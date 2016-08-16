@@ -87,7 +87,7 @@ object Chart {
 
   case object BarChart extends ChartStyle
 
-  case class ChartProps(name: String, style: ChartStyle, data: ChartData, width: Int = 500, height: Int = 300)
+  case class ChartProps(name: String, style: ChartStyle, data: ChartData, width: Int = 800, height: Int = 300)
 
   val Chart = ReactComponentB[ChartProps]("Chart")
     .render_P(p =>

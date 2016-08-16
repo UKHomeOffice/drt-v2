@@ -36,10 +36,12 @@ lazy val client: Project = (project in file("client"))
     // use Scala.js provided launcher code to start the client app
     persistLauncher := true,
     persistLauncher in Test := false,
-    // use uTest framework for tests
-    testFrameworks += new TestFramework("utest.runner.Framework")
-  )
-  .enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+
+      // use uTest framework for tests
+
+      testFrameworks += new TestFramework("utest.runner.Framework")
+)
+.enablePlugins(ScalaJSPlugin, ScalaJSPlay)
   .dependsOn(sharedJS)
 
 // Client projects (just one in this case)
@@ -57,6 +59,8 @@ lazy val server = (project in file("server"))
     // connect to the client project
     scalaJSProjects := clients,
     pipelineStages := Seq(scalaJSProd, digest, gzip),
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     // compress CSS
     LessKeys.compress in Assets := true
   )

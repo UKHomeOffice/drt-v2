@@ -48,4 +48,8 @@ class ApiService extends Api {
     todos = todos.filterNot(_.id == itemId)
     todos
   }
+
+  override def crunch(workloads: Seq[Double]) =  {
+    CrunchResult(Nil)
+  }
 }
