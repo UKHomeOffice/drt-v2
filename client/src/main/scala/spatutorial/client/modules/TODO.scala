@@ -43,7 +43,7 @@ object Todo {
     def render(p: Props, s: State) =
       Panel(Panel.Props("What needs to be done"), <.div(
         p.proxy().renderFailed(ex => "Error loading"),
-        p.proxy().renderPending(_ > 500, _ => "Loading..."),
+        p.proxy().renderPending(_ > 10, _ => "Loading..."),
         p.proxy().render(todos => TodoList(todos.items, item => p.proxy.dispatch(UpdateTodo(item)),
           item => editTodo(Some(item)), item => p.proxy.dispatch(DeleteTodo(item)))),
         Button(Button.Props(editTodo(None)), Icon.plusSquare, " New")),

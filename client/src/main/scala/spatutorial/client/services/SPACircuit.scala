@@ -5,9 +5,10 @@ import diode._
 import diode.data._
 import diode.util._
 import diode.react.ReactConnector
-import spatutorial.shared.{TodoItem, Api}
+import spatutorial.shared.{CrunchResult, TodoItem, Api}
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import scala.util.Random
 
 // Actions
 case object RefreshTodos extends Action
@@ -22,8 +23,18 @@ case class UpdateMotd(potResult: Pot[String] = Empty) extends PotAction[String, 
   override def next(value: Pot[String]) = UpdateMotd(value)
 }
 
+case class UpdateCrunchResult(crunchResult: CrunchResult) extends Action
+
+case class Crunch(workload: Seq[Double]) extends Action
+case class UpdateCrunch(potResult: Pot[CrunchResult] = Empty) extends PotAction[CrunchResult, UpdateCrunch] {
+  override def next(value: Pot[CrunchResult]) = UpdateCrunch(value)
+}
+case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
+
 // The base model of our application
-case class RootModel(todos: Pot[Todos], motd: Pot[String])
+case class RootModel(todos: Pot[Todos],
+                     motd: Pot[String],
+                     crunchResult: Pot[CrunchResult])
 
 case class Todos(items: Seq[TodoItem]) {
   def updated(newItem: TodoItem) = {
@@ -36,6 +47,7 @@ case class Todos(items: Seq[TodoItem]) {
         Todos(items.updated(idx, newItem))
     }
   }
+
   def remove(item: TodoItem) = Todos(items.filterNot(_ == item))
 }
 
@@ -47,11 +59,13 @@ case class Todos(items: Seq[TodoItem]) {
 class TodoHandler[M](modelRW: ModelRW[M, Pot[Todos]]) extends ActionHandler(modelRW) {
   override def handle = {
     case RefreshTodos =>
+      println("RefreshTodos")
       effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
     case UpdateAllTodos(todos) =>
       // got new todos, update model
       updated(Ready(Todos(todos)))
     case UpdateTodo(item) =>
+      println("UpdateTodo")
       // make a local update and inform server
       updated(value.map(_.updated(item)), Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos)))
     case DeleteTodo(item) =>
@@ -75,13 +89,38 @@ class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends ActionHandler(mod
   }
 }
 
+class CrunchHandler[M](modelRW: ModelRW[M, Pot[CrunchResult]]) extends ActionHandler(modelRW) {
+
+  override def handle = {
+    case action: Crunch =>
+      println(s"Crunch Sending ${action.workload}")
+      effectOnly(Effect(AjaxClient[Api].crunch(action.workload).call().map(UpdateCrunchResult)))
+    case UpdateCrunchResult(r) =>
+      println("UpdateCrunchResult")
+      updated(Ready(r))
+    case UpdateCrunch(Ready(crunchResult)) =>
+      updated(Ready(crunchResult))
+    case UpdateCrunch(Empty) =>
+      println("was empty")
+      val blockWidth = 15
+      val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
+      effectOnly(Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
+    case messag =>
+      println(s"what have we got? ${messag}")
+      throw new MatchError(messag)
+  }
+
+}
+
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   // initial application model
-  override protected def initialModel = RootModel(Empty, Empty)
+  override protected def initialModel = RootModel(Empty, Empty, Empty)
+
   // combine all handlers into one
   override protected val actionHandler = composeHandlers(
     new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
-    new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v)))
+    new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
+    new CrunchHandler(zoomRW(_.crunchResult)((m, v) => m.copy(crunchResult = v)))
   )
 }

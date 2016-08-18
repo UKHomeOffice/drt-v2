@@ -3,6 +3,7 @@ package spatutorial.client.components
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{Callback, ReactComponentB}
 import org.scalajs.dom.raw.HTMLCanvasElement
+import spatutorial.client.components.Bootstrap.Panel
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -91,8 +92,8 @@ object Chart {
 
   val Chart = ReactComponentB[ChartProps]("Chart")
     .render_P(p =>
-      <.canvas("width".reactAttr := p.width, "height".reactAttr := p.height)
-    )
+        <.canvas("width".reactAttr := p.width, "height".reactAttr := p.height)
+      )
     .domType[HTMLCanvasElement]
     .componentDidMount(scope => Callback {
       // access context of the canvas
