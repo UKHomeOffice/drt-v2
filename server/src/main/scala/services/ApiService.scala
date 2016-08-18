@@ -12,12 +12,13 @@ class ApiService extends Api {
     TodoItem("4", 0x61626364, "Sneeze in front of the pope. Get blessed.", TodoNormal, completed = true)
   )
 
-  override def welcomeMsg(name: String): String =
+  override def welcomeMsg(name: String): String = {
+    println("welcomeMsg")
     s"Welcome to SPA, $name! Time is now ${new Date}"
-
+  }
   override def getAllTodos(): Seq[TodoItem] = {
     // provide some fake Todos
-    Thread.sleep(300)
+    Thread.sleep(3000)
     println(s"Sending ${todos.size} Todo items")
     todos
   }
@@ -49,7 +50,10 @@ class ApiService extends Api {
     todos
   }
 
-  override def crunch(workloads: Seq[Double]) =  {
-    CrunchResult(Nil)
+  override def crunch(workloads: Seq[Double]): CrunchResult =  {
+    println(s"Crunch requested for ${workloads}")
+    TryRenjin.crunch(workloads)
   }
+
+  def processWork(workloads: Seq[Double]): CrunchResult = ???
 }

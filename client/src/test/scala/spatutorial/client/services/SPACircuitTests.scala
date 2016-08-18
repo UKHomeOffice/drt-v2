@@ -102,5 +102,36 @@ object SPACircuitTests extends TestSuite {
         }
       }
     }
+    'CrunchHandler - {
+      val model: Pot[CrunchResult] = Ready(CrunchResult(Nil, Nil))
+      def build = new CrunchHandler(new RootModelRW[Pot[CrunchResult]](model))
+      'UpdateCrunch - {
+       val h = build
+        val result = h.handle(UpdateCrunch())
+        println("handled it!")
+        result match {
+          case ModelUpdateEffect(newValue, effects) =>
+            assert(newValue.isPending)
+            assert(effects.size == 1)
+          case NoChange =>
+          case what =>
+            println(s"didn't handle ${what}")
+            val badPath1 = false
+            assert(badPath1)
+        }
+        val crunchResult = CrunchResult(Seq[Double](23, 39), Seq[Double](12, 10))
+        val crunch: UpdateCrunch = UpdateCrunch(Ready(crunchResult))
+        val result2 = h.handle(crunch)
+        result2 match {
+          case ModelUpdate(newValue) =>
+            println(s"here we are ${newValue.isReady}")
+            assert(newValue.isReady)
+            assert(newValue.get == crunchResult)
+          case _ =>
+            val badPath2 = false
+            assert(badPath2)
+        }
+      }
+    }
   }
 }
