@@ -34,7 +34,7 @@ object TryRenjin {
     val waitR = engine.eval("processed$wait").asInstanceOf[IntVector]
     println(s"got $waitR")
     val waitTimes = (0 until waitR.length()) map (waitR.getElementAsInt(_).toDouble)
-    engine.eval("print(processed)")
+//    engine.eval("print(processed)")
     waitTimes
   }
 

@@ -11,6 +11,7 @@ import spatutorial.client.components._
 import spatutorial.client.services._
 
 import scalacss.ScalaCssReact._
+import spatutorial.client.logger._
 
 object MainMenu {
   // shorthand for styles
@@ -23,6 +24,7 @@ object MainMenu {
   // build the Todo menu item, showing the number of open todos
   private def buildTodoMenu(props: Props): ReactElement = {
     val todoCount = props.proxy().getOrElse(0)
+    log.info(s"buildTodoMenu ${todoCount}")
     <.span(
       <.span("Todo "),
       todoCount > 0 ?= <.span(bss.labelOpt(CommonStyle.danger), bss.labelAsBadge, todoCount)

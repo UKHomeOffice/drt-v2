@@ -1,14 +1,14 @@
 package spatutorial.client.components
 
+import diode.data.Pot
 import diode.react.ReactPot._
 import diode.react._
-import diode.data.Pot
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap._
-import spatutorial.client.services.{UpdateCrunch, Crunch, UpdateMotd}
-import spatutorial.shared.CrunchResult
 import spatutorial.client.logger._
+import spatutorial.client.services.{UpdateCrunch, UpdateMotd}
+import spatutorial.shared.CrunchResult
 
 /**
   * This is a simple component demonstrating how to display async data coming from the server
@@ -24,7 +24,7 @@ object Motd {
         proxy1.renderPending(_ > 500, _ => <.p("Loading...")),
         proxy().renderFailed(ex => <.p("Failed to load")),
         proxy().render(m => <.p(m)),
-        Button(Button.Props(proxy.dispatch(UpdateMotd()), CommonStyle.danger), Icon.refresh, " Update")
+        Button(Button.Props(proxy.dispatch(UpdateMotd()), CommonStyle.danger), Icon.refresh, "Update")
       )
     }
     .componentDidMount(scope =>
@@ -44,7 +44,7 @@ object DeskRecsChart {
 
   def DeskRecs(labels: Seq[String]) = ReactComponentB[ModelProxy[Pot[CrunchResult]]]("CrunchResults")
     .render_P { (proxy) =>
-      Panel(Panel.Props("CrunchResults"),
+      Panel(Panel.Props("Desk Recommendations"),
         proxy().renderPending(_ >= 500, _ => <.p("Waiting for data")),
         proxy().render(chartData =>
           Chart(Chart.ChartProps("Desk Recs",
@@ -52,7 +52,13 @@ object DeskRecsChart {
             ChartData(labels, Seq(ChartDataset(chartData.recommendedDesks, "Desk Recommendations")))
           ))
         ),
-        Button(Button.Props(proxy.dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, " Update")
+        proxy().render(chartData =>
+          Chart(Chart.ChartProps("Wait Times",
+            Chart.LineChart,
+            ChartData(labels, Seq(ChartDataset(chartData.waitTimes, "Wait Times")))
+          ))
+        ),
+        Button(Button.Props(proxy.dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, "Update")
       )
     }.componentDidMount(scope =>
     Callback.log("Mounted DeskRecs")

@@ -1,11 +1,13 @@
 package spatutorial.client
 
+import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.GlobalStyles
 import spatutorial.client.logger._
+import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules._
 import spatutorial.client.services.SPACircuit
 
@@ -27,15 +29,24 @@ object SPAMain extends js.JSApp {
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
-
+    val workloadsWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.workload))(proxy => {
+      log.info(s"workloads update from subscribe isReady ${proxy.value.isReady}")
+    })
     val todoWrapper = SPACircuit.connect(_.todos)
     // wrap/connect components to the circuit
-    (staticRoute(root, DashboardLoc) ~> renderR(ctl => SPACircuit.wrap(_.crunchResult)(proxy => Dashboard(ctl, proxy)))
-      | staticRoute("#todo", TodoLoc) ~> renderR(ctl => todoWrapper(Todo(_)))
+    (staticRoute(root, DashboardLoc) ~>
+      renderR(ctl => SPACircuit.wrap(m =>
+        DashboardModels(m.workload, m.crunchResult))(proxy => {
+        log.info("dashboard update")
+        workloadsWrapper()
+        Dashboard(ctl, proxy)
+      })) |
+        staticRoute("#todo", TodoLoc) ~> renderR(ctl => todoWrapper(Todo(_)))
       ).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
-  val todoCountWrapper = SPACircuit.connect(_.todos.map(_.items.count(!_.completed)).toOption)
+  val todoCountWrapper: ReactConnectProxy[Option[Int]] = SPACircuit.connect(_.todos.map(_.items.count(!_.completed)).toOption)
+
   // base layout for all pages
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
     <.div(

@@ -106,10 +106,12 @@ object SPACircuitTests extends TestSuite {
       val model: Pot[CrunchResult] = Ready(CrunchResult(Nil, Nil))
       def build = new CrunchHandler(new RootModelRW[Pot[CrunchResult]](model))
       'UpdateCrunch - {
-       val h = build
+        val h = build
         val result = h.handle(UpdateCrunch())
         println("handled it!")
         result match {
+          case e: EffectOnly =>
+            println(s"effect was ${e}")
           case ModelUpdateEffect(newValue, effects) =>
             assert(newValue.isPending)
             assert(effects.size == 1)
