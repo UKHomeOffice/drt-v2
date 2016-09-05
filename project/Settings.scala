@@ -55,7 +55,7 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
-    "org.renjin" % "renjin-script-engine" % "0.8.2193",
+    "org.renjin" % "renjin-script-engine" % "0.8.2195",
     "joda-time" % "joda-time" % "2.9.4"
 
   ))

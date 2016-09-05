@@ -9,6 +9,7 @@ import spatutorial.shared.{CrunchResult, TodoItem, Api}
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
+import spatutorial.client.logger._
 
 // Actions
 case object RefreshTodos extends Action
@@ -25,15 +26,25 @@ case class UpdateMotd(potResult: Pot[String] = Empty) extends PotAction[String, 
 
 case class UpdateCrunchResult(crunchResult: CrunchResult) extends Action
 
+case class UpdateWorkloads(workloads: Seq[Double]) extends Action
+
 case class Crunch(workload: Seq[Double]) extends Action
+
+case class GetWorkloads(begin: String, end: String, port: String) extends Action
+
+
 case class UpdateCrunch(potResult: Pot[CrunchResult] = Empty) extends PotAction[CrunchResult, UpdateCrunch] {
   override def next(value: Pot[CrunchResult]) = UpdateCrunch(value)
 }
+
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
 // The base model of our application
+case class Workloads(workloads: Seq[Double] = Nil)
+
 case class RootModel(todos: Pot[Todos],
                      motd: Pot[String],
+                     workload: Pot[Workloads],
                      crunchResult: Pot[CrunchResult])
 
 case class Todos(items: Seq[TodoItem]) {
@@ -59,13 +70,13 @@ case class Todos(items: Seq[TodoItem]) {
 class TodoHandler[M](modelRW: ModelRW[M, Pot[Todos]]) extends ActionHandler(modelRW) {
   override def handle = {
     case RefreshTodos =>
-      println("RefreshTodos")
+      log.info("RefreshTodos")
       effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
     case UpdateAllTodos(todos) =>
       // got new todos, update model
       updated(Ready(Todos(todos)))
     case UpdateTodo(item) =>
-      println("UpdateTodo")
+      log.info("UpdateTodo")
       // make a local update and inform server
       updated(value.map(_.updated(item)), Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos)))
     case DeleteTodo(item) =>
@@ -89,38 +100,61 @@ class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends ActionHandler(mod
   }
 }
 
+class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHandler(modelRW) {
+  protected def handle = {
+    case action: GetWorkloads =>
+      log.info("requesting workloads from server")
+      effectOnly(Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
+    case UpdateWorkloads(workloads) =>
+      log.info(s"received workloads ${workloads} from server")
+      updated(Ready(Workloads(workloads)), Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
+  }
+}
+
 class CrunchHandler[M](modelRW: ModelRW[M, Pot[CrunchResult]]) extends ActionHandler(modelRW) {
 
   override def handle = {
     case action: Crunch =>
-      println(s"Crunch Sending ${action.workload}")
-      effectOnly(Effect(AjaxClient[Api].crunch(action.workload).call().map(UpdateCrunchResult)))
+      log.info(s"Crunch Sending ${action.workload}")
+      if (action.workload != null)
+        effectOnly(Effect(AjaxClient[Api].crunch(action.workload).call().map(UpdateCrunchResult)))
+      else
+        noChange
     case UpdateCrunchResult(r) =>
-      println("UpdateCrunchResult")
+      log.info("UpdateCrunchResult")
       updated(Ready(r))
     case UpdateCrunch(Ready(crunchResult)) =>
+      log.info(s"updatecrunch ready ${crunchResult}")
       updated(Ready(crunchResult))
     case UpdateCrunch(Empty) =>
-      println("was empty")
+      log.info("was empty")
       val blockWidth = 15
+      log.info(s"inventing workloads")
       val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
       effectOnly(Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
-    case messag =>
-      println(s"what have we got? ${messag}")
-      throw new MatchError(messag)
   }
 
 }
 
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
+  val blockWidth = 15
+//  val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
+
   // initial application model
-  override protected def initialModel = RootModel(Empty, Empty, Empty)
+  override protected def initialModel = RootModel(Empty, Empty,
+    Empty, //Ready(Workloads(workloads)),
+    Empty)
 
   // combine all handlers into one
-  override protected val actionHandler = composeHandlers(
-    new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
-    new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
-    new CrunchHandler(zoomRW(_.crunchResult)((m, v) => m.copy(crunchResult = v)))
-  )
+  override protected val actionHandler = {
+    println("composing handlers")
+    composeHandlers(
+      new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
+      new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
+      new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
+      new CrunchHandler(zoomRW(_.crunchResult)((m, v) => m.copy(crunchResult = v)))
+    )
+  }
+
 }

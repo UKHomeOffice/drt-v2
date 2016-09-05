@@ -4,6 +4,8 @@ import java.util.{UUID, Date}
 
 import spatutorial.shared._
 
+import scala.util.Random
+
 class ApiService extends Api {
   var todos = Seq(
     TodoItem("41424344-4546-4748-494a-4b4c4d4e4f50", 0x61626364, "Wear shirt that says “Life”. Hand out lemons on street corner.", TodoLow, completed = false),
@@ -50,10 +52,21 @@ class ApiService extends Api {
     todos
   }
 
+  val numberOf15Mins = (24 * 4 * 15)
+  private val maxLoadPerSlot: Int = 10
+  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * maxLoadPerSlot).take(numberOf15Mins).toSeq
+
+  def getWorkloads(): Seq[Double] = {
+    workload
+  }
+
   override def crunch(workloads: Seq[Double]): CrunchResult =  {
     println(s"Crunch requested for ${workloads}")
     TryRenjin.crunch(workloads)
   }
 
-  def processWork(workloads: Seq[Double]): CrunchResult = ???
+  def processWork(workloads: Seq[Double]): CrunchResult = {
+    println(s"processWork")
+    ???
+  }
 }
