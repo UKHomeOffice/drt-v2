@@ -1,0 +1,16 @@
+array (
+  'block_width' => 15,
+  'concavity_limit' => 30,
+  'sla' => 45,
+  'time_limit' => 200,
+  'weight_churn' => 50,
+  'weight_pax' => 0.05,
+  'weight_staff' => 3,
+  'weight_sla' => 10,
+  'window_step' => 60,
+  'window_width' => 90,
+  'fair_xmax_sla_scaling' => 0.75,
+  'fair_xmax_block_size' => 5,
+  'fair_xmax_target_width' => 60,
+  'fair_xmax_rolling_buffer' => 120,
+)

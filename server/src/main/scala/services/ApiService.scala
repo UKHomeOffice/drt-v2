@@ -18,6 +18,7 @@ class ApiService extends Api {
     println("welcomeMsg")
     s"Welcome to SPA, $name! Time is now ${new Date}"
   }
+
   override def getAllTodos(): Seq[TodoItem] = {
     // provide some fake Todos
     Thread.sleep(3000)
@@ -28,7 +29,7 @@ class ApiService extends Api {
   // update a Todo
   override def updateTodo(item: TodoItem): Seq[TodoItem] = {
     // TODO, update database etc :)
-    if(todos.exists(_.id == item.id)) {
+    if (todos.exists(_.id == item.id)) {
       todos = todos.collect {
         case i if i.id == item.id => item
         case i => i
@@ -60,9 +61,10 @@ class ApiService extends Api {
     workload
   }
 
-  override def crunch(workloads: Seq[Double]): CrunchResult =  {
+  override def crunch(workloads: Seq[Double]): CrunchResult = {
     println(s"Crunch requested for ${workloads}")
-    TryRenjin.crunch(workloads)
+    val repeat = List.fill[Int](workloads.length)_
+    TryRenjin.crunch(workloads, repeat(10), repeat(15))
   }
 
   def processWork(workloads: Seq[Double]): CrunchResult = {
