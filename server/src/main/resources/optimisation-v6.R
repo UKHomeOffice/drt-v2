@@ -350,9 +350,6 @@ optimise.win = function(work, sla = 25, weight.sla = 10, weight.pax = 0.3,
 {
 smoothing.width = block.width
 win.width = min(win.width, length(work))
-print(win.width)
-print(block.width)
-print(win.width %% (2 * block.width))
 stopifnot(win.width %% (2 * block.width) == 0)
 stopifnot(length(work) %% block.width == 0)
 stopifnot(xmax >= xmin)
