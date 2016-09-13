@@ -54,7 +54,7 @@ class ApiService extends Api {
   }
 
   val numberOf15Mins = (24 * 4 * 15)
-  private val maxLoadPerSlot: Int = 10
+  private val maxLoadPerSlot: Int = 20
   private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * maxLoadPerSlot).take(numberOf15Mins).toSeq
 
   def getWorkloads(): Seq[Double] = {
@@ -67,8 +67,8 @@ class ApiService extends Api {
     TryRenjin.crunch(workloads, repeat(10), repeat(15))
   }
 
-  def processWork(workloads: Seq[Double]): CrunchResult = {
+  override def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult = {
     println(s"processWork")
-    ???
+    TryRenjin.processWork(workloads, desks)
   }
 }

@@ -3,8 +3,8 @@ package services
 import java.io.InputStream
 import javax.script.ScriptEngineManager
 
-import org.renjin.sexp.{DoubleVector, IntVector}
-import spatutorial.shared.CrunchResult
+import org.renjin.sexp.{IntVector, DoubleVector}
+import spatutorial.shared.{SimulationResult, CrunchResult}
 
 import scala.collection.immutable.IndexedSeq
 
@@ -30,11 +30,11 @@ object TryRenjin {
     CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised"))
   }
 
-  def processWork(workloads: Seq[Double], desks: Seq[Int]): CrunchResult = {
+  def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult = {
     loadOptimiserScript
     initialiseWorkloads(workloads)
     initialiseDesks("desks", desks)
-    CrunchResult(desks, runSimulation(desks, "desks"))
+    SimulationResult(desks.toVector, runSimulation(desks, "desks").toVector)
   }
 
   def runSimulation(deskRecsScala: Seq[Int], desks: String): Seq[Int] = {
