@@ -36,7 +36,7 @@ object SPAMain extends js.JSApp {
     // wrap/connect components to the circuit
     (staticRoute(root, DashboardLoc) ~>
       renderR(ctl => SPACircuit.wrap(m =>
-        DashboardModels(m.workload, m.crunchResult))(proxy => {
+        DashboardModels(m.workload, m.crunchResult, m.simulationResult))(proxy => {
         log.info("dashboard update")
         workloadsWrapper()
         Dashboard(ctl, proxy)

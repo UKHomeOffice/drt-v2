@@ -137,8 +137,8 @@ class SimulationHandler[M](
       noChange
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
-      val crunchModel = modelRW.zoom(_._1)
-      val simModel = modelRW.zoom(_._2)
+      val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
+      val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
       val map: Pot[SimulationResult] = simModel.value.map(cr => {
         val newRecDesks = cr.recommendedDesks.toArray
         for (n <- k until k + 15) {
@@ -146,8 +146,8 @@ class SimulationHandler[M](
         }
         cr.copy(recommendedDesks = newRecDesks)
       })
-      val newValCrunch: Pot[SimulationResult] = map
-      val newVal = (newValCrunch, simModel.value)
+      val newValSimulation: Pot[SimulationResult] = map
+      val newVal = (crunchModel.value, newValSimulation)
       ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
   }
 }

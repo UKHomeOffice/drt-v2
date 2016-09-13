@@ -9,8 +9,9 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, TodoLoc}
 import spatutorial.client.components._
-import spatutorial.client.services.{GetWorkloads, Workloads, Crunch}
-import spatutorial.shared.CrunchResult
+import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
+import spatutorial.shared.{CrunchResult, SimulationResult}
+
 import scala.scalajs.js
 import scala.util.Random
 import scala.language.existentials
@@ -18,13 +19,14 @@ import spatutorial.client.logger._
 
 object Dashboard {
 
-  case class DashboardModels(workloads: Pot[Workloads], crunchProxy: Pot[CrunchResult])
+  case class DashboardModels(workloads: Pot[Workloads], crunchProxy: Pot[CrunchResult], simulationResult: Pot[SimulationResult])
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels])
 
   case class State(workloads: ReactConnectProxy[Pot[Workloads]],
-                   crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]])
+                   crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]],
+                   simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]])
 
   val baseDate = new js.Date(2016, 10, 1, 7)
   val millisPer15Minutes = 1000 * 60
@@ -71,9 +73,11 @@ object Dashboard {
   private val component = ReactComponentB[Props]("Dashboard")
     // create and store the connect proxy in state for later use
     .initialState_P(props => State(
-    props.dashboardModelProxy.connect(m => m.workloads),
-    props.dashboardModelProxy.connect(m => m.crunchProxy)))
-    .renderPS { (_, props, state) =>
+      props.dashboardModelProxy.connect(m => m.workloads),
+      props.dashboardModelProxy.connect(m => m.crunchProxy),
+      props.dashboardModelProxy.connect(m => m.simulationResult)
+    ))
+    .renderPS { (_, props, state: State) =>
       log.info(s"evaluating dashboard ${props}:${state}")
       <.div(
         // header, MessageOfTheDay and chart components
@@ -86,7 +90,7 @@ object Dashboard {
             wlp.renderPending((num) => <.div(s"waiting with ${num}")),
             wlp.renderEmpty(<.div(s"Waiting for workload")))
         }),
-        state.crunchResultWrapper(DeskRecsChart(labels, _)),
+        state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy)),
         // create a link to the To Do view
         <.div(props.router.link(TodoLoc)("Check your todos!"))
       )
