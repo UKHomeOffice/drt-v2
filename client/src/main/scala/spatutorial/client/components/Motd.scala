@@ -39,30 +39,3 @@ object Motd {
   def apply(proxy: ModelProxy[Pot[String]]) = Motd(proxy)
 }
 
-object DeskRecsChart {
-  log.info("initialising deskrecschart")
-
-  def DeskRecs(labels: Seq[String]) = ReactComponentB[ModelProxy[Pot[CrunchResult]]]("CrunchResults")
-    .render_P { (proxy) =>
-      Panel(Panel.Props("Desk Recommendations"),
-        proxy().renderPending(_ >= 500, _ => <.p("Waiting for data")),
-        proxy().render(chartData =>
-          Chart(Chart.ChartProps("Desk Recs",
-            Chart.LineChart,
-            ChartData(labels, Seq(ChartDataset(chartData.recommendedDesks, "Desk Recommendations")))
-          ))
-        ),
-        proxy().render(chartData =>
-          Chart(Chart.ChartProps("Wait Times",
-            Chart.LineChart,
-            ChartData(labels, Seq(ChartDataset(chartData.waitTimes, "Wait Times")))
-          ))
-        ),
-        Button(Button.Props(proxy.dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, "Update")
-      )
-    }.componentDidMount(scope =>
-    Callback.log("Mounted DeskRecs")
-  ).build
-
-  def apply(labels: Seq[String], proxy: ModelProxy[Pot[CrunchResult]]) = DeskRecs(labels)(proxy)
-}
