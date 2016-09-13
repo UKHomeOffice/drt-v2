@@ -103,7 +103,7 @@ object SPACircuitTests extends TestSuite {
       }
     }
     'CrunchHandler - {
-      val model: Pot[CrunchResult] = Ready(CrunchResult(Nil, Nil))
+      val model: Pot[CrunchResult] = Ready(CrunchResult(IndexedSeq[Double](), Nil))
       def build = new CrunchHandler(new RootModelRW[Pot[CrunchResult]](model))
       'UpdateCrunch - {
         val h = build
@@ -121,7 +121,7 @@ object SPACircuitTests extends TestSuite {
             val badPath1 = false
             assert(badPath1)
         }
-        val crunchResult = CrunchResult(Seq[Double](23, 39), Seq[Double](12, 10))
+        val crunchResult = CrunchResult(IndexedSeq[Double](23, 39), Seq[Double](12, 10))
         val crunch: UpdateCrunch = UpdateCrunch(Ready(crunchResult))
         val result2 = h.handle(crunch)
         result2 match {
