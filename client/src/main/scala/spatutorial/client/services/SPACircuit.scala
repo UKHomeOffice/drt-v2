@@ -139,7 +139,7 @@ class SimulationHandler[M](
       log.info(s"Handler: ChangeDesk($v, $k)")
       val crunchModel = modelRW.zoom(_._1)
       val simModel = modelRW.zoom(_._2)
-      val map: Pot[CrunchResult] = sim.value.map(cr => {
+      val map: Pot[CrunchResult] = simModel.value.map(cr => {
         val newRecDesks = cr.recommendedDesks.toArray
         for (n <- k until k + 15) {
           newRecDesks(n) = v.toInt
