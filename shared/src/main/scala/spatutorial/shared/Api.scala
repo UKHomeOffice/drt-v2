@@ -1,6 +1,7 @@
 package spatutorial.shared
 
-case class CrunchResult(recommendedDesks: Seq[Int], waitTimes: Seq[Int])
+case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
+case class SimulationResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
 trait Api {
   def welcomeMsg(name: String): String
@@ -15,5 +16,5 @@ trait Api {
 
   def crunch(workloads: Seq[Double]): CrunchResult
 
-  def processWork(workloads: Seq[Double]): CrunchResult
+  def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult
 }
