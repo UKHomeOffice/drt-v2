@@ -4,7 +4,7 @@ import java.io.InputStream
 import javax.script.ScriptEngineManager
 
 import org.renjin.sexp.{IntVector, DoubleVector}
-import spatutorial.shared.CrunchResult
+import spatutorial.shared.{SimulationResult, CrunchResult}
 
 object TryRenjin {
   lazy val manager = new ScriptEngineManager()
@@ -14,18 +14,18 @@ object TryRenjin {
     loadOptimiserScript
     initialiseWorkloads(workloads)
 
-    engine.eval("optimised <- optimise.win(w, xmax=15)")
+    engine.eval("optimised <- optimise.win(w, xmax=45)")
 
     val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
     val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsDouble(_))
     CrunchResult(deskRecsScala, processWork(deskRecsScala, "optimised"))
   }
 
-  def processWork(workloads: Seq[Double], desks: Seq[Double]): CrunchResult = {
+  def processWork(workloads: Seq[Double], desks: Seq[Double]): SimulationResult = {
     loadOptimiserScript
     initialiseWorkloads(workloads)
     initialiseDesks("desks", desks)
-    CrunchResult(desks, processWork(desks, "desks"))
+    SimulationResult(desks.toVector, processWork(desks, "desks").toVector)
   }
 
   def processWork(deskRecsScala: Seq[Double], desks: String): Seq[Double] = {
@@ -34,7 +34,6 @@ object TryRenjin {
     val waitR = engine.eval("processed$wait").asInstanceOf[IntVector]
     println(s"got $waitR")
     val waitTimes = (0 until waitR.length()) map (waitR.getElementAsInt(_).toDouble)
-//    engine.eval("print(processed)")
     waitTimes
   }
 
