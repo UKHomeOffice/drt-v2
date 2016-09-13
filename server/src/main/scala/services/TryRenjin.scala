@@ -15,8 +15,7 @@ object TryRenjin {
   def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int]): CrunchResult = {
     loadOptimiserScript
     initialiseWorkloads(workloads)
-    println(workloads.length / 30.0)
-    println(s"${workloads.length}, ${minDesks.length}, ${maxDesks.length}")
+
     engine.put("xmax", maxDesks.toArray)
     engine.put("xmin", minDesks.toArray)
     engine.put("sla", 45)
