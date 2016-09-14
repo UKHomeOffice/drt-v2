@@ -19,7 +19,7 @@ import spatutorial.client.logger._
 
 object Dashboard {
 
-  case class DashboardModels(workloads: Pot[Workloads], crunchProxy: Pot[CrunchResult], simulationResult: Pot[SimulationResult])
+  case class DashboardModels(workloads: Pot[Workloads], potCrunchResult: Pot[CrunchResult], simulationResult: Pot[SimulationResult])
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels])
@@ -74,7 +74,7 @@ object Dashboard {
     // create and store the connect proxy in state for later use
     .initialState_P(props => State(
       props.dashboardModelProxy.connect(m => m.workloads),
-      props.dashboardModelProxy.connect(m => m.crunchProxy),
+      props.dashboardModelProxy.connect(m => m.potCrunchResult),
       props.dashboardModelProxy.connect(m => m.simulationResult)
     ))
     .renderPS { (_, props, state: State) =>
