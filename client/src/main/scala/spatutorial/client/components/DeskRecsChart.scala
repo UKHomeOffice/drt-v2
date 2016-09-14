@@ -1,6 +1,6 @@
 package spatutorial.client.components
 
-import diode.ActionType
+import diode.{Action, ActionType}
 import diode.data.Pot
 import diode.react.ModelProxy
 import japgolly.scalajs.react.{Callback, ReactComponentB}
@@ -27,19 +27,20 @@ object DeskRecsChart {
   def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
     .render_P { proxy => {
       val potCrunchResult: Pot[CrunchResult] = proxy().potCrunchResult
+      val dispatch: (Action) => Callback = proxy.dispatch _
       Panel(Panel.Props("Desk Recommendations and Wait times"),
         potCrunchResult.renderPending(_ >= 500, _ => <.p("Waiting for data")),
         deskRecsChart(labels, potCrunchResult),
         waitTimesChart(labels, potCrunchResult),
-        deskSimulationInputs(labels, potCrunchResult, proxy.dispatch),
-        Button(Button.Props(proxy.dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, "Update")
+        deskSimulationInputs(labels, potCrunchResult, dispatch),
+        Button(Button.Props(dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, "Update")
       )
     }
     }.componentDidMount(scope =>
     Callback.log("Mounted DeskRecs")
   ).build
 
-  def deskSimulationInputs(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult], dispatch: Any => Callback): ReactNode = {
+  def deskSimulationInputs(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult], dispatch: Action => Callback): ReactNode = {
     def inputChange(idx: Int)(e: ReactEventI) = {
       val ev = e.target.value
       log.info(s"direct call in callback ${idx} ${ev}")
