@@ -6,6 +6,7 @@ import diode._
 import diode.data._
 import diode.util._
 import diode.react.ReactConnector
+import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared.{SimulationResult, CrunchResult, TodoItem, Api}
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -53,7 +54,8 @@ case class RootModel(todos: Pot[Todos],
                      workload: Pot[Workloads],
                      crunchResult: Pot[CrunchResult],
                      realDesks: Pot[Seq[Double]],
-                     simulationResult: Pot[SimulationResult]
+                     simulationResult: Pot[SimulationResult],
+                     flights: Pot[Flights]
                     )
 
 case class Todos(items: Seq[TodoItem]) {
@@ -131,9 +133,7 @@ class SimulationHandler[M](
           .call()
           .map(UpdateSimulationResult)))
     case UpdateSimulationResult(simResult) =>
-      log.info(s"Got simulation result ${
-        simResult
-      }")
+      log.info(s"Got simulation result $simResult")
       noChange
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
@@ -149,6 +149,18 @@ class SimulationHandler[M](
       val newValSimulation: Pot[SimulationResult] = map
       val newVal = (crunchModel.value, newValSimulation)
       ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
+  }
+}
+
+case class RequestFlights(from: Long, to: Long) extends Action
+
+case class UpdateFlights(flights: Flights) extends Action
+
+class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends ActionHandler(modelRW) {
+  protected def handle = {
+    case RequestFlights(from, to) =>
+      //      effectOnly(Effect(AjaxClient[Api].flights(from, to)))
+      noChange
   }
 }
 
@@ -185,6 +197,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   // initial application model
   override protected def initialModel = RootModel(Empty, Empty,
     Empty, //Ready(Workloads(workloads)),
+    Empty,
     Empty,
     Empty,
     Empty)

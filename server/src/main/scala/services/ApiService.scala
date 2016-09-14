@@ -6,7 +6,7 @@ import spatutorial.shared._
 
 import scala.util.Random
 
-class ApiService extends Api {
+class ApiService extends Api with WorkloadsService with FlightsService {
   var todos = Seq(
     TodoItem("41424344-4546-4748-494a-4b4c4d4e4f50", 0x61626364, "Wear shirt that says “Life”. Hand out lemons on street corner.", TodoLow, completed = false),
     TodoItem("2", 0x61626364, "Make vanilla pudding. Put in mayo jar. Eat in public.", TodoNormal, completed = false),
@@ -51,14 +51,6 @@ class ApiService extends Api {
     Thread.sleep(300)
     todos = todos.filterNot(_.id == itemId)
     todos
-  }
-
-  val numberOf15Mins = (24 * 4 * 15)
-  private val maxLoadPerSlot: Int = 20
-  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * maxLoadPerSlot).take(numberOf15Mins).toSeq
-
-  def getWorkloads(): Seq[Double] = {
-    workload
   }
 
   override def crunch(workloads: Seq[Double]): CrunchResult = {
