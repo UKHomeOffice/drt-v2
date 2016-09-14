@@ -8,8 +8,10 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, TodoLoc}
+import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
+import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared.{CrunchResult, SimulationResult}
 
 import scala.scalajs.js

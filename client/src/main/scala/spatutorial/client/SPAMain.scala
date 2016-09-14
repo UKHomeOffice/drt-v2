@@ -1,15 +1,20 @@
 package spatutorial.client
 
+import diode.ModelR
+import diode.data.Pot
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
+import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.GlobalStyles
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules._
-import spatutorial.client.services.SPACircuit
+import spatutorial.client.services.{RootModel, SPACircuit}
+import spatutorial.shared.FlightsApi.Flights
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -23,6 +28,8 @@ object SPAMain extends js.JSApp {
   sealed trait Loc
 
   case object DashboardLoc extends Loc
+
+  case object FlightsLoc extends Loc
 
   case object TodoLoc extends Loc
 
@@ -41,7 +48,11 @@ object SPAMain extends js.JSApp {
         workloadsWrapper()
         Dashboard(ctl, proxy)
       })) |
-        staticRoute("#todo", TodoLoc) ~> renderR(ctl => todoWrapper(Todo(_)))
+      (staticRoute("#flights", FlightsLoc) ~>
+        renderR(ctl => SPACircuit.wrap(_.flights)(proxy =>
+          FlightsView(FlightsView.Props(ctl, proxy), proxy)))
+        ) |
+      (staticRoute("#todo", TodoLoc) ~> renderR(ctl => todoWrapper(Todo(_))))
       ).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
@@ -53,7 +64,7 @@ object SPAMain extends js.JSApp {
       // here we use plain Bootstrap class names as these are specific to the top level layout defined here
       <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
         <.div(^.className := "container",
-          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "SPA Tutorial")),
+          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "DRT EDI Live Spike")),
           <.div(^.className := "collapse navbar-collapse",
             // connect menu to model, because it needs to update when the number of open todos changes
             todoCountWrapper(proxy => MainMenu(c, r.page, proxy))

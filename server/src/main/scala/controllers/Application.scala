@@ -20,7 +20,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
   val apiService = new ApiService()
 
   def index = Action {
-    Ok(views.html.index("SPA tutorial"))
+    Ok(views.html.index("DRT - BorderForce"))
   }
 
   def autowireApi(path: String) = Action.async(parse.raw) {

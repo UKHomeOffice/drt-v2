@@ -4,7 +4,7 @@ import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.SPAMain.{DashboardLoc, Loc, TodoLoc}
+import spatutorial.client.SPAMain.{FlightsLoc, DashboardLoc, Loc, TodoLoc}
 import spatutorial.client.components.Bootstrap.CommonStyle
 import spatutorial.client.components.Icon._
 import spatutorial.client.components._
@@ -33,7 +33,8 @@ object MainMenu {
 
   private val menuItems = Seq(
     MenuItem(1, _ => "Dashboard", Icon.dashboard, DashboardLoc),
-    MenuItem(2, buildTodoMenu, Icon.check, TodoLoc)
+    MenuItem(2, _ => "Flights", Icon.plane, FlightsLoc),
+    MenuItem(3, buildTodoMenu, Icon.check, TodoLoc)
   )
 
   private class Backend($: BackendScope[Props, Unit]) {
