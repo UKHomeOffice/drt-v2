@@ -124,8 +124,7 @@ object HandyStuff {
   type tupleMagic = (Pot[CrunchResult], Pot[SimulationResult])
 }
 
-class SimulationHandler[M](
-                            modelRW: ModelRW[M, tupleMagic])
+class SimulationHandler[M](modelRW: ModelRW[M, tupleMagic])
   extends ActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(workloads, desks) =>
@@ -141,15 +140,15 @@ class SimulationHandler[M](
       log.info(s"Handler: ChangeDesk($v, $k)")
       val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
       val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
-      val map: Pot[SimulationResult] = simModel.value.map(cr => {
+      val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
         val newRecDesks = cr.recommendedDesks.toArray
         for (n <- k until k + 15) {
           newRecDesks(n) = v.toInt
         }
         cr.copy(recommendedDesks = newRecDesks)
       })
-      val newValSimulation: Pot[SimulationResult] = map
       val newVal = (crunchModel.value, newValSimulation)
+      log.info(s"NV Sim: ${newVal._2.get.recommendedDesks.take(5)}")
       ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
   }
 }
@@ -174,15 +173,12 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
       effectOnly(Effect(AjaxClient[Api].crunch(workload).call().map(UpdateCrunchResult)))
     case UpdateCrunchResult(crunchResult) =>
       log.info("UpdateCrunchResult")
-      //      updated(Ready(r))
 
       val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
       val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
-      val map: Pot[SimulationResult] = simModel.value.map(cr => {
-        cr.copy(recommendedDesks = crunchResult.recommendedDesks)
-      })
-      val newValSimulation: Pot[SimulationResult] = map
-      val newVal = (Ready(crunchResult), newValSimulation)
+      log.info(s"Model:${simModel.value}")
+
+      val newVal = (Ready(crunchResult), Ready(SimulationResult(crunchResult.recommendedDesks, Nil)))
       ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
   }
 
@@ -208,11 +204,14 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
-      new CrunchHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) =>
-        m.copy(simulationResult = v._2, crunchResult = v._1))),
-      new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) =>
-        m.copy(simulationResult = v._2, crunchResult = v._1)))
-    )
+      new CrunchHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
+        log.info("setting crunch result and simulation desks in model")
+        m.copy(simulationResult = v._2, crunchResult = v._1)
+      })),
+      new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
+        log.info("setting simulation result in model")
+        m.copy(simulationResult = v._2, crunchResult = v._1)
+      })))
   }
 
 }
