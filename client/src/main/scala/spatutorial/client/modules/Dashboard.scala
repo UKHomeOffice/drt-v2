@@ -19,7 +19,7 @@ import spatutorial.client.logger._
 
 object Dashboard {
 
-  case class DashboardModels(workloads: Pot[Workloads], potCrunchResult: Pot[CrunchResult], simulationResult: Pot[SimulationResult])
+  case class DashboardModels(workloads: Pot[Workloads], potCrunchResult: Pot[CrunchResult], potSimulationResult: Pot[SimulationResult])
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels])
@@ -73,10 +73,10 @@ object Dashboard {
   private val component = ReactComponentB[Props]("Dashboard")
     // create and store the connect proxy in state for later use
     .initialState_P(props => State(
-      props.dashboardModelProxy.connect(m => m.workloads),
-      props.dashboardModelProxy.connect(m => m.potCrunchResult),
-      props.dashboardModelProxy.connect(m => m.simulationResult)
-    ))
+    props.dashboardModelProxy.connect(m => m.workloads),
+    props.dashboardModelProxy.connect(m => m.potCrunchResult),
+    props.dashboardModelProxy.connect(m => m.potSimulationResult)
+  ))
     .renderPS { (_, props, state: State) =>
       log.info(s"evaluating dashboard ${props}:${state}")
       <.div(
@@ -91,9 +91,14 @@ object Dashboard {
             wlp.renderEmpty(<.div(s"Waiting for workload")))
         }),
         state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy)),
-        // create a link to the To Do view
-        <.div(props.router.link(TodoLoc)("Check your todos!"))
-      )
+      state.simulationResultWrapper((s: ModelProxy[Pot[SimulationResult]]) => DeskRecsChart.DeskSimInputs(labels)(s)))
+      /*
+        state.simulationResultWrapper(simRes =>
+          state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy))),
+          // create a link to the To Do view
+          <.div(props.router.link(TodoLoc)("Check your todos!"))
+        )
+        */
     }
     .componentDidMount(scope => mounted(scope.props))
     .build
