@@ -1,23 +1,17 @@
 package spatutorial.client.components
 
-import diode.{Action, ActionType}
+import diode.Action
 import diode.data.Pot
 import diode.react.ModelProxy
-import japgolly.scalajs.react.{Callback, ReactComponentB}
-import org.scalajs.dom.svg.A
-import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
-import spatutorial.client.services.{ChangeDeskUsage, UpdateCrunch, UpdateMotd}
-import spatutorial.shared.{CrunchResult, SimulationResult}
-import diode.data.Pot
 import diode.react.ReactPot._
-import diode.react._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.components.Bootstrap._
-import spatutorial.client.logger._
-import spatutorial.shared.CrunchResult
 import japgolly.scalajs.react.vdom.DomCallbackResult._
+import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.{Callback, ReactComponentB, _}
+import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
+import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.services.{ChangeDeskUsage, Crunch}
+import spatutorial.shared.CrunchResult
 
 object DeskRecsChart {
   type DeskRecsModel = DashboardModels
@@ -28,12 +22,13 @@ object DeskRecsChart {
     .render_P { proxy => {
       val potCrunchResult: Pot[CrunchResult] = proxy().potCrunchResult
       val dispatch: (Action) => Callback = proxy.dispatch _
+      val workloads = proxy().workloads
       Panel(Panel.Props("Desk Recommendations and Wait times"),
         potCrunchResult.renderPending(_ >= 500, _ => <.p("Waiting for data")),
         deskRecsChart(labels, potCrunchResult),
         waitTimesChart(labels, potCrunchResult),
         deskSimulationInputs(labels, potCrunchResult, dispatch),
-        Button(Button.Props(dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, "Update")
+        workloads.render( wl => Button(Button.Props(dispatch(Crunch(wl.workloads)), CommonStyle.danger), Icon.refresh, "Update"))
       )
     }
     }.componentDidMount(scope =>

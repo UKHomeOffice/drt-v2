@@ -6,9 +6,7 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap._
-import spatutorial.client.logger._
-import spatutorial.client.services.{UpdateCrunch, UpdateMotd}
-import spatutorial.shared.CrunchResult
+import spatutorial.client.services.UpdateMotd
 
 /**
   * This is a simple component demonstrating how to display async data coming from the server
