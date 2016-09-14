@@ -3,6 +3,7 @@ package spatutorial.client.services
 import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
+import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import utest._
 
@@ -133,6 +134,13 @@ object SPACircuitTests extends TestSuite {
             val badPath2 = false
             assert(badPath2)
         }
+      }
+    }
+
+    'FlightsHandler - {
+      "given no flights, when we start, then we request flights from the api" - {
+        val model: Pot[Flights] = Empty
+        def build = new FlightsHandler(new RootModelRW[Pot[Flights]](model))
       }
     }
   }

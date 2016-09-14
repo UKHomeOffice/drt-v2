@@ -1,5 +1,7 @@
 package spatutorial.client.components
 
+import japgolly.scalajs.react.ReactComponentB.BuildResult.Aux
+import japgolly.scalajs.react.ReactComponentC.ReqProps
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 
@@ -46,7 +48,7 @@ object Bootstrap {
 
     case class Props(heading: String, style: CommonStyle.Value = CommonStyle.default)
 
-    val component = ReactComponentB[Props]("Panel")
+    val component: Aux[Props, Unit, Unit, TopNode, ReqProps[Props, Unit, Unit, TopNode]]#Out = ReactComponentB[Props]("Panel")
       .renderPC((_, p, c) =>
         <.div(bss.panelOpt(p.style),
           <.div(bss.panelHeading, p.heading),
