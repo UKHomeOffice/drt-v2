@@ -30,7 +30,7 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
     val workloadsWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.workload))(proxy => {
-      log.info(s"workloads update from subscribe isReady ${proxy.value.isReady}")
+      log.info(s"workloadsWrapper update from subscribe isReady ${proxy.value.isReady}")
     })
     val overriddenRecDesksWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.simulationResult))(simulationResult => {
       log.info(s"simulation result changed ${simulationResult.value.get.recommendedDesks.take(20)}")

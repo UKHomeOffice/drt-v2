@@ -4,9 +4,11 @@ import diode.Action
 import diode.data.Pot
 import diode.react.ModelProxy
 import diode.react.ReactPot._
+import japgolly.scalajs.react
 import japgolly.scalajs.react.vdom.DomCallbackResult._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{Callback, ReactComponentB, _}
+import spatutorial.client.components.Bootstrap.Panel.Props
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
@@ -19,7 +21,14 @@ object DeskRecsChart {
   log.info("initialising deskrecschart")
 
   def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
-    .render_P { proxy => {
+    .render_P(deskRecsRender(labels))
+    .componentDidMount(scope =>
+    Callback.log("Mounted DeskRecs")
+  ).build
+
+  def deskRecsRender(labels: IndexedSeq[String]): (ModelProxy[DeskRecsModel]) => ReactComponentU[Props, Unit, Unit, react.TopNode] = {
+    proxy => {
+      log.info(s"rendering desk recs")
       val potCrunchResult: Pot[CrunchResult] = proxy().potCrunchResult
       val potSimulationResult: Pot[SimulationResult] = proxy().potSimulationResult
       val dispatch: (Action) => Callback = proxy.dispatch _
@@ -31,9 +40,8 @@ object DeskRecsChart {
         workloads.render(wl => Button(Button.Props(dispatch(Crunch(wl.workloads)), CommonStyle.danger), Icon.refresh, "Update"))
       )
     }
-    }.componentDidMount(scope =>
-    Callback.log("Mounted DeskRecs")
-  ).build
+  }
+
   def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[SimulationResult]]]("FunkyInputs")
     .render_P {
       proxy => {
@@ -46,12 +54,13 @@ object DeskRecsChart {
     }.componentDidMount(scope =>
       Callback.log("Mounted Desk Sim Inputs")
     ).build
+
   def deskSimulationInputs(labels: IndexedSeq[String], potSimulationResult: Pot[SimulationResult], dispatch: Action => Callback): ReactNode = {
     def inputChange(idx: Int)(e: ReactEventI) = {
       val ev = e.target.value
       log.info(s"direct call in callback ${idx} ${ev}")
       Callback.log(s"callback from outside", ev, idx)
-      dispatch(ChangeDeskUsage(ev, idx))
+      dispatch(ChangeDeskUsage(ev, idx * 15))
     }
 
     <.div(
