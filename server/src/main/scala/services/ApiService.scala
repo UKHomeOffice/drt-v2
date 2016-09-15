@@ -2,11 +2,16 @@ package services
 
 import java.util.{UUID, Date}
 
+import akka.actor.ActorRef
+import akka.pattern.AskableActorRef
 import spatutorial.shared._
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-class ApiService extends Api with WorkloadsService with FlightsService {
+abstract class ApiService
+  extends Api with WorkloadsService {//with FlightsService {
+
   var todos = Seq(
     TodoItem("41424344-4546-4748-494a-4b4c4d4e4f50", 0x61626364, "Wear shirt that says “Life”. Hand out lemons on street corner.", TodoLow, completed = false),
     TodoItem("2", 0x61626364, "Make vanilla pudding. Put in mayo jar. Eat in public.", TodoNormal, completed = false),
@@ -16,13 +21,17 @@ class ApiService extends Api with WorkloadsService with FlightsService {
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")
-    s"Welcome to SPA, $name! Time is now ${new Date}"
+    s"Welcome to SPA, $name! Time is now ${
+      new Date
+    }"
   }
 
   override def getAllTodos(): Seq[TodoItem] = {
     // provide some fake Todos
     Thread.sleep(3000)
-    println(s"Sending ${todos.size} Todo items")
+    println(s"Sending ${
+      todos.size
+    } Todo items")
     todos
   }
 
@@ -55,7 +64,7 @@ class ApiService extends Api with WorkloadsService with FlightsService {
 
   override def crunch(workloads: Seq[Double]): CrunchResult = {
     println(s"Crunch requested for ${workloads}")
-    val repeat = List.fill[Int](workloads.length)_
+    val repeat = List.fill[Int](workloads.length) _
     TryRenjin.crunch(workloads, repeat(10), repeat(15))
   }
 

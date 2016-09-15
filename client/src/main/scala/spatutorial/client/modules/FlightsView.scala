@@ -12,7 +12,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 
 object FlightsView {
-
+import scala.language.existentials
   case class Props(router: RouterCtl[Loc], flightsModelProxy: ModelProxy[Pot[Flights]])
 
   case class State(flights: ReactConnectProxy[Pot[Flights]])

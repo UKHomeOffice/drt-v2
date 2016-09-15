@@ -2,9 +2,9 @@ import sbt._
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 
 /**
- * Application settings. Configure the build for your application here.
- * You normally don't have to touch the actual build definition after this.
- */
+  * Application settings. Configure the build for your application here.
+  * You normally don't have to touch the actual build definition after this.
+  */
 object Settings {
   /** The name of your application */
   val name = "scalajs-spa"
@@ -19,6 +19,7 @@ object Settings {
     "-deprecation",
     "-feature"
   )
+
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
     val scala = "2.11.8"
@@ -37,29 +38,35 @@ object Settings {
     val chartjs = "2.1.3"
 
     val playScripts = "0.5.0"
+    val sprayVersion: String = "1.3.3"
+    val json4sVersion = "3.4.0"
   }
 
   /**
-   * These dependencies are shared between JS and JVM projects
-   * the special %%% function selects the correct version for each project
-   */
+    * These dependencies are shared between JS and JVM projects
+    * the special %%% function selects the correct version for each project
+    */
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % versions.autowire,
     "me.chrons" %%% "boopickle" % versions.booPickle
   ))
 
   /** Dependencies only used by the JVM project */
-  val jvmDependencies = Def.setting(Seq(
-//    "org.specs2" %% "specs2-core" % "3.0" % Test,
+  val jvmDependencies = Def.setting((List(
+    //    "org.specs2" %% "specs2-core" % "3.0" % Test,
     "uk.gov.homeoffice.borderforce" %% "chroma-live" % "1.0",
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
     "org.renjin" % "renjin-script-engine" % "0.8.2195",
-    "joda-time" % "joda-time" % "2.9.4"
-
-  ))
+    "joda-time" % "joda-time" % "2.9.4") :::
+    List("io.spray" %% "spray-client" % versions.sprayVersion,
+      "io.spray" %% "spray-routing" % versions.sprayVersion,
+      "io.spray" %% "spray-json" % "1.3.2",
+      "com.typesafe" % "config" % "1.3.0"
+    ))
+  )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(
