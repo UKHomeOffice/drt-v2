@@ -39,13 +39,16 @@ object SPAMain extends js.JSApp {
     val workloadsWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.workload))(proxy => {
       log.info(s"workloads update from subscribe isReady ${proxy.value.isReady}")
     })
+    val overriddenRecDesksWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.simulationResult))(simulationResult => {
+      log.info(s"simulation result changed ${simulationResult.value.get.recommendedDesks.take(20)}")
+    })
     val todoWrapper = SPACircuit.connect(_.todos)
     // wrap/connect components to the circuit
     (staticRoute(root, DashboardLoc) ~>
       renderR(ctl => SPACircuit.wrap(m =>
         DashboardModels(m.workload, m.crunchResult, m.simulationResult))(proxy => {
         log.info("dashboard update")
-        workloadsWrapper()
+//        workloadsWrapper()
         Dashboard(ctl, proxy)
       })) |
       (staticRoute("#flights", FlightsLoc) ~>
