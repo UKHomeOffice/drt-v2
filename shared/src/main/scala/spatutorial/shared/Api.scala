@@ -1,7 +1,8 @@
 package spatutorial.shared
 
 import java.time.LocalDateTime
-
+import scala.collection.immutable
+import immutable.Seq
 import spatutorial.shared.FlightsApi.Flights
 
 case class ApiFlight(
@@ -39,8 +40,7 @@ object FlightsApi {
                     iata: Option[String],
                     icao: Option[String])
 
-  case class Flights(flights: Seq[ApiFlight])
-
+  case class Flights(flights: List[ApiFlight])
 }
 
 trait FlightsApi {
@@ -52,15 +52,15 @@ trait Api {
 
   def welcomeMsg(name: String): String
 
-  def getAllTodos(): Seq[TodoItem]
+  def getAllTodos(): List[TodoItem]
 
-  def updateTodo(item: TodoItem): Seq[TodoItem]
+  def updateTodo(item: TodoItem): List[TodoItem]
 
-  def deleteTodo(itemId: String): Seq[TodoItem]
+  def deleteTodo(itemId: String): List[TodoItem]
 
-  def getWorkloads(): Seq[Double]
+  def getWorkloads(): List[Double]
 
-  def crunch(workloads: Seq[Double]): CrunchResult
+  def crunch(workloads: List[Double]): CrunchResult
 
-  def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult
+  def processWork(workloads: List[Double], desks: List[Int]): SimulationResult
 }

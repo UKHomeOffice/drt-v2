@@ -6,6 +6,7 @@ import javax.script.ScriptEngineManager
 import org.renjin.sexp.{IntVector, DoubleVector}
 import spatutorial.shared.{SimulationResult, CrunchResult}
 
+import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
 object TryRenjin {

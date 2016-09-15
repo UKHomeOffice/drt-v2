@@ -65,8 +65,8 @@ object Settings {
       "io.spray" %% "spray-routing" % versions.sprayVersion,
       "io.spray" %% "spray-json" % "1.3.2",
       "com.typesafe" % "config" % "1.3.0"
-    ))
-  )
+    )))
+
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(

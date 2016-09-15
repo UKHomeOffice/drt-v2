@@ -23,7 +23,7 @@ import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared.{ApiFlight, Api}
 import spray.http._
 
-import scala.collection.immutable.Seq
+//import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +43,7 @@ class FlightsActor extends Actor with ActorLogging {
 
   def receive = {
     case GetFlights =>
-      sender ! Flights(flights.toSeq)
+      sender ! Flights(flights.toList)
     case fs: List[ApiFlight] =>
       log.info(s"Adding ${fs.length} new flights")
       flights ++ fs
@@ -67,15 +67,15 @@ class Application @Inject()
   val log = system.log
 
   val apiService = new ApiService {
-//    implicit val timeout = Timeout(5 seconds)
-//
-//    override def getFlights(st: Long, end: Long): Future[scala.Seq[ApiFlight]] = {
-//      val flights: Future[Any] = flightsActorAskable ? GetFlights
-//      val fsFuture = flights.collect {
-//        case Flights(fs) => fs
-//      }
-//      fsFuture
-//    }
+    implicit val timeout = Timeout(5 seconds)
+
+    override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = {
+      val flights: Future[Any] = flightsActorAskable ? GetFlights
+      val fsFuture = flights.collect {
+        case Flights(fs) => fs
+      }
+      fsFuture
+    }
   }
 
   val apiS: Api = apiService
@@ -132,7 +132,7 @@ class Application @Inject()
           ICAO = flight.ICAO,
           IATA = flight.IATA,
           Origin = flight.Origin,
-          SchDT = flight.SchDT)))
+          SchDT = flight.SchDT)).toList)
   }
 
   val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))

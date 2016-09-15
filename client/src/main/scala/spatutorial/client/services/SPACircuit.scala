@@ -12,6 +12,7 @@ import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
+import scala.collection.immutable.Seq
 
 // Actions
 case object RefreshTodos extends Action
@@ -30,13 +31,13 @@ case class UpdateCrunchResult(crunchResult: CrunchResult) extends Action
 
 case class UpdateSimulationResult(simulationResult: SimulationResult) extends Action
 
-case class UpdateWorkloads(workloads: Seq[Double]) extends Action
+case class UpdateWorkloads(workloads: List[Double]) extends Action
 
-case class Crunch(workload: Seq[Double]) extends Action
+case class Crunch(workload: List[Double]) extends Action
 
 case class GetWorkloads(begin: String, end: String, port: String) extends Action
 
-case class RunSimulation(workloads: Seq[Double], desks: Seq[Double]) extends Action
+case class RunSimulation(workloads: List[Double], desks: List[Double]) extends Action
 
 case class ChangeDeskUsage(value: String, index: Int) extends Action
 
@@ -183,7 +184,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Pot[CrunchResult]]) extends ActionHan
       log.info("was empty")
       val blockWidth = 15
       log.info(s"inventing workloads")
-      val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
+      val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toList
       effectOnly(Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
   }
 
