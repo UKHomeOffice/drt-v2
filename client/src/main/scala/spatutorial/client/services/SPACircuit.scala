@@ -112,10 +112,10 @@ class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends ActionHandler(mod
 class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHandler(modelRW) {
   protected def handle = {
     case action: GetWorkloads =>
-      log.info("requesting workloads from server")
+      log.info("requesting workloadsWrapper from server")
       effectOnly(Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
     case UpdateWorkloads(workloads) =>
-      log.info(s"received workloads ${workloads} from server")
+      log.info(s"received workloadsWrapper ${workloads} from server")
       updated(Ready(Workloads(workloads)), Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
   }
 }
@@ -143,6 +143,7 @@ class SimulationHandler[M](modelRW: ModelRW[M, tupleMagic])
       val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
         val newRecDesks = cr.recommendedDesks.toArray
         for (n <- k until k + 15) {
+          log.info(s"N: $n")
           newRecDesks(n) = v.toInt
         }
         cr.copy(recommendedDesks = newRecDesks)
@@ -187,11 +188,11 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
-  //  val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
+  //  val workloadsWrapper = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
 
   // initial application model
   override protected def initialModel = RootModel(Empty, Empty,
-    Empty, //Ready(Workloads(workloads)),
+    Empty, //Ready(Workloads(workloadsWrapper)),
     Empty,
     Empty,
     Empty,
