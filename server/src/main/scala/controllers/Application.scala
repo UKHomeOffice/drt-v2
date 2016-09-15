@@ -43,10 +43,11 @@ class FlightsActor extends Actor with ActorLogging {
 
   def receive = {
     case GetFlights =>
+      log.info(s"Being asked for flights and I know about ${flights.size}")
       sender ! Flights(flights.toList)
-    case fs: List[ApiFlight] =>
+    case Flights(fs) =>
       log.info(s"Adding ${fs.length} new flights")
-      flights ++ fs
+      flights ++= fs
       log.info(s"Flights now ${flights.size}")
     case message => log.info("Actor saw" + message.toString)
   }
@@ -72,7 +73,9 @@ class Application @Inject()
     override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = {
       val flights: Future[Any] = flightsActorAskable ? GetFlights
       val fsFuture = flights.collect {
-        case Flights(fs) => fs
+        case Flights(fs) =>
+          log.info(s"Got flights list ${fs}")
+          fs
       }
       fsFuture
     }

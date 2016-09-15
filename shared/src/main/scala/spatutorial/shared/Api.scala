@@ -48,7 +48,7 @@ trait FlightsApi {
 }
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
-trait Api {
+trait Api extends FlightsApi {
 
   def welcomeMsg(name: String): String
 

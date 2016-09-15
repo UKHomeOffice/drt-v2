@@ -6,13 +6,17 @@ import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.extra.router.RouterCtl
 import spatutorial.client.SPAMain.Loc
 import spatutorial.client.components.Bootstrap.Panel
+import spatutorial.client.services.RequestFlights
 import spatutorial.shared.FlightsApi.Flights
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
+import spatutorial.client.logger._
 
 object FlightsView {
-import scala.language.existentials
+
+  import scala.language.existentials
+
   case class Props(router: RouterCtl[Loc], flightsModelProxy: ModelProxy[Pot[Flights]])
 
   case class State(flights: ReactConnectProxy[Pot[Flights]])
@@ -32,7 +36,10 @@ import scala.language.existentials
         <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("BaggageUnloaded"), <.td("32")),
         <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("OnChox"), <.td("Inf")))
     )
-  )).build
+  )).componentDidMount((scope) => Callback.when(scope.props.flightsModelProxy.value.isEmpty) {
+    log.info("Flights View is empty, requesting flights")
+    scope.props.flightsModelProxy.dispatch(RequestFlights(0, 0))
+  }).build
 
   def apply(props: Props, proxy: ModelProxy[Pot[Flights]]) = component(props)
 }

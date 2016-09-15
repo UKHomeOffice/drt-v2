@@ -159,8 +159,10 @@ case class UpdateFlights(flights: Flights) extends Action
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends ActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
-      //      effectOnly(Effect(AjaxClient[Api].flights(from, to)))
-      noChange
+      effectOnly(Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights)))
+    case UpdateFlights(flights) =>
+      log.info(s"Client got flights! ${flights.flights.length}")
+      updated(Ready(flights))
   }
 }
 
@@ -210,7 +212,8 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
         log.info("setting simulation result in model")
         m.copy(simulationResult = v._2, crunchResult = v._1)
-      })))
+      })),
+      new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))))
   }
 
 }
