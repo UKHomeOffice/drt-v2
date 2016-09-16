@@ -26,7 +26,7 @@ object Dashboard {
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels])
 
-  case class State(workloads: ReactConnectProxy[Pot[Workloads]],
+  case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
                    crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]],
                    simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]])
 
@@ -66,7 +66,7 @@ object Dashboard {
     log.info("backend mounted")
     val cb: Callback = Callback.when(props.dashboardModelProxy().workloads.isEmpty) {
       props.dashboardModelProxy.dispatch(GetWorkloads("", "", "edi"))
-      //      props.dashboardModelProxy.dispatch(Crunch(props.dashboardModelProxy.value.workloads.get.workloads))
+      //      props.dashboardModelProxy.dispatch(Crunch(props.dashboardModelProxy.value.workloadsWrapper.get.workloadsWrapper))
     }
     cb
   }
@@ -85,15 +85,15 @@ object Dashboard {
         // header, MessageOfTheDay and chart components
         <.h2("Dashboard"),
         //        state.motdWrapper(Motd(_)),
-        state.workloads(x => {
-          val wlp = props.dashboardModelProxy.value.workloads
+        state.workloadsWrapper(workloadsModelProxy => {
+          val workloads: Pot[Workloads] = workloadsModelProxy.value
           <.div(
-            wlp.renderReady(wl => Chart(cp(wl.workloads))),
-            wlp.renderPending((num) => <.div(s"waiting with ${num}")),
-            wlp.renderEmpty(<.div(s"Waiting for workload")))
+            workloads.renderReady(wl => Chart(cp(wl.workloads))),
+            workloads.renderPending((num) => <.div(s"waiting with ${num}")),
+            workloads.renderEmpty(<.div(s"Waiting for workload")))
         }),
-        state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy)),
-      state.simulationResultWrapper((s: ModelProxy[Pot[SimulationResult]]) => DeskRecsChart.DeskSimInputs(labels)(s)))
+        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
+        state.simulationResultWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
       /*
         state.simulationResultWrapper(simRes =>
           state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy))),
