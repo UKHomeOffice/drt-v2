@@ -29,9 +29,9 @@ case class ApiFlight(
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
-//case class DeskRec(desks: Int)
+case class DeskRec(id: Int, desks: Int)
 
-case class SimulationResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
+case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
 
 object FlightsApi {
 
@@ -55,11 +55,11 @@ trait Api extends FlightsApi {
 
   def welcomeMsg(name: String): String
 
-  def getAllTodos(): List[TodoItem]
+  def getAllTodos(): List[DeskRecTimeslot]
 
-  def updateTodo(item: TodoItem): List[TodoItem]
+  def updateTodo(item: DeskRecTimeslot): List[DeskRecTimeslot]
 
-  def deleteTodo(itemId: String): List[TodoItem]
+  def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def getWorkloads(): List[Double]
 

@@ -12,12 +12,9 @@ import scala.util.Random
 abstract class ApiService
   extends Api with WorkloadsService with FlightsService {
 
-  var todos = List(
-    TodoItem("41424344-4546-4748-494a-4b4c4d4e4f50", 0x61626364, "Wear shirt that says “Life”. Hand out lemons on street corner.", TodoLow, completed = false),
-    TodoItem("2", 0x61626364, "Make vanilla pudding. Put in mayo jar. Eat in public.", TodoNormal, completed = false),
-    TodoItem("3", 0x61626364, "Walk away slowly from an explosion without looking back.", TodoHigh, completed = false),
-    TodoItem("4", 0x61626364, "Sneeze in front of the pope. Get blessed.", TodoNormal, completed = true)
-  )
+  var todos = (1 to 100).map(n =>
+    DeskRecTimeslot(n.toString, 0x61626364, n)
+  ).toList
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")
@@ -26,7 +23,7 @@ abstract class ApiService
     }"
   }
 
-  override def getAllTodos(): List[TodoItem] = {
+  override def getAllTodos(): List[DeskRecTimeslot] = {
     // provide some fake Todos
     Thread.sleep(3000)
     println(s"Sending ${
@@ -36,7 +33,7 @@ abstract class ApiService
   }
 
   // update a Todo
-  override def updateTodo(item: TodoItem): List[TodoItem] = {
+  override def updateTodo(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
     // TODO, update database etc :)
     if (todos.exists(_.id == item.id)) {
       todos = todos.collect {
@@ -55,7 +52,7 @@ abstract class ApiService
   }
 
   // delete a Todo
-  override def deleteTodo(itemId: String): List[TodoItem] = {
+  override def deleteTodo(itemId: String): List[DeskRecTimeslot] = {
     println(s"Deleting item with id = $itemId")
     Thread.sleep(300)
     todos = todos.filterNot(_.id == itemId)

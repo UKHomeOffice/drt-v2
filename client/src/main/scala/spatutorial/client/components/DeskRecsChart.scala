@@ -13,7 +13,7 @@ import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.services.{ChangeDeskUsage, Crunch}
-import spatutorial.shared.{CrunchResult, SimulationResult}
+import spatutorial.shared.{DeskRec, CrunchResult, SimulationResult}
 
 object DeskRecsChart {
   type DeskRecsModel = DashboardModels
@@ -51,7 +51,7 @@ object DeskRecsChart {
         val potSimulationResult: Pot[SimulationResult] = proxy()
         val dispatch: (Action) => Callback = proxy.dispatch _
         Panel(Panel.Props("Override Desk Recommendations and Wait times"),
-          deskSimulationInputs(labels, potSimulationResult, state, dispatch)
+          deskSimulationInputs(labels, potSimulationResult, dispatch)
         )
       }
     }.componentDidMount(scope =>
@@ -71,13 +71,13 @@ object DeskRecsChart {
       potSimulationResult.renderEmpty(<.p("Waiting for simulation")),
       potSimulationResult.renderReady(crunchResult => {
         log.info("rendering simulation inputs")
-        val rds = takeEvery15th(crunchResult.recommendedDesks)
+        val rds = (crunchResult.recommendedDesks)
         val skippedLabels = takeEvery15th(labels)
-        val zip: Seq[((String, Int), Int)] = skippedLabels.zip(rds).zipWithIndex
-        <.ul(zip.map { case (dr, idx) => {
-          <.li(<.span(dr._1.toString(),
-            <.input.number(^.value := dr._2,^.key:=idx.toString,
-              ^.onChange ==> inputChange(idx))))
+      val zip: IndexedSeq[(String, DeskRec)] = skippedLabels.zip(rds)
+        <.ul(zip.map { case (label, dr) => {
+          <.li(<.span(label,
+            <.input.number(^.value := dr.desks.toString,^.key:=dr.id,
+              ^.onChange ==> inputChange(dr.id))))
         }
         })
       }))

@@ -85,14 +85,14 @@ object Dashboard {
         // header, MessageOfTheDay and chart components
         <.h2("Dashboard"),
         //        state.motdWrapper(Motd(_)),
-        state.workloadsWrapper(workloadsModelProxy => {
-          val workloads: Pot[Workloads] = workloadsModelProxy.value
-          <.div(
-            workloads.renderReady(wl => Chart(cp(wl.workloads))),
-            workloads.renderPending((num) => <.div(s"waiting with ${num}")),
-            workloads.renderEmpty(<.div(s"Waiting for workload")))
-        }),
-        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
+//        state.workloadsWrapper(workloadsModelProxy => {
+//          val workloads: Pot[Workloads] = workloadsModelProxy.value
+//          <.div(
+//            workloads.renderReady(wl => Chart(cp(wl.workloads))),
+//            workloads.renderPending((num) => <.div(s"waiting with ${num}")),
+//            workloads.renderEmpty(<.div(s"Waiting for workload")))
+//        }),
+//        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
         state.simulationResultWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
       /*
         state.simulationResultWrapper(simRes =>

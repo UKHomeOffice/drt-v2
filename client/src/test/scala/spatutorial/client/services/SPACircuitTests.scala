@@ -11,13 +11,13 @@ object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
     'TodoHandler - {
       val model = Ready(Todos(Seq(
-        TodoItem("1", 0, "Test1", TodoLow, completed = false),
-        TodoItem("2", 0, "Test2", TodoLow, completed = false),
-        TodoItem("3", 0, "Test3", TodoHigh, completed = true)
+        DeskRecTimeslot("1", 0, "Test1", TodoLow, completed = false),
+        DeskRecTimeslot("2", 0, "Test2", TodoLow, completed = false),
+        DeskRecTimeslot("3", 0, "Test3", TodoHigh, completed = true)
       )))
 
       val newTodos = Seq(
-        TodoItem("3", 0, "Test3", TodoHigh, completed = true)
+        DeskRecTimeslot("3", 0, "Test3", TodoHigh, completed = true)
       )
 
       def build = new TodoHandler(new RootModelRW(model))
@@ -41,7 +41,7 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateTodoAdd - {
         val h = build
-        val result = h.handle(UpdateTodo(TodoItem("4", 0, "Test4", TodoNormal, completed = false)))
+        val result = h.handle(UpdateTodo(DeskRecTimeslot("4", 0, "Test4", TodoNormal, completed = false)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
             assert(newValue.get.items.size == 4)
@@ -54,7 +54,7 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateTodo - {
         val h = build
-        val result = h.handle(UpdateTodo(TodoItem("1", 0, "Test111", TodoNormal, completed = false)))
+        val result = h.handle(UpdateTodo(DeskRecTimeslot("1", 0, "Test111", TodoNormal, completed = false)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
             assert(newValue.get.items.size == 3)

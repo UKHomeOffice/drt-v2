@@ -4,7 +4,7 @@ import java.io.InputStream
 import javax.script.ScriptEngineManager
 
 import org.renjin.sexp.{IntVector, DoubleVector}
-import spatutorial.shared.{SimulationResult, CrunchResult}
+import spatutorial.shared.{DeskRec, SimulationResult, CrunchResult}
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
@@ -35,7 +35,7 @@ object TryRenjin {
     loadOptimiserScript
     initialiseWorkloads(workloads)
     initialiseDesks("desks", desks)
-    SimulationResult(desks.toVector, runSimulation(desks, "desks").toVector)
+    SimulationResult(desks.zipWithIndex.map(t => DeskRec(t._1, t._2)).toVector, runSimulation(desks, "desks").toVector)
   }
 
   def runSimulation(deskRecsScala: Seq[Int], desks: String): Seq[Int] = {

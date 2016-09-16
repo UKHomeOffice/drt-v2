@@ -6,6 +6,7 @@ import diode._
 import diode.data._
 import diode.util._
 import diode.react.ReactConnector
+import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.services.HandyStuff.tupleMagic
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
@@ -17,11 +18,11 @@ import spatutorial.client.logger._
 // Actions
 case object RefreshTodos extends Action
 
-case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
+case class UpdateAllTodos(todos: Seq[DeskRecTimeslot]) extends Action
 
-case class UpdateTodo(item: TodoItem) extends Action
+case class UpdateTodo(item: DeskRecTimeslot) extends Action
 
-case class DeleteTodo(item: TodoItem) extends Action
+case class DeleteTodo(item: DeskRecTimeslot) extends Action
 
 case class UpdateMotd(potResult: Pot[String] = Empty) extends PotAction[String, UpdateMotd] {
   override def next(value: Pot[String]) = UpdateMotd(value)
@@ -51,12 +52,13 @@ case class RootModel(todos: Pot[Todos],
                      workload: Pot[Workloads],
                      crunchResult: Pot[CrunchResult],
                      realDesks: Pot[Seq[Double]],
+                     userDeskRec: Pot[Seq[DeskRec]],
                      simulationResult: Pot[SimulationResult],
                      flights: Pot[Flights]
                     )
 
-case class Todos(items: Seq[TodoItem]) {
-  def updated(newItem: TodoItem) = {
+case class Todos(items: Seq[DeskRecTimeslot]) {
+  def updated(newItem: DeskRecTimeslot) = {
     items.indexWhere(_.id == newItem.id) match {
       case -1 =>
         // add new
@@ -67,7 +69,7 @@ case class Todos(items: Seq[TodoItem]) {
     }
   }
 
-  def remove(item: TodoItem) = Todos(items.filterNot(_ == item))
+  def remove(item: DeskRecTimeslot) = Todos(items.filterNot(_ == item))
 }
 
 /**
@@ -123,7 +125,7 @@ object HandyStuff {
   type tupleMagic = (Pot[CrunchResult], Pot[SimulationResult])
 }
 
-class SimulationHandler[M](modelRW: ModelRW[M, tupleMagic])
+class SimulationHandler[M](modelRW: ModelRW[M, Pot[SimulationResult]])
   extends ActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(workloads, desks) =>
@@ -137,19 +139,13 @@ class SimulationHandler[M](modelRW: ModelRW[M, tupleMagic])
       noChange
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
-      val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
-      val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
+      val simModel: ModelR[M, Pot[SimulationResult]] = modelRW
       val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
         val newRecDesks = cr.recommendedDesks.toArray
-        for (n <- k until k + 15) {
-          log.info(s"N: $n")
-          newRecDesks(n) = v.toInt
-        }
+        newRecDesks(k) = DeskRec(k, v.toInt)
         cr.copy(recommendedDesks = newRecDesks)
       })
-      val newVal = (crunchModel.value, newValSimulation)
-      log.info(s"NV Sim: ${newVal._2.get.recommendedDesks.take(5)}")
-      ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
+      ModelUpdate(modelRW.updated(newValSimulation))
   }
 }
 
@@ -180,7 +176,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
       val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
       log.info(s"Model:${simModel.value}")
 
-      val newVal = (Ready(crunchResult), Ready(SimulationResult(crunchResult.recommendedDesks, Nil)))
+      val newVal = (Ready(crunchResult), Ready(SimulationResult(DeskRecsChart.takeEvery15th(crunchResult.recommendedDesks).zipWithIndex.map(t => DeskRec(t._1, t._2)).toIndexedSeq, Nil)))
       ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
   }
 
@@ -197,6 +193,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     Empty,
     Empty,
     Empty,
+    Empty,
     Empty)
 
   // combine all handlers into one
@@ -210,9 +207,9 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
         log.info("setting crunch result and simulation desks in model")
         m.copy(simulationResult = v._2, crunchResult = v._1)
       })),
-      new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
+      new SimulationHandler(zoomRW(m => m.simulationResult)((m, v) => {
         log.info("setting simulation result in model")
-        m.copy(simulationResult = v._2)//, crunchResult = v._1)
+        m.copy(simulationResult = v) //, crunchResult = v._1)
       })),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))))
   }

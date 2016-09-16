@@ -11,34 +11,23 @@ object TodoList {
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class TodoListProps(
-    items: Seq[TodoItem],
-    stateChange: TodoItem => Callback,
-    editItem: TodoItem => Callback,
-    deleteItem: TodoItem => Callback
-  )
+                            items: Seq[DeskRecTimeslot],
+                            stateChange: DeskRecTimeslot => Callback,
+                            editItem: DeskRecTimeslot => Callback,
+                            deleteItem: DeskRecTimeslot => Callback
+                          )
 
   private val TodoList = ReactComponentB[TodoListProps]("TodoList")
     .render_P(p => {
       val style = bss.listGroup
-      def renderItem(item: TodoItem) = {
-        // convert priority into Bootstrap style
-        val itemStyle = item.priority match {
-          case TodoLow => style.itemOpt(CommonStyle.info)
-          case TodoNormal => style.item
-          case TodoHigh => style.itemOpt(CommonStyle.danger)
-        }
-        <.li(itemStyle,
-          <.input.checkbox(^.checked := item.completed, ^.onChange --> p.stateChange(item.copy(completed = !item.completed))),
-          <.span(" "),
-          if (item.completed) <.s(item.content) else <.span(item.content),
-          Button(Button.Props(p.editItem(item), addStyles = Seq(bss.pullRight, bss.buttonXS)), "Edit"),
-          Button(Button.Props(p.deleteItem(item), addStyles = Seq(bss.pullRight, bss.buttonXS)), "Delete")
-        )
+      def renderItem(item: DeskRecTimeslot) = {
+        <.li(<.input.number(
+          ^.value := item.deskRec, ^.onChange ==> ((e: ReactEventI) => p.stateChange(item.copy(deskRec = e.target.value.toInt)))))
       }
       <.ul(style.listGroup)(p.items map renderItem)
     })
     .build
 
-  def apply(items: Seq[TodoItem], stateChange: TodoItem => Callback, editItem: TodoItem => Callback, deleteItem: TodoItem => Callback) =
+  def apply(items: Seq[DeskRecTimeslot], stateChange: DeskRecTimeslot => Callback, editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
     TodoList(TodoListProps(items, stateChange, editItem, deleteItem))
 }
