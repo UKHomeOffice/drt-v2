@@ -105,5 +105,5 @@ object Dashboard {
     .componentDidMount(scope => mounted(scope.props))
     .build
 
-  def apply(router: RouterCtl[Loc], crunchProxy: ModelProxy[DashboardModels]) = component(Props(router, crunchProxy))
+  def apply(router: RouterCtl[Loc], dashboardProps: ModelProxy[DashboardModels]) = component(Props(router, dashboardProps))
 }

@@ -1,16 +1,35 @@
 package spatutorial.client.modules
 
 import diode.data.Pot
-import diode.react.{ReactConnectProxy, ModelProxy}
+import diode.react.{ReactPot, ReactConnectProxy, ModelProxy}
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.extra.router.RouterCtl
 import spatutorial.client.SPAMain.Loc
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.services.RequestFlights
+import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi.Flights
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
+import spatutorial.client.logger._
+import diode.react.ReactPot._
+import diode.data.Pot
+import diode.react._
+import diode.util._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.prefix_<^._
+import spatutorial.client.SPAMain.{Loc, TodoLoc}
+import spatutorial.client.components.Bootstrap.Panel
+import spatutorial.client.components._
+import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
+import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.{CrunchResult, SimulationResult}
+
+import scala.scalajs.js
+import scala.util.Random
+import scala.language.existentials
 import spatutorial.client.logger._
 
 object FlightsView {
@@ -26,20 +45,64 @@ object FlightsView {
       State(p.flightsModelProxy.connect(m => m))
     ).renderPS((_, proxy, state) => Panel(Panel.Props("Flights"),
     <.h2("Flights"),
-    <.table(^.className := "table", ^.className := "table-striped",
-      <.thead(<.th("Scheduled Arrival Date"), <.th("Flight Number"), <.th("Carrier"), <.th("Actual Arrival Date"), <.th("Status"), <.th("Pax")),
-      <.tbody(
-        <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("TimeTraveller"), <.td("Inf")),
-        <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("TimeTraveller"), <.td("123")),
-        <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("Engines Failing"), <.td("50")),
-        <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("What do you think?"), <.td("19")),
-        <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("BaggageUnloaded"), <.td("32")),
-        <.tr(<.td("2016-05-10T13:39"), <.td("123"), <.td("BA"), <.td("3023-never"), <.td("OnChox"), <.td("Inf")))
-    )
-  )).componentDidMount((scope) => Callback.when(scope.props.flightsModelProxy.value.isEmpty) {
+    state.flights(x => {
+      <.div(^.className := "table-responsive",
+        proxy.flightsModelProxy.value.renderReady(flights =>
+          <.table(^.className := "table", ^.className := "table-striped",
+            flightHeaders, <.tbody( flights.flights.sortBy(_.Operator).reverse.map(flightRow) ))))
+    }))).componentDidMount((scope) => Callback.when(scope.props.flightsModelProxy.value.isEmpty) {
     log.info("Flights View is empty, requesting flights")
     scope.props.flightsModelProxy.dispatch(RequestFlights(0, 0))
   }).build
+
+  def flightHeaders() = {
+    val hs = List("Operator",
+      "Status",
+      "EstDT",
+      "ActDT",
+      "EstChoxDT",
+      "ActChoxDT",
+      "Gate",
+      "Stand",
+      "MaxPax",
+      "ActPax",
+      "TranPax",
+      "RunwayID",
+      "BaggageReclaimId",
+      "FlightID",
+      "AirportID",
+      "Terminal",
+      "ICAO",
+      "IATA",
+      "Origin",
+      "SchDT")
+    <.thead(hs.map(<.th(_)))
+  }
+
+  def flightRow(f: ApiFlight) = {
+    val vals = List[String](
+      f.Operator,
+      f.Status,
+      f.EstDT,
+      f.ActDT,
+      f.EstChoxDT,
+      f.ActChoxDT,
+      f.Gate,
+      f.Stand,
+      f.MaxPax.toString,
+      f.ActPax.toString,
+      f.TranPax.toString,
+      f.RunwayID,
+      f.BaggageReclaimId,
+      f.FlightID.toString,
+      f.AirportID,
+      f.Terminal,
+      f.ICAO,
+      f.IATA,
+      f.Origin,
+      f.SchDT)
+    <.tr(vals.map(v => <.td(v.toString)))
+  }
 
   def apply(props: Props, proxy: ModelProxy[Pot[Flights]]) = component(props)
 }

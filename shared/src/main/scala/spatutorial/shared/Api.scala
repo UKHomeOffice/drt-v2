@@ -29,6 +29,8 @@ case class ApiFlight(
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
+//case class DeskRec(desks: Int)
+
 case class SimulationResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
 object FlightsApi {
@@ -41,6 +43,7 @@ object FlightsApi {
                     icao: Option[String])
 
   case class Flights(flights: List[ApiFlight])
+
 }
 
 trait FlightsApi {

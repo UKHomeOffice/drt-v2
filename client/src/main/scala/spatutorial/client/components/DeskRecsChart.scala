@@ -2,7 +2,7 @@ package spatutorial.client.components
 
 import diode.Action
 import diode.data.Pot
-import diode.react.ModelProxy
+import diode.react.{ReactConnectProxy, ModelProxy}
 import diode.react.ReactPot._
 import japgolly.scalajs.react
 import japgolly.scalajs.react.vdom.DomCallbackResult._
@@ -19,6 +19,8 @@ object DeskRecsChart {
   type DeskRecsModel = DashboardModels
 
   log.info("initialising deskrecschart")
+
+  case class State(deskRecs: ReactConnectProxy[Pot[SimulationResult]])
 
   def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
     .render_P(deskRecsRender(labels))
@@ -43,14 +45,15 @@ object DeskRecsChart {
   }
 
   def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[SimulationResult]]]("FunkyInputs")
-    .render_P {
-      proxy => {
-      val potSimulationResult: Pot[SimulationResult] = proxy()
-      val dispatch: (Action) => Callback = proxy.dispatch _
-      Panel(Panel.Props("Desk Recommendations and Wait times"),
-        deskSimulationInputs(labels, potSimulationResult, dispatch)
-      )
-    }
+    .initialState_P((p: ModelProxy[Pot[SimulationResult]]) => State(p.connect(f => f)))
+    .renderPS {
+      (_, proxy, state) => {
+        val potSimulationResult: Pot[SimulationResult] = proxy()
+        val dispatch: (Action) => Callback = proxy.dispatch _
+        Panel(Panel.Props("Override Desk Recommendations and Wait times"),
+          deskSimulationInputs(labels, potSimulationResult, state, dispatch)
+        )
+      }
     }.componentDidMount(scope =>
       Callback.log("Mounted Desk Sim Inputs")
     ).build
@@ -63,7 +66,7 @@ object DeskRecsChart {
       dispatch(ChangeDeskUsage(ev, idx * 15))
     }
 
-    <.div(
+    <.div(^.key := "deskRecsInput",
       potSimulationResult.renderEmpty(<.p("Waiting for simulation")),
       potSimulationResult.renderReady(crunchResult => {
         log.info("rendering simulation inputs")
@@ -71,8 +74,8 @@ object DeskRecsChart {
         val skippedLabels = takeEvery15th(labels)
         val zip: Seq[((String, Int), Int)] = skippedLabels.zip(rds).zipWithIndex
         <.ul(zip.map { case (dr, idx) => {
-          <.li(<.span(dr._1.toString(),
-            <.input.number(^.value := dr._2,
+          <.li(<.span(dr._1.toString(), ^.key := dr._1.toString,
+            <.input.number(^.value := dr._2, ^.key := s"input${idx}",
               ^.onChange ==> inputChange(idx))))
         }
         })

@@ -8,7 +8,7 @@ import diode.util._
 import diode.react.ReactConnector
 import spatutorial.client.services.HandyStuff.tupleMagic
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{SimulationResult, CrunchResult, TodoItem, Api}
+import spatutorial.shared._
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
@@ -212,7 +212,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
         log.info("setting simulation result in model")
-        m.copy(simulationResult = v._2, crunchResult = v._1)
+        m.copy(simulationResult = v._2)//, crunchResult = v._1)
       })),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))))
   }
