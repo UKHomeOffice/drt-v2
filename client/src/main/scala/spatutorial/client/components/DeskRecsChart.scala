@@ -58,12 +58,13 @@ object DeskRecsChart {
   def deskSimulationInputs(labels: IndexedSeq[String], potSimulationResult: Pot[SimulationResult], dispatch: Action => Callback): ReactNode = {
     def inputChange(idx: Int)(e: ReactEventI) = {
       val ev = e.target.value
+      e.preventDefault()
       log.info(s"direct call in callback ${idx} ${ev}")
       Callback.log(s"callback from outside", ev, idx)
       dispatch(ChangeDeskUsage(ev, idx * 15))
     }
 
-    <.div(
+    <.div(^.key := "inputs",
       potSimulationResult.renderEmpty(<.p("Waiting for simulation")),
       potSimulationResult.renderReady(crunchResult => {
         log.info("rendering simulation inputs")
@@ -72,7 +73,7 @@ object DeskRecsChart {
         val zip: Seq[((String, Int), Int)] = skippedLabels.zip(rds).zipWithIndex
         <.ul(zip.map { case (dr, idx) => {
           <.li(<.span(dr._1.toString(),
-            <.input.number(^.value := dr._2,
+            <.input.number(^.value := dr._2,^.key:=idx.toString,
               ^.onChange ==> inputChange(idx))))
         }
         })
