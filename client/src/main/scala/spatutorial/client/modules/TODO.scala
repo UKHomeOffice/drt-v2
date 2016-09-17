@@ -13,7 +13,7 @@ import spatutorial.shared._
 
 import scalacss.ScalaCssReact._
 
-object Todo {
+object UserDeskRecsComponent {
 
   case class Props(proxy: ModelProxy[Pot[UserDeskRecs]])
 
@@ -41,7 +41,7 @@ object Todo {
     }
 
     def render(p: Props, s: State) =
-      Panel(Panel.Props("What needs to be done"), <.div(
+      Panel(Panel.Props("Enter your real (or projected) desk numbers to see projected queue times"), <.div(
         p.proxy().renderFailed(ex => "Error loading"),
         p.proxy().renderPending(_ > 10, _ => "Loading..."),
         p.proxy().render(todos =>
@@ -50,7 +50,6 @@ object Todo {
             item => p.proxy.dispatch(UpdateDeskRecsTime(item)),
             item => editTodo(Some(item)),
             item => p.proxy.dispatch(DeleteTodo(item)))),
-        Button(Button.Props(editTodo(None)), Icon.plusSquare, " New"),
         p.proxy().render(todos =>
           Button(
             Button.Props(

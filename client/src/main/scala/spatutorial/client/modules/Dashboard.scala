@@ -101,7 +101,8 @@ object Dashboard {
               workloads.renderPending((num) => <.div(s"waiting with ${num}")),
               workloads.renderEmpty(<.div(s"Waiting for workload")))
           })),
-        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
+        state.crunchResultWrapper(s =>
+          DeskRecsChart(labels, props.dashboardModelProxy)),
         state.userDeskRecsWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
       /*
         state.simulationResultWrapper(simRes =>

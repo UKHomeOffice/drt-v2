@@ -23,10 +23,15 @@ abstract class ApiService
 
   override def getAllTodos(): List[DeskRecTimeslot] = {
     // provide some fake Todos
-    Thread.sleep(3000)
-    println(s"Sending ${
-      todos.size
-    } Todo items")
+//    Thread.sleep(3000)
+    println(s"Sending ${ todos.size } Todo items")
+    todos
+  }
+
+
+  override def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot] = {
+    println("Setting all the todos on the server")
+    todos = items
     todos
   }
 

@@ -10,7 +10,7 @@ import boopickle.Default._
 //
 //case object TodoHigh extends TodoPriority
 
-case class DeskRecTimeslot(id: String, timeStamp: Int, deskRec: Int)
+case class DeskRecTimeslot(id: String, timeLabel: String, timeStamp: Long, deskRec: Int)
 
 //object TodoPriority {
 //  implicit val todoPriorityPickler: Pickler[TodoPriority] = generatePickler[TodoPriority]

@@ -57,6 +57,8 @@ trait Api extends FlightsApi {
 
   def getAllTodos(): List[DeskRecTimeslot]
 
+  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
+
   def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
 
   def deleteTodo(itemId: String): List[DeskRecTimeslot]

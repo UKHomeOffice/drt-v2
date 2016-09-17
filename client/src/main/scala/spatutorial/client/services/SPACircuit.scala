@@ -84,7 +84,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Pot[UserDeskRecs]]) extends Action
   override def handle = {
     case RefreshTodos =>
       log.info("RefreshTodos")
-//      effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
+      //      effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
       noChange
     case UpdateAllTodos(todos) =>
       // got new todos, update model
@@ -94,7 +94,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Pot[UserDeskRecs]]) extends Action
       log.info(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
       val newDesksPot: Pot[UserDeskRecs] = value.map(_.updated(item))
-      updated(newDesksPot, Effect(Future(RunSimulation(Nil, newDesksPot.get.items.map(_.deskRec).toList))))//, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+      updated(newDesksPot, Effect(Future(RunSimulation(Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -143,7 +143,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
       val simModel: ModelRW[M, Pot[UserDeskRecs]] = modelRW
-      val newUserRecs: UserDeskRecs = simModel.value.get.updated(DeskRecTimeslot(k.toString, k, v.toInt))
+      val newUserRecs: UserDeskRecs = simModel.value.get.updated(DeskRecTimeslot(k.toString, k.toString, k, v.toInt))
       updated(Ready(newUserRecs))
   }
 }
@@ -178,13 +178,13 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
       effectOnly(Effect(AjaxClient[Api].crunch(workload).call().map(UpdateCrunchResult)))
     case UpdateCrunchResult(crunchResult) =>
       log.info("UpdateCrunchResult")
-
+      //todo zip with labels?, or, probably better, get these prepoluated from the server response?
       val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2, t._1)))
+        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2.toString,t._2, t._1)))
 
-      val newVal = (Ready(crunchResult), Ready(newDeskRec))
-      updated(newVal)
+      updated((Ready(crunchResult), Ready(newDeskRec)),
+        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(UpdateAllTodos)))
   }
 
 }
@@ -210,7 +210,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
-      new CrunchHandler(zoomRW(m => (m.crunchResult,  m.userDeskRec))((m, v) => {
+      new CrunchHandler(zoomRW(m => (m.crunchResult, m.userDeskRec))((m, v) => {
         log.info(s"setting crunch result and userdesk recs desks in model ${v._2.take(10)}")
         m.copy(crunchResult = v._1, userDeskRec = v._2)
       })),

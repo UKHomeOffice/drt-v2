@@ -58,7 +58,7 @@ object SPAMain extends js.JSApp {
         ) |
       (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
         <.div(
-          todoWrapper(Todo(_)),
+          todoWrapper(UserDeskRecsComponent(_)),
           simulationResultWrapper(srw => {
             log.info("running simresultchart again")
             DeskRecsChart.userSimulationWaitTimesChart(Dashboard.labels, srw)

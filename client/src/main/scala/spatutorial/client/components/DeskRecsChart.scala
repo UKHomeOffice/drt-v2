@@ -36,7 +36,9 @@ object DeskRecsChart {
       val dispatch: (Action) => Callback = proxy.dispatch _
       val workloads = proxy().workloads
       Panel(Panel.Props("Desk Recommendations and Wait times"),
-        potCrunchResult.renderPending(_ >= 500, _ => <.p("Waiting for data")),
+        potCrunchResult.renderPending(_ >= 50, _ => <.p("Waiting for crunch result")),
+        potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
+        potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
         deskRecsChart(labels, potCrunchResult),
         waitTimesChart(labels, potCrunchResult),
         workloads.render(wl => Button(Button.Props(dispatch(Crunch(wl.workloads)), CommonStyle.danger), Icon.refresh, "Update"))
