@@ -12,7 +12,7 @@ import scala.util.Random
 abstract class ApiService
   extends Api with WorkloadsService with FlightsService {
 
-  var todos = (1 to 100).map(n =>
+  var todos = (1 to (1440/15)).map(n =>
     DeskRecTimeslot(n.toString, 0x61626364, n)
   ).toList
 
@@ -33,7 +33,7 @@ abstract class ApiService
   }
 
   // update a Todo
-  override def updateTodo(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
+  override def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
     // TODO, update database etc :)
     if (todos.exists(_.id == item.id)) {
       todos = todos.collect {
@@ -67,6 +67,6 @@ abstract class ApiService
 
   override def processWork(workloads: List[Double], desks: List[Int]): SimulationResult = {
     println(s"processWork")
-    TryRenjin.processWork(workloads, desks)
+    TryRenjin.processWork(workloads, desks.flatMap(x => List.fill(15)(x)))
   }
 }

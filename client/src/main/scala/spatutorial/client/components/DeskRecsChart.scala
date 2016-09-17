@@ -12,7 +12,7 @@ import spatutorial.client.components.Bootstrap.Panel.Props
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
-import spatutorial.client.services.{ChangeDeskUsage, Crunch}
+import spatutorial.client.services.{RunSimulation, ChangeDeskUsage, Crunch}
 import spatutorial.shared.{DeskRec, CrunchResult, SimulationResult}
 
 object DeskRecsChart {
@@ -25,8 +25,8 @@ object DeskRecsChart {
   def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
     .render_P(deskRecsRender(labels))
     .componentDidMount(scope =>
-    Callback.log("Mounted DeskRecs")
-  ).build
+      Callback.log("Mounted DeskRecs")
+    ).build
 
   def deskRecsRender(labels: IndexedSeq[String]): (ModelProxy[DeskRecsModel]) => ReactComponentU[Props, Unit, Unit, react.TopNode] = {
     proxy => {
@@ -44,39 +44,37 @@ object DeskRecsChart {
     }
   }
 
-  def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[SimulationResult]]]("FunkyInputs")
-    .initialState_P((p: ModelProxy[Pot[SimulationResult]]) => State(p.connect(f => f)))
+  def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[Seq[DeskRec]]]]("FunkyInputs")
     .renderPS {
       (_, proxy, state) => {
-        val potSimulationResult: Pot[SimulationResult] = proxy()
+        val potSimulationResult = proxy()
         val dispatch: (Action) => Callback = proxy.dispatch _
         Panel(Panel.Props("Override Desk Recommendations and Wait times"),
           deskSimulationInputs(labels, potSimulationResult, dispatch)
         )
       }
     }.componentDidMount(scope =>
-      Callback.log("Mounted Desk Sim Inputs")
-    ).build
+    Callback.log("Mounted Desk Sim Inputs")
+  ).build
 
-  def deskSimulationInputs(labels: IndexedSeq[String], potSimulationResult: Pot[SimulationResult], dispatch: Action => Callback): ReactNode = {
+  def deskSimulationInputs(labels: IndexedSeq[String], potSimulationResult: Pot[Seq[DeskRec]], dispatch: Action => Callback): ReactNode = {
     def inputChange(idx: Int)(e: ReactEventI) = {
       val ev = e.target.value
       e.preventDefault()
       log.info(s"direct call in callback ${idx} ${ev}")
       Callback.log(s"callback from outside", ev, idx)
-      dispatch(ChangeDeskUsage(ev, idx * 15))
+      dispatch(ChangeDeskUsage(ev, idx))
     }
 
     <.div(^.key := "inputs",
       potSimulationResult.renderEmpty(<.p("Waiting for simulation")),
-      potSimulationResult.renderReady(crunchResult => {
+      potSimulationResult.renderReady(rds => {
         log.info("rendering simulation inputs")
-        val rds = (crunchResult.recommendedDesks)
         val skippedLabels = takeEvery15th(labels)
-      val zip: IndexedSeq[(String, DeskRec)] = skippedLabels.zip(rds)
+        val zip: IndexedSeq[(String, DeskRec)] = skippedLabels.zip(rds)
         <.ul(zip.map { case (label, dr) => {
           <.li(<.span(label,
-            <.input.number(^.value := dr.desks.toString,^.key:=dr.id,
+            <.input.number(^.value := dr.desks.toString, ^.key := dr.id,
               ^.onChange ==> inputChange(dr.id))))
         }
         })
@@ -95,6 +93,28 @@ object DeskRecsChart {
       ))
     })
   }
+
+  def userSimulationWaitTimesChart(labels: IndexedSeq[String],
+                                   simulationResult: ModelProxy[Pot[SimulationResult]]) = {
+    val component = ReactComponentB[ModelProxy[Pot[SimulationResult]]]("UserSimulationChart").render_P(proxy => {
+      log.info("rendering chart")
+      if (proxy().isReady) {
+        log.info(s"Think our simulation result is ready! ${proxy()}")
+        val grouped: Iterator[Seq[Int]] = proxy().get.waitTimes.grouped(15)
+        val maxInEachGroup: Iterator[Int] = grouped.map(_.max)
+        val sampledWaitTimes = maxInEachGroup.map(_.toDouble).toList
+        val sampledLabels = takeEvery15th(labels)
+        Chart(Chart.ChartProps("Simulated Wait Times",
+          Chart.LineChart,
+          ChartData(sampledLabels, Seq(ChartDataset(sampledWaitTimes, "Simulated Wait Times")))
+        ))
+      } else {
+        <.p("waiting for data")
+      }
+    }).build
+    component(simulationResult)
+  }
+
 
   def deskRecsChart(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult]): ReactNode = {
     potCrunchResult.render(chartData =>

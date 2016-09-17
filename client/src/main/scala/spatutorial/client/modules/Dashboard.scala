@@ -12,7 +12,7 @@ import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{CrunchResult, SimulationResult}
+import spatutorial.shared.{DeskRec, CrunchResult, SimulationResult}
 
 import scala.scalajs.js
 import scala.util.Random
@@ -21,14 +21,21 @@ import spatutorial.client.logger._
 
 object Dashboard {
 
-  case class DashboardModels(workloads: Pot[Workloads], potCrunchResult: Pot[CrunchResult], potSimulationResult: Pot[SimulationResult])
+  case class DashboardModels(workloads: Pot[Workloads],
+                             potCrunchResult: Pot[CrunchResult],
+                             potSimulationResult: Pot[SimulationResult],
+                             potUserDeskRecs: Pot[Seq[DeskRec]]
+                            )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
-                   dashboardModelProxy: ModelProxy[DashboardModels])
+                   dashboardModelProxy: ModelProxy[DashboardModels]
+                  )
 
   case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
                    crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]],
-                   simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]])
+                   simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]],
+                   userDeskRecsWrapper: ReactConnectProxy[Pot[Seq[DeskRec]]]
+                  )
 
   val baseDate = new js.Date(2016, 10, 1, 7)
   val millisPer15Minutes = 1000 * 60
@@ -77,23 +84,25 @@ object Dashboard {
     .initialState_P(props => State(
     props.dashboardModelProxy.connect(m => m.workloads),
     props.dashboardModelProxy.connect(m => m.potCrunchResult),
-    props.dashboardModelProxy.connect(m => m.potSimulationResult)
+    props.dashboardModelProxy.connect(m => m.potSimulationResult),
+    props.dashboardModelProxy.connect(_.potUserDeskRecs)
   ))
     .renderPS { (_, props, state: State) =>
       log.info(s"evaluating dashboard ${props}:${state}")
       <.div(
         // header, MessageOfTheDay and chart components
         <.h2("Dashboard"),
-        //        state.motdWrapper(Motd(_)),
-//        state.workloadsWrapper(workloadsModelProxy => {
-//          val workloads: Pot[Workloads] = workloadsModelProxy.value
-//          <.div(
-//            workloads.renderReady(wl => Chart(cp(wl.workloads))),
-//            workloads.renderPending((num) => <.div(s"waiting with ${num}")),
-//            workloads.renderEmpty(<.div(s"Waiting for workload")))
-//        }),
-//        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
-        state.simulationResultWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
+        //                state.motdWrapper(Motd(_)),
+        state.simulationResultWrapper(srw =>
+          state.workloadsWrapper(workloadsModelProxy => {
+            val workloads: Pot[Workloads] = workloadsModelProxy.value
+            <.div(
+              workloads.renderReady(wl => Chart(cp(wl.workloads))),
+              workloads.renderPending((num) => <.div(s"waiting with ${num}")),
+              workloads.renderEmpty(<.div(s"Waiting for workload")))
+          })),
+        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
+        state.userDeskRecsWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
       /*
         state.simulationResultWrapper(simRes =>
           state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy))),

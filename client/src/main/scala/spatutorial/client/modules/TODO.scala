@@ -34,7 +34,7 @@ object Todo {
         Callback.log("Todo editing cancelled")
       } else {
         Callback.log(s"Todo edited: $item") >>
-          $.props >>= (_.proxy.dispatch(UpdateTodo(item)))
+          $.props >>= (_.proxy.dispatch(UpdateDeskRecsTime(item)))
       }
       // hide the edit dialog, chain callbacks
       cb >> $.modState(s => s.copy(showTodoForm = false))
@@ -44,10 +44,13 @@ object Todo {
       Panel(Panel.Props("What needs to be done"), <.div(
         p.proxy().renderFailed(ex => "Error loading"),
         p.proxy().renderPending(_ > 10, _ => "Loading..."),
-        p.proxy().render(todos => TodoList(todos.items, item => p.proxy.dispatch(UpdateTodo(item)),
+        p.proxy().render(todos => TodoList(todos.items, item => p.proxy.dispatch(UpdateDeskRecsTime(item)),
           item => editTodo(Some(item)), item => p.proxy.dispatch(DeleteTodo(item)))),
-        Button(Button.Props(editTodo(None)), Icon.plusSquare, " New")))
-
+        Button(Button.Props(editTodo(None)), Icon.plusSquare, " New"),
+        p.proxy().render(todos => Button(Button.Props(p.proxy.dispatch(RunSimulation(Nil, todos.items.map(_.deskRec).toList))),
+          Icon.play,
+          "Run Simulation"
+        ))))
   }
 
   // create the React component for To Do management

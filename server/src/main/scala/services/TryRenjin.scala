@@ -32,6 +32,7 @@ object TryRenjin {
   }
 
   def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult = {
+    println(s"${workloads.length}, ${desks.length}")
     loadOptimiserScript
     initialiseWorkloads(workloads)
     initialiseDesks("desks", desks)

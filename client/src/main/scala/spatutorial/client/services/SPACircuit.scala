@@ -11,6 +11,7 @@ import spatutorial.client.services.HandyStuff.tupleMagic
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import boopickle.Default._
+import scala.collection.immutable.IndexedSeq
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
@@ -20,7 +21,7 @@ case object RefreshTodos extends Action
 
 case class UpdateAllTodos(todos: Seq[DeskRecTimeslot]) extends Action
 
-case class UpdateTodo(item: DeskRecTimeslot) extends Action
+case class UpdateDeskRecsTime(item: DeskRecTimeslot) extends Action
 
 case class DeleteTodo(item: DeskRecTimeslot) extends Action
 
@@ -38,7 +39,7 @@ case class Crunch(workload: List[Double]) extends Action
 
 case class GetWorkloads(begin: String, end: String, port: String) extends Action
 
-case class RunSimulation(workloads: List[Double], desks: List[Double]) extends Action
+case class RunSimulation(workloads: List[Double], desks: List[Int]) extends Action
 
 case class ChangeDeskUsage(value: String, index: Int) extends Action
 
@@ -52,7 +53,7 @@ case class RootModel(todos: Pot[Todos],
                      workload: Pot[Workloads],
                      crunchResult: Pot[CrunchResult],
                      realDesks: Pot[Seq[Double]],
-                     userDeskRec: Pot[Seq[DeskRec]],
+                     userDeskRec: Pot[IndexedSeq[DeskRec]],
                      simulationResult: Pot[SimulationResult],
                      flights: Pot[Flights]
                     )
@@ -68,8 +69,6 @@ case class Todos(items: Seq[DeskRecTimeslot]) {
         Todos(items.updated(idx, newItem))
     }
   }
-
-  def remove(item: DeskRecTimeslot) = Todos(items.filterNot(_ == item))
 }
 
 /**
@@ -85,13 +84,10 @@ class TodoHandler[M](modelRW: ModelRW[M, Pot[Todos]]) extends ActionHandler(mode
     case UpdateAllTodos(todos) =>
       // got new todos, update model
       updated(Ready(Todos(todos)))
-    case UpdateTodo(item) =>
-      log.info("UpdateTodo")
+    case UpdateDeskRecsTime(item) =>
+      log.info(s"Update Desk Recs time ${item}")
       // make a local update and inform server
-      updated(value.map(_.updated(item)), Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos)))
-    case DeleteTodo(item) =>
-      // make a local update and inform server
-      updated(value.map(_.remove(item)), Effect(AjaxClient[Api].deleteTodo(item.id).call().map(UpdateAllTodos)))
+      updated(value.map(_.updated(item)), Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -116,36 +112,45 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
       log.info("requesting workloadsWrapper from server")
       effectOnly(Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
     case UpdateWorkloads(workloads) =>
-      log.info(s"received workloadsWrapper ${workloads} from server")
+      log.info(s"received workloads ${workloads} from server")
       updated(Ready(Workloads(workloads)), Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
   }
 }
 
 object HandyStuff {
-  type tupleMagic = (Pot[CrunchResult], Pot[SimulationResult])
+  type tupleMagic = (Pot[CrunchResult], Pot[SimulationResult], Pot[IndexedSeq[DeskRec]])
 }
 
-class SimulationHandler[M](modelRW: ModelRW[M, Pot[SimulationResult]])
+class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Pot[IndexedSeq[DeskRec]]])
   extends ActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(workloads, desks) =>
-      log.info("Requesting ")
-      effectOnly(Effect(
-        AjaxClient[Api].processWork(workloads, desks.map(_.toInt))
+      log.info("Requesting simulation")
+      log.info("Getting workloads from model")
+      val workloads1: List[Double] = modelR.value.get.workloads
+      log.info("Got workloads from model")
+      effectOnly(
+        Effect(AjaxClient[Api].processWork(workloads1, desks.map(_.toInt))
           .call()
           .map(UpdateSimulationResult)))
-    case UpdateSimulationResult(simResult) =>
-      log.info(s"Got simulation result $simResult")
-      noChange
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
-      val simModel: ModelR[M, Pot[SimulationResult]] = modelRW
-      val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
-        val newRecDesks = cr.recommendedDesks.toArray
-        newRecDesks(k) = DeskRec(k, v.toInt)
-        cr.copy(recommendedDesks = newRecDesks)
-      })
-      ModelUpdate(modelRW.updated(newValSimulation))
+      val simModel: ModelRW[M, Pot[IndexedSeq[DeskRec]]] = modelRW
+      val newUserRecs = simModel.value.get.updated(k, DeskRec(k, v.toInt))
+      //      val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
+      //        val newRecDesks = cr.recommendedDesks.toArray
+      //        newRecDesks(k) = DeskRec(k, v.toInt)
+      //        cr.copy(recommendedDesks = newRecDesks)
+      //      })
+      ModelUpdate(modelRW.updated(Ready(newUserRecs)))
+  }
+}
+
+class SimulationResultHandler[M](modelRW: ModelRW[M, Pot[SimulationResult]]) extends ActionHandler(modelRW) {
+  protected def handle = {
+    case UpdateSimulationResult(simResult) =>
+      log.info(s"Got simulation result ${simResult.waitTimes}")
+      updated(Ready(simResult))
   }
 }
 
@@ -176,8 +181,15 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
       val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
       log.info(s"Model:${simModel.value}")
 
-      val newVal = (Ready(crunchResult), Ready(SimulationResult(DeskRecsChart.takeEvery15th(crunchResult.recommendedDesks).zipWithIndex.map(t => DeskRec(t._1, t._2)).toIndexedSeq, Nil)))
-      ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
+      val newDeskRec: IndexedSeq[DeskRec] = DeskRecsChart
+        .takeEvery15th(crunchResult.recommendedDesks)
+        .zipWithIndex.map(t => DeskRec(t._2, t._1))
+        .toIndexedSeq
+
+      val newVal = (Ready(crunchResult),
+        Ready(SimulationResult(newDeskRec, Nil)),
+        Ready(newDeskRec))
+      updated(newVal)
   }
 
 }
@@ -203,14 +215,15 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
-      new CrunchHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
-        log.info("setting crunch result and simulation desks in model")
-        m.copy(simulationResult = v._2, crunchResult = v._1)
+      new CrunchHandler(zoomRW(m => (m.crunchResult, m.simulationResult, m.userDeskRec))((m, v) => {
+        log.info(s"setting crunch result and simulation desks in model ${v._3.take(10)}")
+        m.copy(simulationResult = v._2, crunchResult = v._1, userDeskRec = v._3)
       })),
-      new SimulationHandler(zoomRW(m => m.simulationResult)((m, v) => {
+      new SimulationHandler(zoom(_.workload), zoomRW(m => m.userDeskRec)((m, v) => {
         log.info("setting simulation result in model")
-        m.copy(simulationResult = v) //, crunchResult = v._1)
+        m.copy(userDeskRec = v) //, crunchResult = v._1)
       })),
+      new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))))
   }
 

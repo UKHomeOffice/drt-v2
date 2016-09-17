@@ -41,7 +41,7 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateTodoAdd - {
         val h = build
-        val result = h.handle(UpdateTodo(DeskRecTimeslot("4", 0, "Test4", TodoNormal, completed = false)))
+        val result = h.handle(UpdateDeskRecsTime(DeskRecTimeslot("4", 0, "Test4", TodoNormal, completed = false)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
             assert(newValue.get.items.size == 4)
@@ -54,7 +54,7 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateTodo - {
         val h = build
-        val result = h.handle(UpdateTodo(DeskRecTimeslot("1", 0, "Test111", TodoNormal, completed = false)))
+        val result = h.handle(UpdateDeskRecsTime(DeskRecTimeslot("1", 0, "Test111", TodoNormal, completed = false)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
             assert(newValue.get.items.size == 3)

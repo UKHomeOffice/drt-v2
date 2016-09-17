@@ -8,18 +8,23 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.components.GlobalStyles
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules._
 import spatutorial.client.services.{RootModel, SPACircuit}
 import spatutorial.shared.FlightsApi.Flights
+import diode.react.ReactPot._
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 import scalacss.ScalaCssReact._
+import japgolly.scalajs.react
+import japgolly.scalajs.react.vdom.DomCallbackResult._
+import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.{Callback, ReactComponentB, _}
 
 @JSExport("SPAMain")
 object SPAMain extends js.JSApp {
@@ -36,26 +41,30 @@ object SPAMain extends js.JSApp {
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
-    val workloadsWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.workload))(proxy => {
-      log.info(s"workloadsWrapper update from subscribe isReady ${proxy.value.isReady}")
-    })
-    val overriddenRecDesksWrapper = SPACircuit.subscribe(SPACircuit.zoom(_.simulationResult))(simulationResult => {
-      log.info(s"simulation result changed ${simulationResult.value.get.recommendedDesks.take(20)}")
-    })
+    val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
     val todoWrapper = SPACircuit.connect(_.todos)
+    val dashboardModelsConnect = SPACircuit.connect(m =>
+      DashboardModels(m.workload, m.crunchResult, m.simulationResult, m.userDeskRec))
     // wrap/connect components to the circuit
     (staticRoute(root, DashboardLoc) ~>
-      renderR(ctl => SPACircuit.wrap(m =>
-        DashboardModels(m.workload, m.crunchResult, m.simulationResult))(proxy => {
+      renderR(ctl => dashboardModelsConnect(proxy => {
         log.info("dashboard update")
-//        workloadsWrapper()
+        //        workloadsWrapper()
         Dashboard(ctl, proxy)
       })) |
       (staticRoute("#flights", FlightsLoc) ~>
         renderR(ctl => SPACircuit.wrap(_.flights)(proxy =>
           FlightsView(FlightsView.Props(ctl, proxy), proxy)))
         ) |
-      (staticRoute("#todo", TodoLoc) ~> renderR(ctl => todoWrapper(Todo(_))))
+      (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
+        <.div(
+          todoWrapper(Todo(_)),
+          <.p("here we are"),
+          simulationResultWrapper(srw => {
+            log.info("running simresultchart again")
+            DeskRecsChart.userSimulationWaitTimesChart(Dashboard.labels, srw)
+          }))
+      }))
       ).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
