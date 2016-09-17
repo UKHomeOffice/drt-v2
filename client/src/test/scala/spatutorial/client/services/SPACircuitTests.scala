@@ -20,7 +20,7 @@ object SPACircuitTests extends TestSuite {
         DeskRecTimeslot("3", 0, "Test3", TodoHigh, completed = true)
       )
 
-      def build = new TodoHandler(new RootModelRW(model))
+      def build = new DeskTimesHandler(new RootModelRW(model))
 
       'RefreshTodos - {
         val h = build

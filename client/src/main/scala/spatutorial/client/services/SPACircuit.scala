@@ -12,6 +12,7 @@ import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import boopickle.Default._
 import scala.collection.immutable.IndexedSeq
+import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
@@ -79,7 +80,7 @@ case class UserDeskRecs(items: Seq[DeskRecTimeslot]) {
   *
   * @param modelRW Reader/Writer to access the model
   */
-class TodoHandler[M](modelRW: ModelRW[M, Pot[UserDeskRecs]]) extends ActionHandler(modelRW) {
+class DeskTimesHandler[M](modelRW: ModelRW[M, Pot[UserDeskRecs]]) extends ActionHandler(modelRW) {
   override def handle = {
     case RefreshTodos =>
       log.info("RefreshTodos")
@@ -92,7 +93,8 @@ class TodoHandler[M](modelRW: ModelRW[M, Pot[UserDeskRecs]]) extends ActionHandl
     case UpdateDeskRecsTime(item) =>
       log.info(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
-      updated(value.map(_.updated(item))//, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+      val newDesksPot: Pot[UserDeskRecs] = value.map(_.updated(item))
+      updated(newDesksPot, Effect(Future(RunSimulation(Nil, newDesksPot.get.items.map(_.deskRec).toList))))//, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -205,7 +207,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   override protected val actionHandler = {
     println("composing handlers")
     composeHandlers(
-      new TodoHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
+      new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
       new CrunchHandler(zoomRW(m => (m.crunchResult,  m.userDeskRec))((m, v) => {
