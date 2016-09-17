@@ -12,9 +12,7 @@ import scala.util.Random
 abstract class ApiService
   extends Api with WorkloadsService with FlightsService {
 
-  var todos = (1 to (1440/15)).map(n =>
-    DeskRecTimeslot(n.toString, 0x61626364, n)
-  ).toList
+  var todos: List[DeskRecTimeslot] = Nil
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")

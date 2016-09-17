@@ -15,7 +15,7 @@ import scalacss.ScalaCssReact._
 
 object Todo {
 
-  case class Props(proxy: ModelProxy[Pot[Todos]])
+  case class Props(proxy: ModelProxy[Pot[UserDeskRecs]])
 
   case class State(selectedItem: Option[DeskRecTimeslot] = None, showTodoForm: Boolean = false)
 
@@ -44,13 +44,20 @@ object Todo {
       Panel(Panel.Props("What needs to be done"), <.div(
         p.proxy().renderFailed(ex => "Error loading"),
         p.proxy().renderPending(_ > 10, _ => "Loading..."),
-        p.proxy().render(todos => TodoList(todos.items, item => p.proxy.dispatch(UpdateDeskRecsTime(item)),
-          item => editTodo(Some(item)), item => p.proxy.dispatch(DeleteTodo(item)))),
+        p.proxy().render(todos =>
+          TodoList(
+            todos.items,
+            item => p.proxy.dispatch(UpdateDeskRecsTime(item)),
+            item => editTodo(Some(item)),
+            item => p.proxy.dispatch(DeleteTodo(item)))),
         Button(Button.Props(editTodo(None)), Icon.plusSquare, " New"),
-        p.proxy().render(todos => Button(Button.Props(p.proxy.dispatch(RunSimulation(Nil, todos.items.map(_.deskRec).toList))),
-          Icon.play,
-          "Run Simulation"
-        ))))
+        p.proxy().render(todos =>
+          Button(
+            Button.Props(
+              p.proxy.dispatch(RunSimulation(Nil, todos.items.map(_.deskRec).toList))),
+            Icon.play,
+            "Run Simulation"
+          ))))
   }
 
   // create the React component for To Do management
@@ -61,7 +68,7 @@ object Todo {
     .build
 
   /** Returns a function compatible with router location system while using our own props */
-  def apply(proxy: ModelProxy[Pot[Todos]]) = component(Props(proxy))
+  def apply(proxy: ModelProxy[Pot[UserDeskRecs]]) = component(Props(proxy))
 }
 
 //object TodoForm {

@@ -10,7 +10,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, TodoLoc}
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
-import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
+import spatutorial.client.services.{UserDeskRecs, Crunch, GetWorkloads, Workloads}
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared.{DeskRec, CrunchResult, SimulationResult}
 
@@ -24,7 +24,7 @@ object Dashboard {
   case class DashboardModels(workloads: Pot[Workloads],
                              potCrunchResult: Pot[CrunchResult],
                              potSimulationResult: Pot[SimulationResult],
-                             potUserDeskRecs: Pot[Seq[DeskRec]]
+                             potUserDeskRecs: Pot[UserDeskRecs]
                             )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
@@ -34,7 +34,7 @@ object Dashboard {
   case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
                    crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]],
                    simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]],
-                   userDeskRecsWrapper: ReactConnectProxy[Pot[Seq[DeskRec]]]
+                   userDeskRecsWrapper: ReactConnectProxy[Pot[UserDeskRecs]]
                   )
 
   val baseDate = new js.Date(2016, 10, 1, 7)

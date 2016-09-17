@@ -10,7 +10,7 @@ import utest._
 object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
     'TodoHandler - {
-      val model = Ready(Todos(Seq(
+      val model = Ready(UserDeskRecs(Seq(
         DeskRecTimeslot("1", 0, "Test1", TodoLow, completed = false),
         DeskRecTimeslot("2", 0, "Test2", TodoLow, completed = false),
         DeskRecTimeslot("3", 0, "Test3", TodoHigh, completed = true)
@@ -36,7 +36,7 @@ object SPACircuitTests extends TestSuite {
       'UpdateAllTodos - {
         val h = build
         val result = h.handle(UpdateAllTodos(newTodos))
-        assert(result == ModelUpdate(Ready(Todos(newTodos))))
+        assert(result == ModelUpdate(Ready(UserDeskRecs(newTodos))))
       }
 
       'UpdateTodoAdd - {

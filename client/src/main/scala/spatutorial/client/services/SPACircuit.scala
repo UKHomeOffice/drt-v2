@@ -48,25 +48,28 @@ case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 // The base model of our application
 case class Workloads(workloads: List[Double] = Nil)
 
-case class RootModel(todos: Pot[Todos],
+case class RootModel(todos: Pot[UserDeskRecs],
                      motd: Pot[String],
                      workload: Pot[Workloads],
                      crunchResult: Pot[CrunchResult],
                      realDesks: Pot[Seq[Double]],
-                     userDeskRec: Pot[IndexedSeq[DeskRec]],
+                     userDeskRec: Pot[UserDeskRecs],
                      simulationResult: Pot[SimulationResult],
                      flights: Pot[Flights]
                     )
 
-case class Todos(items: Seq[DeskRecTimeslot]) {
+case class UserDeskRecs(items: Seq[DeskRecTimeslot]) {
   def updated(newItem: DeskRecTimeslot) = {
+    log.info(s"will update ${newItem} into ${items.take(5)}...")
     items.indexWhere(_.id == newItem.id) match {
       case -1 =>
         // add new
-        Todos(items :+ newItem)
+        log.info("add new")
+        UserDeskRecs(items :+ newItem)
       case idx =>
+        log.info("add old")
         // replace old
-        Todos(items.updated(idx, newItem))
+        UserDeskRecs(items.updated(idx, newItem))
     }
   }
 }
@@ -76,18 +79,20 @@ case class Todos(items: Seq[DeskRecTimeslot]) {
   *
   * @param modelRW Reader/Writer to access the model
   */
-class TodoHandler[M](modelRW: ModelRW[M, Pot[Todos]]) extends ActionHandler(modelRW) {
+class TodoHandler[M](modelRW: ModelRW[M, Pot[UserDeskRecs]]) extends ActionHandler(modelRW) {
   override def handle = {
     case RefreshTodos =>
       log.info("RefreshTodos")
-      effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
+//      effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
+      noChange
     case UpdateAllTodos(todos) =>
       // got new todos, update model
-      updated(Ready(Todos(todos)))
+      log.info("got new Todos update model")
+      updated(Ready(UserDeskRecs(todos)))
     case UpdateDeskRecsTime(item) =>
-      log.info(s"Update Desk Recs time ${item}")
+      log.info(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
-      updated(value.map(_.updated(item)), Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+      updated(value.map(_.updated(item))//, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -118,10 +123,10 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
 }
 
 object HandyStuff {
-  type tupleMagic = (Pot[CrunchResult], Pot[SimulationResult], Pot[IndexedSeq[DeskRec]])
+  type tupleMagic = (Pot[CrunchResult], Pot[UserDeskRecs])
 }
 
-class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Pot[IndexedSeq[DeskRec]]])
+class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Pot[UserDeskRecs]])
   extends ActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(workloads, desks) =>
@@ -135,14 +140,9 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
           .map(UpdateSimulationResult)))
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
-      val simModel: ModelRW[M, Pot[IndexedSeq[DeskRec]]] = modelRW
-      val newUserRecs = simModel.value.get.updated(k, DeskRec(k, v.toInt))
-      //      val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
-      //        val newRecDesks = cr.recommendedDesks.toArray
-      //        newRecDesks(k) = DeskRec(k, v.toInt)
-      //        cr.copy(recommendedDesks = newRecDesks)
-      //      })
-      ModelUpdate(modelRW.updated(Ready(newUserRecs)))
+      val simModel: ModelRW[M, Pot[UserDeskRecs]] = modelRW
+      val newUserRecs: UserDeskRecs = simModel.value.get.updated(DeskRecTimeslot(k.toString, k, v.toInt))
+      updated(Ready(newUserRecs))
   }
 }
 
@@ -177,18 +177,11 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
     case UpdateCrunchResult(crunchResult) =>
       log.info("UpdateCrunchResult")
 
-      val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
-      val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
-      log.info(s"Model:${simModel.value}")
-
-      val newDeskRec: IndexedSeq[DeskRec] = DeskRecsChart
+      val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRec(t._2, t._1))
-        .toIndexedSeq
+        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2, t._1)))
 
-      val newVal = (Ready(crunchResult),
-        Ready(SimulationResult(newDeskRec, Nil)),
-        Ready(newDeskRec))
+      val newVal = (Ready(crunchResult), Ready(newDeskRec))
       updated(newVal)
   }
 
@@ -212,12 +205,12 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   override protected val actionHandler = {
     println("composing handlers")
     composeHandlers(
-      new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
+      new TodoHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
-      new CrunchHandler(zoomRW(m => (m.crunchResult, m.simulationResult, m.userDeskRec))((m, v) => {
-        log.info(s"setting crunch result and simulation desks in model ${v._3.take(10)}")
-        m.copy(simulationResult = v._2, crunchResult = v._1, userDeskRec = v._3)
+      new CrunchHandler(zoomRW(m => (m.crunchResult,  m.userDeskRec))((m, v) => {
+        log.info(s"setting crunch result and userdesk recs desks in model ${v._2.take(10)}")
+        m.copy(crunchResult = v._1, userDeskRec = v._2)
       })),
       new SimulationHandler(zoom(_.workload), zoomRW(m => m.userDeskRec)((m, v) => {
         log.info("setting simulation result in model")
