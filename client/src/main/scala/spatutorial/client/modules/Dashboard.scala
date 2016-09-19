@@ -21,12 +21,12 @@ import spatutorial.client.logger._
 
 object Dashboard {
 
-  case class DashboardModels(workloads: Pot[Workloads], potCrunchResult: Pot[CrunchResult], simulationResult: Pot[SimulationResult])
+  case class DashboardModels(workloads: Pot[Workloads], potCrunchResult: Pot[CrunchResult], potSimulationResult: Pot[SimulationResult])
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels])
 
-  case class State(workloads: ReactConnectProxy[Pot[Workloads]],
+  case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
                    crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]],
                    simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]])
 
@@ -66,7 +66,6 @@ object Dashboard {
     log.info("backend mounted")
     val cb: Callback = Callback.when(props.dashboardModelProxy().workloads.isEmpty) {
       props.dashboardModelProxy.dispatch(GetWorkloads("", "", "edi"))
-      //      props.dashboardModelProxy.dispatch(Crunch(props.dashboardModelProxy.value.workloads.get.workloads))
     }
     cb
   }
@@ -75,27 +74,32 @@ object Dashboard {
   private val component = ReactComponentB[Props]("Dashboard")
     // create and store the connect proxy in state for later use
     .initialState_P(props => State(
-      props.dashboardModelProxy.connect(m => m.workloads),
-      props.dashboardModelProxy.connect(m => m.potCrunchResult),
-      props.dashboardModelProxy.connect(m => m.simulationResult)
-    ))
+    props.dashboardModelProxy.connect(m => m.workloads),
+    props.dashboardModelProxy.connect(m => m.potCrunchResult),
+    props.dashboardModelProxy.connect(m => m.potSimulationResult)
+  ))
     .renderPS { (_, props, state: State) =>
       log.info(s"evaluating dashboard ${props}:${state}")
       <.div(
         // header, MessageOfTheDay and chart components
         <.h2("Dashboard"),
         //        state.motdWrapper(Motd(_)),
-        state.workloads(x => {
-          val wlp = props.dashboardModelProxy.value.workloads
+        state.workloadsWrapper(workloadsModelProxy => {
+          val workloads: Pot[Workloads] = workloadsModelProxy.value
           <.div(
-            wlp.renderReady(wl => Chart(cp(wl.workloads))),
-            wlp.renderPending((num) => <.div(s"waiting with ${num}")),
-            wlp.renderEmpty(<.div(s"Waiting for workload")))
+            workloads.renderReady(wl => Chart(cp(wl.workloads))),
+            workloads.renderPending((num) => <.div(s"waiting with ${num}")),
+            workloads.renderEmpty(<.div(s"Waiting for workload")))
         }),
-        state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy)),
-        // create a link to the To Do view
-        <.div(props.router.link(TodoLoc)("Check your todos!"))
-      )
+        state.crunchResultWrapper(s => DeskRecsChart(labels, props.dashboardModelProxy)),
+        state.simulationResultWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
+      /*
+        state.simulationResultWrapper(simRes =>
+          state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy))),
+          // create a link to the To Do view
+          <.div(props.router.link(TodoLoc)("Check your todos!"))
+        )
+        */
     }
     .componentDidMount(scope => mounted(scope.props))
     .build

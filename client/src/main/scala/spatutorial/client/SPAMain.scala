@@ -15,6 +15,11 @@ import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules._
 import spatutorial.client.services.{RootModel, SPACircuit}
 import spatutorial.shared.FlightsApi.Flights
+import spatutorial.client.components.GlobalStyles
+import spatutorial.client.logger._
+import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules._
+import spatutorial.client.services.SPACircuit
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -33,6 +38,7 @@ object SPAMain extends js.JSApp {
 
   case object TodoLoc extends Loc
 
+  // configure the router
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._

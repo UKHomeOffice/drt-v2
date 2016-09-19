@@ -7,11 +7,21 @@ import diode.data._
 import diode.util._
 import diode.react.ReactConnector
 import spatutorial.shared.FlightsApi.Flights
+<<<<<<< HEAD
 import spatutorial.shared.{SimulationResult, CrunchResult, TodoItem, Api}
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
+=======
+import spatutorial.shared.{Api, CrunchResult, SimulationResult, TodoItem}
+import boopickle.Default._
+
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import scala.util.Random
+import spatutorial.client.logger._
+import spatutorial.client.services.HandyStuff.tupleMagic
+>>>>>>> 3bc442c5d56e0d9b57b1cc54865b69324d740722
 
 // Actions
 case object RefreshTodos extends Action
@@ -39,10 +49,6 @@ case class GetWorkloads(begin: String, end: String, port: String) extends Action
 case class RunSimulation(workloads: Seq[Double], desks: Seq[Double]) extends Action
 
 case class ChangeDeskUsage(value: String, index: Int) extends Action
-
-case class UpdateCrunch(potResult: Pot[CrunchResult] = Empty) extends PotAction[CrunchResult, UpdateCrunch] {
-  override def next(value: Pot[CrunchResult]) = UpdateCrunch(value)
-}
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
@@ -122,8 +128,11 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
   }
 }
 
-class SimulationHandler[M](
-                            modelRW: ModelRW[M, (Pot[CrunchResult], Pot[SimulationResult])])
+object HandyStuff {
+  type tupleMagic = (Pot[CrunchResult], Pot[SimulationResult])
+}
+
+class SimulationHandler[M](modelRW: ModelRW[M, tupleMagic])
   extends ActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(workloads, desks) =>
@@ -139,15 +148,16 @@ class SimulationHandler[M](
       log.info(s"Handler: ChangeDesk($v, $k)")
       val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
       val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
-      val map: Pot[SimulationResult] = simModel.value.map(cr => {
+      val newValSimulation: Pot[SimulationResult] = simModel.value.map(cr => {
         val newRecDesks = cr.recommendedDesks.toArray
         for (n <- k until k + 15) {
+          log.info(s"N: $n")
           newRecDesks(n) = v.toInt
         }
         cr.copy(recommendedDesks = newRecDesks)
       })
-      val newValSimulation: Pot[SimulationResult] = map
       val newVal = (crunchModel.value, newValSimulation)
+      log.info(s"NV Sim: ${newVal._2.get.recommendedDesks.take(5)}")
       ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
   }
 }
@@ -164,27 +174,21 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends ActionHandler
   }
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, Pot[CrunchResult]]) extends ActionHandler(modelRW) {
+class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case action: Crunch =>
-      log.info(s"Crunch Sending ${action.workload}")
-      if (action.workload != null)
-        effectOnly(Effect(AjaxClient[Api].crunch(action.workload).call().map(UpdateCrunchResult)))
-      else
-        noChange
-    case UpdateCrunchResult(r) =>
+    case Crunch(workload) =>
+      log.info(s"Crunch Sending ${workload}")
+      effectOnly(Effect(AjaxClient[Api].crunch(workload).call().map(UpdateCrunchResult)))
+    case UpdateCrunchResult(crunchResult) =>
       log.info("UpdateCrunchResult")
-      updated(Ready(r))
-    case UpdateCrunch(Ready(crunchResult)) =>
-      log.info(s"updatecrunch ready ${crunchResult}")
-      updated(Ready(crunchResult))
-    case UpdateCrunch(Empty) =>
-      log.info("was empty")
-      val blockWidth = 15
-      log.info(s"inventing workloads")
-      val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
-      effectOnly(Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
+
+      val crunchModel: ModelR[M, Pot[CrunchResult]] = modelRW.zoom(_._1)
+      val simModel: ModelR[M, Pot[SimulationResult]] = modelRW.zoom(_._2)
+      log.info(s"Model:${simModel.value}")
+
+      val newVal = (Ready(crunchResult), Ready(SimulationResult(crunchResult.recommendedDesks, Nil)))
+      ModelUpdate(modelRW.updatedWith(modelRW.root.value, newVal))
   }
 
 }
@@ -192,11 +196,11 @@ class CrunchHandler[M](modelRW: ModelRW[M, Pot[CrunchResult]]) extends ActionHan
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
-  //  val workloads = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
+  //  val workloadsWrapper = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
 
   // initial application model
   override protected def initialModel = RootModel(Empty, Empty,
-    Empty, //Ready(Workloads(workloads)),
+    Empty, //Ready(Workloads(workloadsWrapper)),
     Empty,
     Empty,
     Empty,
@@ -209,10 +213,14 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new TodoHandler(zoomRW(_.todos)((m, v) => m.copy(todos = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => m.copy(workload = v))),
-      new CrunchHandler(zoomRW(_.crunchResult)((m, v) => m.copy(crunchResult = v))),
-      new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) =>
-        m.copy(simulationResult = v._2, crunchResult = v._1)))
-    )
+      new CrunchHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
+        log.info("setting crunch result and simulation desks in model")
+        m.copy(simulationResult = v._2, crunchResult = v._1)
+      })),
+      new SimulationHandler(zoomRW(m => (m.crunchResult, m.simulationResult))((m, v) => {
+        log.info("setting simulation result in model")
+        m.copy(simulationResult = v._2, crunchResult = v._1)
+      })))
   }
 
 }
