@@ -21,13 +21,14 @@ object TodoList {
     .render_P(p => {
       val style = bss.listGroup
       def renderItem(item: DeskRecTimeslot) = {
-        <.li(
+        <.span(
           <.span(item.timeLabel),
           <.input.number(
+            ^.className := "desk-rec-input",
             ^.value := item.deskRec,
             ^.onChange ==> ((e: ReactEventI) => p.stateChange(item.copy(deskRec = e.target.value.toInt)))))
       }
-      <.ul(style.listGroup)(p.items map renderItem)
+      <.span(p.items map renderItem)
     })
     .build
 

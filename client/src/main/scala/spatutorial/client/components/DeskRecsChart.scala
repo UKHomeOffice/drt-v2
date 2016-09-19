@@ -15,6 +15,8 @@ import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.services.{UserDeskRecs, RunSimulation, ChangeDeskUsage, Crunch}
 import spatutorial.shared.{DeskRecTimeslot, DeskRec, CrunchResult, SimulationResult}
 
+import scala.collection.immutable
+
 object DeskRecsChart {
   type DeskRecsModel = DashboardModels
 
@@ -76,7 +78,8 @@ object DeskRecsChart {
         val zip: IndexedSeq[(String, DeskRecTimeslot)] = skippedLabels.zip(rds.items)
         <.ul(zip.map { case (label, dr) => {
           <.li(<.span(label,
-            <.input.number(^.value := dr.deskRec.toString, ^.key := dr.id,
+            <.input.number(^.className := "desk-rec-input",
+              ^.value := dr.deskRec.toString, ^.key := dr.id,
               ^.onChange ==> inputChange(dr.id.toInt))))
         }
         })
@@ -85,38 +88,52 @@ object DeskRecsChart {
 
   def waitTimesChart(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult]): ReactNode = {
     potCrunchResult.render(chartData => {
-      val grouped: Iterator[Seq[Int]] = chartData.waitTimes.grouped(15)
-      val maxInEachGroup: Iterator[Int] = grouped.map(_.max)
-      val sampledWaitTimes = maxInEachGroup.map(_.toDouble).toList
+      val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(chartData.waitTimes)
+
       val sampledLabels = takeEvery15th(labels)
       Chart(Chart.ChartProps("Wait Times",
         Chart.LineChart,
-        ChartData(sampledLabels, Seq(ChartDataset(sampledWaitTimes, "Wait Times")))
+        ChartData(sampledLabels, Seq(ChartDataset(sampledWaitTimesSimulation, "Wait Times")))
       ))
     })
   }
 
+  case class UserSimulationProps(simulationResult: ModelProxy[Pot[SimulationResult]],
+                                 crunchResult: ModelProxy[Pot[CrunchResult]])
+
   def userSimulationWaitTimesChart(labels: IndexedSeq[String],
-                                   simulationResult: ModelProxy[Pot[SimulationResult]]) = {
-    val component = ReactComponentB[ModelProxy[Pot[SimulationResult]]]("UserSimulationChart").render_P(proxy => {
+                                   simulationResult: ModelProxy[Pot[SimulationResult]],
+                                   crunchResult: ModelProxy[Pot[CrunchResult]]) = {
+    val component = ReactComponentB[UserSimulationProps]("UserSimulationChart").render_P(props => {
       log.info("rendering chart")
-      if (proxy().isReady) {
-        log.info(s"Think our simulation result is ready! ${proxy()}")
-        val grouped: Iterator[Seq[Int]] = proxy().get.waitTimes.grouped(15)
-        val maxInEachGroup: Iterator[Int] = grouped.map(_.max)
-        val sampledWaitTimes = maxInEachGroup.map(_.toDouble).toList
+      val proxy: Pot[SimulationResult] = props.simulationResult()
+      if (proxy.isReady) {
+        log.info(s"Think our simulation result is ready! ${proxy}")
+        val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
+        val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
         val sampledLabels = takeEvery15th(labels)
         Chart(Chart.ChartProps("Simulated Wait Times",
           Chart.LineChart,
-          ChartData(sampledLabels, Seq(ChartDataset(sampledWaitTimes, "Simulated Wait Times")))
+          ChartData(sampledLabels,
+            Seq(
+              ChartDataset(sampledWaitTimesSimulation, "Simulated Wait Times with your actual desk"),
+              ChartDataset(sampledWaitTimesCrunch, "Predicted Wait Times with Recommended Desks", backgroundColor = "red", borderColor = "red")))
         ))
       } else {
         <.p("waiting for data")
       }
     }).build
-    component(simulationResult)
+
+    component(UserSimulationProps(simulationResult, crunchResult))
   }
 
+
+  def sampledWaitTimes(times: immutable.Seq[Int]): List[Double] = {
+    val grouped: Iterator[Seq[Int]] = times.grouped(15)
+    val maxInEachGroup: Iterator[Int] = grouped.map(_.max)
+    val sampledWaitTimes = maxInEachGroup.map(_.toDouble).toList
+    sampledWaitTimes
+  }
 
   def deskRecsChart(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult]): ReactNode = {
     potCrunchResult.render(chartData =>

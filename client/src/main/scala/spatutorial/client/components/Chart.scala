@@ -23,7 +23,7 @@ object ChartDataset {
     js.Dynamic.literal(
       label = label,
       data = data.toJSArray,
-      backgroundColor = backgroundColor,
+//      backgroundColor = backgroundColor,
       borderColor = borderColor
     ).asInstanceOf[ChartDataset]
   }

@@ -42,6 +42,7 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
     val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
+    val crunchResultWrapper = SPACircuit.connect(_.crunchResult)
     val todoWrapper = SPACircuit.connect(_.userDeskRec)
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.crunchResult, m.simulationResult, m.userDeskRec))
@@ -59,10 +60,11 @@ object SPAMain extends js.JSApp {
       (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
         <.div(
           todoWrapper(UserDeskRecsComponent(_)),
-          simulationResultWrapper(srw => {
+          crunchResultWrapper(crw =>
+            simulationResultWrapper(srw => {
             log.info("running simresultchart again")
-            DeskRecsChart.userSimulationWaitTimesChart(Dashboard.labels, srw)
-          }))
+            DeskRecsChart.userSimulationWaitTimesChart(Dashboard.labels, srw, crw)
+          })))
       }))
       ).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
