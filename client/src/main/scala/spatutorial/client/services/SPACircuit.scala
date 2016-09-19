@@ -7,13 +7,11 @@ import diode.data._
 import diode.util._
 import diode.react.ReactConnector
 import spatutorial.shared.FlightsApi.Flights
-<<<<<<< HEAD
 import spatutorial.shared.{SimulationResult, CrunchResult, TodoItem, Api}
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
-=======
 import spatutorial.shared.{Api, CrunchResult, SimulationResult, TodoItem}
 import boopickle.Default._
 
@@ -21,7 +19,6 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff.tupleMagic
->>>>>>> 3bc442c5d56e0d9b57b1cc54865b69324d740722
 
 // Actions
 case object RefreshTodos extends Action

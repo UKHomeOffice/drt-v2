@@ -1,23 +1,17 @@
 package spatutorial.client.components
 
-import diode.{Action, ActionType}
+import diode.Action
 import diode.data.Pot
 import diode.react.ModelProxy
-import japgolly.scalajs.react.{Callback, ReactComponentB}
-import org.scalajs.dom.svg.A
-import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
-import spatutorial.client.services.{ChangeDeskUsage, UpdateCrunch, UpdateMotd}
-import spatutorial.shared.{CrunchResult, SimulationResult}
-import diode.data.Pot
 import diode.react.ReactPot._
-import diode.react._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.components.Bootstrap._
-import spatutorial.client.logger._
-import spatutorial.shared.CrunchResult
 import japgolly.scalajs.react.vdom.DomCallbackResult._
+import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.{Callback, ReactComponentB, _}
+import spatutorial.client.components.Bootstrap.Panel
+import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.services.ChangeDeskUsage
+import spatutorial.shared.{SimulationResult, CrunchResult}
 
 object DeskRecsChart {
   type DeskRecsModel = DashboardModels
@@ -31,16 +25,28 @@ object DeskRecsChart {
       Panel(Panel.Props("Desk Recommendations and Wait times"),
         potCrunchResult.renderPending(_ >= 500, _ => <.p("Waiting for data")),
         deskRecsChart(labels, potCrunchResult),
-        waitTimesChart(labels, potCrunchResult),
-        deskSimulationInputs(labels, potCrunchResult, dispatch),
-        Button(Button.Props(dispatch(UpdateCrunch()), CommonStyle.danger), Icon.refresh, "Update")
+        waitTimesChart(labels, potCrunchResult)
+//        , deskSimulationInputs(labels, potCrunchResult, dispatch)
       )
     }
     }.componentDidMount(scope =>
     Callback.log("Mounted DeskRecs")
   ).build
 
-  def deskSimulationInputs(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult], dispatch: Action => Callback): ReactNode = {
+  def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[SimulationResult]]]("FunkyInputs")
+    .render_P {
+      proxy => {
+        val potSimulationResult: Pot[SimulationResult] = proxy()
+        val dispatch: (Action) => Callback = proxy.dispatch _
+        Panel(Panel.Props("Desk Recommendations and Wait times"),
+          deskSimulationInputs(labels, potSimulationResult, dispatch)
+        )
+      }
+    }.componentDidMount(scope =>
+    Callback.log("Mounted Desk Sim Inputs")
+  ).build
+
+  def deskSimulationInputs(labels: IndexedSeq[String], potCrunchResult: Pot[SimulationResult], dispatch: Action => Callback): ReactNode = {
     def inputChange(idx: Int)(e: ReactEventI) = {
       val ev = e.target.value
       log.info(s"direct call in callback ${idx} ${ev}")
