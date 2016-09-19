@@ -5,6 +5,9 @@ import scala.collection.immutable
 import immutable.Seq
 import spatutorial.shared.FlightsApi.Flights
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 case class ApiFlight(
                       Operator: String,
                       Status: String,
@@ -50,6 +53,34 @@ trait FlightsApi {
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights
 }
 
+case class WorkloadResponse(terminals: Seq[TerminalWorkload])
+
+case class TerminalWorkload(terminalName: String,
+                            queues: Seq[QueueWorkloads])
+
+case class QueueWorkloads(queueName: String,
+                          workloadsByMinute: Seq[WL],
+                          paxByMinute: Seq[Pax]
+//                          , deskRec: Seq[DeskRec]
+                         ) {
+  def workloadsByPeriod(n: Int): Iterator[WL] = workloadsByMinute.grouped(n).map(g => WL(g.head.time, g.map(_.workload).sum))
+
+//  def deskRecByPeriod(n: Int): Iterator[DeskRec] = deskRec.grouped(n).map(_.max)
+//
+//  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
+}
+
+case class WL(time: Long, workload: Double)
+
+case class Pax(time: Long, pax: Int)
+
+
+//case class QueueWorkloads(queueName: String,
+//                          workloads: Seq[WorkloadTimeslot],
+//                          workloadsByMinute: Seq[Double])
+
+case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
+
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi {
 
@@ -64,6 +95,8 @@ trait Api extends FlightsApi {
   def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def getWorkloads(): List[Double]
+
+//  def airportInfoByAirportCode(code: String): Future[String]
 
   def crunch(workloads: List[Double]): CrunchResult
 

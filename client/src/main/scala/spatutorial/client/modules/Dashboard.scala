@@ -42,7 +42,7 @@ object Dashboard {
   val numberOf15Mins = (24 * 4 * 15)
   // create dummy data for the chart
   val labelsDates = (baseDate.getTime() to (baseDate.getTime() + millisPer15Minutes * numberOf15Mins) by millisPer15Minutes).map(new js.Date(_))
-  val labels = labelsDates.map(_.toISOString())
+  val labels = labelsDates.map(_.toISOString().take(16))
 
   //  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * 250).take(numberOf15Mins).toSeq
   def cp(workload: Seq[Double]) = {

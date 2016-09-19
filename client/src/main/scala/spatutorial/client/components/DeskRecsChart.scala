@@ -25,7 +25,7 @@ object DeskRecsChart {
   case class State(deskRecs: ReactConnectProxy[Pot[SimulationResult]])
 
   def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
-    .render_P(deskRecsRender(labels))
+    .render_P(deskRecsRender(labels.map(_.take(16))))
     .componentDidMount(scope =>
       Callback.log("Mounted DeskRecs")
     ).build

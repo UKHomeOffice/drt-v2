@@ -144,9 +144,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       val workloads1: List[Double] = modelR.value.get.workloads
       log.info("Got workloads from model")
       effectOnly(
-        Effect(AjaxClient[Api].processWork(workloads1, desks.map(_.toInt))
-          .call()
-          .map(UpdateSimulationResult)))
+        Effect(AjaxClient[Api].processWork(workloads1, desks.map(_.toInt)).call().map(UpdateSimulationResult)))
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
       val simModel: ModelRW[M, Pot[UserDeskRecs]] = modelRW
@@ -188,7 +186,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
       val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2.toString,t._2, t._1)))
+        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2.toString, t._2, t._1)))
 
       updated((Ready(crunchResult), Ready(newDeskRec)),
         Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(UpdateAllTodos)))

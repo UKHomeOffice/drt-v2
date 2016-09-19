@@ -44,14 +44,13 @@ object SPAMain extends js.JSApp {
     import dsl._
     val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
     val crunchResultWrapper = SPACircuit.connect(_.crunchResult)
-    val todoWrapper = SPACircuit.connect(_.userDeskRec)
+    val userDeskRecsWrapper = SPACircuit.connect(_.userDeskRec)
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.crunchResult, m.simulationResult, m.userDeskRec))
     // wrap/connect components to the circuit
     (staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
         log.info("dashboard update")
-        //        workloadsWrapper()
         Dashboard(ctl, proxy)
       })) |
       (staticRoute("#flights", FlightsLoc) ~>
@@ -60,7 +59,7 @@ object SPAMain extends js.JSApp {
         ) |
       (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
         <.div(
-          todoWrapper(UserDeskRecsComponent(_)),
+          userDeskRecsWrapper(UserDeskRecsComponent(_)),
           crunchResultWrapper(crw =>
             simulationResultWrapper(srw => {
             log.info("running simresultchart again")

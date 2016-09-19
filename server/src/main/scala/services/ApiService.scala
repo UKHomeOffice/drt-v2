@@ -1,13 +1,16 @@
 package services
 
 import java.util.{UUID, Date}
-
+import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import spatutorial.shared._
 import scala.collection.immutable.Seq
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 import scala.util.Random
+import spray.client.pipelining._
+import spray.http.HttpHeaders.{Accept, Authorization}
+import spray.http.{HttpRequest, HttpResponse, MediaTypes, OAuth2BearerToken}
 
 abstract class ApiService
   extends Api with WorkloadsService with FlightsService {
@@ -23,8 +26,8 @@ abstract class ApiService
 
   override def getAllTodos(): List[DeskRecTimeslot] = {
     // provide some fake Todos
-//    Thread.sleep(3000)
-    println(s"Sending ${ todos.size } Todo items")
+    //    Thread.sleep(3000)
+    println(s"Sending ${todos.size} Todo items")
     todos
   }
 
@@ -71,5 +74,16 @@ abstract class ApiService
   override def processWork(workloads: List[Double], desks: List[Int]): SimulationResult = {
     println(s"processWork")
     TryRenjin.processWork(workloads, desks.flatMap(x => List.fill(15)(x)))
+  }
+
+  lazy val airportInfo = {
+    case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
+                   loc2: Double, elevation: Double, dk: String, tz: String)
+//    1,"Goroka","Goroka","Papua New Guinea","GKA","AYGA",-6.081689,145.391881,5282,10,"U","Pacific/Port_Moresby"
+  }
+  def airportInfoByAirportCode(code: String) = Future {
+
+    val pipeline = addHeader(Accept(MediaTypes.`application/json`))
+    """[]"""
   }
 }
