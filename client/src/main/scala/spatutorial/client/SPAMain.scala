@@ -39,6 +39,7 @@ object SPAMain extends js.JSApp {
   case object TodoLoc extends Loc
 
   // configure the router
+  // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
     val simulationResultWrapper = SPACircuit.connect(_.simulationResult)

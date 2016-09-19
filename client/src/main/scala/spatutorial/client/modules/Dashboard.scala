@@ -73,7 +73,6 @@ object Dashboard {
     log.info("backend mounted")
     val cb: Callback = Callback.when(props.dashboardModelProxy().workloads.isEmpty) {
       props.dashboardModelProxy.dispatch(GetWorkloads("", "", "edi"))
-      //      props.dashboardModelProxy.dispatch(Crunch(props.dashboardModelProxy.value.workloadsWrapper.get.workloadsWrapper))
     }
     cb
   }

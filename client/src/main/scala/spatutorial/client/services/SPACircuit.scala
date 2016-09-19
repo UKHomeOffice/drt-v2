@@ -16,6 +16,13 @@ import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.Random
 import spatutorial.client.logger._
+import spatutorial.shared.{Api, CrunchResult, SimulationResult}
+import boopickle.Default._
+
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import scala.util.Random
+import spatutorial.client.logger._
+import spatutorial.client.services.HandyStuff.tupleMagic
 
 // Actions
 case object RefreshTodos extends Action
