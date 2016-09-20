@@ -48,25 +48,30 @@ object SPAMain extends js.JSApp {
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.crunchResult, m.simulationResult, m.userDeskRec))
     // wrap/connect components to the circuit
-    (staticRoute(root, DashboardLoc) ~>
+
+    val dashboardRoute = staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
         log.info("dashboard update")
         Dashboard(ctl, proxy)
-      })) |
-      (staticRoute("#flights", FlightsLoc) ~>
-        renderR(ctl => SPACircuit.wrap(_.flights)(proxy =>
-          FlightsView(FlightsView.Props(ctl, proxy), proxy)))
-        ) |
-      (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
-        <.div(
-          userDeskRecsWrapper(UserDeskRecsComponent(_)),
-          crunchResultWrapper(crw =>
-            simulationResultWrapper(srw => {
+      }))
+
+    val flightsRoute = (staticRoute("#flights", FlightsLoc) ~>
+      renderR(ctl => SPACircuit.wrap(_.airportInfos)(airportInfoProxy =>
+        SPACircuit.wrap(_.flights)(proxy =>
+          FlightsView(FlightsView.Props(ctl, proxy, airportInfoProxy), proxy)))
+      ))
+
+    val todosRoute = (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
+      <.div(
+        userDeskRecsWrapper(UserDeskRecsComponent(_)),
+        crunchResultWrapper(crw =>
+          simulationResultWrapper(srw => {
             log.info("running simresultchart again")
             DeskRecsChart.userSimulationWaitTimesChart(Dashboard.labels, srw, crw)
           })))
-      }))
-      ).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
+    }))
+
+    (dashboardRoute | flightsRoute | todosRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   val todoCountWrapper: ReactConnectProxy[Option[Int]] = SPACircuit.connect(_.todos.map(_.items.length).toOption)

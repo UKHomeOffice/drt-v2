@@ -23,11 +23,12 @@ trait AirportToCountryLike {
 
       val t = Try {
         val splitRow: Array[String] = l.split(",")
-        AirportInfo(stripQuotes(splitRow(1)), stripQuotes(splitRow(3)), stripQuotes(splitRow(4)))
+        val sq: (String) => String = stripQuotes _
+        AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
       }
       t.getOrElse({
         println(s"boo ${l}");
-        AirportInfo("failed on", l, "boo")
+        AirportInfo("failed on", l, "boo", "ya")
       })
     }.toList
   }

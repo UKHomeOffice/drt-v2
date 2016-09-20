@@ -12,15 +12,14 @@ import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import boopickle.Default._
 import scala.collection.immutable.IndexedSeq
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import scala.util.Random
+import scala.util.{Success, Random}
 import spatutorial.client.logger._
 import spatutorial.shared.{Api, CrunchResult, SimulationResult}
 import boopickle.Default._
-
+//import ExecutionContext.Implicits.global
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import scala.util.Random
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff.tupleMagic
 
@@ -63,7 +62,8 @@ case class RootModel(todos: Pot[UserDeskRecs],
                      realDesks: Pot[Seq[Double]],
                      userDeskRec: Pot[UserDeskRecs],
                      simulationResult: Pot[SimulationResult],
-                     flights: Pot[Flights]
+                     flights: Pot[Flights],
+                     airportInfos: Map[String, Pot[AirportInfo]]
                     )
 
 case class UserDeskRecs(items: Seq[DeskRecTimeslot]) {
@@ -171,7 +171,8 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends ActionHandler
       effectOnly(Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights)))
     case UpdateFlights(flights) =>
       log.info(s"Client got flights! ${flights.flights.length}")
-      updated(Ready(flights))
+      val airportSubs: List[EffectSingle[GetAirportInfo]] = flights.flights.map(f => Effect(Future(GetAirportInfo(f.Origin))))
+      updated(Ready(flights), new EffectSeq(airportSubs.head, airportSubs.tail, queue))
   }
 }
 
@@ -194,6 +195,19 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
 
 }
 
+class AirportCountryHandler[M](modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case GetAirportInfo(code) =>
+      val stringToObject = value + (code -> Empty)
+      log.info(s"sending request for info for ${code}")
+      updated(stringToObject, Effect(AjaxClient[Api].airportInfoByAirportCode(code).call().map(res => UpdateAirportInfo(code, res))))
+    case UpdateAirportInfo(code, Some(airportInfo)) =>
+      val newValue = value + ((code -> Ready(airportInfo)))
+      log.info(s"got a new value for ${code} ${airportInfo}")
+      updated(newValue)
+  }
+}
+
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
@@ -206,10 +220,10 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     Empty,
     Empty,
     Empty,
-    Empty)
+    Empty, Map.empty)
 
   // combine all handlers into one
-  override protected val actionHandler = {
+  override val actionHandler = {
     println("composing handlers")
     composeHandlers(
       new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
@@ -221,10 +235,15 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new SimulationHandler(zoom(_.workload), zoomRW(m => m.userDeskRec)((m, v) => {
         log.info("setting simulation result in model")
-        m.copy(userDeskRec = v) //, crunchResult = v._1)
+        m.copy(userDeskRec = v)
       })),
       new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
-      new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))))
+      new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
+      new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))))
   }
 
 }
+
+case class GetAirportInfo(code: String) extends Action
+
+case class UpdateAirportInfo(code: String, info: Option[AirportInfo]) extends Action

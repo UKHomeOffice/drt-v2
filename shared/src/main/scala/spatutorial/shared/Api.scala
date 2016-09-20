@@ -75,7 +75,7 @@ case class WL(time: Long, workload: Double)
 case class Pax(time: Long, pax: Int)
 
 
-case class AirportInfo(airportName: String, country: String, code: String)
+case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 //case class QueueWorkloads(queueName: String,
 //                          workloads: Seq[WorkloadTimeslot],
