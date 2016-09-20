@@ -99,7 +99,7 @@ object FlightsView {
       <.td(f.Terminal),
       <.td(f.ICAO),
       <.td(f.IATA),
-      <.td(f.Origin, ^.title:=Callback."portname"),
+      <.td(f.Origin, ^.title:="portname"),
       <.td(f.SchDT))
 
     <.tr(vals)
