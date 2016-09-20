@@ -80,28 +80,29 @@ object FlightsView {
   }
 
   def flightRow(f: ApiFlight) = {
-    val vals = List[String](
-      f.Operator,
-      f.Status,
-      f.EstDT,
-      f.ActDT,
-      f.EstChoxDT,
-      f.ActChoxDT,
-      f.Gate,
-      f.Stand,
-      f.MaxPax.toString,
-      f.ActPax.toString,
-      f.TranPax.toString,
-      f.RunwayID,
-      f.BaggageReclaimId,
-      f.FlightID.toString,
-      f.AirportID,
-      f.Terminal,
-      f.ICAO,
-      f.IATA,
-      f.Origin,
-      f.SchDT)
-    <.tr(vals.map(v => <.td(v.toString)))
+    val vals = List(
+      <.td(f.Operator),
+      <.td(f.Status),
+      <.td(f.EstDT),
+      <.td(f.ActDT),
+      <.td(f.EstChoxDT),
+      <.td(f.ActChoxDT),
+      <.td(f.Gate),
+      <.td(f.Stand),
+      <.td(f.MaxPax.toString),
+      <.td(f.ActPax.toString),
+      <.td(f.TranPax.toString),
+      <.td(f.RunwayID),
+      <.td(f.BaggageReclaimId),
+      <.td(f.FlightID.toString),
+      <.td(f.AirportID),
+      <.td(f.Terminal),
+      <.td(f.ICAO),
+      <.td(f.IATA),
+      <.td(f.Origin, ^.title:=Callback."portname"),
+      <.td(f.SchDT))
+
+    <.tr(vals)
   }
 
   def apply(props: Props, proxy: ModelProxy[Pot[Flights]]) = component(props)

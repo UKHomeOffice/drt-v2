@@ -75,6 +75,8 @@ case class WL(time: Long, workload: Double)
 case class Pax(time: Long, pax: Int)
 
 
+case class AirportInfo(airportName: String, country: String, code: String)
+
 //case class QueueWorkloads(queueName: String,
 //                          workloads: Seq[WorkloadTimeslot],
 //                          workloadsByMinute: Seq[Double])
@@ -96,7 +98,7 @@ trait Api extends FlightsApi {
 
   def getWorkloads(): List[Double]
 
-//  def airportInfoByAirportCode(code: String): Future[String]
+  def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def crunch(workloads: List[Double]): CrunchResult
 

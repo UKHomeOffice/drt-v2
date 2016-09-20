@@ -1,14 +1,33 @@
 package services
 
-import java.io.InputStream
-import javax.script._
-
-import org.renjin.sexp.DoubleVector
 import spatutorial.shared._
 import utest._
 
-import scala.util.Random
+import scala.concurrent.{Future, Await}
+import scala.util.Success
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
+object AirportToCountryTests extends TestSuite {
+  def tests = TestSuite {
+    "can load csv" - {
+      val head = AirportToCountry.airportInfo.head
+      println(s"head is ${head}")
+      assert(head :: Nil == AirportInfo("Goroka", "Papua New Guinea", "GKA") :: Nil)
+    }
+    "can ask the apiservice for LGW" - {
+      val airportInfo = AirportToCountry.airportInfoByAirportCode("LGW")
+      airportInfo.onSuccess {
+        case Some(ai) =>
+          println(s"i'm asserting ${ai}")
+          assert(ai == Some(AirportInfo("Gatwick", "United Kingdom", "LGW")))
+        case f =>
+          println(f)
+          assert(false)
+      }
+    }
+  }
+}
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
@@ -43,7 +62,7 @@ object CrunchTests extends TestSuite {
     //    }
     'canUseCsvForWorkloadInput - {
       val bufferedSource = scala.io.Source.fromURL(
-       getClass.getResource("/optimiser-LHR-T2-NON-EEA-2016-09-12_121059-in-out.csv"))
+        getClass.getResource("/optimiser-LHR-T2-NON-EEA-2016-09-12_121059-in-out.csv"))
       val recs: List[Array[String]] = bufferedSource.getLines.map { l =>
         l.split(",").map(_.trim)
       }.toList

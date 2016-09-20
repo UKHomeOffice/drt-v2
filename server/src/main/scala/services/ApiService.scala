@@ -1,19 +1,51 @@
 package services
 
-import java.util.{UUID, Date}
-import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.ActorRef
-import akka.pattern.AskableActorRef
+import java.util.{Date, UUID}
+
 import spatutorial.shared._
+
 import scala.collection.immutable.Seq
-import scala.concurrent.{Future, ExecutionContext}
-import scala.util.Random
-import spray.client.pipelining._
-import spray.http.HttpHeaders.{Accept, Authorization}
-import spray.http.{HttpRequest, HttpResponse, MediaTypes, OAuth2BearerToken}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.io.Codec
+import scala.util.Try
+
+
+//  case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
+//                 loc2: Double, elevation: Double,dkDouble: Double, dk: String, tz: String)
+
+
+trait AirportToCountryLike {
+  lazy val airportInfo: Seq[AirportInfo] = {
+    val bufferedSource = scala.io.Source.fromURL(
+      getClass.getResource("/airports.dat"))(Codec.UTF8)
+    bufferedSource.getLines().map { l =>
+
+      val t = Try {
+        val splitRow: Array[String] = l.split(",")
+        AirportInfo(stripQuotes(splitRow(1)), stripQuotes(splitRow(3)), stripQuotes(splitRow(4)))
+      }
+      t.getOrElse({
+        println(s"boo ${l}");
+        AirportInfo("failed on", l, "boo")
+      })
+    }.toList
+  }
+
+  def stripQuotes(row1: String): String = {
+    row1.substring(1, row1.length - 1)
+  }
+
+  def airportInfoByAirportCode(code: String) = Future(airportInfo.find(_.code == code))
+
+}
+
+object AirportToCountry extends AirportToCountryLike {
+
+}
 
 abstract class ApiService
-  extends Api with WorkloadsService with FlightsService {
+  extends Api with WorkloadsService with FlightsService with AirportToCountryLike {
 
   var todos: List[DeskRecTimeslot] = Nil
 
@@ -76,14 +108,4 @@ abstract class ApiService
     TryRenjin.processWork(workloads, desks.flatMap(x => List.fill(15)(x)))
   }
 
-  lazy val airportInfo = {
-    case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
-                   loc2: Double, elevation: Double, dk: String, tz: String)
-//    1,"Goroka","Goroka","Papua New Guinea","GKA","AYGA",-6.081689,145.391881,5282,10,"U","Pacific/Port_Moresby"
-  }
-  def airportInfoByAirportCode(code: String) = Future {
-
-    val pipeline = addHeader(Accept(MediaTypes.`application/json`))
-    """[]"""
-  }
 }
