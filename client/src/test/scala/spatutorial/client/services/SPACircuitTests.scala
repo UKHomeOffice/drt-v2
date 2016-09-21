@@ -60,7 +60,7 @@ object SPACircuitTests extends TestSuite {
             }
           }
           "when we update a single port code we see the model change " - {
-            val info = AirportInfo("Gatwick", "United Kingdom", "LGW")
+            val info = AirportInfo("Gatwick", "Gatwick", "United Kingdom", "LGW")
             val someInfo: Some[AirportInfo] = Some(info)
             val result = h.handle(UpdateAirportInfo("LGW", someInfo))
             result match {
@@ -72,7 +72,7 @@ object SPACircuitTests extends TestSuite {
             }
           }
           "when we update a single LHR port code we see the model change " - {
-            val info = AirportInfo("LHR", "United Kingdom", "LHR")
+            val info = AirportInfo("LHR", "London", "United Kingdom", "LHR")
             val someInfo: Some[AirportInfo] = Some(info)
             val result = h.handle(UpdateAirportInfo("LHR", someInfo))
             result match {
@@ -80,6 +80,22 @@ object SPACircuitTests extends TestSuite {
                 assert(newValue == Map(("LHR" -> Ready(info))))
               case message =>
                 println(s"Message was ${message}")
+                assert(false)
+            }
+          }
+
+        }
+        "Given a pending request" - {
+          val model: Map[String, Pot[AirportInfo]] = Map("LGW" -> Empty) //todo Empty because type reasons, try and make in Pending
+          def build = new AirportCountryHandler(new RootModelRW(model))
+          val h = build
+          "when we request a mapping for the existing request we see noChange" - {
+            val result = h.handle(GetAirportInfo("LGW"))
+            result match {
+              case NoChange =>
+                assert(true)
+              case m =>
+                println(s"should not have got $m")
                 assert(false)
             }
           }

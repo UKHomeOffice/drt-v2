@@ -1,5 +1,6 @@
 package spatutorial.client
 
+import chandu0101.scalajs.react.components.ReactTable
 import diode.ModelR
 import diode.data.Pot
 import diode.react.ReactConnectProxy
@@ -102,6 +103,8 @@ object SPAMain extends js.JSApp {
     log.info("This message goes to server as well")
 
     // create stylesheet
+    import scalacss.ScalaCssReact._
+    ReactTable.DefaultStyle.addToDocument()
     GlobalStyles.addToDocument()
     // create the router
     val router = Router(BaseUrl.until_#, routerConfig)

@@ -1,5 +1,7 @@
 package spatutorial.client.modules
 
+import chandu0101.scalajs.react.components.{JsonUtil, ReactTable, Spinner}
+import chandu0101.scalajs.react.components.materialui.{MuiPaper, ZDepth, DeterminateIndeterminate, MuiCircularProgress}
 import diode.data.{Ready, Pot}
 import diode.react.{ReactPot, ReactConnectProxy, ModelProxy}
 import japgolly.scalajs.react.ReactComponentB
@@ -30,8 +32,97 @@ import scala.util.Random
 import scala.language.existentials
 import spatutorial.client.logger._
 
+
+object CodeExample {
+
+  object Style {
+
+    val pageBodyContent = Seq(^.borderRadius := "2px",
+      ^.boxShadow := "0 1px 4px rgba(223, 228, 228, 0.79)",
+      ^.maxWidth := "1024px")
+
+    val contentDemo = Seq(^.padding := "30px")
+
+    val contentCode = Seq(^.borderTop := "solid 1px #e0e0e0"
+    )
+
+    val title = Seq(
+      ^.paddingBottom := "15px")
+
+  }
+
+  case class Backend($: BackendScope[Props, _]) {
+    def render(P: Props, C: PropsChildren) = {
+      <.div(
+        P.title.nonEmpty ?= <.h3(P.title, Style.title),
+        <.div(Style.pageBodyContent)(
+          <.div(Style.contentDemo, ^.key := "dan")(
+            C
+          ),
+          <.pre(Style.contentCode, ^.key := "code")(P.code)
+        )
+      )
+    }
+  }
+
+  val component = ReactComponentB[Props]("codeexample")
+    .renderBackend[Backend]
+    .build
+
+  case class Props(code: String, title: String)
+
+  def apply(code: String,
+            title: String,
+            ref: js.UndefOr[String] = "",
+            key: js.Any = {})
+           (children: ReactNode*) =
+    component.set(key, ref)(Props(code, title), children: _*)
+}
+
+object TableTest {
+
+  object SampleData {
+
+    val personJson =
+      """
+        |[ {"fname": "Joshua", "lname": "Myers", "email": "jmyers0@trellian.com", "country": "France"},
+        | {"fname": "Gloria", "lname": "Porter", "email": "gporter1@hatena.ne.jp", "country": "Indonesia"},
+        | {"fname": "Joe", "lname": "Elliott", "email": "jelliott2@mediafire.com", "country": "Brazil"},
+        | {"fname": "Larry", "lname": "Henry", "email": "lhenry3@goo.ne.jp", "country": "Philippines"},
+        | {"fname": "Frances", "lname": "Roberts", "email": "froberts4@fema.gov", "country": "Mexico"},
+        | {"fname": "Ashley", "lname": "Turner", "email": "aturner5@paypal.com", "country": "Brazil"},
+        | {"fname": "Jeremy", "lname": "Morris", "email": "jmorris6@yale.edu", "country": "China"},
+        | {"fname": "Todd", "lname": "Carter", "email": "tcarter7@printfriendly.com", "country": "Peru"},
+        | {"fname": "Antonio", "lname": "Hart", "email": "ahart8@webs.com", "country": "Brazil"},
+        | {"fname": "Henry", "lname": "Welch", "email": "hwelch9@soup.io", "country": "Paraguay"}
+        ]""".stripMargin('|')
+  }
+
+  val data: Vector[Map[String, Any]] =
+    JsonUtil.jsonArrayToMap(SampleData.personJson)
+
+  val columns: List[String] =
+    List("fname", "lname", "email", "country")
+
+  case class Backend($: BackendScope[_, _]) {
+    def render =
+      <.div(
+        <.h2(^.cls := "mui-font-style-headline")("Basic Table"),
+        //        CodeExample(code, "ReactTableBasic")(
+//        <.p("hello")
+                ReactTable(data = data, columns = columns, rowsPerPage = 10)
+        //        )
+      )
+  }
+
+  val component = ReactComponentB[Unit]("plain")
+    .renderBackend[Backend]
+    .build
+}
+
 object FlightsView {
 
+  import chandu0101.scalajs.react.components.Implicits._
   import scala.language.existentials
 
   case class Props(router: RouterCtl[Loc],
@@ -57,11 +148,42 @@ object FlightsView {
         state.flights(x => {
           log.info("rendering flight rows")
           <.div(^.className := "table-responsive",
-            props.flightsModelProxy.value.renderReady(flights =>
-              <.table(
-                ^.className := "table", ^.className := "table-striped",
-                <.tbody(flightHeaders,
-                  flights.flights.sortBy(_.Operator).reverse.map(flightRow(_, ai.value))))))
+            props.flightsModelProxy.value.renderPending((t) => Spinner()()),
+            //            props.flightsModelProxy.value.renderEmpty(TableTest.component()),
+            //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
+            props.flightsModelProxy.value.renderReady(flights => {
+              val data = flights.flights.map(f => Map(
+                "Operator" -> f.Operator,
+                "Status"  -> f.Status,
+                "EstDT" -> f.EstDT,
+                "ActDT" -> f.ActDT,
+                "EstChoxDT" -> f.EstChoxDT,
+                "ActChoxDT" -> f.ActChoxDT,
+                "Gate" -> f.Gate,
+                "Stand" -> f.Stand,
+                "MaxPax" -> f.MaxPax,
+                "ActPax" -> f.ActPax,
+                "TranPax" -> f.TranPax,
+                "RunwayID" -> f.RunwayID,
+                "BaggageReclaimId" -> f.BaggageReclaimId,
+                "FlightID" -> f.FlightID,
+                "AirportID" -> f.AirportID,
+                "Terminal" -> f.Terminal,
+                "ICAO" -> f.ICAO,
+                "IATA" -> f.IATA,
+                "Origin" -> f.Origin,
+                "SchDT" -> f.SchDT)).toVector
+              val config = List(
+                ("SchDT", None, Some(ReactTable.getStringSort("SchDT")), None),
+                ("Origin", None, Some(ReactTable.getStringSort("Origin")), None))
+              ReactTable(data = data, columns = columnNames, rowsPerPage = 50, config = config)
+            })
+            //                TableTest.component()
+            //              <.table(
+            //                ^.className := "table", ^.className := "table-striped",
+            //                <.tbody(flightHeaders,
+            //                  flights.flights.sortBy(_.Operator).reverse.map(flightRow(_, ai.value))) )
+          )
         })))
   }).componentDidMount((scope) => Callback.when(scope.props.flightsModelProxy.value.isEmpty) {
     log.info("Flights View is empty, requesting flights")
@@ -69,7 +191,15 @@ object FlightsView {
   }).build
 
   def flightHeaders() = {
-    val hs = List("Operator",
+    val hs = columnNames
+    <.tr(hs.map(<.th(_)))
+  }
+
+  def columnNames: List[String] = {
+    List(
+      "SchDT",
+      "Origin",
+      "Operator",
       "Status",
       "EstDT",
       "ActDT",
@@ -86,10 +216,8 @@ object FlightsView {
       "AirportID",
       "Terminal",
       "ICAO",
-      "IATA",
-      "Origin",
-      "SchDT")
-    <.tr(hs.map(<.th(_)))
+      "IATA"
+      )
   }
 
   def flightRow(f: ApiFlight, ai: Map[String, Pot[AirportInfo]]) = {
@@ -120,7 +248,7 @@ object FlightsView {
       <.td(f.Terminal),
       <.td(f.ICAO),
       <.td(f.IATA),
-      <.td(f.Origin, ReactAttr("data-toggle") := "tooltip", extracted),
+      <.td(f.Origin, ReactAttr("data-toggle") := "popover", ReactAttr("data-content") := "content!", extracted),
       <.td(f.SchDT))
 
     <.tr(vals)

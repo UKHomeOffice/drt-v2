@@ -25,6 +25,7 @@ object Settings {
     val scala = "2.11.8"
     val scalaDom = "0.9.1"
     val scalajsReact = "0.11.1"
+    val scalajsReactComponents = "0.5.0"
     val scalaCSS = "0.4.1"
     val log4js = "1.4.10"
     val autowire = "0.2.5"
@@ -73,7 +74,9 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "core" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
+    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
     "me.chrons" %%% "diode" % versions.diode,
+    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
     "me.chrons" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
@@ -83,6 +86,7 @@ object Settings {
   val jsDependencies = Def.setting(Seq(
     "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
     "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
+    //    "org.webjars.npm" % "fixed-data-table" % "0.6.3" / "dist/fixed-data-table.js" minified "dist/fixed-data-table.min.js" dependsOn "react-with-addons.js" commonJSName "ReactFixedDataTable",
     "org.webjars" % "rgraph" % "3_2014-07-27-stable" / "RGraph.bar.js",
     "org.webjars" % "jquery" % versions.jQuery / "jquery.js" minified "jquery.min.js",
     "org.webjars" % "bootstrap" % versions.bootstrap / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",

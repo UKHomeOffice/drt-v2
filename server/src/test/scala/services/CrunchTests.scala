@@ -13,14 +13,14 @@ object AirportToCountryTests extends TestSuite {
     "can load csv" - {
       val head = AirportToCountry.airportInfo.head
       println(s"head is ${head}")
-      assert(head :: Nil == AirportInfo("Goroka", "Papua New Guinea", "GKA") :: Nil)
+      assert(head :: Nil == AirportInfo("Goroka", "Goroka", "Papua New Guinea", "GKA") :: Nil)
     }
     "can ask the apiservice for LGW" - {
       val airportInfo = AirportToCountry.airportInfoByAirportCode("LGW")
       airportInfo.onSuccess {
         case Some(ai) =>
           println(s"i'm asserting ${ai}")
-          assert(ai == Some(AirportInfo("Gatwick", "United Kingdom", "LGW")))
+          assert(ai == Some(AirportInfo("Gatwick", "Gatwick",  "United Kingdom", "LGW")))
         case f =>
           println(f)
           assert(false)

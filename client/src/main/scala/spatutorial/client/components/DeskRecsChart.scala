@@ -22,7 +22,7 @@ object DeskRecsChart {
 
   log.info("initialising deskrecschart")
 
-  case class State(deskRecs: ReactConnectProxy[Pot[SimulationResult]])
+  case class State(deskRecs: ReactConnectProxy[Pot[UserDeskRecs]])
 
   def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
     .render_P(deskRecsRender(labels.map(_.take(16))))
@@ -49,19 +49,24 @@ object DeskRecsChart {
   }
 
   def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[UserDeskRecs]]]("FunkyInputs")
+    .initialState_P(p => State(p.connect(m => m)))
     .renderPS {
       (_, proxy, state) => {
-        val potSimulationResult = proxy()
         val dispatch: (Action) => Callback = proxy.dispatch _
-        Panel(Panel.Props("Override Desk Recommendations and Wait times"),
-          deskSimulationInputs(labels, potSimulationResult, dispatch)
-        )
+        state.deskRecs((deskRecs: ModelProxy[Pot[UserDeskRecs]]) => {
+          val deskRecsM = deskRecs.value
+          Panel(Panel.Props("Override Desk Recommendations and Wait times"),
+            deskSimulationInputs(labels, deskRecsM, dispatch)
+          )
+        })
       }
     }.componentDidMount(scope =>
     Callback.log("Mounted Desk Sim Inputs")
   ).build
 
-  def deskSimulationInputs(labels: IndexedSeq[String], potSimulationResult: Pot[UserDeskRecs], dispatch: Action => Callback): ReactNode = {
+  def deskSimulationInputs(labels: IndexedSeq[String],
+                           userDeskRecs: Pot[UserDeskRecs],
+                           dispatch: Action => Callback): ReactNode = {
     def inputChange(idx: Int)(e: ReactEventI) = {
       val ev = e.target.value
       e.preventDefault()
@@ -71,8 +76,8 @@ object DeskRecsChart {
     }
 
     <.div(^.key := "inputs",
-      potSimulationResult.renderEmpty(<.p("Waiting for simulation")),
-      potSimulationResult.renderReady(rds => {
+      userDeskRecs.renderEmpty(<.p("Waiting for simulation")),
+      userDeskRecs.renderReady(rds => {
         log.info("rendering simulation inputs")
         val skippedLabels = takeEvery15th(labels)
         val zip: IndexedSeq[(String, DeskRecTimeslot)] = skippedLabels.zip(rds.items)

@@ -36,7 +36,7 @@ lazy val client: Project = (project in file("client"))
     // use Scala.js provided launcher code to start the client app
     persistLauncher := true,
     persistLauncher in Test := false,
-
+    resolvers += Resolver.sonatypeRepo("snapshots"),
     // use uTest framework for tests
 
     testFrameworks += new TestFramework("utest.runner.Framework")

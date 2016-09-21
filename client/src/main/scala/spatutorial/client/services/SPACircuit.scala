@@ -18,6 +18,7 @@ import scala.util.{Success, Random}
 import spatutorial.client.logger._
 import spatutorial.shared.{Api, CrunchResult, SimulationResult}
 import boopickle.Default._
+
 //import ExecutionContext.Implicits.global
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import spatutorial.client.logger._
@@ -198,9 +199,14 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
 class AirportCountryHandler[M](modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]]) extends ActionHandler(modelRW) {
   override def handle = {
     case GetAirportInfo(code) =>
-      val stringToObject = value + (code -> Empty)
-      log.info(s"sending request for info for ${code}")
-      updated(stringToObject, Effect(AjaxClient[Api].airportInfoByAirportCode(code).call().map(res => UpdateAirportInfo(code, res))))
+      value.get(code) match {
+        case None =>
+          val stringToObject = value + (code -> Empty)
+          log.info(s"sending request for info for ${ code }")
+          updated(stringToObject, Effect(AjaxClient[Api].airportInfoByAirportCode(code).call().map(res => UpdateAirportInfo(code, res))))
+        case Some(v) =>
+          noChange
+      }
     case UpdateAirportInfo(code, Some(airportInfo)) =>
       val newValue = value + ((code -> Ready(airportInfo)))
       log.info(s"got a new value for ${code} ${airportInfo}")

@@ -11,9 +11,18 @@
         <link rel="stylesheet" media="screen" href=@_asset("stylesheets/main.min.css") >
         <link rel="shortcut icon" type="image/png" href=@_asset("images/favicon.png") >
     </head>
+    <script src=@_asset("index-bundle.js") type="text/javascript"></script>
     <body>
         <div id="root">
         </div>
         @playscalajs.html.scripts(projectName = "client", fileName => _asset(fileName).toString)
     </body>
+    <script src=@_asset("react_spinner-bundle.js") type="text/javascript"></script>
+    <script src=@_asset("elemental_ui-bundle.js") type="text/javascript"></script>
+    <script src=@_asset("material_ui-bundle.js") type="text/javascript"></script>
+    <script type="text/javascript">
+            $(function () {
+                $('[data-toggle="popover"]').popover()
+            })
+    </script>
 </html>
