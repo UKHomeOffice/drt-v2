@@ -10,6 +10,10 @@ lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   // set up settings specific to the JS project
   .jsConfigure(_ enablePlugins ScalaJSPlay)
 
+val bundle = project.in(file("bundle"))
+
+addCommandAlias("bundle", "bundle/bundle")
+
 lazy val sharedJVM = shared.jvm.settings(name := "sharedJVM")
 
 lazy val sharedJS = shared.js.settings(name := "sharedJS")
@@ -31,6 +35,7 @@ lazy val client: Project = (project in file("client"))
     jsDependencies ++= Settings.jsDependencies.value,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
+    jsDependencies += ProvidedJS / "bundle.js",
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app

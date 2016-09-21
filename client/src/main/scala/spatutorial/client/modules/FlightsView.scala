@@ -1,7 +1,10 @@
 package spatutorial.client.modules
 
-import chandu0101.scalajs.react.components.{JsonUtil, ReactTable, Spinner}
+import chandu0101.scalajs.react.components.ReactTable.Backend
+import chandu0101.scalajs.react.components.{ReactTable, JsonUtil, Spinner}
 import chandu0101.scalajs.react.components.materialui.{MuiPaper, ZDepth, DeterminateIndeterminate, MuiCircularProgress}
+import com.payalabs.scalajs.react.bridge.ReactBridgeComponent
+import com.sun.org.apache.xpath.internal.operations.Bool
 import diode.data.{Ready, Pot}
 import diode.react.{ReactPot, ReactConnectProxy, ModelProxy}
 import japgolly.scalajs.react.ReactComponentB
@@ -26,12 +29,53 @@ import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
 import spatutorial.shared.FlightsApi.Flights
+import com.payalabs.scalajs.react.bridge._
 
 import scala.scalajs.js
 import scala.util.Random
 import scala.language.existentials
 import spatutorial.client.logger._
 
+case class TagsInput(id: js.UndefOr[String]  = js.undefined,
+                     className: js.UndefOr[String] = js.undefined,
+                     ref: js.UndefOr[String] = js.undefined,
+                     key: js.UndefOr[Any] = js.undefined,
+                     defaultValue: js.UndefOr[Seq[String]] = js.undefined,
+                     value: js.UndefOr[Array[String]] = js.undefined,
+                     placeholder: js.UndefOr[String] = js.undefined,
+                     onChange: js.UndefOr[js.Array[String] => Unit] = js.undefined,
+                     validate: js.UndefOr[String => Boolean] = js.undefined,
+                     transform: js.UndefOr[String => String] = js.undefined)
+  extends ReactBridgeComponent
+
+//<Griddle results={fakeData} tableClassName="table" showFilter={true}
+//showSettings={true} columns={["name", "city", "state", "country"]}/>
+case class AwesomeJSCompWrapper( results: js.Dynamic,
+                                 columns: Seq[String] ) {
+  def toJS = {
+    val p = js.Dynamic.literal()
+    p.updateDynamic("results")(results)
+    p.updateDynamic("columns")(columns)
+    p
+  }
+
+  def apply(children : ReactNode*) = {
+    val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.griddle) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
+    f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
+  }
+
+}
+
+case class Griddle(id: js.UndefOr[String] = js.undefined,
+                   className: js.UndefOr[String] = js.undefined,
+                   ref: js.UndefOr[String] = js.undefined,
+                   key: js.UndefOr[Any] = js.undefined,
+                   results: js.UndefOr[Any] = js.undefined,
+                   tableClassName: js.UndefOr[String] = "table",
+                   showFilter: js.UndefOr[Boolean] = true,
+                   showSettings: js.UndefOr[Boolean] = true,
+                   columns: js.UndefOr[Seq[String]] = js.undefined
+                  ) extends ReactBridgeComponent
 
 object CodeExample {
 
@@ -100,6 +144,9 @@ object TableTest {
 
   val data: Vector[Map[String, Any]] =
     JsonUtil.jsonArrayToMap(SampleData.personJson)
+  import scala.scalajs.js.JSON
+
+  val fakeData: js.Dynamic = JSON.parse(SampleData.personJson)
 
   val columns: List[String] =
     List("fname", "lname", "email", "country")
@@ -121,8 +168,16 @@ object TableTest {
 }
 
 object FlightsView {
-
+  import com.payalabs.scalajs.react.bridge.ReactBridgeComponent
   import chandu0101.scalajs.react.components.Implicits._
+  import org.scalajs.dom
+//  import com.payalabs.scalajs.react.bridge.elements.{ReactMediumEditor, Input, Button, TagsInput}
+  import japgolly.scalajs.react.vdom.all.{onChange => _,_}
+  import japgolly.scalajs.react._
+  import org.scalajs.dom
+
+  import scala.scalajs.js
+
   import scala.language.existentials
 
   case class Props(router: RouterCtl[Loc],
@@ -152,31 +207,8 @@ object FlightsView {
             //            props.flightsModelProxy.value.renderEmpty(TableTest.component()),
             //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
             props.flightsModelProxy.value.renderReady(flights => {
-              val data = flights.flights.map(f => Map(
-                "Operator" -> f.Operator,
-                "Status"  -> f.Status,
-                "EstDT" -> f.EstDT,
-                "ActDT" -> f.ActDT,
-                "EstChoxDT" -> f.EstChoxDT,
-                "ActChoxDT" -> f.ActChoxDT,
-                "Gate" -> f.Gate,
-                "Stand" -> f.Stand,
-                "MaxPax" -> f.MaxPax,
-                "ActPax" -> f.ActPax,
-                "TranPax" -> f.TranPax,
-                "RunwayID" -> f.RunwayID,
-                "BaggageReclaimId" -> f.BaggageReclaimId,
-                "FlightID" -> f.FlightID,
-                "AirportID" -> f.AirportID,
-                "Terminal" -> f.Terminal,
-                "ICAO" -> f.ICAO,
-                "IATA" -> f.IATA,
-                "Origin" -> f.Origin,
-                "SchDT" -> f.SchDT)).toVector
-              val config = List(
-                ("SchDT", None, Some(ReactTable.getStringSort("SchDT")), None),
-                ("Origin", None, Some(ReactTable.getStringSort("Origin")), None))
-              ReactTable(data = data, columns = columnNames, rowsPerPage = 50, config = config)
+              AwesomeJSCompWrapper(results=TableTest.fakeData, columns=Seq("fname", "lname", "email", "country"))()
+//              reactTable(flights)
             })
             //                TableTest.component()
             //              <.table(
@@ -189,6 +221,34 @@ object FlightsView {
     log.info("Flights View is empty, requesting flights")
     scope.props.flightsModelProxy.dispatch(RequestFlights(0, 0))
   }).build
+
+  def reactTable(flights: Flights) = {
+    val data = flights.flights.map(f => Map(
+      "Operator" -> f.Operator,
+      "Status" -> f.Status,
+      "EstDT" -> f.EstDT,
+      "ActDT" -> f.ActDT,
+      "EstChoxDT" -> f.EstChoxDT,
+      "ActChoxDT" -> f.ActChoxDT,
+      "Gate" -> f.Gate,
+      "Stand" -> f.Stand,
+      "MaxPax" -> f.MaxPax,
+      "ActPax" -> f.ActPax,
+      "TranPax" -> f.TranPax,
+      "RunwayID" -> f.RunwayID,
+      "BaggageReclaimId" -> f.BaggageReclaimId,
+      "FlightID" -> f.FlightID,
+      "AirportID" -> f.AirportID,
+      "Terminal" -> f.Terminal,
+      "ICAO" -> f.ICAO,
+      "IATA" -> f.IATA,
+      "Origin" -> f.Origin,
+      "SchDT" -> f.SchDT)).toVector
+    val config = List(
+      ("SchDT", None, Some(ReactTable.getStringSort("SchDT")), None),
+      ("Origin", None, Some(ReactTable.getStringSort("Origin")), None))
+    ReactTable(data = data, columns = columnNames, rowsPerPage = 50, config = config)
+  }
 
   def flightHeaders() = {
     val hs = columnNames

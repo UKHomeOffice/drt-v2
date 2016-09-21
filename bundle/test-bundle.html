@@ -1,0 +1,12 @@
+<h1></h1>
+<script src="../client/src/main/resources/bundle.js"></script>
+<script>
+var $ = Bundle.jquery
+var _ = Bundle.lodash
+var griddlereact = Bundle.griddle
+console.log($)
+console.log(_)
+console.log(griddlereact)
+
+$("h1").text(_.camelCase("Hello, world."))
+</script>
