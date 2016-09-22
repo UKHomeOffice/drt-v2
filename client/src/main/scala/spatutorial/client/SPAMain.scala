@@ -1,6 +1,6 @@
 package spatutorial.client
 
-import chandu0101.scalajs.react.components.ReactTable
+import chandu0101.scalajs.react.components.{Spinner, ReactTable}
 import diode.ModelR
 import diode.data.Pot
 import diode.react.ReactConnectProxy
@@ -105,6 +105,7 @@ object SPAMain extends js.JSApp {
     // create stylesheet
     import scalacss.ScalaCssReact._
     ReactTable.DefaultStyle.addToDocument()
+//    Spinner.Style.addToDocument()
     GlobalStyles.addToDocument()
     // create the router
     val router = Router(BaseUrl.until_#, routerConfig)

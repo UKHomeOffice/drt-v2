@@ -1,5 +1,8 @@
 package spatutorial.client.modules
 
+import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
+import sun.java2d.loops.CustomComponent
+
 import scala.scalajs.js.{Object, JSON}
 import chandu0101.scalajs.react.components.ReactTable.Backend
 import chandu0101.scalajs.react.components.{ReactTable, JsonUtil, Spinner}
@@ -37,22 +40,15 @@ import scala.util.Random
 import scala.language.existentials
 import spatutorial.client.logger._
 
-case class TagsInput(id: js.UndefOr[String] = js.undefined,
-                     className: js.UndefOr[String] = js.undefined,
-                     ref: js.UndefOr[String] = js.undefined,
-                     key: js.UndefOr[Any] = js.undefined,
-                     defaultValue: js.UndefOr[Seq[String]] = js.undefined,
-                     value: js.UndefOr[Array[String]] = js.undefined,
-                     placeholder: js.UndefOr[String] = js.undefined,
-                     onChange: js.UndefOr[js.Array[String] => Unit] = js.undefined,
-                     validate: js.UndefOr[String => Boolean] = js.undefined,
-                     transform: js.UndefOr[String => String] = js.undefined)
-  extends ReactBridgeComponent
+object GriddleComponentWrapper {
 
-//<Griddle results={fakeData} tableClassName="table" showFilter={true}
-//showSettings={true} columns={["name", "city", "state", "country"]}/>
+  case class ColumnMeta(columnName: String, order: Int, customComponent: Option[ReactNode])
+
+}
+
 case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
                                    columns: Seq[String],
+                                   columnMeta: Option[Seq[ColumnMeta]] = None,
                                    showSettings: Boolean = true,
                                    showFilter: Boolean = true
                                   ) {
@@ -62,9 +58,26 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
     p.updateDynamic("columns")(columns)
     p.updateDynamic("showSettings")(showSettings)
     p.updateDynamic("showFilter")(showFilter)
+
+    fixWeirdCharacterEncoding(p)
+
+    val meta = """[
+      |{"columnName": "Origin","visible": true, "order": 2}
+      |]""".stripMargin
+    val parsedMeta = JSON.parse(meta, null)
+    p.updateDynamic("columnMeta")(parsedMeta)
     p
   }
 
+  def fixWeirdCharacterEncoding(p: Object with js.Dynamic): Unit = {
+    // these are here because of a weird character encoding issue when twirl bundles bundle.js into client-jsdeps.js
+    p.updateDynamic("sortAscendingComponent")("  ▲")
+    p.updateDynamic("sortDescendingComponent")(" ▼")
+  }
+
+  //  def customColumn = ReactComponentB[String].render(
+//    (s) =>  <.p("custom here")
+//  )
   def apply(children: ReactNode*) = {
     val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.griddle) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
     f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
@@ -206,18 +219,18 @@ object FlightsView {
     ).renderPS((_, props, state) => {
     log.info("rendering flights")
     Panel(Panel.Props("Flights"),
+      <.div(backgroundColor := "grey", Spinner()()),
       <.h2("Flights"),
       state.airportInfo(ai =>
         state.flights(x => {
           log.info("rendering flight rows")
           <.div(^.className := "table-responsive",
             props.flightsModelProxy.value.renderPending((t) => Spinner()()),
-            //            props.flightsModelProxy.value.renderEmpty(TableTest.component()),
+            props.flightsModelProxy.value.renderEmpty(Spinner()()),
+
             //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
             props.flightsModelProxy.value.renderReady(flights => {
-              div(
-                GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray, columns = columnNames)(),
-                GriddleComponentWrapper(results = TableTest.fakeData, columns = Seq("fname", "lname", "email", "country"))())
+                GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray, columns = columnNames)()
               //              reactTable(flights)
             })
             //                TableTest.component()
@@ -350,7 +363,7 @@ object FlightsView {
       <.td(f.Terminal),
       <.td(f.ICAO),
       <.td(f.IATA),
-      <.td(f.Origin, ReactAttr("data-toggle") := "popover", ReactAttr("data-content") := "content!", extracted),
+      <.td(f.Origin, ReactAttr("data-toggle") := "popover", ReactAttr("data-content") := "content", extracted),
       <.td(f.SchDT))
 
     <.tr(vals)

@@ -9,6 +9,7 @@
     "browserify": "13.0.0",
     "griddle-react": "0.6.1",
     "lodash": "4.3.0",
+    "react-spinner": "^0.2.3",
     "jquery": "1.9.1"
   }
 }
