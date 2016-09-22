@@ -1,5 +1,6 @@
 package spatutorial.client.modules
 
+import scala.scalajs.js.{Object, JSON}
 import chandu0101.scalajs.react.components.ReactTable.Backend
 import chandu0101.scalajs.react.components.{ReactTable, JsonUtil, Spinner}
 import chandu0101.scalajs.react.components.materialui.{MuiPaper, ZDepth, DeterminateIndeterminate, MuiCircularProgress}
@@ -36,7 +37,7 @@ import scala.util.Random
 import scala.language.existentials
 import spatutorial.client.logger._
 
-case class TagsInput(id: js.UndefOr[String]  = js.undefined,
+case class TagsInput(id: js.UndefOr[String] = js.undefined,
                      className: js.UndefOr[String] = js.undefined,
                      ref: js.UndefOr[String] = js.undefined,
                      key: js.UndefOr[Any] = js.undefined,
@@ -50,78 +51,83 @@ case class TagsInput(id: js.UndefOr[String]  = js.undefined,
 
 //<Griddle results={fakeData} tableClassName="table" showFilter={true}
 //showSettings={true} columns={["name", "city", "state", "country"]}/>
-case class AwesomeJSCompWrapper( results: js.Dynamic,
-                                 columns: Seq[String] ) {
+case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
+                                   columns: Seq[String],
+                                   showSettings: Boolean = true,
+                                   showFilter: Boolean = true
+                                  ) {
   def toJS = {
     val p = js.Dynamic.literal()
     p.updateDynamic("results")(results)
     p.updateDynamic("columns")(columns)
+    p.updateDynamic("showSettings")(showSettings)
+    p.updateDynamic("showFilter")(showFilter)
     p
   }
 
-  def apply(children : ReactNode*) = {
+  def apply(children: ReactNode*) = {
     val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.griddle) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
     f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
   }
 
 }
 
-case class Griddle(id: js.UndefOr[String] = js.undefined,
-                   className: js.UndefOr[String] = js.undefined,
-                   ref: js.UndefOr[String] = js.undefined,
-                   key: js.UndefOr[Any] = js.undefined,
-                   results: js.UndefOr[Any] = js.undefined,
-                   tableClassName: js.UndefOr[String] = "table",
-                   showFilter: js.UndefOr[Boolean] = true,
-                   showSettings: js.UndefOr[Boolean] = true,
-                   columns: js.UndefOr[Seq[String]] = js.undefined
-                  ) extends ReactBridgeComponent
+//case class Griddle(id: js.UndefOr[String] = js.undefined,
+//                   className: js.UndefOr[String] = js.undefined,
+//                   ref: js.UndefOr[String] = js.undefined,
+//                   key: js.UndefOr[Any] = js.undefined,
+//                   results: js.UndefOr[Any] = js.undefined,
+//                   tableClassName: js.UndefOr[String] = "table",
+//                   showFilter: js.UndefOr[Boolean] = true,
+//                   showSettings: js.UndefOr[Boolean] = true,
+//                   columns: js.UndefOr[Seq[String]] = js.undefined
+//                  ) extends ReactBridgeComponent
 
-object CodeExample {
-
-  object Style {
-
-    val pageBodyContent = Seq(^.borderRadius := "2px",
-      ^.boxShadow := "0 1px 4px rgba(223, 228, 228, 0.79)",
-      ^.maxWidth := "1024px")
-
-    val contentDemo = Seq(^.padding := "30px")
-
-    val contentCode = Seq(^.borderTop := "solid 1px #e0e0e0"
-    )
-
-    val title = Seq(
-      ^.paddingBottom := "15px")
-
-  }
-
-  case class Backend($: BackendScope[Props, _]) {
-    def render(P: Props, C: PropsChildren) = {
-      <.div(
-        P.title.nonEmpty ?= <.h3(P.title, Style.title),
-        <.div(Style.pageBodyContent)(
-          <.div(Style.contentDemo, ^.key := "dan")(
-            C
-          ),
-          <.pre(Style.contentCode, ^.key := "code")(P.code)
-        )
-      )
-    }
-  }
-
-  val component = ReactComponentB[Props]("codeexample")
-    .renderBackend[Backend]
-    .build
-
-  case class Props(code: String, title: String)
-
-  def apply(code: String,
-            title: String,
-            ref: js.UndefOr[String] = "",
-            key: js.Any = {})
-           (children: ReactNode*) =
-    component.set(key, ref)(Props(code, title), children: _*)
-}
+//object CodeExample {
+//
+//  object Style {
+//
+//    val pageBodyContent = Seq(^.borderRadius := "2px",
+//      ^.boxShadow := "0 1px 4px rgba(223, 228, 228, 0.79)",
+//      ^.maxWidth := "1024px")
+//
+//    val contentDemo = Seq(^.padding := "30px")
+//
+//    val contentCode = Seq(^.borderTop := "solid 1px #e0e0e0"
+//    )
+//
+//    val title = Seq(
+//      ^.paddingBottom := "15px")
+//
+//  }
+//
+//  case class Backend($: BackendScope[Props, _]) {
+//    def render(P: Props, C: PropsChildren) = {
+//      <.div(
+//        P.title.nonEmpty ?= <.h3(P.title, Style.title),
+//        <.div(Style.pageBodyContent)(
+//          <.div(Style.contentDemo, ^.key := "dan")(
+//            C
+//          ),
+//          <.pre(Style.contentCode, ^.key := "code")(P.code)
+//        )
+//      )
+//    }
+//  }
+//
+//  val component = ReactComponentB[Props]("codeexample")
+//    .renderBackend[Backend]
+//    .build
+//
+//  case class Props(code: String, title: String)
+//
+//  def apply(code: String,
+//            title: String,
+//            ref: js.UndefOr[String] = "",
+//            key: js.Any = {})
+//           (children: ReactNode*) =
+//    component.set(key, ref)(Props(code, title), children: _*)
+//}
 
 object TableTest {
 
@@ -144,7 +150,7 @@ object TableTest {
 
   val data: Vector[Map[String, Any]] =
     JsonUtil.jsonArrayToMap(SampleData.personJson)
-  import scala.scalajs.js.JSON
+
 
   val fakeData: js.Dynamic = JSON.parse(SampleData.personJson)
 
@@ -156,8 +162,8 @@ object TableTest {
       <.div(
         <.h2(^.cls := "mui-font-style-headline")("Basic Table"),
         //        CodeExample(code, "ReactTableBasic")(
-//        <.p("hello")
-                ReactTable(data = data, columns = columns, rowsPerPage = 10)
+        //        <.p("hello")
+        ReactTable(data = data, columns = columns, rowsPerPage = 10)
         //        )
       )
   }
@@ -168,11 +174,13 @@ object TableTest {
 }
 
 object FlightsView {
+
   import com.payalabs.scalajs.react.bridge.ReactBridgeComponent
   import chandu0101.scalajs.react.components.Implicits._
   import org.scalajs.dom
-//  import com.payalabs.scalajs.react.bridge.elements.{ReactMediumEditor, Input, Button, TagsInput}
-  import japgolly.scalajs.react.vdom.all.{onChange => _,_}
+
+  //  import com.payalabs.scalajs.react.bridge.elements.{ReactMediumEditor, Input, Button, TagsInput}
+  import japgolly.scalajs.react.vdom.all.{onChange => _, _}
   import japgolly.scalajs.react._
   import org.scalajs.dom
 
@@ -207,8 +215,10 @@ object FlightsView {
             //            props.flightsModelProxy.value.renderEmpty(TableTest.component()),
             //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
             props.flightsModelProxy.value.renderReady(flights => {
-              AwesomeJSCompWrapper(results=TableTest.fakeData, columns=Seq("fname", "lname", "email", "country"))()
-//              reactTable(flights)
+              div(
+                GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray, columns = columnNames)(),
+                GriddleComponentWrapper(results = TableTest.fakeData, columns = Seq("fname", "lname", "email", "country"))())
+              //              reactTable(flights)
             })
             //                TableTest.component()
             //              <.table(
@@ -223,31 +233,63 @@ object FlightsView {
   }).build
 
   def reactTable(flights: Flights) = {
-    val data = flights.flights.map(f => Map(
-      "Operator" -> f.Operator,
-      "Status" -> f.Status,
-      "EstDT" -> f.EstDT,
-      "ActDT" -> f.ActDT,
-      "EstChoxDT" -> f.EstChoxDT,
-      "ActChoxDT" -> f.ActChoxDT,
-      "Gate" -> f.Gate,
-      "Stand" -> f.Stand,
-      "MaxPax" -> f.MaxPax,
-      "ActPax" -> f.ActPax,
-      "TranPax" -> f.TranPax,
-      "RunwayID" -> f.RunwayID,
-      "BaggageReclaimId" -> f.BaggageReclaimId,
-      "FlightID" -> f.FlightID,
-      "AirportID" -> f.AirportID,
-      "Terminal" -> f.Terminal,
-      "ICAO" -> f.ICAO,
-      "IATA" -> f.IATA,
-      "Origin" -> f.Origin,
-      "SchDT" -> f.SchDT)).toVector
+    val data = reactTableFlights(flights).toVector
     val config = List(
       ("SchDT", None, Some(ReactTable.getStringSort("SchDT")), None),
       ("Origin", None, Some(ReactTable.getStringSort("Origin")), None))
     ReactTable(data = data, columns = columnNames, rowsPerPage = 50, config = config)
+  }
+
+  def reactTableFlights(flights: Flights): List[Map[String, Any]] = {
+    flights.flights.map(f => {
+      Map(
+        "Operator" -> f.Operator,
+        "Status" -> f.Status,
+        "EstDT" -> f.EstDT,
+        "ActDT" -> f.ActDT,
+        "EstChoxDT" -> f.EstChoxDT,
+        "ActChoxDT" -> f.ActChoxDT,
+        "Gate" -> f.Gate,
+        "Stand" -> f.Stand,
+        "MaxPax" -> f.MaxPax,
+        "ActPax" -> f.ActPax,
+        "TranPax" -> f.TranPax,
+        "RunwayID" -> f.RunwayID,
+        "BaggageReclaimId" -> f.BaggageReclaimId,
+        "FlightID" -> f.FlightID,
+        "AirportID" -> f.AirportID,
+        "Terminal" -> f.Terminal,
+        "ICAO" -> f.ICAO,
+        "IATA" -> f.IATA,
+        "Origin" -> f.Origin,
+        "SchDT" -> f.SchDT)
+    })
+  }
+
+  def reactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
+    flights.flights.map(f => {
+      js.Dynamic.literal(
+        Operator = f.Operator,
+        Status = f.Status,
+        EstDT = f.EstDT,
+        ActDT = f.ActDT,
+        EstChoxDT = f.EstChoxDT,
+        ActChoxDT = f.ActChoxDT,
+        Gate = f.Gate,
+        Stand = f.Stand,
+        MaxPax = f.MaxPax,
+        ActPax = f.ActPax,
+        TranPax = f.TranPax,
+        RunwayID = f.RunwayID,
+        BaggageReclaimId = f.BaggageReclaimId,
+        FlightID = f.FlightID,
+        AirportID = f.AirportID,
+        Terminal = f.Terminal,
+        ICAO = f.ICAO,
+        IATA = f.IATA,
+        Origin = f.Origin,
+        SchDT = f.SchDT)
+    })
   }
 
   def flightHeaders() = {
@@ -277,7 +319,7 @@ object FlightsView {
       "Terminal",
       "ICAO",
       "IATA"
-      )
+    )
   }
 
   def flightRow(f: ApiFlight, ai: Map[String, Pot[AirportInfo]]) = {
