@@ -19,7 +19,7 @@ case class PaxLoad(time: DateTime, nbPax: Double, paxType: PaxType)
 case class SplitRatio(paxType: PaxType, ratio: Double)
 
 object PaxLoadCalculator {
-  val splitRatios = List(
+  def splitRatios(flight: ApiFlight) = List(
     SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
     SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
   )
@@ -29,21 +29,29 @@ object PaxLoadCalculator {
     WL(paxLoad.time.getMillis() / 1000, paxLoad.nbPax)
   }
 
-  def getQueueWorkloads(flights: List[ApiFlight]) =
-    flights
-    .map(flight => getVoyagePaxSplitsFromApiFlight(flight, splitRatios))
-    .map(vps => calculateVoyagePaxLoadByDesk(vps, paxOffFlowRate))
-    .map((queuePaxloads: Map[String, Seq[PaxLoad]]) => {
-      queuePaxloads.map((queuePaxload: (String, Seq[PaxLoad])) =>
-        QueueWorkloads(
-          queuePaxload._1,
-          queuePaxload._2.map((paxLoad: PaxLoad) => getWorkload(paxLoad)),
-          queuePaxload._2.map((paxLoad: PaxLoad) => Pax(paxLoad.time.getMillis() / 1000, paxLoad.nbPax))
-        )
-      )
-    })
-    .reduceLeft((a, b) => combineQueues(a.toList, b.toList))
+  def getQueueWorkloads(flights: List[ApiFlight]) = {
 
+    val voyagePaxSplits: List[VoyagePaxSplits] = flights
+      .map(flight => getVoyagePaxSplitsFromApiFlight(flight, splitRatios(flight)))
+    val paxLoadsByDesk = voyagePaxSplits
+      .map(vps => calculateVoyagePaxLoadByDesk(vps, paxOffFlowRate))
+
+    val queueWorkloads: List[Iterable[QueueWorkloads]] = paxLoadsByDesk
+      .map(paxloadsToQueueWorkloads)
+    queueWorkloads
+      .reduceLeft((a, b) => combineQueues(a.toList, b.toList))
+  }
+
+
+  def paxloadsToQueueWorkloads(queuePaxloads: Map[String, Seq[PaxLoad]]): Iterable[QueueWorkloads] = {
+    queuePaxloads.map((queuePaxload: (String, Seq[PaxLoad])) =>
+      QueueWorkloads(
+        queuePaxload._1,
+        queuePaxload._2.map((paxLoad: PaxLoad) => getWorkload(paxLoad)),
+        queuePaxload._2.map((paxLoad: PaxLoad) => Pax(paxLoad.time.getMillis() / 1000, paxLoad.nbPax))
+      )
+    )
+  }
 
   def getFlightPaxSplits(flight: ApiFlight, splitRatios: List[SplitRatio]) = {
     splitRatios.map(splitRatio => PaxTypeAndQueueCount(splitRatio.paxType._1, splitRatio.paxType._2, splitRatio.ratio * flight.ActPax))
@@ -88,11 +96,31 @@ object PaxLoadCalculator {
     res2
   }
 
+  def combinePaxLoads(l1: Seq[Pax], l2: Seq[Pax]) = {
+    def foldInto(agg: Map[Long, Double], list: List[Pax]): Map[Long, Double] = list.foldLeft(agg)(
+      (agg, pax) => {
+        val cv = agg.getOrElse(pax.time, 0d)
+        agg + (pax.time -> (cv + pax.pax))
+      }
+    )
+    val res1 = foldInto(Map[Long, Double](), l1.toList)
+    val res2 = foldInto(res1, l2.toList).map(timeWorkload => Pax(timeWorkload._1, timeWorkload._2)).toSeq
+
+    res2
+  }
+
   def combineQueues(l1: List[QueueWorkloads], l2: List[QueueWorkloads]) = {
     def foldInto(agg: Map[String, QueueWorkloads], list: List[QueueWorkloads]) = list.foldLeft(agg)(
       (agg, qw) => {
         val cv = agg.getOrElse(qw.queueName, QueueWorkloads(qw.queueName, Seq[WL](), Seq[Pax]()))
-        agg + (qw.queueName -> QueueWorkloads(qw.queueName, combineWorkloads(cv.workloadsByMinute, qw.workloadsByMinute), qw.paxByMinute))
+        agg + (
+          qw.queueName ->
+            QueueWorkloads(
+              qw.queueName,
+              combineWorkloads(cv.workloadsByMinute, qw.workloadsByMinute),
+              combinePaxLoads(cv.paxByMinute, qw.paxByMinute)
+            )
+          )
       }
     )
     val res1 = foldInto(Map[String, QueueWorkloads](), l1)
@@ -221,6 +249,35 @@ object WorkloadCalculatorTests extends TestSuite {
         )
       }
 
+      "Given a map of queues to pax load, we should get back a list of queue workloads" - {
+        val paxload = Map(
+          Queues.eeaDesk ->
+            Seq(
+              PaxLoad(DateTime.parse("2020-01-01T00:00:00"), 20, (PaxTypes.eeaMachineReadable, Queues.eeaDesk)),
+              PaxLoad(DateTime.parse("2020-01-01T00:01:00"), 20, (PaxTypes.eeaMachineReadable, Queues.eeaDesk))
+            ),
+          Queues.eGate ->
+            Seq(PaxLoad(DateTime.parse("2020-01-01T00:00:00"), 20, (PaxTypes.eeaMachineReadable, Queues.eGate)))
+        )
+
+        val expected = List(
+          QueueWorkloads(
+            Queues.eeaDesk,
+            Seq(WL(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20), WL(DateTime.parse("2020-01-01T00:01:00").getMillis / 1000, 20)),
+            Seq(Pax(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20), Pax(DateTime.parse("2020-01-01T00:01:00").getMillis / 1000, 20))
+          ),
+          QueueWorkloads(
+            Queues.eGate,
+            Seq(WL(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20)),
+            Seq(Pax(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20))
+          )
+        )
+
+        val result = PaxLoadCalculator.paxloadsToQueueWorkloads(paxload)
+
+        assert(result == expected)
+      }
+
       "Given two lists of WL return an aggregation of them" - {
         val l1 = List(WL(1577836800, 40.0), WL(1577836860, 10.0))
         val l2 = List(WL(1577836800, 40.0), WL(1577836860, 10.0))
@@ -230,8 +287,9 @@ object WorkloadCalculatorTests extends TestSuite {
 
 
       "Given a list of flights, then we should get back a list of QueueWorkloads" - {
+        println("some stuff")
         val flights = List(
-          //          createApiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00"),
+          createApiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00"),
           createApiFlight("BA0002", "LHR", 50, "2020-01-01T00:00:00")
         )
 
@@ -241,21 +299,6 @@ object WorkloadCalculatorTests extends TestSuite {
           QueueWorkloads(Queues.eeaDesk, List(WL(1577836800, 40.0), WL(1577836860, 10.0)), List(Pax(1577836800, 40.0), Pax(1577836860, 10.0))),
           QueueWorkloads(Queues.eGate, List(WL(1577836800, 40.0), WL(1577836860, 10.0)), List(Pax(1577836800, 40.0), Pax(1577836860, 10.0)))
         ))
-
-        List(
-          QueueWorkloads(eeaDesk,List(WL(1577836800,20.0), WL(1577836860,5.0)),List(Pax(1577836800,20.0), Pax(1577836860,5.0))),
-          QueueWorkloads(eGate,List(WL(1577836800,20.0), WL(1577836860,5.0)),List(Pax(1577836800,20.0), Pax(1577836860,5.0)))
-        )
-        //        assert(queueWorkloads == List(
-        //          List(
-        //            QueueWorkloads(Queues.eeaDesk, List(WL(1577836800, 20.0), WL(1577836860, 5.0)), List(Pax(1577836800, 20.0), Pax(1577836860, 5.0))),
-        //            QueueWorkloads(Queues.eGate, List(WL(1577836800, 20.0), WL(1577836860, 5.0)), List(Pax(1577836800, 20.0), Pax(1577836860, 5.0)))
-        //          ),
-        //          List(
-        //            QueueWorkloads(Queues.eeaDesk, List(WL(1577836800, 20.0), WL(1577836860, 5.0)), List(Pax(1577836800, 20.0), Pax(1577836860, 5.0))),
-        //            QueueWorkloads(Queues.eGate, List(WL(1577836800, 20.0), WL(1577836860, 5.0)), List(Pax(1577836800, 20.0), Pax(1577836860, 5.0)))
-        //          )
-        //        ))
       }
     }
   }
