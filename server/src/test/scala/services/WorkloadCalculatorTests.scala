@@ -19,48 +19,43 @@ case class PaxLoad(time: DateTime, nbPax: Double, paxType: PaxType)
 case class SplitRatio(paxType: PaxType, ratio: Double)
 
 object PaxLoadCalculator {
-  def splitRatios(flight: ApiFlight) = List(
-    SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-    SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
-  )
   val paxOffFlowRate = 20
 
-  def getWorkload(paxLoad: PaxLoad): WL = {
+  def workload(paxLoad: PaxLoad): WL = {
     WL(paxLoad.time.getMillis() / 1000, paxLoad.nbPax)
   }
 
-  def getQueueWorkloads(flights: List[ApiFlight]) = {
+  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio]) = {
 
-    val voyagePaxSplits: List[VoyagePaxSplits] = flights
-      .map(flight => getVoyagePaxSplitsFromApiFlight(flight, splitRatios(flight)))
-    val paxLoadsByDesk = voyagePaxSplits
-      .map(vps => calculateVoyagePaxLoadByDesk(vps, paxOffFlowRate))
-
-    val queueWorkloads: List[Iterable[QueueWorkloads]] = paxLoadsByDesk
-      .map(paxloadsToQueueWorkloads)
-    queueWorkloads
-      .reduceLeft((a, b) => combineQueues(a.toList, b.toList))
+    (flights: List[ApiFlight]) => {
+      val voyagePaxSplits: List[VoyagePaxSplits] = flights
+        .map(flight => voyagePaxSplitsFromApiFlight(flight, splitsRatioProvider(flight)))
+      val paxLoadsByDesk = voyagePaxSplits
+        .map(vps => calculateVoyagePaxLoadByDesk(vps, paxOffFlowRate))
+      val queueWorkloads: List[Iterable[QueueWorkloads]] = paxLoadsByDesk
+        .map(paxloadsToQueueWorkloads)
+      queueWorkloads.reduceLeft((a, b) => combineQueues(a.toList, b.toList))
+    }
   }
-
 
   def paxloadsToQueueWorkloads(queuePaxloads: Map[String, Seq[PaxLoad]]): Iterable[QueueWorkloads] = {
     queuePaxloads.map((queuePaxload: (String, Seq[PaxLoad])) =>
       QueueWorkloads(
         queuePaxload._1,
-        queuePaxload._2.map((paxLoad: PaxLoad) => getWorkload(paxLoad)),
+        queuePaxload._2.map((paxLoad: PaxLoad) => workload(paxLoad)),
         queuePaxload._2.map((paxLoad: PaxLoad) => Pax(paxLoad.time.getMillis() / 1000, paxLoad.nbPax))
       )
     )
   }
 
-  def getFlightPaxSplits(flight: ApiFlight, splitRatios: List[SplitRatio]) = {
+  def flightPaxSplits(flight: ApiFlight, splitRatios: List[SplitRatio]) = {
     splitRatios.map(splitRatio => PaxTypeAndQueueCount(splitRatio.paxType._1, splitRatio.paxType._2, splitRatio.ratio * flight.ActPax))
   }
 
   val paxType = (PassengerQueueTypes.PaxTypes.eeaMachineReadable, PassengerQueueTypes.Queues.eeaDesk)
 
-  def getVoyagePaxSplitsFromApiFlight(apiFlight: ApiFlight, splitRatios: List[SplitRatio]): VoyagePaxSplits = {
-    VoyagePaxSplits(apiFlight.AirportID, apiFlight.IATA, apiFlight.ActPax, DateTime.parse(apiFlight.SchDT), getFlightPaxSplits(apiFlight, splitRatios))
+  def voyagePaxSplitsFromApiFlight(apiFlight: ApiFlight, splitRatios: List[SplitRatio]): VoyagePaxSplits = {
+    VoyagePaxSplits(apiFlight.AirportID, apiFlight.IATA, apiFlight.ActPax, DateTime.parse(apiFlight.SchDT), flightPaxSplits(apiFlight, splitRatios))
   }
 
   def calculateVoyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits, flowRate: => Int): Map[String, Seq[PaxLoad]] = {
@@ -232,7 +227,7 @@ object WorkloadCalculatorTests extends TestSuite {
           PaxTypeAndQueueCount(PaxTypes.eeaMachineReadable, Queues.eeaDesk, 25),
           PaxTypeAndQueueCount(PaxTypes.eeaMachineReadable, Queues.eGate, 25)
         )
-        val actualPaxSplits = PaxLoadCalculator.getFlightPaxSplits(flight, splitRatios)
+        val actualPaxSplits = PaxLoadCalculator.flightPaxSplits(flight, splitRatios)
 
         assert(expectedPaxSplits == actualPaxSplits)
       }
@@ -240,7 +235,7 @@ object WorkloadCalculatorTests extends TestSuite {
       "Given an ApiFlight and single split ratio, we should get back a VoyagePaxSplits containing a single pax split" - {
         val flight = createApiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00")
         val splitRatios = List(SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1.0))
-        val voyagesPaxSplit = PaxLoadCalculator.getVoyagePaxSplitsFromApiFlight(flight, splitRatios)
+        val voyagesPaxSplit = PaxLoadCalculator.voyagePaxSplitsFromApiFlight(flight, splitRatios)
 
         assert(voyagesPaxSplit ==
           VoyagePaxSplits("LHR", "BA0001", 50, DateTime.parse(flight.SchDT),
@@ -285,15 +280,17 @@ object WorkloadCalculatorTests extends TestSuite {
         assert(combined == List(WL(1577836800, 80.0), WL(1577836860, 20.0)))
       }
 
-
       "Given a list of flights, then we should get back a list of QueueWorkloads" - {
-        println("some stuff")
+        def splitRatioProvider(flight: ApiFlight) = List(
+          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
+          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
+        )
         val flights = List(
           createApiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00"),
           createApiFlight("BA0002", "LHR", 50, "2020-01-01T00:00:00")
         )
 
-        val queueWorkloads = PaxLoadCalculator.getQueueWorkloads(flights)
+        val queueWorkloads = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider)(flights)
 
         assert(queueWorkloads == List(
           QueueWorkloads(Queues.eeaDesk, List(WL(1577836800, 40.0), WL(1577836860, 10.0)), List(Pax(1577836800, 40.0), Pax(1577836860, 10.0))),
