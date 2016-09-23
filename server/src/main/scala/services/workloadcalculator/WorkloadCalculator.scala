@@ -10,7 +10,6 @@ import scala.collection.immutable.{NumericRange, Iterable}
 
 object PaxLoadAt {
 
-  //  type PaxType = (String, String)
   case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
 }
@@ -23,30 +22,36 @@ object PaxLoadCalculator {
   val paxOffFlowRate = 20
 
   def workload(paxLoad: PaxLoadAt): WL = {
-    WL(paxLoad.time.getMillis() / 1000, paxLoad.paxType.paxCount)
+    WL(paxLoad.time.getMillis / 1000, paxLoad.paxType.paxCount)
   }
 
   def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio])(flights: List[ApiFlight]) = {
-    val voyagePaxSplits: List[VoyagePaxSplits] = flights
-      .map(flight => {
-        val splitsOverTime: List[PaxTypeAndQueueCount] = paxDeparturesPerMinutes(flight.ActPax, paxOffFlowRate).map { paxInMinute =>
-          val splits = splitsRatioProvider(flight)
-          splits.map(split => PaxTypeAndQueueCount(split.paxType, split.ratio * paxInMinute))
-        }.flatten
-
-        VoyagePaxSplits(flight.AirportID,
-          flight.IATA,
-          flight.ActPax,
-          org.joda.time.DateTime.parse(flight.SchDT), splitsOverTime)
-
-        //        voyagePaxSplitsFromApiFlight(flight, splitsRatioProvider(flight))
-      }
-
-      )
-    val paxLoadsByDesk: List[Map[String, Seq[PaxLoadAt]]] = voyagePaxSplits.map((vps: VoyagePaxSplits) => calculateVoyagePaxLoadByDesk(vps, paxOffFlowRate))
+    val paxLoadsByDesk: List[Map[String, Seq[PaxLoadAt]]] = paxLoadsByQueue(splitsRatioProvider, flights)
     val queueWorkloads: List[Iterable[QueueWorkloads]] = paxLoadsByDesk
       .map(paxloadsToQueueWorkloads)
     queueWorkloads.reduceLeft((a, b) => combineQueues(a.toList, b.toList))
+  }
+
+  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], flights: List[ApiFlight]): List[Map[String, Seq[PaxLoadAt]]] = {
+    val voyagePaxSplits: List[VoyagePaxSplits] = flights.map(
+      voyagePaxSplitsFromApiFlight(splitsRatioProvider)
+    )
+    val paxLoadsByDesk: List[Map[String, Seq[PaxLoadAt]]] = voyagePaxSplits.map(vps => voyagePaxLoadByDesk(vps))
+    paxLoadsByDesk
+  }
+
+  def voyagePaxSplitsFromApiFlight(splitsRatioProvider: (ApiFlight) => List[SplitRatio]): (ApiFlight) => VoyagePaxSplits = {
+    flight => {
+      val splitsOverTime: List[PaxTypeAndQueueCount] = paxDeparturesPerMinutes(flight.ActPax, paxOffFlowRate).flatMap { paxInMinute =>
+        val splits = splitsRatioProvider(flight)
+        splits.map(split => PaxTypeAndQueueCount(split.paxType, split.ratio * paxInMinute))
+      }
+
+      VoyagePaxSplits(flight.AirportID,
+        flight.IATA,
+        flight.ActPax,
+        org.joda.time.DateTime.parse(flight.SchDT), splitsOverTime)
+    }
   }
 
   def paxloadsToQueueWorkloads(queuePaxloads: Map[String, Seq[PaxLoadAt]]): Iterable[QueueWorkloads] = {
@@ -54,7 +59,7 @@ object PaxLoadCalculator {
       QueueWorkloads(
         queuePaxload._1,
         queuePaxload._2.map((paxLoad: PaxLoadAt) => workload(paxLoad)),
-        queuePaxload._2.map((paxLoad: PaxLoadAt) => Pax(paxLoad.time.getMillis() / 1000, paxLoad.paxType.paxCount))
+        queuePaxload._2.map((paxLoad: PaxLoadAt) => Pax(paxLoad.time.getMillis / 1000, paxLoad.paxType.paxCount))
       )
     )
   }
@@ -63,20 +68,14 @@ object PaxLoadCalculator {
     splitRatios.map(splitRatio => PaxTypeAndQueueCount(splitRatio.paxType, splitRatio.ratio * flight.ActPax))
   }
 
-  val paxType = (PassengerQueueTypes.PaxTypes.eeaMachineReadable, PassengerQueueTypes.Queues.eeaDesk)
-
-  def voyagePaxSplitsFromApiFlight(apiFlight: ApiFlight, splitRatios: List[SplitRatio]): VoyagePaxSplits = {
-    VoyagePaxSplits(apiFlight.AirportID, apiFlight.IATA, apiFlight.ActPax, DateTime.parse(apiFlight.SchDT), flightPaxSplits(apiFlight, splitRatios))
-  }
-
-  def calculateVoyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits, flowRate: => Int): Map[String, Seq[PaxLoadAt]] = {
+  def voyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits): Map[String, Seq[PaxLoadAt]] = {
     val firstMinute = voyagePaxSplits.scheduledArrivalDateTime
     val groupedByDesk: Map[String, Seq[PaxTypeAndQueueCount]] = voyagePaxSplits.paxSplits.groupBy(_.paxAndQueueType.queueType)
     groupedByDesk.mapValues(
       (paxTypeAndCount: Seq[PaxTypeAndQueueCount]) => {
-//        val totalPax = paxTypeAndCount.map(_.paxCount).sum
-//        val headPaxType = paxTypeAndCount.head
-        val times = (firstMinute.getMillis to firstMinute.plusDays(1).getMillis by 60000L)
+        //        val totalPax = paxTypeAndCount.map(_.paxCount).sum
+        //        val headPaxType = paxTypeAndCount.head
+        val times = firstMinute.getMillis to firstMinute.plusDays(1).getMillis by 60000L
         times.zip(paxTypeAndCount).map { case (time, paxTypeCount) => {
           PaxLoadAt(new org.joda.time.DateTime(time), paxTypeCount)
         }
@@ -160,15 +159,9 @@ object PassengerQueueTypes {
 
     case object nonVisaNational extends PaxType
 
-    //    val eeaNonMachineReadable = "eeaNonMachineReadable"
-    //    val visaNational = "visaNational"
-    //    val eeaMachineReadable = "eeaMachineReadable"
-    //    val nonVisaNational = "nonVisaNational"
   }
 
   val eGatePercentage = 0.6
-
-  type QueueType = String
 
   type FlightCode = String
 
