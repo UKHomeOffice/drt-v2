@@ -3,9 +3,9 @@ package services.workloadcalculator
 import org.joda.time.DateTime
 import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypeAndQueueCount, VoyagePaxSplits}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import spatutorial.shared.ApiFlight
+import spatutorial.shared.{ApiFlight, Pax, QueueWorkloads, WL}
 
-import scala.collection.immutable.{NumericRange, Iterable}
+import scala.collection.immutable.{IndexedSeq, Seq, Iterable, NumericRange}
 
 
 object PaxLoadAt {
@@ -26,17 +26,17 @@ object PaxLoadCalculator {
   }
 
   def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio])(flights: List[ApiFlight]) = {
-    val paxLoadsByDesk: List[Map[String, Seq[PaxLoadAt]]] = paxLoadsByQueue(splitsRatioProvider, flights)
+    val paxLoadsByDesk: List[Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]]] = paxLoadsByQueue(splitsRatioProvider, flights)
     val queueWorkloads: List[Iterable[QueueWorkloads]] = paxLoadsByDesk
-      .map(paxloadsToQueueWorkloads)
+      .map(m => { paxloadsToQueueWorkloads(m.map(e => e._1.queueType -> e._2)) })
     queueWorkloads.reduceLeft((a, b) => combineQueues(a.toList, b.toList))
   }
 
-  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], flights: List[ApiFlight]): List[Map[String, Seq[PaxLoadAt]]] = {
+  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], flights: List[ApiFlight]): List[Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]]] = {
     val voyagePaxSplits: List[VoyagePaxSplits] = flights.map(
       voyagePaxSplitsFromApiFlight(splitsRatioProvider)
     )
-    val paxLoadsByDesk: List[Map[String, Seq[PaxLoadAt]]] = voyagePaxSplits.map(vps => voyagePaxLoadByDesk(vps))
+    val paxLoadsByDesk: List[Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]]] = voyagePaxSplits.map(vps => voyagePaxLoadByDesk(vps))
     paxLoadsByDesk
   }
 
@@ -68,9 +68,9 @@ object PaxLoadCalculator {
     splitRatios.map(splitRatio => PaxTypeAndQueueCount(splitRatio.paxType, splitRatio.ratio * flight.ActPax))
   }
 
-  def voyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits): Map[String, Seq[PaxLoadAt]] = {
+  def voyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits): Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]] = {
     val firstMinute = voyagePaxSplits.scheduledArrivalDateTime
-    val groupedByDesk: Map[String, Seq[PaxTypeAndQueueCount]] = voyagePaxSplits.paxSplits.groupBy(_.paxAndQueueType.queueType)
+    val groupedByDesk: Map[PaxTypeAndQueue, Seq[PaxTypeAndQueueCount]] = voyagePaxSplits.paxSplits.groupBy(_.paxAndQueueType)
     groupedByDesk.mapValues(
       (paxTypeAndCount: Seq[PaxTypeAndQueueCount]) => {
         //        val totalPax = paxTypeAndCount.map(_.paxCount).sum
@@ -99,7 +99,7 @@ object PaxLoadCalculator {
       }
     )
     val res1 = foldInto(Map[Long, Double](), l1.toList)
-    val res2 = foldInto(res1, l2.toList).map(timeWorkload => WL(timeWorkload._1, timeWorkload._2)).toSeq
+    val res2 = foldInto(res1, l2.toList).map(timeWorkload => WL(timeWorkload._1, timeWorkload._2)).toList
 
     res2
   }
@@ -112,7 +112,7 @@ object PaxLoadCalculator {
       }
     )
     val res1 = foldInto(Map[Long, Double](), l1.toList)
-    val res2 = foldInto(res1, l2.toList).map(timeWorkload => Pax(timeWorkload._1, timeWorkload._2)).toSeq
+    val res2 = foldInto(res1, l2.toList).map(timeWorkload => Pax(timeWorkload._1, timeWorkload._2)).toList
 
     res2
   }
@@ -176,26 +176,4 @@ object PassengerQueueTypes {
   case class PaxTypeAndQueueCount(paxAndQueueType: PaxTypeAndQueue, paxCount: Double)
 
 }
-
-case class WorkloadResponse(terminals: Seq[TerminalWorkload])
-
-case class TerminalWorkload(terminalName: String,
-                            queues: Seq[QueueWorkloads])
-
-case class QueueWorkloads(queueName: String,
-                          workloadsByMinute: Seq[WL],
-                          paxByMinute: Seq[Pax]
-                         ) {
-  //  def workloadsByPeriod(n: Int): Iterator[WL] = workloadsByMinute.grouped(n).map(g => WL(g.head.time, g.map(_.workload).sum))
-
-  //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
-}
-
-case class WL(time: Long, workload: Double)
-
-case class Pax(time: Long, pax: Double)
-
-case class DeskRec(time: Long, desks: Int)
-
-case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
 

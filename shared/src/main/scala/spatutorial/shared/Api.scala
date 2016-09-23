@@ -31,9 +31,30 @@ case class ApiFlight(
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
-case class DeskRec(id: Int, desks: Int)
-
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
+
+case class WorkloadResponse(terminals: Seq[TerminalWorkload])
+
+case class TerminalWorkload(terminalName: String,
+                            queues: Seq[QueueWorkloads])
+
+case class QueueWorkloads(queueName: String,
+                          workloadsByMinute: Seq[WL],
+                          paxByMinute: Seq[Pax]
+                         ) {
+  //  def workloadsByPeriod(n: Int): Iterator[WL] = workloadsByMinute.grouped(n).map(g => WL(g.head.time, g.map(_.workload).sum))
+
+  //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
+}
+
+case class WL(time: Long, workload: Double)
+
+case class Pax(time: Long, pax: Double)
+
+case class DeskRec(time: Long, desks: Int)
+
+case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
+
 
 object FlightsApi {
 

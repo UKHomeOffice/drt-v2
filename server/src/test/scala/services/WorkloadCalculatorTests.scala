@@ -1,13 +1,14 @@
 package services
 
 import org.joda.time.DateTime
+import services.workloadcalculator.PassengerQueueTypes.PaxTypes._
 import services.workloadcalculator.PassengerQueueTypes._
 import services.workloadcalculator._
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import spatutorial.shared.ApiFlight
+import spatutorial.shared.{ApiFlight, Pax, QueueWorkloads, WL}
 import utest.{TestSuite, _}
 
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.{IndexedSeq, Iterable, NumericRange, Seq}
 
 object WorkloadCalculatorTests extends TestSuite {
   def apiFlight(iataFlightCode: String, airportCode: String, totalPax: Int, scheduledDatetime: String): ApiFlight =
@@ -99,8 +100,8 @@ object WorkloadCalculatorTests extends TestSuite {
         val queueWorkloads = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider)(flights)
         val workloads = queueWorkloads.map(qw => (qw.queueName, qw.workloadsByMinute.toList)).toList
         val tuples: List[(String, List[WL])] = List(
-          Queues.eeaDesk -> List(WL(1577836800, 10.0), WL(1577836860, 10.0), WL(1577836920, 10.0), WL(1577836980, 10.0), WL(1577837040, 10.0)),
-          Queues.eGate -> List(WL(1577836800, 10.0), WL(1577836860, 10.0), WL(1577836920, 10.0), WL(1577836980, 10.0), WL(1577837040, 10.0)))
+          Queues.eGate -> List(WL(1577836800, 10.0), WL(1577836860, 10.0), WL(1577836920, 10.0), WL(1577836980, 10.0), WL(1577837040, 10.0)),
+          Queues.eeaDesk -> List(WL(1577836800, 10.0), WL(1577836860, 10.0), WL(1577836920, 10.0), WL(1577836980, 10.0), WL(1577837040, 10.0)))
         assert(workloads == tuples)
       }
 
@@ -114,16 +115,21 @@ object WorkloadCalculatorTests extends TestSuite {
           50,
           DateTime.parse("2020-01-01T00:00:00"),
           Seq(
-            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 10),
-            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
-            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 10),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
             PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
             PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 2.5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 2.5),
             PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 5)
           )
         )
+
         def splitRatioProvider(flight: ApiFlight) = List(
-          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
+          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.25),
+          SplitRatio((PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.25),
           SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
         )
 
@@ -152,47 +158,87 @@ object WorkloadCalculatorTests extends TestSuite {
         assert(result == expected)
       }
 
-      //      "Given voyage pax splits with multiple paxloads, then we should get pax loads per type of passenger for each desk at a time" - {
-      //        val voyagePaxSplits = VoyagePaxSplits(
-      //          "LHR",
-      //          "BA123",
-      //          2,
-      //          DateTime.parse("2020-01-01T00:00:00"),
-      //          Seq(
-      //            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20),
-      //            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 20),
-      //            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 20)
-      //          )
-      //        )
-      //
-      //        val expected = Map(
-      //          Queues.eeaDesk -> Seq(
-      //            PaxLoadAt(
-      //              DateTime.parse("2020-01-01T00:00:00"),
-      //              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)
-      //            ),
-      //            PaxLoadAt(
-      //              DateTime.parse("2020-01-01T00:01:00"),
-      //              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)
-      //            )
-      //          ),
-      //          Queues.eGate -> Seq(
-      //            PaxLoadAt(
-      //              DateTime.parse("2020-01-01T00:00:00"),
-      //              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)
-      //            ),
-      //            PaxLoadAt(
-      //              DateTime.parse("2020-01-01T00:01:00"),
-      //              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)
-      //            )
-      //          )
-      //        )
-      //
-      //        val result = PaxLoadCalculator.voyagePaxLoadByDesk(voyagePaxSplits)
-      //
-      //        assert(result == expected)
-      //      }
-      //    }
+      "Given voyage pax splits with multiple paxloads, then we should get pax loads per type of passenger for each desk at a time" - {
+        val voyagePaxSplits = VoyagePaxSplits(
+          "LHR",
+          "BA0001",
+          50,
+          DateTime.parse("2020-01-01T00:00:00"),
+          Seq(
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 2.5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 2.5),
+            PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 5)
+          )
+        )
+
+        val expected = Map(
+          PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk) -> Seq(
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:00:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5.0)
+            ),
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:01:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5.0)
+            ),
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:02:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 2.5)
+            )
+          ),
+          PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> Seq(
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:00:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10.0)
+            ),
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:01:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10.0)
+            ),
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:02:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 5.0)
+            )
+          ),
+          PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> Seq(
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:00:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5.0)
+            ),
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:01:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5.0)
+            ),
+            PaxLoadAt(
+              DateTime.parse("2020-01-01T00:02:00"),
+              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 2.5)
+            )
+          )
+        )
+        //        Map(PaxTypeAndQueue(eeaNonMachineReadable,eeaDesk) ->
+        //        Vector(
+        // PaxLoadAt(2020-01-01T00:00:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaNonMachineReadable,eeaDesk),5.0)),
+        // PaxLoadAt(2020-01-01T00:01:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaNonMachineReadable,eeaDesk),5.0)),
+        // PaxLoadAt(2020-01-01T00:02:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaNonMachineReadable,eeaDesk),2.5))),
+        // PaxTypeAndQueue(eeaMachineReadable,eGate) ->
+        // Vector(PaxLoadAt(2020-01-01T00:00:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaMachineReadable,eGate),10.0)),
+        // PaxLoadAt(2020-01-01T00:01:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaMachineReadable,eGate),10.0)),
+        // PaxLoadAt(2020-01-01T00:02:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaMachineReadable,eGate),5.0))),
+        // PaxTypeAndQueue(eeaMachineReadable,eeaDesk) ->
+        // Vector(PaxLoadAt(2020-01-01T00:00:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaMachineReadable,eeaDesk),5.0)),
+        // PaxLoadAt(2020-01-01T00:01:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaMachineReadable,eeaDesk),5.0)),
+        // PaxLoadAt(2020-01-01T00:02:00.000Z,PaxTypeAndQueueCount(PaxTypeAndQueue(eeaMachineReadable,eeaDesk),2.5))))
+
+        val result = PaxLoadCalculator.voyagePaxLoadByDesk(voyagePaxSplits)
+
+        assert(result == expected)
+      }
     }
   }
 }
