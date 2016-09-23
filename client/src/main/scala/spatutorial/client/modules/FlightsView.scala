@@ -217,16 +217,15 @@ object FlightsView {
       )
     }
     ).renderPS((_, props, state) => {
-    log.info("rendering flights")
     Panel(Panel.Props("Flights"),
       <.div(backgroundColor := "grey", Spinner()()),
       <.h2("Flights"),
       state.airportInfo(ai =>
         state.flights(x => {
-          log.info("rendering flight rows")
           <.div(^.className := "table-responsive",
             props.flightsModelProxy.value.renderPending((t) => Spinner()()),
             props.flightsModelProxy.value.renderEmpty(Spinner()()),
+            //,
 
             //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
             props.flightsModelProxy.value.renderReady(flights => {

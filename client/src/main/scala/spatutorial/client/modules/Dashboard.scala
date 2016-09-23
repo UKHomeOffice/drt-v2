@@ -46,7 +46,7 @@ object Dashboard {
 
   //  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * 250).take(numberOf15Mins).toSeq
   def cp(workload: Seq[Double]) = {
-    log.debug(s"Workload is ${workload}")
+//    log.debug(s"Workload is ${workload}")
     val safeWl = if (workload == null) Nil else workload
     Chart.ChartProps(
       "Test chart",

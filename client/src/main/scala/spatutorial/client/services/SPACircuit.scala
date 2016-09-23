@@ -127,7 +127,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
       log.info("requesting workloadsWrapper from server")
       effectOnly(Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
     case UpdateWorkloads(workloads) =>
-      log.info(s"received workloads ${workloads} from server")
+//      log.info(s"received workloads ${workloads} from server")
       updated(Ready(Workloads(workloads)), Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
   }
 }
