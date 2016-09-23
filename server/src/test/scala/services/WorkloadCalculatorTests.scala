@@ -1,9 +1,9 @@
 package services
 
 import org.joda.time.DateTime
-import services.workloadcalculator.PassengerQueueTypes.{PaxTypeAndQueueCount, PaxTypes, Queues, VoyagePaxSplits}
+import services.workloadcalculator.PassengerQueueTypes._
 import services.workloadcalculator._
-import services.workloadcalculator.PaxLoad.PaxType
+import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import spatutorial.shared.ApiFlight
 import utest.{TestSuite, _}
 
@@ -36,7 +36,7 @@ object WorkloadCalculatorTests extends TestSuite {
 
   def tests = TestSuite {
     'WorkloadCalculator - {
-
+      implicit def tupleToPaxTypeAndQueueCounty(t: (PaxType, String)): PaxTypeAndQueue = PaxTypeAndQueue(t._1, t._2)
       "Given an ApiFlight and a multi-split definition, we should get back corresponding splits of the APIFlight's passengers" - {
         val flight = createApiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00")
         val splitRatios = List(
@@ -45,8 +45,8 @@ object WorkloadCalculatorTests extends TestSuite {
         )
 
         val expectedPaxSplits = List(
-          PaxTypeAndQueueCount(PaxTypes.eeaMachineReadable, Queues.eeaDesk, 25),
-          PaxTypeAndQueueCount(PaxTypes.eeaMachineReadable, Queues.eGate, 25)
+          PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 25),
+          PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eGate), 25)
         )
         val actualPaxSplits = PaxLoadCalculator.flightPaxSplits(flight, splitRatios)
 
@@ -60,7 +60,7 @@ object WorkloadCalculatorTests extends TestSuite {
 
         assert(voyagesPaxSplit ==
           VoyagePaxSplits("LHR", "BA0001", 50, DateTime.parse(flight.SchDT),
-            List(PaxTypeAndQueueCount(PaxTypes.eeaMachineReadable, Queues.eeaDesk, 50))
+            List(PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 50))
           )
         )
       }
@@ -69,19 +69,16 @@ object WorkloadCalculatorTests extends TestSuite {
         val paxload = Map(
           Queues.eeaDesk ->
             Seq(
-              PaxLoad(DateTime.parse("2020-01-01T00:00:00"), 20, (PaxTypes.eeaMachineReadable, Queues.eeaDesk)),
-              PaxLoad(DateTime.parse("2020-01-01T00:01:00"), 20, (PaxTypes.eeaMachineReadable, Queues.eeaDesk))
-            ),
+              PaxLoadAt(DateTime.parse("2020-01-01T00:00:00"), PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)),
+              PaxLoadAt(DateTime.parse("2020-01-01T00:01:00"), PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20))),
           Queues.eGate ->
-            Seq(PaxLoad(DateTime.parse("2020-01-01T00:00:00"), 20, (PaxTypes.eeaMachineReadable, Queues.eGate)))
-        )
+            Seq(PaxLoadAt(DateTime.parse("2020-01-01T00:00:00"), PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 20))))
 
         val expected = List(
           QueueWorkloads(
             Queues.eeaDesk,
             Seq(WL(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20), WL(DateTime.parse("2020-01-01T00:01:00").getMillis / 1000, 20)),
-            Seq(Pax(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20), Pax(DateTime.parse("2020-01-01T00:01:00").getMillis / 1000, 20))
-          ),
+            Seq(Pax(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20), Pax(DateTime.parse("2020-01-01T00:01:00").getMillis / 1000, 20))),
           QueueWorkloads(
             Queues.eGate,
             Seq(WL(DateTime.parse("2020-01-01T00:00:00").getMillis / 1000, 20)),

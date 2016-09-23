@@ -5,6 +5,8 @@ import scala.collection.immutable
 import immutable.Seq
 import spatutorial.shared.FlightsApi.Flights
 
+import scala.concurrent.Future
+
 case class ApiFlight(
                       Operator: String,
                       Status: String,
@@ -63,7 +65,7 @@ trait Api extends FlightsApi {
 
   def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
-  def getWorkloads(): List[Double]
+  def getWorkloads(): Future[List[Double]]
 
   def crunch(workloads: List[Double]): CrunchResult
 

@@ -30,3 +30,4 @@ out
 # GitBook
 doc/_book
 /_book
+node_modules/
