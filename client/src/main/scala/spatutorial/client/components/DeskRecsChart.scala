@@ -12,8 +12,8 @@ import spatutorial.client.components.Bootstrap.Panel.Props
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
-import spatutorial.client.services.{UserDeskRecs, RunSimulation, ChangeDeskUsage, Crunch}
-import spatutorial.shared.{DeskRecTimeslot, DeskRec, CrunchResult, SimulationResult}
+import spatutorial.client.services._
+import spatutorial.shared._
 
 import scala.collection.immutable
 
@@ -43,7 +43,10 @@ object DeskRecsChart {
         potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
         deskRecsChart(labels, potCrunchResult),
         waitTimesChart(labels, potCrunchResult),
-        workloads.render(wl => Button(Button.Props(dispatch(Crunch(wl.workloads)), CommonStyle.danger), Icon.refresh, "Update"))
+        workloads.render(wl =>
+          Button(
+            Button.Props(dispatch(Crunch(WorkloadsHelpers.queueWorkloadsToFullyPopulatedDoublesList(wl.workloads))),
+              CommonStyle.danger), Icon.refresh, "Update"))
       )
     }
   }

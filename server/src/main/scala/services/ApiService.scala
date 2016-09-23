@@ -101,7 +101,7 @@ abstract class ApiService
   override def crunch(workloads: List[Double]): CrunchResult = {
     println(s"Crunch requested for ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
-    TryRenjin.crunch(workloads, repeat(10), repeat(15))
+    TryRenjin.crunch(workloads, repeat(2), repeat(25))
   }
 
   override def processWork(workloads: List[Double], desks: List[Int]): SimulationResult = {

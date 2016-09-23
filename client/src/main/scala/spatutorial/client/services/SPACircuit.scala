@@ -41,7 +41,7 @@ case class UpdateCrunchResult(crunchResult: CrunchResult) extends Action
 
 case class UpdateSimulationResult(simulationResult: SimulationResult) extends Action
 
-case class UpdateWorkloads(workloads: List[Double]) extends Action
+case class UpdateWorkloads(workloads: List[QueueWorkloads]) extends Action
 
 case class Crunch(workload: List[Double]) extends Action
 
@@ -54,7 +54,7 @@ case class ChangeDeskUsage(value: String, index: Int) extends Action
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
 // The base model of our application
-case class Workloads(workloads: List[Double] = Nil)
+case class Workloads(workloads: List[QueueWorkloads])
 
 case class RootModel(todos: Pot[UserDeskRecs],
                      motd: Pot[String],
@@ -126,9 +126,10 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
       effectOnly(Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
-    case UpdateWorkloads(workloads) =>
+    case UpdateWorkloads(queueWorkloads) =>
 //      log.info(s"received workloads ${workloads} from server")
-      updated(Ready(Workloads(workloads)), Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
+      val workloads = WorkloadsHelpers.queueWorkloadsToFullyPopulatedDoublesList(queueWorkloads)
+      updated(Ready(Workloads(queueWorkloads)), Effect(AjaxClient[Api].crunch(workloads).call().map(UpdateCrunchResult)))
   }
 }
 
@@ -142,10 +143,10 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
     case RunSimulation(workloads, desks) =>
       log.info("Requesting simulation")
       log.info("Getting workloads from model")
-      val workloads1: List[Double] = modelR.value.get.workloads
+      val workloads1: List[Double] = WorkloadsHelpers.queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
       log.info("Got workloads from model")
       effectOnly(
-        Effect(AjaxClient[Api].processWork(workloads1, desks.map(_.toInt)).call().map(UpdateSimulationResult)))
+        Effect(AjaxClient[Api].processWork(workloads1, desks).call().map(UpdateSimulationResult)))
     case ChangeDeskUsage(v, k) =>
       log.info(s"Handler: ChangeDesk($v, $k)")
       val simModel: ModelRW[M, Pot[UserDeskRecs]] = modelRW
@@ -217,7 +218,6 @@ class AirportCountryHandler[M](modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
-  //  val workloadsWrapper = Iterator.continually(Random.nextInt(20).toDouble).take(30 * blockWidth).toSeq
 
   // initial application model
   override protected def initialModel = RootModel(Empty, Empty,

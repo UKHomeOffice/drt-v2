@@ -15,7 +15,8 @@ import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.rabbit.JsonRabbit
-import http.ProdSendAndReceive
+import http.{WithSendAndReceive, ProdSendAndReceive}
+import org.slf4j.LoggerFactory
 import play.api.{Configuration, Environment}
 import play.api.mvc._
 import services.ApiService
@@ -25,7 +26,6 @@ import spray.http._
 
 //import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
@@ -82,32 +82,8 @@ class Application @Inject()
   }
 
   val apiS: Api = apiService
-  val mockStream = getClass.getClassLoader.getResourceAsStream("edi-chroma.json")
-  val content = scala.io.Source.fromInputStream(mockStream).getLines().mkString("\n")
 
-  val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-
-    override def sendAndReceive = {
-      def res(req: HttpRequest): Future[HttpResponse] = Future {
-        log.info(s"request is ${req}")
-        req.uri.path match {
-          case Uri.Path("/edi/chroma/token") => {
-            HttpResponse().withEntity(
-              HttpEntity(ContentTypes.`application/json`,
-                """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
-                  |"token_type":"bearer","expires_in":86399}""".stripMargin))
-          }
-          case Uri.Path("/edi/chroma/live/edi") => {
-            HttpResponse(StatusCodes.OK,
-              HttpEntity(ContentTypes.`application/json`,
-                content
-              ))
-          }
-        }
-      }
-      res
-    }
-
+  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
     implicit val system: ActorSystem = ctrl.system
   }
 

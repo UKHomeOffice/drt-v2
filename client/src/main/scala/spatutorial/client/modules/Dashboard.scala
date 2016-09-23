@@ -12,7 +12,7 @@ import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.services.{UserDeskRecs, Crunch, GetWorkloads, Workloads}
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{DeskRec, CrunchResult, SimulationResult}
+import spatutorial.shared.{WorkloadsHelpers, DeskRec, CrunchResult, SimulationResult}
 
 import scala.scalajs.js
 import scala.util.Random
@@ -46,7 +46,7 @@ object Dashboard {
 
   //  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * 250).take(numberOf15Mins).toSeq
   def cp(workload: Seq[Double]) = {
-//    log.debug(s"Workload is ${workload}")
+    //    log.debug(s"Workload is ${workload}")
     val safeWl = if (workload == null) Nil else workload
     Chart.ChartProps(
       "Test chart",
@@ -89,27 +89,17 @@ object Dashboard {
     .renderPS { (_, props, state: State) =>
       log.info(s"evaluating dashboard ${props}:${state}")
       <.div(
-        // header, MessageOfTheDay and chart components
         <.h2("Dashboard"),
-        //                state.motdWrapper(Motd(_)),
         state.simulationResultWrapper(srw =>
           state.workloadsWrapper(workloadsModelProxy => {
             val workloads: Pot[Workloads] = workloadsModelProxy.value
             <.div(
-              workloads.renderReady(wl => Chart(cp(wl.workloads))),
+              workloads.renderReady(wl => Chart(cp(WorkloadsHelpers.queueWorkloadsToFullyPopulatedDoublesList(wl.workloads)))),
               workloads.renderPending((num) => <.div(s"waiting with ${num}")),
               workloads.renderEmpty(<.div(s"Waiting for workload")))
           })),
         state.crunchResultWrapper(s =>
-          DeskRecsChart(labels, props.dashboardModelProxy)),
-        state.userDeskRecsWrapper(s => DeskRecsChart.DeskSimInputs(labels)(s)))
-      /*
-        state.simulationResultWrapper(simRes =>
-          state.crunchResultWrapper((s: ModelProxy[Pot[CrunchResult]]) => DeskRecsChart(labels, props.dashboardModelProxy))),
-          // create a link to the To Do view
-          <.div(props.router.link(TodoLoc)("Check your todos!"))
-        )
-        */
+          DeskRecsChart(labels, props.dashboardModelProxy)))
     }
     .componentDidMount(scope => mounted(scope.props))
     .build
