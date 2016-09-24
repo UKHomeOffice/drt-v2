@@ -54,6 +54,7 @@ trait FlightsApi {
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 trait WorkloadsHelpers {
+
   def queueWorkloadsToFullyPopulatedDoublesList(workloads: Iterable[QueueWorkloads]): List[Double] = {
     val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min
     val allMins = (timesMin until (timesMin + 60 * 60 * 24) by 60)

@@ -83,9 +83,9 @@ class Application @Inject()
 
   val apiS: Api = apiService
 
-  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
-    implicit val system: ActorSystem = ctrl.system
-  }
+  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
+
+//  val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
   val ediMapping = JsonRabbit.ediMappingAndDiff(chromaFlow)

@@ -14,6 +14,7 @@ import boopickle.Default._
 import scala.collection.immutable.IndexedSeq
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import scala.scalajs.js
 import scala.util.{Success, Random}
 import spatutorial.client.logger._
 import spatutorial.shared.{Api, CrunchResult, SimulationResult}
@@ -53,8 +54,18 @@ case class ChangeDeskUsage(value: String, index: Int) extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
+trait WorkloadsUtil {
+  def labelsFromAllQueues(workloads: Iterable[QueueWorkloads]) = {
+    val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min
+    val allMins = (timesMin until (timesMin + 60 * 60 * 24) by 60)
+    allMins.map(new js.Date(_).toISOString())
+  }
+}
+
 // The base model of our application
-case class Workloads(workloads: List[QueueWorkloads])
+case class Workloads(workloads: List[QueueWorkloads])  extends WorkloadsUtil {
+  def labels = labelsFromAllQueues(workloads)
+}
 
 case class RootModel(todos: Pot[UserDeskRecs],
                      motd: Pot[String],
@@ -125,7 +136,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
   protected def handle = {
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
-      effectOnly(Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
+      updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
     case UpdateWorkloads(queueWorkloads) =>
 //      log.info(s"received workloads ${workloads} from server")
       val workloads = WorkloadsHelpers.queueWorkloadsToFullyPopulatedDoublesList(queueWorkloads)
@@ -183,7 +194,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, tupleMagic]) extends ActionHandler(mo
   override def handle = {
     case Crunch(workload) =>
       log.info(s"Crunch Sending ${workload}")
-      effectOnly(Effect(AjaxClient[Api].crunch(workload).call().map(UpdateCrunchResult)))
+      updated((Pending(), Pending()), Effect(AjaxClient[Api].crunch(workload).call().map(UpdateCrunchResult)))
     case UpdateCrunchResult(crunchResult) =>
       log.info("UpdateCrunchResult")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?

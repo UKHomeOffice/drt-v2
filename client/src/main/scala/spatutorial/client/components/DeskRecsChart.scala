@@ -24,32 +24,29 @@ object DeskRecsChart {
 
   case class State(deskRecs: ReactConnectProxy[Pot[UserDeskRecs]])
 
-  def DeskRecs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
-    .render_P(deskRecsRender(labels.map(_.take(16))))
-    .componentDidMount(scope =>
-      Callback.log("Mounted DeskRecs")
-    ).build
-
-  def deskRecsRender(labels: IndexedSeq[String]): (ModelProxy[DeskRecsModel]) => ReactComponentU[Props, Unit, Unit, react.TopNode] = {
-    proxy => {
+  val DeskRecs = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
+    .render_P(proxy => {
       log.info(s"rendering desk recs")
       val potCrunchResult: Pot[CrunchResult] = proxy().potCrunchResult
       val potSimulationResult: Pot[SimulationResult] = proxy().potSimulationResult
       val dispatch: (Action) => Callback = proxy.dispatch _
       val workloads = proxy().workloads
-      Panel(Panel.Props("Desk Recommendations and Wait times"),
-        potCrunchResult.renderPending(_ >= 50, _ => <.p("Waiting for crunch result")),
-        potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
-        potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
-        deskRecsChart(labels, potCrunchResult),
-        waitTimesChart(labels, potCrunchResult),
-        workloads.render(wl =>
+      <.div(workloads.renderReady(wl => {
+        val labels = wl.labels
+        Panel(Panel.Props("Desk Recommendations and Wait times"),
+          potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
+          potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
+          potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
+          deskRecsChart(labels, potCrunchResult),
+          waitTimesChart(labels, potCrunchResult),
           Button(
             Button.Props(dispatch(Crunch(WorkloadsHelpers.queueWorkloadsToFullyPopulatedDoublesList(wl.workloads))),
               CommonStyle.danger), Icon.refresh, "Update"))
-      )
-    }
-  }
+      }))
+    })
+    .componentDidMount(scope =>
+      Callback.log("Mounted DeskRecs")
+    ).build
 
   def DeskSimInputs(labels: IndexedSeq[String]) = ReactComponentB[ModelProxy[Pot[UserDeskRecs]]]("FunkyInputs")
     .initialState_P(p => State(p.connect(m => m)))
@@ -157,5 +154,5 @@ object DeskRecsChart {
     case (n, i) if (i % 15 == 0) => n
   }
 
-  def apply(labels: IndexedSeq[String], proxy: ModelProxy[DeskRecsModel]) = DeskRecs(labels)(proxy)
+  def apply(proxy: ModelProxy[DeskRecsModel]) = DeskRecs(proxy)
 }
