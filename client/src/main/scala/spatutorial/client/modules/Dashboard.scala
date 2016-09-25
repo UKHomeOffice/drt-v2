@@ -28,7 +28,7 @@ object Dashboard {
   case class DashboardModels(workloads: Pot[Workloads],
                              queueCrunchResults: QueueCrunchResults,
                              potSimulationResult: QueueSimulationResults,
-                             potUserDeskRecs: Map[QueueName, Pot[UserDeskRecs]]
+                             potUserDeskRecs: QueueUserDeskRecs
                             )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],

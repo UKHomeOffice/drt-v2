@@ -11,7 +11,8 @@ import japgolly.scalajs.react.{Callback, ReactComponentB, _}
 import spatutorial.client.components.Bootstrap.Panel.Props
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules.Dashboard.{QueueCrunchResults, DashboardModels}
+import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
 import spatutorial.shared._
 
@@ -22,33 +23,49 @@ object DeskRecsChart {
 
   log.info("initialising deskrecschart")
 
-  case class State(deskRecs: ReactConnectProxy[Pot[UserDeskRecs]])
+  case class State(crunchResultWrapper: ReactConnectProxy[QueueCrunchResults],
+                   deskRecs: ReactConnectProxy[QueueUserDeskRecs])
 
   val DeskRecs = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
-    .render_P(proxy => {
-      log.info(s"rendering desk recs")
+    .initialState_P(props => State(props.connect(_.queueCrunchResults), props.connect(_.potUserDeskRecs)))
+    .renderPS((_, proxy, state) => {
       <.div(
         proxy().queueCrunchResults.map {
-        case (queueName, queueCrunchResults) =>
-          <.div(
-            queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
-            queueCrunchResults.renderReady(queueWorkload => {
-              val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
-              //todo this seems to be at the wrong level
-              val potSimulationResult: Pot[SimulationResult] = proxy().potSimulationResult(queueName)
-              val workloads = proxy().workloads
-              <.div(workloads.renderReady(wl => {
-                val labels = wl.labels
-                Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
-                  potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
-                  potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
-                  potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
-                  deskRecsChart(queueName, labels, potCrunchResult),
-                  waitTimesChart(labels, potCrunchResult))
+          case (queueName, queueCrunchResults) =>
+            log.info(s"rendering ${queueName}")
+            <.div(
+              queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
+              queueCrunchResults.renderReady(queueWorkload => {
+                log.info("We think crunch results are ready!!!!")
+                val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
+                //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
+                log.info(s"looking up ${queueName} in ${proxy().potSimulationResult.keys}")
+                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
+                log.info(s"simulationResultState: ${potSimulationResult.state}")
+                val workloads = proxy().workloads
+                <.div(
+                  potSimulationResult.renderReady(sr => {
+                    log.info("we think simulation results are ready")
+                    workloads.renderReady(wl => {
+                      log.info("We think workloads are ready!")
+                      val labels = wl.labels
+                      Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
+                        potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
+                        potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
+                        potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
+                        deskRecsChart(queueName, labels, potCrunchResult),
+                        waitTimesChart(labels, potCrunchResult))
+                    })
+                  })
+                )
               }))
-            }))
-      })
-    })
+          case default =>
+            log.error(s"I broke something ${default}")
+            <.div("we're broken")
+        })
+    }
+
+    )
     .componentDidMount(scope =>
       Callback.log("Mounted DeskRecs")
     ).build
@@ -77,10 +94,18 @@ object DeskRecsChart {
       log.info("rendering chart")
       val proxy: Pot[SimulationResult] = props.simulationResult()
       if (proxy.isReady) {
-        log.info(s"Think our simulation result is ready! ${proxy}")
+        log.info(s"Think our simulation result is ready! ${
+          proxy
+        }")
         val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
         val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-        log.info(s"charting ${queueName} ${sampledWaitTimesCrunch.take(10)}, ${sampledWaitTimesSimulation.take(10)}")
+        log.info(s"charting ${
+          queueName
+        } ${
+          sampledWaitTimesCrunch.take(10)
+        }, ${
+          sampledWaitTimesSimulation.take(10)
+        }")
         val sampledLabels = takeEvery15th(labels)
         Chart(Chart.ChartProps("Simulated Wait Times",
           Chart.LineChart,
@@ -107,11 +132,15 @@ object DeskRecsChart {
 
   def deskRecsChart(queueName: QueueName, labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult]): ReactNode = {
     potCrunchResult.render(chartData =>
-      Chart(Chart.ChartProps(s"Desk Recs ${queueName}",
+      Chart(Chart.ChartProps(s"Desk Recs ${
+        queueName
+      }",
         Chart.LineChart,
         ChartData(takeEvery15th(labels), Seq(
           ChartDataset(
-            takeEvery15th(chartData.recommendedDesks).map(_.toDouble), s"Desk Recommendations ${queueName}")))
+            takeEvery15th(chartData.recommendedDesks).map(_.toDouble), s"Desk Recommendations ${
+              queueName
+            }")))
       )))
   }
 

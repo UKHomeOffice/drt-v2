@@ -31,3 +31,4 @@ out
 doc/_book
 /_book
 node_modules/
+*.log.zip
