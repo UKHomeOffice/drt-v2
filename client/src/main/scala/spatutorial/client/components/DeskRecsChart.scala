@@ -39,15 +39,11 @@ object DeskRecsChart {
                 log.info("We think crunch results are ready!!!!")
                 val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
                 //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
-                log.info(s"looking up ${queueName} in ${proxy().potSimulationResult.keys}")
-                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
-                log.info(s"simulationResultState: ${potSimulationResult.state}")
+//                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
                 val workloads = proxy().workloads
-                <.div(
-                  potSimulationResult.renderReady(sr => {
-                    log.info("we think simulation results are ready")
+                <.div(^.key := queueName,
+//                  potSimulationResult.renderReady(sr => {
                     workloads.renderReady(wl => {
-                      log.info("We think workloads are ready!")
                       val labels = wl.labels
                       Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
                         potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
@@ -56,12 +52,9 @@ object DeskRecsChart {
                         deskRecsChart(queueName, labels, potCrunchResult),
                         waitTimesChart(labels, potCrunchResult))
                     })
-                  })
+//                  })
                 )
               }))
-          case default =>
-            log.error(s"I broke something ${default}")
-            <.div("we're broken")
         })
     }
 

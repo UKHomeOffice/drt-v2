@@ -1,32 +1,22 @@
 package spatutorial.client
 
-import chandu0101.scalajs.react.components.{Spinner, ReactTable}
-import diode.ModelR
+import chandu0101.scalajs.react.components.ReactTable
 import diode.data.{Empty, Pot}
 import diode.react.ReactConnectProxy
-import japgolly.scalajs.react.ReactDOM
+import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
-import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles}
+import spatutorial.client.components.{GlobalStyles, QueueUserDeskRecsComponent}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.{QueueCrunchResults, DashboardModels}
-import spatutorial.client.modules.FlightsView
-import spatutorial.client.modules._
-import spatutorial.client.services.{QueueName, UserDeskRecs, RootModel, SPACircuit}
-import spatutorial.shared.{SimulationResult, CrunchResult}
-import spatutorial.shared.FlightsApi.Flights
-import diode.react.ReactPot._
+import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules.{FlightsView, _}
+import spatutorial.client.services.{QueueName, SPACircuit, UserDeskRecs}
+import spatutorial.shared.CrunchResult
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
-import scalacss.ScalaCssReact._
-import japgolly.scalajs.react
-import japgolly.scalajs.react.vdom.DomCallbackResult._
-import japgolly.scalajs.react.vdom.prefix_<^._
-import japgolly.scalajs.react.{Callback, ReactComponentB, _}
 
 @JSExport("SPAMain")
 object SPAMain extends js.JSApp {
@@ -38,7 +28,7 @@ object SPAMain extends js.JSApp {
 
   case object FlightsLoc extends Loc
 
-  case object TodoLoc extends Loc
+  case object UserDeskRecommendationsLoc extends Loc
 
   val eeadesk = "eeaDesk"
   val egate = "eGate"
@@ -62,7 +52,7 @@ object SPAMain extends js.JSApp {
           FlightsView(FlightsView.Props(ctl, proxy, airportInfoProxy), proxy)))
       )
 
-    val todosRoute = staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
+    val todosRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
       val queues: Seq[QueueName] = Seq(eeadesk, egate)
       val queueUserDeskRecProps = queues.map { queueName =>
@@ -77,26 +67,6 @@ object SPAMain extends js.JSApp {
 
     (dashboardRoute | flightsRoute | todosRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
-
-  object QueueUserDeskRecsComponent {
-
-    case class Props(queueName: QueueName,
-                     queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]],
-                     queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]],
-                     simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]]
-                    )
-
-    val component = ReactComponentB[Props]("QueueUserDeskRecs")
-      .render_P(props =>
-        <.div(^.key := props.queueName,
-          props.queueUserDeskRecs(allQueuesDeskRecs => UserDeskRecsComponent(props.queueName, allQueuesDeskRecs)),
-          props.queueCrunchResults(crw =>
-            props.simulationResultWrapper(srw => {
-              log.info(s"running simresultchart again for $props.queueName")
-              DeskRecsChart.userSimulationWaitTimesChart(props.queueName, Dashboard.labels, srw, crw)
-            })))
-      ).build
-  }
 
   val todoCountWrapper: ReactConnectProxy[Option[Int]] = SPACircuit.connect(_.todos.map(_.items.length).toOption)
 
