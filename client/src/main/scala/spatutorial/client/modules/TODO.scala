@@ -15,7 +15,7 @@ import scalacss.ScalaCssReact._
 
 object UserDeskRecsComponent {
 
-  case class Props(proxy: ModelProxy[Pot[UserDeskRecs]])
+  case class Props(queueName: QueueName, proxy: ModelProxy[Pot[UserDeskRecs]])
 
   case class State(selectedItem: Option[DeskRecTimeslot] = None, showTodoForm: Boolean = false)
 
@@ -28,32 +28,34 @@ object UserDeskRecsComponent {
     // activate the edit dialog
       $.modState(s => s.copy(selectedItem = item, showTodoForm = true))
 
-    def todoEdited(item: DeskRecTimeslot, cancelled: Boolean) = {
-      val cb = if (cancelled) {
-        // nothing to do here
-        Callback.log("Todo editing cancelled")
-      } else {
-        Callback.log(s"Todo edited: $item") >>
-          $.props >>= (_.proxy.dispatch(UpdateDeskRecsTime(item)))
-      }
-      // hide the edit dialog, chain callbacks
-      cb >> $.modState(s => s.copy(showTodoForm = false))
-    }
+    //    def todoEdited(item: DeskRecTimeslot, cancelled: Boolean) = {
+    //      val cb = if (cancelled) {
+    //        // nothing to do here
+    //        Callback.log("Todo editing cancelled")
+    //      } else {
+    //        Callback.log(s"Todo edited: $item") >>
+    //          $.props >>= (_.proxy.dispatch(UpdateDeskRecsTime(item)))
+    //      }
+    //      // hide the edit dialog, chain callbacks
+    //      cb >> $.modState(s => s.copy(showTodoForm = false))
+    //    }
 
     def render(p: Props, s: State) =
-      Panel(Panel.Props("Enter your real (or projected) desk numbers to see projected queue times"), <.div(
+      Panel(Panel.Props(s"Enter your real (or projected) desk numbers to see projected queue times for queue '${p.queueName}'"), <.div(
         p.proxy().renderFailed(ex => "Error loading"),
         p.proxy().renderPending(_ > 10, _ => "Loading..."),
-        p.proxy().render(todos =>
+        p.proxy().render(userDeskRecs => {
+          log.info(s"rendering ${p.queueName} with ${userDeskRecs.items.length}")
           TodoList(
-            todos.items,
-            item => p.proxy.dispatch(UpdateDeskRecsTime(item)),
+            userDeskRecs.items,
+            item => p.proxy.dispatch(UpdateDeskRecsTime(p.queueName, item)),
             item => editTodo(Some(item)),
-            item => p.proxy.dispatch(DeleteTodo(item)))),
+            item => p.proxy.dispatch(DeleteTodo(item)))
+        }),
         p.proxy().render(todos =>
           Button(
             Button.Props(
-              p.proxy.dispatch(RunSimulation(Nil, todos.items.map(_.deskRec).toList))),
+              p.proxy.dispatch(RunSimulation(p.queueName, Nil, todos.items.map(_.deskRec).toList))),
             Icon.play,
             "Run Simulation"
           ))))
@@ -67,7 +69,7 @@ object UserDeskRecsComponent {
     .build
 
   /** Returns a function compatible with router location system while using our own props */
-  def apply(proxy: ModelProxy[Pot[UserDeskRecs]]) = component(Props(proxy))
+  def apply(queueName: QueueName, proxy: ModelProxy[Pot[UserDeskRecs]]) = component(Props(queueName, proxy))
 }
 
 //object TodoForm {

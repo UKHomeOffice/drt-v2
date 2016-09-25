@@ -36,8 +36,8 @@ trait WorkloadsService extends WorkloadsApi {
   def maxLoadPerSlot: Int = 20
 
   def splitRatioProvider(flight: ApiFlight) = List(
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
+    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.2),
+    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.8)
   )
 
   override def getWorkloads(): Future[List[QueueWorkloads]] = {

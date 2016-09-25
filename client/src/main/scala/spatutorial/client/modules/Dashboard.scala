@@ -10,7 +10,8 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, TodoLoc}
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
-import spatutorial.client.services.{UserDeskRecs, Crunch, GetWorkloads, Workloads}
+import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
+import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 
@@ -20,21 +21,25 @@ import scala.language.existentials
 import spatutorial.client.logger._
 
 object Dashboard {
+  type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
+  type QueueSimulationResults = Map[QueueName,Pot[SimulationResult]]
+  type QueueUserDeskRecs = Map[String, Pot[UserDeskRecs]]
 
   case class DashboardModels(workloads: Pot[Workloads],
-                             potCrunchResult: Pot[CrunchResult],
-                             potSimulationResult: Pot[SimulationResult],
-                             potUserDeskRecs: Pot[UserDeskRecs]
+                             queueCrunchResults: QueueCrunchResults,
+                             potSimulationResult: QueueSimulationResults,
+                             potUserDeskRecs: Map[QueueName, Pot[UserDeskRecs]]
                             )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels]
                   )
 
+
   case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
-                   crunchResultWrapper: ReactConnectProxy[Pot[CrunchResult]],
-                   simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]],
-                   userDeskRecsWrapper: ReactConnectProxy[Pot[UserDeskRecs]]
+                   crunchResultWrapper: ReactConnectProxy[QueueCrunchResults],
+                   simulationResultWrapper: ReactConnectProxy[QueueSimulationResults],
+                   userDeskRecsWrapper: ReactConnectProxy[QueueUserDeskRecs]
                   )
 
   val baseDate = new js.Date(2016, 10, 1, 7)
@@ -59,10 +64,13 @@ object Dashboard {
 
     queueWorkloadsByMinute
   }
+
   val colors = IndexedSeq("red", "blue")
+
   def chartDatas(workload: Workloads): Seq[ChartDataset] = {
-    chartDataFromWorkloads(workload.workloads).zipWithIndex.map{
-      case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))}.toSeq
+    chartDataFromWorkloads(workload.workloads).zipWithIndex.map {
+      case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))
+    }.toSeq
   }
 
   //  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * 250).take(numberOf15Mins).toSeq
@@ -79,10 +87,9 @@ object Dashboard {
 
   def mounted(props: Props) = {
     log.info("backend mounted")
-    val cb: Callback = Callback.when(props.dashboardModelProxy().workloads.isEmpty) {
+    Callback.when(props.dashboardModelProxy().workloads.isEmpty) {
       props.dashboardModelProxy.dispatch(GetWorkloads("", "", "edi"))
     }
-    cb
   }
 
   // create the React component for Dashboard
@@ -90,7 +97,7 @@ object Dashboard {
     // create and store the connect proxy in state for later use
     .initialState_P(props => State(
     props.dashboardModelProxy.connect(m => m.workloads),
-    props.dashboardModelProxy.connect(m => m.potCrunchResult),
+    props.dashboardModelProxy.connect(m => m.queueCrunchResults),
     props.dashboardModelProxy.connect(m => m.potSimulationResult),
     props.dashboardModelProxy.connect(_.potUserDeskRecs)
   ))

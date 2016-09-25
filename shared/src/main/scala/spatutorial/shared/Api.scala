@@ -2,7 +2,7 @@ package spatutorial.shared
 
 import java.time.LocalDateTime
 import scala.collection.immutable
-import immutable.Seq
+import scala.collection.immutable.{NumericRange, Seq}
 import spatutorial.shared.FlightsApi.Flights
 
 import scala.concurrent.Future
@@ -54,19 +54,45 @@ trait FlightsApi {
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 trait WorkloadsHelpers {
+  def workloadsByQueue(workloads: Seq[QueueWorkloads]): Map[String, List[Double]] = {
+    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads)
+    workloads.map(qwl => {
+        val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
+        val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
+        qwl.queueName ->  queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
+    }).toMap
+  }
 
-  def queueWorkloadsToFullyPopulatedDoublesList(workloads: Iterable[QueueWorkloads]): List[Double] = {
-    val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min
-    val allMins = (timesMin until (timesMin + 60 * 60 * 24) by 60)
+  def queueWorkloadsToFullyPopulatedDoublesList(workloads: Seq[QueueWorkloads]): List[Double] = {
+    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads)
     println(allMins.length)
-    val workloadsByMinute = workloads.flatMap(_.workloadsByMinute.map((wl) => (wl.time, wl.workload))).toMap
+    val workloadsByMinute: Map[Long, Double] = workloads.flatMap(workloads1 => oneQueueWorkload(workloads1)).toMap
 
+    queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(foldQueuesMinutesIntoDay(allMins, workloadsByMinute))
+  }
+
+  def queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(res: Map[Long, Double]): List[Double] = {
+    res.toSeq.sortBy(_._1).map(_._2).toList
+  }
+
+  def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
     val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
       (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
-    val maxMinutes = workloadsByMinute.keys.max
-    val myMaxMinutes = allMins.last
-    println(s"----- disjoint $maxMinutes $myMaxMinutes ${(maxMinutes - myMaxMinutes)/60}")
-    res.toSeq.sortBy(_._1).map(_._2).toList
+    res
+  }
+
+  def oneQueueWorkload(workloads1: QueueWorkloads): Map[Long, Double] = {
+    workloads1.workloadsByMinute.map((wl) => (wl.time, wl.workload)).toMap
+  }
+
+  def allMinsFromAllQueues(workloads: Seq[QueueWorkloads]): NumericRange[Long] = {
+    val timesMin = minMinuteInWorkloads(workloads)
+    val timeMinPlusOneDay: Long = timesMin + 60 * 60 * 24
+    timesMin until timeMinPlusOneDay by 60
+  }
+
+  def minMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
+    workloads.flatMap(_.workloadsByMinute.map(_.time)).min
   }
 }
 
