@@ -11,11 +11,11 @@ import org.scalajs.dom
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.{DeskRecsChart, GlobalStyles}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules.Dashboard.{QueueCrunchResults, DashboardModels}
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules._
 import spatutorial.client.services.{QueueName, UserDeskRecs, RootModel, SPACircuit}
-import spatutorial.shared.CrunchResult
+import spatutorial.shared.{SimulationResult, CrunchResult}
 import spatutorial.shared.FlightsApi.Flights
 import diode.react.ReactPot._
 
@@ -47,11 +47,8 @@ object SPAMain extends js.JSApp {
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
-    val crunchResultWrapper = SPACircuit.connect(_.queueCrunchResults)
-    val userDeskRecsWrapper = SPACircuit.connect(_.userDeskRec)
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
-    // wrap/connect components to the circuit
 
     val dashboardRoute = staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
@@ -59,31 +56,47 @@ object SPAMain extends js.JSApp {
         Dashboard(ctl, proxy)
       }))
 
-    val flightsRoute = (staticRoute("#flights", FlightsLoc) ~>
+    val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
       renderR(ctl => SPACircuit.wrap(_.airportInfos)(airportInfoProxy =>
         SPACircuit.wrap(_.flights)(proxy =>
           FlightsView(FlightsView.Props(ctl, proxy, airportInfoProxy), proxy)))
-      ))
+      )
 
-    val todosRoute = (staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
+    val todosRoute = staticRoute("#todo", TodoLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
+      val queues: Seq[QueueName] = Seq(eeadesk, egate)
+      val queueUserDeskRecProps = queues.map { queueName =>
 
-      <.div(Seq(eeadesk, egate).map { case queueName =>
         val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(queueName, Empty).flatMap(_._1))
         val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(queueName, Empty))
         val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
-        <.div(^.key := queueName,
-          queueUserDeskRecs(allQueuesDeskRecs => UserDeskRecsComponent(queueName, allQueuesDeskRecs)),
-          queueCrunchResults(crw =>
-            simulationResultWrapper(srw => {
-              log.info(s"running simresultchart again for $queueName")
-              DeskRecsChart.userSimulationWaitTimesChart(queueName, Dashboard.labels, srw, crw)
-            })))
-      })
-    }))
+        QueueUserDeskRecsComponent.Props(queueName, queueCrunchResults, queueUserDeskRecs, simulationResultWrapper)
+      }
+      <.div(queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
+    })
 
     (dashboardRoute | flightsRoute | todosRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
+
+  object QueueUserDeskRecsComponent {
+
+    case class Props(queueName: QueueName,
+                     queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]],
+                     queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]],
+                     simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]]
+                    )
+
+    val component = ReactComponentB[Props]("QueueUserDeskRecs")
+      .render_P(props =>
+        <.div(^.key := props.queueName,
+          props.queueUserDeskRecs(allQueuesDeskRecs => UserDeskRecsComponent(props.queueName, allQueuesDeskRecs)),
+          props.queueCrunchResults(crw =>
+            props.simulationResultWrapper(srw => {
+              log.info(s"running simresultchart again for $props.queueName")
+              DeskRecsChart.userSimulationWaitTimesChart(props.queueName, Dashboard.labels, srw, crw)
+            })))
+      ).build
+  }
 
   val todoCountWrapper: ReactConnectProxy[Option[Int]] = SPACircuit.connect(_.todos.map(_.items.length).toOption)
 
