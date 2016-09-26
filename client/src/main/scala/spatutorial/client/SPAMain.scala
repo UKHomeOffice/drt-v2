@@ -14,6 +14,7 @@ import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services.{QueueName, SPACircuit, UserDeskRecs}
 import spatutorial.shared.CrunchResult
 
+import scala.collection.immutable.IndexedSeq
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
@@ -56,11 +57,11 @@ object SPAMain extends js.JSApp {
       //todo take the queuenames from the workloads response
       val queues: Seq[QueueName] = Seq(eeadesk, egate)
       val queueUserDeskRecProps = queues.map { queueName =>
-
+        val labels: ReactConnectProxy[IndexedSeq[String]] = SPACircuit.connect(_.workload.get.labels)
         val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(queueName, Empty).flatMap(_._1))
         val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(queueName, Empty))
         val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
-        QueueUserDeskRecsComponent.Props(queueName, queueCrunchResults, queueUserDeskRecs, simulationResultWrapper)
+        QueueUserDeskRecsComponent.Props(queueName, labels, queueCrunchResults, queueUserDeskRecs, simulationResultWrapper)
       }
       <.div(queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })

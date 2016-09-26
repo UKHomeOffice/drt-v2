@@ -15,6 +15,7 @@ import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 
+import scala.collection.immutable
 import scala.scalajs.js
 import scala.util.Random
 import scala.language.existentials
@@ -22,7 +23,7 @@ import spatutorial.client.logger._
 
 object Dashboard {
   type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
-  type QueueSimulationResults = Map[QueueName,Pot[SimulationResult]]
+  type QueueSimulationResults = Map[QueueName, Pot[SimulationResult]]
   type QueueUserDeskRecs = Map[String, Pot[UserDeskRecs]]
 
   case class DashboardModels(workloads: Pot[Workloads],
@@ -42,24 +43,21 @@ object Dashboard {
                    userDeskRecsWrapper: ReactConnectProxy[QueueUserDeskRecs]
                   )
 
-  val baseDate = new js.Date(2016, 10, 1, 7)
-  val millisPer15Minutes = 1000 * 60
-  val numberOf15Mins = (24 * 4 * 15)
-
-  // create dummy data for the chart
-  val labelsDates = (baseDate.getTime() to (baseDate.getTime() + millisPer15Minutes * numberOf15Mins) by millisPer15Minutes).map(new js.Date(_))
-  val labels = labelsDates.map(_.toISOString().take(16))
-
   def chartDataFromWorkloads(workloads: Iterable[QueueWorkloads]): Map[String, List[Double]] = {
     val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min
-    val allMins = (timesMin until (timesMin + 60 * 60 * 24) by 60)
-    println(allMins.length)
+    val allMins = timesMin until (timesMin + 60 * 60 * 24) by (60)
     val queueWorkloadsByMinute = workloads
       .map(queue => {
-        val workloadsByMinute = queue.workloadsByMinute.map((wl) => (wl.time, wl.workload)).toMap
+        val minute0 = queue.workloadsByMinute
+        val minute1 = queue.workloadsByPeriod(15).toList
+        log.info(s"by 1 mins: ${minute0.take(40)}")
+        log.info(s"by 15 mins: ${minute1}")
+        val workloadsByMinute = minute0.map((wl) => (wl.time, wl.workload)).toMap
         val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
           (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
-        queue.queueName -> res.toSeq.sortBy(_._1).map(_._2).toList
+        queue.queueName -> res.toSeq.sortBy(_._1).map(_._2)
+          .grouped(15).map(_.sum)
+          .toList
       }).toMap
 
     queueWorkloadsByMinute
@@ -67,16 +65,9 @@ object Dashboard {
 
   val colors = IndexedSeq("red", "blue")
 
-  def chartDatas(workload: Workloads): Seq[ChartDataset] = {
-    chartDataFromWorkloads(workload.workloads).zipWithIndex.map {
-      case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))
-    }.toSeq
-  }
 
-  //  private val workload: Seq[Double] = Iterator.continually(Random.nextDouble() * 250).take(numberOf15Mins).toSeq
   def ChartProps(labels: Seq[String], workload: Workloads) = {
-    //    log.debug(s"Workload is ${workload}")
-    val chartData = chartDatas(workload)
+    val chartData: Seq[ChartDataset] = chartDatas(workload)
     Chart.ChartProps(
       "Workloads",
       Chart.LineChart,
@@ -84,6 +75,11 @@ object Dashboard {
     )
   }
 
+  def chartDatas(workload: Workloads): Seq[ChartDataset] = {
+    chartDataFromWorkloads(workload.workloads).zipWithIndex.map {
+      case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))
+    }.toSeq
+  }
 
   def mounted(props: Props) = {
     log.info("backend mounted")
@@ -110,7 +106,7 @@ object Dashboard {
             val workloads: Pot[Workloads] = workloadsModelProxy.value
             <.div(
               workloads.renderFailed(t => <.p(t.toString())),
-              workloads.renderReady(wl => Chart(ChartProps(wl.labels, wl))),
+              workloads.renderReady(wl => Chart(ChartProps(DeskRecsChart.takeEvery15th(wl.labels), wl))),
               workloads.renderPending((num) => <.div(s"waiting for workloads with ${num}")),
               workloads.renderEmpty(<.div(s"Waiting for workload")))
           })),

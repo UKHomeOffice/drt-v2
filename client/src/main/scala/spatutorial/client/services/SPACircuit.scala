@@ -56,7 +56,8 @@ case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 trait WorkloadsUtil {
   def labelsFromAllQueues(workloads: Seq[QueueWorkloads]) = {
     val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min * 1000
-    val allMins = (timesMin until (timesMin + 60 * 60 * 24) by 60)
+    val oneMinute: Long = 60000
+    val allMins = timesMin until (timesMin + 1000 * 60 * 60 * 24) by 60000
     allMins.map(new js.Date(_).toISOString())
   }
 }
@@ -169,7 +170,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
 
       val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads)(queueName)
 //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
-      log.info(s"Got workloads from model for ${queueName} ${desks.take(15)} ${workloads1.take(15)}")
+      log.info(s"Got workloads from model for ${queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
       effectOnly(
         Effect(AjaxClient[Api].processWork(workloads1, desks).call().map(resp => UpdateSimulationResult(queueName, resp))))
     case ChangeDeskUsage(queueName, v, k) =>

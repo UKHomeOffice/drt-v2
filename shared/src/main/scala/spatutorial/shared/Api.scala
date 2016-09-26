@@ -57,9 +57,9 @@ trait WorkloadsHelpers {
   def workloadsByQueue(workloads: Seq[QueueWorkloads]): Map[String, List[Double]] = {
     val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads)
     workloads.map(qwl => {
-        val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
-        val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
-        qwl.queueName ->  queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
+      val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
+      val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
+      qwl.queueName -> queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
     }).toMap
   }
 
@@ -107,7 +107,8 @@ case class QueueWorkloads(queueName: String,
                           workloadsByMinute: Seq[WL],
                           paxByMinute: Seq[Pax]
                          ) {
-  //  def workloadsByPeriod(n: Int): Iterator[WL] = workloadsByMinute.grouped(n).map(g => WL(g.head.time, g.map(_.workload).sum))
+  def workloadsByPeriod(n: Int): scala.Seq[WL] =
+    workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
 
   //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
 }
