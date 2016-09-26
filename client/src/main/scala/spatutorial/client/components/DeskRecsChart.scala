@@ -2,7 +2,7 @@ package spatutorial.client.components
 
 import diode.Action
 import diode.data.Pot
-import diode.react.{ReactConnectProxy, ModelProxy}
+import diode.react.{ModelProxy, ReactConnectProxy}
 import diode.react.ReactPot._
 import japgolly.scalajs.react
 import japgolly.scalajs.react.vdom.DomCallbackResult._
@@ -11,9 +11,10 @@ import japgolly.scalajs.react.{Callback, ReactComponentB, _}
 import spatutorial.client.components.Bootstrap.Panel.Props
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.{QueueCrunchResults, DashboardModels}
+import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
 import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
+import spatutorial.shared.FlightsApi.QueueName
 import spatutorial.shared._
 
 import scala.collection.immutable

@@ -8,13 +8,15 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
 import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
-import spatutorial.client.modules.{GriddleComponentWrapper, Dashboard, UserDeskRecsComponent}
-import spatutorial.client.services.{QueueName, UserDeskRecs}
+import spatutorial.client.modules.{Dashboard, GriddleComponentWrapper, UserDeskRecsComponent}
+import spatutorial.client.services.UserDeskRecs
 import spatutorial.shared.{CrunchResult, SimulationResult}
 import diode.react.ReactPot._
+
 import scala.scalajs.js
 import scala.scalajs.js.annotation.ScalaJSDefined
 import japgolly.scalajs.react._
+import spatutorial.shared.FlightsApi.QueueName
 
 object QueueUserDeskRecsComponent {
 

@@ -12,7 +12,7 @@ import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.FlightsApi.{Flights, QueueName, QueueWorkloads}
 import spatutorial.shared._
 
 import scala.collection.immutable
@@ -20,6 +20,8 @@ import scala.scalajs.js
 import scala.util.Random
 import scala.language.existentials
 import spatutorial.client.logger._
+
+import scala.collection.immutable.Iterable
 
 object Dashboard {
   type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
@@ -43,22 +45,22 @@ object Dashboard {
                    userDeskRecsWrapper: ReactConnectProxy[QueueUserDeskRecs]
                   )
 
-  def chartDataFromWorkloads(workloads: Iterable[QueueWorkloads]): Map[String, List[Double]] = {
-    val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min
+  def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
+    val timesMin = workloads.values.flatMap(_._2.map(c => c.time)).min
     val allMins = timesMin until (timesMin + 60 * 60 * 24) by (60)
     val queueWorkloadsByMinute = workloads
-      .map(queue => {
-        val minute0 = queue.workloadsByMinute
-        val minute1 = queue.workloadsByPeriod(15).toList
+      .mapValues(queue => {
+        val minute0 = queue._1
+        val minute1 = WorkloadsHelpers.workloadsByPeriod(queue._1, 15).toList
         log.info(s"by 1 mins: ${minute0.take(40)}")
         log.info(s"by 15 mins: ${minute1}")
         val workloadsByMinute = minute0.map((wl) => (wl.time, wl.workload)).toMap
         val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
           (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
-        queue.queueName -> res.toSeq.sortBy(_._1).map(_._2)
+        res.toSeq.sortBy(_._1).map(_._2)
           .grouped(15).map(_.sum)
           .toList
-      }).toMap
+      })
 
     queueWorkloadsByMinute
   }

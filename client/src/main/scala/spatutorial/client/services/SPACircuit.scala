@@ -7,15 +7,16 @@ import diode.data._
 import diode.util._
 import diode.react.ReactConnector
 import spatutorial.client.components.DeskRecsChart
-import spatutorial.client.services.HandyStuff.{QueueUserDeskRecs, CrunchResultAndDeskRecs}
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
+import spatutorial.shared.FlightsApi.{Flights, QueueName, QueueWorkloads}
 import spatutorial.shared._
 import boopickle.Default._
+
 import scala.collection.immutable.IndexedSeq
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
-import scala.util.{Success, Random}
+import scala.util.{Random, Success}
 import spatutorial.client.logger._
 import spatutorial.shared.{Api, CrunchResult, SimulationResult}
 import boopickle.Default._
@@ -27,7 +28,7 @@ import spatutorial.client.logger._
 // Actions
 case object RefreshTodos extends Action
 
-case class UpdateAllTodos(queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
+case class UpdateQueueUserDeskRecs(queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
 
 case class UpdateDeskRecsTime(queueName: QueueName, item: DeskRecTimeslot) extends Action
 
@@ -41,7 +42,7 @@ case class UpdateCrunchResult(queueName: QueueName, crunchResult: CrunchResult) 
 
 case class UpdateSimulationResult(queueName: QueueName, simulationResult: SimulationResult) extends Action
 
-case class UpdateWorkloads(workloads: List[QueueWorkloads]) extends Action
+case class UpdateWorkloads(workloads: Map[QueueName, QueueWorkloads]) extends Action
 
 case class Crunch(queue: QueueName, workload: List[Double]) extends Action
 
@@ -54,17 +55,17 @@ case class ChangeDeskUsage(queueName: QueueName, value: String, index: Int) exte
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
 trait WorkloadsUtil {
-  def labelsFromAllQueues(workloads: Seq[QueueWorkloads]) = {
-    val timesMin = workloads.flatMap(_.workloadsByMinute.map(_.time)).min * 1000
+  def labelsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
+    val timesMin = workloads.values.flatMap(_._1.map(_.time)).min
     val oneMinute: Long = 60000
-    val allMins = timesMin until (timesMin + 1000 * 60 * 60 * 24) by 60000
+    val allMins = timesMin until (timesMin + 60000 * 60 * 24) by oneMinute
     allMins.map(new js.Date(_).toISOString())
   }
 }
 
 
 // The base model of our application
-case class Workloads(workloads: List[QueueWorkloads]) extends WorkloadsUtil {
+case class Workloads(workloads: Map[String, QueueWorkloads]) extends WorkloadsUtil {
   def labels = labelsFromAllQueues(workloads)
 }
 
@@ -106,7 +107,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, QueueUserDeskRecs]) extends Action
       log.info("RefreshTodos")
       //      effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
       noChange
-    case UpdateAllTodos(queueName, deskRecs) =>
+    case UpdateQueueUserDeskRecs(queueName, deskRecs) =>
       // got new deskRecs, update model
       log.info(s"got new user desk recs update model for $queueName")
       updated(value + (queueName -> Ready(UserDeskRecs(deskRecs))))
@@ -142,9 +143,8 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
     case UpdateWorkloads(queueWorkloads) =>
       //      log.info(s"received workloads ${workloads} from server")
       val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-      val effects = workloadsByQueue.map { queueWorkload =>
-        val effect = Effect(AjaxClient[Api].crunch(queueWorkload._2).call().map(resp => {
-          val queueName: QueueName = queueWorkload._1
+      val effects = workloadsByQueue.map { case (queueName, queueWorkload) =>
+        val effect = Effect(AjaxClient[Api].crunch(queueWorkload).call().map(resp => {
           log.info(s"will request crunch for ${queueName}")
           UpdateCrunchResult(queueName, resp)
         }))
@@ -221,7 +221,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[QueueName, Pot[CrunchResultAndDes
         .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2.toString, t._2, t._1)))
 
       updated(value + (queueName -> Ready((Ready(crunchResult), Ready(newDeskRec)))),
-        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateAllTodos(queueName, res))))
+        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateQueueUserDeskRecs(queueName, res))))
   }
 
 }
