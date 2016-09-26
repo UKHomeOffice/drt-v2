@@ -1,12 +1,13 @@
 package services.workloadcalculator
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypeAndQueueCount, VoyagePaxSplits}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import spatutorial.shared.{Pax, QueueWorkloads, WL, ApiFlight}
+import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads}
+import spatutorial.shared.{ApiFlight, Pax, WL}
 
-import scala.collection.immutable.{IndexedSeq, Seq, Iterable, NumericRange}
+import scala.collection.immutable.{IndexedSeq, Seq}
 
 
 object PaxLoadAt {
@@ -24,21 +25,30 @@ object PaxLoadCalculator {
   val paxOffFlowRate = 20
 
   def workload(paxLoad: PaxLoadAt): WL = {
-    WL(paxLoad.time.getMillis / 1000, paxLoad.paxType.paxCount)
+    WL(paxLoad.time.getMillis, paxLoad.paxType.paxCount)
   }
 
-  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio])(flights: List[ApiFlight]) = {
-    val paxLoadsByDesk: List[Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]]] = paxLoadsByQueue(splitsRatioProvider, flights)
-    val queueWorkloads: List[Iterable[QueueWorkloads]] = paxLoadsByDesk
-      .map(m => { paxloadsToQueueWorkloads(m.map(e => e._1.queueType -> e._2)) })
-    queueWorkloads.reduceLeft((a, b) => combineQueues(a.toList, b.toList))
+  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio])(flights: List[ApiFlight]): Map[QueueName, QueueWorkloads] = {
+    val paxLoadsByDesk: List[Map[String, IndexedSeq[PaxLoadAt]]] = paxLoadsByQueue(splitsRatioProvider, flights)
+    val queueWorkloads: List[Map[String, QueueWorkloads]] = paxLoadsByDesk
+      .map(m => {
+        paxloadsToQueueWorkloads(m.map(e => e._1 -> e._2))
+      })
+    queueWorkloads.reduceLeft((agg, right) => {
+      val overridden: Map[String, QueueWorkloads] = right.map { case (rightQueueName, rightQueueLoads) =>
+        val currVal = agg.getOrElse(rightQueueName, (Nil, Nil))
+        val combinedQueueLoads: QueueWorkloads = (combineWorkloads(currVal._1, rightQueueLoads._1), combinePaxLoads(currVal._2, rightQueueLoads._2))
+        (rightQueueName -> combinedQueueLoads)
+      }
+      agg ++ overridden
+    })
   }
 
-  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], flights: List[ApiFlight]): List[Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]]] = {
+  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], flights: List[ApiFlight]): List[Map[String, IndexedSeq[PaxLoadAt]]] = {
     val voyagePaxSplits: List[VoyagePaxSplits] = flights.map(
       voyagePaxSplitsFromApiFlight(splitsRatioProvider)
     )
-    val paxLoadsByDesk: List[Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]]] = voyagePaxSplits.map(vps => voyagePaxLoadByDesk(vps))
+    val paxLoadsByDesk: List[Map[String, IndexedSeq[PaxLoadAt]]] = voyagePaxSplits.map(vps => paxTypeAndQueueToPaxLoadAtTime(vps.scheduledArrivalDateTime, vps.paxSplits))
     paxLoadsByDesk
   }
 
@@ -49,30 +59,33 @@ object PaxLoadCalculator {
         splits.map(split => PaxTypeAndQueueCount(split.paxType, split.ratio * paxInMinute))
       }
 
-      VoyagePaxSplits(flight.AirportID,
-        flight.IATA,
-        flight.ActPax,
-        org.joda.time.DateTime.parse(flight.SchDT), splitsOverTime)
+      VoyagePaxSplits(flight.AirportID, flight.IATA, org.joda.time.DateTime.parse(flight.SchDT), splitsOverTime)
     }
   }
 
-  def paxloadsToQueueWorkloads(queuePaxloads: Map[String, Seq[PaxLoadAt]]): Iterable[QueueWorkloads] = {
+  def paxloadsToQueueWorkloads(queuePaxloads: Map[String, Seq[PaxLoadAt]]): Map[String, (Seq[WL], Seq[Pax])] = {
     queuePaxloads.map((queuePaxload: (String, Seq[PaxLoadAt])) =>
-      QueueWorkloads(
-        queuePaxload._1,
+
+      queuePaxload._1 -> (
         queuePaxload._2.map((paxLoad: PaxLoadAt) => workload(paxLoad)),
-        queuePaxload._2.map((paxLoad: PaxLoadAt) => Pax(paxLoad.time.getMillis / 1000, paxLoad.paxType.paxCount))
-      )
-    )
+        queuePaxload._2.map((paxLoad: PaxLoadAt) => Pax(paxLoad.time.getMillis, paxLoad.paxType.paxCount))
+        )
+
+    ).toMap
   }
 
-  def flightPaxSplits(flight: ApiFlight, splitRatios: List[SplitRatio]) = {
+  def flightPaxSplits(flight: ApiFlight, splitRatios: List[SplitRatio]): List[PaxTypeAndQueueCount] = {
     splitRatios.map(splitRatio => PaxTypeAndQueueCount(splitRatio.paxType, splitRatio.ratio * flight.ActPax))
   }
 
-  def voyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits): Map[PaxTypeAndQueue, IndexedSeq[PaxLoadAt]] = {
-    val firstMinute = voyagePaxSplits.scheduledArrivalDateTime
-    val groupedByDesk: Map[PaxTypeAndQueue, Seq[PaxTypeAndQueueCount]] = voyagePaxSplits.paxSplits.groupBy(_.paxAndQueueType)
+  def voyagePaxLoadByDesk(voyagePaxSplits: VoyagePaxSplits): Map[String, IndexedSeq[PaxLoadAt]] = {
+    val firstMinute: DateTime = voyagePaxSplits.scheduledArrivalDateTime
+    val splits: Seq[PaxTypeAndQueueCount] = voyagePaxSplits.paxSplits
+    paxTypeAndQueueToPaxLoadAtTime(firstMinute, splits)
+  }
+
+  def paxTypeAndQueueToPaxLoadAtTime(firstMinute: DateTime, splits: Seq[PaxTypeAndQueueCount]): Map[String, IndexedSeq[PaxLoadAt]] = {
+    val groupedByDesk: Map[String, Seq[PaxTypeAndQueueCount]] = splits.groupBy(_.paxAndQueueType.queueType)
     groupedByDesk.mapValues(
       (paxTypeAndCount: Seq[PaxTypeAndQueueCount]) => {
         //        val totalPax = paxTypeAndCount.map(_.paxCount).sum
@@ -85,7 +98,7 @@ object PaxLoadCalculator {
         }
         }
       }
-    )
+    ).toMap
   }
 
   def paxDeparturesPerMinutes(remainingPax: Int, departRate: Int): List[Int] = {
@@ -108,7 +121,7 @@ object PaxLoadCalculator {
     res2.toList
   }
 
-  def combinePaxLoads(l1: Seq[Pax], l2: Seq[Pax]): scala.Seq[Pax] = {
+  def combinePaxLoads(l1: Seq[Pax], l2: Seq[Pax]): Seq[Pax] = {
     def foldInto(agg: Map[Long, Double], list: List[Pax]): Map[Long, Double] = list.foldLeft(agg)(
       (agg, pax) => {
         val cv = agg.getOrElse(pax.time, 0d)
@@ -118,27 +131,25 @@ object PaxLoadCalculator {
     val res1 = foldInto(Map[Long, Double](), l1.toList)
     val res2 = foldInto(res1, l2.toList).map(timeWorkload => Pax(timeWorkload._1, timeWorkload._2)).toList
 
-    res2.toList
-  }
-
-  def combineQueues(l1: List[QueueWorkloads], l2: List[QueueWorkloads]) = {
-    def foldInto(agg: Map[String, QueueWorkloads], list: List[QueueWorkloads]) = list.foldLeft(agg)(
-      (agg, qw) => {
-        val cv = agg.getOrElse(qw.queueName, QueueWorkloads(qw.queueName, Nil, Nil))
-        agg + (
-          qw.queueName ->
-            QueueWorkloads(
-              qw.queueName,
-              combineWorkloads(cv.workloadsByMinute, qw.workloadsByMinute),
-              combinePaxLoads(cv.paxByMinute, qw.paxByMinute).toList
-            )
-          )
-      }
-    )
-    val res1 = foldInto(Map[String, QueueWorkloads](), l1)
-    val res2 = foldInto(res1, l2).map(qw => qw._2)
     res2
   }
+
+  //  def combineWorkloadsWithinAQueue(l1: List[QueueWorkloads], l2: List[QueueWorkloads]) = {
+  //    def foldInto(agg: Map[String, QueueWorkloads], list: List[QueueWorkloads]) = list.foldLeft(agg)(
+  //      (agg, qw) => {
+  //        val cv = agg.getOrElse(qw.queueName, (Nil, Nil))
+  //        agg + (
+  //          qw.queueName ->
+  //            (   combineWorkloads(cv.workloadsByMinute, qw.workloadsByMinute),
+  //              combinePaxLoads(cv.paxByMinute, qw.paxByMinute).toList
+  //            )
+  //          )
+  //      }
+  //    )
+  //    val res1 = foldInto(Map[String, QueueWorkloads](), l1)
+  //    val res2 = foldInto(res1, l2).map(qw => qw._2)
+  //    res2
+  //  }
 }
 
 object PassengerQueueTypes {
@@ -169,11 +180,7 @@ object PassengerQueueTypes {
 
   type FlightCode = String
 
-  case class VoyagePaxSplits(destinationPort: String,
-                             flightCode: FlightCode,
-                             totalPaxCount: Int,
-                             scheduledArrivalDateTime: DateTime,
-                             paxSplits: Seq[PaxTypeAndQueueCount])
+  case class VoyagePaxSplits(destinationPort: String, flightCode: FlightCode, scheduledArrivalDateTime: DateTime, paxSplits: Seq[PaxTypeAndQueueCount])
 
   case class VoyagesPaxSplits(voyageSplits: List[VoyagePaxSplits])
 

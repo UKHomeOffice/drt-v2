@@ -1,9 +1,8 @@
 package spatutorial.shared
 
-import java.time.LocalDateTime
-import scala.collection.immutable
-import scala.collection.immutable.{NumericRange, Seq}
-import spatutorial.shared.FlightsApi.Flights
+
+import scala.collection.immutable._
+import spatutorial.shared.FlightsApi.{Flights, QueueWorkloads}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,29 +33,6 @@ case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
 
-case class WorkloadResponse(terminals: Seq[TerminalWorkload])
-
-case class TerminalWorkload(terminalName: String,
-                            queues: Seq[QueueWorkloads])
-
-case class QueueWorkloads(queueName: String,
-                          workloadsByMinute: Seq[WL],
-                          paxByMinute: Seq[Pax]
-                         ) {
-  //  def workloadsByPeriod(n: Int): Iterator[WL] = workloadsByMinute.grouped(n).map(g => WL(g.head.time, g.map(_.workload).sum))
-
-  //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
-}
-
-case class WL(time: Long, workload: Double)
-
-case class Pax(time: Long, pax: Double)
-
-case class DeskRec(time: Long, desks: Int)
-
-case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
-
-
 object FlightsApi {
 
   case class Flight(scheduleArrivalDt: Long, actualArrivalDt: Option[Long], reallyADate: Long,
@@ -68,6 +44,11 @@ object FlightsApi {
 
   case class Flights(flights: List[ApiFlight])
 
+  type QueueWorkloads = (Seq[WL], Seq[Pax])
+
+  type QueueName = String
+
+  type WorkloadsResult = Map[QueueName, QueueWorkloads]
 }
 
 trait FlightsApi {
@@ -77,14 +58,17 @@ trait FlightsApi {
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 trait WorkloadsHelpers {
-  def workloadsByQueue(workloads: Seq[QueueWorkloads]): Map[String, List[Double]] = {
-    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads)
-    workloads.map(qwl => {
+  def workloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
+    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads.values.toList)
+    workloads.mapValues(qwl => {
       val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
-      qwl.queueName -> queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
-    }).toMap
+      queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
+    })
   }
+
+  def workloadsByPeriod(workloadsByMinute: Seq[WL], n: Int): scala.Seq[WL] =
+    workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
 
   def queueWorkloadsToFullyPopulatedDoublesList(workloads: Seq[QueueWorkloads]): List[Double] = {
     val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads)
@@ -105,7 +89,7 @@ trait WorkloadsHelpers {
   }
 
   def oneQueueWorkload(workloads1: QueueWorkloads): Map[Long, Double] = {
-    workloads1.workloadsByMinute.map((wl) => (wl.time, wl.workload)).toMap
+    workloads1._1.map((wl) => (wl.time, wl.workload)).toMap
   }
 
   def allMinsFromAllQueues(workloads: Seq[QueueWorkloads]): NumericRange[Long] = {
@@ -115,7 +99,7 @@ trait WorkloadsHelpers {
   }
 
   def minMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
-    workloads.flatMap(_.workloadsByMinute.map(_.time)).min
+    workloads.flatMap(_._1.map(_.time)).min
   }
 }
 
@@ -126,15 +110,15 @@ case class WorkloadResponse(terminals: Seq[TerminalWorkload])
 case class TerminalWorkload(terminalName: String,
                             queues: Seq[QueueWorkloads])
 
-case class QueueWorkloads(queueName: String,
-                          workloadsByMinute: Seq[WL],
-                          paxByMinute: Seq[Pax]
-                         ) {
-  def workloadsByPeriod(n: Int): scala.Seq[WL] =
-    workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
-
-  //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
-}
+//case class QueueWorkloads(queueName: String,
+//                          workloadsByMinute: Seq[WL],
+//                          paxByMinute: Seq[Pax]
+//                         ) {
+//  def workloadsByPeriod(n: Int): scala.Seq[WL] =
+//    workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
+//
+//  //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
+//}
 
 case class WL(time: Long, workload: Double)
 
@@ -146,7 +130,7 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[List[QueueWorkloads]]
+  def getWorkloads(): Future[Map[String, QueueWorkloads]]
 }
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?

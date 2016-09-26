@@ -32,13 +32,9 @@ object AirportToCountryTests extends TestSuite {
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
     "given workloads by the minute we can get them in t minute chunks and take the sum from each chunk" - {
-      val workloads = QueueWorkloads("eea",
-        workloadsByMinute = WL(1, 2) :: WL(2, 3) :: WL(3, 4) :: WL(4, 5) :: Nil,
-        paxByMinute = Nil
-        //          deskRec = Nil
-      )
+      val workloads = WL(1, 2) :: WL(2, 3) :: WL(3, 4) :: WL(4, 5) :: Nil
 
-      val period: List[WL] = workloads.workloadsByPeriod(2).toList
+      val period: List[WL] = WorkloadsHelpers.workloadsByPeriod(workloads, 2).toList
       assert(period == WL(1, 5) :: WL(3, 9) :: Nil)
     }
   }
