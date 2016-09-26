@@ -1,16 +1,52 @@
 package services
 
-import java.util.{UUID, Date}
+import java.util.{Date, UUID}
 
-import akka.actor.ActorRef
-import akka.pattern.AskableActorRef
 import spatutorial.shared._
+
 import scala.collection.immutable.Seq
-import scala.concurrent.ExecutionContext
-import scala.util.Random
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.io.Codec
+import scala.util.Try
+
+
+//  case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
+//                 loc2: Double, elevation: Double,dkDouble: Double, dk: String, tz: String)
+
+
+trait AirportToCountryLike {
+  lazy val airportInfo: Seq[AirportInfo] = {
+    val bufferedSource = scala.io.Source.fromURL(
+      getClass.getResource("/airports.dat"))(Codec.UTF8)
+    bufferedSource.getLines().map { l =>
+
+      val t = Try {
+        val splitRow: Array[String] = l.split(",")
+        val sq: (String) => String = stripQuotes _
+        AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
+      }
+      t.getOrElse({
+        println(s"boo ${l}");
+        AirportInfo("failed on", l, "boo", "ya")
+      })
+    }.toList
+  }
+
+  def stripQuotes(row1: String): String = {
+    row1.substring(1, row1.length - 1)
+  }
+
+  def airportInfoByAirportCode(code: String) = Future(airportInfo.find(_.code == code))
+
+}
+
+object AirportToCountry extends AirportToCountryLike {
+
+}
 
 abstract class ApiService
-  extends Api with WorkloadsService with FlightsService {
+  extends Api with WorkloadsService with FlightsService with AirportToCountryLike {
 
   var todos: List[DeskRecTimeslot] = Nil
 
@@ -23,8 +59,8 @@ abstract class ApiService
 
   override def getAllTodos(): List[DeskRecTimeslot] = {
     // provide some fake Todos
-//    Thread.sleep(3000)
-    println(s"Sending ${ todos.size } Todo items")
+    //    Thread.sleep(3000)
+    println(s"Sending ${todos.size} Todo items")
     todos
   }
 
@@ -72,4 +108,5 @@ abstract class ApiService
     println(s"processWork")
     TryRenjin.processWork(workloads, desks.flatMap(x => List.fill(15)(x)))
   }
+
 }

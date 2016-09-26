@@ -1,9 +1,10 @@
 package services.workloadcalculator
 
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
+import org.slf4j.LoggerFactory
 import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypeAndQueueCount, VoyagePaxSplits}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import spatutorial.shared.{ApiFlight, Pax, QueueWorkloads, WL}
+import spatutorial.shared.{Pax, QueueWorkloads, WL, ApiFlight}
 
 import scala.collection.immutable.{IndexedSeq, Seq, Iterable, NumericRange}
 
@@ -19,6 +20,7 @@ case class PaxLoadAt(time: DateTime, paxType: PaxTypeAndQueueCount)
 case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
 
 object PaxLoadCalculator {
+  val log = LoggerFactory.getLogger(getClass)
   val paxOffFlowRate = 20
 
   def workload(paxLoad: PaxLoadAt): WL = {
@@ -77,7 +79,9 @@ object PaxLoadCalculator {
         //        val headPaxType = paxTypeAndCount.head
         val times = firstMinute.getMillis to firstMinute.plusDays(1).getMillis by 60000L
         times.zip(paxTypeAndCount).map { case (time, paxTypeCount) => {
-          PaxLoadAt(new org.joda.time.DateTime(time), paxTypeCount)
+          val time1: DateTime = new DateTime(time, DateTimeZone.UTC)
+          //          log.info(s"PaxLoad from $firstMinute for ${time1} ${voyagePaxSplits.flightCode}")
+          PaxLoadAt(time1, paxTypeCount)
         }
         }
       }
@@ -91,7 +95,7 @@ object PaxLoadCalculator {
       List.fill(remainingPax / departRate)(departRate)
   }
 
-  def combineWorkloads(l1: Seq[WL], l2: Seq[WL]) = {
+  def combineWorkloads(l1: Seq[WL], l2: Seq[WL]): Seq[WL] = {
     def foldInto(agg: Map[Long, Double], list: List[WL]): Map[Long, Double] = list.foldLeft(agg)(
       (agg, wl) => {
         val cv = agg.getOrElse(wl.time, 0d)
@@ -101,10 +105,10 @@ object PaxLoadCalculator {
     val res1 = foldInto(Map[Long, Double](), l1.toList)
     val res2 = foldInto(res1, l2.toList).map(timeWorkload => WL(timeWorkload._1, timeWorkload._2)).toList
 
-    res2
+    res2.toList
   }
 
-  def combinePaxLoads(l1: Seq[Pax], l2: Seq[Pax]) = {
+  def combinePaxLoads(l1: Seq[Pax], l2: Seq[Pax]): scala.Seq[Pax] = {
     def foldInto(agg: Map[Long, Double], list: List[Pax]): Map[Long, Double] = list.foldLeft(agg)(
       (agg, pax) => {
         val cv = agg.getOrElse(pax.time, 0d)
@@ -114,19 +118,19 @@ object PaxLoadCalculator {
     val res1 = foldInto(Map[Long, Double](), l1.toList)
     val res2 = foldInto(res1, l2.toList).map(timeWorkload => Pax(timeWorkload._1, timeWorkload._2)).toList
 
-    res2
+    res2.toList
   }
 
   def combineQueues(l1: List[QueueWorkloads], l2: List[QueueWorkloads]) = {
     def foldInto(agg: Map[String, QueueWorkloads], list: List[QueueWorkloads]) = list.foldLeft(agg)(
       (agg, qw) => {
-        val cv = agg.getOrElse(qw.queueName, QueueWorkloads(qw.queueName, Seq[WL](), Seq[Pax]()))
+        val cv = agg.getOrElse(qw.queueName, QueueWorkloads(qw.queueName, Nil, Nil))
         agg + (
           qw.queueName ->
             QueueWorkloads(
               qw.queueName,
               combineWorkloads(cv.workloadsByMinute, qw.workloadsByMinute),
-              combinePaxLoads(cv.paxByMinute, qw.paxByMinute)
+              combinePaxLoads(cv.paxByMinute, qw.paxByMinute).toList
             )
           )
       }

@@ -1,0 +1,17 @@
+{
+  "name": "static",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:sciabarra/jgh.git"
+  },
+  "dependencies": {
+    "browserify": "13.0.0",
+    "react": "15.1.0",
+    "react-dom": "15.1.0",
+    "griddle-react": "0.6.1",
+    "lodash": "4.3.0",
+    "react-spinner": "^0.2.3",
+    "jquery": "1.9.1"
+  }
+}
