@@ -35,6 +35,47 @@ object WorkloadCalculatorTests extends TestSuite {
       SchDT = scheduledDatetime
     )
 
+//  voyagePaxSplit
+//  List(
+//    (
+//      1577836800000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eeaDesk),10.0)), (
+//      1577836800000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eGate),10.0)), (
+//      1577836860000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eeaDesk),10.0)), (
+//      1577836860000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eGate),10.0)))
+//
+//
+//  paxLoadsByDeskAndMinute Map(
+//    (
+//      eGate,1577836860000) -> List(
+//      (
+//        1577836860000,PaxTypeAndQueueCount(
+//        PaxTypeAndQueue(
+//          eeaMachineReadable,eGate),10.0))), (
+//    eeaDesk,1577836860000) -> List(
+//    (
+//      1577836860000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eeaDesk),10.0))), (
+//    eeaDesk,1577836800000) -> List(
+//    (
+//      1577836800000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eeaDesk),10.0))), (
+//    eGate,1577836800000) -> List(
+//    (
+//      1577836800000,PaxTypeAndQueueCount(
+//      PaxTypeAndQueue(
+//        eeaMachineReadable,eGate),10.0))))
+
+
   def tests = TestSuite {
     'WorkloadCalculator - {
       implicit def tupleToPaxTypeAndQueueCounty(t: (PaxType, String)): PaxTypeAndQueue = PaxTypeAndQueue(t._1, t._2)
@@ -46,9 +87,28 @@ object WorkloadCalculatorTests extends TestSuite {
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
           )
 
+          def defaultProcessingTimes(paxType: PaxType) = 1.0
+          def paxLoadMultiplier(paxType: PaxType): Double = paxType match {
+            case PaxTypes.visaNational => 0.6
+            case PaxTypes.eeaMachineReadable => 1.0
+
+          }
           val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider) _
 
-          "Given a single flight when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" - {
+          "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" - {
+            val startTime: String = "2020-01-01T00:00:00Z"
+            val flights = List(
+              apiFlight("BA0001", "LHR", 20, startTime)
+            )
+
+            val queueWorkloads = sut(flights)
+            val workloads = queueWorkloads.map(qw => (qw._1, qw._2._1.toList))
+            val expected: Map[FlightCode, List[WL]] = Map(
+              Queues.eGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
+              Queues.eeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)))
+            assert(workloads == expected)
+          }
+          "Given a single flight with two minutes of flow and two desks when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" - {
             val startTime: String = "2020-01-01T00:00:00Z"
             val flights = List(
               apiFlight("BA0001", "LHR", 40, startTime)
@@ -122,44 +182,6 @@ object WorkloadCalculatorTests extends TestSuite {
         }
       }
 
-      "flightPaxSplits" - {
-        "Given an ApiFlight with 50 pax and splits of (0.5, 0.5), we should get pax splits of (25, 25)" - {
-          val flight = apiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00")
-          val splitRatios = List(
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
-          )
-
-          val actualPaxSplits = PaxLoadCalculator.flightPaxSplits(flight, splitRatios)
-
-          val expectedPaxSplits = List(
-            PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 25),
-            PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eGate), 25)
-          )
-
-          assert(expectedPaxSplits == actualPaxSplits)
-        }
-
-        "Given an ApiFlight with 50 pax and splits of (0.25, 0.25, 0.5), we should get pax splits of (12.5, 12.5, 25)" - {
-          val flight = apiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00")
-          val splitRatios = List(
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.25),
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.25),
-            SplitRatio((PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.5)
-          )
-
-          val actualPaxSplits = PaxLoadCalculator.flightPaxSplits(flight, splitRatios)
-
-          val expectedPaxSplits = List(
-            PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 12.5),
-            PaxTypeAndQueueCount((PaxTypes.eeaMachineReadable, Queues.eGate), 12.5),
-            PaxTypeAndQueueCount((PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 25)
-          )
-
-          assert(expectedPaxSplits == actualPaxSplits)
-        }
-      }
-
       "Given a map of queues to pax load by minute, we should get back a list of queue workloads" - {
         val paxload = Map(
           Queues.eeaDesk ->
@@ -190,50 +212,50 @@ object WorkloadCalculatorTests extends TestSuite {
       }
 
 
+//
+//      "Given a flight, I should get back a voyage pax split representing that flight" - {
+//
+//        val flight = apiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00")
+//
+//        val expected = VoyagePaxSplits("LHR", "BA0001", DateTime.parse("2020-01-01T00:00:00"), List(
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 2.5),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 2.5),
+//          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 5)
+//        ))
+//
+//        def splitRatioProvider(flight: ApiFlight) = List(
+//          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.25),
+//          SplitRatio((PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.25),
+//          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
+//        )
+//
+//        val result = PaxLoadCalculator.voyagePaxSplitsFromApiFlight(splitRatioProvider)(flight)
+//        assert(result == expected)
+//      }
 
-      "Given a flight, I should get back a voyage pax split representing that flight" - {
-
-        val flight = apiFlight("BA0001", "LHR", 50, "2020-01-01T00:00:00")
-
-        val expected = VoyagePaxSplits("LHR", "BA0001", DateTime.parse("2020-01-01T00:00:00"), Seq(
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 5),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 5),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 10),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 2.5),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 2.5),
-          PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 5)
-        ))
-
-        def splitRatioProvider(flight: ApiFlight) = List(
-          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.25),
-          SplitRatio((PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.25),
-          SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
-        )
-
-        val result = PaxLoadCalculator.voyagePaxSplitsFromApiFlight(splitRatioProvider)(flight)
-        assert(result == expected)
-      }
-
-      "paxTypeAndQueueToPaxLoadAtTime" - {
-        "Given voyage pax splits, then we should get pax loads per type of passenger for each desk at a time" - {
-          val result = PaxLoadCalculator.paxTypeAndQueueToPaxLoadAtTime(
-            DateTime.parse("2020-01-01T00:00:00Z"),
-            Seq(PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20))
-          )
-
-          val expected = scala.collection.immutable.Map(Queues.eeaDesk -> IndexedSeq(
-            PaxLoadAt(
-              DateTime.parse("2020-01-01T00:00:00Z"),
-              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)
-            )
-          ))
-
-          assert(result == expected)
-        }
-      }
+//      "paxTypeAndQueueToPaxLoadAtTime" - {
+//        "Given voyage pax splits, then we should get pax loads per type of passenger for each desk at a time" - {
+//          val result = PaxLoadCalculator.paxTypeAndQueueToPaxLoadAtTime(
+//            DateTime.parse("2020-01-01T00:00:00Z"),
+//            Seq(PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20))
+//          )
+//
+//          val expected = scala.collection.immutable.Map(Queues.eeaDesk -> IndexedSeq(
+//            PaxLoadAt(
+//              DateTime.parse("2020-01-01T00:00:00Z"),
+//              PaxTypeAndQueueCount(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 20)
+//            )
+//          ))
+//
+//          assert(result == expected)
+//        }
+//      }
     }
   }
 
