@@ -71,7 +71,6 @@ object SPAMain extends js.JSApp {
     (dashboardRoute | flightsRoute | todosRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
-  val todoCountWrapper: ReactConnectProxy[Option[Int]] = SPACircuit.connect(_.todos.map(_.items.length).toOption)
 
   // base layout for all pages
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
@@ -80,15 +79,10 @@ object SPAMain extends js.JSApp {
       <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
         <.div(^.className := "container",
           <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "DRT EDI Live Spike")),
-          <.div(^.className := "collapse navbar-collapse",
-            // connect menu to model, because it needs to update when the number of open todos changes
-            todoCountWrapper(proxy => MainMenu(c, r.page, proxy))
-          )
-        )
-      ),
-      // currently active module is shown in this container
-      <.div(^.className := "container", r.render())
-    )
+          <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page)))),
+    // currently active module is shown in this container
+    <.div(^.className := "container", r.render()))
+
   }
 
   @JSExport

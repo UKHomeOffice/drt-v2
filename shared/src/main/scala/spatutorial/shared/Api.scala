@@ -130,13 +130,13 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
-  def getAllTodos(): List[DeskRecTimeslot]
+//  def getAllTodos(): List[DeskRecTimeslot]
 
-  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
+//  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
 
-  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
+//  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
 
-  def deleteTodo(itemId: String): List[DeskRecTimeslot]
+//  def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

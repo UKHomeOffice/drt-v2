@@ -48,7 +48,7 @@ object AirportToCountry extends AirportToCountryLike {
 abstract class ApiService
   extends Api with WorkloadsService with FlightsService with AirportToCountryLike {
 
-  var todos: List[DeskRecTimeslot] = Nil
+////  var todos: List[DeskRecTimeslot] = Nil
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")
@@ -56,47 +56,47 @@ abstract class ApiService
       new Date
     }"
   }
-
-  override def getAllTodos(): List[DeskRecTimeslot] = {
-    // provide some fake Todos
-    //    Thread.sleep(3000)
-    println(s"Sending ${todos.size} Todo items")
-    todos
-  }
-
-
-  override def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot] = {
-    println("Setting all the todos on the server")
-    todos = items
-    todos
-  }
-
-  // update a Todo
-  override def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
-    // TODO, update database etc :)
-    if (todos.exists(_.id == item.id)) {
-      todos = todos.collect {
-        case i if i.id == item.id => item
-        case i => i
-      }
-      println(s"Todo item was updated: $item")
-    } else {
-      // add a new item
-      val newItem = item.copy(id = UUID.randomUUID().toString)
-      todos :+= newItem
-      println(s"Todo item was added: $newItem")
-    }
-    Thread.sleep(300)
-    todos
-  }
-
-  // delete a Todo
-  override def deleteTodo(itemId: String): List[DeskRecTimeslot] = {
-    println(s"Deleting item with id = $itemId")
-    Thread.sleep(300)
-    todos = todos.filterNot(_.id == itemId)
-    todos
-  }
+////
+////  override def getAllTodos(): List[DeskRecTimeslot] = {
+////    // provide some fake Todos
+////    //    Thread.sleep(3000)
+////    println(s"Sending ${todos.size} Todo items")
+////    todos
+////  }
+////
+////
+////  override def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot] = {
+////    println("Setting all the todos on the server")
+////    todos = items
+////    todos
+////  }
+////
+////  // update a Todo
+////  override def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
+////    // TODO, update database etc :)
+////    if (todos.exists(_.id == item.id)) {
+////      todos = todos.collect {
+////        case i if i.id == item.id => item
+////        case i => i
+////      }
+////      println(s"Todo item was updated: $item")
+////    } else {
+////      // add a new item
+////      val newItem = item.copy(id = UUID.randomUUID().toString)
+////      todos :+= newItem
+////      println(s"Todo item was added: $newItem")
+////    }
+////    Thread.sleep(300)
+////    todos
+////  }
+//
+//  // delete a Todo
+//  override def deleteTodo(itemId: String): List[DeskRecTimeslot] = {
+//    println(s"Deleting item with id = $itemId")
+//    Thread.sleep(300)
+//    todos = todos.filterNot(_.id == itemId)
+//    todos
+//  }
 
   override def crunch(workloads: List[Double]): CrunchResult = {
     println(s"Crunch requested for ${workloads}")

@@ -1,5 +1,8 @@
 package spatutorial.shared
 
+//import scala.scalajs.js
+//import scala.scalajs.js.annotation.JSExport
+
 
 //sealed trait TodoPriority
 //
@@ -9,7 +12,6 @@ package spatutorial.shared
 //
 //case object TodoHigh extends TodoPriority
 
-case class DeskRecTimeslot(id: String, deskRec: Int)
 
 //object TodoPriority {
 //  implicit val todoPriorityPickler: Pickler[TodoPriority] = generatePickler[TodoPriority]

@@ -3,6 +3,7 @@ package spatutorial.client.components
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{CommonStyle, Button}
+import spatutorial.client.services.DeskRecTimeslot
 import spatutorial.shared._
 import scalacss.ScalaCssReact._
 
@@ -25,7 +26,7 @@ object TodoList {
           <.input.number(
             ^.className := "desk-rec-input",
             ^.value := item.deskRec,
-            ^.onChange ==> ((e: ReactEventI) => p.stateChange(item.copy(deskRec = e.target.value.toInt)))))
+            ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.id, deskRec=e.target.value.toInt)))))
       }
       <.span(p.items map renderItem)
     })

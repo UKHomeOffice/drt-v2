@@ -10,11 +10,11 @@ import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.client.modules.{Dashboard, GriddleComponentWrapper, UserDeskRecsComponent}
-import spatutorial.client.services.UserDeskRecs
+import spatutorial.client.services.{DeskRecTimeslot, UserDeskRecs}
 import spatutorial.shared.{CrunchResult, SimulationResult}
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import spatutorial.client.modules.{GriddleComponentWrapper, Dashboard, UserDeskRecsComponent}
-import spatutorial.shared.{DeskRecTimeslot, CrunchResult, SimulationResult}
+import spatutorial.shared.{CrunchResult, SimulationResult}
 import diode.react.ReactPot._
 
 import scala.collection.immutable
@@ -29,7 +29,7 @@ object MyCustomComponent {
 
   val component: js.Function = (props: js.Dynamic) => {
     log.info(s"got props of ${props.data} val")
-    val string = props.data.toString
+    val string = props.data.deskRec.toString
     log.info(s"setting input with ${string} val")
     <.input.number(^.value := string, ^.onChange ==> ((e: ReactEventI) => Callback.log(e.toString))).render
   }
@@ -59,43 +59,45 @@ object QueueUserDeskRecsComponent {
           props.labels(labels =>
             <.div(
               labels().renderEmpty(<.p("Please go to dashboard to request workloads")),
-              labels().renderReady { labels =>
-                val crunchResult: Pot[CrunchResult] = crunchResultProxy.value
-                <.div(
-                  crunchResult.renderEmpty(<.p("Waiting for crunch")),
-                  crunchResult.renderReady { cr =>
-                    val l = DeskRecsChart.takeEvery15th(labels)
-                    val recDesks = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
-                    // todo probably want the max in the window
-                    val waitTimesWithRecommended = DeskRecsChart.takeEvery15th(cr.waitTimes.toIndexedSeq)
-                    val userDeskRecs: UserDeskRecs = userDeskRecsProxy().get
-                    val waitTimesWithYourDesks: Pot[immutable.Seq[Int]] = simulationResultProxy().map(_.waitTimes)
-                    val transposed: List[List[Any]] = List(
-                      l,
-                      recDesks.map(_.toString),
-                      waitTimesWithRecommended.map(_.toString),
-                      userDeskRecs.items.map(_.deskRec),
-                      DeskRecsChart.takeEvery15th(waitTimesWithYourDesks.getOrElse(List.fill(1440)(0)))
-                    ).transpose
+              userDeskRecsProxy().renderEmpty(<.p("waiting for userdesk recs")),
+              userDeskRecsProxy().renderReady(userDeskRecs =>
+                labels().renderReady { labels =>
+                  val crunchResult: Pot[CrunchResult] = crunchResultProxy.value
+                  <.div(
+                    crunchResult.renderEmpty(<.p("Waiting for crunch")),
+                    crunchResult.renderReady { cr =>
+                      val l = DeskRecsChart.takeEvery15th(labels)
+                      val recDesks = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
+                      // todo probably want the max in the window
+                      val waitTimesWithRecommended = DeskRecsChart.takeEvery15th(cr.waitTimes.toIndexedSeq)
+//                      val userDeskRecs: UserDeskRecs = userDeskRecsProxy
+                      val waitTimesWithYourDesks: Pot[immutable.Seq[Int]] = simulationResultProxy().map(_.waitTimes)
+                      val transposed: List[List[Any]] = List(
+                        l,
+                        recDesks.map(_.toString),
+                        waitTimesWithRecommended.map(_.toString),
+                        userDeskRecs.items,
+                        DeskRecsChart.takeEvery15th(waitTimesWithYourDesks.getOrElse(List.fill(1440)(0)))
+                      ).transpose
 
-                    //            val results = (1 to 20).zip(labels.value).zip(recDesks).zip(waitTimes).map {
-                    val results = transposed.zipWithIndex.map {
-                      case (((label: String) :: (recDesk: String) :: (waitTime: String) :: (userDeskRec: Int) :: (waitTimeYourDesks: Int) :: Nil), rowId) =>
-                        dynRow(label, "??", recDesk, waitTime, userDeskRec, waitTimeYourDesks)
-                    }.toSeq.toJsArray
+                      //            val results = (1 to 20).zip(labels.value).zip(recDesks).zip(waitTimes).map {
+                      val results = transposed.zipWithIndex.map {
+                        case (((label: String) :: (recDesk: String) :: (waitTime: String) :: (userDeskRec: DeskRecTimeslot) :: (waitTimeYourDesks: Int) :: Nil), rowId) =>
+                          dynRow(label, "??", recDesk, waitTime, userDeskRec, waitTimeYourDesks)
+                      }.toSeq.toJsArray
 
-                    val columns: List[String] = "time" :: "workloads" :: "recommended_desks" :: "wait_times_with_recommended" :: "your_desks" :: "wait_times_with_your_desks" :: Nil
-                    val component1 = MyCustomComponent.component
-                    val columnMeta = new ColumnMeta("your_desks", 1, component1)
-                    val cms = Seq(columnMeta).toJsArray
-                    GriddleComponentWrapper(results, columns, Some(cms))()
-                  })
-              })))))
+                      val columns: List[String] = "time" :: "workloads" :: "recommended_desks" :: "wait_times_with_recommended" :: "your_desks" :: "wait_times_with_your_desks" :: Nil
+                      val component1 = MyCustomComponent.component
+                      val columnMeta = new ColumnMeta("your_desks", 1, component1)
+                      val cms = Seq(columnMeta).toJsArray
+                      GriddleComponentWrapper(results, columns, Some(cms))()
+                    })
+                }))))))
   }
 
   def dynRow(time: String, workload: String,
              recommended_desks: String, wait_times_with_recommended: String,
-             your_desks: Int, wait_times_with_your_desks: Int) = {
+             your_desks: DeskRecTimeslot, wait_times_with_your_desks: Int) = {
     js.Dynamic.literal(
       "time" -> time,
       "workloads" -> workload,

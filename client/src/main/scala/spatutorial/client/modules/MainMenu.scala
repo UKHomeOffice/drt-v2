@@ -18,17 +18,15 @@ object MainMenu {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, proxy: ModelProxy[Option[Int]])
+  case class Props(router: RouterCtl[Loc], currentLoc: Loc)
 
   private case class MenuItem(idx: Int, label: (Props) => ReactNode, icon: Icon, location: Loc)
 
   // build the Todo menu item, showing the number of open todos
   private def buildTodoMenu(props: Props): ReactElement = {
-    val todoCount = props.proxy().getOrElse(0)
-    log.info(s"buildTodoMenu ${todoCount}")
     <.span(
       <.span("User Desk Overrides"),
-      todoCount > 0 ?= <.span(bss.labelOpt(CommonStyle.danger), bss.labelAsBadge, todoCount)
+      <.span(bss.labelOpt(CommonStyle.danger), bss.labelAsBadge)
     )
   }
 
@@ -39,9 +37,9 @@ object MainMenu {
   )
 
   private class Backend($: BackendScope[Props, Unit]) {
-    def mounted(props: Props) =
-      // dispatch a message to refresh the todos
-      Callback.when(props.proxy.value.isEmpty)(props.proxy.dispatch(RefreshTodos))
+//    def mounted(props: Props) =
+//      // dispatch a message to refresh the todos
+//      Callback.when(propsops.proxy.value.isEmpty)(props.proxy.dispatch(RefreshTodos))
 
     def render(props: Props) = {
       <.ul(bss.navbar)(
@@ -57,9 +55,9 @@ object MainMenu {
 
   private val component = ReactComponentB[Props]("MainMenu")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+//    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, proxy: ModelProxy[Option[Int]]): ReactElement =
-    component(Props(ctl, currentLoc, proxy))
+  def apply(ctl: RouterCtl[Loc], currentLoc: Loc): ReactElement =
+    component(Props(ctl, currentLoc))
 }
