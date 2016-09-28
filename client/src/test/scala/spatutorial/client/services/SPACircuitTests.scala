@@ -3,7 +3,7 @@ package spatutorial.client.services
 import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.FlightsApi.{Flights, QueueName}
 import spatutorial.shared._
 import utest._
 
@@ -12,12 +12,14 @@ import scala.collection.immutable.Map
 object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
     'DeskRecHandler - {
-      val model = Ready(UserDeskRecs(Seq(
+
+      val queueName: QueueName = "eeaDesk"
+      val model = Map(queueName -> Ready(UserDeskRecs(Seq(
         DeskRecTimeslot("1", "20160901T10:00", 0, 30),
         DeskRecTimeslot("2", "20160901T10:01", 0, 30),
         DeskRecTimeslot("3", "20160901T10:02", 0, 30),
         DeskRecTimeslot("4", "20160901T10:03", 0, 30)
-      )))
+      ))))
 
       val newTodos = Seq(
         DeskRecTimeslot("3", "20160901T10:02", 0, 15)
@@ -27,18 +29,19 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateAllTodos - {
         val h = build
-        val result = h.handle(UpdateAllTodos(newTodos))
+        val result = h.handle(UpdateQueueUserDeskRecs(queueName, newTodos))
         assert(result == ModelUpdate(Ready(UserDeskRecs(newTodos))))
       }
 
       'UpdateTodo - {
         val h = build
-        val result = h.handle(UpdateDeskRecsTime(DeskRecTimeslot("4", "20160901T10:03", 0, 25)))
+        val result = h.handle(UpdateDeskRecsTime(queueName, DeskRecTimeslot("4", "20160901T10:03", 0, 25)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
-            assert(newValue.get.items.size == 4)
-            assert(newValue.get.items(3).id == "4")
-            assert(newValue.get.items(3).deskRec == 25)
+            val newUserDeskRecs: UserDeskRecs = newValue(queueName).get
+            assert(newUserDeskRecs.items.size == 4)
+            assert(newUserDeskRecs.items(3).id == "4")
+            assert(newUserDeskRecs.items(3).deskRec == 25)
             assert(effects.size == 1)
           case message =>
             assert(false)

@@ -9,6 +9,7 @@ import spatutorial.client.components.Bootstrap._
 import spatutorial.client.components._
 import spatutorial.client.logger._
 import spatutorial.client.services._
+import spatutorial.shared.FlightsApi.QueueName
 import spatutorial.shared._
 
 import scalacss.ScalaCssReact._

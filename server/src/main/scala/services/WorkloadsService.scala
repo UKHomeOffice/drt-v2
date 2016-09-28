@@ -6,15 +6,16 @@ import akka.util.Timeout
 import controllers.GetFlights
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import services.workloadcalculator.PassengerQueueTypes.{Queues, PaxTypes}
+import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypes, Queues}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import services.workloadcalculator.{PaxLoadCalculator, SplitRatio}
-import spatutorial.shared.FlightsApi.{Flights, Flight}
-import spatutorial.shared.{QueueWorkloads, WorkloadsApi, ApiFlight, FlightsApi}
+import spatutorial.shared.FlightsApi.{Flight, Flights, QueueName, QueueWorkloads}
+import spatutorial.shared._
+
 import scala.collection.immutable.{Iterable, Seq}
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -31,6 +32,7 @@ trait FlightsService extends FlightsApi {
 trait WorkloadsService extends WorkloadsApi {
   self: FlightsService =>
   private val log = LoggerFactory.getLogger(getClass)
+
   def numberOf15Mins = (24 * 4 * 15)
 
   def maxLoadPerSlot: Int = 20
@@ -40,13 +42,17 @@ trait WorkloadsService extends WorkloadsApi {
     SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.8)
   )
 
-  override def getWorkloads(): Future[List[QueueWorkloads]] = {
-    for (flights <- getFlights(0, 0)) yield {
-      val workloads: Iterable[QueueWorkloads] = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider)(flights)
+  def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 0.25
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 0.20
+    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 1.0
+    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 0.4
+    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 1.0
+  }
 
-      val wls = workloads.toList
-      log.info(s"Workloads ${wls}")
-      wls
+  override def getWorkloads(): Future[Map[String, QueueWorkloads]] = {
+    for (flights <- getFlights(0, 0)) yield {
+      PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)(flights)
     }
   }
 

@@ -10,9 +10,11 @@ import org.scalajs.dom
 import spatutorial.client.components.{GlobalStyles, QueueUserDeskRecsComponent}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
-import spatutorial.client.services.{QueueName, SPACircuit, UserDeskRecs}
+import spatutorial.client.services.{SPACircuit, UserDeskRecs}
 import spatutorial.shared.CrunchResult
+import spatutorial.shared.FlightsApi.QueueName
 
 import scala.collection.immutable.IndexedSeq
 import scala.scalajs.js
@@ -50,14 +52,14 @@ object SPAMain extends js.JSApp {
     val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
       renderR(ctl => SPACircuit.wrap(_.airportInfos)(airportInfoProxy =>
         SPACircuit.wrap(_.flights)(proxy =>
-          FlightsView(FlightsView.Props(ctl, proxy, airportInfoProxy), proxy)))
+          FlightsView(Props(ctl, proxy, airportInfoProxy), proxy)))
       )
 
     val todosRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
       val queues: Seq[QueueName] = Seq(eeadesk, egate)
       val queueUserDeskRecProps = queues.map { queueName =>
-        val labels: ReactConnectProxy[IndexedSeq[String]] = SPACircuit.connect(_.workload.get.labels)
+        val labels: ReactConnectProxy[IndexedSeq[String]] = SPACircuit.connect(model => model.workload.get.labels)
         val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(queueName, Empty).flatMap(_._1))
         val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(queueName, Empty))
         val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
