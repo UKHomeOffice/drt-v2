@@ -1,6 +1,5 @@
 package spatutorial.shared
 
-import boopickle.Default._
 
 //sealed trait TodoPriority
 //
@@ -10,7 +9,7 @@ import boopickle.Default._
 //
 //case object TodoHigh extends TodoPriority
 
-case class DeskRecTimeslot(id: String, timeLabel: String, timeStamp: Long, deskRec: Int)
+case class DeskRecTimeslot(id: String, deskRec: Int)
 
 //object TodoPriority {
 //  implicit val todoPriorityPickler: Pickler[TodoPriority] = generatePickler[TodoPriority]

@@ -3,6 +3,7 @@ package spatutorial.client.modules
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import sun.java2d.loops.CustomComponent
 
+import scala.scalajs.js.annotation.ScalaJSDefined
 import scala.scalajs.js.{Object, JSON}
 import chandu0101.scalajs.react.components.ReactTable.Backend
 import chandu0101.scalajs.react.components.{ReactTable, JsonUtil, Spinner}
@@ -41,9 +42,8 @@ import scala.language.existentials
 import spatutorial.client.logger._
 
 object GriddleComponentWrapper {
-
-  case class ColumnMeta(columnName: String, order: Int, customComponent: Option[ReactNode])
-
+  @ScalaJSDefined
+  class ColumnMeta(val columnName: String, val order: Int, val customComponent: Any=null) extends js.Object
 }
 
 case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
@@ -58,6 +58,9 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
     p.updateDynamic("columns")(columns)
     p.updateDynamic("showSettings")(showSettings)
     p.updateDynamic("showFilter")(showFilter)
+
+    (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
+
 
     fixWeirdCharacterEncoding(p)
 

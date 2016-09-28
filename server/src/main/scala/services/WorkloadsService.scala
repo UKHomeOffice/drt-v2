@@ -43,16 +43,19 @@ trait WorkloadsService extends WorkloadsApi {
   )
 
   def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
-    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 0.25
-    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 0.20
-    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 1.0
-    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 0.4
-    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 1.0
+    case _ => 1.0
+//    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 0.25
+//    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 0.20
+//    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 1.0
+//    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 0.4
+//    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 1.0
   }
 
   override def getWorkloads(): Future[Map[String, QueueWorkloads]] = {
     for (flights <- getFlights(0, 0)) yield {
-      PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)(flights)
+      val res = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)(flights)
+      log.info(s"workloads ${res}")
+      res
     }
   }
 

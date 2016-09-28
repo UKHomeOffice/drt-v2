@@ -177,7 +177,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       log.info(s"Handler: ChangeDesk($queueName, $v, $k)")
       val simModel: ModelRW[M, QueueUserDeskRecs] = modelRW
       val model: Pot[UserDeskRecs] = simModel.value(queueName)
-      val newUserRecs: UserDeskRecs = model.get.updated(DeskRecTimeslot(k.toString, k.toString, k, v.toInt))
+      val newUserRecs: UserDeskRecs = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
       updated(value + (queueName -> Ready(newUserRecs)))
   }
 }
@@ -218,7 +218,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[QueueName, Pot[CrunchResultAndDes
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
       val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._2.toString, t._2, t._1)))
+        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._1)))
 
       updated(value + (queueName -> Ready((Ready(crunchResult), Ready(newDeskRec)))),
         Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateQueueUserDeskRecs(queueName, res))))

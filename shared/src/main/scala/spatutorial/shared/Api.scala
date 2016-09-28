@@ -70,22 +70,13 @@ trait WorkloadsHelpers {
   def workloadsByPeriod(workloadsByMinute: Seq[WL], n: Int): scala.Seq[WL] =
     workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
 
-  def queueWorkloadsToFullyPopulatedDoublesList(workloads: Seq[QueueWorkloads]): List[Double] = {
-    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads)
-    println(allMins.length)
-    val workloadsByMinute: Map[Long, Double] = workloads.flatMap(workloads1 => oneQueueWorkload(workloads1)).toMap
-
-    queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(foldQueuesMinutesIntoDay(allMins, workloadsByMinute))
-  }
-
   def queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(res: Map[Long, Double]): List[Double] = {
     res.toSeq.sortBy(_._1).map(_._2).toList
   }
 
   def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
-    val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
-      (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
-    res
+    allMins.foldLeft(Map[Long, Double]())(
+      (minuteMap, minute) => minuteMap + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
   }
 
   def oneQueueWorkload(workloads1: QueueWorkloads): Map[Long, Double] = {
@@ -93,12 +84,13 @@ trait WorkloadsHelpers {
   }
 
   def allMinsFromAllQueues(workloads: Seq[QueueWorkloads]): NumericRange[Long] = {
-    val timesMin = minMinuteInWorkloads(workloads)
-    val timeMinPlusOneDay: Long = timesMin + 60 * 60 * 24
-    timesMin until timeMinPlusOneDay by 60
+    val timesMin = minimumMinuteInWorkloads(workloads)
+    val oneMinute = 60000L
+    val timeMinPlusOneDay: Long = timesMin + oneMinute * 60 * 24
+    timesMin until timeMinPlusOneDay by oneMinute
   }
 
-  def minMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
+  def minimumMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
     workloads.flatMap(_._1.map(_.time)).min
   }
 }

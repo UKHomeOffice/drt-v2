@@ -6,22 +6,39 @@ import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
+import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.client.modules.{Dashboard, GriddleComponentWrapper, UserDeskRecsComponent}
 import spatutorial.client.services.UserDeskRecs
 import spatutorial.shared.{CrunchResult, SimulationResult}
+import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
+import spatutorial.client.modules.{GriddleComponentWrapper, Dashboard, UserDeskRecsComponent}
+import spatutorial.shared.{DeskRecTimeslot, CrunchResult, SimulationResult}
 import diode.react.ReactPot._
 
+import scala.collection.immutable
 import scala.scalajs.js
 import scala.scalajs.js.annotation.ScalaJSDefined
 import japgolly.scalajs.react._
 import spatutorial.shared.FlightsApi.QueueName
 
+object MyCustomComponent {
+
+  case class Props(name: String)
+
+  val component: js.Function = (props: js.Dynamic) => {
+    log.info(s"got props of ${props.data} val")
+    val string = props.data.toString
+    log.info(s"setting input with ${string} val")
+    <.input.number(^.value := string, ^.onChange ==> ((e: ReactEventI) => Callback.log(e.toString))).render
+  }
+}
+
 object QueueUserDeskRecsComponent {
 
   case class Props(queueName: QueueName,
-                   labels: ReactConnectProxy[scala.collection.immutable.IndexedSeq[String]],
+                   labels: ReactConnectProxy[Pot[scala.collection.immutable.IndexedSeq[String]]],
                    queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]],
                    queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]],
                    simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]]
@@ -30,57 +47,78 @@ object QueueUserDeskRecsComponent {
   val component = ReactComponentB[Props]("QueueUserDeskRecs")
     .render_P(props =>
       <.div(^.key := props.queueName,
-        tableUserDeskRecView(props),
-        currentUserDeskRecView(props))
+        Panel(Panel.Props(props.queueName),
+          tableUserDeskRecView(props),
+          currentUserDeskRecView(props)))
     ).build
 
-  @ScalaJSDefined
-  class Row(recommended_desks: String, wait_times_with_recommended: String,
-            your_desks: String, wait_times_with_your_desks: String) extends js.Object {
+  def tableUserDeskRecView(props: Props) = {
+    props.queueUserDeskRecs(userDeskRecsProxy =>
+      props.queueCrunchResults(crunchResultProxy =>
+        props.simulationResultWrapper(simulationResultProxy =>
+          props.labels(labels =>
+            <.div(
+              labels().renderEmpty(<.p("Please go to dashboard to request workloads")),
+              labels().renderReady { labels =>
+                val crunchResult: Pot[CrunchResult] = crunchResultProxy.value
+                <.div(
+                  crunchResult.renderEmpty(<.p("Waiting for crunch")),
+                  crunchResult.renderReady { cr =>
+                    val l = DeskRecsChart.takeEvery15th(labels)
+                    val recDesks = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
+                    // todo probably want the max in the window
+                    val waitTimesWithRecommended = DeskRecsChart.takeEvery15th(cr.waitTimes.toIndexedSeq)
+                    val userDeskRecs: UserDeskRecs = userDeskRecsProxy().get
+                    val waitTimesWithYourDesks: Pot[immutable.Seq[Int]] = simulationResultProxy().map(_.waitTimes)
+                    val transposed: List[List[Any]] = List(
+                      l,
+                      recDesks.map(_.toString),
+                      waitTimesWithRecommended.map(_.toString),
+                      userDeskRecs.items.map(_.deskRec),
+                      DeskRecsChart.takeEvery15th(waitTimesWithYourDesks.getOrElse(List.fill(1440)(0)))
+                    ).transpose
+
+                    //            val results = (1 to 20).zip(labels.value).zip(recDesks).zip(waitTimes).map {
+                    val results = transposed.zipWithIndex.map {
+                      case (((label: String) :: (recDesk: String) :: (waitTime: String) :: (userDeskRec: Int) :: (waitTimeYourDesks: Int) :: Nil), rowId) =>
+                        dynRow(label, "??", recDesk, waitTime, userDeskRec, waitTimeYourDesks)
+                    }.toSeq.toJsArray
+
+                    val columns: List[String] = "time" :: "workloads" :: "recommended_desks" :: "wait_times_with_recommended" :: "your_desks" :: "wait_times_with_your_desks" :: Nil
+                    val component1 = MyCustomComponent.component
+                    val columnMeta = new ColumnMeta("your_desks", 1, component1)
+                    val cms = Seq(columnMeta).toJsArray
+                    GriddleComponentWrapper(results, columns, Some(cms))()
+                  })
+              })))))
   }
 
-  def dynRow(time: String,
+  def dynRow(time: String, workload: String,
              recommended_desks: String, wait_times_with_recommended: String,
-             your_desks: String, wait_times_with_your_desks: String) = {
+             your_desks: Int, wait_times_with_your_desks: Int) = {
     js.Dynamic.literal(
       "time" -> time,
+      "workloads" -> workload,
       "recommended_desks" -> recommended_desks,
       "wait_times_with_recommended" -> wait_times_with_recommended,
       "your_desks" -> your_desks,
       "wait_times_with_your_desks" -> wait_times_with_your_desks)
   }
 
-  def tableUserDeskRecView(props: Props) = {
-    props.queueCrunchResults(crunchResultProxy =>
-      props.labels { labels =>
-        val crunchResult: Pot[CrunchResult] = crunchResultProxy.value
-        <.div(
-          crunchResult.renderEmpty(<.p("Waiting for crunch")),
-          crunchResult.renderReady { cr =>
-            val l = labels.value
-            val recDesks = cr.recommendedDesks
-            val waitTimes = cr.waitTimes
-            val transposed = List(l, recDesks.map(_.toString), waitTimes.map(_.toString)).transpose
-
-            //            val results = (1 to 20).zip(labels.value).zip(recDesks).zip(waitTimes).map {
-            val results = transposed.zipWithIndex.map {
-              case ((label :: recDesk :: waitTime :: Nil), rowId) =>
-                dynRow(label, recDesk, waitTime, rowId.toString, rowId.toString)
-            }.toSeq.toJsArray
-
-            val columns: List[String] = "time" :: "recommended_desks" :: "wait_times_with_recommended" :: "your_desks" :: "wait_times_with_your_desks" :: Nil
-            GriddleComponentWrapper(results, columns)()
-          })
-      })
+  @ScalaJSDefined
+  class Row(recommended_desks: String, wait_times_with_recommended: String,
+            your_desks: String, wait_times_with_your_desks: String) extends js.Object {
   }
 
+
   def currentUserDeskRecView(props: Props): ReactTagOf[html.Div] = {
-    <.div(props.queueUserDeskRecs(queueDeskRecs => UserDeskRecsComponent(props.queueName, queueDeskRecs)),
+    <.div(^.key := props.queueName,
+      props.queueUserDeskRecs(queueDeskRecs => UserDeskRecsComponent(props.queueName, queueDeskRecs)),
       props.queueCrunchResults(crw =>
         props.simulationResultWrapper(srw => {
           log.info(s"running simresultchart again for $props.queueName")
           props.labels(labels =>
-            DeskRecsChart.userSimulationWaitTimesChart(props.queueName, labels.value, srw, crw))
+            <.div(labels().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.queueName, labels, srw, crw))))
         })))
   }
 }

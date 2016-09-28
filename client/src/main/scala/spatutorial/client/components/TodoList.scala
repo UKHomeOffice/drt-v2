@@ -22,7 +22,6 @@ object TodoList {
       val style = bss.listGroup
       def renderItem(item: DeskRecTimeslot) = {
         <.span(
-          <.span(item.timeLabel),
           <.input.number(
             ^.className := "desk-rec-input",
             ^.value := item.deskRec,

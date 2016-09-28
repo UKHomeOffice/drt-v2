@@ -59,7 +59,7 @@ object SPAMain extends js.JSApp {
       //todo take the queuenames from the workloads response
       val queues: Seq[QueueName] = Seq(eeadesk, egate)
       val queueUserDeskRecProps = queues.map { queueName =>
-        val labels: ReactConnectProxy[IndexedSeq[String]] = SPACircuit.connect(model => model.workload.get.labels)
+        val labels: ReactConnectProxy[Pot[IndexedSeq[String]]] = SPACircuit.connect(_.workload.map(_.labels))
         val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(queueName, Empty).flatMap(_._1))
         val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(queueName, Empty))
         val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
