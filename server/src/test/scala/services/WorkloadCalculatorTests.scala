@@ -40,13 +40,15 @@ object WorkloadCalculatorTests extends TestSuite {
       implicit def tupleToPaxTypeAndQueueCounty(t: (PaxType, String)): PaxTypeAndQueue = PaxTypeAndQueue(t._1, t._2)
 
       "queueWorkloadCalculator" - {
+        def defaultProcTimesProvider(paxTypeAndQueue: PaxTypeAndQueue) = 1
+
         "with simple pax splits all at the same paxType" - {
           def splitRatioProvider(flight: ApiFlight) = List(
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
           )
 
-          val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider) _
+          val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, defaultProcTimesProvider) _
 
           "Examining workloads specifically" - {
 
@@ -195,7 +197,7 @@ object WorkloadCalculatorTests extends TestSuite {
             SplitRatio((PaxTypes.visaNational, Queues.eeaDesk), 0.5)
           )
 
-          val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider) _
+          val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, defaultProcTimesProvider) _
 
           "Examining workloads specifically" - {
             "Given a single flight, we see different passenger types aggregated into one workload number" - {

@@ -21,18 +21,19 @@ object PaxLoadCalculator {
   val paxOffFlowRate = 20
   val oneMinute = 60000L
 
-  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio])(flights: List[ApiFlight]): Map[QueueName, QueueWorkloads] = {
-    val paxLoadsByDesk: Map[String, (List[WL], List[Pax])] = paxLoadsByQueue(splitsRatioProvider, flights)
+  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio], procTimeProvider: (PaxTypeAndQueue) => Double)(flights: List[ApiFlight]): Map[QueueName, QueueWorkloads] = {
+    val paxLoadsByDesk: Map[String, (List[WL], List[Pax])] = paxLoadsByQueue(splitsRatioProvider, procTimeProvider, flights)
     paxLoadsByDesk
   }
 
-  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], flights: List[ApiFlight]): Map[String, (List[WL], List[Pax])] = {
+  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], procTimeProvider: (PaxTypeAndQueue) => Double, flights: List[ApiFlight]): Map[String, (List[WL], List[Pax])] = {
     val something = voyagePaxSplitsFromApiFlight(splitsRatioProvider)_
     val voyagePaxSplits: List[(Long, PaxTypeAndQueueCount)] = flights.flatMap(something)
     val paxLoadsByDeskAndMinute: Map[(String, Long), List[(Long, PaxTypeAndQueueCount)]] = voyagePaxSplits.groupBy(t => (t._2.paxAndQueueType.queueType, t._1))
-    val paxLoadsByDeskAndTime: Map[(String, Long), Double] = paxLoadsByDeskAndMinute.mapValues(_.map(_._2.paxCount).sum)
+    val paxLoadsByDeskAndTime: Map[(String, Long), (Double, Double)] = paxLoadsByDeskAndMinute
+      .mapValues(tmPtQcs => (tmPtQcs.map(_._2.paxCount).sum, tmPtQcs.map(tmPtQc => procTimeProvider(tmPtQc._2.paxAndQueueType) * tmPtQc._2.paxCount).sum))
     val queueWithPaxloads: Map[String, (List[WL], List[Pax])] = paxLoadsByDeskAndTime.toSeq.map {
-      case ((queueName, time), paxload) => (queueName, (WL(time, paxload), Pax(time, paxload)))
+      case ((queueName, time), (paxload, workload)) => (queueName, (WL(time, workload), Pax(time, paxload)))
     }.groupBy(_._1).mapValues(tuples => (tuples.map(_._2._1).sortBy(_.time).toList, tuples.map(_._2._2).sortBy(_.time).toList))
 
     queueWithPaxloads

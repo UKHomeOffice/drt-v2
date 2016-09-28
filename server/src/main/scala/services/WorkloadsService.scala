@@ -6,7 +6,7 @@ import akka.util.Timeout
 import controllers.GetFlights
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
+import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypes, Queues}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import services.workloadcalculator.{PaxLoadCalculator, SplitRatio}
 import spatutorial.shared.FlightsApi.{Flight, Flights, QueueName, QueueWorkloads}
@@ -32,6 +32,7 @@ trait FlightsService extends FlightsApi {
 trait WorkloadsService extends WorkloadsApi {
   self: FlightsService =>
   private val log = LoggerFactory.getLogger(getClass)
+
   def numberOf15Mins = (24 * 4 * 15)
 
   def maxLoadPerSlot: Int = 20
@@ -41,9 +42,17 @@ trait WorkloadsService extends WorkloadsApi {
     SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.8)
   )
 
+  def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 0.25
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 0.20
+    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 1.0
+    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 0.4
+    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 1.0
+  }
+
   override def getWorkloads(): Future[Map[String, QueueWorkloads]] = {
     for (flights <- getFlights(0, 0)) yield {
-      PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider)(flights)
+      PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)(flights)
     }
   }
 
