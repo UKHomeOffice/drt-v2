@@ -58,24 +58,25 @@ object QueueUserDeskRecsComponent {
 
   val component = ReactComponentB[Props]("QueueUserDeskRecs")
     .render_P(props =>
-      <.div(//^.key := props.queueName,
-        Panel(Panel.Props(props.queueName),
-          tableUserDeskRecView(props),
-          currentUserDeskRecView(props)))
+      <.div(^.key := props.queueName + "-QueueUserDeskRecs",
+        currentUserDeskRecView(props))
+      //        tableUserDeskRecView(props))
+      //        Panel(Panel.Props(props.queueName),
     ).build
 
+  //todo find out why inputs in the griddle component have the lose focus issue.
   def tableUserDeskRecView(props: Props) = {
     props.queueUserDeskRecs(userDeskRecsProxy =>
       props.queueCrunchResults(crunchResultProxy =>
         props.simulationResultWrapper(simulationResultProxy =>
           props.labels(labels =>
-            <.div(
+            <.div(^.key := props.queueName + "-outertalbestuff",
               labels().renderEmpty(<.p("Please go to dashboard to request workloads")),
               userDeskRecsProxy().renderEmpty(<.p("waiting for userdesk recs")),
               labels().renderReady { labels =>
                 userDeskRecsProxy().renderReady { userDeskRecs =>
                   val crunchResult: Pot[CrunchResult] = crunchResultProxy.value
-                  <.div(
+                  <.div(^.key := props.queueName + "-inner-crunchres",
                     crunchResult.renderEmpty(<.p("Waiting for crunch")),
                     crunchResult.renderReady { cr =>
                       val l = DeskRecsChart.takeEvery15th(labels)

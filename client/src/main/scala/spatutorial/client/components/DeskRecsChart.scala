@@ -88,9 +88,6 @@ object DeskRecsChart {
       log.info("rendering chart")
       val proxy: Pot[SimulationResult] = props.simulationResult()
       if (proxy.isReady) {
-        log.info(s"Think our simulation result is ready! ${
-          proxy
-        }")
         val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
         val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
         log.info(s"charting ${queueName} ${sampledWaitTimesCrunch.take(10)}, ${sampledWaitTimesSimulation.take(10)}")

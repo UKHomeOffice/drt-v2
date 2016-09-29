@@ -2495,7 +2495,7 @@ var GridTable = React.createClass({
       nodes = React.createElement('tbody', null, nodes);
     }
 
-    var pagingContent = React.createElement('tbody', null);
+    var pagingContent = null; //React.createElement('tbody', null);
     if (this.props.showPager) {
       var pagingStyles = this.props.useGriddleStyles ? {
         padding: "0px",

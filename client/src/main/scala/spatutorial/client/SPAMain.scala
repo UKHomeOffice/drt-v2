@@ -1,7 +1,7 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.data.{Empty, Pot}
+import diode.data.{Ready, Empty, Pot}
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
@@ -14,7 +14,7 @@ import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services.{DeskRecTimeslot, SPACircuit, UserDeskRecs}
-import spatutorial.shared.CrunchResult
+import spatutorial.shared.{DeskRec, SimulationResult, CrunchResult}
 import spatutorial.shared.FlightsApi.QueueName
 
 import scala.collection.immutable.{NumericRange, IndexedSeq}
@@ -74,11 +74,14 @@ object SPAMain extends js.JSApp {
   }.renderWith(layout)
 
   def makeItems(queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {
+    def defaultSimulationResult: Ready[SimulationResult] = Ready(
+      SimulationResult(List.fill(1440)(0).map(v => DeskRec(v.toLong, v)).toIndexedSeq,
+        List.fill(1440)(0)))
     val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {times <- model.workload.map(_.timeStamps)
                                                qcr <- model.queueCrunchResults.getOrElse(queueName, Empty)
                                                qur <- model.userDeskRec.getOrElse(queueName, Empty)
-                                               simres <- model.simulationResult.getOrElse(queueName, Empty)
+                                               simres <- model.simulationResult.getOrElse(queueName, defaultSimulationResult)
                                                potcr = qcr._1
                                                potdr = qcr._2
                                                cr <- potcr
@@ -87,8 +90,9 @@ object SPAMain extends js.JSApp {
         val every15thRecDesk = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
         val every15thCrunchWaitTime = cr.waitTimes.grouped(15).map(_.max)
         val every15thSimWaitTime = simres.waitTimes.grouped(15).map(_.max)
-        log.info(s"CountsAre ${times.take(96).length}, ${every15thRecDesk.length}, ${dr.items.length}")
-        val allRows = ((times.take(96) :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose)
+        val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
+        log.info(s"CountsAre ${aDaysWorthOfTimes.length}, ${every15thRecDesk.length}, ${dr.items.length}")
+        val allRows = ((aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose)
         allRows
       }
       log.info(s"calculating new is")

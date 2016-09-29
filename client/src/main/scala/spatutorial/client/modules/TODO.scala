@@ -40,12 +40,13 @@ object UserDeskRecsComponent {
         p.simulationResult().renderReady(sr =>
           p.proxy().render(userDeskRecs => {
             log.info(s"rendering ${p.queueName} with ${userDeskRecs.items.length}")
-            TableTodoList(
-              p.items,
-              sr,
-              item => p.proxy.dispatch(UpdateDeskRecsTime(p.queueName, item)),
-              item => editTodo(Some(item)),
-              item => p.proxy.dispatch(DeleteTodo(item)))
+            <.div(^.cls := "user-desk-recs-container",
+              TableTodoList(
+                p.items,
+                sr,
+                item => p.proxy.dispatch(UpdateDeskRecsTime(p.queueName, item)),
+                item => editTodo(Some(item)),
+                item => p.proxy.dispatch(DeleteTodo(item))))
           })),
         p.proxy().render(todos =>
           Button(

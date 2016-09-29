@@ -63,7 +63,7 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
     p.updateDynamic("showSettings")(showSettings)
     p.updateDynamic("showFilter")(showFilter)
     p.updateDynamic("rowMetadata")(rowMetaData)
-
+    p.updateDynamic("showPager")(false)
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
 
 
