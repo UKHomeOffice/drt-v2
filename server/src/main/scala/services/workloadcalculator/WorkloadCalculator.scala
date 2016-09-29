@@ -43,7 +43,7 @@ object PaxLoadCalculator {
     val timesMin = new DateTime(flight.SchDT, DateTimeZone.UTC).getMillis
     val splits = splitsRatioProvider(flight)
     val splitsOverTime: IndexedSeq[(Long, PaxTypeAndQueueCount)] = minsForNextNHours(timesMin, 1)
-      .zip(paxDeparturesPerMinutes(flight.ActPax, paxOffFlowRate))
+      .zip(paxDeparturesPerMinutes(if(flight.ActPax > 0) flight.ActPax else flight.MaxPax, paxOffFlowRate))
       .flatMap {
         case (m, paxInMinute) =>
           splits.map(splitRatio => (m, PaxTypeAndQueueCount(splitRatio.paxType, splitRatio.ratio * paxInMinute)))
