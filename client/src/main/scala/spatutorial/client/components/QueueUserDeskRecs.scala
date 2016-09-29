@@ -2,19 +2,21 @@ package spatutorial.client.components
 
 import chandu0101.scalajs.react.components.ReactTable
 import diode.data.Pot
-import diode.react.{ModelProxy, ReactConnectProxy}
+import diode.react._
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.DeskRecsChart
+import spatutorial.client.components.TableTodoList.UserDeskRecsRow
 import spatutorial.client.logger._
-import spatutorial.client.modules.{Dashboard, GriddleComponentWrapper, UserDeskRecsComponent}
+import spatutorial.client.modules._
 import spatutorial.client.services.{UpdateDeskRecsTime, DeskRecTimeslot, UserDeskRecs}
 import spatutorial.shared.{CrunchResult, SimulationResult}
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
-import spatutorial.client.modules.{GriddleComponentWrapper, Dashboard, UserDeskRecsComponent}
 import spatutorial.shared.{CrunchResult, SimulationResult}
+import diode.react.ReactPot._
+import sun.awt.image.PixelConverter.Rgba
 import diode.react.ReactPot._
 
 import scala.collection.immutable
@@ -24,25 +26,30 @@ import scala.scalajs.js.annotation.ScalaJSDefined
 import japgolly.scalajs.react._
 import spatutorial.shared.FlightsApi.QueueName
 
-object MyCustomComponent {
-
-  case class Props(name: String)
-
-  def makeDispatchable(dispatch: (UpdateDeskRecsTime) => Callback)(queueName: String): js.Function = (props: js.Dynamic) => {
+object UserDeskRecCustomComponents {
+  def userDeskRecInput(dispatch: (UpdateDeskRecsTime) => Callback)(queueName: String): js.Function = (props: js.Dynamic) => {
     val data: DeskRecTimeslot = props.data.asInstanceOf[DeskRecTimeslot]
-    log.info(s"got props of ${data} val")
+    val recommendedDesk = props.rowData.recommended_desks.toString.toInt
+    log.info(s"recommndedDes ${recommendedDesk}")
+
     val string = data.deskRec.toString
-    log.info(s"setting input with ${string} val")
-    <.input.number(
+    <.span(<.input.number(
+      //      ^.key := data.id,
       ^.value := string,
+      ^.backgroundColor := (if (recommendedDesk > data.deskRec) "#ffaaaa" else "#aaffaa"),
       ^.onChange ==>
-        ((e: ReactEventI) => dispatch(UpdateDeskRecsTime(queueName, DeskRecTimeslot(data.id, e.target.value.toInt))))).render
+        ((e: ReactEventI) => {
+          e.preventDefault()
+          e.stopPropagation()
+          dispatch(UpdateDeskRecsTime(queueName, DeskRecTimeslot(data.id, e.target.value.toInt)))
+        }))).render
   }
 }
 
 object QueueUserDeskRecsComponent {
 
   case class Props(queueName: QueueName,
+                   items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]],
                    labels: ReactConnectProxy[Pot[scala.collection.immutable.IndexedSeq[String]]],
                    queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]],
                    queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]],
@@ -51,24 +58,25 @@ object QueueUserDeskRecsComponent {
 
   val component = ReactComponentB[Props]("QueueUserDeskRecs")
     .render_P(props =>
-      <.div(^.key := props.queueName,
-        Panel(Panel.Props(props.queueName),
-          tableUserDeskRecView(props),
-          currentUserDeskRecView(props)))
+      <.div(^.key := props.queueName + "-QueueUserDeskRecs",
+        currentUserDeskRecView(props))
+      //        tableUserDeskRecView(props))
+      //        Panel(Panel.Props(props.queueName),
     ).build
 
+  //todo find out why inputs in the griddle component have the lose focus issue.
   def tableUserDeskRecView(props: Props) = {
     props.queueUserDeskRecs(userDeskRecsProxy =>
       props.queueCrunchResults(crunchResultProxy =>
         props.simulationResultWrapper(simulationResultProxy =>
           props.labels(labels =>
-            <.div(
+            <.div(^.key := props.queueName + "-outertalbestuff",
               labels().renderEmpty(<.p("Please go to dashboard to request workloads")),
               userDeskRecsProxy().renderEmpty(<.p("waiting for userdesk recs")),
-              userDeskRecsProxy().renderReady(userDeskRecs =>
-                labels().renderReady { labels =>
+              labels().renderReady { labels =>
+                userDeskRecsProxy().renderReady { userDeskRecs =>
                   val crunchResult: Pot[CrunchResult] = crunchResultProxy.value
-                  <.div(
+                  <.div(^.key := props.queueName + "-inner-crunchres",
                     crunchResult.renderEmpty(<.p("Waiting for crunch")),
                     crunchResult.renderReady { cr =>
                       val l = DeskRecsChart.takeEvery15th(labels)
@@ -91,14 +99,16 @@ object QueueUserDeskRecsComponent {
                           dynRow(label, "wl??", recDesk, waitTime, userDeskRec, waitTimeYourDesks)
                       }.toSeq.toJsArray
 
-                      val columns: List[String] = "time" :: "workloads" :: "recommended_desks" :: "wait_times_with_recommended" :: "your_desks" :: "wait_times_with_your_desks" :: Nil
+                      val columns: List[String] = "time" :: "workloads" :: "recommended_desks" :: "your_desks" :: "wait_times_with_recommended" :: "wait_times_with_your_desks" :: Nil
                       val dispatch: (UpdateDeskRecsTime) => Callback = userDeskRecsProxy.dispatch[UpdateDeskRecsTime]
-                      val component1 = MyCustomComponent.makeDispatchable(dispatch)(props.queueName)
-                      val columnMeta = new ColumnMeta("your_desks", 1, component1)
+                      val columnMeta = new ColumnMeta("your_desks",
+                        customComponent = UserDeskRecCustomComponents.userDeskRecInput(dispatch)(props.queueName))
                       val cms = Seq(columnMeta).toJsArray
-                      GriddleComponentWrapper(results, columns, Some(cms))()
-                    })
-                }))))))
+                      GriddleComponentWrapper(results, columns, Some(cms), rowMetaData = new RowMetaData(key = "time"))()
+                    }
+                  )
+                }
+              })))))
   }
 
   def dynRow(time: String, workload: String,
@@ -121,13 +131,19 @@ object QueueUserDeskRecsComponent {
 
   def currentUserDeskRecView(props: Props): ReactTagOf[html.Div] = {
     <.div(^.key := props.queueName,
-      props.queueUserDeskRecs(queueDeskRecs => UserDeskRecsComponent(props.queueName, queueDeskRecs)),
-      props.queueCrunchResults(crw =>
-        props.simulationResultWrapper(srw => {
-          log.info(s"running simresultchart again for $props.queueName")
-          props.labels(labels =>
-            <.div(labels().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.queueName, labels, srw, crw))))
-        })))
+      props.labels(labels =>
+        props.queueUserDeskRecs(queueDeskRecs =>
+          props.queueCrunchResults(crw =>
+            props.items(itemsmodel =>
+              props.simulationResultWrapper(srw => {
+                <.div(
+                  itemsmodel().renderReady(items => props.queueUserDeskRecs(queueDeskRecs => UserDeskRecsComponent(props.queueName, items, queueDeskRecs, srw))),
+                  props.queueCrunchResults(crw => {
+                    log.info(s"running simresultchart again for $props.queueName")
+                    <.div(labels().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.queueName, labels, srw, crw)))
+                  }
+                  ))
+              }))))))
   }
 }
 

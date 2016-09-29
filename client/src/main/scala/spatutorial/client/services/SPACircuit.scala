@@ -72,12 +72,21 @@ trait WorkloadsUtil {
     val allMins = timesMin until (timesMin + 60000 * 60 * 24) by oneMinute
     allMins.map(new js.Date(_).toISOString())
   }
+
+  def timeStampsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
+    val timesMin = workloads.values.flatMap(_._1.map(_.time)).min
+    val oneMinute: Long = 60000
+    val allMins = timesMin until (timesMin + 60000 * 60 * 24) by oneMinute
+    allMins
+  }
 }
 
 
 // The base model of our application
 case class Workloads(workloads: Map[String, QueueWorkloads]) extends WorkloadsUtil {
   def labels = labelsFromAllQueues(workloads)
+
+  def timeStamps = timeStampsFromAllQueues(workloads)
 }
 
 case class RootModel(

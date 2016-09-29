@@ -88,9 +88,6 @@ object DeskRecsChart {
       log.info("rendering chart")
       val proxy: Pot[SimulationResult] = props.simulationResult()
       if (proxy.isReady) {
-        log.info(s"Think our simulation result is ready! ${
-          proxy
-        }")
         val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
         val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
         log.info(s"charting ${queueName} ${sampledWaitTimesCrunch.take(10)}, ${sampledWaitTimesSimulation.take(10)}")
@@ -100,8 +97,9 @@ object DeskRecsChart {
             Chart.LineChart,
             ChartData(sampledLabels,
               Seq(
-                ChartDataset(sampledWaitTimesSimulation, "Simulated Wait Times with your actual desk"),
-                ChartDataset(sampledWaitTimesCrunch, "Predicted Wait Times with Recommended Desks", backgroundColor = "red", borderColor = "red")))
+                ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "red"),
+                ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0.8)",
+                  borderColor = "rgba(10,10, 55, 0.8)")))
           ))
       } else {
         <.p("waiting for data")
