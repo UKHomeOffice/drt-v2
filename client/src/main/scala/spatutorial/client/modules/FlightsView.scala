@@ -3,7 +3,7 @@ package spatutorial.client.modules
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import sun.java2d.loops.CustomComponent
 
-import scala.scalajs.js.annotation.ScalaJSDefined
+import scala.scalajs.js.annotation.{JSExportAll, JSExport, ScalaJSDefined}
 import scala.scalajs.js.{Object, JSON}
 import chandu0101.scalajs.react.components.ReactTable.Backend
 import chandu0101.scalajs.react.components.{ReactTable, JsonUtil, Spinner}
@@ -43,12 +43,16 @@ import spatutorial.client.logger._
 
 object GriddleComponentWrapper {
   @ScalaJSDefined
-  class ColumnMeta(val columnName: String, val order: Int, val customComponent: Any=null) extends js.Object
+  class ColumnMeta(val columnName: String, val order: js.UndefOr[Int] = js.undefined, val customComponent: Any=null) extends js.Object
 }
+
+@ScalaJSDefined
+class RowMetaData(val key: String) extends js.Object
 
 case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
                                    columns: Seq[String],
                                    columnMeta: Option[Seq[ColumnMeta]] = None,
+                                   rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
                                    showSettings: Boolean = true,
                                    showFilter: Boolean = true
                                   ) {
@@ -58,6 +62,7 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
     p.updateDynamic("columns")(columns)
     p.updateDynamic("showSettings")(showSettings)
     p.updateDynamic("showFilter")(showFilter)
+    p.updateDynamic("rowMetadata")(rowMetaData)
 
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
 
