@@ -77,18 +77,21 @@ object SPAMain extends js.JSApp {
     val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {times <- model.workload.map(_.timeStamps)
                                                qcr <- model.queueCrunchResults.getOrElse(queueName, Empty)
+                                               qur <- model.userDeskRec.getOrElse(queueName, Empty)
+                                               simres <- model.simulationResult.getOrElse(queueName, Empty)
                                                potcr = qcr._1
                                                potdr = qcr._2
                                                cr <- potcr
                                                dr <- potdr
       } yield {
         val every15thRecDesk = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
-        val every15thUserDeskRec = dr.items
-        log.info(s"CountsAre ${times.take(96).length}, ${every15thRecDesk.length}, ${every15thUserDeskRec.length}")
-        val allRows = ((times.take(96) :: every15thRecDesk :: every15thUserDeskRec :: Nil).transpose)
+        val every15thCrunchWaitTime = cr.waitTimes.grouped(15).map(_.max)
+        val every15thSimWaitTime = simres.waitTimes.grouped(15).map(_.max)
+        log.info(s"CountsAre ${times.take(96).length}, ${every15thRecDesk.length}, ${dr.items.length}")
+        val allRows = ((times.take(96) :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose)
         allRows
       }
-
+      log.info(s"calculating new is")
       val is: Pot[List[UserDeskRecsRow]] = for (rows <- potRows) yield {
         rows.map(row => row match {
           case (time: Long) :: (crunchDeskRec: Int) :: (userDeskRec: DeskRecTimeslot) :: (waitTimeWithUserDeskRec: Int) :: (waitTimeWithCrunchDeskRec: Int) :: Nil =>
