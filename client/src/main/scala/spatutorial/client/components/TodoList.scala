@@ -2,10 +2,12 @@ package spatutorial.client.components
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.components.Bootstrap.{CommonStyle, Button}
+import spatutorial.client.components.Bootstrap.{Button, CommonStyle}
 import spatutorial.client.services.DeskRecTimeslot
 import spatutorial.shared._
-import scala.scalajs.js.Date
+
+import scala.scalajs.js
+import scala.scalajs.js.{Date, JSON, Object}
 import scalacss.ScalaCssReact._
 
 object TodoList {
@@ -42,6 +44,26 @@ object TodoList {
     TodoList(TodoListProps(items, sr, stateChange, editItem, deleteItem))
 }
 
+case class PopoverWrapper(
+                           position: String = "bottom",
+                           className: String = "flights-popover",
+                           trigger: String
+                         ) {
+  def toJS = {
+    js.Dynamic.literal(
+      position = position,
+      className = className,
+      trigger = trigger
+    )
+  }
+
+  def apply(children: ReactNode*) = {
+    val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.popover.Popover) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
+    f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
+  }
+
+}
+
 object TableTodoList {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
@@ -62,16 +84,16 @@ object TableTodoList {
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         <.tr(^.key := item.time,
-          <.td(new Date(item.time).toISOString()),
-          <.td(item.crunchDeskRec),
-          <.td(
-            <.input.number(
-              ^.className := "desk-rec-input",
-              ^.value := item.userDeskRec.deskRec,
-              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
-          <.td(item.waitTimeWithCrunchDeskRec),
-          <.td(item.waitTimeWithUserDeskRec)
-        )
+          <.td(PopoverWrapper(trigger = new Date(item.time).toISOString())(<.p())),
+            <.td(item.crunchDeskRec),
+            <.td(
+              <.input.number(
+                ^.className := "desk-rec-input",
+                ^.value := item.userDeskRec.deskRec,
+                ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
+            <.td(item.waitTimeWithCrunchDeskRec),
+            <.td(item.waitTimeWithUserDeskRec)
+          )
       }
       <.table(<.tbody(
         <.tr(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
