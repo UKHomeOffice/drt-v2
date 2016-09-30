@@ -2,6 +2,7 @@ package services
 
 import java.util.{Date, UUID}
 
+import org.slf4j.LoggerFactory
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq
@@ -48,6 +49,7 @@ object AirportToCountry extends AirportToCountryLike {
 abstract class ApiService
   extends Api with WorkloadsService with FlightsService with AirportToCountryLike {
 
+  val log = LoggerFactory.getLogger(getClass)
 ////  var todos: List[DeskRecTimeslot] = Nil
 
   override def welcomeMsg(name: String): String = {
@@ -56,6 +58,7 @@ abstract class ApiService
       new Date
     }"
   }
+
 ////
 ////  override def getAllTodos(): List[DeskRecTimeslot] = {
 ////    // provide some fake Todos
@@ -98,15 +101,18 @@ abstract class ApiService
 //    todos
 //  }
 
-  override def crunch(workloads: List[Double]): CrunchResult = {
-    println(s"Crunch requested for ${workloads}")
+  override def crunch(queueName: String, workloads: List[Double]): CrunchResult = {
+    println(s"Crunch requested for $queueName, ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
     TryRenjin.crunch(workloads, repeat(2), repeat(25))
   }
 
   override def processWork(workloads: List[Double], desks: List[Int]): SimulationResult = {
     println(s"processWork")
-    TryRenjin.processWork(workloads, desks.flatMap(x => List.fill(15)(x)))
+    log.info(s"ProcessWork workloads ${workloads.take(200)}")
+    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
+    log.info(s"ProcessWork desks ${desks.take(200)}")
+    TryRenjin.processWork(workloads, fulldesks)
   }
 
 }

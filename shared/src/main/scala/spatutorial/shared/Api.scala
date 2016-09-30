@@ -2,7 +2,7 @@ package spatutorial.shared
 
 
 import scala.collection.immutable._
-import spatutorial.shared.FlightsApi.{Flights, QueueWorkloads}
+import spatutorial.shared.FlightsApi.{QueueName, Flights, QueueWorkloads}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -140,7 +140,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
-  def crunch(workloads: List[Double]): CrunchResult
+  def crunch(queueName: QueueName, workloads: List[Double]): CrunchResult
 
   def processWork(workloads: List[Double], desks: List[Int]): SimulationResult
 }

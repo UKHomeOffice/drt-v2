@@ -67,8 +67,11 @@ object DeskRecsChart {
 
   def waitTimesChart(labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult]): ReactNode = {
     potCrunchResult.render(chartData => {
-      val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(chartData.waitTimes)
 
+      val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(chartData.waitTimes)
+      log.info("!!!!======================")
+      log.info(s"waitTime ${chartData.waitTimes.take(200)}")
+      log.info(s"sampledWaitTime ${sampledWaitTimesSimulation}")
       val sampledLabels = takeEvery15th(labels)
       Chart(Chart.ChartProps("Wait Times",
         Chart.LineChart,

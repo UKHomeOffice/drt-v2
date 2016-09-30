@@ -42,8 +42,10 @@ import scala.language.existentials
 import spatutorial.client.logger._
 
 object GriddleComponentWrapper {
+
   @ScalaJSDefined
-  class ColumnMeta(val columnName: String, val order: js.UndefOr[Int] = js.undefined, val customComponent: Any=null) extends js.Object
+  class ColumnMeta(val columnName: String, val order: js.UndefOr[Int] = js.undefined, val customComponent: Any = null) extends js.Object
+
 }
 
 @ScalaJSDefined
@@ -69,9 +71,10 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
 
     fixWeirdCharacterEncoding(p)
 
-    val meta = """[
-      |{"columnName": "Origin","visible": true, "order": 2}
-      |]""".stripMargin
+    val meta =
+      """[
+        |{"columnName": "Origin","visible": true, "order": 2}
+        |]""".stripMargin
     val parsedMeta = JSON.parse(meta, null)
     p.updateDynamic("columnMeta")(parsedMeta)
     p
@@ -84,8 +87,8 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
   }
 
   //  def customColumn = ReactComponentB[String].render(
-//    (s) =>  <.p("custom here")
-//  )
+  //    (s) =>  <.p("custom here")
+  //  )
   def apply(children: ReactNode*) = {
     val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.griddle) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
     f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
@@ -209,6 +212,11 @@ object FlightsView {
 
   import scala.language.existentials
 
+  def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
+    val mod: TagMod = ^.title := originMapper(props.data.toString())
+    <.span(props.data.toString(), mod).render
+  }
+
   case class Props(router: RouterCtl[Loc],
                    flightsModelProxy: ModelProxy[Pot[Flights]],
                    airportInfoProxy: ModelProxy[Map[String, Pot[AirportInfo]]])
@@ -230,6 +238,17 @@ object FlightsView {
       <.h2("Flights"),
       state.airportInfo(ai =>
         state.flights(x => {
+          val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy()
+          def mappings(port: String) = {
+            val res: Option[Pot[String]] = portMapper.get(port).map { info =>
+              info.map( i => s"${i.airportName}, ${i.city}, ${i.country}")
+            }
+            res match {
+              case Some(Ready(v))  => v
+              case _ => "waiting for info..."
+            }
+          }
+          val columnMeta = Some(Seq(new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
           <.div(^.className := "table-responsive",
             props.flightsModelProxy.value.renderPending((t) => Spinner()()),
             props.flightsModelProxy.value.renderEmpty(Spinner()()),
@@ -237,7 +256,9 @@ object FlightsView {
 
             //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
             props.flightsModelProxy.value.renderReady(flights => {
-                GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray, columns = columnNames)()
+              GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
+                columnMeta = columnMeta,
+                columns = columnNames)()
               //              reactTable(flights)
             })
             //                TableTest.component()

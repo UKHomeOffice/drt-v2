@@ -164,7 +164,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends ActionHand
       //      log.info(s"received workloads ${workloads} from server")
       val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
       val effects = workloadsByQueue.map { case (queueName, queueWorkload) =>
-        val effect = Effect(AjaxClient[Api].crunch(queueWorkload).call().map(resp => {
+        val effect = Effect(AjaxClient[Api].crunch(queueName, queueWorkload).call().map(resp => {
           log.info(s"will request crunch for ${queueName}")
           UpdateCrunchResult(queueName, resp)
         }))
@@ -232,7 +232,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (QueueUserDeskRecs, Map[QueueName, Po
     case Crunch(queueName, workload) =>
       log.info(s"Requesting Crunch $queueName with ${workload}")
       updated(value.copy(_2 = value._2 + (queueName -> Pending())),
-        Effect(AjaxClient[Api].crunch(workload).call().map(serverResult => UpdateCrunchResult(queueName, serverResult))))
+        Effect(AjaxClient[Api].crunch(queueName, workload).call().map(serverResult => UpdateCrunchResult(queueName, serverResult))))
     case UpdateCrunchResult(queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
