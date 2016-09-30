@@ -92,7 +92,9 @@ class Application @Inject()
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
-      flights.map(flight =>
+      flights.map(flight => {
+        val walkTimeMinutes = 4
+        val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
         ApiFlight(
           Operator = flight.Operator,
           Status = flight.Status, EstDT = flight.EstDT,
@@ -111,7 +113,9 @@ class Application @Inject()
           ICAO = flight.ICAO,
           IATA = flight.IATA,
           Origin = flight.Origin,
-          SchDT = flight.SchDT)).toList)
+          SchDT = flight.SchDT,
+          PcpTime = pcpTime)}
+      ).toList)
   }
 
   val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))

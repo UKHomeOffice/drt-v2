@@ -27,7 +27,8 @@ case class ApiFlight(
                       ICAO: String,
                       IATA: String,
                       Origin: String,
-                      SchDT: String)
+                      SchDT: String,
+                      PcpTime: Long)
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 

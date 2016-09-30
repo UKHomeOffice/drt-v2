@@ -4,7 +4,7 @@ import diode.data.{Empty, Pot}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle}
-import spatutorial.client.modules.{FlightsTable, FlightsView}
+import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.DeskRecTimeslot
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
@@ -87,9 +87,14 @@ object TableTodoList {
       val style = bss.listGroup
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
+        val time = item.time
+        val windowSize = 60000 * 15
+        val flights: Pot[Flights] = p.flights.map(flights =>
+          flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
+        val date: Date = new Date(item.time)
         <.tr(^.key := item.time,
-          <.td(PopoverWrapper(trigger = new Date(item.time).toISOString())(
-            FlightsTable(FlightsView.Props(p.flights, Map()))
+          <.td(PopoverWrapper(trigger = date.toLocaleDateString() + " "  + date.toLocaleTimeString())(
+            FlightsTable(FlightsView.Props(flights, Map()))
           )),
             <.td(item.crunchDeskRec),
             <.td(

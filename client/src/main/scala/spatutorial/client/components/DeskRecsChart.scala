@@ -3,7 +3,6 @@ package spatutorial.client.components
 import diode.Action
 import diode.data.Pot
 import diode.react.{ModelProxy, ReactConnectProxy}
-import diode.react.ReactPot._
 import japgolly.scalajs.react
 import japgolly.scalajs.react.vdom.DomCallbackResult._
 import japgolly.scalajs.react.vdom.prefix_<^._

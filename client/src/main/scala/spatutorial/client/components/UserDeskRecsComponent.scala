@@ -1,20 +1,19 @@
-package spatutorial.client.modules
+package spatutorial.client.components
 
-import diode.react.ReactPot._
-import diode.react._
 import diode.data.Pot
-import japgolly.scalajs.react._
+import diode.react.ModelProxy
+import japgolly.scalajs.react.{BackendScope, Callback, _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.components.Bootstrap._
+import spatutorial.client.components.Bootstrap.{Button, Panel}
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
-import spatutorial.client.components._
 import spatutorial.client.logger._
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName}
-import spatutorial.shared._
+import spatutorial.shared.FlightsApi.{Flights, _}
+import spatutorial.shared.SimulationResult
 
-import scalacss.ScalaCssReact._
-
+/**
+  * Created by rich on 30/09/16.
+  */
 object UserDeskRecsComponent {
 
   case class Props(queueName: QueueName,
@@ -78,4 +77,3 @@ object UserDeskRecsComponent {
             proxy: ModelProxy[Pot[UserDeskRecs]],
             simulationResult: ModelProxy[Pot[SimulationResult]]) = component(Props(queueName, items, flights.value, proxy, simulationResult))
 }
-

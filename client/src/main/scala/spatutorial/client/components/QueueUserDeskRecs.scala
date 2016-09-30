@@ -1,30 +1,19 @@
 package spatutorial.client.components
 
-import chandu0101.scalajs.react.components.ReactTable
 import diode.data.Pot
 import diode.react._
-import japgolly.scalajs.react.ReactComponentB
+import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
-import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.modules._
 import spatutorial.client.services._
-import spatutorial.shared.{ApiFlight, CrunchResult, SimulationResult}
+import spatutorial.shared.FlightsApi.{Flights, QueueName}
 import spatutorial.shared.{CrunchResult, SimulationResult}
-import diode.react.ReactPot._
-import sun.awt.image.PixelConverter.Rgba
-import diode.react.ReactPot._
 
-import scala.collection.immutable
-import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.ScalaJSDefined
-import japgolly.scalajs.react._
-import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
-import spatutorial.shared.FlightsApi.{Flights, QueueName}
 
 object UserDeskRecCustomComponents {
   def userDeskRecInput(dispatch: (UpdateDeskRecsTime) => Callback)(queueName: String): js.Function = (props: js.Dynamic) => {
@@ -117,7 +106,7 @@ object QueueUserDeskRecsComponent {
              recommended_desks: String, wait_times_with_recommended: String,
              your_desks: DeskRecTimeslot, wait_times_with_your_desks: Int) = {
     js.Dynamic.literal(
-      "time" -> time,
+      "time" -> makeDTReadable(time),
       "workloads" -> workload,
       "recommended_desks" -> recommended_desks,
       "wait_times_with_recommended" -> wait_times_with_recommended,

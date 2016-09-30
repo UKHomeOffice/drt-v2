@@ -1,7 +1,5 @@
 package spatutorial.client.modules
 
-import chandu0101.scalajs.react.components.ReactTable
-import diode.react.ReactPot._
 import diode.data.Pot
 import diode.react._
 import diode.util._
@@ -26,82 +24,6 @@ import scala.util.{Try, Random}
 import scala.language.existentials
 import spatutorial.client.logger._
 import scala.collection.immutable.Iterable
-
-//@JSExport
-//object Ouch {
-//  @JSExport("mySimpleComp")
-//  def mySimpleComp(props: js.Dynamic) =  {
-//    log.info(s"simple comp ${props}")
-//    <.p(props.toString())
-//  }
-//  val justAFunc: js.Function = (props: ColumnMetaProps) => {
-//    log.info(s"simple comp ${props}")
-//    <.h1("Mineminemine", <.input.text(^.value := props.data.toString())).render
-//  }
-//  val reactWrappedFunc = js.Dynamic.global.React.createFactory(justAFunc)
-//}
-//object MyTestGrid {
-//
-//  @js.native
-//  class ColumnMetaProps(val data: js.Object, val rowData: js.Object, val metadata: js.Object) extends js.Object
-//
-//  //  object - the data that would normally be rendered in the column.
-//  //    rowData
-//  //  object - the data for all items in the same row
-//  //    metadata
-//  //  object - The columnMetadata object)
-//
-//  @JSExport
-//  val testComp = ReactComponentB[js.Dynamic]("Mine")
-//    .initialState_P((p) => {
-//      log.info(s"initialSate ${p.data}")
-//      new ColumnMetaProps(p.data.asInstanceOf[js.Object], p.rowData.asInstanceOf[js.Object], p.metadata.asInstanceOf[js.Object])
-//    }
-//  ).renderP(
-//    (sc, props: js.Dynamic) => {
-//      //      log.info(s"what scope is ${sc.props}")
-//      log.info(s"what is ${sc.props}")
-//      log.info(s"what is $props")
-//      //      val string: Frag = if (!js.isUndefined(props)) props.data.toString() else "nothing!"
-//      val localsc = sc
-//      log.info(s"localsc ${localsc}")
-//      val localscprops = Try(sc.props)
-//      log.info(s"localscprops ${localsc.props.toString()}")
-//
-//      val localscpropsdata = localscprops.map(p => p.data)
-//      log.info(s"localdata is ${localscpropsdata}")
-//      val string = localscprops.toString() //Try(sc.props.data).toString()
-//      <.h1(string)
-//    })
-//    .componentDidMount((scope) => Callback.log(s"did mount ${js.Object.getOwnPropertyNames(scope)} ${scope.props}"))
-//    .componentWillReceiveProps((whatIsThis) => {
-//      Callback.log(s"willReceiveProps ${whatIsThis}")
-//    })
-//    .build
-//
-//  val simpleComp = ReactComponentB[Unit]("SimpleThing").render((p) => <.p("haha I work")).build
-//
-//  //  val columnMeta = (new ColumnMeta("c1", 1, testComp.reactClass) :: Nil).toJsArray
-//  val columnMeta = (new ColumnMeta("c1", 1, Ouch.justAFunc) :: Nil).toJsArray
-//
-//
-//  val results = Seq(
-//    js.Dynamic.literal("c1" -> "aa", "c2" -> "bb")
-//
-//  ).toJsArray
-//
-//  @ScalaJSDefined
-//  class Row(val c1: String, val c2: String) extends js.Object
-//
-//  val component = ReactComponentB[js.Dynamic]("MyTestGrid")
-//    .render_P {
-//      props =>
-//        GriddleComponentWrapper(results, columns = "c1" :: "c2" :: Nil, columnMeta = Some(columnMeta))()
-//    }.build
-//
-//  def apply() = component
-//}
-
 
 object Dashboard {
   type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
