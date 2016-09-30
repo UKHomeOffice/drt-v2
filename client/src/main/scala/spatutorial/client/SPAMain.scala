@@ -1,23 +1,24 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.data.{Ready, Empty, Pot}
+import diode.{ModelR, UseValueEq}
+import diode.data.{Empty, Pot, Ready}
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, QueueUserDeskRecsComponent, GlobalStyles}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, QueueUserDeskRecsComponent}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
-import spatutorial.client.services.{DeskRecTimeslot, SPACircuit, UserDeskRecs}
-import spatutorial.shared.{DeskRec, SimulationResult, CrunchResult}
+import spatutorial.client.services._
+import spatutorial.shared.{CrunchResult, DeskRec, SimulationResult}
 import spatutorial.shared.FlightsApi.QueueName
 
-import scala.collection.immutable.{NumericRange, IndexedSeq}
+import scala.collection.immutable.{IndexedSeq, NumericRange}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
@@ -37,6 +38,15 @@ object SPAMain extends js.JSApp {
   val eeadesk = "eeaDesk"
   val egate = "eGate"
 
+  val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
+  hasWl.value match {
+    case Empty => SPACircuit.dispatch(GetWorkloads("", "", "edi"))
+    case default =>
+      log.info(s"was $default")
+  }
+
+  SPACircuit.dispatch(RequestFlights(0, 0))
+
   // configure the router
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
@@ -51,10 +61,11 @@ object SPAMain extends js.JSApp {
       }))
 
     val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
-      renderR(ctl => SPACircuit.wrap(_.airportInfos)(airportInfoProxy =>
-        SPACircuit.wrap(_.flights)(proxy =>
-          FlightsView(Props(ctl, proxy, airportInfoProxy), proxy)))
-      )
+      renderR(ctl => {
+        val airportWrapper = SPACircuit.connect(_.airportInfos)
+        val flightsWrapper = SPACircuit.connect(m => m.flights)
+        airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
+      })
 
     val todosRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
@@ -63,10 +74,18 @@ object SPAMain extends js.JSApp {
         val labels: ReactConnectProxy[Pot[IndexedSeq[String]]] = SPACircuit.connect(_.workload.map(_.labels))
         val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(queueName, Empty).flatMap(_._1))
         val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(queueName, Empty))
+        val flightsWrapper = SPACircuit.connect(_.flights)
         val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
         val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = makeItems(queueName)
-        QueueUserDeskRecsComponent.Props(queueName, items, labels, queueCrunchResults, queueUserDeskRecs, simulationResultWrapper)
+        QueueUserDeskRecsComponent.Props(queueName, items, labels, queueCrunchResults, queueUserDeskRecs, flightsWrapper, simulationResultWrapper)
       }
+
+
+      //        .map {
+      //        case Empty => SPACircuit.dispatch(GetWorkloads("", "", "edi"))
+      //        case default =>
+      //          log.info(s"was $default")
+      //      }
       <.div(queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
@@ -78,33 +97,30 @@ object SPAMain extends js.JSApp {
       SimulationResult(List.fill(1440)(0).map(v => DeskRec(v.toLong, v)).toIndexedSeq,
         List.fill(1440)(0)))
     val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = SPACircuit.connect(model => {
-      val potRows: Pot[List[List[Any]]] = for {times <- model.workload.map(_.timeStamps)
-                                               qcr <- model.queueCrunchResults.getOrElse(queueName, Empty)
-                                               qur <- model.userDeskRec.getOrElse(queueName, Empty)
-                                               simres <- model.simulationResult.getOrElse(queueName, defaultSimulationResult)
-                                               potcr = qcr._1
-                                               potdr = qcr._2
-                                               cr <- potcr
-                                               dr <- potdr
+      val potRows: Pot[List[List[Any]]] = for {
+        times <- model.workload.map(_.timeStamps)
+        qcr <- model.queueCrunchResults.getOrElse(queueName, Empty)
+        qur <- model.userDeskRec.getOrElse(queueName, Empty)
+        simres <- model.simulationResult.getOrElse(queueName, defaultSimulationResult)
+        potcr = qcr._1
+        potdr = qcr._2
+        cr <- potcr
+        dr <- potdr
       } yield {
         val every15thRecDesk = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
         val every15thCrunchWaitTime = cr.waitTimes.grouped(15).map(_.max)
         val every15thSimWaitTime = simres.waitTimes.grouped(15).map(_.max)
         val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
-        log.info(s"CountsAre ${aDaysWorthOfTimes.length}, ${every15thRecDesk.length}, ${dr.items.length}")
         val allRows = ((aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose)
         allRows
       }
-      log.info(s"calculating new is")
       val is: Pot[List[UserDeskRecsRow]] = for (rows <- potRows) yield {
         rows.map(row => row match {
           case (time: Long) :: (crunchDeskRec: Int) :: (userDeskRec: DeskRecTimeslot) :: (waitTimeWithUserDeskRec: Int) :: (waitTimeWithCrunchDeskRec: Int) :: Nil =>
             UserDeskRecsRow(time, crunchDeskRec, userDeskRec, waitTimeWithUserDeskRec, waitTimeWithCrunchDeskRec)
-          case (time: Long) :: (crunchDeskRec: Int) :: (userDeskRec: DeskRecTimeslot) :: Nil =>
-            UserDeskRecsRow(time, crunchDeskRec, userDeskRec, 99, 99)
           case default =>
-            log.error(s"match error ${default}")
-            throw new Exception(s"fail on ${default}")
+            log.error(s"match error $default")
+            throw new Exception(s"fail on $default")
         })
       }
       is

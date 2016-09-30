@@ -126,7 +126,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, QueueUserDeskRecs]) extends Action
   override def handle = {
     case RefreshTodos =>
       log.info("RefreshTodos")
-      //      effectOnly(Effect(AjaxClient[Api].getAllTodos().call().map(UpdateAllTodos)))
+      //      effectOnly(Effect(AjaxClient[Api].geAllTodos().call().map(UpdateAllTodos)))
       noChange
     case UpdateQueueUserDeskRecs(queueName, deskRecs) =>
       // got new deskRecs, update model
@@ -217,6 +217,7 @@ case class UpdateFlights(flights: Flights) extends Action
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends ActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
+      log.info(s"requeusting flights $from $to")
       effectOnly(Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights)))
     case UpdateFlights(flights) =>
       log.info(s"Client got flights! ${flights.flights.length}")

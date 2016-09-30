@@ -3,15 +3,15 @@ package spatutorial.client.modules
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import sun.java2d.loops.CustomComponent
 
-import scala.scalajs.js.annotation.{JSExportAll, JSExport, ScalaJSDefined}
-import scala.scalajs.js.{Object, JSON}
+import scala.scalajs.js.annotation.{JSExport, JSExportAll, ScalaJSDefined}
+import scala.scalajs.js.{JSON, Object}
 import chandu0101.scalajs.react.components.ReactTable.Backend
-import chandu0101.scalajs.react.components.{ReactTable, JsonUtil, Spinner}
-import chandu0101.scalajs.react.components.materialui.{MuiPaper, ZDepth, DeterminateIndeterminate, MuiCircularProgress}
+import chandu0101.scalajs.react.components.{JsonUtil, ReactTable, Spinner}
+import chandu0101.scalajs.react.components.materialui.{DeterminateIndeterminate, MuiCircularProgress, MuiPaper, ZDepth}
 import com.payalabs.scalajs.react.bridge.ReactBridgeComponent
 import com.sun.org.apache.xpath.internal.operations.Bool
-import diode.data.{Ready, Pot}
-import diode.react.{ReactPot, ReactConnectProxy, ModelProxy}
+import diode.data.{Pot, Ready}
+import diode.react.{ModelProxy, ReactConnectProxy, ReactPot}
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.extra.router.RouterCtl
 import spatutorial.client.SPAMain.Loc
@@ -35,6 +35,7 @@ import spatutorial.client.components._
 import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
 import spatutorial.shared.FlightsApi.Flights
 import com.payalabs.scalajs.react.bridge._
+import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _, _}
 
 import scala.scalajs.js
 import scala.util.Random
@@ -199,112 +200,30 @@ object TableTest {
 
 object FlightsView {
 
-  import com.payalabs.scalajs.react.bridge.ReactBridgeComponent
-  import chandu0101.scalajs.react.components.Implicits._
-  import org.scalajs.dom
-
-  //  import com.payalabs.scalajs.react.bridge.elements.{ReactMediumEditor, Input, Button, TagsInput}
   import japgolly.scalajs.react.vdom.all.{onChange => _, _}
   import japgolly.scalajs.react._
-  import org.scalajs.dom
-
   import scala.scalajs.js
-
   import scala.language.existentials
 
-  def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
-    val mod: TagMod = ^.title := originMapper(props.data.toString())
-    <.span(props.data.toString(), mod).render
-  }
-
-  case class Props(router: RouterCtl[Loc],
-                   flightsModelProxy: ModelProxy[Pot[Flights]],
-                   airportInfoProxy: ModelProxy[Map[String, Pot[AirportInfo]]])
+  case class Props(flightsModelProxy: Pot[Flights],
+                   airportInfoProxy: Map[String, Pot[AirportInfo]])
 
   case class State(flights: ReactConnectProxy[Pot[Flights]],
                    airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]])
 
   val component = ReactComponentB[Props]("Flights")
-    .initialState_P(p => {
-      log.info("initialising flights component")
-      State(
-        p.flightsModelProxy.connect(m => m),
-        p.airportInfoProxy.connect(m => m)
-      )
-    }
-    ).renderPS((_, props, state) => {
-    Panel(Panel.Props("Flights"),
-      <.div(backgroundColor := "grey", Spinner()()),
-      <.h2("Flights"),
-      state.airportInfo(ai =>
-        state.flights(x => {
-          val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy()
-          def mappings(port: String) = {
-            val res: Option[Pot[String]] = portMapper.get(port).map { info =>
-              info.map( i => s"${i.airportName}, ${i.city}, ${i.country}")
-            }
-            res match {
-              case Some(Ready(v))  => v
-              case _ => "waiting for info..."
-            }
-          }
-          val columnMeta = Some(Seq(new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
-          <.div(^.className := "table-responsive",
-            props.flightsModelProxy.value.renderPending((t) => Spinner()()),
-            props.flightsModelProxy.value.renderEmpty(Spinner()()),
-            //,
+    .render_P((props) => {
+      Panel(Panel.Props("Flights"),
+        <.h2("Flights"), FlightsTable(props))
+    }).build
 
-            //              MuiPaper(zDepth = ZDepth._1, rounded = false)(<.p("rounded = false"))), //MuiCircularProgress(mode = DeterminateIndeterminate.indeterminate, size = 0.5)()),
-            props.flightsModelProxy.value.renderReady(flights => {
-              GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
-                columnMeta = columnMeta,
-                columns = columnNames)()
-              //              reactTable(flights)
-            })
-            //                TableTest.component()
-            //              <.table(
-            //                ^.className := "table", ^.className := "table-striped",
-            //                <.tbody(flightHeaders,
-            //                  flights.flights.sortBy(_.Operator).reverse.map(flightRow(_, ai.value))) )
-          )
-        })))
-  }).componentDidMount((scope) => Callback.when(scope.props.flightsModelProxy.value.isEmpty) {
-    log.info("Flights View is empty, requesting flights")
-    scope.props.flightsModelProxy.dispatch(RequestFlights(0, 0))
-  }).build
+  def apply(props: Props): ReactComponentU[Props, Unit, Unit, TopNode] = component(props)
+}
 
-  def reactTable(flights: Flights) = {
-    val data = reactTableFlights(flights).toVector
-    val config = List(
-      ("SchDT", None, Some(ReactTable.getStringSort("SchDT")), None),
-      ("Origin", None, Some(ReactTable.getStringSort("Origin")), None))
-    ReactTable(data = data, columns = columnNames, rowsPerPage = 50, config = config)
-  }
-
-  def reactTableFlights(flights: Flights): List[Map[String, Any]] = {
-    flights.flights.map(f => {
-      Map(
-        "Operator" -> f.Operator,
-        "Status" -> f.Status,
-        "EstDT" -> f.EstDT,
-        "ActDT" -> f.ActDT,
-        "EstChoxDT" -> f.EstChoxDT,
-        "ActChoxDT" -> f.ActChoxDT,
-        "Gate" -> f.Gate,
-        "Stand" -> f.Stand,
-        "MaxPax" -> f.MaxPax,
-        "ActPax" -> f.ActPax,
-        "TranPax" -> f.TranPax,
-        "RunwayID" -> f.RunwayID,
-        "BaggageReclaimId" -> f.BaggageReclaimId,
-        "FlightID" -> f.FlightID,
-        "AirportID" -> f.AirportID,
-        "Terminal" -> f.Terminal,
-        "ICAO" -> f.ICAO,
-        "IATA" -> f.IATA,
-        "Origin" -> f.Origin,
-        "SchDT" -> f.SchDT)
-    })
+object FlightsTable {
+  def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
+    val mod: TagMod = ^.title := originMapper(props.data.toString())
+    <.span(props.data.toString(), mod).render
   }
 
   def reactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
@@ -312,10 +231,10 @@ object FlightsView {
       js.Dynamic.literal(
         Operator = f.Operator,
         Status = f.Status,
-        EstDT = f.EstDT,
-        ActDT = f.ActDT,
+        EstDT = makeDTReadable(f.EstDT),
+        ActDT = makeDTReadable(f.ActDT),
         EstChoxDT = f.EstChoxDT,
-        ActChoxDT = f.ActChoxDT,
+        ActChoxDT = makeDTReadable(f.ActChoxDT),
         Gate = f.Gate,
         Stand = f.Stand,
         MaxPax = f.MaxPax,
@@ -329,14 +248,11 @@ object FlightsView {
         ICAO = f.ICAO,
         IATA = f.IATA,
         Origin = f.Origin,
-        SchDT = f.SchDT)
+        SchDT = makeDTReadable(f.SchDT))
     })
   }
 
-  def flightHeaders() = {
-    val hs = columnNames
-    <.tr(hs.map(<.th(_)))
-  }
+  def makeDTReadable(dt: String) = dt.replace("T", " ").take(16)
 
   def columnNames: List[String] = {
     List(
@@ -346,56 +262,48 @@ object FlightsView {
       "Status",
       "EstDT",
       "ActDT",
-      "EstChoxDT",
+      //      "EstChoxDT",
       "ActChoxDT",
       "Gate",
       "Stand",
       "MaxPax",
       "ActPax",
-      "TranPax",
-      "RunwayID",
-      "BaggageReclaimId",
-      "FlightID",
-      "AirportID",
+      //      "TranPax",
+      //      "RunwayID",
+      //      "BaggageReclaimId",
+      //      "FlightID",
+      //      "AirportID",
       "Terminal",
-      "ICAO",
+      //      "ICAO",
       "IATA"
     )
   }
 
-  def flightRow(f: ApiFlight, ai: Map[String, Pot[AirportInfo]]) = {
-    val maybePot = ai.get(f.Origin)
-    val tt = maybePot.map { v =>
-      v.map(t => ^.title := s"${t.airportName}, ${t.city}, ${t.country}")
-    }
-    val extracted = tt match {
-      case Some(Ready(tag)) => tag
-      case _ => ^.title := "pending country"
-    }
-    val vals = List(
-      <.td(f.Operator),
-      <.td(f.Status),
-      <.td(f.EstDT),
-      <.td(f.ActDT),
-      <.td(f.EstChoxDT),
-      <.td(f.ActChoxDT),
-      <.td(f.Gate),
-      <.td(f.Stand),
-      <.td(f.MaxPax.toString),
-      <.td(f.ActPax.toString),
-      <.td(f.TranPax.toString),
-      <.td(f.RunwayID),
-      <.td(f.BaggageReclaimId),
-      <.td(f.FlightID.toString),
-      <.td(f.AirportID),
-      <.td(f.Terminal),
-      <.td(f.ICAO),
-      <.td(f.IATA),
-      <.td(f.Origin, ReactAttr("data-toggle") := "popover", ReactAttr("data-content") := "content", extracted),
-      <.td(f.SchDT))
+  val component = ReactComponentB[FlightsView.Props]("FlightsTable")
+    .render_P(props => {
+      val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
 
-    <.tr(vals)
-  }
+      def mappings(port: String) = {
+        val res: Option[Pot[String]] = portMapper.get(port).map { info =>
+          info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
+        }
+        res match {
+          case Some(Ready(v)) => v
+          case _ => "waiting for info..."
+        }
+      }
 
-  def apply(props: Props, proxy: ModelProxy[Pot[Flights]]) = component(props)
+      val columnMeta = Some(Seq(new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
+      <.div(^.className := "table-responsive",
+        props.flightsModelProxy.renderPending((t) => Spinner()()),
+        props.flightsModelProxy.renderEmpty(Spinner()()),
+        props.flightsModelProxy.renderReady(flights => {
+          GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
+            columnMeta = columnMeta,
+            columns = columnNames)()
+        })
+      )
+    }).build
+
+  def apply(props: FlightsView.Props) = component(props)
 }

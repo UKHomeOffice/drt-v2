@@ -1,9 +1,12 @@
 package spatutorial.client.components
 
+import diode.data.{Empty, Pot}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle}
+import spatutorial.client.modules.{FlightsTable, FlightsView}
 import spatutorial.client.services.DeskRecTimeslot
+import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 
 import scala.scalajs.js
@@ -45,7 +48,7 @@ object TodoList {
 }
 
 case class PopoverWrapper(
-                           position: String = "bottom",
+                           position: String = "right",
                            className: String = "flights-popover",
                            trigger: String
                          ) {
@@ -72,6 +75,7 @@ object TableTodoList {
 
   case class TodoListProps(
                             items: Seq[UserDeskRecsRow],
+                            flights: Pot[Flights],
                             simulationResult: SimulationResult,
                             stateChange: DeskRecTimeslot => Callback,
                             editItem: DeskRecTimeslot => Callback,
@@ -84,7 +88,9 @@ object TableTodoList {
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         <.tr(^.key := item.time,
-          <.td(PopoverWrapper(trigger = new Date(item.time).toISOString())(<.p())),
+          <.td(PopoverWrapper(trigger = new Date(item.time).toISOString())(
+            FlightsTable(FlightsView.Props(p.flights, Map()))
+          )),
             <.td(item.crunchDeskRec),
             <.td(
               <.input.number(
@@ -102,6 +108,6 @@ object TableTodoList {
     })
     .build
 
-  def apply(items: Seq[UserDeskRecsRow], sr: SimulationResult, stateChange: DeskRecTimeslot => Callback, editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    TodoList(TodoListProps(items, sr, stateChange, editItem, deleteItem))
+  def apply(items: Seq[UserDeskRecsRow], flights: Pot[Flights], sr: SimulationResult, stateChange: DeskRecTimeslot => Callback, editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
+    TodoList(TodoListProps(items, flights, sr, stateChange, editItem, deleteItem))
 }
