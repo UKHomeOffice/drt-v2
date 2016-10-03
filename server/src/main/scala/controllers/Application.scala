@@ -11,7 +11,7 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.{ConfigFactory, Config}
-import drt.chroma.StreamingChromaFlow
+import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.rabbit.JsonRabbit
@@ -39,15 +39,25 @@ case object GetFlights
 
 class FlightsActor extends Actor with ActorLogging {
   implicit val timeout = Timeout(5 seconds)
-  val flights = mutable.Set[ApiFlight]()
+  val flights = mutable.Map[Int, ApiFlight]()
 
   def receive = {
     case GetFlights =>
       log.info(s"Being asked for flights and I know about ${flights.size}")
-      sender ! Flights(flights.toList)
+      sender ! Flights(flights.values.toList)
     case Flights(fs) =>
       log.info(s"Adding ${fs.length} new flights")
-      flights ++= fs
+      val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
+      val existingFlightIds: Set[Int] = flights.keys.toSet
+
+      val updatingFlightIds = existingFlightIds intersect inboundFlightIds
+      val newFlightIds = inboundFlightIds diff inboundFlightIds
+
+      log.info(s"New flights ${fs.filter(newFlightIds contains _.FlightID)}")
+      log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
+      log.info(s"Updating fl ${fs.filter(updatingFlightIds contains _.FlightID)}")
+
+      flights ++= fs.map(f => (f.FlightID, f))
       log.info(s"Flights now ${flights.size}")
     case message => log.info("Actor saw" + message.toString)
   }
@@ -74,7 +84,7 @@ class Application @Inject()
       val flights: Future[Any] = flightsActorAskable ? GetFlights
       val fsFuture = flights.collect {
         case Flights(fs) =>
-          log.info(s"Got flights list ${fs}")
+//          log.info(s"Got flights list ${fs}")
           fs
       }
       fsFuture
@@ -83,12 +93,13 @@ class Application @Inject()
 
   val apiS: Api = apiService
 
-  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
+//  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
 
-//  val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
+  val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
-  val ediMapping = JsonRabbit.ediMappingAndDiff(chromaFlow)
+  val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]())
+//  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>

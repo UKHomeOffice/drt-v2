@@ -45,9 +45,12 @@ object SPAMain extends js.JSApp {
       log.info(s"was $default")
   }
 
-  SPACircuit.dispatch(RequestFlights(0, 0))
-
-  // configure the router
+  import scala.scalajs.js.timers._
+  import scala.concurrent.duration._
+  import scala.concurrent.duration.FiniteDuration
+  setInterval(FiniteDuration(10L, SECONDS)) {
+    SPACircuit.dispatch(RequestFlights(0, 0))
+  }
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
@@ -77,7 +80,13 @@ object SPAMain extends js.JSApp {
         val flightsWrapper = SPACircuit.connect(_.flights)
         val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
         val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = makeItems(queueName)
-        QueueUserDeskRecsComponent.Props(queueName, items, labels, queueCrunchResults, queueUserDeskRecs, flightsWrapper, simulationResultWrapper)
+        val airportInfo = SPACircuit.connect(_.airportInfos)
+        QueueUserDeskRecsComponent.Props(queueName,
+          items,
+          airportInfo,
+          labels,
+          queueCrunchResults,
+          queueUserDeskRecs, flightsWrapper, simulationResultWrapper)
       }
 
 

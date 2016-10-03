@@ -12,16 +12,13 @@ import spatutorial.shared.FlightsApi.Flights
 import scala.language.existentials
 import scala.scalajs.js
 
-/**
-  * Created by rich on 30/09/16.
-  */
 object FlightsTable {
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString())
     <.span(props.data.toString(), mod).render
   }
 
-  def reactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
+  def ReactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
     flights.flights.map(f => {
       js.Dynamic.literal(
         Operator = f.Operator,

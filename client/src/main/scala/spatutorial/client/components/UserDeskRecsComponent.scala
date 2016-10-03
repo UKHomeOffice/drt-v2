@@ -1,7 +1,7 @@
 package spatutorial.client.components
 
 import diode.data.Pot
-import diode.react.ModelProxy
+import diode.react.{ReactConnectProxy, ModelProxy}
 import japgolly.scalajs.react.{BackendScope, Callback, _}
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{Button, Panel}
@@ -9,7 +9,7 @@ import spatutorial.client.components.TableTodoList.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, _}
-import spatutorial.shared.SimulationResult
+import spatutorial.shared.{AirportInfo, SimulationResult}
 
 /**
   * Created by rich on 30/09/16.
@@ -19,6 +19,7 @@ object UserDeskRecsComponent {
   case class Props(queueName: QueueName,
                    items: Seq[UserDeskRecsRow],
                    flights: Pot[Flights],
+                   airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                    proxy: ModelProxy[Pot[UserDeskRecs]],
                    simulationResult: ModelProxy[Pot[SimulationResult]])
 
@@ -45,10 +46,11 @@ object UserDeskRecsComponent {
         p.simulationResult().renderReady(sr =>
           p.proxy().render(userDeskRecs => {
             log.info(s"rendering ${p.queueName} with ${userDeskRecs.items.length}")
-            <.div(^.cls := "user-desk-recs-container",
+            <.div(^.cls := "user-desk-recs-container table-responsive",
               TableTodoList(
                 p.items,
                 p.flights,
+                p.airportInfos,
                 sr,
                 item => p.proxy.dispatch(UpdateDeskRecsTime(p.queueName, item)),
                 item => editTodo(Some(item)),
@@ -73,7 +75,9 @@ object UserDeskRecsComponent {
   /** Returns a function compatible with router location system while using our own props */
   def apply(queueName: QueueName,
             items: Seq[UserDeskRecsRow],
+            airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             flights: ModelProxy[Pot[Flights]],
             proxy: ModelProxy[Pot[UserDeskRecs]],
-            simulationResult: ModelProxy[Pot[SimulationResult]]) = component(Props(queueName, items, flights.value, proxy, simulationResult))
+            simulationResult: ModelProxy[Pot[SimulationResult]]) =
+    component(Props(queueName, items, flights.value, airportInfo, proxy, simulationResult))
 }

@@ -97,50 +97,6 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
 
 }
 
-object TableTest {
-
-  object SampleData {
-
-    val personJson =
-      """
-        |[ {"fname": "Joshua", "lname": "Myers", "email": "jmyers0@trellian.com", "country": "France"},
-        | {"fname": "Gloria", "lname": "Porter", "email": "gporter1@hatena.ne.jp", "country": "Indonesia"},
-        | {"fname": "Joe", "lname": "Elliott", "email": "jelliott2@mediafire.com", "country": "Brazil"},
-        | {"fname": "Larry", "lname": "Henry", "email": "lhenry3@goo.ne.jp", "country": "Philippines"},
-        | {"fname": "Frances", "lname": "Roberts", "email": "froberts4@fema.gov", "country": "Mexico"},
-        | {"fname": "Ashley", "lname": "Turner", "email": "aturner5@paypal.com", "country": "Brazil"},
-        | {"fname": "Jeremy", "lname": "Morris", "email": "jmorris6@yale.edu", "country": "China"},
-        | {"fname": "Todd", "lname": "Carter", "email": "tcarter7@printfriendly.com", "country": "Peru"},
-        | {"fname": "Antonio", "lname": "Hart", "email": "ahart8@webs.com", "country": "Brazil"},
-        | {"fname": "Henry", "lname": "Welch", "email": "hwelch9@soup.io", "country": "Paraguay"}
-        ]""".stripMargin('|')
-  }
-
-  val data: Vector[Map[String, Any]] =
-    JsonUtil.jsonArrayToMap(SampleData.personJson)
-
-
-  val fakeData: js.Dynamic = JSON.parse(SampleData.personJson)
-
-  val columns: List[String] =
-    List("fname", "lname", "email", "country")
-
-  case class Backend($: BackendScope[_, _]) {
-    def render =
-      <.div(
-        <.h2(^.cls := "mui-font-style-headline")("Basic Table"),
-        //        CodeExample(code, "ReactTableBasic")(
-        //        <.p("hello")
-        ReactTable(data = data, columns = columns, rowsPerPage = 10)
-        //        )
-      )
-  }
-
-  val component = ReactComponentB[Unit]("plain")
-    .renderBackend[Backend]
-    .build
-}
-
 object FlightsView {
 
   import japgolly.scalajs.react.vdom.all.{onChange => _, _}

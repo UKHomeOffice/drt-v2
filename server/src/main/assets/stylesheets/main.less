@@ -199,3 +199,19 @@ h3 { margin-top: 3em; }
   height: 400px;
   overflow: scroll;
 }
+
+tr.table-warning td {
+  background-color: @alert-warning-bg;
+}
+
+td.table-info {
+  background-color: @alert-info-bg;
+}
+
+td.table-danger {
+  background-color: @alert-danger-bg;
+}
+
+tr.table-warning td.table-danger {
+  background-color: @alert-danger-bg;
+}
