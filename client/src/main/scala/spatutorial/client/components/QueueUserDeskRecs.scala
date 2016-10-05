@@ -8,7 +8,7 @@ import org.scalajs.dom.html
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName}
+import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared.{AirportInfo, CrunchResult, SimulationResult}
 
 import scala.scalajs.js
@@ -16,7 +16,7 @@ import scala.scalajs.js.annotation.ScalaJSDefined
 
 object UserDeskRecCustomComponents {
 
-  def magic(dispatch: (UpdateDeskRecsTime) => Callback)(queueName: String) = (props: js.Dynamic) => {
+  def magic(dispatch: (UpdateDeskRecsTime) => Callback)(terminalName: TerminalName, queueName: String) = (props: js.Dynamic) => {
     val data: DeskRecTimeslot = props.data.asInstanceOf[DeskRecTimeslot]
     val recommendedDesk = props.rowData.recommended_desks.toString.toInt
     log.info(s"recommndedDes ${recommendedDesk}")
@@ -30,18 +30,16 @@ object UserDeskRecCustomComponents {
         ((e: ReactEventI) => {
           e.preventDefault()
           e.stopPropagation()
-          dispatch(UpdateDeskRecsTime(queueName, DeskRecTimeslot(data.id, e.target.value.toInt)))
+          dispatch(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot(data.id, e.target.value.toInt)))
         })
     )).render
   }
-
-  def userDeskRecInput(dispatch: (UpdateDeskRecsTime) => Callback)(queueName: String): js.Function = magic(dispatch)(queueName)
-
 }
 
 object QueueUserDeskRecsComponent {
 
   case class Props(
+                    terminalName: TerminalName,
                     queueName: QueueName,
                     items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]],
                     airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -62,19 +60,6 @@ object QueueUserDeskRecsComponent {
       //        Panel(Panel.Props(props.queueName),
     ).build
 
-  def dynRow(time: String, workload: String,
-             recommended_desks: String, wait_times_with_recommended: String,
-             your_desks: DeskRecTimeslot, wait_times_with_your_desks: Int) = {
-    js.Dynamic.literal(
-      "time" -> makeDTReadable(time),
-      "workloads" -> workload,
-      "recommended_desks" -> recommended_desks,
-      "wait_times_with_recommended" -> wait_times_with_recommended,
-      "your_desks" -> your_desks,
-      "wait_times_with_your_desks" -> wait_times_with_your_desks
-    )
-  }
-
   @ScalaJSDefined
   class Row(recommended_desks: String, wait_times_with_recommended: String,
             your_desks: String, wait_times_with_your_desks: String) extends js.Object {
@@ -92,7 +77,7 @@ object QueueUserDeskRecsComponent {
                   <.div(
                     itemsmodel().renderReady(items =>
                       props.queueUserDeskRecs(
-                        queueDeskRecs => UserDeskRecsComponent(props.queueName, items,
+                        queueDeskRecs => UserDeskRecsComponent(props.terminalName, props.queueName, items,
                           props.airportInfo, flights, queueDeskRecs, srw)
                       )),
                     props.queueCrunchResults(crw => {

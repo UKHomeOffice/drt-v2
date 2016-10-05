@@ -1,8 +1,8 @@
 package spatutorial.client.components
 
 import diode.react.ReactConnectProxy
-import scala.collection.immutable
 
+import scala.collection.immutable
 import diode.data.Pot
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
@@ -14,7 +14,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.services._
 import spatutorial.shared._
-import spatutorial.shared.FlightsApi.QueueName
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.client.modules.Dashboard._
 
 object DeskRecsChart {
@@ -22,38 +22,41 @@ object DeskRecsChart {
 
   log.info("initialising deskrecschart")
 
-  case class State(crunchResultWrapper: ReactConnectProxy[QueueCrunchResults],
-                   deskRecs: ReactConnectProxy[QueueUserDeskRecs])
+  case class State(crunchResultWrapper: ReactConnectProxy[Map[TerminalName, QueueCrunchResults]],
+                   deskRecs: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]])
 
   val DeskRecs = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
     .initialState_P(props => State(props.connect(_.queueCrunchResults), props.connect(_.potUserDeskRecs)))
     .renderPS((_, proxy, state) => {
       <.div(
         proxy().queueCrunchResults.map {
-          case (queueName, queueCrunchResults) =>
-            log.info(s"rendering ${queueName}")
-            <.div(
-              queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
-              queueCrunchResults.renderReady(queueWorkload => {
-                log.info("We think crunch results are ready!!!!")
-                val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
-                //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
-                //                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
-                val workloads = proxy().workloads
-                <.div(^.key := queueName,
-                  //                  potSimulationResult.renderReady(sr => {
-                  workloads.renderReady(wl => {
-                    val labels = wl.labels
-                    Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
-                      potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
-                      potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
-                      potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
-                      deskRecsChart(queueName, labels, potCrunchResult),
-                      waitTimesChart(labels, potCrunchResult))
-                  })
-                  //                  })
-                )
-              }))
+          case (terminalName, terminalQueueCrunchResults) =>
+            terminalQueueCrunchResults.map {
+            case (queueName, queueCrunchResults) =>
+              log.info(s"rendering ${queueName}")
+              <.div(
+                queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
+                queueCrunchResults.renderReady(queueWorkload => {
+                  log.info("We think crunch results are ready!!!!")
+                  val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
+                  //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
+                  //                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
+                  val workloads = proxy().workloads
+                  <.div(^.key := queueName,
+                    //                  potSimulationResult.renderReady(sr => {
+                    workloads.renderReady(wl => {
+                      val labels = wl.labels
+                      Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
+                        potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
+                        potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
+                        potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
+                        deskRecsChart(queueName, labels, potCrunchResult),
+                        waitTimesChart(labels, potCrunchResult))
+                    })
+                    //                  })
+                  )
+                }))
+          }
         })
     }
 

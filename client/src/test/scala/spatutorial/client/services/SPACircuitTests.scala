@@ -3,23 +3,25 @@ package spatutorial.client.services
 import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
-import spatutorial.shared.FlightsApi.{Flights, QueueName}
+import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Map
+
+import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
     'DeskRecHandler - {
 
       val queueName: QueueName = "eeaDesk"
-      val model = Map(queueName -> Ready(UserDeskRecs(Seq(
+      val terminalName: TerminalName = "T1"
+      val model = Map(terminalName -> Map(queueName -> Ready(UserDeskRecs(Seq(
         DeskRecTimeslot("1", 30),
         DeskRecTimeslot("2", 30),
         DeskRecTimeslot("3", 30),
         DeskRecTimeslot("4", 30)
-      ))))
+      )))))
 
       val newTodos = Seq(
         DeskRecTimeslot("3", 15)
@@ -29,17 +31,17 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateAllTodos - {
         val h = build
-        val result = h.handle(UpdateQueueUserDeskRecs(queueName, newTodos))
-        val expected = ModelUpdate(Map(queueName -> Ready(UserDeskRecs(newTodos))))
+        val result = h.handle(UpdateQueueUserDeskRecs(terminalName, queueName, newTodos))
+        val expected = ModelUpdate(Map(terminalName -> Map(queueName -> Ready(UserDeskRecs(newTodos)))))
         assert(result == expected)
       }
 
-      'UpdateTodo - {
+      'UpdateDeskRecInModel - {
         val h = build
-        val result = h.handle(UpdateDeskRecsTime(queueName, DeskRecTimeslot("4", 25)))
+        val result = h.handle(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot("4", 25)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
-            val newUserDeskRecs: UserDeskRecs = newValue(queueName).get
+            val newUserDeskRecs: UserDeskRecs = newValue(terminalName)(queueName).get
             assert(newUserDeskRecs.items.size == 4)
             assert(newUserDeskRecs.items(3).id == "4")
             assert(newUserDeskRecs.items(3).deskRec == 25)
@@ -148,26 +150,65 @@ object SPACircuitTests extends TestSuite {
       }
     }
 
-  'SPACircuitHandler - {
-    "Model workloads update" - {
-      val model = RootModel()
-      val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-      val res = handler.apply(
-        model,
-        UpdateWorkloads(
-          Map("T1" ->
-            (Map("eeaGate" ->
-              (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+    'SPACircuitHandler - {
+      "Model workloads update" - {
+        val model = RootModel()
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateWorkloads(
+            Map("T1" ->
+              (Map("eeaGate" ->
+                (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
-      val expected = RootModel().copy(
-        workload = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+        val expected = RootModel().copy(
+          workload = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
-      res match {
-        case Some(ModelUpdateEffect(newValue, effects)) => 
-          assert(newValue == expected) 
-        case default => assert(false)
+        res match {
+          case Some(ModelUpdateEffect(newValue, effects)) =>
+            assert(newValue == expected)
+          case default => assert(false)
+        }
+      }
+      "Update crunch results" - {
+        val model = RootModel()
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateCrunchResult("A1", "EEA", CrunchResult(IndexedSeq(33), Seq(29))))
+
+        val expected = RootModel().copy(
+          queueCrunchResults = Map("A1" -> Map(
+                "EEA" -> Ready(
+                  (
+                    Ready(
+                      CrunchResult(
+                        Vector(33), List(29)
+                      )
+                    ),
+                    Ready(
+                      UserDeskRecs(
+                        List(
+                          DeskRecTimeslot("0", 33)
+                        )
+                      )
+                    )
+                    )
+                )
+              )),
+          userDeskRec =  Map("A1" -> Map("EEA" -> Ready(
+                UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+              ))
+            )
+        println(expected)
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
       }
     }
-  }
   }
 }

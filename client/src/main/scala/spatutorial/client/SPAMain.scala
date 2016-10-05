@@ -16,7 +16,7 @@ import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services._
 import spatutorial.shared.{CrunchResult, DeskRec, SimulationResult}
-import spatutorial.shared.FlightsApi.QueueName
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 
 import scala.collection.immutable.{IndexedSeq, NumericRange}
 import scala.scalajs.js
@@ -48,6 +48,7 @@ object SPAMain extends js.JSApp {
   import scala.scalajs.js.timers._
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
+
   setInterval(FiniteDuration(10L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))
   }
@@ -73,20 +74,24 @@ object SPAMain extends js.JSApp {
     val todosRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
       val queues: Seq[QueueName] = Seq(eeadesk, egate)
-      val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = queues.map { queueName =>
-        val labels: ReactConnectProxy[Pot[IndexedSeq[String]]] = SPACircuit.connect(_.workload.map(_.labels))
-        val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(queueName, Empty).flatMap(_._1))
-        val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(queueName, Empty))
-        val flightsWrapper = SPACircuit.connect(_.flights)
-        val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(queueName, Empty))
-        val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = makeItems(queueName)
-        val airportInfo = SPACircuit.connect(_.airportInfos)
-        QueueUserDeskRecsComponent.Props(queueName,
-          items,
-          airportInfo,
-          labels,
-          queueCrunchResults,
-          queueUserDeskRecs, flightsWrapper, simulationResultWrapper)
+      val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
+      val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = terminalNames.flatMap { terminalName =>
+        queues.map { queueName =>
+          val labels: ReactConnectProxy[Pot[IndexedSeq[String]]] = SPACircuit.connect(_.workload.map(_.labels))
+          val queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty).flatMap(_._1))
+          val queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]] = SPACircuit.connect(_.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
+          val flightsWrapper = SPACircuit.connect(_.flights)
+          val simulationResultWrapper = SPACircuit.connect(_.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
+          val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = makeItems(terminalName, queueName)
+          val airportInfo = SPACircuit.connect(_.airportInfos)
+          QueueUserDeskRecsComponent.Props(terminalName,
+            queueName,
+            items,
+            airportInfo,
+            labels,
+            queueCrunchResults,
+            queueUserDeskRecs, flightsWrapper, simulationResultWrapper)
+        }
       }
 
 
@@ -101,16 +106,16 @@ object SPAMain extends js.JSApp {
     (dashboardRoute | flightsRoute | todosRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
-  def makeItems(queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {
+  def makeItems(terminalName: TerminalName, queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {
     def defaultSimulationResult: Ready[SimulationResult] = Ready(
       SimulationResult(List.fill(1440)(0).map(v => DeskRec(v.toLong, v)).toIndexedSeq,
         List.fill(1440)(0)))
     val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {
         times <- model.workload.map(_.timeStamps)
-        qcr <- model.queueCrunchResults.getOrElse(queueName, Empty)
-        qur <- model.userDeskRec.getOrElse(queueName, Empty)
-        simres <- model.simulationResult.getOrElse(queueName, defaultSimulationResult)
+        qcr <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        qur <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        simres <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, defaultSimulationResult)
         potcr = qcr._1
         potdr = qcr._2
         cr <- potcr

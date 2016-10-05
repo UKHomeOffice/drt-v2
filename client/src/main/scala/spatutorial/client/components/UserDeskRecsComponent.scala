@@ -16,7 +16,9 @@ import spatutorial.shared.{AirportInfo, SimulationResult}
   */
 object UserDeskRecsComponent {
 
-  case class Props(queueName: QueueName,
+  case class Props(
+                   terminalName: TerminalName,
+                   queueName: QueueName,
                    items: Seq[UserDeskRecsRow],
                    flights: Pot[Flights],
                    airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -52,14 +54,14 @@ object UserDeskRecsComponent {
                 p.flights,
                 p.airportInfos,
                 sr,
-                item => p.proxy.dispatch(UpdateDeskRecsTime(p.queueName, item)),
+                item => p.proxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
                 item => editTodo(Some(item)),
                 item => p.proxy.dispatch(DeleteTodo(item))))
           })),
         p.proxy().render(todos =>
           Button(
             Button.Props(
-              p.proxy.dispatch(RunSimulation(p.queueName, Nil, todos.items.map(_.deskRec).toList))),
+              p.proxy.dispatch(RunSimulation(p.terminalName, p.queueName, Nil, todos.items.map(_.deskRec).toList))),
             Icon.play,
             "Run Simulation"
           ))))
@@ -73,11 +75,13 @@ object UserDeskRecsComponent {
     .build
 
   /** Returns a function compatible with router location system while using our own props */
-  def apply(queueName: QueueName,
+  def apply(
+            terminalName: TerminalName,
+            queueName: QueueName,
             items: Seq[UserDeskRecsRow],
             airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             flights: ModelProxy[Pot[Flights]],
             proxy: ModelProxy[Pot[UserDeskRecs]],
             simulationResult: ModelProxy[Pot[SimulationResult]]) =
-    component(Props(queueName, items, flights.value, airportInfo, proxy, simulationResult))
+    component(Props(terminalName, queueName, items, flights.value, airportInfo, proxy, simulationResult))
 }

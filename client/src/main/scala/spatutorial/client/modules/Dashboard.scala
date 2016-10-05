@@ -31,9 +31,9 @@ object Dashboard {
   type QueueUserDeskRecs = Map[String, Pot[UserDeskRecs]]
 
   case class DashboardModels(workloads: Pot[Workloads],
-                             queueCrunchResults: QueueCrunchResults,
-                             potSimulationResult: QueueSimulationResults,
-                             potUserDeskRecs: QueueUserDeskRecs
+                             queueCrunchResults: Map[TerminalName, QueueCrunchResults],
+                             potSimulationResult: Map[TerminalName, QueueSimulationResults],
+                             potUserDeskRecs: Map[TerminalName, QueueUserDeskRecs]
                             )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
@@ -42,9 +42,9 @@ object Dashboard {
 
 
   case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
-                   crunchResultWrapper: ReactConnectProxy[QueueCrunchResults],
-                   simulationResultWrapper: ReactConnectProxy[QueueSimulationResults],
-                   userDeskRecsWrapper: ReactConnectProxy[QueueUserDeskRecs]
+                   crunchResultWrapper: ReactConnectProxy[Map[TerminalName, QueueCrunchResults]],
+                   simulationResultWrapper: ReactConnectProxy[Map[TerminalName, QueueSimulationResults]],
+                   userDeskRecsWrapper: ReactConnectProxy[Map[TerminalName,QueueUserDeskRecs]]
                   )
 
   def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
