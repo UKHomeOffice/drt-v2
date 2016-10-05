@@ -1,22 +1,21 @@
 package spatutorial.client.components
 
-import diode.Action
+import diode.react.ReactConnectProxy
+import scala.collection.immutable
+
 import diode.data.Pot
-import diode.react.{ModelProxy, ReactConnectProxy}
-import japgolly.scalajs.react
+import diode.react.ModelProxy
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.DomCallbackResult._
 import japgolly.scalajs.react.vdom.prefix_<^._
-import japgolly.scalajs.react.{Callback, ReactComponentB, _}
+import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.Bootstrap.Panel.Props
-import spatutorial.client.components.Bootstrap.{Button, CommonStyle, Panel}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
-import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.QueueName
 import spatutorial.shared._
-
-import scala.collection.immutable
+import spatutorial.shared.FlightsApi.QueueName
+import spatutorial.client.modules.Dashboard._
 
 object DeskRecsChart {
   type DeskRecsModel = DashboardModels

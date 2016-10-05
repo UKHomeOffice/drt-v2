@@ -23,6 +23,7 @@ import services.ApiService
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared.{ApiFlight, Api}
 import spray.http._
+import scala.language.postfixOps
 
 //import scala.collection.immutable.Seq
 import scala.collection.mutable
@@ -63,9 +64,9 @@ class FlightsActor extends Actor with ActorLogging {
   }
 }
 
-class Application @Inject()
-(
-  implicit val config: Configuration,
+class Application @Inject() (
+  implicit
+  val config: Configuration,
   implicit val mat: Materializer,
   env: Environment,
   system: ActorSystem,
@@ -84,7 +85,7 @@ class Application @Inject()
       val flights: Future[Any] = flightsActorAskable ? GetFlights
       val fsFuture = flights.collect {
         case Flights(fs) =>
-//          log.info(s"Got flights list ${fs}")
+          //          log.info(s"Got flights list ${fs}")
           fs
       }
       fsFuture
@@ -93,13 +94,13 @@ class Application @Inject()
 
   val apiS: Api = apiService
 
-//  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
+  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
 
-  val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
+  // val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
   val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]())
-//  JsonRabbit.ediMappingAndDiff(chromaFlow)
+  //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
@@ -125,8 +126,9 @@ class Application @Inject()
           IATA = flight.IATA,
           Origin = flight.Origin,
           SchDT = flight.SchDT,
-          PcpTime = pcpTime)}
-      ).toList)
+          PcpTime = pcpTime
+        )
+      }).toList)
   }
 
   val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
@@ -147,10 +149,10 @@ class Application @Inject()
       Router.route[Api](apiService)(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
       ).map(buffer => {
-        val data = Array.ofDim[Byte](buffer.remaining())
-        buffer.get(data)
-        Ok(data)
-      })
+          val data = Array.ofDim[Byte](buffer.remaining())
+          buffer.get(data)
+          Ok(data)
+        })
   }
 
   def logging = Action(parse.anyContent) {

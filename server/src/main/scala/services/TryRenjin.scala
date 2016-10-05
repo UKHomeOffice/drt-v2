@@ -50,7 +50,6 @@ object TryRenjin {
 
     def runSimulation(deskRecsScala: Seq[Int], desks: String): Seq[Int] = {
       engine.eval("processed <- process.work(w, " + desks + ", 25, 0)")
-      println("getting Processed$wait")
       val waitR = engine.eval("processed$wait").asInstanceOf[IntVector]
       println(s"got $waitR")
       val waitTimes: IndexedSeq[Int] = (0 until waitR.length()) map (waitR.getElementAsInt(_))

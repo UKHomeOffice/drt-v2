@@ -52,13 +52,14 @@ object GriddleComponentWrapper {
 @ScalaJSDefined
 class RowMetaData(val key: String) extends js.Object
 
-case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
-                                   columns: Seq[String],
-                                   columnMeta: Option[Seq[ColumnMeta]] = None,
-                                   rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
-                                   showSettings: Boolean = true,
-                                   showFilter: Boolean = true
-                                  ) {
+case class GriddleComponentWrapper(
+  results: js.Any, //Seq[Map[String, Any]],
+  columns: Seq[String],
+  columnMeta: Option[Seq[ColumnMeta]] = None,
+  rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
+  showSettings: Boolean = true,
+  showFilter: Boolean = true
+) {
   def toJS = {
     val p = js.Dynamic.literal()
     p.updateDynamic("results")(results)
@@ -68,7 +69,6 @@ case class GriddleComponentWrapper(results: js.Any, //Seq[Map[String, Any]],
     p.updateDynamic("rowMetadata")(rowMetaData)
     p.updateDynamic("showPager")(false)
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
-
 
     fixWeirdCharacterEncoding(p)
 
@@ -104,16 +104,25 @@ object FlightsView {
   import scala.scalajs.js
   import scala.language.existentials
 
-  case class Props(flightsModelProxy: Pot[Flights],
-                   airportInfoProxy: Map[String, Pot[AirportInfo]])
+  case class Props(
+    flightsModelProxy: Pot[Flights],
+    airportInfoProxy: Map[String, Pot[AirportInfo]]
+  )
 
-  case class State(flights: ReactConnectProxy[Pot[Flights]],
-                   airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]])
+  case class State(
+    flights: ReactConnectProxy[Pot[Flights]],
+    airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
+  )
 
   val component = ReactComponentB[Props]("Flights")
     .render_P((props) => {
-      Panel(Panel.Props("Flights"),
-        <.h2("Flights"), FlightsTable(props))
+      <.div(
+        <.h2("Flights"),
+        Panel(
+          Panel.Props("Flights"),
+          FlightsTable(props)
+        )
+      )
     }).build
 
   def apply(props: Props): ReactComponentU[Props, Unit, Unit, TopNode] = component(props)

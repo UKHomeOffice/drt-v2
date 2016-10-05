@@ -6,7 +6,7 @@ import diode.data._
 import spatutorial.shared.FlightsApi.{Flights, QueueName}
 import spatutorial.shared._
 import utest._
-
+import scala.collection.immutable.Seq
 import scala.collection.immutable.Map
 
 object SPACircuitTests extends TestSuite {
@@ -15,14 +15,14 @@ object SPACircuitTests extends TestSuite {
 
       val queueName: QueueName = "eeaDesk"
       val model = Map(queueName -> Ready(UserDeskRecs(Seq(
-        DeskRecTimeslot("1", "20160901T10:00", 0, 30),
-        DeskRecTimeslot("2", "20160901T10:01", 0, 30),
-        DeskRecTimeslot("3", "20160901T10:02", 0, 30),
-        DeskRecTimeslot("4", "20160901T10:03", 0, 30)
+        DeskRecTimeslot("1", 30),
+        DeskRecTimeslot("2", 30),
+        DeskRecTimeslot("3", 30),
+        DeskRecTimeslot("4", 30)
       ))))
 
       val newTodos = Seq(
-        DeskRecTimeslot("3", "20160901T10:02", 0, 15)
+        DeskRecTimeslot("3", 15)
       )
 
       def build = new DeskTimesHandler(new RootModelRW(model))
@@ -30,12 +30,13 @@ object SPACircuitTests extends TestSuite {
       'UpdateAllTodos - {
         val h = build
         val result = h.handle(UpdateQueueUserDeskRecs(queueName, newTodos))
-        assert(result == ModelUpdate(Ready(UserDeskRecs(newTodos))))
+        val expected = ModelUpdate(Map(queueName -> Ready(UserDeskRecs(newTodos))))
+        assert(result == expected)
       }
 
       'UpdateTodo - {
         val h = build
-        val result = h.handle(UpdateDeskRecsTime(queueName, DeskRecTimeslot("4", "20160901T10:03", 0, 25)))
+        val result = h.handle(UpdateDeskRecsTime(queueName, DeskRecTimeslot("4", 25)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
             val newUserDeskRecs: UserDeskRecs = newValue(queueName).get
@@ -146,5 +147,27 @@ object SPACircuitTests extends TestSuite {
         def build = new FlightsHandler(new RootModelRW[Pot[Flights]](model))
       }
     }
+
+  'SPACircuitHandler - {
+    "Model workloads update" - {
+      val model = RootModel()
+      val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+      val res = handler.apply(
+        model,
+        UpdateWorkloads(
+          Map("T1" ->
+            (Map("eeaGate" ->
+              (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+
+      val expected = RootModel().copy(
+        workload = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+
+      res match {
+        case Some(ModelUpdateEffect(newValue, effects)) => 
+          assert(newValue == expected) 
+        case default => assert(false)
+      }
+    }
+  }
   }
 }

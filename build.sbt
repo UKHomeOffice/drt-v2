@@ -66,7 +66,7 @@ lazy val server = (project in file("server"))
     pipelineStages := Seq(scalaJSProd, digest, gzip),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-    resolvers += Resolver.mavenLocal,
+    resolvers += Resolver.defaultLocal,
     // compress CSS
     LessKeys.compress in Assets := true
   )

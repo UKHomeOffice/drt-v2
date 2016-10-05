@@ -4,7 +4,7 @@ import java.util.{Date, UUID}
 
 import org.slf4j.LoggerFactory
 import spatutorial.shared._
-
+import spatutorial.shared.FlightsApi._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -101,8 +101,8 @@ abstract class ApiService
 //    todos
 //  }
 
-  override def crunch(queueName: String, workloads: List[Double]): CrunchResult = {
-    println(s"Crunch requested for $queueName, ${workloads}")
+  override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
+    println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
     TryRenjin.crunch(workloads, repeat(2), repeat(25))
   }

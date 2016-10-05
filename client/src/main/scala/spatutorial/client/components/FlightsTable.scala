@@ -18,7 +18,7 @@ object FlightsTable {
     <.span(props.data.toString(), mod).render
   }
 
-  def ReactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
+  def reactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
     flights.flights.map(f => {
       js.Dynamic.literal(
         Operator = f.Operator,

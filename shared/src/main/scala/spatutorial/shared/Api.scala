@@ -2,7 +2,7 @@ package spatutorial.shared
 
 
 import scala.collection.immutable._
-import spatutorial.shared.FlightsApi.{QueueName, Flights, QueueWorkloads}
+import spatutorial.shared.FlightsApi._
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -46,6 +46,8 @@ object FlightsApi {
   case class Flights(flights: List[ApiFlight])
 
   type QueueWorkloads = (Seq[WL], Seq[Pax])
+
+  type TerminalName = String
 
   type QueueName = String
 
@@ -123,7 +125,7 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[Map[String, QueueWorkloads]]
+  def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueueWorkloads]]]
 }
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
@@ -141,7 +143,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
-  def crunch(queueName: QueueName, workloads: List[Double]): CrunchResult
+  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): CrunchResult
 
   def processWork(workloads: List[Double], desks: List[Int]): SimulationResult
 }

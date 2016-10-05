@@ -2,13 +2,10 @@ package spatutorial.client.modules
 
 import diode.data.Pot
 import diode.react._
-import diode.util._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.Frag
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, UserDeskRecommendationsLoc}
-import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
@@ -81,7 +78,8 @@ object Dashboard {
   }
 
   def chartDatas(workload: Workloads): Seq[ChartDataset] = {
-    chartDataFromWorkloads(workload.workloads).zipWithIndex.map {
+    //todo add terminals
+    chartDataFromWorkloads(workload.workloads("T1")).zipWithIndex.map {
       case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))
     }.toSeq
   }
@@ -111,20 +109,34 @@ object Dashboard {
             val workloads: Pot[Workloads] = workloadsModelProxy.value
             <.div(
               workloads.renderFailed(t => <.p(t.toString())),
-              workloads.renderReady(wl => Chart(ChartProps(DeskRecsChart.takeEvery15th(wl.labels), wl))),
+              workloads.renderReady(wl => {
+                                      <.div(
+                                        <.ul(^.cls := "nav nav-pills",
+                                             wl.workloads.keys.map(
+                                               terminalName => <.li(<.a(^.cls := "active",
+                                                                        ^.href := "#",
+                                                                        terminalName)))
+                                        ),
+
+                                       <.div(
+                                        Chart(ChartProps(DeskRecsChart.takeEvery15th(wl.labels), wl)),
+                                      state.crunchResultWrapper(s =>
+                                        DeskRecsChart(props.dashboardModelProxy))))
+                                    }),
               workloads.renderPending((num) => <.div(s"waiting for workloads with ${num}")),
               workloads.renderEmpty(<.div(s"Waiting for workload")))
-          })),
-        state.workloadsWrapper(workloadsModelProxy =>
-          state.crunchResultWrapper(s =>
-            DeskRecsChart(props.dashboardModelProxy)))
-      )
+          })))
     }
     .componentDidMount(scope => mounted(scope.props))
     .build
 
   def apply(router: RouterCtl[Loc], dashboardProps: ModelProxy[DashboardModels]) = component(Props(router, dashboardProps))
 }
+
+// object DashboardTerminals {
+//  val component = ReactComponentB[Props]
+
+// }
 
 object DashboardQueue {
 

@@ -32,6 +32,7 @@ object WorkloadCalculatorTests extends TestSuite {
       ICAO = "",
       IATA = iataFlightCode,
       Origin = "",
+      PcpTime = 0,
       SchDT = scheduledDatetime
     )
 
