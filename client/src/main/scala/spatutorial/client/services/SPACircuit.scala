@@ -1,6 +1,6 @@
 package spatutorial.client.services
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, Seq}
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
@@ -58,15 +58,22 @@ case class ChangeDeskUsage(queueName: QueueName, value: String, index: Int) exte
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
 trait WorkloadsUtil {
-  def labelsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
-    val timesMin = workloads.values.flatMap(_._1.map(_.time)).min
+  def labelsFromAllQueues(startTime: Long) = {
     val oneMinute: Long = 60000
-    val allMins = timesMin until (timesMin + 60000 * 60 * 24) by oneMinute
+    val allMins = startTime until (startTime + 60000 * 60 * 24) by oneMinute
     allMins.map(new js.Date(_).toISOString())
   }
 
+  def firstFlightTimeQueue(workloads: Map[String, (Seq[WL], Seq[Pax])]): Long = {
+    workloads.values.flatMap(_._1.map(_.time)).min
+  }
+
+  def firstFlightTimeTerminal(workloads: Map[String, Map[String, (Seq[WL], Seq[Pax])]]): Long = {
+    workloads.values.map(firstFlightTimeQueue(_)).min
+  }
+
   def timeStampsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
-    val timesMin = workloads.values.flatMap(_._1.map(_.time)).min
+    val timesMin = firstFlightTimeQueue(workloads)
     val oneMinute: Long = 60000
     val allMins = timesMin until (timesMin + 60000 * 60 * 24) by oneMinute
     allMins
@@ -75,11 +82,11 @@ trait WorkloadsUtil {
 
 // The base model of our application
 case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends WorkloadsUtil {
-  def labels = labelsFromAllQueues(t1workload)
+  def labels = labelsFromAllQueues(firstFlightTimeTerminal(workloads))
 
   def timeStamps = timeStampsFromAllQueues(t1workload)
 
-  private def t1workload = { workloads("T1") }
+  private def t1workload = { workloads("A1") }
 }
 
 case class RootModel(
@@ -255,7 +262,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (QueueUserDeskRecs, Map[QueueName, Po
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
       val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._1)))
+        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._1)).toList)
 
       updated(value.copy(
         _1 = value._1 + (queueName -> Ready(newDeskRec)),

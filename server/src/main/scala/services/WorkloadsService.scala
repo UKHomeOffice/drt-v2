@@ -65,7 +65,7 @@ trait WorkloadsService extends WorkloadsApi {
     // what.map(_.toMap)
 
     val whatByMap: Future[Map[String, List[ApiFlight]]] = getFlights(0, 0).map(fs => {
-      val flightsByTerminal = fs.filterNot(_.Terminal == "FRT").groupBy(_.Terminal)
+      val flightsByTerminal = fs.filterNot(flight => Set("FRT", "ENG").contains(flight.Terminal) ).groupBy(_.Terminal)
       flightsByTerminal
     })
     val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)_

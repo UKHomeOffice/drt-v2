@@ -99,7 +99,23 @@ class Application @Inject() (
   // val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
-  val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]())
+  val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
+      csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
+        case Some(renamedTerminal) =>
+             csf.copy(Terminal = renamedTerminal)
+        case None => csf
+      })
+  )
+
+  val ArrivalsHall1 = "A1"
+  val ArrivalsHall2 = "A2"
+  val ediMapTerminals = Map(
+    "T1" -> ArrivalsHall1,
+    "T2" -> ArrivalsHall2
+  )
+  def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
+      if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
+  }
   //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {

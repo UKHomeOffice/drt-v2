@@ -6,20 +6,23 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, UserDeskRecommendationsLoc}
+import spatutorial.client.components.Chart.ChartProps
 import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, QueueWorkloads}
+import spatutorial.shared.FlightsApi.{Flights, QueueName, QueueWorkloads, TerminalName}
 import spatutorial.shared._
 
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, ScalaJSDefined}
-import scala.util.{Try, Random}
+import scala.util.{Random, Try}
 import scala.language.existentials
 import spatutorial.client.logger._
+
+import scala.Iterable
 import scala.collection.immutable.Iterable
 
 object Dashboard {
@@ -68,8 +71,7 @@ object Dashboard {
   val colors = IndexedSeq("red", "blue")
 
 
-  def ChartProps(labels: Seq[String], workload: Workloads) = {
-    val chartData: Seq[ChartDataset] = chartDatas(workload)
+  def ChartProps(labels: Seq[String], chartData: Seq[ChartDataset]) = {
     Chart.ChartProps(
       "Workloads",
       Chart.LineChart,
@@ -77,9 +79,9 @@ object Dashboard {
     )
   }
 
-  def chartDatas(workload: Workloads): Seq[ChartDataset] = {
-    //todo add terminals
-    chartDataFromWorkloads(workload.workloads("T1")).zipWithIndex.map {
+  def chartDatas(workload: Workloads, terminalName: String): Seq[ChartDataset] = {
+    log.info(s"Looking up $terminalName in ${workload.workloads.keys}")
+    chartDataFromWorkloads(workload.workloads(terminalName)).zipWithIndex.map {
       case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))
     }.toSeq
   }
@@ -110,19 +112,31 @@ object Dashboard {
             <.div(
               workloads.renderFailed(t => <.p(t.toString())),
               workloads.renderReady(wl => {
-                                      <.div(
-                                        <.ul(^.cls := "nav nav-pills",
-                                             wl.workloads.keys.map(
-                                               terminalName => <.li(<.a(^.cls := "active",
-                                                                        ^.href := "#",
-                                                                        terminalName)))
-                                        ),
-
-                                       <.div(
-                                        Chart(ChartProps(DeskRecsChart.takeEvery15th(wl.labels), wl)),
-                                      state.crunchResultWrapper(s =>
-                                        DeskRecsChart(props.dashboardModelProxy))))
-                                    }),
+                val keys: Seq[TerminalName] = wl.workloads.keys.toList
+                <.div(
+                  <.ul(^.cls := "nav nav-pills",
+                    keys.map(
+                      terminalName => <.li(<.a(^.cls := "active",
+                        ^.href := s"#$terminalName",
+                        terminalName)))
+                  ),
+                  <.div(
+                    keys.map(
+                      terminalName => {
+                        log.info(s"YEah!!! $terminalName")
+                        val every15th: Seq[String] = DeskRecsChart.takeEvery15th(wl.labels)
+                                              val datas: Seq[ChartDataset] = chartDatas(wl, terminalName)
+                                              val props1: ChartProps = ChartProps(every15th, datas)
+                                              <.div(
+                                                <.a(^.name := terminalName),
+                                                <.h2(terminalName),
+                                                Chart(props1),
+                                                state.crunchResultWrapper(s =>
+                                                  DeskRecsChart(props.dashboardModelProxy)))
+                      })
+                  )
+                )
+              }),
               workloads.renderPending((num) => <.div(s"waiting for workloads with ${num}")),
               workloads.renderEmpty(<.div(s"Waiting for workload")))
           })))
