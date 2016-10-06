@@ -100,7 +100,30 @@ case class RootModel(
   simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
   flights: Pot[Flights] = Empty,
   airportInfos: Map[String, Pot[AirportInfo]] = Map()
-)
+) {
+  override def toString: String =
+    s"""
+       |RootModel(
+       |motd: $motd
+       |workload: $workload
+       |queueCrunchResults: $queueCrunchResults
+       |userDeskRec: $userDeskRec
+       |simulationResult: $simulationResult
+       |flights: $flights
+       |airportInfos: $airportInfos
+       |)
+     """.stripMargin
+
+}
+object RootModel{
+
+  def mergeTerminalQueues[A](m1: Map[QueueName, Map[QueueName, A]], m2: Map[QueueName, Map[QueueName, A]]): Map[String, Map[String, A]] = {
+    val merged = m1.toSeq ++ m2.toSeq
+    val grouped = merged.groupBy(_._1)
+    val cleaned = grouped.mapValues(_.flatMap(_._2).toMap)
+    cleaned
+  }
+}
 
 case class UserDeskRecs(items: Seq[DeskRecTimeslot]) {
   def updated(newItem: DeskRecTimeslot) = {
@@ -129,15 +152,11 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
       log.info("RefreshTodos")
       //      effectOnly(Effect(AjaxClient[Api].geAllTodos().call().map(UpdateAllTodos)))
       noChange
-    case UpdateQueueUserDeskRecs(terminalName, queueName, deskRecs) =>
-      // got new deskRecs, update model
-      log.info(s"got new user desk recs update model for $queueName")
-      updated(value + (terminalName -> Map(queueName -> Ready(UserDeskRecs(deskRecs)))))
     case UpdateDeskRecsTime(terminalName, queueName, item) =>
       log.info(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
       val newDesksPot: Pot[UserDeskRecs] = value(terminalName)(queueName).map(_.updated(item))
-      updated(value + (terminalName->Map(queueName -> newDesksPot)), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+      updated(RootModel.mergeTerminalQueues(value, Map(terminalName->Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -211,7 +230,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
     case RunSimulation(terminalName, queueName, workloads, desks) =>
       log.info(s"Requesting simulation for ${queueName}")
       //todo add terminal to RunSimulation
-      val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads("T1"))(queueName)
+      val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads(terminalName))(queueName)
       //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
       log.info(s"Got workloads from model for ${queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
       effectOnly(
@@ -219,10 +238,9 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       )
     case ChangeDeskUsage(terminalName, queueName, v, k) =>
       log.info(s"Handler: ChangeDesk($queueName, $v, $k)")
-      val simModel: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]] = modelRW
-      val model: Pot[UserDeskRecs] = simModel.value(terminalName)(queueName)
+      val model: Pot[UserDeskRecs] = value(terminalName)(queueName)
       val newUserRecs: UserDeskRecs = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
-      updated(value + (terminalName -> Map(queueName -> Ready(newUserRecs))))
+      updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))
   }
 }
 
@@ -230,7 +248,7 @@ class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[Queue
   protected def handle = {
     case UpdateSimulationResult(terminalName, queueName, simResult) =>
       log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
-      updated(value + (terminalName ->Map(queueName -> Ready(simResult))))
+      updated(RootModel.mergeTerminalQueues(value, Map(terminalName ->Map(queueName -> Ready(simResult)))))
   }
 }
 
@@ -257,7 +275,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName,QueueUserDeskRecs],
     case Crunch(terminalName, queueName, workload) =>
       log.info(s"Requesting Crunch $terminalName, $queueName,  with ${workload}")
       updated(
-        value.copy(_2 = value._2 + (terminalName ->Map(queueName -> Pending()))),
+        value.copy(_2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName ->Map(queueName -> Pending())))),
         Effect(AjaxClient[Api].crunch(terminalName, queueName, workload).call().map(serverResult => UpdateCrunchResult(terminalName, queueName, serverResult))))
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
@@ -267,8 +285,8 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName,QueueUserDeskRecs],
         .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._1)).toList)
 
       updated(value.copy(
-        _1 = value._1 + (terminalName ->Map(queueName -> Ready(newDeskRec))),
-        _2 = value._2 + (terminalName ->Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec)))))
+        _1 = RootModel.mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
+        _2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName ->Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
       ))
     //        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateQueueUserDeskRecs(queueName, res))))
   }

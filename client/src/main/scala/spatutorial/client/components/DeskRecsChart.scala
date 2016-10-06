@@ -4,6 +4,7 @@ import diode.react.ReactConnectProxy
 
 import scala.collection.immutable
 import diode.data.Pot
+//import diode.react.ReactPot._
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.DomCallbackResult._
@@ -32,31 +33,31 @@ object DeskRecsChart {
         proxy().queueCrunchResults.map {
           case (terminalName, terminalQueueCrunchResults) =>
             terminalQueueCrunchResults.map {
-            case (queueName, queueCrunchResults) =>
-              log.info(s"rendering ${queueName}")
-              <.div(
-                queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
-                queueCrunchResults.renderReady(queueWorkload => {
-                  log.info("We think crunch results are ready!!!!")
-                  val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
-                  //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
-                  //                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
-                  val workloads = proxy().workloads
-                  <.div(^.key := queueName,
-                    //                  potSimulationResult.renderReady(sr => {
-                    workloads.renderReady(wl => {
-                      val labels = wl.labels
-                      Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
-                        potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
-                        potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
-                        potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
-                        deskRecsChart(queueName, labels, potCrunchResult),
-                        waitTimesChart(labels, potCrunchResult))
-                    })
-                    //                  })
-                  )
-                }))
-          }
+              case (queueName, queueCrunchResults) =>
+                log.info(s"rendering ${queueName}")
+                <.div(
+                  queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
+                  queueCrunchResults.renderReady(queueWorkload => {
+                    log.info("We think crunch results are ready!!!!")
+                    val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
+                    //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
+                    //                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
+                    val workloads = proxy().workloads
+                    <.div(^.key := queueName,
+                      //                  potSimulationResult.renderReady(sr => {
+                      workloads.renderReady(wl => {
+                        val labels = wl.labels
+                        Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
+                          potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
+                          potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
+                          potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
+                          deskRecsChart(queueName, labels, potCrunchResult),
+                          waitTimesChart(labels, potCrunchResult))
+                      })
+                      //                  })
+                    )
+                  }))
+            }
         })
     }
 
@@ -86,29 +87,32 @@ object DeskRecsChart {
 
   def userSimulationWaitTimesChart(queueName: QueueName,
                                    labels: IndexedSeq[String],
-                                   simulationResult: ModelProxy[Pot[SimulationResult]],
+                                   blah: ModelProxy[Pot[SimulationResult]],
                                    crunchResult: ModelProxy[Pot[CrunchResult]]) = {
     val component = ReactComponentB[UserSimulationProps]("UserSimulationChart").render_P(props => {
       val proxy: Pot[SimulationResult] = props.simulationResult()
-      if (proxy.isReady) {
+      val ready: TagMod = proxy.renderReady(simulationResult => {
         val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
         val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
         val sampledLabels = takeEvery15th(labels)
-        Chart(
-          Chart.ChartProps("Simulated Wait Times",
-            Chart.LineChart,
-            ChartData(sampledLabels,
-              Seq(
-                ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "red"),
-                ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0.8)",
-                  borderColor = "rgba(10,10, 55, 0.8)")))
-          ))
-      } else {
-        <.p("waiting for data")
-      }
+        <.div(
+          Chart(
+            Chart.ChartProps("Simulated Wait Times",
+              Chart.LineChart,
+              ChartData(sampledLabels,
+                Seq(
+                  ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "red"),
+                  ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0.8)",
+                    borderColor = "rgba(10,10, 55, 0.8)")))
+            )))
+      })
+      <.div(
+        ready,
+        proxy.renderEmpty(s"No simulation run yet."),
+        proxy.renderPending(time => <.p(s"waiting for data, been waiting $time")))
     }).build
 
-    component(UserSimulationProps(simulationResult, crunchResult))
+    component(UserSimulationProps(blah, crunchResult))
   }
 
 

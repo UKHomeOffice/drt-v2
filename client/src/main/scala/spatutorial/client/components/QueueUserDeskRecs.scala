@@ -5,6 +5,7 @@ import diode.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{ReactComponentB, _}
 import org.scalajs.dom.html
+import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
@@ -74,7 +75,7 @@ object QueueUserDeskRecsComponent {
             props.flights((flights: ModelProxy[Pot[Flights]]) =>
               props.items((itemsmodel: ModelProxy[Pot[List[UserDeskRecsRow]]]) =>
                 props.simulationResultWrapper(srw => {
-                  <.div(
+                  Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),
                     itemsmodel().renderReady(items =>
                       props.queueUserDeskRecs(
                         queueDeskRecs => UserDeskRecsComponent(props.terminalName, props.queueName, items,
