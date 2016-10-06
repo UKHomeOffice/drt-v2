@@ -17,7 +17,7 @@ import scala.util.Try
 
 
 trait AirportToCountryLike {
-  lazy val airportInfo: Seq[AirportInfo] = {
+  lazy val airportInfo: Map[String, AirportInfo] = {
     val bufferedSource = scala.io.Source.fromURL(
       getClass.getResource("/airports.dat"))(Codec.UTF8)
     bufferedSource.getLines().map { l =>
@@ -31,14 +31,14 @@ trait AirportToCountryLike {
         println(s"boo ${l}");
         AirportInfo("failed on", l, "boo", "ya")
       })
-    }.toList
+    }.map( ai => (ai.code, ai)).toMap
   }
 
   def stripQuotes(row1: String): String = {
     row1.substring(1, row1.length - 1)
   }
 
-  def airportInfoByAirportCode(code: String) = Future(airportInfo.find(_.code == code))
+  def airportInfoByAirportCode(code: String) = Future(airportInfo.get(code))
 
 }
 
