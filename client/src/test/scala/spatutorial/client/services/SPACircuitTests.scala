@@ -29,13 +29,6 @@ object SPACircuitTests extends TestSuite {
 
       def build = new DeskTimesHandler(new RootModelRW(model))
 
-      'UpdateAllTodos - {
-        val h = build
-        val result = h.handle(UpdateQueueUserDeskRecs(terminalName, queueName, newTodos))
-        val expected = ModelUpdate(Map(terminalName -> Map(queueName -> Ready(UserDeskRecs(newTodos)))))
-        assert(result == expected)
-      }
-
       'UpdateDeskRecInModel - {
         val h = build
         val result = h.handle(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot("4", 25)))
@@ -217,7 +210,6 @@ object SPACircuitTests extends TestSuite {
             UserDeskRecs(List(DeskRecTimeslot("0", 33))))
           ))
         )
-        println(expected)
         res match {
           case Some(ModelUpdate(newValue)) =>
             assert(newValue == expected)
@@ -226,6 +218,317 @@ object SPACircuitTests extends TestSuite {
             assert(false)
         }
       }
+      "Given a model that already has a crunch result for a queue," +
+        " when we apply the results for a new queue then we should see both existing queue and new queue" - {
+        val model = RootModel().copy(
+          queueCrunchResults = Map("A1" -> Map(
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+          )),
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(
+            UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+          ))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateCrunchResult("A1", "eGates", CrunchResult(IndexedSeq(33), Seq(29))))
+
+        val expected = RootModel().copy(
+          queueCrunchResults = Map("A1" -> Map(
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))))),
+            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+          )),
+          userDeskRec = Map("A1" -> Map(
+            "EEA" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))),
+            "eGates" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+        )
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given a model that already has a crunch result for 2 queues," +
+        " when we apply an update for one queue then we should see both existing queue and updated queue" - {
+        val model = RootModel().copy(
+          queueCrunchResults = Map("A1" -> Map(
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))))),
+            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+          )),
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(
+            UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+          ))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateCrunchResult("A1", "eGates", CrunchResult(IndexedSeq(22), Seq(23))))
+
+        val expected = RootModel().copy(
+          queueCrunchResults = Map("A1" -> Map(
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))))),
+            "eGates" -> Ready((Ready(CrunchResult(Vector(22), List(23))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 22))))))
+          )),
+          userDeskRec = Map("A1" -> Map(
+            "EEA" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))),
+            "eGates" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 22))))))
+        )
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given an empty model when we run a simulation, then the result of the simulation should be in the model" - {
+        val model = RootModel()
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateSimulationResult("A1", "eGates", SimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
+
+        val expected = RootModel().copy(
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(100, 10)), List(23)))))
+        )
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given a model with an existing simulation, when we run a simulation, then the new results should be in the model" - {
+        val model = RootModel().copy(
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateSimulationResult("A1", "eGates", SimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
+
+        val expected = RootModel().copy(
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(100, 10)), List(23)))))
+        )
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given a model with an existing simulation desk, when we run a simulation on a different desk," +
+        " then both desks should be in the model" - {
+        val model = RootModel().copy(
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(
+          model,
+          UpdateSimulationResult("A1", "EEA", SimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
+
+        val expected = RootModel().copy(
+          simulationResult = Map("A1" -> Map(
+            "eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))),
+            "EEA" -> Ready(SimulationResult(Vector(DeskRec(100, 10)), List(23))))
+          ))
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given a model with user desk recs, when we update a user desk rec, then that value should be updated in the model" - {
+        val model = RootModel().copy(
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5))))))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
+
+        val expected = RootModel().copy(
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 6))))))
+        )
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given a model with two queues of desk recs, when we update one of them, then we should see desk recs for both queues with the updated values" - {
+        val model = RootModel().copy(
+          userDeskRec = Map("A1" -> Map(
+            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5)))),
+            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5))))
+          ))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
+
+        val expected = RootModel().copy(
+          userDeskRec = Map("A1" -> Map(
+            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 6)))),
+            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5))))
+          ))
+        )
+        res match {
+          case Some(ModelUpdate(newValue)) =>
+            assert(newValue == expected)
+          case default =>
+            println(default)
+            assert(false)
+        }
+      }
+      "Given a model with user desk recs, when we update UserDeskRecsTime then we should see updated wait times" - {
+        val model = RootModel().copy(
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),
+          userDeskRec = Map("A1" -> Map("eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6))))))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(model, UpdateDeskRecsTime("A1", "eGates", DeskRecTimeslot("0", 5)))
+
+        val expected = RootModel().copy(
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),
+          userDeskRec = Map("A1" -> Map("eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 5))))))
+        )
+        res match {
+          case Some(ModelUpdateEffect(newValue, effect)) =>
+            assert(newValue == expected)
+          case default =>
+            println(s"Failure: $default")
+            assert(false)
+        }
+      }
+      "Given a model with desk recs for two queues, when we update one, we should see both queues desk recs" - {
+        val model = RootModel().copy(
+          simulationResult = Map("A1" -> Map(
+            "eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))),
+            "EEA" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))
+          )),
+          userDeskRec = Map("A1" -> Map(
+            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6)))),
+            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6))))
+          ))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(model, UpdateDeskRecsTime("A1", "eGates", DeskRecTimeslot("0", 5)))
+
+        val expected = RootModel().copy(
+          simulationResult = Map("A1" -> Map(
+            "eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))),
+            "EEA" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))
+          )),
+          userDeskRec = Map("A1" -> Map(
+            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 5)))),
+            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6))))
+          ))
+        )
+        res match {
+          case Some(ModelUpdateEffect(newValue, effect)) =>
+            assert(newValue == expected)
+          case default =>
+            println(s"Failure: $default")
+            assert(false)
+        }
+      }
+      "Given an empty model, when we get a crunch result, then we should see the result in the model" - {
+        val model = RootModel()
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(model, Crunch("A1", "eGates", List(100, 100, 100)))
+
+        res match {
+          case Some(ModelUpdateEffect(newValue, effect)) =>
+            assert(newValue.queueCrunchResults("A1").keySet == Set("eGates"))
+          case default =>
+            println(s"Failure: $default")
+            assert(false)
+        }
+      }
+      "Given a with a queueCrunchResult for EEA, when we get a crunch result eGates, then we should see both results in the model" - {
+        val model = RootModel(
+          queueCrunchResults = Map("A1" -> Map("EEA" -> Empty))
+        )
+        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+        val res = handler.apply(model, Crunch("A1", "eGates", List(100, 100, 100)))
+
+        res match {
+          case Some(ModelUpdateEffect(newValue, effect)) =>
+            assert(newValue.queueCrunchResults("A1").keySet == Set("eGates", "EEA"))
+          case default =>
+            println(s"Failure: $default")
+            assert(false)
+        }
+      }
+      import RootModel._
+      "Map merge" - {
+        val m1 = Map("T1" -> Map("EEA" -> Seq(1)))
+        val m2 = Map("T1" -> Map("eGates" -> Seq(2)))
+
+        val cleaned = mergeTerminalQueues(m1, m2)
+
+        val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(2)))
+
+        assert(expected == cleaned)
+      }
+      "Map merge 2" - {
+        val m1 = Map("T1" -> Map("eGates" -> Seq(3)))
+        val m2 = Map("T1" -> Map("EEA" -> Seq(1)))
+
+        val cleaned = mergeTerminalQueues(m1, m2)
+
+
+        val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(3)))
+        assert(expected == cleaned)
+
+      }
+      "Map merge 3" - {
+        val m1 = Map("T1" -> Map("eGates" -> Seq(3)))
+        val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
+
+        val cleaned = mergeTerminalQueues(m1, m2)
+
+        val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
+
+        assert(expected == cleaned)
+      }
+      "Map merge 4" - {
+        val m1 = Map("T1" -> Map("eGates" -> Seq(3), "EEA" -> Seq(9)))
+        val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
+
+        val cleaned = mergeTerminalQueues(m1, m2)
+
+        val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
+
+        assert(expected == cleaned)
+      }
+      "Map merge 5" - {
+        val m1 = Map("T1" -> Map("eGates" -> Seq(3), "EEA" -> Seq(9)), "T2" -> Map("eGates" -> Seq(0), "EEA" -> Seq(8)))
+        val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
+
+        val cleaned = mergeTerminalQueues(m1, m2)
+
+        val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)), "T2" -> Map("eGates" -> Seq(0), "EEA" -> Seq(8)))
+
+        assert(expected == cleaned)
+      }
+      "Map merge 6" - {
+        val m1 = Map("T1" -> Map("eGates" -> Seq(3), "EEA" -> Seq(9)), "T2" -> Map("eGates" -> Seq(0), "EEA" -> Seq(8)))
+        val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)), "T2" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
+
+        val cleaned = mergeTerminalQueues(m1, m2)
+
+        val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)), "T2" -> Map("eGates" -> Seq(1), "EEA" -> Seq(1)))
+
+        assert(expected == cleaned)
+      }
     }
   }
+
 }
