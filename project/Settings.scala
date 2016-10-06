@@ -59,6 +59,8 @@ object Settings {
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
+    "com.typesafe.akka" %% "akka-testkit" % "2.4.9" % "test",
+    "com.typesafe.akka" %% "akka-stream-testkit" % "2.4.9" % "test",
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
     "org.renjin" % "renjin-script-engine" % "0.8.2195",
     "joda-time" % "joda-time" % "2.9.4") :::

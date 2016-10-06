@@ -3,10 +3,14 @@ package services
 import spatutorial.shared._
 import utest._
 
+import akka.actor.ActorSystem
 import scala.concurrent.{Future, Await}
 import scala.util.Success
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender }
+import controllers.SystemActors
+import controllers.Core
 
 object AirportToCountryTests extends TestSuite {
   def tests = TestSuite {
@@ -40,22 +44,24 @@ object CrunchStructureTests extends TestSuite {
   }
 }
 
+object FlightCrunchInteractionTests extends TestSuite {
+  test => 
+
+  def makeSystem = {
+    new TestKit(ActorSystem()) with SystemActors with Core {
+    }
+  }
+
+  def tests = TestSuite {
+    "Given a system with flightsactor and crunch actor, flights actor can request crunch actor does a crunch"  - {
+      assert(false)
+    }
+  }
+
+}
+
 object CrunchTests extends TestSuite {
   def tests = TestSuite {
-    //    'canCrunch - {
-    //      val blockWidth = 15
-    //      val workloads = Iterator.continually(Random.nextDouble() * 20).take(100 * blockWidth).toSeq
-    //      val cr = TryRenjin.crunch(workloads)
-    //      println(cr)
-    //      assert(true)
-    //    }
-    //    'anotherOne - {
-    //      val workload = (0 until 30 * 15) map (_ => 23.0d)
-    //      val cr = TryRenjin.crunch(workload)
-    //      val cr2 = TryRenjin.crunch(workload)
-    //      val cr3 = TryRenjin.crunch(Nil)
-    //      assert(true)
-    //    }
     'canUseCsvForWorkloadInput - {
       val bufferedSource = scala.io.Source.fromURL(
         getClass.getResource("/optimiser-LHR-T2-NON-EEA-2016-09-12_121059-in-out.csv"))

@@ -31,7 +31,7 @@ trait AirportToCountryLike {
         println(s"boo ${l}");
         AirportInfo("failed on", l, "boo", "ya")
       })
-    }.map( ai => (ai.code, ai)).toMap
+    }.map(ai => (ai.code, ai)).toMap
   }
 
   def stripQuotes(row1: String): String = {
@@ -39,6 +39,18 @@ trait AirportToCountryLike {
   }
 
   def airportInfoByAirportCode(code: String) = Future(airportInfo.get(code))
+
+  def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]] = Future {
+    val res = codes.map(code =>
+      (code, airportInfo.get(code))
+    )
+    val successes: Set[(String, AirportInfo)] = res collect {
+      case (code, Some(ai)) =>
+        (code, ai)
+    }
+
+    successes.toMap
+  }
 
 }
 
@@ -50,7 +62,7 @@ abstract class ApiService
   extends Api with WorkloadsService with FlightsService with AirportToCountryLike {
 
   val log = LoggerFactory.getLogger(getClass)
-////  var todos: List[DeskRecTimeslot] = Nil
+  ////  var todos: List[DeskRecTimeslot] = Nil
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")
@@ -59,47 +71,47 @@ abstract class ApiService
     }"
   }
 
-////
-////  override def getAllTodos(): List[DeskRecTimeslot] = {
-////    // provide some fake Todos
-////    //    Thread.sleep(3000)
-////    println(s"Sending ${todos.size} Todo items")
-////    todos
-////  }
-////
-////
-////  override def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot] = {
-////    println("Setting all the todos on the server")
-////    todos = items
-////    todos
-////  }
-////
-////  // update a Todo
-////  override def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
-////    // TODO, update database etc :)
-////    if (todos.exists(_.id == item.id)) {
-////      todos = todos.collect {
-////        case i if i.id == item.id => item
-////        case i => i
-////      }
-////      println(s"Todo item was updated: $item")
-////    } else {
-////      // add a new item
-////      val newItem = item.copy(id = UUID.randomUUID().toString)
-////      todos :+= newItem
-////      println(s"Todo item was added: $newItem")
-////    }
-////    Thread.sleep(300)
-////    todos
-////  }
-//
-//  // delete a Todo
-//  override def deleteTodo(itemId: String): List[DeskRecTimeslot] = {
-//    println(s"Deleting item with id = $itemId")
-//    Thread.sleep(300)
-//    todos = todos.filterNot(_.id == itemId)
-//    todos
-//  }
+  ////
+  ////  override def getAllTodos(): List[DeskRecTimeslot] = {
+  ////    // provide some fake Todos
+  ////    //    Thread.sleep(3000)
+  ////    println(s"Sending ${todos.size} Todo items")
+  ////    todos
+  ////  }
+  ////
+  ////
+  ////  override def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot] = {
+  ////    println("Setting all the todos on the server")
+  ////    todos = items
+  ////    todos
+  ////  }
+  ////
+  ////  // update a Todo
+  ////  override def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
+  ////    // TODO, update database etc :)
+  ////    if (todos.exists(_.id == item.id)) {
+  ////      todos = todos.collect {
+  ////        case i if i.id == item.id => item
+  ////        case i => i
+  ////      }
+  ////      println(s"Todo item was updated: $item")
+  ////    } else {
+  ////      // add a new item
+  ////      val newItem = item.copy(id = UUID.randomUUID().toString)
+  ////      todos :+= newItem
+  ////      println(s"Todo item was added: $newItem")
+  ////    }
+  ////    Thread.sleep(300)
+  ////    todos
+  ////  }
+  //
+  //  // delete a Todo
+  //  override def deleteTodo(itemId: String): List[DeskRecTimeslot] = {
+  //    println(s"Deleting item with id = $itemId")
+  //    Thread.sleep(300)
+  //    todos = todos.filterNot(_.id == itemId)
+  //    todos
+  //  }
 
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
     println(s"Crunch requested for $terminalName, $queueName, ${workloads}")

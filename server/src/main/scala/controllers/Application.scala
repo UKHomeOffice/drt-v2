@@ -30,38 +30,23 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
+
+
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
 
   override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
 }
 
-case object GetFlights
+trait Core {
+  def system: ActorSystem
+}
 
-class FlightsActor extends Actor with ActorLogging {
-  implicit val timeout = Timeout(5 seconds)
-  val flights = mutable.Map[Int, ApiFlight]()
-
-  def receive = {
-    case GetFlights =>
-      log.info(s"Being asked for flights and I know about ${flights.size}")
-      sender ! Flights(flights.values.toList)
-    case Flights(fs) =>
-      log.info(s"Adding ${fs.length} new flights")
-      val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
-      val existingFlightIds: Set[Int] = flights.keys.toSet
-
-      val updatingFlightIds = existingFlightIds intersect inboundFlightIds
-      val newFlightIds = inboundFlightIds diff inboundFlightIds
-
-      log.info(s"New flights ${fs.filter(newFlightIds contains _.FlightID)}")
-      log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
-      log.info(s"Updating fl ${fs.filter(updatingFlightIds contains _.FlightID)}")
-
-      flights ++= fs.map(f => (f.FlightID, f))
-      log.info(s"Flights now ${flights.size}")
-    case message => log.info("Actor saw" + message.toString)
-  }
+trait SystemActors {
+  self: Core => 
+  val flightsActor = system.actorOf(Props(classOf[FlightsActor]), "flightsActor")
+  val crunchActor = system.actorOf(Props(classOf[CrunchActor]), "crunchActor")
+  val flightsActorAskable: AskableActorRef = flightsActor
 }
 
 class Application @Inject() (
@@ -69,13 +54,11 @@ class Application @Inject() (
   val config: Configuration,
   implicit val mat: Materializer,
   env: Environment,
-  system: ActorSystem,
+  override val system: ActorSystem,
   ec: ExecutionContext
 )
-  extends Controller {
+  extends Controller with Core with SystemActors {
   ctrl =>
-  val flightsActor = system.actorOf(Props(classOf[FlightsActor]), "flightsActor")
-  val flightsActorAskable: AskableActorRef = flightsActor
   val log = system.log
 
   val apiService = new ApiService {

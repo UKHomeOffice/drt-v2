@@ -50,17 +50,18 @@ object SPACircuitTests extends TestSuite {
             assert(false)
         }
       }
+      val timeProvider = () => 93L
 
       'AirportCountryHandler - {
         "Given no inital state " - {
           val model: Map[String, Pot[AirportInfo]] = Map.empty
-          def build = new AirportCountryHandler(new RootModelRW(model))
+          def build = new AirportCountryHandler(timeProvider, new RootModelRW(model))
           val h = build
-          "when we request a mapping we see a model change to reflect the pending state and the effect" - {
-            val result = h.handle(GetAirportInfo("BHX"))
+          "when we request  airportinfo mappings we see a model change to reflect the pending state and the effect" - {
+            val result = h.handle(GetAirportInfos(Set("BHX", "EDI")))
             result match {
               case ModelUpdateEffect(newValue, effect) =>
-                assert(newValue == Map("BHX" -> Empty)) // using Empty as Pending seems to have covariance issues, or i don't understand it
+                assert(newValue == Map("BHX" -> Pending(93L), "EDI" -> Pending(93L))) // using Empty as Pending seems to have covariance issues, or i don't understand it
                 println(effect.toString)
                 assert(effect.size == 1) //todo figure out how to mock/assert the effect
             }
@@ -72,6 +73,22 @@ object SPACircuitTests extends TestSuite {
             result match {
               case ModelUpdate(newValue) =>
                 assert(newValue == Map(("LGW" -> Ready(info))))
+              case message =>
+                println(s"Message was ${message}")
+                assert(false)
+            }
+          }
+
+          "when we update a set of ports code we see the model change " - {
+            val lgwInfo = AirportInfo("Gatwick", "Gatwick", "United Kingdom", "LGW")
+            val lhrInfo = AirportInfo("Heathrow", "Heathrow", "United Kingdom", "LHR")
+
+            val infos = Map("LGW" -> lgwInfo, "LHR" -> lhrInfo)
+
+            val result = h.handle(UpdateAirportInfos(infos))
+            result match {
+              case ModelUpdate(newValue) =>
+                assert(newValue == Map("LGW" -> Ready(lgwInfo), "LHR" -> Ready(lhrInfo)))
               case message =>
                 println(s"Message was ${message}")
                 assert(false)
@@ -93,7 +110,7 @@ object SPACircuitTests extends TestSuite {
         }
         "Given a pending request" - {
           val model: Map[String, Pot[AirportInfo]] = Map("LGW" -> Empty) //todo Empty because type reasons, try and make in Pending
-          def build = new AirportCountryHandler(new RootModelRW(model))
+          def build = new AirportCountryHandler(timeProvider, new RootModelRW(model))
           val h = build
           "when we request a mapping for the existing request we see noChange" - {
             val result = h.handle(GetAirportInfo("LGW"))
@@ -162,7 +179,7 @@ object SPACircuitTests extends TestSuite {
                 (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
         val expected = RootModel().copy(
-          workload = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+          workload = Ready(Workloads(Map("T1" -> Map("eeaGate" ->(Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
         res match {
           case Some(ModelUpdateEffect(newValue, effects)) =>
@@ -179,27 +196,27 @@ object SPACircuitTests extends TestSuite {
 
         val expected = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
-                "EEA" -> Ready(
-                  (
-                    Ready(
-                      CrunchResult(
-                        Vector(33), List(29)
-                      )
-                    ),
-                    Ready(
-                      UserDeskRecs(
-                        List(
-                          DeskRecTimeslot("0", 33)
-                        )
-                      )
+            "EEA" -> Ready(
+              (
+                Ready(
+                  CrunchResult(
+                    Vector(33), List(29)
+                  )
+                ),
+                Ready(
+                  UserDeskRecs(
+                    List(
+                      DeskRecTimeslot("0", 33)
                     )
-                    )
+                  )
                 )
-              )),
-          userDeskRec =  Map("A1" -> Map("EEA" -> Ready(
-                UserDeskRecs(List(DeskRecTimeslot("0", 33))))
-              ))
+                )
             )
+          )),
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(
+            UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+          ))
+        )
         println(expected)
         res match {
           case Some(ModelUpdate(newValue)) =>

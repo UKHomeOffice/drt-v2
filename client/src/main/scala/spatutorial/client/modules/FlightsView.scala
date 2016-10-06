@@ -68,6 +68,7 @@ case class GriddleComponentWrapper(
     p.updateDynamic("showFilter")(showFilter)
     p.updateDynamic("rowMetadata")(rowMetaData)
     p.updateDynamic("showPager")(false)
+    p.updateDynamic("resultsPerPage")(200)
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
 
     fixWeirdCharacterEncoding(p)
