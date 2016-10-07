@@ -47,7 +47,7 @@ object DeskRecsChart {
                       //                  potSimulationResult.renderReady(sr => {
                       workloads.renderReady(wl => {
                         val labels = wl.labels
-                        Panel(Panel.Props(s"Desk Recommendations and Wait times for '${queueName}'"),
+                        Panel(Panel.Props(s"Desk Recommendations and Wait times for '$terminalName' '${queueName}'"),
                           potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
                           potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
                           potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),

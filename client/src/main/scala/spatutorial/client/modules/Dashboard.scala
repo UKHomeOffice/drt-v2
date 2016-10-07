@@ -123,7 +123,6 @@ object Dashboard {
                   <.div(
                     keys.map(
                       terminalName => {
-                        log.info(s"YEah!!! $terminalName")
                         val every15th: Seq[String] = DeskRecsChart.takeEvery15th(wl.labels)
                                               val datas: Seq[ChartDataset] = chartDatas(wl, terminalName)
                                               val props1: ChartProps = ChartProps(every15th, datas)
@@ -132,7 +131,8 @@ object Dashboard {
                                                 <.h2(terminalName),
                                                 Chart(props1),
                                                 state.crunchResultWrapper(s =>
-                                                  DeskRecsChart(props.dashboardModelProxy)))
+                                                  DeskRecsChart(props.dashboardModelProxy.zoom(model => model.copy(
+                                                    queueCrunchResults = model.queueCrunchResults.filterKeys(_ == terminalName))))))
                       })
                   )
                 )
