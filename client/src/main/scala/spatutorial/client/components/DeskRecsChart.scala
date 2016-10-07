@@ -108,7 +108,6 @@ object DeskRecsChart {
       })
       <.div(
         ready,
-        proxy.renderEmpty(s"No simulation run yet."),
         proxy.renderPending(time => <.p(s"waiting for data, been waiting $time")))
     }).build
 

@@ -35,6 +35,10 @@ object UserDeskRecsComponent {
         props.proxy.dispatch(GetWorkloads("", "", "edi"))
       }
       Callback.when(props.proxy().isEmpty)(props.proxy.dispatch(RefreshTodos))
+
+      Callback.when(props.proxy().isReady)(
+        props.proxy.dispatch(RunSimulation(props.terminalName, props.queueName, Nil, props.proxy().get.items.map(_.deskRec).toList))
+      )
     }
 
     def editTodo(item: Option[DeskRecTimeslot]) =
@@ -57,14 +61,7 @@ object UserDeskRecsComponent {
                 item => p.proxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
                 item => editTodo(Some(item)),
                 item => p.proxy.dispatch(DeleteTodo(item))))
-          })),
-        p.proxy().render(todos =>
-          Button(
-            Button.Props(
-              p.proxy.dispatch(RunSimulation(p.terminalName, p.queueName, Nil, todos.items.map(_.deskRec).toList))),
-            Icon.play,
-            "Run Simulation"
-          ))))
+          }))))
   }
 
   // create the React component for To Do management
