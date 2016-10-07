@@ -47,12 +47,14 @@ object ChartData {
 @js.native
 trait ChartOptions extends js.Object {
   def responsive: Boolean = js.native
+  def animation: Boolean = false
 }
 
 object ChartOptions {
-  def apply(responsive: Boolean = true): ChartOptions = {
+  def apply(responsive: Boolean = true, animation: Boolean = false): ChartOptions = {
     js.Dynamic.literal(
-      responsive = responsive
+      responsive = responsive,
+      animation = animation
     ).asInstanceOf[ChartOptions]
   }
 }
