@@ -34,7 +34,7 @@ object DeskRecsChart {
           case (terminalName, terminalQueueCrunchResults) =>
             terminalQueueCrunchResults.map {
               case (queueName, queueCrunchResults) =>
-                log.info(s"rendering ${queueName}")
+                log.info(s"rendering ${terminalName}, ${queueName}")
                 <.div(
                   queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
                   queueCrunchResults.renderReady(queueWorkload => {

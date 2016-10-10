@@ -150,7 +150,7 @@ case class UserDeskRecs(items: Seq[DeskRecTimeslot]) {
   *
   * @param modelRW Reader/Writer to access the model
   */
-class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]]) extends ActionHandler(modelRW) {
+class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]]) extends LoggingActionHandler(modelRW) {
   override def handle = {
     case RefreshTodos =>
       log.info("RefreshTodos")
@@ -183,7 +183,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
   *
   * @param modelRW Reader/Writer to access the model
   */
-class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends ActionHandler(modelRW) {
+class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   implicit val runner = new RunAfterJS
 
   override def handle = {
@@ -200,12 +200,12 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-      log.info(s"received workloads ${terminalQueueWorkloads} from server")
+//      log.info(s"received workloads ${terminalQueueWorkloads} from server")
       val trytqes = terminalQueueWorkloads.flatMap {
         case (terminalName, queueWorkloads) =>
-          log.info(s" $terminalName, $queueWorkloads flatmapping")
+//          log.info(s" $terminalName, $queueWorkloads flatmapping")
           val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-          log.info(s"workloadsByQueue ${workloadsByQueue}")
+//          log.info(s"workloadsByQueue ${workloadsByQueue}")
           val effects = workloadsByQueue.map {
             case (queueName, queueWorkload) =>
               val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
@@ -230,7 +230,7 @@ object HandyStuff {
 }
 
 class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]])
-  extends ActionHandler(modelRW) {
+  extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(terminalName, queueName, workloads, desks) =>
       log.info(s"Requesting simulation for ${queueName}")
@@ -249,10 +249,10 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
   }
 }
 
-class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]]) extends ActionHandler(modelRW) {
+class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case UpdateSimulationResult(terminalName, queueName, simResult) =>
-      log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
+//      log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
       updated(RootModel.mergeTerminalQueues(value, Map(terminalName ->Map(queueName -> Ready(simResult)))))
   }
 }
@@ -261,7 +261,7 @@ case class RequestFlights(from: Long, to: Long) extends Action
 
 case class UpdateFlights(flights: Flights) extends Action
 
-class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends ActionHandler(modelRW) {
+class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"requeusting flights $from $to")
@@ -298,12 +298,12 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
 }
 
-class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]]) extends ActionHandler(modelRW) {
+class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
   def mkPending = Pending(timeProvider())
 
   override def handle = {
     case GetAirportInfos(codes) =>
-      log.info(s"Will request infos for $codes")
+//      log.info(s"Will request infos for $codes")
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))))
     case UpdateAirportInfos(infos) =>
@@ -341,11 +341,11 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => {
-        log.info(s"Updateing workloads to $v")
+//        log.info(s"Updateing workloads to $v")
         m.copy(workload = v)
       })),
       new CrunchHandler(zoomRW(m => (m.userDeskRec, m.queueCrunchResults))((m, v) => {
-        log.info(s"setting crunch result and userdesk recs desks in model ${v}")
+//        log.info(s"setting crunch result and userdesk recs desks in model ${v}")
         m.copy(
           userDeskRec = v._1,
           queueCrunchResults = v._2

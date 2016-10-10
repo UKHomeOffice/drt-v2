@@ -44,7 +44,7 @@ object Dashboard {
   case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
                    crunchResultWrapper: ReactConnectProxy[Map[TerminalName, QueueCrunchResults]],
                    simulationResultWrapper: ReactConnectProxy[Map[TerminalName, QueueSimulationResults]],
-                   userDeskRecsWrapper: ReactConnectProxy[Map[TerminalName,QueueUserDeskRecs]]
+                   userDeskRecsWrapper: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]]
                   )
 
   def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
@@ -55,8 +55,8 @@ object Dashboard {
       .mapValues(queue => {
         val minute0 = queue._1
         val minute1 = WorkloadsHelpers.workloadsByPeriod(queue._1, 15).toList
-        log.info(s"by 1 mins: ${minute0.take(40)}")
-        log.info(s"by 15 mins: ${minute1}")
+        //        log.info(s"by 1 mins: ${minute0.take(40)}")
+        //        log.info(s"by 15 mins: ${minute1}")
         val workloadsByMinute = minute0.map((wl) => (wl.time, wl.workload)).toMap
         val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
           (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
@@ -68,7 +68,7 @@ object Dashboard {
     queueWorkloadsByMinute
   }
 
-  val colors = IndexedSeq("red", "blue")
+  val colors = IndexedSeq("red", "blue", "green", "black")
 
 
   def ChartProps(labels: Seq[String], chartData: Seq[ChartDataset]) = {
@@ -80,7 +80,6 @@ object Dashboard {
   }
 
   def chartDatas(workload: Workloads, terminalName: String): Seq[ChartDataset] = {
-    log.info(s"Looking up $terminalName in ${workload.workloads.keys}")
     chartDataFromWorkloads(workload.workloads(terminalName)).zipWithIndex.map {
       case (qd, idx) => ChartDataset(qd._2, qd._1, borderColor = colors(idx))
     }.toSeq
@@ -103,7 +102,7 @@ object Dashboard {
     props.dashboardModelProxy.connect(_.potUserDeskRecs)
   ))
     .renderPS { (_, props, state: State) =>
-      log.info(s"evaluating dashboard ${props}:${state}")
+      //      log.info(s"evaluating dashboard ${props}:${state}")
       <.div(
         <.h2("Dashboard"),
         state.simulationResultWrapper(srw =>
@@ -112,6 +111,7 @@ object Dashboard {
             <.div(
               workloads.renderFailed(t => <.p(t.toString())),
               workloads.renderReady(wl => {
+                //                log.info(s"dashboard render ready ${wl.workloads("A1")}")
                 val keys: Seq[TerminalName] = wl.workloads.keys.toList
                 <.div(
                   <.ul(^.cls := "nav nav-pills",
@@ -124,15 +124,16 @@ object Dashboard {
                     keys.map(
                       terminalName => {
                         val every15th: Seq[String] = DeskRecsChart.takeEvery15th(wl.labels)
-                                              val datas: Seq[ChartDataset] = chartDatas(wl, terminalName)
-                                              val props1: ChartProps = ChartProps(every15th, datas)
-                                              <.div(
-                                                <.a(^.name := terminalName),
-                                                <.h2(terminalName),
-                                                Chart(props1),
-                                                state.crunchResultWrapper(s =>
-                                                  DeskRecsChart(props.dashboardModelProxy.zoom(model => model.copy(
-                                                    queueCrunchResults = model.queueCrunchResults.filterKeys(_ == terminalName))))))
+                        val datas: Seq[ChartDataset] = chartDatas(wl, terminalName)
+                        val props1: ChartProps = ChartProps(every15th, datas)
+                        <.div(
+                          <.a(^.name := terminalName),
+                          <.h2(terminalName),
+                          Chart(props1),
+                          state.crunchResultWrapper(s => {
+                            DeskRecsChart(props.dashboardModelProxy.zoom(model => model.copy(
+                              queueCrunchResults = model.queueCrunchResults.filterKeys(_ == terminalName))))
+                          }))
                       })
                   )
                 )

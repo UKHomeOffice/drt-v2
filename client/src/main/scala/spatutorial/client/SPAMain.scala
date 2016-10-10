@@ -37,6 +37,7 @@ object SPAMain extends js.JSApp {
 
   val eeadesk = "eeaDesk"
   val egate = "eGate"
+  val nonEeaDesk = "nonEeaDesk"
 
   val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
   hasWl.value match {
@@ -71,9 +72,9 @@ object SPAMain extends js.JSApp {
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
 
-    val todosRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
+    val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
-      val queues: Seq[QueueName] = Seq(eeadesk, egate)
+      val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
       val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
       val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = terminalNames.flatMap { terminalName =>
         queues.map { queueName =>
@@ -103,7 +104,7 @@ object SPAMain extends js.JSApp {
       <.div(queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
-    (dashboardRoute | flightsRoute | todosRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
+    (dashboardRoute | flightsRoute | userDeskRecsRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   def makeItems(terminalName: TerminalName, queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {

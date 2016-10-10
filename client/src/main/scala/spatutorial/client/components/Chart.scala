@@ -4,6 +4,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{Callback, ReactComponentB}
 import org.scalajs.dom.raw.HTMLCanvasElement
 import spatutorial.client.components.Bootstrap.Panel
+import spatutorial.client.logger._
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
