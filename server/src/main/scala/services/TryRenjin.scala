@@ -9,26 +9,28 @@ import spatutorial.shared.{DeskRec, SimulationResult, CrunchResult}
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
+case class OptimizerConfig(sla: Int)
+
 object TryRenjin {
   lazy val manager = new ScriptEngineManager()
-  def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int]): CrunchResult = {
+  def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): CrunchResult = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
-    optimizer.crunch(workloads, minDesks, maxDesks)
+    optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
-  def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult = {
+  def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
-    optimizer.processWork(workloads, desks)
+    optimizer.processWork(workloads, desks, config)
   }
 
   case class Optimizer(engine: ScriptEngine) {
-    def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int]): CrunchResult = {
+    def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): CrunchResult = {
 
       loadOptimiserScript
       initialiseWorkloads(workloads)
 
       engine.put("xmax", maxDesks.toArray)
       engine.put("xmin", minDesks.toArray)
-      engine.put("sla", 45)
+      engine.put("sla", config.sla)
       engine.put("weight_churn", 50)
       engine.put("weight_pax", 0.05)
       engine.put("weight_staff", 3)
@@ -37,23 +39,25 @@ object TryRenjin {
 
       val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
       val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
-      CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised"))
+      CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
     }
 
-    def processWork(workloads: Seq[Double], desks: Seq[Int]): SimulationResult = {
+    def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
       println(s"${workloads.length}, ${desks.length}")
       loadOptimiserScript
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
-      SimulationResult(desks.zipWithIndex.map(t => DeskRec(t._1, t._2)).toIndexedSeq, runSimulation(desks, "desks").toVector)
+      SimulationResult(desks.zipWithIndex.map(t => DeskRec(t._1, t._2)).toIndexedSeq, runSimulation(desks, "desks", config).toVector)
     }
 
-    def runSimulation(deskRecsScala: Seq[Int], desks: String): Seq[Int] = {
-      engine.eval("processed <- process.work(w, " + desks + ", 25, 0)")
+    def runSimulation(deskRecsScala: Seq[Int], desks: String, config: OptimizerConfig): Seq[Int] = {
+      engine.put("sla", config.sla)
+      engine.eval("processed <- process.work(w, " + desks + ", sla=sla, 0)")
+
       val waitR = engine.eval("processed$wait").asInstanceOf[IntVector]
-      println(s"got $waitR")
+
       val waitTimes: IndexedSeq[Int] = (0 until waitR.length()) map (waitR.getElementAsInt(_))
-      //    engine.eval("print(processed)")
+
       waitTimes
     }
 

@@ -234,7 +234,6 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
   protected def handle = {
     case RunSimulation(terminalName, queueName, workloads, desks) =>
       log.info(s"Requesting simulation for ${queueName}")
-      //todo add terminal to RunSimulation
       val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads(terminalName))(queueName)
       //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
       log.info(s"Got workloads from model for ${queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")

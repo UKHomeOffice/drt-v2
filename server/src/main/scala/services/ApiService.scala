@@ -71,60 +71,16 @@ abstract class ApiService
     }"
   }
 
-  ////
-  ////  override def getAllTodos(): List[DeskRecTimeslot] = {
-  ////    // provide some fake Todos
-  ////    //    Thread.sleep(3000)
-  ////    println(s"Sending ${todos.size} Todo items")
-  ////    todos
-  ////  }
-  ////
-  ////
-  ////  override def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot] = {
-  ////    println("Setting all the todos on the server")
-  ////    todos = items
-  ////    todos
-  ////  }
-  ////
-  ////  // update a Todo
-  ////  override def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot] = {
-  ////    // TODO, update database etc :)
-  ////    if (todos.exists(_.id == item.id)) {
-  ////      todos = todos.collect {
-  ////        case i if i.id == item.id => item
-  ////        case i => i
-  ////      }
-  ////      println(s"Todo item was updated: $item")
-  ////    } else {
-  ////      // add a new item
-  ////      val newItem = item.copy(id = UUID.randomUUID().toString)
-  ////      todos :+= newItem
-  ////      println(s"Todo item was added: $newItem")
-  ////    }
-  ////    Thread.sleep(300)
-  ////    todos
-  ////  }
-  //
-  //  // delete a Todo
-  //  override def deleteTodo(itemId: String): List[DeskRecTimeslot] = {
-  //    println(s"Deleting item with id = $itemId")
-  //    Thread.sleep(300)
-  //    todos = todos.filterNot(_.id == itemId)
-  //    todos
-  //  }
-
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
     println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
-    TryRenjin.crunch(workloads, repeat(2), repeat(25))
+    TryRenjin.crunch(workloads, repeat(2), repeat(25), OptimizerConfig(25))
   }
 
   override def processWork(workloads: List[Double], desks: List[Int]): SimulationResult = {
-    println(s"processWork")
-    log.info(s"ProcessWork workloads ${workloads.take(200)}")
     val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
-    log.info(s"ProcessWork desks ${desks.take(200)}")
-    TryRenjin.processWork(workloads, fulldesks)
+
+    TryRenjin.processWork(workloads, fulldesks, OptimizerConfig(25))
   }
 
 }
