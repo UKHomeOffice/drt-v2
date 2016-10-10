@@ -17,13 +17,13 @@ import spatutorial.shared.{AirportInfo, SimulationResult}
 object UserDeskRecsComponent {
 
   case class Props(
-                   terminalName: TerminalName,
-                   queueName: QueueName,
-                   items: Seq[UserDeskRecsRow],
-                   flights: Pot[Flights],
-                   airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                   proxy: ModelProxy[Pot[UserDeskRecs]],
-                   simulationResult: ModelProxy[Pot[SimulationResult]])
+                    terminalName: TerminalName,
+                    queueName: QueueName,
+                    items: Seq[UserDeskRecsRow],
+                    flights: Pot[Flights],
+                    airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+                    userDeskRecsPotProxy: ModelProxy[Pot[UserDeskRecs]],
+                    simulationResult: ModelProxy[Pot[SimulationResult]])
 
   case class State(selectedItem: Option[DeskRecTimeslot] = None, showTodoForm: Boolean = false)
 
@@ -32,12 +32,12 @@ object UserDeskRecsComponent {
       log.info("*****************UserDeskRecsComponent mounted")
       // dispatch a message to refresh the todos, which will cause TodoStore to fetch todos from the server
       Callback.when(false) {
-        props.proxy.dispatch(GetWorkloads("", "", "edi"))
+        props.userDeskRecsPotProxy.dispatch(GetWorkloads("", "", "edi"))
       }
-      Callback.when(props.proxy().isEmpty)(props.proxy.dispatch(RefreshTodos))
+      Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
 
-      Callback.when(props.proxy().isReady)(
-        props.proxy.dispatch(RunSimulation(props.terminalName, props.queueName, Nil, props.proxy().get.items.map(_.deskRec).toList))
+      Callback.when(props.userDeskRecsPotProxy().isReady)(
+        props.userDeskRecsPotProxy.dispatch(RunSimulation(props.terminalName, props.queueName, Nil, props.userDeskRecsPotProxy().get.items.map(_.deskRec).toList))
       )
     }
 
@@ -47,10 +47,10 @@ object UserDeskRecsComponent {
 
     def render(p: Props, s: State) =
       Panel(Panel.Props(s"Enter your real (or projected) desk numbers to see projected queue times for queue '${p.queueName}'"), <.div(
-        p.proxy().renderFailed(ex => "Error loading"),
-        p.proxy().renderPending(_ > 10, _ => "Loading..."),
+        p.userDeskRecsPotProxy().renderFailed(ex => "Error loading"),
+        p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
         p.simulationResult().renderReady(sr =>
-          p.proxy().render(userDeskRecs => {
+          p.userDeskRecsPotProxy().render(userDeskRecs => {
             log.info(s"rendering ${p.queueName} with ${userDeskRecs.items.length}")
             <.div(^.cls := "user-desk-recs-container table-responsive",
               TableTodoList(
@@ -58,9 +58,9 @@ object UserDeskRecsComponent {
                 p.flights,
                 p.airportInfos,
                 sr,
-                item => p.proxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
+                item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
                 item => editTodo(Some(item)),
-                item => p.proxy.dispatch(DeleteTodo(item))))
+                item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
           }))))
   }
 
