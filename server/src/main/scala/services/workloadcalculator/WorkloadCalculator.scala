@@ -4,8 +4,8 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypeAndQueueCount}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads}
-import spatutorial.shared.{ApiFlight, Pax, WL}
+import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads, TerminalName}
+import spatutorial.shared.{ApiFlight, FlightsApi, Pax, WL}
 
 import scala.collection.immutable.{IndexedSeq, Nil}
 

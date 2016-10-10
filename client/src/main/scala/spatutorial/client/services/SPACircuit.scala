@@ -96,15 +96,15 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]
 }
 
 case class RootModel(
-  //todos: Pot[UserDeskRecs],
-  motd: Pot[String] = Empty,
-  workload: Pot[Workloads] = Empty,
-  queueCrunchResults: Map[TerminalName,Map[QueueName, Pot[CrunchResultAndDeskRecs]]] = Map(),
-  userDeskRec: Map[TerminalName,QueueUserDeskRecs] = Map(),
-  simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
-  flights: Pot[Flights] = Empty,
-  airportInfos: Map[String, Pot[AirportInfo]] = Map()
-) {
+                      //todos: Pot[UserDeskRecs],
+                      motd: Pot[String] = Empty,
+                      workload: Pot[Workloads] = Empty,
+                      queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]] = Map(),
+                      userDeskRec: Map[TerminalName, QueueUserDeskRecs] = Map(),
+                      simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
+                      flights: Pot[Flights] = Empty,
+                      airportInfos: Map[String, Pot[AirportInfo]] = Map()
+                    ) {
   override def toString: String =
     s"""
        |RootModel(
@@ -119,7 +119,8 @@ case class RootModel(
      """.stripMargin
 
 }
-object RootModel{
+
+object RootModel {
 
   def mergeTerminalQueues[A](m1: Map[QueueName, Map[QueueName, A]], m2: Map[QueueName, Map[QueueName, A]]): Map[String, Map[String, A]] = {
     val merged = m1.toSeq ++ m2.toSeq
@@ -160,7 +161,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
       log.info(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
       val newDesksPot: Pot[UserDeskRecs] = value(terminalName)(queueName).map(_.updated(item))
-      updated(RootModel.mergeTerminalQueues(value, Map(terminalName->Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+      updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -200,12 +201,12 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-//      log.info(s"received workloads ${terminalQueueWorkloads} from server")
+      //      log.info(s"received workloads ${terminalQueueWorkloads} from server")
       val trytqes = terminalQueueWorkloads.flatMap {
         case (terminalName, queueWorkloads) =>
-//          log.info(s" $terminalName, $queueWorkloads flatmapping")
+          //          log.info(s" $terminalName, $queueWorkloads flatmapping")
           val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-//          log.info(s"workloadsByQueue ${workloadsByQueue}")
+          //          log.info(s"workloadsByQueue ${workloadsByQueue}")
           val effects = workloadsByQueue.map {
             case (queueName, queueWorkload) =>
               val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
@@ -237,8 +238,9 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads(terminalName))(queueName)
       //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
       log.info(s"Got workloads from model for ${queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
+      val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, workloads1, desks).call()
       effectOnly(
-        Effect(AjaxClient[Api].processWork(workloads1, desks).call().map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
+        Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )
     case ChangeDeskUsage(terminalName, queueName, v, k) =>
       log.info(s"Handler: ChangeDesk($queueName, $v, $k)")
@@ -251,8 +253,8 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
 class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case UpdateSimulationResult(terminalName, queueName, simResult) =>
-//      log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
-      updated(RootModel.mergeTerminalQueues(value, Map(terminalName ->Map(queueName -> Ready(simResult)))))
+      //      log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
+      updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 }
 
@@ -278,9 +280,10 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
   override def handle = {
     case Crunch(terminalName, queueName, workload) =>
       log.info(s"Requesting Crunch $terminalName, $queueName,  with ${workload}")
+      val crunchResult = AjaxClient[Api].crunch(terminalName, queueName, workload).call()
       updated(
-        value.copy(_2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName ->Map(queueName -> Pending())))),
-        Effect(AjaxClient[Api].crunch(terminalName, queueName, workload).call().map(serverResult => UpdateCrunchResult(terminalName, queueName, serverResult))))
+        value.copy(_2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Pending())))),
+        Effect(crunchResult.map(serverResult => UpdateCrunchResult(terminalName, queueName, serverResult))))
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
@@ -290,7 +293,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
       updated(value.copy(
         _1 = RootModel.mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
-        _2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName ->Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
+        _2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
       ))
     //        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateQueueUserDeskRecs(queueName, res))))
   }
@@ -302,7 +305,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
   override def handle = {
     case GetAirportInfos(codes) =>
-//      log.info(s"Will request infos for $codes")
+      //      log.info(s"Will request infos for $codes")
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))))
     case UpdateAirportInfos(infos) =>
@@ -340,11 +343,11 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
       new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => {
-//        log.info(s"Updateing workloads to $v")
+        //        log.info(s"Updateing workloads to $v")
         m.copy(workload = v)
       })),
       new CrunchHandler(zoomRW(m => (m.userDeskRec, m.queueCrunchResults))((m, v) => {
-//        log.info(s"setting crunch result and userdesk recs desks in model ${v}")
+        //        log.info(s"setting crunch result and userdesk recs desks in model ${v}")
         m.copy(
           userDeskRec = v._1,
           queueCrunchResults = v._2

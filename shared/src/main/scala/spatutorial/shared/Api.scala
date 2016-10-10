@@ -1,9 +1,9 @@
 package spatutorial.shared
 
-
 import scala.collection.immutable._
 import spatutorial.shared.FlightsApi._
 
+import scala.List
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -96,6 +96,15 @@ trait WorkloadsHelpers {
   def minimumMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
     workloads.flatMap(_._1.map(_.time)).min
   }
+
+  def slaFromTerminalAndQueue(terminal: String, queue: String) = (terminal, queue) match {
+    case ("A1", "eeaDesk") => 20
+    case ("A1", "eGate") => 25
+    case ("A1", "nonEeaDesk") => 45
+    case ("A2", "eeaDesk") => 20
+    case ("A2", "eGate") => 25
+    case ("A2", "nonEeaDesk") => 45
+  }
 }
 
 object WorkloadsHelpers extends WorkloadsHelpers
@@ -147,5 +156,5 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): CrunchResult
 
-  def processWork(workloads: List[Double], desks: List[Int]): SimulationResult
+  def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 }

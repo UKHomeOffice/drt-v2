@@ -3,8 +3,10 @@ package services
 import java.util.{Date, UUID}
 
 import org.slf4j.LoggerFactory
+import services.workloadcalculator.PassengerQueueTypes
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -74,13 +76,15 @@ abstract class ApiService
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
     println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
-    TryRenjin.crunch(workloads, repeat(2), repeat(25), OptimizerConfig(25))
+    val optimizerConfig = OptimizerConfig(WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName))
+    TryRenjin.crunch(workloads, repeat(2), repeat(25), optimizerConfig)
   }
 
-  override def processWork(workloads: List[Double], desks: List[Int]): SimulationResult = {
+  override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
     val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
 
-    TryRenjin.processWork(workloads, fulldesks, OptimizerConfig(25))
+    val optimizerConfig = OptimizerConfig(WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName))
+    TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
   }
 
 }

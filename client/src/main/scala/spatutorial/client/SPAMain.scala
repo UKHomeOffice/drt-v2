@@ -50,7 +50,7 @@ object SPAMain extends js.JSApp {
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
 
-  setInterval(FiniteDuration(10L, SECONDS)) {
+  setInterval(FiniteDuration(30L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))
   }
   // configure the router
