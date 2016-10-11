@@ -65,7 +65,10 @@ trait WorkloadsUtil {
   def labelsFromAllQueues(startTime: Long) = {
     val oneMinute: Long = 60000
     val allMins = startTime until (startTime + 60000 * 60 * 24) by oneMinute
-    allMins.map(new js.Date(_).toISOString())
+
+    allMins.map(millis =>
+      new js.Date(millis).toLocaleTimeString().replaceAll(":00$", "")
+    )
   }
 
   def firstFlightTimeQueue(workloads: Map[String, (Seq[WL], Seq[Pax])]): Long = {
