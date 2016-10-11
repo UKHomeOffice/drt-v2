@@ -244,16 +244,16 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(terminalName, queueName, workloads, desks) =>
-      log.info(s"Requesting simulation for ${queueName}")
+      log.info(s"Requesting simulation for $terminalName, {queueName}")
       val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads(terminalName))(queueName)
       //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
-      log.info(s"Got workloads from model for ${queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
+      log.info(s"Got workloads from model for $terminalName {queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
       val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, workloads1, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )
     case ChangeDeskUsage(terminalName, queueName, v, k) =>
-      log.info(s"Handler: ChangeDesk($queueName, $v, $k)")
+      log.info(s"Handler: ChangeDesk($terminalName, $queueName, $v, $k)")
       val model: Pot[UserDeskRecs] = value(terminalName)(queueName)
       val newUserRecs: UserDeskRecs = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
       updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))

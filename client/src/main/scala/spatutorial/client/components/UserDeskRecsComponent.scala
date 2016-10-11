@@ -11,9 +11,6 @@ import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, _}
 import spatutorial.shared.{AirportInfo, SimulationResult}
 
-/**
-  * Created by rich on 30/09/16.
-  */
 object UserDeskRecsComponent {
 
   case class Props(
@@ -51,7 +48,7 @@ object UserDeskRecsComponent {
         p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
         p.simulationResult().renderReady(sr =>
           p.userDeskRecsPotProxy().render(userDeskRecs => {
-              log.info(s"rendering ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
+              log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
               <.div(^.cls := "user-desk-recs-container table-responsive",
                 TableTodoList(
                   p.items,
