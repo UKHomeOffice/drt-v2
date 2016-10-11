@@ -54,7 +54,7 @@ object QueueUserDeskRecsComponent {
   val component = ReactComponentB[Props]("QueueUserDeskRecs")
     .render_P(props =>
       <.div(
-        ^.key := props.queueName + "-QueueUserDeskRecs",
+        ^.key := s"${props.terminalName}-${props.queueName}-QueueUserDeskRecs",
         currentUserDeskRecView(props)
       )
       //        tableUserDeskRecView(props))
@@ -69,10 +69,10 @@ object QueueUserDeskRecsComponent {
   def currentUserDeskRecView(props: Props): ReactTagOf[html.Div] = {
     <.div(
       ^.key := props.queueName,
-      props.labels(labels =>
-        props.queueUserDeskRecs(queueDeskRecs =>
-          props.queueCrunchResults(crw =>
-            props.flights((flights: ModelProxy[Pot[Flights]]) =>
+      props.flights((flights: ModelProxy[Pot[Flights]]) =>
+        props.labels(labels =>
+          props.queueUserDeskRecs(queueDeskRecs =>
+            props.queueCrunchResults(crw =>
               props.items((itemsmodel: ModelProxy[Pot[List[UserDeskRecsRow]]]) =>
                 props.simulationResultWrapper(srw => {
                   Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),

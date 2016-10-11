@@ -20,6 +20,14 @@ import spatutorial.client.logger._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
 
+
+/*
+ //BEGIN RECEIVE ORGTBL Shortcuts
+ | modes | state | output
+ | UpdateQueueUserDeskRecs | should await | nothing
+
+ //END RECEIVE ORGTBL Shortcuts
+ */
 //@JSExport
 //@ScalaJSDefined
 //class DeskRecTimeslot(val id: String, val deskRec: Int) extends js.Object {
@@ -170,14 +178,13 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
-    val triedHandler = Try(super.handleAction(model, action))
-    triedHandler match {
+    log.info(s"finding handler for ${action.toString.take(100)}")
+    Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        log.error("Exception from ${getClass}" + f.toString())
-      case _ =>
-    }
-    triedHandler match {
-      case Success(s) => s
+        log.error("Exception from ${getClass}  ${ f.toString() }")
+        throw f
+      case Success(s) =>
+        s
     }
   }
 }
@@ -272,8 +279,21 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
       effectOnly(Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights)))
     case UpdateFlights(flights) =>
       log.info(s"Client got flights! ${flights.flights.length}")
-      val codes = flights.flights.map(_.Origin).toSet
-      updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
+      val result = if (value.isReady) {
+        val oldFlights = value.get
+        val oldFlightsSet = oldFlights.flights.toSet
+        val newFlightsSet = flights.flights.toSet
+        if (oldFlightsSet != newFlightsSet) {
+          val codes = flights.flights.map(_.Origin).toSet
+          updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
+        } else {
+          noChange
+        }
+      } else {
+        noChange
+      }
+
+      result
   }
 }
 

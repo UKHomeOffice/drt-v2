@@ -74,6 +74,7 @@ object SPAMain extends js.JSApp {
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
+      log.info("running our user desk recs route")
       val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
       val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
       val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = terminalNames.flatMap { terminalName =>
@@ -101,7 +102,9 @@ object SPAMain extends js.JSApp {
       //        case default =>
       //          log.info(s"was $default")
       //      }
-      <.div(queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
+      <.div(
+        ^.key := "UserDeskRecsWrapper",
+        queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
     (dashboardRoute | flightsRoute | userDeskRecsRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
