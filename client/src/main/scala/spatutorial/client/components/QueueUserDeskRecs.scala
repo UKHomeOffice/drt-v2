@@ -82,7 +82,7 @@ object QueueUserDeskRecsComponent {
                           props.airportInfo, flights, queueDeskRecs, srw)
                       )),
                     props.queueCrunchResults(crw => {
-                      <.div(labels().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.queueName, labels, srw, crw)))
+                      <.div(labels().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, srw, crw)))
                     })
                   )
                 }))))))

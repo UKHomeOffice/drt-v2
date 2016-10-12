@@ -87,15 +87,18 @@ object DeskRecsChart {
   case class UserSimulationProps(simulationResult: ModelProxy[Pot[SimulationResult]],
                                  crunchResult: ModelProxy[Pot[CrunchResult]])
 
-  def userSimulationWaitTimesChart(queueName: QueueName,
-                                   labels: IndexedSeq[String],
-                                   blah: ModelProxy[Pot[SimulationResult]],
-                                   crunchResult: ModelProxy[Pot[CrunchResult]]) = {
+  def userSimulationWaitTimesChart(
+                                    terminalName: TerminalName,
+                                    queueName: QueueName,
+                                    labels: IndexedSeq[String],
+                                    potSimulationResultProxy: ModelProxy[Pot[SimulationResult]],
+                                    crunchResult: ModelProxy[Pot[CrunchResult]]) = {
     val component = ReactComponentB[UserSimulationProps]("UserSimulationChart").render_P(props => {
       val proxy: Pot[SimulationResult] = props.simulationResult()
       val ready: TagMod = proxy.renderReady(simulationResult => {
         val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
         val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
+        val fakeSLAData = sampledWaitTimesSimulation.map(_ => WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName).toDouble)
         val sampledLabels = takeEvery15th(labels)
         <.div(
           Chart(
@@ -103,17 +106,18 @@ object DeskRecsChart {
               Chart.LineChart,
               ChartData(sampledLabels,
                 Seq(
-                  ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "red"),
                   ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0.8)",
-                    borderColor = "rgba(10,10, 55, 0.8)")))
-            )))
+                    borderColor = "rgba(10,10, 55, 0.8)"),
+                  ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "green"),
+                  ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
+                ))))
       })
       <.div(
         ready,
         proxy.renderPending(time => <.p(s"waiting for data, been waiting $time")))
     }).build
 
-    component(UserSimulationProps(blah, crunchResult))
+    component(UserSimulationProps(potSimulationResultProxy, crunchResult))
   }
 
 
