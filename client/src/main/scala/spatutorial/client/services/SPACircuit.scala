@@ -287,10 +287,12 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
           val codes = flights.flights.map(_.Origin).toSet
           updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
         } else {
+          log.info("******** no change 1")
           noChange
         }
       } else {
-        noChange
+        val codes = flights.flights.map(_.Origin).toSet
+        updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
       }
 
       result

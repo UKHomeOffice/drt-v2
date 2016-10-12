@@ -106,8 +106,8 @@ object DeskRecsChart {
               Chart.LineChart,
               ChartData(sampledLabels,
                 Seq(
-                  ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0.8)",
-                    borderColor = "rgba(10,10, 55, 0.8)"),
+                  ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0)",
+                    borderColor = "rgba(10,10, 110, 1)"),
                   ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "green"),
                   ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
                 ))))

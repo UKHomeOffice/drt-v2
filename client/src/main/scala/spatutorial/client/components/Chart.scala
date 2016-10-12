@@ -13,18 +13,22 @@ import scala.scalajs.js.annotation.JSName
 @js.native
 trait ChartDataset extends js.Object {
   def label: String = js.native
+
   def data: js.Array[Double] = js.native
+
   def fillColor: String = js.native
+
   def strokeColor: String = js.native
 }
 
 object ChartDataset {
   def apply(data: Seq[Double],
-            label: String, backgroundColor: String = "#8080FF", borderColor: String = "#404080"): ChartDataset = {
+            label: String, backgroundColor: String = "rgba(0, 0, 0, 0)", borderColor: String = "#404080"): ChartDataset = {
     js.Dynamic.literal(
       label = label,
       data = data.toJSArray,
-      borderColor = borderColor
+      borderColor = borderColor,
+      backgroundColor = backgroundColor
     ).asInstanceOf[ChartDataset]
   }
 }
@@ -32,6 +36,7 @@ object ChartDataset {
 @js.native
 trait ChartData extends js.Object {
   def labels: js.Array[String] = js.native
+
   def datasets: js.Array[ChartDataset] = js.native
 }
 
@@ -47,6 +52,7 @@ object ChartData {
 @js.native
 trait ChartOptions extends js.Object {
   def responsive: Boolean = js.native
+
   def animation: Boolean = false
 }
 
@@ -62,7 +68,9 @@ object ChartOptions {
 @js.native
 trait ChartConfiguration extends js.Object {
   def `type`: String = js.native
+
   def data: ChartData = js.native
+
   def options: ChartOptions = js.native
 }
 
@@ -94,8 +102,8 @@ object Chart {
 
   val Chart = ReactComponentB[ChartProps]("Chart")
     .render_P(p =>
-        <.canvas("width".reactAttr := p.width, "height".reactAttr := p.height)
-      )
+      <.canvas("width".reactAttr := p.width, "height".reactAttr := p.height)
+    )
     .domType[HTMLCanvasElement]
     .componentDidMount(scope => Callback {
       // access context of the canvas
