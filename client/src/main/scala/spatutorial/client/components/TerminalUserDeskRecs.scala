@@ -3,11 +3,12 @@ package spatutorial.client.components
 import diode.data.Pot
 import diode.react._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import org.scalajs.dom.html.TableHeaderCell
+import org.scalajs.dom.html.{TableCell, TableHeaderCell}
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.{DeskRecTimeslot, UserDeskRecs}
-import spatutorial.shared.{SimulationResult, AirportInfo}
+import spatutorial.shared.{AirportInfo, SimulationResult}
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.scalajs.js.Date
@@ -80,7 +81,8 @@ object TableTerminalDeskRecs {
         val trigger: String = date.toLocaleDateString() + " " + date.toLocaleTimeString().replaceAll(":00$", "")
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val popover = HoverPopover(trigger, flights, airportInfo)
-        <.div("here goes better table")
+        val fill = item.queueDetails.flatMap(q => Seq(<.td(q.crunchDeskRec), <.td(q.userDeskRec.deskRec), <.td(q.waitTimeWithCrunchDeskRec), <.td(q.waitTimeWithUserDeskRec))).toList
+        <.tr(<.td(item.time) :: fill: _*)
         //        val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         //        val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
         //        val dangerWait = if (item.waitTimeWithUserDeskRec > 25) "table-danger"

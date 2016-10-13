@@ -1,24 +1,26 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.{ModelR, UseValueEq}
+import diode.{ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, Ready}
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
+import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
-import spatutorial.client.components.{TableTerminalDeskRecs, DeskRecsChart, GlobalStyles, QueueUserDeskRecsComponent}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, QueueUserDeskRecsComponent, TableTerminalDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
+import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.{AirportInfo, CrunchResult, DeskRec, SimulationResult}
+import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 
-import scala.collection.immutable.{IndexedSeq, NumericRange}
+import scala.collection.immutable.{IndexedSeq, NumericRange, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
@@ -78,10 +80,28 @@ object SPAMain extends js.JSApp {
       log.info("routing to A1 userdeskrecs")
       val airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = SPACircuit.connect(_.airportInfos)
       val flightsWrapper = SPACircuit.connect(m => m.flights)
-      flightsWrapper(flightsProxy =>
-        <.div(
-          <.h1("A1 Desks"),
-          TableTerminalDeskRecs(Nil, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state chagne ${drt}"))))
+      val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
+      val userDeskRecWrapper = SPACircuit.connect(_.userDeskRec)
+      val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
+      val rows = Seq(TerminalUserDeskRecsRow(60000, Seq(QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1), QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1), QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1))))
+      flightsWrapper(flightsProxy => {
+        userDeskRecWrapper(userDeskRecs => {
+          val minMillis = userDeskRecs.value("A1").map(qdrt => qdrt._2.get.items.map((drts: DeskRecTimeslot) => drts.id.toLong).min).min
+          val dayOfMinutesInMillis = Seq.range(minMillis, minMillis + (60 * 60 * 24 * 1000), 60000)
+          val rows2 = dayOfMinutesInMillis.map(milli => TerminalUserDeskRecsRow(milli, userDeskRecs.value("A1").map(qudrp => {
+            val x: Seq[DeskRecTimeslot] = qudrp._2.get.items
+            val y = x.filter(drts => drts.id.toLong == milli)
+//            QueueDetailsRow(x.map(drts => ))
+          })))
+          val stuff = userDeskRecs.value("A1").map((queueDeskRecsTuple: (String, Pot[UserDeskRecs])) => {
+            val userDeskRecs = queueDeskRecsTuple._2.get
+            userDeskRecs.items
+          })
+          <.div(
+            <.h1("A1 Desks"),
+            TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
+        })
+      })
     })
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
