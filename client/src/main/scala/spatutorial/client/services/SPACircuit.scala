@@ -97,7 +97,7 @@ trait WorkloadsUtil {
 
 // The base model of our application
 case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends WorkloadsUtil {
-  def labels = labelsFromAllQueues(firstFlightTimeTerminal(workloads))
+  lazy val labels = labelsFromAllQueues(firstFlightTimeTerminal(workloads))
 
   def timeStamps = timeStampsFromAllQueues(t1workload)
 
@@ -181,7 +181,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
     log.info(s"finding handler for ${action.toString.take(100)}")
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        log.error("Exception from ${getClass}  ${ f.toString() }")
+        log.error(s"Exception from ${getClass}  ${ f.toString() }")
         throw f
       case Success(s) =>
         s

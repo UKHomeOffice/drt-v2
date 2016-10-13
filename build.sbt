@@ -42,6 +42,8 @@ lazy val client: Project = (project in file("client"))
     persistLauncher := true,
     persistLauncher in Test := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
+    resolvers += Resolver.defaultLocal,
+      resolvers += Resolver.file("/Users/lancep/.ivy2/cache/com.payalabs/scalajs-react-bridge_sjs0.6_2.11/jars/scalajs-react-bridge_sjs0.6_2.11-0.2.0-SNAPSHOT.jar"),
     // use uTest framework for tests
 
     testFrameworks += new TestFramework("utest.runner.Framework")

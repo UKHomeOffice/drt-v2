@@ -4,8 +4,7 @@ import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.SPAMain.{DashboardLoc, Loc, UserDeskRecommendationsLoc}
-import spatutorial.client.SPAMain.{FlightsLoc, DashboardLoc, Loc, UserDeskRecommendationsLoc}
+import spatutorial.client.SPAMain._
 import spatutorial.client.components.Bootstrap.CommonStyle
 import spatutorial.client.components.Icon._
 import spatutorial.client.components._
@@ -30,16 +29,18 @@ object MainMenu {
     )
   }
 
+  val terminalA1 = "A1"
   private val menuItems = Seq(
     MenuItem(1, _ => "Dashboard", Icon.dashboard, DashboardLoc),
     MenuItem(2, _ => "Flights", Icon.plane, FlightsLoc),
-    MenuItem(3, buildTodoMenu, Icon.calculator, UserDeskRecommendationsLoc)
+    MenuItem(3, buildTodoMenu, Icon.calculator, UserDeskRecommendationsLoc),
+    MenuItem(4, _ => terminalA1, Icon.calculator, TerminalUserDeskRecommendationsLoc(terminalA1))
   )
 
   private class Backend($: BackendScope[Props, Unit]) {
-//    def mounted(props: Props) =
-//      // dispatch a message to refresh the todos
-//      Callback.when(propsops.proxy.value.isEmpty)(props.proxy.dispatch(RefreshTodos))
+    //    def mounted(props: Props) =
+    //      // dispatch a message to refresh the todos
+    //      Callback.when(propsops.proxy.value.isEmpty)(props.proxy.dispatch(RefreshTodos))
 
     def render(props: Props) = {
       <.ul(bss.navbar)(
@@ -55,7 +56,7 @@ object MainMenu {
 
   private val component = ReactComponentB[Props]("MainMenu")
     .renderBackend[Backend]
-//    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    //    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Loc): ReactElement =

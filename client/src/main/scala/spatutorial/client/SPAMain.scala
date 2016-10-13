@@ -9,13 +9,13 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, QueueUserDeskRecsComponent}
+import spatutorial.client.components.{TableTerminalDeskRecs, DeskRecsChart, GlobalStyles, QueueUserDeskRecsComponent}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services._
-import spatutorial.shared.{CrunchResult, DeskRec, SimulationResult}
+import spatutorial.shared.{AirportInfo, CrunchResult, DeskRec, SimulationResult}
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 
 import scala.collection.immutable.{IndexedSeq, NumericRange}
@@ -34,6 +34,8 @@ object SPAMain extends js.JSApp {
   case object FlightsLoc extends Loc
 
   case object UserDeskRecommendationsLoc extends Loc
+
+  case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
 
   val eeadesk = "eeaDesk"
   val egate = "eGate"
@@ -72,6 +74,16 @@ object SPAMain extends js.JSApp {
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
 
+    val terminalUserDeskRecs = staticRoute("#A1/userdeskrecs", TerminalUserDeskRecommendationsLoc("A1")) ~> renderR(ctl => {
+      log.info("routing to A1 userdeskrecs")
+      val airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = SPACircuit.connect(_.airportInfos)
+      val flightsWrapper = SPACircuit.connect(m => m.flights)
+      flightsWrapper(flightsProxy =>
+        <.div(
+          <.h1("A1 Desks"),
+          TableTerminalDeskRecs(Nil, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state chagne ${drt}"))))
+    })
+
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
       log.info("running our user desk recs route")
@@ -107,7 +119,7 @@ object SPAMain extends js.JSApp {
         queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
-    (dashboardRoute | flightsRoute | userDeskRecsRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
+    (dashboardRoute | flightsRoute | terminalUserDeskRecs | userDeskRecsRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   def makeItems(terminalName: TerminalName, queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {

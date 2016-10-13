@@ -131,8 +131,8 @@ object TableTodoList {
               ^.className := "desk-rec-input",
               ^.value := item.userDeskRec.deskRec,
               ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
-          <.td(^.cls := dangerWait + " " + warningClasses, item.waitTimeWithUserDeskRec),
-          <.td(item.waitTimeWithCrunchDeskRec)
+          <.td(^.cls := dangerWait + " " + warningClasses + " minutes", item.waitTimeWithUserDeskRec + " mins"),
+          <.td(^.cls := "minutes", item.waitTimeWithCrunchDeskRec + " mins")
         )
       }
       <.table(^.cls := "table table-striped table-hover table-sm",
