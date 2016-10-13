@@ -44,12 +44,12 @@ trait WorkloadsService extends WorkloadsApi {
   )
 
   def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
-    case _ => 1.0
-    //    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 0.25
-    //    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 0.20
-    //    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 1.0
-    //    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 0.4
-    //    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 1.0
+    //    case _ => 1.0
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 25d / 60d
+    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
+    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
+    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
   }
 
   override def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueueWorkloads]]] = {
@@ -67,10 +67,10 @@ trait WorkloadsService extends WorkloadsApi {
     // what.map(_.toMap)
 
     val whatByMap: Future[Map[String, List[ApiFlight]]] = getFlights(0, 0).map(fs => {
-      val flightsByTerminal = fs.filterNot(flight => Set("FRT", "ENG").contains(flight.Terminal) ).groupBy(_.Terminal)
+      val flightsByTerminal = fs.filterNot(flight => Set("FRT", "ENG").contains(flight.Terminal)).groupBy(_.Terminal)
       flightsByTerminal
     })
-    val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)_
+    val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider) _
 
     val whatByTerminal: Future[Map[String, Map[QueueName, (Seq[WL], Seq[Pax])]]] = whatByMap.map(flightsByTerminal => flightsByTerminal.map(fbt => {
       val terminal = fbt._1
@@ -78,10 +78,10 @@ trait WorkloadsService extends WorkloadsApi {
       (terminal -> plc(flights))
     }))
 
-    val terminals = whatByTerminal.onSuccess{
+    val terminals = whatByTerminal.onSuccess {
       case s =>
         log.info(s"========should return ${s}")
-        val terminals =s.keys
+        val terminals = s.keys
         log.info(s"getWorkloads terminals a ${terminals}")
     }
 
