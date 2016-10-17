@@ -3,7 +3,7 @@ package spatutorial.client
 import chandu0101.scalajs.react.components.ReactTable
 import diode.{ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, Ready}
-import diode.react.ReactConnectProxy
+import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -15,12 +15,12 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
-import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
 import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 
-import scala.collection.immutable.{IndexedSeq}
+import scala.collection.immutable.IndexedSeq
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
@@ -50,6 +50,34 @@ object SPAMain extends js.JSApp {
       log.info(s"was $default")
   }
 
+  def terminalUserDeskRecsRows(queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
+    log.info(s"queueCrunchResults ${queueCrunchResultsForTerminal}")
+    log.info(s"simulationResults  ${simulationResult}")
+    val queueRows = queueCrunchResultsForTerminal.keys.toList.map(qn => {
+      Seq(
+        simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
+        queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+        simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
+        queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+        simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+      ).toList.transpose.map(queueFields =>
+        (queueFields(0), qn) -> QueueDetailsRow(
+          crunchDeskRec = queueFields(1).toInt,
+          userDeskRec = DeskRecTimeslot(queueFields(0).toString, queueFields(2).toInt),
+          waitTimeWithCrunchDeskRec = queueFields(3).toInt,
+          waitTimeWithUserDeskRec = queueFields(4).toInt
+        )
+      )
+    })
+
+    val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
+
+    queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDetailsRow)])) => {
+      val qr = queueRows._2.map(_._2)
+      TerminalUserDeskRecsRow(queueRows._1, qr)
+    }).toList.reverse
+  }
+
   import scala.scalajs.js.timers._
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
@@ -76,6 +104,7 @@ object SPAMain extends js.JSApp {
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
 
+
     val terminalUserDeskRecs = staticRoute("#A1/userdeskrecs", TerminalUserDeskRecommendationsLoc("A1")) ~> renderR(ctl => {
       log.info("routing to A1 userdeskrecs")
       val airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = SPACircuit.connect(_.airportInfos)
@@ -83,28 +112,29 @@ object SPAMain extends js.JSApp {
       val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
       val userDeskRecWrapper = SPACircuit.connect(_.userDeskRec)
       val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
-      val rows = Seq(
-        TerminalUserDeskRecsRow(60000, Seq(
-          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1),
-          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1),
-          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1))))
+//        Seq(
+//        TerminalUserDeskRecsRow(60000, Seq(
+//          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1),
+//          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1),
+//          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1))))
 
       flightsWrapper(flightsProxy => {
-        userDeskRecWrapper(userDeskRecs => {
-//          val minMillis = userDeskRecs.value("A1").map(qdrt => qdrt._2.get.items.map((drts: DeskRecTimeslot) => drts.id.toLong).min).min
-//          val dayOfMinutesInMillis = Seq.range(minMillis, minMillis + (60 * 60 * 24 * 1000), 60000)
-//          val rows2 = dayOfMinutesInMillis.map(milli => TerminalUserDeskRecsRow(milli, userDeskRecs.value("A1").map(qudrp => {
-//            val x: Seq[DeskRecTimeslot] = qudrp._2.get.items
-//            val y = x.filter(drts => drts.id.toLong == milli)
-////            QueueDetailsRow(x.map(drts => ))
-//          })))
-//          val stuff = userDeskRecs.value("A1").map((queueDeskRecsTuple: (String, Pot[UserDeskRecs])) => {
-//            val userDeskRecs = queueDeskRecsTuple._2.get
-//            userDeskRecs.items
-//          })
-          <.div(
-            <.h1("A1 Desks"),
-            TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
+        queueCrunchResultsWrapper((crunchResults: ModelProxy[Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]]]) => {
+          simulationResultWrapper( simulationResult => {
+            val optionalQueueRows = for {
+              crv: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]] <- crunchResults.value.get("A1")
+              srv: Map[QueueName, Pot[SimulationResult]] <- simulationResult.value.get("A1")
+            } yield {
+              val rows = terminalUserDeskRecsRows(crv, srv)
+              log.info(s"Rows ${rows.mkString("\n")}")
+              <.div(
+                <.h1("A1 Desks"),
+                TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
+            }
+
+
+            <.div(optionalQueueRows.getOrElse(""))
+          })
         })
       })
     })
@@ -154,17 +184,17 @@ object SPAMain extends js.JSApp {
     val items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {
         times <- model.workload.map(_.timeStamps)
-        qcr <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        qur <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        simres <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, defaultSimulationResult)
-        potcr = qcr._1
-        potdr = qcr._2
-        cr <- potcr
-        dr <- potdr
+        qcr: (Pot[CrunchResult], Pot[UserDeskRecs]) <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        qur: UserDeskRecs <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        simres: SimulationResult <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, defaultSimulationResult)
+        potcr: Pot[CrunchResult] = qcr._1
+        potdr: Pot[UserDeskRecs] = qcr._2
+        cr: CrunchResult <- potcr
+        dr: UserDeskRecs <- potdr
       } yield {
-        val every15thRecDesk = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
-        val every15thCrunchWaitTime = cr.waitTimes.grouped(15).map(_.max)
-        val every15thSimWaitTime = simres.waitTimes.grouped(15).map(_.max)
+        val every15thRecDesk: Seq[Int] = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
+        val every15thCrunchWaitTime: Iterator[Int] = cr.waitTimes.grouped(15).map(_.max)
+        val every15thSimWaitTime: Iterator[Int] = simres.waitTimes.grouped(15).map(_.max)
         val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
         val allRows = ((aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose)
         allRows
@@ -194,7 +224,6 @@ object SPAMain extends js.JSApp {
           <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page)))),
       // currently active module is shown in this container
       <.div(^.className := "container", r.render()))
-
   }
 
   @JSExport
