@@ -112,11 +112,6 @@ object SPAMain extends js.JSApp {
       val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
       val userDeskRecWrapper = SPACircuit.connect(_.userDeskRec)
       val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
-//        Seq(
-//        TerminalUserDeskRecsRow(60000, Seq(
-//          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1),
-//          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1),
-//          QueueDetailsRow(10, DeskRecTimeslot("10", 10), 1, 1))))
 
       flightsWrapper(flightsProxy => {
         queueCrunchResultsWrapper((crunchResults: ModelProxy[Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]]]) => {
@@ -163,12 +158,6 @@ object SPAMain extends js.JSApp {
         }
       }
 
-
-      //        .map {
-      //        case Empty => SPACircuit.dispatch(GetWorkloads("", "", "edi"))
-      //        case default =>
-      //          log.info(s"was $default")
-      //      }
       <.div(
         ^.key := "UserDeskRecsWrapper",
         queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
