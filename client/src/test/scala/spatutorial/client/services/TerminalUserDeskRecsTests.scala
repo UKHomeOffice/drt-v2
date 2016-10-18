@@ -1,20 +1,14 @@
 package spatutorial.client.services
 
-import diode.ActionResult._
-import diode.RootModelRW
 import diode.data._
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
-import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
-import spatutorial.client.logger._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._
-import spatutorial.client.SPAMain.terminalUserDeskRecsRows
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 object TerminalUserDeskRecsTests extends TestSuite {
-
+ import spatutorial.client.TableViewUtils._
 
   def tests = TestSuite {
 

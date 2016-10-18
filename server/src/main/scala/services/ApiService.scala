@@ -74,7 +74,7 @@ abstract class ApiService
   }
 
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
-    println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
+    //println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
     val optimizerConfig = OptimizerConfig(WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName))
     TryRenjin.crunch(workloads, repeat(2), repeat(25), optimizerConfig)

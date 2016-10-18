@@ -25,31 +25,8 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 
-@JSExport("SPAMain")
-object SPAMain extends js.JSApp {
 
-  // Define the locations (pages) used in this application
-  sealed trait Loc
-
-  case object DashboardLoc extends Loc
-
-  case object FlightsLoc extends Loc
-
-  case object UserDeskRecommendationsLoc extends Loc
-
-  case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
-
-  val eeadesk = "eeaDesk"
-  val egate = "eGate"
-  val nonEeaDesk = "nonEeaDesk"
-
-  val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
-  hasWl.value match {
-    case Empty => SPACircuit.dispatch(GetWorkloads("", "", "edi"))
-    case default =>
-      log.info(s"was $default")
-  }
-
+object TableViewUtils {
   def terminalUserDeskRecsRows(queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
     log.info(s"queueCrunchResults ${queueCrunchResultsForTerminal}")
     log.info(s"simulationResults  ${simulationResult}")
@@ -75,8 +52,36 @@ object SPAMain extends js.JSApp {
     queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDetailsRow)])) => {
       val qr = queueRows._2.map(_._2)
       TerminalUserDeskRecsRow(queueRows._1, qr)
-    }).toList.reverse
+    }).toList.sortWith(_.time < _.time)
   }
+
+}
+
+@JSExport("SPAMain")
+object SPAMain extends js.JSApp {
+
+  // Define the locations (pages) used in this application
+  sealed trait Loc
+
+  case object DashboardLoc extends Loc
+
+  case object FlightsLoc extends Loc
+
+  case object UserDeskRecommendationsLoc extends Loc
+
+  case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
+
+  val eeadesk = "eeaDesk"
+  val egate = "eGate"
+  val nonEeaDesk = "nonEeaDesk"
+
+  val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
+  hasWl.value match {
+    case Empty => SPACircuit.dispatch(GetWorkloads("", "", "edi"))
+    case default =>
+      log.info(s"was $default")
+  }
+
 
   import scala.scalajs.js.timers._
   import scala.concurrent.duration._
@@ -120,7 +125,7 @@ object SPAMain extends js.JSApp {
               crv: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]] <- crunchResults.value.get("A1")
               srv: Map[QueueName, Pot[SimulationResult]] <- simulationResult.value.get("A1")
             } yield {
-              val rows = terminalUserDeskRecsRows(crv, srv)
+              val rows = TableViewUtils.terminalUserDeskRecsRows(crv, srv)
               log.info(s"Rows ${rows.mkString("\n")}")
               <.div(
                 <.h1("A1 Desks"),
