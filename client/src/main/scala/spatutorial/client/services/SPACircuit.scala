@@ -211,12 +211,9 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-      //      log.info(s"received workloads ${terminalQueueWorkloads} from server")
       val trytqes = terminalQueueWorkloads.flatMap {
         case (terminalName, queueWorkloads) =>
-          //          log.info(s" $terminalName, $queueWorkloads flatmapping")
           val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-          //          log.info(s"workloadsByQueue ${workloadsByQueue}")
           val effects = workloadsByQueue.map {
             case (queueName, queueWorkload) =>
               val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
@@ -303,12 +300,6 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
   extends LoggingActionHandler(modelRW) {
 
   override def handle = {
-    case Crunch(terminalName, queueName, workload) =>
-      log.info(s"Requesting Crunch $terminalName, $queueName,  with ${workload}")
-      val crunchResult = AjaxClient[Api].crunch(terminalName, queueName, workload).call()
-      updated(
-        value.copy(_2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Pending())))),
-        Effect(crunchResult.map(serverResult => UpdateCrunchResult(terminalName, queueName, serverResult))))
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?

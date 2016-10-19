@@ -32,7 +32,8 @@ object TableTerminalDeskRecs {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class QueueDetailsRow(crunchDeskRec: Int,
+  case class QueueDetailsRow(pax: Double,
+                             crunchDeskRec: Int,
                              userDeskRec: DeskRecTimeslot,
                              waitTimeWithCrunchDeskRec: Int,
                              waitTimeWithUserDeskRec: Int)
@@ -82,7 +83,7 @@ object TableTerminalDeskRecs {
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val popover = HoverPopover(trigger, flights, airportInfo)
         val fill = item.queueDetails.flatMap(
-          q => Seq(<.td(q.crunchDeskRec), <.td(q.userDeskRec.deskRec),
+          q => Seq(<.td(q.pax), <.td(q.crunchDeskRec), <.td(q.userDeskRec.deskRec),
             <.td(q.waitTimeWithCrunchDeskRec), <.td(q.waitTimeWithUserDeskRec))).toList
         <.tr(<.td(item.time) :: fill: _*)
         //        val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
@@ -104,10 +105,10 @@ object TableTerminalDeskRecs {
       }
       val queueNames = "EEA" :: "NON-EEA" :: "E-GATES" :: Nil
       val flatten: List[TagMod] = List.fill(3)(List(<.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
-      val fill: List[TagMod] = List.fill(3)(List(<.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended"))).flatten
+      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended"))).flatten
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
-          <.tr(<.th("") :: queueNames.map(queueName => <.th(<.h2(queueName), ^.colSpan := 4)): _*),
+          <.tr(<.th("") :: queueNames.map(queueName => <.th(<.h2(queueName), ^.colSpan := 5)): _*),
           <.tr(<.th("") :: flatten: _*),
           <.tr(<.th("Time") :: fill: _*),
           p.items.zipWithIndex map renderItem))

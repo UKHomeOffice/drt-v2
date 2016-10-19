@@ -2,7 +2,7 @@ package spatutorial.client.components
 
 import diode.react.ReactConnectProxy
 
-import scala.collection.immutable
+import scala.collection.immutable._
 import diode.data.Pot
 
 //import diode.react.ReactPot._
@@ -121,7 +121,7 @@ object DeskRecsChart {
   }
 
 
-  def sampledWaitTimes(times: immutable.Seq[Int]): List[Double] = {
+  def sampledWaitTimes(times: Seq[Int]): List[Double] = {
     val grouped: Iterator[Seq[Int]] = times.grouped(15)
     val maxInEachGroup: Iterator[Int] = grouped.map(_.max)
     val sampledWaitTimes = maxInEachGroup.map(_.toDouble).toList
