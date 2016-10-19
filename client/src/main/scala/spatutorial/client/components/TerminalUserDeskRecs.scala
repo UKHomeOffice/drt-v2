@@ -8,7 +8,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html.{TableCell, TableHeaderCell}
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.{DeskRecTimeslot, UserDeskRecs}
-import spatutorial.shared.{AirportInfo, SimulationResult}
+import spatutorial.shared.{AirportInfo, SimulationResult, WorkloadsHelpers}
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.scalajs.js.Date
@@ -103,7 +103,7 @@ object TableTerminalDeskRecs {
         //          <.td(item.waitTimeWithCrunchDeskRec)
         //        )
       }
-      val queueNames = "EEA" :: "NON-EEA" :: "E-GATES" :: Nil
+      val queueNames = WorkloadsHelpers.queueNames.values.toList
       val flatten: List[TagMod] = List.fill(3)(List(<.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
       val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended"))).flatten
       <.table(^.cls := "table table-striped table-hover table-sm",

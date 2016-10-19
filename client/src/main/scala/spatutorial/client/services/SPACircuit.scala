@@ -120,7 +120,7 @@ case class RootModel(
     s"""
        |RootModel(
        |motd: $motd
-       |workload: $workload
+       |paxload: $workload
        |queueCrunchResults: $queueCrunchResults
        |userDeskRec: $userDeskRec
        |simulationResult: $simulationResult

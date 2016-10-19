@@ -20,23 +20,19 @@ import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 
-import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 
 
 object TableViewUtils {
-  def terminalUserDeskRecsRows(workload: Map[QueueName, (Seq[WL], Seq[Pax])], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
+  def terminalUserDeskRecsRows(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
     //    log.info(s"queueCrunchResults ${queueCrunchResultsForTerminal}")
-    log.info(s"workload  $workload")
-
-    log.info(s"workload length: ${workload("nonEeaDesk")._2.length}")
-
-    val queueRows = queueCrunchResultsForTerminal.keys.toList.map(qn => {
+    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = WorkloadsHelpers.queueNames.keys.toList.map(qn => {
       log.info(s"queue name: $qn")
       Seq(
-        workload(qn)._2.grouped(15).map(paxes => paxes.map(_.pax).sum.toLong).toList,
+        paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
         simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
         queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
         simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
@@ -134,8 +130,8 @@ object SPAMain extends js.JSApp {
                 crv: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]] <- crunchResults.value.get("A1")
                 srv: Map[QueueName, Pot[SimulationResult]] <- simulationResult.value.get("A1")
               } yield {
-                val fullWorkloads = WorkloadsHelpers.workloadsByQueue(wl)
-                val rows = TableViewUtils.terminalUserDeskRecsRows(fullWorkloads, crv, srv)
+                val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(wl)
+                val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
                 log.info(s"Rows ${rows.mkString("\n")}")
                 <.div(
                   <.h1("A1 Desks"),
