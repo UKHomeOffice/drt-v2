@@ -6,6 +6,7 @@ import spatutorial.shared.FlightsApi._
 import scala.List
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 case class ApiFlight(
                       Operator: String,

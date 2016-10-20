@@ -5,12 +5,15 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import org.scalajs.dom.html.{TableCell, TableHeaderCell}
+import org.scalajs.dom.html.{Div, TableCell, TableHeaderCell}
+import spatutorial.client.TableViewUtils
+import spatutorial.client.logger._
 import spatutorial.client.modules.FlightsView
-import spatutorial.client.services.{DeskRecTimeslot, UserDeskRecs}
-import spatutorial.shared.{AirportInfo, SimulationResult, WorkloadsHelpers}
+import spatutorial.client.services.{DeskRecTimeslot, SPACircuit, UserDeskRecs, Workloads}
+import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
+import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
 
 object TerminalUserDeskRecs {
@@ -32,7 +35,8 @@ object TableTerminalDeskRecs {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class QueueDetailsRow(pax: Double,
+  case class QueueDetailsRow(sr: Pot[SimulationResult],
+                             pax: Double,
                              crunchDeskRec: Int,
                              userDeskRec: DeskRecTimeslot,
                              waitTimeWithCrunchDeskRec: Int,
@@ -69,6 +73,42 @@ object TableTerminalDeskRecs {
     popover
   }).build
 
+  def buildTerminalUserDeskRecsComponent = {
+    val airportWrapper = SPACircuit.connect(_.airportInfos)
+    val flightsWrapper = SPACircuit.connect(m => m.flights)
+    val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
+    val workloadWrapper = SPACircuit.connect(_.workload)
+    val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
+
+    flightsWrapper(flightsProxy => {
+      log.info("^^^^^^^^^^^ flightsProxy")
+      queueCrunchResultsWrapper((crunchResultsMP: ModelProxy[Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]]]) => {
+        log.info("^^^^^^^^^^^ crunchResults")
+        simulationResultWrapper((simulationResultMP: ModelProxy[Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]]) => {
+          log.info("^^^^^^^^^^^ simulationResult")
+          workloadWrapper((workloadsMP: ModelProxy[Pot[Workloads]]) => {
+            log.info(s"^^^^^^^^^^^ workloadsMP - state: ${workloadsMP().state}")
+            <.div(
+              workloadsMP().renderReady((workloads: Workloads) => {
+                log.info(s"^^^^^^^^^^^ workloadsMP - Ready")
+                val crv = crunchResultsMP.value.getOrElse("A1", Map())
+                val srv = simulationResultMP.value.getOrElse("A1", Map())
+                val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(workloadsMP.value.get.workloads("A1"))
+                val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
+                val queueRows = <.div(
+                  <.h1("A1 Desks"),
+                  TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
+                <.div(queueRows)
+              }),
+              workloadsMP().renderPending(_ => <.div("Pending")),
+              workloadsMP().renderEmpty(<.div("Empty"))
+            )
+          })
+        })
+      })
+    })
+  }
+
   private val TodoList = ReactComponentB[Props]("TodoList")
     .render_P(p => {
       val style = bss.listGroup
@@ -83,8 +123,14 @@ object TableTerminalDeskRecs {
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val popover = HoverPopover(trigger, flights, airportInfo)
         val fill = item.queueDetails.flatMap(
-          q => Seq(<.td(q.pax), <.td(q.crunchDeskRec), <.td(q.userDeskRec.deskRec),
-            <.td(q.waitTimeWithCrunchDeskRec), <.td(q.waitTimeWithUserDeskRec))).toList
+          (q: QueueDetailsRow) => Seq(
+            <.td(q.sr.renderReady(sr => q.pax), q.sr.renderPending(sr => "...")),
+            <.td(q.sr.renderReady(sr => q.crunchDeskRec), q.sr.renderPending(sr => "...")),
+            <.td(q.sr.renderReady(sr => q.userDeskRec.deskRec), q.sr.renderPending(sr => "...")),
+            <.td(q.sr.renderReady(sr => q.waitTimeWithCrunchDeskRec), q.sr.renderPending(sr => "...")),
+            <.td(q.sr.renderReady(sr => q.waitTimeWithUserDeskRec), q.sr.renderPending(sr => "...")))
+
+        ).toList
         <.tr(<.td(item.time) :: fill: _*)
         //        val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         //        val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""

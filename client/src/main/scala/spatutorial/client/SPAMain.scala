@@ -1,8 +1,9 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
+import diode.data.PotState.PotReady
 import diode.{ModelR, UseValueEq, react}
-import diode.data.{Empty, Pot, Ready}
+import diode.data.{Empty, Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
@@ -18,7 +19,7 @@ import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
 import spatutorial.client.services._
 import spatutorial.shared._
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
+import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
@@ -28,26 +29,42 @@ import scalacss.Defaults._
 
 object TableViewUtils {
   def terminalUserDeskRecsRows(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
-    //    log.info(s"queueCrunchResults ${queueCrunchResultsForTerminal}")
+    log.info("^^^^^^^^^^^^^^^^^^^ JESUS!!")
     val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = WorkloadsHelpers.queueNames.keys.toList.map(qn => {
-      log.info(s"queue name: $qn")
-      Seq(
-        paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-        simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
-        queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-        simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
-        queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-        simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-      ).toList.transpose.map(queueFields =>
-        (queueFields(1), qn) -> QueueDetailsRow(
-          pax = queueFields(0).toDouble,
-          crunchDeskRec = queueFields(2).toInt,
-          userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
-          waitTimeWithCrunchDeskRec = queueFields(4).toInt,
-          waitTimeWithUserDeskRec = queueFields(5).toInt
-        )
-      )
+      log.info("^^^^^^^^^^^^^^^^^^^ CHRIST")
+      val s: Option[Pot[SimulationResult]] = simulationResult.get(qn)
+      simulationResult.get(qn) match {
+        case Some(Ready(sr)) =>
+          log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Ready")
+          val times = simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
+          val simDeskRecs = simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList
+          val simWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+          val pax = paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList
+          val crunchDeskRecs = queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList
+          val crunchWaitTimes = queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+          Seq(
+            pax,
+            times,
+            crunchDeskRecs,
+            simDeskRecs,
+            crunchWaitTimes,
+            simWaitTimes
+          ).toList.transpose.map(queueFields =>
+            (queueFields(1), qn) -> QueueDetailsRow(
+              sr = simulationResult(qn),
+              pax = queueFields(0).toDouble,
+              crunchDeskRec = queueFields(2).toInt,
+              userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
+              waitTimeWithCrunchDeskRec = queueFields(4).toInt,
+              waitTimeWithUserDeskRec = queueFields(5).toInt
+            )
+          )
+        case _ =>
+          log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Not ready")
+          List()
+      }
     })
+
 
     val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
 
@@ -55,9 +72,7 @@ object TableViewUtils {
       val qr = queueRows._2.map(_._2)
       TerminalUserDeskRecsRow(queueRows._1, qr)
     }).toList.sortWith(_.time < _.time)
-
   }
-
 }
 
 @JSExport("SPAMain")
@@ -112,36 +127,9 @@ object SPAMain extends js.JSApp {
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
 
-
     val terminalUserDeskRecs = staticRoute("#A1/userdeskrecs", TerminalUserDeskRecommendationsLoc("A1")) ~> renderR(ctl => {
       log.info("routing to A1 userdeskrecs")
-      val airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = SPACircuit.connect(_.airportInfos)
-      val flightsWrapper = SPACircuit.connect(m => m.flights)
-      val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
-      val workloadWrapper = SPACircuit.connect(_.workload)
-      val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
-
-      flightsWrapper(flightsProxy => {
-        queueCrunchResultsWrapper((crunchResults: ModelProxy[Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]]]) => {
-          simulationResultWrapper(simulationResult => {
-            workloadWrapper(workloads => {
-              val optionalQueueRows = for {
-                wl: Map[QueueName, (Seq[WL], Seq[Pax])] <- workloads.value.get.workloads.get("A1")
-                crv: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]] <- crunchResults.value.get("A1")
-                srv: Map[QueueName, Pot[SimulationResult]] <- simulationResult.value.get("A1")
-              } yield {
-                val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(wl)
-                val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
-                log.info(s"Rows ${rows.mkString("\n")}")
-                <.div(
-                  <.h1("A1 Desks"),
-                  TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
-              }
-              <.div(optionalQueueRows.getOrElse(""))
-            })
-          })
-        })
-      })
+      TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent
     })
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
