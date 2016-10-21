@@ -69,24 +69,24 @@ object QueueUserDeskRecsComponent {
   def currentUserDeskRecView(props: Props): ReactTagOf[html.Div] = {
     <.div(
       ^.key := props.queueName,
-      props.flightsPotRCP(flightsPotMP =>
-        props.labelsPotRCP(labelsPotMP =>
-          props.userDeskRecsPotRCP(userDeskRecsPotMP =>
-            props.crunchResultPotRCP(crunchResultPotMP =>
-              props.userDeskRecsRowPotRCP(userDeskRecsRosPotMP =>
-                props.simulationResultPotRCP(simulationResultPotMP => {
-                  Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),
-                    userDeskRecsRosPotMP().renderReady(userDeskRecsRows =>
-                      props.userDeskRecsPotRCP(
-                        userDeskRecsPotMP => UserDeskRecsComponent(props.terminalName, props.queueName, userDeskRecsRows,
-                          props.airportInfoPotsRCP, flightsPotMP, userDeskRecsPotMP, simulationResultPotMP)
-                      )),
-                    props.crunchResultPotRCP(crunchResultPotMP => {
-                      <.div(labelsPotMP().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, simulationResultPotMP, crunchResultPotMP)))
-                    })
-                  )
-                }))))))
-    )
+      props.userDeskRecsRowPotRCP(userDeskRecsRosPotMP =>
+        Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),
+          userDeskRecsRosPotMP().renderReady(userDeskRecsRows =>
+            props.simulationResultPotRCP(simulationResultPotMP => {
+              props.userDeskRecsPotRCP(
+                userDeskRecsPotMP => UserDeskRecsComponent(props.terminalName, props.queueName, userDeskRecsRows,
+                  props.airportInfoPotsRCP, props.flightsPotRCP, userDeskRecsPotMP, simulationResultPotMP)
+              )
+            })),
+          props.simulationResultPotRCP(simulationResultPotMP => {
+            props.crunchResultPotRCP(crunchResultPotMP => {
+              props.labelsPotRCP(labelsPotMP =>
+                <.div(labelsPotMP().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, simulationResultPotMP, crunchResultPotMP)))
+              )
+            })
+          })
+        )))
   }
+
 }
 

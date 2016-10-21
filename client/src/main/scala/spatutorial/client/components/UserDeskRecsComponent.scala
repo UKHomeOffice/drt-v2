@@ -17,7 +17,7 @@ object UserDeskRecsComponent {
                     terminalName: TerminalName,
                     queueName: QueueName,
                     items: Seq[UserDeskRecsRow],
-                    flights: Pot[Flights],
+                    flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     userDeskRecsPotProxy: ModelProxy[Pot[UserDeskRecs]],
                     simulationResult: ModelProxy[Pot[SimulationResult]])
@@ -47,7 +47,7 @@ object UserDeskRecsComponent {
               <.div(^.cls := "user-desk-recs-container table-responsive",
                 TableTodoList(
                   p.items,
-                  p.flights,
+                  p.flightsPotRCP,
                   p.airportInfos,
                   item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
                   item => editTodo(Some(item)),
@@ -64,12 +64,12 @@ object UserDeskRecsComponent {
 
   /** Returns a function compatible with router location system while using our own props */
   def apply(
-            terminalName: TerminalName,
-            queueName: QueueName,
-            items: Seq[UserDeskRecsRow],
-            airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            flights: ModelProxy[Pot[Flights]],
-            proxy: ModelProxy[Pot[UserDeskRecs]],
-            simulationResult: ModelProxy[Pot[SimulationResult]]) =
-    component(Props(terminalName, queueName, items, flights.value, airportInfo, proxy, simulationResult))
+             terminalName: TerminalName,
+             queueName: QueueName,
+             items: Seq[UserDeskRecsRow],
+             airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+             flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+             proxy: ModelProxy[Pot[UserDeskRecs]],
+             simulationResult: ModelProxy[Pot[SimulationResult]]) =
+    component(Props(terminalName, queueName, items, flightsPotRCP, airportInfo, proxy, simulationResult))
 }
