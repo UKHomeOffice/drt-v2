@@ -91,33 +91,30 @@ object DeskRecsChart {
                                     terminalName: TerminalName,
                                     queueName: QueueName,
                                     labels: IndexedSeq[String],
-                                    potSimulationResultProxy: ModelProxy[Pot[SimulationResult]],
-                                    crunchResult: ModelProxy[Pot[CrunchResult]]) = {
+                                    simulationResultPotMP: ModelProxy[Pot[SimulationResult]],
+                                    crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
     val component = ReactComponentB[UserSimulationProps]("UserSimulationChart").render_P(props => {
-      val proxy: Pot[SimulationResult] = props.simulationResult()
-      val ready: TagMod = proxy.renderReady(simulationResult => {
-        val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(proxy.get.waitTimes)
-        val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-        val fakeSLAData = sampledWaitTimesSimulation.map(_ => WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName).toDouble)
-        val sampledLabels = takeEvery15th(labels)
-        <.div(
-          Chart(
-            Chart.ChartProps("Simulated Wait Times",
-              Chart.LineChart,
-              ChartData(sampledLabels,
-                Seq(
-                  ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0)",
-                    borderColor = "rgba(10,10, 110, 1)"),
-                  ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "green"),
-                  ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
-              ))))
+      val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(props.simulationResult().isReady match {
+        case true => props.simulationResult().get.waitTimes
+        case _ => props.crunchResult().get.waitTimes
       })
+      val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
+      val fakeSLAData = sampledWaitTimesSimulation.map(_ => WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName).toDouble)
+      val sampledLabels = takeEvery15th(labels)
       <.div(
-        ready,
-        proxy.renderPending(time => <.p(s"waiting for data, been waiting $time")))
+        Chart(
+          Chart.ChartProps("Simulated Wait Times",
+            Chart.LineChart,
+            ChartData(sampledLabels,
+              Seq(
+                ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0)",
+                  borderColor = "rgba(10,10, 110, 1)"),
+                ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "green"),
+                ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
+            ))))
     }).build
 
-    component(UserSimulationProps(potSimulationResultProxy, crunchResult))
+    component(UserSimulationProps(simulationResultPotMP, crunchResultPotMP))
   }
 
 

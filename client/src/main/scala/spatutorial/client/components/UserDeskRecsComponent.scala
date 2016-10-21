@@ -32,10 +32,6 @@ object UserDeskRecsComponent {
         props.userDeskRecsPotProxy.dispatch(GetWorkloads("", "", "edi"))
       }
       Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
-
-      Callback.when(props.userDeskRecsPotProxy().isReady)(
-        props.userDeskRecsPotProxy.dispatch(RunSimulation(props.terminalName, props.queueName, Nil, props.userDeskRecsPotProxy().get.items.map(_.deskRec).toList))
-      )
     }
 
     def editTodo(item: Option[DeskRecTimeslot]) =
@@ -43,10 +39,9 @@ object UserDeskRecsComponent {
       $.modState(s => s.copy(selectedItem = item, showTodoForm = true))
 
     def render(p: Props, s: State) =
-      Panel(Panel.Props(s"Enter your real (or projected) desk numbers to see projected queue times for queue '${p.queueName}'"), <.div(
+      <.div(
         p.userDeskRecsPotProxy().renderFailed(ex => "Error loading"),
         p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
-        p.simulationResult().renderReady(sr =>
           p.userDeskRecsPotProxy().render(userDeskRecs => {
               log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
               <.div(^.cls := "user-desk-recs-container table-responsive",
@@ -54,11 +49,10 @@ object UserDeskRecsComponent {
                   p.items,
                   p.flights,
                   p.airportInfos,
-                  sr,
                   item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
                   item => editTodo(Some(item)),
                   item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
-            }))))
+            }))
   }
 
   // create the React component for To Do management
