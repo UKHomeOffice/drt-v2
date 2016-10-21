@@ -143,8 +143,8 @@ object TableTerminalDeskRecs {
         //        )
       }
       val queueNames = WorkloadsHelpers.queueNames.values.toList
-      val flatten: List[TagMod] = List.fill(3)(List(<.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
-      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended"))).flatten
+      val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
+      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Rec Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recs"))).flatten
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
           <.tr(<.th("") :: queueNames.map(queueName => <.th(<.h2(queueName), ^.colSpan := 5)): _*),
