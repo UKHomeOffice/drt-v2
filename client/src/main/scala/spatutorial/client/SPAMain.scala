@@ -29,57 +29,21 @@ import scalacss.Defaults._
 
 object TableViewUtils {
   def terminalUserDeskRecsRows(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
-    log.info("^^^^^^^^^^^^^^^^^^^ JESUS!!")
     val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = WorkloadsHelpers.queueNames.keys.toList.map(qn => {
-      log.info("^^^^^^^^^^^^^^^^^^^ CHRIST")
       val s: Option[Pot[SimulationResult]] = simulationResult.get(qn)
       simulationResult.get(qn) match {
         case Some(Ready(sr)) =>
           log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Ready")
-          Seq(
-            paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-            simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
-            queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-            simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
-            queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-            simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-          ).toList.transpose.map(queueFields =>
-            (queueFields(1), qn) -> QueueDetailsRow(
-              sr = simulationResult(qn),
-              pax = queueFields(0).toDouble,
-              crunchDeskRec = queueFields(2).toInt,
-              userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
-              waitTimeWithCrunchDeskRec = queueFields(4).toInt,
-              waitTimeWithUserDeskRec = queueFields(5).toInt
-            )
-          )
+          queueDetailsRowsFromNos(qn, queueNosFromSimulationResult(paxload, queueCrunchResultsForTerminal, simulationResult, qn))
         case _ =>
           queueCrunchResultsForTerminal.get(qn) match {
             case Some(Ready(cr)) =>
-              log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Ready")
-              Seq(
-                paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-                List.range(0,queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.length, 15).map(_.toLong),
-                queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-                queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-                queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-                queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-              ).toList.transpose.map(queueFields =>
-                (queueFields(1), qn) -> QueueDetailsRow(
-                  sr = simulationResult(qn),
-                  pax = queueFields(0).toDouble,
-                  crunchDeskRec = queueFields(2).toInt,
-                  userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
-                  waitTimeWithCrunchDeskRec = queueFields(4).toInt,
-                  waitTimeWithUserDeskRec = queueFields(5).toInt
-                )
-              )
+              log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Ready4")
+              queueDetailsRowsFromNos(qn, queueNosFromCrunchResult(paxload, queueCrunchResultsForTerminal, qn))
             case _ =>
               log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Not ready")
               List()
           }
-          log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Not ready")
-          List()
       }
     })
 
@@ -90,6 +54,40 @@ object TableViewUtils {
       val qr = queueRows._2.map(_._2)
       TerminalUserDeskRecsRow(queueRows._1, qr)
     }).toList.sortWith(_.time < _.time)
+  }
+
+  def queueDetailsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDetailsRow)] = {
+    queueNos.toList.transpose.map(queueFields =>
+      (queueFields(1), qn) -> QueueDetailsRow(
+        pax = queueFields(0).toDouble,
+        crunchDeskRec = queueFields(2).toInt,
+        userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
+        waitTimeWithCrunchDeskRec = queueFields(4).toInt,
+        waitTimeWithUserDeskRec = queueFields(5).toInt
+      )
+    )
+  }
+
+  def queueNosFromCrunchResult(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], qn: QueueName): Seq[List[Long]] = {
+    Seq(
+      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
+      List.range(0, queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.length, 15).map(_.toLong),
+      queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    )
+  }
+
+  def queueNosFromSimulationResult(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName): Seq[List[Long]] = {
+    Seq(
+      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
+      simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    )
   }
 }
 

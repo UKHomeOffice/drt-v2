@@ -35,12 +35,12 @@ object TableTerminalDeskRecs {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class QueueDetailsRow(sr: Pot[SimulationResult],
-                             pax: Double,
-                             crunchDeskRec: Int,
-                             userDeskRec: DeskRecTimeslot,
-                             waitTimeWithCrunchDeskRec: Int,
-                             waitTimeWithUserDeskRec: Int)
+  case class QueueDetailsRow(
+                              pax: Double,
+                              crunchDeskRec: Int,
+                              userDeskRec: DeskRecTimeslot,
+                              waitTimeWithCrunchDeskRec: Int,
+                              waitTimeWithUserDeskRec: Int)
 
   case class TerminalUserDeskRecsRow(time: Long, queueDetails: Seq[QueueDetailsRow])
 
@@ -81,27 +81,20 @@ object TableTerminalDeskRecs {
     val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
 
     flightsWrapper(flightsProxy => {
-      log.info("^^^^^^^^^^^ flightsProxy")
-      queueCrunchResultsWrapper((crunchResultsMP: ModelProxy[Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]]]) => {
-        log.info("^^^^^^^^^^^ crunchResults")
-        simulationResultWrapper((simulationResultMP: ModelProxy[Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]]) => {
-          log.info("^^^^^^^^^^^ simulationResult")
+      queueCrunchResultsWrapper(crunchResultsMP => {
+        simulationResultWrapper(simulationResultMP => {
           workloadWrapper((workloadsMP: ModelProxy[Pot[Workloads]]) => {
-            log.info(s"^^^^^^^^^^^ workloadsMP - state: ${workloadsMP().state}")
             <.div(
+              <.h1("A1 Desks"),
               workloadsMP().renderReady((workloads: Workloads) => {
-                log.info(s"^^^^^^^^^^^ workloadsMP - Ready")
                 val crv = crunchResultsMP.value.getOrElse("A1", Map())
                 val srv = simulationResultMP.value.getOrElse("A1", Map())
                 val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(workloadsMP.value.get.workloads("A1"))
                 val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
-                val queueRows = <.div(
-                  <.h1("A1 Desks"),
+                <.div(
                   TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
-                <.div(queueRows)
               }),
-              workloadsMP().renderPending(_ => <.div("Pending")),
-              workloadsMP().renderEmpty(<.div("Empty"))
+              workloadsMP().renderPending(_ => <.div("Waiting for crunch results"))
             )
           })
         })
@@ -109,8 +102,7 @@ object TableTerminalDeskRecs {
     })
   }
 
-  class Backend($: BackendScope[Props, Unit])
-  {
+  class Backend($: BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
       val style = bss.listGroup
@@ -126,12 +118,11 @@ object TableTerminalDeskRecs {
         val popover = HoverPopover(trigger, flights, airportInfo)
         val fill = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => Seq(
-            <.td(q.sr.renderReady(sr => q.pax), q.sr.renderPending(sr => "...")),
-            <.td(q.sr.renderReady(sr => q.crunchDeskRec), q.sr.renderPending(sr => "...")),
-            <.td(q.sr.renderReady(sr => q.userDeskRec.deskRec), q.sr.renderPending(sr => "...")),
-            <.td(q.sr.renderReady(sr => q.waitTimeWithCrunchDeskRec), q.sr.renderPending(sr => "...")),
-            <.td(q.sr.renderReady(sr => q.waitTimeWithUserDeskRec), q.sr.renderPending(sr => "...")))
-
+            <.td(q.pax),
+            <.td(q.crunchDeskRec),
+            <.td(q.userDeskRec.deskRec),
+            <.td(q.waitTimeWithCrunchDeskRec),
+            <.td(q.waitTimeWithUserDeskRec))
         ).toList
         <.tr(<.td(item.time) :: fill: _*)
         //        val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
