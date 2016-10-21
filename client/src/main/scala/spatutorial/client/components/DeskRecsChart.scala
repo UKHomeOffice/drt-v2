@@ -110,7 +110,7 @@ object DeskRecsChart {
                     borderColor = "rgba(10,10, 110, 1)"),
                   ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "green"),
                   ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
-                ))))
+              ))))
       })
       <.div(
         ready,

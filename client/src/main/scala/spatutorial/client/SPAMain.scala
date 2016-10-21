@@ -36,19 +36,13 @@ object TableViewUtils {
       simulationResult.get(qn) match {
         case Some(Ready(sr)) =>
           log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Ready")
-          val times = simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
-          val simDeskRecs = simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList
-          val simWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-          val pax = paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList
-          val crunchDeskRecs = queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList
-          val crunchWaitTimes = queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
           Seq(
-            pax,
-            times,
-            crunchDeskRecs,
-            simDeskRecs,
-            crunchWaitTimes,
-            simWaitTimes
+            paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
+            simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
+            queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+            simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
+            queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+            simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
           ).toList.transpose.map(queueFields =>
             (queueFields(1), qn) -> QueueDetailsRow(
               sr = simulationResult(qn),
@@ -60,6 +54,30 @@ object TableViewUtils {
             )
           )
         case _ =>
+          queueCrunchResultsForTerminal.get(qn) match {
+            case Some(Ready(cr)) =>
+              log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Ready")
+              Seq(
+                paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
+                List.range(0,queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.length, 15).map(_.toLong),
+                queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+                queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+                queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+                queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+              ).toList.transpose.map(queueFields =>
+                (queueFields(1), qn) -> QueueDetailsRow(
+                  sr = simulationResult(qn),
+                  pax = queueFields(0).toDouble,
+                  crunchDeskRec = queueFields(2).toInt,
+                  userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
+                  waitTimeWithCrunchDeskRec = queueFields(4).toInt,
+                  waitTimeWithUserDeskRec = queueFields(5).toInt
+                )
+              )
+            case _ =>
+              log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Not ready")
+              List()
+          }
           log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Not ready")
           List()
       }

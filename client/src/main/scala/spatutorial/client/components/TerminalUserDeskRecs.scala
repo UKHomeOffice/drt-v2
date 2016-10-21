@@ -109,8 +109,10 @@ object TableTerminalDeskRecs {
     })
   }
 
-  private val TodoList = ReactComponentB[Props]("TodoList")
-    .render_P(p => {
+  class Backend($: BackendScope[Props, Unit])
+  {
+
+    def render(p: Props) = {
       val style = bss.listGroup
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
@@ -158,12 +160,16 @@ object TableTerminalDeskRecs {
           <.tr(<.th("") :: flatten: _*),
           <.tr(<.th("Time") :: fill: _*),
           p.items.zipWithIndex map renderItem))
-    })
+    }
+  }
+
+  private val component = ReactComponentB[Props]("TerminalUserDeskRecs")
+    .renderBackend[Backend]
     .build
 
   def apply(items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: DeskRecTimeslot => Callback) =
-    TodoList(Props(items, flights, airportInfos, stateChange))
+    component(Props(items, flights, airportInfos, stateChange))
 }
 

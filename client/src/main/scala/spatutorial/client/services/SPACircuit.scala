@@ -107,7 +107,6 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]
 }
 
 case class RootModel(
-                      //todos: Pot[UserDeskRecs],
                       motd: Pot[String] = Empty,
                       workload: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]] = Map(),
