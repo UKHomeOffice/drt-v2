@@ -9,7 +9,7 @@ import org.scalajs.dom.html.{Div, TableCell, TableHeaderCell}
 import spatutorial.client.TableViewUtils
 import spatutorial.client.logger._
 import spatutorial.client.modules.FlightsView
-import spatutorial.client.services.{DeskRecTimeslot, SPACircuit, UserDeskRecs, Workloads}
+import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
@@ -66,7 +66,7 @@ object TableTerminalDeskRecs {
       if (state.hovered) {
         PopoverWrapper(trigger = trigger)(
           airportInfos(airportInfo =>
-            (FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value)))))
+            FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))))
       } else {
         trigger
       })
@@ -79,23 +79,34 @@ object TableTerminalDeskRecs {
     val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
     val workloadWrapper = SPACircuit.connect(_.workload)
     val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
+    val userDeskRecsWrapper = SPACircuit.connect(_.userDeskRec)
 
     flightsWrapper(flightsProxy => {
       queueCrunchResultsWrapper(crunchResultsMP => {
         simulationResultWrapper(simulationResultMP => {
           workloadWrapper((workloadsMP: ModelProxy[Pot[Workloads]]) => {
-            <.div(
-              <.h1("A1 Desks"),
-              workloadsMP().renderReady((workloads: Workloads) => {
-                val crv = crunchResultsMP.value.getOrElse("A1", Map())
-                val srv = simulationResultMP.value.getOrElse("A1", Map())
-                val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(workloadsMP.value.get.workloads("A1"))
-                val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
-                <.div(
-                  TableTerminalDeskRecs(rows, flightsProxy.value, airportWrapper, (drt: DeskRecTimeslot) => Callback.log(s"state change ${drt}")))
-              }),
-              workloadsMP().renderPending(_ => <.div("Waiting for crunch results"))
-            )
+            userDeskRecsWrapper(userDeskRecsMP => {
+              <.div(
+                <.h1("A1 Desks"),
+                workloadsMP().renderReady((workloads: Workloads) => {
+                  val crv = crunchResultsMP.value.getOrElse("A1", Map())
+                  val srv = simulationResultMP.value.getOrElse("A1", Map())
+                  val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(workloadsMP.value.get.workloads("A1"))
+                  val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
+                  <.div(
+                    TableTerminalDeskRecs(
+                      rows,
+                      flightsProxy.value,
+                      airportWrapper,
+                      deskRecTimeslot => {
+                        log.info(s"updating user desk for $deskRecTimeslot")
+                        userDeskRecsMP.dispatch(UpdateDeskRecsTime("A1", "eeaDesk", deskRecTimeslot))
+                      }
+                    ))
+                }),
+                workloadsMP().renderPending(_ => <.div("Waiting for crunch results"))
+              )
+            })
           })
         })
       })
@@ -105,6 +116,7 @@ object TableTerminalDeskRecs {
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
+      log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
@@ -120,7 +132,11 @@ object TableTerminalDeskRecs {
           (q: QueueDetailsRow) => Seq(
             <.td(q.pax),
             <.td(q.crunchDeskRec),
-            <.td(q.userDeskRec.deskRec),
+            <.td(
+              <.input.number(
+                ^.value := q.userDeskRec.deskRec,
+                ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
+              )),
             <.td(q.waitTimeWithCrunchDeskRec),
             <.td(q.waitTimeWithUserDeskRec))
         ).toList

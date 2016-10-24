@@ -28,7 +28,7 @@ import scalacss.Defaults._
 
 
 object TableViewUtils {
-  def terminalUserDeskRecsRows(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]) = {
+  def terminalUserDeskRecsRows(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
     val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = WorkloadsHelpers.queueNames.keys.toList.map(qn => {
       val s: Option[Pot[SimulationResult]] = simulationResult.get(qn)
       simulationResult.get(qn) match {
@@ -57,16 +57,18 @@ object TableViewUtils {
   }
 
   def queueDetailsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDetailsRow)] = {
-    queueNos.toList.transpose.map(queueFields =>
-      (queueFields(1), qn) -> QueueDetailsRow(
-        pax = queueFields(0).toDouble,
-        crunchDeskRec = queueFields(2).toInt,
-        userDeskRec = DeskRecTimeslot(queueFields(1).toString, queueFields(3).toInt),
-        waitTimeWithCrunchDeskRec = queueFields(4).toInt,
-        waitTimeWithUserDeskRec = queueFields(5).toInt
-      )
-    )
+    queueNos.toList.transpose.zipWithIndex.map {
+      case (queueFields, rowIndex) =>
+        (queueFields(1), qn) -> QueueDetailsRow(
+          pax = queueFields(0).toDouble,
+          crunchDeskRec = queueFields(2).toInt,
+          userDeskRec = DeskRecTimeslot(rowIndex.toString, queueFields(3).toInt),
+          waitTimeWithCrunchDeskRec = queueFields(4).toInt,
+          waitTimeWithUserDeskRec = queueFields(5).toInt
+        )
+    }
   }
+
 
   def queueNosFromCrunchResult(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], qn: QueueName): Seq[List[Long]] = {
     Seq(

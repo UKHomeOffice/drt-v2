@@ -15,28 +15,6 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.ScalaJSDefined
 
-object UserDeskRecCustomComponents {
-
-  def magic(dispatch: (UpdateDeskRecsTime) => Callback)(terminalName: TerminalName, queueName: String) = (props: js.Dynamic) => {
-    val data: DeskRecTimeslot = props.data.asInstanceOf[DeskRecTimeslot]
-    val recommendedDesk = props.rowData.recommended_desks.toString.toInt
-    log.info(s"recommndedDes ${recommendedDesk}")
-
-    val string = data.deskRec.toString
-    <.span(<.input.number(
-      //      ^.key := data.id,
-      ^.value := string,
-      ^.backgroundColor := (if (recommendedDesk > data.deskRec) "#ffaaaa" else "#aaffaa"),
-      ^.onChange ==>
-        ((e: ReactEventI) => {
-          e.preventDefault()
-          e.stopPropagation()
-          dispatch(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot(data.id, e.target.value.toInt)))
-        })
-    )).render
-  }
-}
-
 object QueueUserDeskRecsComponent {
 
   case class Props(
