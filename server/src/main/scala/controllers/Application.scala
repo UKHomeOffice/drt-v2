@@ -8,6 +8,7 @@ import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Source, Sink}
 import akka.util.Timeout
+import akka.event._
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.{ConfigFactory, Config}
@@ -49,39 +50,26 @@ trait SystemActors {
   val flightsActorAskable: AskableActorRef = flightsActor
 }
 
-class Application @Inject() (
-  implicit
-  val config: Configuration,
-  implicit val mat: Materializer,
-  env: Environment,
-  override val system: ActorSystem,
-  ec: ExecutionContext
-)
-  extends Controller with Core with SystemActors {
-  ctrl =>
-  val log = system.log
+trait ChromaFetcherLike {
+  def system: ActorSystem
+  def chromafetcher: ChromaFetcher
+}
 
-  val apiService = new ApiService {
-    implicit val timeout = Timeout(5 seconds)
+trait MockChroma extends ChromaFetcherLike {
+  self => 
+  system.log.info("Mock Chroma init")
+  override val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = self.system}
+}
 
-    override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = {
-      val flights: Future[Any] = flightsActorAskable ? GetFlights
-      val fsFuture = flights.collect {
-        case Flights(fs) =>
-          //          log.info(s"Got flights list ${fs}")
-          fs
-      }
-      fsFuture
-    }
-  }
+trait ProdChroma extends ChromaFetcherLike {
+  self => 
+  override val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = self.system }
+}
 
-  val apiS: Api = apiService
+case class ChromaFlightFeed(log: LoggingAdapter, chromafetch: ChromaFetcherLike) extends {
+  flightFeed => 
 
-  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
-
-  // val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
-
-  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
+  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetch.chromafetcher, 10 seconds)
   val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
       csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
         case Some(renamedTerminal) =>
@@ -131,7 +119,41 @@ class Application @Inject() (
   }
 
   val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
-  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+
+}
+
+class Application @Inject() (
+  implicit
+  val config: Configuration,
+  implicit val mat: Materializer,
+  env: Environment,
+  override val system: ActorSystem,
+  ec: ExecutionContext
+)
+  extends Controller with Core with SystemActors {
+  ctrl =>
+  val log = system.log
+
+  val apiService = new ApiService {
+    implicit val timeout = Timeout(5 seconds)
+
+    override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = {
+      val flights: Future[Any] = flightsActorAskable ? GetFlights
+      val fsFuture = flights.collect {
+        case Flights(fs) =>
+          //          log.info(s"Got flights list ${fs}")
+          fs
+      }
+      fsFuture
+    }
+  }
+
+  val feed = ChromaFlightFeed(log,
+                              new MockChroma{
+                                override def system = ctrl.system
+                              })
+
+  feed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

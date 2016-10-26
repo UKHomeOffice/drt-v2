@@ -132,7 +132,6 @@ object TableTerminalDeskRecs {
       log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
-        log.info(s"__________item $itemWithIndex")
         val item = itemWithIndex._1
         val time = item.time
         val windowSize = 60000 * 15
