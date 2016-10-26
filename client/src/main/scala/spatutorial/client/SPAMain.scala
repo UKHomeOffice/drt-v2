@@ -5,6 +5,7 @@ import diode.data.PotState.PotReady
 import diode.{ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
+import japgolly.scalajs.react.extra.router.StaticDsl.Rule
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -26,27 +27,37 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 
+trait AirportConfig {
+  val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
+  val airportShortCode: String = "edi"
+  val eeadesk = "eeaDesk"
+  val egate = "eGate"
+  val nonEeaDesk = "nonEeaDesk"
+  val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
+}
 
 object TableViewUtils {
-  def terminalUserDeskRecsRows(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
-    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = WorkloadsHelpers.queueNames.keys.toList.map(qn => {
-      val s: Option[Pot[SimulationResult]] = simulationResult.get(qn)
-      simulationResult.get(qn) match {
+
+  def queueNameMapping = Map("eeaDesk"->"EEA", "nonEeaDesk" -> "Non-EEA", "eGate" -> "e-Gates")
+
+  def terminalUserDeskRecsRows(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
+    val queueNames: List[QueueName] = queueNameMapping.keys.toList
+    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNames.map(queueName => {
+      simulationResult.get(queueName) match {
         case Some(Ready(sr)) =>
           log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Ready")
-          queueDetailsRowsFromNos(qn, queueNosFromSimulationResult(paxload, queueCrunchResultsForTerminal, simulationResult, qn))
-        case _ =>
-          queueCrunchResultsForTerminal.get(qn) match {
+          queueDetailsRowsFromNos(queueName, queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, queueName))
+        case None =>
+          queueCrunchResultsForTerminal.get(queueName) match {
             case Some(Ready(cr)) =>
               log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Ready4")
-              queueDetailsRowsFromNos(qn, queueNosFromCrunchResult(paxload, queueCrunchResultsForTerminal, qn))
+              queueDetailsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, queueName))
             case _ =>
               log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Not ready")
               List()
           }
       }
     })
-
 
     val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
 
@@ -58,20 +69,34 @@ object TableViewUtils {
 
   def queueDetailsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDetailsRow)] = {
     queueNos.toList.transpose.zipWithIndex.map {
-      case (queueFields, rowIndex) =>
-        (queueFields(1), qn) -> QueueDetailsRow(
-          pax = queueFields(0).toDouble,
-          crunchDeskRec = queueFields(2).toInt,
-          userDeskRec = DeskRecTimeslot(rowIndex.toString, queueFields(3).toInt),
-          waitTimeWithCrunchDeskRec = queueFields(4).toInt,
-          waitTimeWithUserDeskRec = queueFields(5).toInt
+      case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
+        (timestamp, qn) -> QueueDetailsRow(
+          timestamp = timestamp,
+          pax = pax.toDouble,
+          crunchDeskRec = crunchDeskRec.toInt,
+          userDeskRec = DeskRecTimeslot(rowIndex.toString, userDeskRec.toInt),
+          waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
+          waitTimeWithUserDeskRec = waitTimeUser.toInt,
+          qn
         )
     }
   }
 
-
-  def queueNosFromCrunchResult(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], qn: QueueName): Seq[List[Long]] = {
+  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName): Seq[List[Long]] = {
     Seq(
+      DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
+      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
+      simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    )
+  }
+
+  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], qn: QueueName): Seq[List[Long]] = {
+    Seq(
+      DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       List.range(0, queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.length, 15).map(_.toLong),
       queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
@@ -81,20 +106,10 @@ object TableViewUtils {
     )
   }
 
-  def queueNosFromSimulationResult(paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName): Seq[List[Long]] = {
-    Seq(
-      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
-      queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-      simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
-      queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-      simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-    )
-  }
 }
 
 @JSExport("SPAMain")
-object SPAMain extends js.JSApp {
+object SPAMain extends js.JSApp with AirportConfig{
 
   // Define the locations (pages) used in this application
   sealed trait Loc
@@ -107,13 +122,11 @@ object SPAMain extends js.JSApp {
 
   case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
 
-  val eeadesk = "eeaDesk"
-  val egate = "eGate"
-  val nonEeaDesk = "nonEeaDesk"
 
   val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
   hasWl.value match {
-    case Empty => SPACircuit.dispatch(GetWorkloads("", "", "edi"))
+    case Empty =>
+      SPACircuit.dispatch(GetWorkloads("", "", airportShortCode))
     case default =>
       log.info(s"was $default")
   }
@@ -145,16 +158,17 @@ object SPAMain extends js.JSApp {
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
 
-    val terminalUserDeskRecs = staticRoute("#A1/userdeskrecs", TerminalUserDeskRecommendationsLoc("A1")) ~> renderR(ctl => {
-      log.info("routing to A1 userdeskrecs")
-      TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent
+
+    val terminalUserDeskRecs = terminalNames.map(tn => {
+      staticRoute(s"#${tn}/userdeskrecs", TerminalUserDeskRecommendationsLoc(tn)) ~> renderR(ctl => {
+        log.info(s"routing to ${tn} userdeskrecs")
+        TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(tn)
+      })
     })
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
       log.info("running our user desk recs route")
-      val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
-      val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
       val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = terminalNames.flatMap { terminalName =>
         queues.map { queueName =>
           val labelsPotRCP = SPACircuit.connect(_.workload.map(_.labels))
@@ -179,7 +193,8 @@ object SPAMain extends js.JSApp {
         queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
-    (dashboardRoute | flightsRoute | terminalUserDeskRecs | userDeskRecsRoute).notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
+    val rule = terminalUserDeskRecs.foldLeft((dashboardRoute | flightsRoute | userDeskRecsRoute))((rules, terminalRule) => rules | terminalRule)
+    rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   def makeUserDeskRecRowsPotRCP(terminalName: TerminalName, queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {
@@ -194,11 +209,11 @@ object SPAMain extends js.JSApp {
         cr: CrunchResult <- potcr
         dr: UserDeskRecs <- potdr
       } yield {
+        val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
         val every15thRecDesk: Seq[Int] = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
         val every15thCrunchWaitTime: Iterator[Int] = cr.waitTimes.grouped(15).map(_.max)
         val every15thSimWaitTime: Iterator[Int] = simres.waitTimes.grouped(15).map(_.max)
-        val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
-        val allRows = ((aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose)
+        val allRows = (aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose
         allRows
       }
       val is: Pot[List[UserDeskRecsRow]] = for (rows <- potRows) yield {
@@ -223,7 +238,7 @@ object SPAMain extends js.JSApp {
       <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
         <.div(^.className := "container",
           <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "DRT EDI Live Spike")),
-          <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page)))),
+          <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page, terminalNames)))),
       // currently active module is shown in this container
       <.div(^.className := "container", r.render()))
   }

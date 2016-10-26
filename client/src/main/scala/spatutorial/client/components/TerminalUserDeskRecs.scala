@@ -9,6 +9,7 @@ import org.scalajs.dom.html.{Div, TableCell, TableHeaderCell}
 import spatutorial.client.TableViewUtils
 import spatutorial.client.logger._
 import spatutorial.client.modules.FlightsView
+import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
@@ -36,11 +37,14 @@ object TableTerminalDeskRecs {
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class QueueDetailsRow(
+                              timestamp: Long,
                               pax: Double,
                               crunchDeskRec: Int,
                               userDeskRec: DeskRecTimeslot,
                               waitTimeWithCrunchDeskRec: Int,
-                              waitTimeWithUserDeskRec: Int)
+                              waitTimeWithUserDeskRec: Int,
+                              queueName: QueueName
+                            )
 
   case class TerminalUserDeskRecsRow(time: Long, queueDetails: Seq[QueueDetailsRow])
 
@@ -49,7 +53,7 @@ object TableTerminalDeskRecs {
                     items: Seq[TerminalUserDeskRecsRow],
                     flights: Pot[Flights],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    stateChange: DeskRecTimeslot => Callback
+                    stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
 
   case class HoverPopoverState(hovered: Boolean = false)
@@ -73,95 +77,96 @@ object TableTerminalDeskRecs {
     popover
   }).build
 
-  def buildTerminalUserDeskRecsComponent = {
-    val airportWrapper = SPACircuit.connect(_.airportInfos)
-    val flightsWrapper = SPACircuit.connect(m => m.flights)
-    val simulationResultWrapper = SPACircuit.connect(_.simulationResult)
-    val workloadWrapper = SPACircuit.connect(_.workload)
-    val queueCrunchResultsWrapper = SPACircuit.connect(_.queueCrunchResults)
-    val userDeskRecsWrapper = SPACircuit.connect(_.userDeskRec)
+  case class PracticallyEverything(
+                                    airportInfos: Map[String, Pot[AirportInfo]],
+                                    flights: Pot[Flights],
+                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
+                                    workload: Pot[Workloads],
+                                    queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]],
+                                    userDeskRec: Map[TerminalName, QueueUserDeskRecs]
+                                  )
 
-    flightsWrapper(flightsProxy => {
-      queueCrunchResultsWrapper(crunchResultsMP => {
-        simulationResultWrapper(simulationResultMP => {
-          workloadWrapper((workloadsMP: ModelProxy[Pot[Workloads]]) => {
-            userDeskRecsWrapper(userDeskRecsMP => {
-              <.div(
-                <.h1("A1 Desks"),
-                workloadsMP().renderReady((workloads: Workloads) => {
-                  val crv = crunchResultsMP.value.getOrElse("A1", Map())
-                  val srv = simulationResultMP.value.getOrElse("A1", Map())
-                  val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(workloadsMP.value.get.workloads("A1"))
-                  val rows = TableViewUtils.terminalUserDeskRecsRows(paxloads, crv, srv)
-                  <.div(
-                    TableTerminalDeskRecs(
-                      rows,
-                      flightsProxy.value,
-                      airportWrapper,
-                      deskRecTimeslot => {
-                        log.info(s"updating user desk for $deskRecTimeslot")
-                        userDeskRecsMP.dispatch(UpdateDeskRecsTime("A1", "eeaDesk", deskRecTimeslot))
-                      }
-                    ))
-                }),
-                workloadsMP().renderPending(_ => <.div("Waiting for crunch results"))
-              )
-            })
-          })
-        })
-      })
+  def buildTerminalUserDeskRecsComponent(terminalName: TerminalName) = {
+    val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model =>
+      PracticallyEverything(
+        model.airportInfos,
+        model.flights,
+        model.simulationResult,
+        model.workload,
+        model.queueCrunchResults,
+        model.userDeskRec
+      ))
+    val airportWrapper = SPACircuit.connect(_.airportInfos)
+    airportFlightsSimresWorksQcrsUdrs(peMP => {
+      <.div(
+        <.h1(terminalName + " Desks"),
+        peMP().workload.renderReady((workloads: Workloads) => {
+          val crv = peMP().queueCrunchResults.getOrElse(terminalName, Map())
+          val srv = peMP().simulationResult.getOrElse(terminalName, Map())
+          val timestamps = workloads.timeStamps
+          val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(peMP().workload.get.workloads(terminalName))
+          val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
+          <.div(
+            TableTerminalDeskRecs(
+              rows,
+              peMP().flights,
+              airportWrapper,
+              (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) => {
+                peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
+              }
+            ))
+        }),
+        peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
     })
   }
 
   class Backend($: BackendScope[Props, Unit]) {
 
+    def zeroPadTens(number: Int) = {
+      if (number < 10)
+        "0" + number
+      else
+        number.toString
+    }
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
+        log.info(s"__________item $itemWithIndex")
         val item = itemWithIndex._1
         val time = item.time
         val windowSize = 60000 * 15
         val flights: Pot[Flights] = p.flights.map(flights =>
           flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
         val date: Date = new Date(item.time)
-        val trigger: String = date.toLocaleDateString() + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+        val trigger: String = date.getFullYear() + "-" + zeroPadTens(date.getMonth()+1) + "-" + zeroPadTens(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val popover = HoverPopover(trigger, flights, airportInfo)
         val fill = item.queueDetails.flatMap(
-          (q: QueueDetailsRow) => Seq(
-            <.td(q.pax),
-            <.td(q.crunchDeskRec),
-            <.td(
-              <.input.number(
-                ^.value := q.userDeskRec.deskRec,
-                ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
-              )),
-            <.td(q.waitTimeWithCrunchDeskRec),
-            <.td(q.waitTimeWithUserDeskRec))
+          (q: QueueDetailsRow) => {
+            val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
+            val dangerWait = if (q.waitTimeWithUserDeskRec > 25) "table-danger"
+            val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
+            Seq(
+              <.td(q.pax),
+              <.td(q.crunchDeskRec),
+              <.td(
+                ^.cls := hasChangeClasses,
+                <.input.number(
+                  ^.className := "desk-rec-input",
+                  ^.value := q.userDeskRec.deskRec,
+                  ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
+                )),
+              <.td(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"),
+            <.td(q.waitTimeWithCrunchDeskRec + " mins"))
+          }
         ).toList
-        <.tr(<.td(item.time) :: fill: _*)
-        //        val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
-        //        val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
-        //        val dangerWait = if (item.waitTimeWithUserDeskRec > 25) "table-danger"
-        //        <.tr(^.key := item.time,
-        //          ^.cls := warningClasses,
-        //          <.td(popover()),
-        //          <.td(item.crunchDeskRec),
-        //          <.td(
-        //            ^.cls := hasChangeClasses,
-        //            <.input.number(
-        //              ^.className := "desk-rec-input",
-        //              ^.value := item.userDeskRec.deskRec,
-        //              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
-        //          <.td(^.cls := dangerWait + " " + warningClasses, item.waitTimeWithUserDeskRec),
-        //          <.td(item.waitTimeWithCrunchDeskRec)
-        //        )
+        <.tr(<.td(popover()) :: fill: _*)
       }
-      val queueNames = WorkloadsHelpers.queueNames.values.toList
+      val queueNames = TableViewUtils.queueNameMapping.values.toList
       val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
       val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Rec Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recs"))).flatten
-      <.table(^.cls := "table table-striped table-hover table-sm",
+      <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.tbody(
           <.tr(<.th("") :: queueNames.map(queueName => <.th(<.h2(queueName), ^.colSpan := 5)): _*),
           <.tr(<.th("") :: flatten: _*),
@@ -176,7 +181,7 @@ object TableTerminalDeskRecs {
 
   def apply(items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            stateChange: DeskRecTimeslot => Callback) =
+            stateChange: (QueueName, DeskRecTimeslot) => Callback) =
     component(Props(items, flights, airportInfos, stateChange))
 }
 
