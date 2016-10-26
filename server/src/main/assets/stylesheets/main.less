@@ -5,7 +5,22 @@
 @import "popover-styles.less";
 
 .desk-rec-input {
-  width: 40px;
+  width: 4em;
+}
+
+table.table.user-desk-recs>tbody>tr>td, table.table.user-desk-recs>tbody>tr>th {
+  padding-right: 0.25em;
+  padding: 0.25em;
+}
+table.user-desk-recs>tbody>tr>td, table.user-desk-recs>tbody>tr>td>input{
+  text-align: right;
+}
+table.user-desk-recs>tbody>tr>td>input:focus{
+  text-align: left;
+}
+
+table.user-desk-recs>tbody>tr>th{
+  text-align: center;
 }
 
 @media (min-width: 1200px) {

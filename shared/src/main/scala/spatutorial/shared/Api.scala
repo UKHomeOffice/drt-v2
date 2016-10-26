@@ -120,7 +120,6 @@ trait WorkloadsHelpers {
     case ("A2", "nonEeaDesk") => 45
   }
 
-  def queueNames = Map("eeaDesk"->"EEA", "eGate" -> "e-Gates", "nonEeaDesk" -> "Non-EEA")
 }
 
 object WorkloadsHelpers extends WorkloadsHelpers
