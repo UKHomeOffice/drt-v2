@@ -26,15 +26,9 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
+import spatutorial.shared.AirportConfig
 
-trait AirportConfig {
-  val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
-  val airportShortCode: String = "edi"
-  val eeadesk = "eeaDesk"
-  val egate = "eGate"
-  val nonEeaDesk = "nonEeaDesk"
-  val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
-}
+
 
 object TableViewUtils {
 

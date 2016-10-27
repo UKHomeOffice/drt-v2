@@ -46,6 +46,8 @@ object UserDeskRecsComponent {
               log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
               <.div(^.cls := "table-responsive",
                 TableTodoList(
+                  p.queueName,
+                  p.terminalName,
                   p.items,
                   p.flightsPotRCP,
                   p.airportInfos,

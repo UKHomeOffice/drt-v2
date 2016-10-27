@@ -18,8 +18,9 @@ import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.client.modules.Dashboard._
+import spatutorial.shared.AirportConfig
 
-object DeskRecsChart {
+object DeskRecsChart extends AirportConfig{
   type DeskRecsModel = DashboardModels
 
   log.info("initialising deskrecschart")
@@ -53,7 +54,7 @@ object DeskRecsChart {
                           potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
                           potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
                           deskRecsChart(queueName, labels, potCrunchResult),
-                          waitTimesChart(labels, potCrunchResult, WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName)))
+                          waitTimesChart(labels, potCrunchResult, slaFromTerminalAndQueue(terminalName, queueName)))
                       })
                       //                  })
                     )
@@ -99,7 +100,7 @@ object DeskRecsChart {
         case _ => props.crunchResult().get.waitTimes
       })
       val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-      val fakeSLAData = sampledWaitTimesSimulation.map(_ => WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName).toDouble)
+      val fakeSLAData = sampledWaitTimesSimulation.map(_ => slaFromTerminalAndQueue(terminalName, queueName).toDouble)
       val sampledLabels = takeEvery15th(labels)
       <.div(
         Chart(
