@@ -11,44 +11,22 @@ import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared.{AirportInfo, CrunchResult, SimulationResult}
-
+import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.ScalaJSDefined
-
-object UserDeskRecCustomComponents {
-
-  def magic(dispatch: (UpdateDeskRecsTime) => Callback)(terminalName: TerminalName, queueName: String) = (props: js.Dynamic) => {
-    val data: DeskRecTimeslot = props.data.asInstanceOf[DeskRecTimeslot]
-    val recommendedDesk = props.rowData.recommended_desks.toString.toInt
-    log.info(s"recommndedDes ${recommendedDesk}")
-
-    val string = data.deskRec.toString
-    <.span(<.input.number(
-      //      ^.key := data.id,
-      ^.value := string,
-      ^.backgroundColor := (if (recommendedDesk > data.deskRec) "#ffaaaa" else "#aaffaa"),
-      ^.onChange ==>
-        ((e: ReactEventI) => {
-          e.preventDefault()
-          e.stopPropagation()
-          dispatch(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot(data.id, e.target.value.toInt)))
-        })
-    )).render
-  }
-}
 
 object QueueUserDeskRecsComponent {
 
   case class Props(
                     terminalName: TerminalName,
                     queueName: QueueName,
-                    items: ReactConnectProxy[Pot[List[UserDeskRecsRow]]],
-                    airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    labels: ReactConnectProxy[Pot[scala.collection.immutable.IndexedSeq[String]]],
-                    queueCrunchResults: ReactConnectProxy[Pot[CrunchResult]],
-                    queueUserDeskRecs: ReactConnectProxy[Pot[UserDeskRecs]],
-                    flights: ReactConnectProxy[Pot[Flights]],
-                    simulationResultWrapper: ReactConnectProxy[Pot[SimulationResult]]
+                    userDeskRecsRowPotRCP: ReactConnectProxy[Pot[List[UserDeskRecsRow]]],
+                    airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+                    labelsPotRCP: ReactConnectProxy[Pot[IndexedSeq[String]]],
+                    crunchResultPotRCP: ReactConnectProxy[Pot[CrunchResult]],
+                    userDeskRecsPotRCP: ReactConnectProxy[Pot[UserDeskRecs]],
+                    flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+                    simulationResultPotRCP: ReactConnectProxy[Pot[SimulationResult]]
                   )
 
   val component = ReactComponentB[Props]("QueueUserDeskRecs")
@@ -69,24 +47,25 @@ object QueueUserDeskRecsComponent {
   def currentUserDeskRecView(props: Props): ReactTagOf[html.Div] = {
     <.div(
       ^.key := props.queueName,
-      props.flights((flights: ModelProxy[Pot[Flights]]) =>
-        props.labels(labels =>
-          props.queueUserDeskRecs(queueDeskRecs =>
-            props.queueCrunchResults(crw =>
-              props.items((itemsmodel: ModelProxy[Pot[List[UserDeskRecsRow]]]) =>
-                props.simulationResultWrapper(srw => {
-                  Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),
-                    itemsmodel().renderReady(items =>
-                      props.queueUserDeskRecs(
-                        queueDeskRecs => UserDeskRecsComponent(props.terminalName, props.queueName, items,
-                          props.airportInfo, flights, queueDeskRecs, srw)
-                      )),
-                    props.queueCrunchResults(crw => {
-                      <.div(labels().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, srw, crw)))
-                    })
-                  )
-                }))))))
-    )
+      props.userDeskRecsRowPotRCP(userDeskRecsRosPotMP =>
+        Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),
+          userDeskRecsRosPotMP().renderReady(userDeskRecsRows =>
+            props.simulationResultPotRCP(simulationResultPotMP => {
+              props.userDeskRecsPotRCP(
+                userDeskRecsPotMP => UserDeskRecsComponent(props.terminalName, props.queueName, userDeskRecsRows,
+                  props.airportInfoPotsRCP, props.flightsPotRCP, userDeskRecsPotMP, simulationResultPotMP)
+              )
+            })),
+          props.simulationResultPotRCP(simulationResultPotMP => {
+            props.crunchResultPotRCP(crunchResultPotMP => {
+              props.labelsPotRCP(labelsPotMP =>
+                <.div(^.cls := "user-desk-recs-chart",
+                  labelsPotMP().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, simulationResultPotMP, crunchResultPotMP)))
+              )
+            })
+          })
+        )))
   }
+
 }
 

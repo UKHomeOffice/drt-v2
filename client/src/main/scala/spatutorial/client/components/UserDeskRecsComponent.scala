@@ -17,7 +17,7 @@ object UserDeskRecsComponent {
                     terminalName: TerminalName,
                     queueName: QueueName,
                     items: Seq[UserDeskRecsRow],
-                    flights: Pot[Flights],
+                    flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     userDeskRecsPotProxy: ModelProxy[Pot[UserDeskRecs]],
                     simulationResult: ModelProxy[Pot[SimulationResult]])
@@ -32,10 +32,6 @@ object UserDeskRecsComponent {
         props.userDeskRecsPotProxy.dispatch(GetWorkloads("", "", "edi"))
       }
       Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
-
-      Callback.when(props.userDeskRecsPotProxy().isReady)(
-        props.userDeskRecsPotProxy.dispatch(RunSimulation(props.terminalName, props.queueName, Nil, props.userDeskRecsPotProxy().get.items.map(_.deskRec).toList))
-      )
     }
 
     def editTodo(item: Option[DeskRecTimeslot]) =
@@ -43,22 +39,20 @@ object UserDeskRecsComponent {
       $.modState(s => s.copy(selectedItem = item, showTodoForm = true))
 
     def render(p: Props, s: State) =
-      Panel(Panel.Props(s"Enter your real (or projected) desk numbers to see projected queue times for queue '${p.queueName}'"), <.div(
+      <.div(^.cls := "user-desk-recs-container",
         p.userDeskRecsPotProxy().renderFailed(ex => "Error loading"),
         p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
-        p.simulationResult().renderReady(sr =>
           p.userDeskRecsPotProxy().render(userDeskRecs => {
               log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
-              <.div(^.cls := "user-desk-recs-container table-responsive",
+              <.div(^.cls := "table-responsive",
                 TableTodoList(
                   p.items,
-                  p.flights,
+                  p.flightsPotRCP,
                   p.airportInfos,
-                  sr,
                   item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
                   item => editTodo(Some(item)),
                   item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
-            }))))
+            }))
   }
 
   // create the React component for To Do management
@@ -70,12 +64,12 @@ object UserDeskRecsComponent {
 
   /** Returns a function compatible with router location system while using our own props */
   def apply(
-            terminalName: TerminalName,
-            queueName: QueueName,
-            items: Seq[UserDeskRecsRow],
-            airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            flights: ModelProxy[Pot[Flights]],
-            proxy: ModelProxy[Pot[UserDeskRecs]],
-            simulationResult: ModelProxy[Pot[SimulationResult]]) =
-    component(Props(terminalName, queueName, items, flights.value, airportInfo, proxy, simulationResult))
+             terminalName: TerminalName,
+             queueName: QueueName,
+             items: Seq[UserDeskRecsRow],
+             airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+             flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+             proxy: ModelProxy[Pot[UserDeskRecs]],
+             simulationResult: ModelProxy[Pot[SimulationResult]]) =
+    component(Props(terminalName, queueName, items, flightsPotRCP, airportInfo, proxy, simulationResult))
 }

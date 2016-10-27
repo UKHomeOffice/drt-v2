@@ -139,7 +139,7 @@ object Dashboard {
                 )
               }),
               workloads.renderPending((num) => <.div(s"waiting for workloads with ${num}")),
-              workloads.renderEmpty(<.div(s"Waiting for workload")))
+              workloads.renderEmpty(<.div(s"Waiting for paxload")))
           })))
     }
     .componentDidMount(scope => mounted(scope.props))

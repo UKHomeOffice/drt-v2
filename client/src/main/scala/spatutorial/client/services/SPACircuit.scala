@@ -107,7 +107,6 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]
 }
 
 case class RootModel(
-                      //todos: Pot[UserDeskRecs],
                       motd: Pot[String] = Empty,
                       workload: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]] = Map(),
@@ -120,7 +119,7 @@ case class RootModel(
     s"""
        |RootModel(
        |motd: $motd
-       |workload: $workload
+       |paxload: $workload
        |queueCrunchResults: $queueCrunchResults
        |userDeskRec: $userDeskRec
        |simulationResult: $simulationResult
@@ -211,12 +210,9 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-      //      log.info(s"received workloads ${terminalQueueWorkloads} from server")
       val trytqes = terminalQueueWorkloads.flatMap {
         case (terminalName, queueWorkloads) =>
-          //          log.info(s" $terminalName, $queueWorkloads flatmapping")
           val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-          //          log.info(s"workloadsByQueue ${workloadsByQueue}")
           val effects = workloadsByQueue.map {
             case (queueName, queueWorkload) =>
               val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
@@ -303,18 +299,12 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
   extends LoggingActionHandler(modelRW) {
 
   override def handle = {
-    case Crunch(terminalName, queueName, workload) =>
-      log.info(s"Requesting Crunch $terminalName, $queueName,  with ${workload}")
-      val crunchResult = AjaxClient[Api].crunch(terminalName, queueName, workload).call()
-      updated(
-        value.copy(_2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Pending())))),
-        Effect(crunchResult.map(serverResult => UpdateCrunchResult(terminalName, queueName, serverResult))))
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
       val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(t._2.toString, t._1)).toList)
+        .zipWithIndex.map(t => DeskRecTimeslot(id = t._2.toString, deskRec = t._1)).toList)
 
       updated(value.copy(
         _1 = RootModel.mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),

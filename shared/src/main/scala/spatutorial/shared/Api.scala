@@ -6,6 +6,7 @@ import spatutorial.shared.FlightsApi._
 import scala.List
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 case class ApiFlight(
                       Operator: String,
@@ -70,6 +71,15 @@ trait WorkloadsHelpers {
     })
   }
 
+  def paxloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
+    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads.values.toList)
+    workloads.mapValues(qwl => {
+      val allPaxloadByMinuteForThisQueue = oneQueuePaxload(qwl)
+      val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allPaxloadByMinuteForThisQueue)
+      queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
+    })
+  }
+
   def workloadsByPeriod(workloadsByMinute: Seq[WL], n: Int): scala.Seq[WL] =
     workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
 
@@ -84,6 +94,10 @@ trait WorkloadsHelpers {
 
   def oneQueueWorkload(workloads1: QueueWorkloads): Map[Long, Double] = {
     workloads1._1.map((wl) => (wl.time, wl.workload)).toMap
+  }
+
+  def oneQueuePaxload(paxloads: QueueWorkloads): Map[Long, Double] = {
+    paxloads._2.map((paxLoad) => (paxLoad.time, paxLoad.pax)).toMap
   }
 
   def allMinsFromAllQueues(workloads: Seq[QueueWorkloads]): NumericRange[Long] = {
@@ -105,6 +119,7 @@ trait WorkloadsHelpers {
     case ("A2", "eGate") => 25
     case ("A2", "nonEeaDesk") => 45
   }
+
 }
 
 object WorkloadsHelpers extends WorkloadsHelpers

@@ -1,7 +1,7 @@
 package spatutorial.client.components
 
 import diode.data.{Empty, Pot}
-import diode.react.ReactConnectProxy
+import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{Button, CommonStyle}
@@ -10,43 +10,10 @@ import spatutorial.client.services.DeskRecTimeslot
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import spatutorial.client.logger._
+
 import scala.scalajs.js
 import scala.scalajs.js.{Date, JSON, Object}
 import scalacss.ScalaCssReact._
-
-object TodoList {
-  // shorthand for styles
-  @inline private def bss = GlobalStyles.bootstrapStyles
-
-  case class TodoListProps(
-                            items: Seq[DeskRecTimeslot],
-                            simulationResult: SimulationResult,
-                            stateChange: DeskRecTimeslot => Callback,
-                            editItem: DeskRecTimeslot => Callback,
-                            deleteItem: DeskRecTimeslot => Callback
-                          )
-
-  private val TodoList = ReactComponentB[TodoListProps]("TodoList")
-    .render_P(p => {
-      val style = bss.listGroup
-      def renderItem(itemWithIndex: ((DeskRecTimeslot, Int), Int)) = {
-        val item = itemWithIndex._1
-        <.div(
-
-          <.span("Wait", item._2),
-          <.span(
-            <.input.number(
-              ^.className := "desk-rec-input",
-              ^.value := item._1.deskRec,
-              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item._1.id, deskRec = e.target.value.toInt))))))
-      }
-      <.span(p.items.zip(DeskRecsChart.takeEvery15th(p.simulationResult.waitTimes)).zipWithIndex map renderItem)
-    })
-    .build
-
-  def apply(items: Seq[DeskRecTimeslot], sr: SimulationResult, stateChange: DeskRecTimeslot => Callback, editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    TodoList(TodoListProps(items, sr, stateChange, editItem, deleteItem))
-}
 
 case class PopoverWrapper(
                            position: String = "right",
@@ -75,10 +42,9 @@ object TableTodoList {
   case class UserDeskRecsRow(time: Long, crunchDeskRec: Int, userDeskRec: DeskRecTimeslot, waitTimeWithCrunchDeskRec: Int, waitTimeWithUserDeskRec: Int)
 
   case class TodoListProps(
-                            items: Seq[UserDeskRecsRow],
-                            flights: Pot[Flights],
-                            airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                            simulationResult: SimulationResult,
+                            userDeskRecsRos: Seq[UserDeskRecsRow],
+                            flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+                            airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                             stateChange: DeskRecTimeslot => Callback,
                             editItem: DeskRecTimeslot => Callback,
                             deleteItem: DeskRecTimeslot => Callback
@@ -87,22 +53,35 @@ object TableTodoList {
   case class HoverPopoverState(hovered: Boolean = false)
 
   def HoverPopover(trigger: String,
-                   matchingFlights: Pot[Flights],
-                   airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) = ReactComponentB[Unit]("HoverPopover")
+                   flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+                   airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+                   time: Long
+                  ) = ReactComponentB[Unit]("HoverPopover")
     .initialState_P((p) =>
       HoverPopoverState()
     ).renderS((scope, state) => {
-    val popover = <.div(
-      ^.onMouseEnter ==> ((e: ReactEvent) => scope.modState(s => s.copy(hovered = true))),
-      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
-      if (state.hovered) {
-        PopoverWrapper(trigger = trigger)(
-          airportInfos(airportInfo =>
-            (FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value)))))
-      } else {
-        trigger
-      })
-    popover
+
+    flightsPotRCP((flightsPotMP: ModelProxy[Pot[Flights]]) => {
+      <.div(
+        flightsPotMP().renderReady((allFlights: Flights) => {
+          val windowSize = 60000 * 15
+          val matchingFlights = flightsPotMP().map(flights => flights.copy(flights = allFlights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
+          <.div(
+            ^.onMouseEnter ==> ((e: ReactEvent) => scope.modState(s => s.copy(hovered = true))),
+            ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
+            if (state.hovered) {
+              PopoverWrapper(trigger = trigger)(
+                airportInfos(airportInfo =>
+                  FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))))
+            } else {
+              trigger
+            }
+          )
+        }),
+        flightsPotMP().renderEmpty(trigger)
+      )
+    })
+
   }).build
 
   private val TodoList = ReactComponentB[TodoListProps]("TodoList")
@@ -110,20 +89,16 @@ object TableTodoList {
       val style = bss.listGroup
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
-        val time = item.time
-        val windowSize = 60000 * 15
-        val flights: Pot[Flights] = p.flights.map(flights =>
-          flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
         val date: Date = new Date(item.time)
-        val trigger: String = date.toLocaleDateString() + " " + date.toLocaleTimeString().replaceAll(":00$", "")
-        val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
-        val popover = HoverPopover(trigger, flights, airportInfo)
+        val formattedDate = jsDateFormat.formatDate(date)
+        val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfoPotsRCP
+        val popover = HoverPopover(formattedDate, p.flightsPotRCP, airportInfo, item.time)
         val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (item.waitTimeWithUserDeskRec > 25) "table-danger"
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
-          <.td(popover()),
+          <.td(^.cls := "date-field", popover()),
           <.td(item.crunchDeskRec),
           <.td(
             ^.cls := hasChangeClasses,
@@ -138,14 +113,14 @@ object TableTodoList {
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
           <.tr(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
-          <.tr(<.th("Time"), <.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended")),
-          p.items.zipWithIndex map renderItem))
+          <.tr(<.th("Time"), <.th("Rec Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recs")),
+          p.userDeskRecsRos.zipWithIndex map renderItem))
     })
     .build
 
-  def apply(items: Seq[UserDeskRecsRow], flights: Pot[Flights],
-            airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            sr: SimulationResult, stateChange: DeskRecTimeslot => Callback,
+  def apply(userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+            airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+            stateChange: DeskRecTimeslot => Callback,
             editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    TodoList(TodoListProps(items, flights, airportInfos, sr, stateChange, editItem, deleteItem))
+    TodoList(TodoListProps(userDeskRecRows, flightsPotRCP, airportInfoPotsRCP, stateChange, editItem, deleteItem))
 }
