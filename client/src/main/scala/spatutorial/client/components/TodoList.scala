@@ -72,7 +72,13 @@ object TableTodoList {
             if (state.hovered) {
               PopoverWrapper(trigger = trigger)(
                 airportInfos(airportInfo =>
-                  FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))))
+                  FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value, List(
+                   "SchDT",
+                    "IATA",
+                    "Origin",
+                    "MaxPax",
+                    "ActPax"
+                  )))))
             } else {
               trigger
             }

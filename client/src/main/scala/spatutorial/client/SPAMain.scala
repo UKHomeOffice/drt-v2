@@ -136,7 +136,7 @@ object SPAMain extends js.JSApp with AirportConfig{
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
 
-  setInterval(FiniteDuration(30L, SECONDS)) {
+  setInterval(FiniteDuration(10L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))
   }
   // configure the router
