@@ -59,7 +59,8 @@ object QueueUserDeskRecsComponent {
           props.simulationResultPotRCP(simulationResultPotMP => {
             props.crunchResultPotRCP(crunchResultPotMP => {
               props.labelsPotRCP(labelsPotMP =>
-                <.div(labelsPotMP().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, simulationResultPotMP, crunchResultPotMP)))
+                <.div(^.cls := "user-desk-recs-chart",
+                  labelsPotMP().renderReady(labels => DeskRecsChart.userSimulationWaitTimesChart(props.terminalName, props.queueName, labels, simulationResultPotMP, crunchResultPotMP)))
               )
             })
           })

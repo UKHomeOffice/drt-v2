@@ -90,15 +90,15 @@ object TableTodoList {
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         val date: Date = new Date(item.time)
-        val trigger: String = date.toLocaleDateString() + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+        val formattedDate = jsDateFormat.formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfoPotsRCP
-        val popover = HoverPopover(trigger, p.flightsPotRCP, airportInfo, item.time)
+        val popover = HoverPopover(formattedDate, p.flightsPotRCP, airportInfo, item.time)
         val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (item.waitTimeWithUserDeskRec > 25) "table-danger"
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
-          <.td(popover()),
+          <.td(^.cls := "date-field", popover()),
           <.td(item.crunchDeskRec),
           <.td(
             ^.cls := hasChangeClasses,
@@ -113,7 +113,7 @@ object TableTodoList {
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
           <.tr(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
-          <.tr(<.th("Time"), <.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended")),
+          <.tr(<.th("Time"), <.th("Rec Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recs")),
           p.userDeskRecsRos.zipWithIndex map renderItem))
     })
     .build

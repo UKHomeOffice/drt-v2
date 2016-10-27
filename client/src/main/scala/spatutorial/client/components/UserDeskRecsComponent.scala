@@ -39,12 +39,12 @@ object UserDeskRecsComponent {
       $.modState(s => s.copy(selectedItem = item, showTodoForm = true))
 
     def render(p: Props, s: State) =
-      <.div(
+      <.div(^.cls := "user-desk-recs-container",
         p.userDeskRecsPotProxy().renderFailed(ex => "Error loading"),
         p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
           p.userDeskRecsPotProxy().render(userDeskRecs => {
               log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
-              <.div(^.cls := "user-desk-recs-container table-responsive",
+              <.div(^.cls := "table-responsive",
                 TableTodoList(
                   p.items,
                   p.flightsPotRCP,

@@ -193,7 +193,7 @@ object SPAMain extends js.JSApp with AirportConfig{
         queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
-    val rule = terminalUserDeskRecs.foldLeft((dashboardRoute | flightsRoute | userDeskRecsRoute))((rules, terminalRule) => rules | terminalRule)
+    val rule = terminalUserDeskRecs.foldLeft(dashboardRoute | flightsRoute | userDeskRecsRoute)((rules, terminalRule) => rules | terminalRule)
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
