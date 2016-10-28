@@ -44,7 +44,7 @@ trait Core {
 }
 
 trait SystemActors {
-  self: Core => 
+  self: Core =>
   val flightsActor = system.actorOf(Props(classOf[FlightsActor]), "flightsActor")
   val crunchActor = system.actorOf(Props(classOf[CrunchActor]), "crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
@@ -56,26 +56,26 @@ trait ChromaFetcherLike {
 }
 
 trait MockChroma extends ChromaFetcherLike {
-  self => 
+  self =>
   system.log.info("Mock Chroma init")
   override val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = self.system}
 }
 
 trait ProdChroma extends ChromaFetcherLike {
-  self => 
+  self =>
   override val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = self.system }
 }
 
 case class ChromaFlightFeed(log: LoggingAdapter, chromafetch: ChromaFetcherLike) extends {
-  flightFeed => 
+  flightFeed =>
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetch.chromafetcher, 10 seconds)
   val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
-      csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
-        case Some(renamedTerminal) =>
-             csf.copy(Terminal = renamedTerminal)
-        case None => csf
-      })
+    csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
+                                              case Some(renamedTerminal) =>
+                                                csf.copy(Terminal = renamedTerminal)
+                                              case None => csf
+                                            })
   )
 
   val ArrivalsHall1 = "A1"
@@ -85,52 +85,57 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromafetch: ChromaFetcherLike)
     "T2" -> ArrivalsHall2
   )
   def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
-      if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
+    if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
   }
-  //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
       flights.map(flight => {
-        val walkTimeMinutes = 4
-        val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-        ApiFlight(
-          Operator = flight.Operator,
-          Status = flight.Status, EstDT = flight.EstDT,
-          ActDT = flight.ActDT, EstChoxDT = flight.EstChoxDT,
-          ActChoxDT = flight.ActChoxDT,
-          Gate = flight.Gate,
-          Stand = flight.Stand,
-          MaxPax = flight.MaxPax,
-          ActPax = flight.ActPax,
-          TranPax = flight.TranPax,
-          RunwayID = flight.RunwayID,
-          BaggageReclaimId = flight.BaggageReclaimId,
-          FlightID = flight.FlightID,
-          AirportID = flight.AirportID,
-          Terminal = flight.Terminal,
-          ICAO = flight.ICAO,
-          IATA = flight.IATA,
-          Origin = flight.Origin,
-          SchDT = flight.SchDT,
-          PcpTime = pcpTime
-        )
-      }).toList)
+                    val walkTimeMinutes = 4
+                    val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
+                    ApiFlight(
+                      Operator = flight.Operator,
+                      Status = flight.Status, EstDT = flight.EstDT,
+                      ActDT = flight.ActDT, EstChoxDT = flight.EstChoxDT,
+                      ActChoxDT = flight.ActChoxDT,
+                      Gate = flight.Gate,
+                      Stand = flight.Stand,
+                      MaxPax = flight.MaxPax,
+                      ActPax = flight.ActPax,
+                      TranPax = flight.TranPax,
+                      RunwayID = flight.RunwayID,
+                      BaggageReclaimId = flight.BaggageReclaimId,
+                      FlightID = flight.FlightID,
+                      AirportID = flight.AirportID,
+                      Terminal = flight.Terminal,
+                      ICAO = flight.ICAO,
+                      IATA = flight.IATA,
+                      Origin = flight.Origin,
+                      SchDT = flight.SchDT,
+                      PcpTime = pcpTime
+                    )
+                  }).toList)
   }
 
   val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
 
 }
 
+// case class LHRFlightFeed(log: LoggingAdapter) {
+//   val csvFile = "LHR_DMNDDET_20161022_0547.csv"
+
+//   val copiedToApiFlights =
+// }
+
 class Application @Inject() (
   implicit
-  val config: Configuration,
+    val config: Configuration,
   implicit val mat: Materializer,
   env: Environment,
   override val system: ActorSystem,
   ec: ExecutionContext
 )
-  extends Controller with Core with SystemActors {
+    extends Controller with Core with SystemActors {
   ctrl =>
   val log = system.log
 
@@ -161,26 +166,26 @@ class Application @Inject() (
 
   def autowireApi(path: String) = Action.async(parse.raw) {
     implicit request =>
-      println(s"Request path: $path")
+    println(s"Request path: $path")
 
-      // get the request body as ByteString
-      val b = request.body.asBytes(parse.UNLIMITED).get
+    // get the request body as ByteString
+    val b = request.body.asBytes(parse.UNLIMITED).get
 
-      // call Autowire route
-      Router.route[Api](apiService)(
-        autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-      ).map(buffer => {
-          val data = Array.ofDim[Byte](buffer.remaining())
-          buffer.get(data)
-          Ok(data)
-        })
+    // call Autowire route
+    Router.route[Api](apiService)(
+      autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
+    ).map(buffer => {
+            val data = Array.ofDim[Byte](buffer.remaining())
+            buffer.get(data)
+            Ok(data)
+          })
   }
 
   def logging = Action(parse.anyContent) {
     implicit request =>
-      request.body.asJson.foreach { msg =>
-        println(s"CLIENT - $msg")
-      }
-      Ok("")
+    request.body.asJson.foreach { msg =>
+      println(s"CLIENT - $msg")
+    }
+    Ok("")
   }
 }
