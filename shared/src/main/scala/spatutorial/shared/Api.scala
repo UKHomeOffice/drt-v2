@@ -118,6 +118,7 @@ trait WorkloadsHelpers {
     case ("A2", "eeaDesk") => 20
     case ("A2", "eGate") => 25
     case ("A2", "nonEeaDesk") => 45
+    case _ => 33
   }
 
 }
@@ -157,13 +158,13 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
-//  def getAllTodos(): List[DeskRecTimeslot]
+  //  def getAllTodos(): List[DeskRecTimeslot]
 
-//  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
+  //  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
 
-//  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
+  //  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
 
-//  def deleteTodo(itemId: String): List[DeskRecTimeslot]
+  //  def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

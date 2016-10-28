@@ -27,6 +27,15 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 
+trait LHRAirportConfig {
+  val terminalNames: Seq[TerminalName] = Seq("2", "3", "4", "5")
+  val airportShortCode: String = "edi"
+  val eeadesk = "eeaDesk"
+  val egate = "eGate"
+  val nonEeaDesk = "nonEeaDesk"
+  val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
+}
+
 trait AirportConfig {
   val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
   val airportShortCode: String = "edi"
@@ -109,7 +118,7 @@ object TableViewUtils {
 }
 
 @JSExport("SPAMain")
-object SPAMain extends js.JSApp with AirportConfig{
+object SPAMain extends js.JSApp with LHRAirportConfig {
 
   // Define the locations (pages) used in this application
   sealed trait Loc
