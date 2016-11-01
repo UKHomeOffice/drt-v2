@@ -32,7 +32,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, UserDeskRecommendationsLoc}
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
-import spatutorial.client.services.{Crunch, GetWorkloads, Workloads}
+import spatutorial.client.services.{GetWorkloads, Workloads}
 import spatutorial.shared.FlightsApi.Flights
 import com.payalabs.scalajs.react.bridge._
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _, _}

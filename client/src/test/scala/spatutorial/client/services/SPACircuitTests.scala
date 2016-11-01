@@ -119,40 +119,6 @@ object SPACircuitTests extends TestSuite {
       }
     }
 
-    //    'CrunchHandler - {
-    //      val model: Pot[CrunchResult] = Ready(CrunchResult(IndexedSeq[Int](), Nil))
-    //      def build = new CrunchHandler(new RootModelRW[Pot[CrunchResult]](model))
-    //      'UpdateCrunch - {
-    //        val h = build
-    //        val result = h.handle(Crunch(Seq(1,2,3d)))
-    //        println("handled it!")
-    //        result match {
-    //          case e: EffectOnly =>
-    //            println(s"effect was ${e}")
-    //          case ModelUpdateEffect(newValue, effects) =>
-    //            assert(newValue.isPending)
-    //            assert(effects.size == 1)
-    //          case NoChange =>
-    //          case what =>
-    //            println(s"didn't handle ${what}")
-    //            val badPath1 = false
-    //            assert(badPath1)
-    //        }
-    //        val crunchResult = CrunchResult(IndexedSeq(23, 39), Seq(12, 10))
-    //        val crunch: UpdateCrunch = UpdateCrunch(Ready(crunchResult))
-    //        val result2 = h.handle(crunch)
-    //        result2 match {
-    //          case ModelUpdate(newValue) =>
-    //            println(s"here we are ${newValue.isReady}")
-    //            assert(newValue.isReady)
-    //            assert(newValue.get == crunchResult)
-    //          case _ =>
-    //            val badPath2 = false
-    //            assert(badPath2)
-    //        }
-    //      }
-    //    }
-
     'FlightsHandler - {
       "given no flights, when we start, then we request flights from the api" - {
         val model: Pot[Flights] = Empty
@@ -433,34 +399,6 @@ object SPACircuitTests extends TestSuite {
         res match {
           case Some(ModelUpdateEffect(newValue, effect)) =>
             assert(newValue == expected)
-          case default =>
-            println(s"Failure: $default")
-            assert(false)
-        }
-      }
-      "Given an empty model, when we get a crunch result, then we should see the result in the model" - {
-        val model = RootModel()
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, Crunch("A1", "eGates", List(100, 100, 100)))
-
-        res match {
-          case Some(ModelUpdateEffect(newValue, effect)) =>
-            assert(newValue.queueCrunchResults("A1").keySet == Set("eGates"))
-          case default =>
-            println(s"Failure: $default")
-            assert(false)
-        }
-      }
-      "Given a with a queueCrunchResult for EEA, when we get a crunch result eGates, then we should see both results in the model" - {
-        val model = RootModel(
-          queueCrunchResults = Map("A1" -> Map("EEA" -> Empty))
-        )
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, Crunch("A1", "eGates", List(100, 100, 100)))
-
-        res match {
-          case Some(ModelUpdateEffect(newValue, effect)) =>
-            assert(newValue.queueCrunchResults("A1").keySet == Set("eGates", "EEA"))
           case default =>
             println(s"Failure: $default")
             assert(false)

@@ -59,8 +59,6 @@ case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueNa
 
 case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends Action
 
-case class Crunch(terminal: TerminalName, queue: QueueName, workload: List[Double]) extends Action
-
 case class GetWorkloads(begin: String, end: String, port: String) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
