@@ -1,46 +1,20 @@
 package spatutorial.client.modules
 
-import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
-import sun.java2d.loops.CustomComponent
-
-import scala.scalajs.js.annotation.{JSExport, JSExportAll, ScalaJSDefined}
-import scala.scalajs.js.{JSON, Object}
-import chandu0101.scalajs.react.components.ReactTable.Backend
-import chandu0101.scalajs.react.components.{JsonUtil, ReactTable, Spinner}
-import chandu0101.scalajs.react.components.materialui.{DeterminateIndeterminate, MuiCircularProgress, MuiPaper, ZDepth}
-import com.payalabs.scalajs.react.bridge.ReactBridgeComponent
-import com.sun.org.apache.xpath.internal.operations.Bool
-import diode.data.{Pot, Ready}
-import diode.react.{ModelProxy, ReactConnectProxy, ReactPot}
-import japgolly.scalajs.react.ReactComponentB
-import japgolly.scalajs.react.extra.router.RouterCtl
-import spatutorial.client.SPAMain.Loc
-import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.services.RequestFlights
-import spatutorial.shared.{AirportInfo, ApiFlight, CrunchResult, SimulationResult}
-import spatutorial.shared.FlightsApi.Flights
+import diode.data.Pot
+import diode.react.ReactConnectProxy
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.logger._
-import diode.react.ReactPot._
-import diode.react._
-import diode.util._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.SPAMain.{Loc, UserDeskRecommendationsLoc}
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
-import spatutorial.client.services.{GetWorkloads, Workloads}
+import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
+import spatutorial.shared.AirportInfo
 import spatutorial.shared.FlightsApi.Flights
-import com.payalabs.scalajs.react.bridge._
-import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _, _}
 
-import scala.scalajs.js
-import scala.util.Random
 import scala.language.existentials
-import spatutorial.client.logger._
+import scala.scalajs.js
+import scala.scalajs.js.annotation.ScalaJSDefined
+import scala.scalajs.js.{JSON, Object}
 
 object GriddleComponentWrapper {
 
@@ -100,9 +74,9 @@ case class GriddleComponentWrapper(
 
 object FlightsView {
 
-  import japgolly.scalajs.react.vdom.all.{onChange => _, _}
   import japgolly.scalajs.react._
-  import scala.scalajs.js
+  import japgolly.scalajs.react.vdom.all.{onChange => _, _}
+
   import scala.language.existentials
 
   case class Props(

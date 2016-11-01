@@ -269,19 +269,21 @@ case class UpdateFlights(flights: Flights) extends Action
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
-      log.info(s"requeusting flights $from $to")
+      log.info(s"client requesting flights $from $to")
       effectOnly(Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights)))
     case UpdateFlights(flights) =>
-      log.info(s"Client got flights! ${flights.flights.length}")
+      log.info(s"client got ${flights.flights.length} flights")
       val result = if (value.isReady) {
         val oldFlights = value.get
         val oldFlightsSet = oldFlights.flights.toSet
         val newFlightsSet = flights.flights.toSet
         if (oldFlightsSet != newFlightsSet) {
+          val i: Flights = flights
+          val j: List[ApiFlight] = flights.flights
           val codes = flights.flights.map(_.Origin).toSet
           updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
         } else {
-          log.info("******** no change 1")
+          log.info("no changes to flights")
           noChange
         }
       } else {
