@@ -5,7 +5,15 @@ import sbt.Project.projectToRef
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
     scalaVersion := Settings.versions.scala,
-    libraryDependencies ++= Settings.sharedDependencies.value
+    libraryDependencies ++= Settings.sharedDependencies.value,
+    publishTo := {
+      val artifactory = "https://artifactory.digital.homeoffice.gov.uk/artifactory/"
+
+      if (isSnapshot.value)
+        Some("snapshot" at artifactory + "artifactory/libs-snapshot-local")
+      else
+        Some("release" at artifactory + "artifactory/libs-release-local")
+    }
   )
   // set up settings specific to the JS project
   .jsConfigure(_ enablePlugins ScalaJSPlay)
@@ -42,8 +50,17 @@ lazy val client: Project = (project in file("client"))
     persistLauncher := true,
     persistLauncher in Test := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
+    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/ext-release-local",
     resolvers += Resolver.defaultLocal,
-      resolvers += Resolver.file("/Users/lancep/.ivy2/cache/com.payalabs/scalajs-react-bridge_sjs0.6_2.11/jars/scalajs-react-bridge_sjs0.6_2.11-0.2.0-SNAPSHOT.jar"),
+    resolvers += Resolver.file("/Users/lancep/.ivy2/cache/com.payalabs/scalajs-react-bridge_sjs0.6_2.11/jars/scalajs-react-bridge_sjs0.6_2.11-0.2.0-SNAPSHOT.jar"),
+    publishTo := {
+      val artifactory = "http://artifactory.digital.homeoffice.gov.uk/artifactory/"
+
+      if (isSnapshot.value)
+        Some("snapshot" at artifactory + "artifactory/libs-snapshot-local")
+      else
+        Some("release" at artifactory + "artifactory/libs-release-local")
+    },
     // use uTest framework for tests
 
     testFrameworks += new TestFramework("utest.runner.Framework")
@@ -68,7 +85,16 @@ lazy val server = (project in file("server"))
     pipelineStages := Seq(scalaJSProd, digest, gzip),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/ext-release-local",
     resolvers += Resolver.defaultLocal,
+    publishTo := {
+      val artifactory = "http://artifactory.digital.homeoffice.gov.uk/artifactory/"
+
+      if (isSnapshot.value)
+        Some("snapshot" at artifactory + "artifactory/libs-snapshot-local")
+      else
+        Some("release" at artifactory + "artifactory/libs-release-local")
+    },
     // compress CSS
     LessKeys.compress in Assets := true
   )
@@ -88,6 +114,30 @@ lazy val ReleaseCmd = Command.command("release") {
     "set elideOptions in client := Seq()" ::
     state
 }
+
+lazy val root = project.in(file(".")).aggregate(client, server)
+
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+
+// Enable publishing the jar produced by `test:package`
+publishArtifact in(Test, packageBin) := true
+
+// Enable publishing the test API jar
+publishArtifact in(Test, packageDoc) := true
+
+// Enable publishing the test sources jar
+publishArtifact in(Test, packageSrc) := true
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+  case PathList(ps@_*) if ps.last endsWith ".java" => MergeStrategy.discard
+  case _ => MergeStrategy.first
+}
+
+fork in run := true
+
+fork in Test := true
 
 // lazy val root = (project in file(".")).aggregate(client, server)
 
