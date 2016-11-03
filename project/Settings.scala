@@ -10,7 +10,7 @@ object Settings {
   val name = "scalajs-spa"
 
   /** The version of your application */
-  val version = "1.1.4"
+  val version = "0.1"
 
   /** Options for the scala compiler */
   val scalacOptions = Seq(
