@@ -31,7 +31,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
 
@@ -43,20 +42,20 @@ trait Core {
 }
 
 trait SystemActors {
-  self: Core => 
+  self: Core =>
   val flightsActor = system.actorOf(Props(classOf[FlightsActor]), "flightsActor")
   val crunchActor = system.actorOf(Props(classOf[CrunchActor]), "crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
 }
 
-class Application @Inject() (
-  implicit
-  val config: Configuration,
-  implicit val mat: Materializer,
-  env: Environment,
-  override val system: ActorSystem,
-  ec: ExecutionContext
-)
+class Application @Inject()(
+                             implicit
+                             val config: Configuration,
+                             implicit val mat: Materializer,
+                             env: Environment,
+                             override val system: ActorSystem,
+                             ec: ExecutionContext
+                           )
   extends Controller with Core with SystemActors {
   ctrl =>
   val log = system.log
@@ -77,17 +76,19 @@ class Application @Inject() (
 
   val apiS: Api = apiService
 
-  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
+  //  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
 
-  // val chromafetcher = new ChromaFetcher with ProdSendAndReceive { implicit val system: ActorSystem = ctrl.system }
+  val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
+    implicit val system: ActorSystem = ctrl.system
+  }
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
   val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
-      csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
-        case Some(renamedTerminal) =>
-             csf.copy(Terminal = renamedTerminal)
-        case None => csf
-      })
+    csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
+      case Some(renamedTerminal) =>
+        csf.copy(Terminal = renamedTerminal)
+      case None => csf
+    })
   )
 
   val ArrivalsHall1 = "A1"
@@ -96,9 +97,11 @@ class Application @Inject() (
     "T1" -> ArrivalsHall1,
     "T2" -> ArrivalsHall2
   )
+
   def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
-      if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
+    if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
   }
+
   //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
@@ -148,10 +151,10 @@ class Application @Inject() (
       Router.route[Api](apiService)(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
       ).map(buffer => {
-          val data = Array.ofDim[Byte](buffer.remaining())
-          buffer.get(data)
-          Ok(data)
-        })
+        val data = Array.ofDim[Byte](buffer.remaining())
+        buffer.get(data)
+        Ok(data)
+      })
   }
 
   def logging = Action(parse.anyContent) {
