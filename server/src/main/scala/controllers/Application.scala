@@ -255,14 +255,17 @@ class Application @Inject()(
     }
   }
 
-  //  val feed = ChromaFlightFeed(log,
-  //    new MockChroma {
-  //      override def system = ctrl.system
-  //    })
-  //  feed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+    val feed = ChromaFlightFeed(log,
+      new MockChroma {
+        override def system = ctrl.system
+      })
+    feed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
-  val lhrfeed = LHRFlightFeed()
-  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+//  val lhrfeed = LHRFlightFeed()
+//  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+
+//  val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
+//  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

@@ -102,7 +102,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]
   def timeStamps = timeStampsFromAllQueues(t1workload)
 
   private def t1workload = {
-    workloads("2")
+    workloads("A1")
   }
 }
 

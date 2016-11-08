@@ -451,7 +451,7 @@ object SPACircuitTests extends TestSuite {
             assert(false)
         }
       }
-      "Given a with a queueCrunchResult for EEA, when we get a crunch result eGates, then we should see both results in the model" - {
+      "Given a model with a queueCrunchResult for EEA, when we get a crunch result eGates, then we should see both results in the model" - {
         val model = RootModel(
           queueCrunchResults = Map("A1" -> Map("EEA" -> Empty))
         )
