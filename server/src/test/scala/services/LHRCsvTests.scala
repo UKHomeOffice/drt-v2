@@ -1,14 +1,21 @@
 package services
 
 
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
+import akka.stream.testkit.TestSubscriber.Probe
+import akka.stream.testkit.scaladsl.TestSink
 import controllers.LHRFlightFeed
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import org.specs2.execute.Result
+import org.specs2.mutable.SpecificationLike
 import utest._
 
 import spatutorial.shared._
 import utest._
 
 import akka.actor.ActorSystem
+import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}
 import scala.util.{Success, Failure}
 import scala.util.Try
@@ -19,6 +26,38 @@ import controllers.Core
 
 
 import scala.util.{Failure, Success}
+
+class StreamFlightCrunchTests extends TestKit(ActorSystem()) with SpecificationLike {
+  implicit val mat = ActorMaterializer()
+
+  implicit def probe2Success[R <: Probe[_]](r: R): Result = success
+
+  "Streamed Flight tests" >> {
+    "can split a stream into two materializers" in {
+      val source = Source(List(1, 2, 3, 4))
+      val doubled = source.map((x) => x * 2)
+      val squared = source.map((x) => x * x)
+      val actDouble = doubled
+        .runWith(TestSink.probe[Int])
+        .toStrict(FiniteDuration(1, SECONDS))
+      assert(actDouble == List(2, 4, 6, 8))
+      val actSquared = squared
+        .runWith(TestSink.probe[Int])
+        .toStrict(FiniteDuration(1, SECONDS))
+
+      assert(actSquared == List(1, 4, 9, 16))
+    }
+
+    "we do a crunch on flight changes" in {
+      import WorkloadCalculatorTests._
+      val flightsSource = Source(List(
+        List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")),
+        List(apiFlight("BA123", totalPax = 100, scheduledDatetime = "2016-09-01T10:31"))))
+
+      false
+    }
+  }
+}
 
 object LHRCsvTests extends TestSuite {
 

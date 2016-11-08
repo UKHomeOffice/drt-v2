@@ -54,7 +54,7 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting((List(
-    //    "org.specs2" %% "specs2-core" % "3.0" % Test,
+    "org.specs2" %% "specs2-core" % "3.0" % Test,
     "uk.gov.homeoffice.borderforce" %% "chroma-live" % "1.0",
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
