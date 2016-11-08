@@ -19,16 +19,16 @@ import controllers.Core
 object AirportToCountryTests extends TestSuite {
   def tests = TestSuite {
     "can load csv" - {
-      val head = AirportToCountry.airportInfo.head
-      println(s"head is ${head}")
-      assert(head :: Nil == AirportInfo("Goroka", "Goroka", "Papua New Guinea", "GKA") :: Nil)
+      val result = AirportToCountry.airportInfo.get("GKA")
+      val expected = Some(AirportInfo("Goroka", "Goroka", "Papua New Guinea", "GKA"))
+      assert(result == expected)
     }
     "can ask the apiservice for LGW" - {
       val airportInfo = AirportToCountry.airportInfoByAirportCode("LGW")
       airportInfo.onSuccess {
         case Some(ai) =>
           println(s"i'm asserting ${ai}")
-          assert(ai == Some(AirportInfo("Gatwick", "Gatwick",  "United Kingdom", "LGW")))
+          assert(ai == AirportInfo("Gatwick", "London",  "United Kingdom", "LGW"))
         case f =>
           println(f)
           assert(false)
@@ -36,3 +36,4 @@ object AirportToCountryTests extends TestSuite {
     }
   }
 }
+

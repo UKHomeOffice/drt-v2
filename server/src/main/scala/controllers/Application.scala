@@ -59,6 +59,7 @@ trait ChromaFetcherLike {
   def chromafetcher: ChromaFetcher
 }
 
+
 trait MockChroma extends ChromaFetcherLike {
   self =>
   system.log.info("Mock Chroma init")
@@ -76,6 +77,9 @@ trait ProdChroma extends ChromaFetcherLike {
 
 case class ChromaFlightFeed(log: LoggingAdapter, chromafetch: ChromaFetcherLike) extends {
   flightFeed =>
+
+  //  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
+
 
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetch.chromafetcher, 10 seconds)
   val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
@@ -96,6 +100,8 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromafetch: ChromaFetcherLike)
   def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
     if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
   }
+
+  //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
@@ -241,6 +247,10 @@ class Application @Inject()(
   ctrl =>
   val log = system.log
 
+  val chromaFetcher = new ProdChroma {
+    def system = ctrl.system
+  }
+
   val apiService = new ApiService {
     implicit val timeout = Timeout(5 seconds)
 
@@ -255,17 +265,15 @@ class Application @Inject()(
     }
   }
 
-    val feed = ChromaFlightFeed(log,
-      new MockChroma {
-        override def system = ctrl.system
-      })
-    feed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+  val feed = ChromaFlightFeed(log, chromaFetcher)
 
-//  val lhrfeed = LHRFlightFeed()
-//  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+  feed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
-//  val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
-//  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+  //  val lhrfeed = LHRFlightFeed()
+  //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+
+  //  val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
+  //  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

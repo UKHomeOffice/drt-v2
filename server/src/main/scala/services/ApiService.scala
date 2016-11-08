@@ -53,7 +53,6 @@ trait AirportToCountryLike {
 
     successes.toMap
   }
-
 }
 
 object AirportToCountry extends AirportToCountryLike {

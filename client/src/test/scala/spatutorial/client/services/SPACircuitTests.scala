@@ -438,34 +438,6 @@ object SPACircuitTests extends TestSuite {
             assert(false)
         }
       }
-      "Given an empty model, when we get a crunch result, then we should see the result in the model" - {
-        val model = RootModel()
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, Crunch("A1", "eGates", List(100, 100, 100)))
-
-        res match {
-          case Some(ModelUpdateEffect(newValue, effect)) =>
-            assert(newValue.queueCrunchResults("A1").keySet == Set("eGates"))
-          case default =>
-            println(s"Failure: $default")
-            assert(false)
-        }
-      }
-      "Given a model with a queueCrunchResult for EEA, when we get a crunch result eGates, then we should see both results in the model" - {
-        val model = RootModel(
-          queueCrunchResults = Map("A1" -> Map("EEA" -> Empty))
-        )
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, Crunch("A1", "eGates", List(100, 100, 100)))
-
-        res match {
-          case Some(ModelUpdateEffect(newValue, effect)) =>
-            assert(newValue.queueCrunchResults("A1").keySet == Set("eGates", "EEA"))
-          case default =>
-            println(s"Failure: $default")
-            assert(false)
-        }
-      }
       import RootModel._
       "Map merge" - {
         val m1 = Map("T1" -> Map("EEA" -> Seq(1)))

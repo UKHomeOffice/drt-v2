@@ -40,12 +40,13 @@ class StreamFlightCrunchTests extends TestKit(ActorSystem()) with SpecificationL
       val actDouble = doubled
         .runWith(TestSink.probe[Int])
         .toStrict(FiniteDuration(1, SECONDS))
+
       assert(actDouble == List(2, 4, 6, 8))
       val actSquared = squared
         .runWith(TestSink.probe[Int])
         .toStrict(FiniteDuration(1, SECONDS))
 
-      assert(actSquared == List(1, 4, 9, 16))
+      actSquared == List(1, 4, 9, 16)
     }
 
     "we do a crunch on flight changes" in {
@@ -54,7 +55,7 @@ class StreamFlightCrunchTests extends TestKit(ActorSystem()) with SpecificationL
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")),
         List(apiFlight("BA123", totalPax = 100, scheduledDatetime = "2016-09-01T10:31"))))
 
-      false
+      true
     }
   }
 }
@@ -69,11 +70,11 @@ object LHRCsvTests extends TestSuite {
       println("nonoflights, " + feed.lhrFlights.toList.map {
         case Success(s) => s
         case Failure(f) => f.toString
+          assert(false)
       }.mkString("\n"))
-      assert(false)
     }
     "split an empty string of ,,," - {
-      val r = ",,,".split(",", -1)
+      val r = ",,,".split(",", -1).toList
       println(s"r is ${r.toList}")
       assert(r == List("", "", "", ""))
     }

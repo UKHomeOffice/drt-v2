@@ -42,10 +42,10 @@ lazy val client: Project = (project in file("client"))
     persistLauncher := true,
     persistLauncher in Test := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
+    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
     resolvers += Resolver.defaultLocal,
-      resolvers += Resolver.file("/Users/lancep/.ivy2/cache/com.payalabs/scalajs-react-bridge_sjs0.6_2.11/jars/scalajs-react-bridge_sjs0.6_2.11-0.2.0-SNAPSHOT.jar"),
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
-
     testFrameworks += new TestFramework("utest.runner.Framework")
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSPlay)
@@ -54,10 +54,11 @@ lazy val client: Project = (project in file("client"))
 // Client projects (just one in this case)
 lazy val clients = Seq(client)
 
+
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
   .settings(
-    name := "server",
+    name := "drt",
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
@@ -68,7 +69,14 @@ lazy val server = (project in file("server"))
     pipelineStages := Seq(scalaJSProd, digest, gzip),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
     resolvers += Resolver.defaultLocal,
+    publishArtifact in (Compile, packageBin) := false,
+    // Disable scaladoc generation for this project (useless)
+    publishArtifact in (Compile, packageDoc) := false,
+    // Disable source jar for this project (useless)
+    publishArtifact in (Compile, packageSrc) := false,
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
     LessKeys.compress in Assets := true
   )
@@ -89,7 +97,9 @@ lazy val ReleaseCmd = Command.command("release") {
     state
 }
 
-// lazy val root = (project in file(".")).aggregate(client, server)
+fork in run := true
+
+fork in Test := true
 
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value

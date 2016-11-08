@@ -35,3 +35,5 @@ doc/_book
 node_modules/
 *.log.zip
 client/src/main/resources/bundle.js
+project/
+.ensime_cache/
