@@ -29,7 +29,6 @@ import scalacss.Defaults._
 import spatutorial.shared.AirportConfig
 
 
-
 object TableViewUtils {
 
   def queueNameMapping = Map("eeaDesk"->"EEA", "nonEeaDesk" -> "Non-EEA", "eGate" -> "e-Gates")
@@ -103,7 +102,7 @@ object TableViewUtils {
 }
 
 @JSExport("SPAMain")
-object SPAMain extends js.JSApp with AirportConfig{
+object SPAMain extends js.JSApp with AirportConfig {
 
   // Define the locations (pages) used in this application
   sealed trait Loc

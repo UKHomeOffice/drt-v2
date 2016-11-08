@@ -54,6 +54,6 @@ class FlightsActor extends Actor with ActorLogging {
 
       flights ++= fs.map(f => (f.FlightID, f))
       log.info(s"Flights now ${flights.size}")
-    case message => log.info("Actor saw" + message.toString)
+    case message => log.error("Actor saw unexpected message: " + message.toString)
   }
 }

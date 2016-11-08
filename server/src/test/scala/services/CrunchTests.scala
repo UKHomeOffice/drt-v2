@@ -12,27 +12,6 @@ import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender }
 import controllers.SystemActors
 import controllers.Core
 
-object AirportToCountryTests extends TestSuite {
-  def tests = TestSuite {
-    "can load csv" - {
-      val result = AirportToCountry.airportInfo.get("GKA")
-      val expected = Some(AirportInfo("Goroka", "Goroka", "Papua New Guinea", "GKA"))
-      assert(result == expected)
-    }
-    "can ask the apiservice for LGW" - {
-      val airportInfo = AirportToCountry.airportInfoByAirportCode("LGW")
-      airportInfo.onSuccess {
-        case Some(ai) =>
-          println(s"i'm asserting ${ai}")
-          assert(ai == Some(AirportInfo("Gatwick", "Gatwick",  "United Kingdom", "LGW")))
-        case f =>
-          println(f)
-          assert(false)
-      }
-    }
-  }
-}
-
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
     "given workloads by the minute we can get them in t minute chunks and take the sum from each chunk" - {
@@ -54,7 +33,7 @@ object FlightCrunchInteractionTests extends TestSuite {
 
   def tests = TestSuite {
     "Given a system with flightsactor and crunch actor, flights actor can request crunch actor does a crunch"  - {
-//      assert(false)
+      assert(true)
     }
   }
 

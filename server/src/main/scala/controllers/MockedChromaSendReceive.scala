@@ -12,7 +12,7 @@ trait MockedChromaSendReceive extends WithSendAndReceive {
   val content = scala.io.Source.fromInputStream(mockStream).getLines().mkString("\n")
   override def sendAndReceive = {
     def res(req: HttpRequest): Future[HttpResponse] = Future {
-      log.info(s"request is ${req}")
+      log.info(s"mocked request is ${req}")
       req.uri.path match {
         case Uri.Path("/edi/chroma/token") => {
           HttpResponse().withEntity(
