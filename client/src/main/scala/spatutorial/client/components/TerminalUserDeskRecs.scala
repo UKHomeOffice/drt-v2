@@ -16,6 +16,7 @@ import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
+import spatutorial.shared.AirportConfig
 
 object TerminalUserDeskRecs {
 
@@ -29,6 +30,20 @@ object TerminalUserDeskRecs {
         <.tr(<.td())
       )
     )
+}
+
+object jsDateFormat {
+
+  def zeroPadTo2Digits(number: Int) = {
+    if (number < 10)
+      "0" + number
+    else
+      number.toString
+  }
+  def formatDate(date: Date): String = {
+    val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+    formattedDate
+  }
 }
 
 
@@ -50,6 +65,7 @@ object TableTerminalDeskRecs {
 
 
   case class Props(
+                    terminalName: String,
                     items: Seq[TerminalUserDeskRecsRow],
                     flights: Pot[Flights],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -108,6 +124,7 @@ object TableTerminalDeskRecs {
           val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
           <.div(
             TableTerminalDeskRecs(
+              terminalName,
               rows,
               peMP().flights,
               airportWrapper,
@@ -120,14 +137,10 @@ object TableTerminalDeskRecs {
     })
   }
 
-  class Backend($: BackendScope[Props, Unit]) {
+  class Backend($: BackendScope[Props, Unit]) extends AirportConfig{
 
-    def zeroPadTens(number: Int) = {
-      if (number < 10)
-        "0" + number
-      else
-        number.toString
-    }
+    import jsDateFormat.formatDate
+
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
@@ -138,13 +151,13 @@ object TableTerminalDeskRecs {
         val flights: Pot[Flights] = p.flights.map(flights =>
           flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
         val date: Date = new Date(item.time)
-        val trigger: String = date.getFullYear() + "-" + zeroPadTens(date.getMonth()+1) + "-" + zeroPadTens(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+        val formattedDate: String = formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
-        val popover = HoverPopover(trigger, flights, airportInfo)
+        val popover = HoverPopover(formattedDate, flights, airportInfo)
         val fill = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
-            val dangerWait = if (q.waitTimeWithUserDeskRec > 25) "table-danger"
+            val dangerWait = if (q.waitTimeWithUserDeskRec > slaFromTerminalAndQueue(p.terminalName, q.queueName)) "table-danger"
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               <.td(q.pax),
@@ -156,15 +169,15 @@ object TableTerminalDeskRecs {
                   ^.value := q.userDeskRec.deskRec,
                   ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
                 )),
-              <.td(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"),
-            <.td(q.waitTimeWithCrunchDeskRec + " mins"))
+            <.td(q.waitTimeWithCrunchDeskRec + " mins"),
+            <.td(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
-        <.tr(<.td(popover()) :: fill: _*)
+        <.tr(<.td(^.cls := "date-field", popover()) :: fill: _*)
       }
       val queueNames = TableViewUtils.queueNameMapping.values.toList
       val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
-      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Rec Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recs"))).flatten
+      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.tbody(
           <.tr(<.th("") :: queueNames.map(queueName => <.th(<.h2(queueName), ^.colSpan := 5)): _*),
@@ -172,15 +185,16 @@ object TableTerminalDeskRecs {
           <.tr(<.th("Time") :: fill: _*),
           p.items.zipWithIndex map renderItem))
     }
+
   }
 
   private val component = ReactComponentB[Props]("TerminalUserDeskRecs")
     .renderBackend[Backend]
     .build
 
-  def apply(items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
+  def apply(terminalName: String, items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =
-    component(Props(items, flights, airportInfos, stateChange))
+    component(Props(terminalName, items, flights, airportInfos, stateChange))
 }
 

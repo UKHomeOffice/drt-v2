@@ -26,24 +26,8 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
+import spatutorial.shared.AirportConfig
 
-trait LHRAirportConfig {
-  val terminalNames: Seq[TerminalName] = Seq("2", "3", "4", "5")
-  val airportShortCode: String = "edi"
-  val eeadesk = "eeaDesk"
-  val egate = "eGate"
-  val nonEeaDesk = "nonEeaDesk"
-  val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
-}
-
-trait AirportConfig {
-  val terminalNames: Seq[TerminalName] = Seq("A1", "A2")
-  val airportShortCode: String = "edi"
-  val eeadesk = "eeaDesk"
-  val egate = "eGate"
-  val nonEeaDesk = "nonEeaDesk"
-  val queues: Seq[QueueName] = Seq(eeadesk, egate, nonEeaDesk)
-}
 
 object TableViewUtils {
 
@@ -118,7 +102,7 @@ object TableViewUtils {
 }
 
 @JSExport("SPAMain")
-object SPAMain extends js.JSApp with LHRAirportConfig {
+object SPAMain extends js.JSApp with AirportConfig {
 
   // Define the locations (pages) used in this application
   sealed trait Loc
@@ -145,7 +129,7 @@ object SPAMain extends js.JSApp with LHRAirportConfig {
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
 
-  setInterval(FiniteDuration(30L, SECONDS)) {
+  setInterval(FiniteDuration(10L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))
   }
   // configure the router
@@ -202,7 +186,7 @@ object SPAMain extends js.JSApp with LHRAirportConfig {
         queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
     })
 
-    val rule = terminalUserDeskRecs.foldLeft((dashboardRoute | flightsRoute | userDeskRecsRoute))((rules, terminalRule) => rules | terminalRule)
+    val rule = terminalUserDeskRecs.foldLeft(dashboardRoute | flightsRoute | userDeskRecsRoute)((rules, terminalRule) => rules | terminalRule)
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 

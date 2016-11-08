@@ -44,32 +44,6 @@ object FlightsTable {
     })
   }
 
-  def columnNames: List[String] = {
-    List(
-      "SchDT",
-      "Origin",
-      "Operator",
-      "Status",
-      "EstDT",
-      "ActDT",
-      //      "EstChoxDT",
-      "ActChoxDT",
-      "Gate",
-      "Stand",
-      "MaxPax",
-      "ActPax",
-      //      "TranPax",
-      //      "RunwayID",
-      //      "BaggageReclaimId",
-      //      "FlightID",
-      //      "AirportID",
-      "Terminal",
-      //      "ICAO",
-      "IATA"
-    )
-  }
-
-
   val component = ReactComponentB[FlightsView.Props]("FlightsTable")
     .render_P(props => {
       val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
@@ -85,13 +59,13 @@ object FlightsTable {
       }
 
       val columnMeta = Some(Seq(new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
-      <.div(^.className := "table-responsive",
+      <.div(^.className := "table-responsive timeslot-flight-popover",
         props.flightsModelProxy.renderPending((t) => Spinner()()),
         props.flightsModelProxy.renderEmpty(Spinner()()),
         props.flightsModelProxy.renderReady(flights => {
           GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
             columnMeta = columnMeta,
-            columns = columnNames)()
+            columns = props.activeCols)()
         })
       )
     }).build

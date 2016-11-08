@@ -110,17 +110,6 @@ trait WorkloadsHelpers {
   def minimumMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
     workloads.flatMap(_._1.map(_.time)).min
   }
-
-  def slaFromTerminalAndQueue(terminal: String, queue: String) = (terminal, queue) match {
-    case ("A1", "eeaDesk") => 20
-    case ("A1", "eGate") => 25
-    case ("A1", "nonEeaDesk") => 45
-    case ("A2", "eeaDesk") => 20
-    case ("A2", "eGate") => 25
-    case ("A2", "nonEeaDesk") => 45
-    case _ => 33
-  }
-
 }
 
 object WorkloadsHelpers extends WorkloadsHelpers
@@ -158,13 +147,13 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
-  //  def getAllTodos(): List[DeskRecTimeslot]
+//  def getAllTodos(): List[DeskRecTimeslot]
 
-  //  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
+//  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
 
-  //  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
+//  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
 
-  //  def deleteTodo(itemId: String): List[DeskRecTimeslot]
+//  def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

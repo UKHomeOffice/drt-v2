@@ -18,8 +18,9 @@ import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.client.modules.Dashboard._
+import spatutorial.shared.AirportConfig
 
-object DeskRecsChart {
+object DeskRecsChart extends AirportConfig{
   type DeskRecsModel = DashboardModels
 
   log.info("initialising deskrecschart")
@@ -53,7 +54,7 @@ object DeskRecsChart {
                           potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
                           potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
                           deskRecsChart(queueName, labels, potCrunchResult),
-                          waitTimesChart(labels, potCrunchResult, WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName)))
+                          waitTimesChart(labels, potCrunchResult, slaFromTerminalAndQueue(terminalName, queueName)))
                       })
                       //                  })
                     )
@@ -99,7 +100,7 @@ object DeskRecsChart {
         case _ => props.crunchResult().get.waitTimes
       })
       val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-      val fakeSLAData = sampledWaitTimesSimulation.map(_ => WorkloadsHelpers.slaFromTerminalAndQueue(terminalName, queueName).toDouble)
+      val fakeSLAData = sampledWaitTimesSimulation.map(_ => slaFromTerminalAndQueue(terminalName, queueName).toDouble)
       val sampledLabels = takeEvery15th(labels)
       <.div(
         Chart(
@@ -109,8 +110,8 @@ object DeskRecsChart {
               Seq(
                 ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0)",
                   borderColor = "rgba(10,10, 110, 1)"),
-                ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", borderColor = "green"),
-                ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
+                ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "rgb(143, 35, 179)"),
+                ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "red"))
             ))))
     }).build
 

@@ -35,13 +35,15 @@ case class PopoverWrapper(
 
 }
 
-object TableTodoList {
+object TableTodoList extends AirportConfig {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class UserDeskRecsRow(time: Long, crunchDeskRec: Int, userDeskRec: DeskRecTimeslot, waitTimeWithCrunchDeskRec: Int, waitTimeWithUserDeskRec: Int)
 
   case class TodoListProps(
+                            queueName: String,
+                            terminalName: String,
                             userDeskRecsRos: Seq[UserDeskRecsRow],
                             flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -72,7 +74,13 @@ object TableTodoList {
             if (state.hovered) {
               PopoverWrapper(trigger = trigger)(
                 airportInfos(airportInfo =>
-                  FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))))
+                  FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value, List(
+                    "SchDT",
+                    "IATA",
+                    "Origin",
+                    "MaxPax",
+                    "ActPax"
+                  )))))
             } else {
               trigger
             }
@@ -90,15 +98,15 @@ object TableTodoList {
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         val date: Date = new Date(item.time)
-        val trigger: String = date.toLocaleDateString() + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+        val formattedDate = jsDateFormat.formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfoPotsRCP
-        val popover = HoverPopover(trigger, p.flightsPotRCP, airportInfo, item.time)
+        val popover = HoverPopover(formattedDate, p.flightsPotRCP, airportInfo, item.time)
         val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
-        val dangerWait = if (item.waitTimeWithUserDeskRec > 25) "table-danger"
+        val dangerWait = if (item.waitTimeWithUserDeskRec > slaFromTerminalAndQueue(p.terminalName, p.queueName)) "table-danger"
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
-          <.td(popover()),
+          <.td(^.cls := "date-field", popover()),
           <.td(item.crunchDeskRec),
           <.td(
             ^.cls := hasChangeClasses,
@@ -106,21 +114,21 @@ object TableTodoList {
               ^.className := "desk-rec-input",
               ^.value := item.userDeskRec.deskRec,
               ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
-          <.td(^.cls := dangerWait + " " + warningClasses + " minutes", item.waitTimeWithUserDeskRec + " mins"),
-          <.td(^.cls := "minutes", item.waitTimeWithCrunchDeskRec + " mins")
+          <.td(^.cls := "minutes", item.waitTimeWithCrunchDeskRec + " mins"),
+          <.td(^.cls := dangerWait + " " + warningClasses + " minutes", item.waitTimeWithUserDeskRec + " mins")
         )
       }
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
           <.tr(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
-          <.tr(<.th("Time"), <.th("Recommended Desks"), <.th("Your Desks"), <.th("With Yours"), <.th("With Recommended")),
+          <.tr(<.th("Time"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available")),
           p.userDeskRecsRos.zipWithIndex map renderItem))
     })
     .build
 
-  def apply(userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+  def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: DeskRecTimeslot => Callback,
             editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    TodoList(TodoListProps(userDeskRecRows, flightsPotRCP, airportInfoPotsRCP, stateChange, editItem, deleteItem))
+    TodoList(TodoListProps(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportInfoPotsRCP, stateChange, editItem, deleteItem))
 }

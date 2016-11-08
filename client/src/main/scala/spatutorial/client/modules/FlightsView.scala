@@ -107,7 +107,22 @@ object FlightsView {
 
   case class Props(
     flightsModelProxy: Pot[Flights],
-    airportInfoProxy: Map[String, Pot[AirportInfo]]
+    airportInfoProxy: Map[String, Pot[AirportInfo]],
+    activeCols: List[String] = List(
+      "SchDT",
+      "Origin",
+      "Operator",
+      "Status",
+      "EstDT",
+      "ActDT",
+      "ActChoxDT",
+      "Gate",
+      "Stand",
+      "MaxPax",
+      "ActPax",
+      "Terminal",
+      "IATA"
+    )
   )
 
   case class State(
