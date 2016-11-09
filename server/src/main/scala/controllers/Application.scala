@@ -3,26 +3,28 @@ package controllers
 import java.nio.ByteBuffer
 
 import akka.actor._
+import akka.event.LoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Source, Sink}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
-import com.typesafe.config.{ConfigFactory, Config}
+import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.rabbit.JsonRabbit
-import http.{WithSendAndReceive, ProdSendAndReceive}
+import http.{ProdSendAndReceive, WithSendAndReceive}
 import org.slf4j.LoggerFactory
 import play.api.{Configuration, Environment}
 import play.api.mvc._
 import services.ApiService
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{ApiFlight, Api}
+import spatutorial.shared.{Api, ApiFlight, EdiAirportConfig, StnAirportConfig}
 import spray.http._
+
 import scala.language.postfixOps
 
 //import scala.collection.immutable.Seq
@@ -48,48 +50,7 @@ trait SystemActors {
   val flightsActorAskable: AskableActorRef = flightsActor
 }
 
-class Application @Inject()(
-                             implicit
-                             val config: Configuration,
-                             implicit val mat: Materializer,
-                             env: Environment,
-                             override val system: ActorSystem,
-                             ec: ExecutionContext
-                           )
-  extends Controller with Core with SystemActors {
-  ctrl =>
-  val log = system.log
-
-  val apiService = new ApiService {
-    implicit val timeout = Timeout(5 seconds)
-
-    override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = {
-      val flights: Future[Any] = flightsActorAskable ? GetFlights
-      val fsFuture = flights.collect {
-        case Flights(fs) =>
-          //          log.info(s"Got flights list ${fs}")
-          fs
-      }
-      fsFuture
-    }
-  }
-
-  val apiS: Api = apiService
-
-  //  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
-
-  val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-    implicit val system: ActorSystem = ctrl.system
-  }
-
-  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromafetcher, 10 seconds)
-  val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
-    csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
-      case Some(renamedTerminal) =>
-        csf.copy(Terminal = renamedTerminal)
-      case None => csf
-    })
-  )
+object FeedStuff {
 
   val ArrivalsHall1 = "A1"
   val ArrivalsHall2 = "A2"
@@ -101,8 +62,6 @@ class Application @Inject()(
   def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
     if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
   }
-
-  //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
@@ -133,7 +92,78 @@ class Application @Inject()(
       }).toList)
   }
 
-  val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
+  def ediFlights(log: LoggingAdapter, chromaFetcher: ChromaFetcher): Source[List[ApiFlight], Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher, 10 seconds)
+
+    def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
+      csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
+        case Some(renamedTerminal) =>
+          csf.copy(Terminal = renamedTerminal)
+        case None => csf
+      })
+    )
+
+    apiFlightCopy(ediMapping)
+  }
+
+  def stnFlights(log: LoggingAdapter, chromaFetcher: ChromaFetcher): Source[List[ApiFlight], Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher, 10 seconds)
+
+    apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
+  }
+}
+
+class Application @Inject()(
+                             implicit
+                             val config: Configuration,
+                             implicit val mat: Materializer,
+                             env: Environment,
+                             override val system: ActorSystem,
+                             ec: ExecutionContext
+                           )
+  extends Controller with Core with SystemActors {
+  ctrl =>
+
+  val log = system.log
+//  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
+//    implicit val system: ActorSystem = ctrl.system
+//  }
+
+  val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
+    implicit val system: ActorSystem = ctrl.system
+  }
+  val portCode = sys.env.get("PORT_CODE")
+  log.info(s"PORT_CODE::: ${portCode}")
+  implicit val timeout = Timeout(5 seconds)
+
+  def getFlightsImpl: Future[List[ApiFlight]] = {
+    val flights: Future[Any] = flightsActorAskable ? GetFlights
+    val fsFuture = flights.collect {
+      case Flights(fs) => fs
+    }
+    fsFuture
+  }
+
+  val apiService = portCode match {
+    case Some("EDI") =>
+      log.info("^^^^^^^^^^^ Doing EDI config")
+      new ApiService with EdiAirportConfig {
+        override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = getFlightsImpl
+      }
+    case Some("STN") =>
+      log.info("^^^^^^^^^^^ Doing STN config")
+      new ApiService with StnAirportConfig {
+        override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = getFlightsImpl
+      }
+  }
+
+  val copiedToApiFlights = portCode match {
+    case Some("EDI") =>
+      FeedStuff.ediFlights(log, chromafetcher).map(Flights(_))
+    case Some("STN") =>
+      FeedStuff.stnFlights(log, chromafetcher).map(Flights(_))
+  }
+
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   def index = Action {

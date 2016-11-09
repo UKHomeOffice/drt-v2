@@ -35,7 +35,7 @@ case class PopoverWrapper(
 
 }
 
-object TableTodoList extends AirportConfig {
+object TableTodoList {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
@@ -46,6 +46,7 @@ object TableTodoList extends AirportConfig {
                             terminalName: String,
                             userDeskRecsRos: Seq[UserDeskRecsRow],
                             flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+                            airportConfig: AirportConfig,
                             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                             stateChange: DeskRecTimeslot => Callback,
                             editItem: DeskRecTimeslot => Callback,
@@ -103,7 +104,7 @@ object TableTodoList extends AirportConfig {
         val popover = HoverPopover(formattedDate, p.flightsPotRCP, airportInfo, item.time)
         val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
-        val dangerWait = if (item.waitTimeWithUserDeskRec > slaFromTerminalAndQueue(p.terminalName, p.queueName)) "table-danger"
+        val dangerWait = if (item.waitTimeWithUserDeskRec > p.airportConfig.slaFromTerminalAndQueue(p.terminalName, p.queueName)) "table-danger"
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
           <.td(^.cls := "date-field", popover()),
@@ -127,8 +128,9 @@ object TableTodoList extends AirportConfig {
     .build
 
   def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+            airportConfig: AirportConfig,
             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: DeskRecTimeslot => Callback,
             editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    TodoList(TodoListProps(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportInfoPotsRCP, stateChange, editItem, deleteItem))
+    TodoList(TodoListProps(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange, editItem, deleteItem))
 }

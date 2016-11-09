@@ -17,7 +17,7 @@ object MainMenu {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, terminals: Seq[String])
+  case class Props(router: RouterCtl[Loc], currentLoc: Loc)
 
   case class MenuItem(idx: Int, label: (Props) => ReactNode, icon: Icon, location: Loc)
 
@@ -34,11 +34,13 @@ object MainMenu {
     MenuItem(2, _ => "Flights", Icon.plane, FlightsLoc),
     MenuItem(3, buildTodoMenu, Icon.calculator, UserDeskRecommendationsLoc))
 
-  def menuItems(terminals: Seq[String]) = {
+  def menuItems() = {
 
-    val staticMenuLength = staticMenuItems.length + 1
-    val terminalMenuItems = terminals.zipWithIndex.map { case (tn, idx) => MenuItem(idx + staticMenuLength, _ => tn, Icon.calculator, TerminalUserDeskRecommendationsLoc(tn)) }.toList
-    staticMenuItems ::: terminalMenuItems
+//    val staticMenuLength = staticMenuItems.length + 1
+//    log.info(s"terminals::: ${terminals}")
+//    val terminalMenuItems = terminals.zipWithIndex.map { case (tn, idx) => MenuItem(idx + staticMenuLength, _ => tn, Icon.calculator, TerminalUserDeskRecommendationsLoc(tn)) }.toList
+//    staticMenuItems ::: terminalMenuItems
+    staticMenuItems
   }
 
   private class Backend($: BackendScope[Props, Unit]) {
@@ -49,7 +51,7 @@ object MainMenu {
     def render(props: Props) = {
       <.ul(bss.navbar)(
         // build a list of menu items
-        for (item <- menuItems(props.terminals)) yield {
+        for (item <- menuItems()) yield {
           <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
             props.router.link(item.location)(item.icon, " ", item.label(props))
           )
@@ -63,6 +65,6 @@ object MainMenu {
     //    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, terminalNames: Seq[String]): ReactElement =
-    component(Props(ctl, currentLoc, terminalNames))
+  def apply(ctl: RouterCtl[Loc], currentLoc: Loc): ReactElement =
+    component(Props(ctl, currentLoc))
 }

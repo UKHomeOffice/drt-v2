@@ -18,6 +18,7 @@ import diode.util._
 import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.shared._
+import spatutorial.shared.StnAirportConfig
 import spatutorial.shared.FlightsApi._
 
 
@@ -43,7 +44,7 @@ case class DeskRecTimeslot(id: String, deskRec: Int)
 // Actions
 case object RefreshTodos extends Action
 
-case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
+  case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
 
 case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
 
@@ -59,7 +60,7 @@ case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueNa
 
 case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends Action
 
-case class GetWorkloads(begin: String, end: String, port: String) extends Action
+case class GetWorkloads(begin: String, end: String) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
@@ -100,7 +101,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]
   def timeStamps = timeStampsFromAllQueues(t1workload)
 
   private def t1workload = {
-    workloads("A1")
+    workloads("T1")
   }
 }
 
@@ -111,7 +112,8 @@ case class RootModel(
                       userDeskRec: Map[TerminalName, QueueUserDeskRecs] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
-                      airportInfos: Map[String, Pot[AirportInfo]] = Map()
+                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
+                      airportConfig: Pot[AirportConfig]
                     ) {
   override def toString: String =
     s"""
@@ -349,7 +351,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def timeProvider() = new Date().getTime
 
   // initial application model
-  override protected def initialModel = RootModel()
+  override protected def initialModel = RootModel(airportConfig = Ready(new StnAirportConfig{}))
 
   // combine all handlers into one
   override val actionHandler = {

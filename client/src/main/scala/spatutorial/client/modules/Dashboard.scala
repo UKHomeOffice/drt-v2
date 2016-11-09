@@ -37,7 +37,8 @@ object Dashboard {
                             )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
-                   dashboardModelProxy: ModelProxy[DashboardModels]
+                   dashboardModelProxy: ModelProxy[DashboardModels],
+                   airportConfigPot: Pot[AirportConfig]
                   )
 
 
@@ -88,7 +89,7 @@ object Dashboard {
   def mounted(props: Props) = {
     log.info("backend mounted")
     Callback.when(props.dashboardModelProxy().workloads.isEmpty) {
-      props.dashboardModelProxy.dispatch(GetWorkloads("", "", "edi"))
+      props.dashboardModelProxy.dispatch(GetWorkloads("", ""))
     }
   }
 
@@ -131,8 +132,11 @@ object Dashboard {
                           <.h2(terminalName),
                           Chart(props1),
                           state.crunchResultWrapper(s => {
-                            DeskRecsChart(props.dashboardModelProxy.zoom(model => model.copy(
-                              queueCrunchResults = model.queueCrunchResults.filterKeys(_ == terminalName))))
+                            DeskRecsChart(
+                              props.dashboardModelProxy.zoom(model => model.copy(
+                                queueCrunchResults = model.queueCrunchResults.filterKeys(_ == terminalName))),
+                              props.airportConfigPot
+                            )
                           }))
                       })
                   )
@@ -145,7 +149,7 @@ object Dashboard {
     .componentDidMount(scope => mounted(scope.props))
     .build
 
-  def apply(router: RouterCtl[Loc], dashboardProps: ModelProxy[DashboardModels]) = component(Props(router, dashboardProps))
+  def apply(router: RouterCtl[Loc], dashboardProps: ModelProxy[DashboardModels], airportConfigPot: Pot[AirportConfig]) = component(Props(router, dashboardProps, airportConfigPot))
 }
 
 // object DashboardTerminals {

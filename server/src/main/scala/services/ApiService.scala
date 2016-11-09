@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.io.Codec
 import scala.util.Try
-import spatutorial.shared.AirportConfig
+import spatutorial.shared.EdiAirportConfig
 
 //  case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
 //                 loc2: Double, elevation: Double,dkDouble: Double, dk: String, tz: String)
@@ -60,7 +60,8 @@ object AirportToCountry extends AirportToCountryLike {
 }
 
 abstract class ApiService
-  extends Api with WorkloadsService with FlightsService with AirportToCountryLike with AirportConfig{
+  extends Api with WorkloadsService with FlightsService with AirportToCountryLike {
+  config: AirportConfig =>
 
   val log = LoggerFactory.getLogger(getClass)
   ////  var todos: List[DeskRecTimeslot] = Nil

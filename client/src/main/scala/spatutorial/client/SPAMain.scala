@@ -5,7 +5,10 @@ import diode.data.PotState.PotReady
 import diode.{ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import japgolly.scalajs.react.extra.router.StaticDsl.Rule
+import japgolly.scalajs.react.CompScope.DuringCallbackU
+import japgolly.scalajs.react.ReactComponentB.PSB
+import japgolly.scalajs.react.ReactComponentC.ReqProps
+import japgolly.scalajs.react.extra.router.StaticDsl.{DynamicRouteB, Rule}
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -26,13 +29,11 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
-import spatutorial.shared.AirportConfig
-
 
 
 object TableViewUtils {
 
-  def queueNameMapping = Map("eeaDesk"->"EEA", "nonEeaDesk" -> "Non-EEA", "eGate" -> "e-Gates")
+  def queueNameMapping = Map("eeaDesk" -> "EEA", "nonEeaDesk" -> "Non-EEA", "eGate" -> "e-Gates")
 
   def terminalUserDeskRecsRows(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
     val queueNames: List[QueueName] = queueNameMapping.keys.toList
@@ -103,7 +104,7 @@ object TableViewUtils {
 }
 
 @JSExport("SPAMain")
-object SPAMain extends js.JSApp with AirportConfig{
+object SPAMain extends js.JSApp {
 
   // Define the locations (pages) used in this application
   sealed trait Loc
@@ -116,11 +117,13 @@ object SPAMain extends js.JSApp with AirportConfig{
 
   case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
 
+  case class Terminal(id: String) extends Loc
+
 
   val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
   hasWl.value match {
     case Empty =>
-      SPACircuit.dispatch(GetWorkloads("", "", airportShortCode))
+      SPACircuit.dispatch(GetWorkloads("", ""))
     case default =>
       log.info(s"was $default")
   }
@@ -138,11 +141,14 @@ object SPAMain extends js.JSApp with AirportConfig{
     import dsl._
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
+    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
 
     val dashboardRoute = staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
         log.info("dashboard update")
-        Dashboard(ctl, proxy)
+        airportConfigPotRCP(airportConfigPotMP =>
+          Dashboard(ctl, proxy, airportConfigPotMP())
+        )
       }))
 
     val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
@@ -153,76 +159,45 @@ object SPAMain extends js.JSApp with AirportConfig{
       })
 
 
-    val terminalUserDeskRecs = terminalNames.map(tn => {
-      staticRoute(s"#${tn}/userdeskrecs", TerminalUserDeskRecommendationsLoc(tn)) ~> renderR(ctl => {
-        log.info(s"routing to ${tn} userdeskrecs")
-        TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(tn)
-      })
-    })
+    //    val terminalUserDeskRecs = terminalNames.map(tn => {
+    //      staticRoute(s"#${tn}/userdeskrecs", TerminalUserDeskRecommendationsLoc(tn)) ~> renderR(ctl => {
+    //        log.info(s"routing to ${tn} userdeskrecs")
+    //        TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(tn)
+    //      })
+    //    })
+
+
+    object TerminalPage {
+
+      case class Props(routeData: Terminal, ctl: RouterCtl[Loc])
+
+      class Backend($: BackendScope[Props, Unit]) {
+        //        def render(props: Props) = <.div("Terminal view " + props.routeData.id)
+        def render(props: Props) = TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.routeData.id)
+      }
+
+      def apply(terminal: Terminal, ctl: RouterCtl[Loc]): ReactElement =
+        component(Props(terminal, ctl))
+
+      private val component = ReactComponentB[Props]("Product")
+        .renderBackend[Backend]
+        .build
+    }
+
+    val terminals = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
+      .caseClass[Terminal]) ~> dynRenderR((page, ctl) => TerminalPage(page, ctl))
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
       log.info("running our user desk recs route")
-      val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = terminalNames.flatMap { terminalName =>
-        queues.map { queueName =>
-          val labelsPotRCP = SPACircuit.connect(_.workload.map(_.labels))
-          val crunchResultPotRCP = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty).flatMap(_._1))
-          val userDeskRecsPotRCP = SPACircuit.connect(_.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
-          val flightsPotRCP = SPACircuit.connect(_.flights)
-          val simulationResultPotRCP = SPACircuit.connect(_.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
-          val userDeskRecsRowsPotRCP = makeUserDeskRecRowsPotRCP(terminalName, queueName)
-          val airportInfoPotsRCP = SPACircuit.connect(_.airportInfos)
-          QueueUserDeskRecsComponent.Props(terminalName,
-            queueName,
-            userDeskRecsRowsPotRCP,
-            airportInfoPotsRCP,
-            labelsPotRCP,
-            crunchResultPotRCP,
-            userDeskRecsPotRCP, flightsPotRCP, simulationResultPotRCP)
-        }
-      }
 
-      <.div(
-        ^.key := "UserDeskRecsWrapper",
-        queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_)))
+      QueueUserDeskRecsComponent.stuff()
     })
 
-    val rule = terminalUserDeskRecs.foldLeft(dashboardRoute | flightsRoute | userDeskRecsRoute)((rules, terminalRule) => rules | terminalRule)
+    //    val rule = terminalUserDeskRecs.foldLeft(dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)((rules, terminalRule) => rules | terminalRule)
+    val rule = (dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
-
-  def makeUserDeskRecRowsPotRCP(terminalName: TerminalName, queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {
-    val userDeskRecRowsPotRCP = SPACircuit.connect(model => {
-      val potRows: Pot[List[List[Any]]] = for {
-        times <- model.workload.map(_.timeStamps)
-        qcr: (Pot[CrunchResult], Pot[UserDeskRecs]) <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        qur: UserDeskRecs <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        simres: SimulationResult <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Ready(SimulationResult(qcr._1.get.recommendedDesks.map(rd => DeskRec(0, rd)), qcr._1.get.waitTimes)))
-        potcr: Pot[CrunchResult] = qcr._1
-        potdr: Pot[UserDeskRecs] = qcr._2
-        cr: CrunchResult <- potcr
-        dr: UserDeskRecs <- potdr
-      } yield {
-        val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
-        val every15thRecDesk: Seq[Int] = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
-        val every15thCrunchWaitTime: Iterator[Int] = cr.waitTimes.grouped(15).map(_.max)
-        val every15thSimWaitTime: Iterator[Int] = simres.waitTimes.grouped(15).map(_.max)
-        val allRows = (aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose
-        allRows
-      }
-      val is: Pot[List[UserDeskRecsRow]] = for (rows <- potRows) yield {
-        rows.map(row => row match {
-          case (time: Long) :: (crunchDeskRec: Int) :: (userDeskRec: DeskRecTimeslot) :: (waitTimeWithUserDeskRec: Int) :: (waitTimeWithCrunchDeskRec: Int) :: Nil =>
-            UserDeskRecsRow(time, crunchDeskRec, userDeskRec, waitTimeWithUserDeskRec, waitTimeWithCrunchDeskRec)
-          case default =>
-            log.error(s"match error $default")
-            throw new Exception(s"fail on $default")
-        })
-      }
-      is
-    })
-    userDeskRecRowsPotRCP
-  }
 
 
   // base layout for all pages
@@ -232,7 +207,7 @@ object SPAMain extends js.JSApp with AirportConfig{
       <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
         <.div(^.className := "container",
           <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "DRT EDI Live Spike")),
-          <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page, terminalNames)))),
+          <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page)))),
       // currently active module is shown in this container
       <.div(^.className := "container", r.render()))
   }

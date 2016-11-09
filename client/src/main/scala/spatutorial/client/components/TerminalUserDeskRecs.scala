@@ -16,7 +16,7 @@ import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
-import spatutorial.shared.AirportConfig
+import spatutorial.shared.EdiAirportConfig
 
 object TerminalUserDeskRecs {
 
@@ -40,6 +40,7 @@ object jsDateFormat {
     else
       number.toString
   }
+
   def formatDate(date: Date): String = {
     val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
     formattedDate
@@ -68,6 +69,7 @@ object TableTerminalDeskRecs {
                     terminalName: String,
                     items: Seq[TerminalUserDeskRecsRow],
                     flights: Pot[Flights],
+                    airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
@@ -113,6 +115,7 @@ object TableTerminalDeskRecs {
         model.userDeskRec
       ))
     val airportWrapper = SPACircuit.connect(_.airportInfos)
+    val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
     airportFlightsSimresWorksQcrsUdrs(peMP => {
       <.div(
         <.h1(terminalName + " Desks"),
@@ -122,22 +125,28 @@ object TableTerminalDeskRecs {
           val timestamps = workloads.timeStamps
           val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(peMP().workload.get.workloads(terminalName))
           val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
-          <.div(
-            TableTerminalDeskRecs(
-              terminalName,
-              rows,
-              peMP().flights,
-              airportWrapper,
-              (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) => {
-                peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
-              }
-            ))
+          airportConfigPotRCP(airportConfigPotMP => {
+            <.div(
+              airportConfigPotMP().renderReady(airportConfig => {
+                TableTerminalDeskRecs(
+                  terminalName,
+                  rows,
+                  peMP().flights,
+                  airportConfig,
+                  airportWrapper,
+                  (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) => {
+                    peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
+                  }
+                )
+              })
+            )
+          })
         }),
         peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
     })
   }
 
-  class Backend($: BackendScope[Props, Unit]) extends AirportConfig{
+  class Backend($: BackendScope[Props, Unit]) {
 
     import jsDateFormat.formatDate
 
@@ -158,7 +167,7 @@ object TableTerminalDeskRecs {
         val fill = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
-            val dangerWait = if (q.waitTimeWithUserDeskRec > slaFromTerminalAndQueue(p.terminalName, q.queueName)) "table-danger"
+            val dangerWait = if (q.waitTimeWithUserDeskRec > p.airportConfig.slaFromTerminalAndQueue(p.terminalName, q.queueName)) "table-danger"
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               <.td(q.pax),
@@ -170,8 +179,8 @@ object TableTerminalDeskRecs {
                   ^.value := q.userDeskRec.deskRec,
                   ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
                 )),
-            <.td(q.waitTimeWithCrunchDeskRec + " mins"),
-            <.td(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
+              <.td(q.waitTimeWithCrunchDeskRec + " mins"),
+              <.td(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
         <.tr(<.td(^.cls := "date-field", popover()) :: fill: _*)
@@ -194,8 +203,9 @@ object TableTerminalDeskRecs {
     .build
 
   def apply(terminalName: String, items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
+            airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =
-    component(Props(terminalName, items, flights, airportInfos, stateChange))
+    component(Props(terminalName, items, flights, airportConfig, airportInfos, stateChange))
 }
 
