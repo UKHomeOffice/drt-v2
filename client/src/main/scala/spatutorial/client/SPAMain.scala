@@ -15,7 +15,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, QueueUserDeskRecsComponent, TableTerminalDeskRecs}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, MainMenu, QueueUserDeskRecsComponent, TableTerminalDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
@@ -117,7 +117,7 @@ object SPAMain extends js.JSApp {
 
   case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
 
-  case class Terminal(id: String) extends Loc
+  case class TerminalLoc(id: String) extends Loc
 
 
   val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
@@ -169,14 +169,14 @@ object SPAMain extends js.JSApp {
 
     object TerminalPage {
 
-      case class Props(routeData: Terminal, ctl: RouterCtl[Loc])
+      case class Props(routeData: TerminalLoc, ctl: RouterCtl[Loc])
 
       class Backend($: BackendScope[Props, Unit]) {
         //        def render(props: Props) = <.div("Terminal view " + props.routeData.id)
         def render(props: Props) = TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.routeData.id)
       }
 
-      def apply(terminal: Terminal, ctl: RouterCtl[Loc]): ReactElement =
+      def apply(terminal: TerminalLoc, ctl: RouterCtl[Loc]): ReactElement =
         component(Props(terminal, ctl))
 
       private val component = ReactComponentB[Props]("Product")
@@ -185,7 +185,7 @@ object SPAMain extends js.JSApp {
     }
 
     val terminals = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[Terminal]) ~> dynRenderR((page, ctl) => TerminalPage(page, ctl))
+      .caseClass[TerminalLoc]) ~> dynRenderR((page, ctl) => TerminalPage(page, ctl))
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response

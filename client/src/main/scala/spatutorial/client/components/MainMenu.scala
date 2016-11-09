@@ -1,5 +1,9 @@
-package spatutorial.client.modules
+package spatutorial.client.components
 
+import java.io.Serializable
+
+import diode.data.{Pot, PotState}
+import diode.data.PotState.PotReady
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -7,11 +11,10 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain._
 import spatutorial.client.components.Bootstrap.CommonStyle
 import spatutorial.client.components.Icon._
-import spatutorial.client.components._
-import spatutorial.client.services._
+import spatutorial.client.services.SPACircuit
+import spatutorial.shared.AirportConfig
 
 import scalacss.ScalaCssReact._
-import spatutorial.client.logger._
 
 object MainMenu {
   // shorthand for styles
@@ -34,29 +37,30 @@ object MainMenu {
     MenuItem(2, _ => "Flights", Icon.plane, FlightsLoc),
     MenuItem(3, buildTodoMenu, Icon.calculator, UserDeskRecommendationsLoc))
 
-  def menuItems() = {
+  def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
+    val terminalMenuItems = airportConfigPotMP().state match {
+      case PotReady =>
+        airportConfigPotMP().get.terminalNames.zipWithIndex.map { case (tn, idx) => MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalLoc(tn)) }.toList
+      case _ =>
+        List()
+    }
 
-//    val staticMenuLength = staticMenuItems.length + 1
-//    log.info(s"terminals::: ${terminals}")
-//    val terminalMenuItems = terminals.zipWithIndex.map { case (tn, idx) => MenuItem(idx + staticMenuLength, _ => tn, Icon.calculator, TerminalUserDeskRecommendationsLoc(tn)) }.toList
-//    staticMenuItems ::: terminalMenuItems
-    staticMenuItems
+    staticMenuItems ::: terminalMenuItems
   }
 
   private class Backend($: BackendScope[Props, Unit]) {
-    //    def mounted(props: Props) =
-    //      // dispatch a message to refresh the todos
-    //      Callback.when(propsops.proxy.value.isEmpty)(props.proxy.dispatch(RefreshTodos))
-
     def render(props: Props) = {
-      <.ul(bss.navbar)(
-        // build a list of menu items
-        for (item <- menuItems()) yield {
-          <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
-            props.router.link(item.location)(item.icon, " ", item.label(props))
-          )
-        }
-      )
+      val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
+      airportConfigPotRCP(airportConfigPotMP => {
+        <.ul(bss.navbar)(
+          //           build a list of menu items
+          for (item <- menuItems(airportConfigPotMP)) yield {
+            <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
+              props.router.link(item.location)(item.icon, " ", item.label(props))
+            )
+          }
+        )
+      })
     }
   }
 
