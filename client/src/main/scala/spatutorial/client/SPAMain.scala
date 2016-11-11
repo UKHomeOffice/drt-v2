@@ -191,7 +191,7 @@ object SPAMain extends js.JSApp {
     }
 
     val terminals = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalLoc]) ~> dynRenderR((page, ctl) => TerminalPage(page, ctl))
+      .caseClass[TerminalLoc]) ~> dynRenderR((page: TerminalLoc, ctl) => TerminalPage(page, ctl))
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response

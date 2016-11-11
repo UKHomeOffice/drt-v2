@@ -20,9 +20,9 @@ import http.{ProdSendAndReceive, WithSendAndReceive}
 import org.slf4j.LoggerFactory
 import play.api.{Configuration, Environment}
 import play.api.mvc._
-import services.ApiService
+import services.{ApiService, FlightsService}
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{Api, ApiFlight, EdiAirportConfig, StnAirportConfig}
+import spatutorial.shared._
 import spray.http._
 
 import scala.language.postfixOps
@@ -92,7 +92,7 @@ object FeedStuff {
       }).toList)
   }
 
-  def ediFlights(log: LoggingAdapter, chromaFetcher: ChromaFetcher): Source[List[ApiFlight], Cancellable] = {
+  def chromaEdiFlights(log: LoggingAdapter, chromaFetcher: ChromaFetcher): Source[List[ApiFlight], Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher, 10 seconds)
 
     def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
@@ -106,7 +106,7 @@ object FeedStuff {
     apiFlightCopy(ediMapping)
   }
 
-  def stnFlights(log: LoggingAdapter, chromaFetcher: ChromaFetcher): Source[List[ApiFlight], Cancellable] = {
+  def chromaVanillaFlights(log: LoggingAdapter, chromaFetcher: ChromaFetcher): Source[List[ApiFlight], Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher, 10 seconds)
 
     apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
@@ -136,32 +136,34 @@ class Application @Inject()(
   log.info(s"PORT_CODE::: ${portCode}")
   implicit val timeout = Timeout(5 seconds)
 
-  def getFlightsImpl: Future[List[ApiFlight]] = {
-    val flights: Future[Any] = flightsActorAskable ? GetFlights
-    val fsFuture = flights.collect {
-      case Flights(fs) => fs
+  trait GetFlightsFromActor extends FlightsService {
+    override def getFlights(start: Long, end: Long): Future[List[ApiFlight]] = {
+      val flights: Future[Any] = flightsActorAskable ? GetFlights
+      val fsFuture = flights.collect {
+        case Flights(fs) => fs
+      }
+      fsFuture
     }
-    fsFuture
   }
 
   val apiService = portCode match {
     case Some("EDI") =>
-      log.info("^^^^^^^^^^^ Doing EDI config")
-      new ApiService with EdiAirportConfig {
-        override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = getFlightsImpl
-      }
+      new ApiService with EdiAirportConfig with GetFlightsFromActor
     case Some("STN") =>
-      log.info("^^^^^^^^^^^ Doing STN config")
-      new ApiService with StnAirportConfig {
-        override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = getFlightsImpl
-      }
+      new ApiService with StnAirportConfig with GetFlightsFromActor
+    case Some("MAN") =>
+      new ApiService with ManAirportConfig with GetFlightsFromActor
+    case Some("BOH") =>
+      new ApiService with BohAirportConfig with GetFlightsFromActor
+    case Some("LTN") =>
+      new ApiService with LtnAirportConfig with GetFlightsFromActor
   }
 
   val copiedToApiFlights = portCode match {
     case Some("EDI") =>
-      FeedStuff.ediFlights(log, chromafetcher).map(Flights(_))
-    case Some("STN") =>
-      FeedStuff.stnFlights(log, chromafetcher).map(Flights(_))
+      FeedStuff.chromaEdiFlights(log, chromafetcher).map(Flights(_))
+    case _ =>
+      FeedStuff.chromaVanillaFlights(log, chromafetcher).map(Flights(_))
   }
 
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))

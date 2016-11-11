@@ -32,3 +32,39 @@ trait StnAirportConfig extends AirportConfig {
     )
   )
 }
+
+trait ManAirportConfig extends AirportConfig {
+  val airportConfigHolder = AirportConfigHolder(
+    Seq("T1", "T2", "T3"),
+    Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    Map(
+      "eeaDesk" -> 20,
+      "eGate" -> 25,
+      "nonEeaDesk" -> 45
+    )
+  )
+}
+
+trait BohAirportConfig extends AirportConfig {
+  val airportConfigHolder = AirportConfigHolder(
+    Seq("T1"),
+    Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    Map(
+      "eeaDesk" -> 20,
+      "eGate" -> 25,
+      "nonEeaDesk" -> 45
+    )
+  )
+}
+
+trait LtnAirportConfig extends AirportConfig {
+  val airportConfigHolder = AirportConfigHolder(
+    Seq("T1"),
+    Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    Map(
+      "eeaDesk" -> 20,
+      "eGate" -> 25,
+      "nonEeaDesk" -> 45
+    )
+  )
+}
