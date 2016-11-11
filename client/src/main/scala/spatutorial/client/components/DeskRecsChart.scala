@@ -30,7 +30,7 @@ object DeskRecsChart {
 
   case class Props(
                     deskRecsModelMP: ModelProxy[DeskRecsModel],
-                    airportConfigPot: Pot[AirportConfig])
+                    airportConfigPot: Pot[AirportConfigHolder])
 
   val DeskRecs = ReactComponentB[Props]("CrunchResults")
     .initialState_P((props: Props) => State(props.deskRecsModelMP.connect(_.queueCrunchResults), props.deskRecsModelMP.connect(_.potUserDeskRecs)))
@@ -52,14 +52,14 @@ object DeskRecsChart {
                     <.div(^.key := queueName,
                       //                  potSimulationResult.renderReady(sr => {
                       workloads.renderReady(wl => {
-                        props.airportConfigPot.renderReady(airportConfig => {
+                        props.airportConfigPot.renderReady(airportConfigHolder => {
                           val labels = wl.labels
                           Panel(Panel.Props(s"Desk Recommendations and Wait times for '$terminalName' '${queueName}'"),
                             potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
                             potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
                             potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
                             deskRecsChart(queueName, labels, potCrunchResult),
-                            waitTimesChart(labels, potCrunchResult, airportConfig.slaFromTerminalAndQueue(terminalName, queueName)))
+                            waitTimesChart(labels, potCrunchResult, airportConfigHolder.slaByQueue(queueName)))
                         })
                       })
                       //                  })
@@ -97,7 +97,7 @@ object DeskRecsChart {
   def userSimulationWaitTimesChart(
                                     terminalName: TerminalName,
                                     queueName: QueueName,
-                                    airportConfig: AirportConfig,
+                                    airportConfigHolder: AirportConfigHolder,
                                     labels: IndexedSeq[String],
                                     simulationResultPotMP: ModelProxy[Pot[SimulationResult]],
                                     crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
@@ -107,7 +107,7 @@ object DeskRecsChart {
         case _ => props.crunchResult().get.waitTimes
       })
       val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-      val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfig.slaFromTerminalAndQueue(terminalName, queueName).toDouble)
+      val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfigHolder.slaByQueue(queueName).toDouble)
       val sampledLabels = takeEvery15th(labels)
       <.div(
         Chart(
@@ -151,5 +151,5 @@ object DeskRecsChart {
     case (n, i) if (i % 15 == 0) => n
   }
 
-  def apply(deskRecsModelMP: ModelProxy[DeskRecsModel], airportConfigPot: Pot[AirportConfig]) = DeskRecs(Props(deskRecsModelMP, airportConfigPot))
+  def apply(deskRecsModelMP: ModelProxy[DeskRecsModel], airportConfigPot: Pot[AirportConfigHolder]) = DeskRecs(Props(deskRecsModelMP, airportConfigPot))
 }

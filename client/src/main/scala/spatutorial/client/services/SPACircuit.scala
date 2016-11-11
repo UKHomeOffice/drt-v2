@@ -62,6 +62,9 @@ case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWork
 
 case class GetWorkloads(begin: String, end: String) extends Action
 
+case class GetAirportConfig() extends Action
+case class UpdateAirportConfig(airportConfigHolder: AirportConfigHolder) extends Action
+
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
 case class ChangeDeskUsage(terminalName: TerminalName, queueName: QueueName, value: String, index: Int) extends Action
@@ -113,7 +116,7 @@ case class RootModel(
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                      airportConfig: Pot[AirportConfig]
+                      airportConfigHolder: Pot[AirportConfigHolder] = Empty
                     ) {
   override def toString: String =
     s"""
@@ -203,6 +206,17 @@ class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHand
   }
 }
 
+class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfigHolder]]) extends LoggingActionHandler(modelRW) {
+  protected def handle = {
+    case action: GetAirportConfig =>
+      log.info("requesting workloadsWrapper from server")
+      log.info(s"Airport config from server: ${AjaxClient[Api].airportConfig().call()}")
+
+      updated(Pending(), Effect(AjaxClient[Api].airportConfig().call().map(UpdateAirportConfig)))
+    case UpdateAirportConfig(configHolder) =>
+      updated(Ready(configHolder))
+  }
+}
 class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case action: GetWorkloads =>
@@ -351,7 +365,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def timeProvider() = new Date().getTime
 
   // initial application model
-  override protected def initialModel = RootModel(airportConfig = Ready(new StnAirportConfig{}))
+  override protected def initialModel = RootModel()
 
   // combine all handlers into one
   override val actionHandler = {
@@ -376,7 +390,8 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
-      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v)))
+      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportConfigHandler(zoomRW(_.airportConfigHolder)((m, v) => m.copy(airportConfigHolder = v)))
     )
   }
 

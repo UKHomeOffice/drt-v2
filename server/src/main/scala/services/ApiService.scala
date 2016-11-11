@@ -76,15 +76,18 @@ abstract class ApiService
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
     //println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
     val repeat = List.fill[Int](workloads.length) _
-    val optimizerConfig = OptimizerConfig(slaFromTerminalAndQueue(terminalName, queueName))
+    val optimizerConfig = OptimizerConfig(airportConfigHolder.slaByQueue(queueName))
     TryRenjin.crunch(workloads, repeat(2), repeat(25), optimizerConfig)
   }
 
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
     val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
 
-    val optimizerConfig = OptimizerConfig(slaFromTerminalAndQueue(terminalName, queueName))
+    val optimizerConfig = OptimizerConfig(airportConfigHolder.slaByQueue(queueName))
     TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
   }
 
+  def airportConfig: AirportConfigHolder = {
+    airportConfigHolder
+  }
 }

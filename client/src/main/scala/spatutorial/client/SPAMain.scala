@@ -120,10 +120,16 @@ object SPAMain extends js.JSApp {
   case class TerminalLoc(id: String) extends Loc
 
 
-  val hasWl: ModelR[RootModel, Pot[Workloads]] = SPACircuit.zoom(_.workload)
-  hasWl.value match {
+  SPACircuit.zoom(_.workload).value match {
     case Empty =>
       SPACircuit.dispatch(GetWorkloads("", ""))
+    case default =>
+      log.info(s"was $default")
+  }
+
+  SPACircuit.zoom(_.airportConfigHolder).value match {
+    case Empty =>
+      SPACircuit.dispatch(GetAirportConfig())
     case default =>
       log.info(s"was $default")
   }
@@ -141,7 +147,7 @@ object SPAMain extends js.JSApp {
     import dsl._
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
-    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
+    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfigHolder]] = SPACircuit.connect(_.airportConfigHolder)
 
     val dashboardRoute = staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
