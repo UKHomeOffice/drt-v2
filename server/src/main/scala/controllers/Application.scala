@@ -266,12 +266,28 @@ class Application @Inject()(
   ctrl =>
   val log = system.log
 
+  def ApiServiceForPort(portCodeString: String): ApiService with HasAirportConfig with GetFlightsFromActor = {
+    portCodeString match {
+      case "EDI" =>
+        new ApiService with EdiAirportConfig with GetFlightsFromActor
+      case "STN" =>
+        new ApiService with StnAirportConfig with GetFlightsFromActor
+      case "MAN" =>
+        new ApiService with ManAirportConfig with GetFlightsFromActor
+      case "BOH" =>
+        new ApiService with BohAirportConfig with GetFlightsFromActor
+      case "LTN" =>
+        new ApiService with LtnAirportConfig with GetFlightsFromActor
+    }
+  }
 
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
   }
+
   val portCode = sys.env.get("PORT_CODE")
   log.info(s"PORT_CODE::: ${portCode}")
+
   implicit val timeout = Timeout(5 seconds)
 
   trait GetFlightsFromActor extends FlightsService {
@@ -286,16 +302,7 @@ class Application @Inject()(
 
   log.info(s"PORT_CODE::: ${portCode}")
   val apiService = portCode match {
-    case Some("EDI") =>
-      new ApiService with EdiAirportConfig with GetFlightsFromActor
-    case Some("STN") =>
-      new ApiService with StnAirportConfig with GetFlightsFromActor
-    case Some("MAN") =>
-      new ApiService with ManAirportConfig with GetFlightsFromActor
-    case Some("BOH") =>
-      new ApiService with BohAirportConfig with GetFlightsFromActor
-    case Some("LTN") =>
-      new ApiService with LtnAirportConfig with GetFlightsFromActor
+    case Some(portCodeString) => ApiServiceForPort(portCodeString)
   }
 
   val mysys = system
