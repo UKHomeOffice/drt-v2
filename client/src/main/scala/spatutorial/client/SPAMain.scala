@@ -161,7 +161,7 @@ object SPAMain extends js.JSApp {
       //todo take the queuenames from the workloads response
       log.info("running our user desk recs route")
 
-      QueueUserDeskRecsComponent.stuff()
+      QueueUserDeskRecsComponent.terminalQueueUserDeskRecsComponent()
     })
 
     val rule = (dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)

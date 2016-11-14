@@ -37,8 +37,6 @@ object QueueUserDeskRecsComponent {
         ^.key := s"${props.terminalName}-${props.queueName}-QueueUserDeskRecs",
         currentUserDeskRecView(props)
       )
-      //        tableUserDeskRecView(props))
-      //        Panel(Panel.Props(props.queueName),
     ).build
 
   @ScalaJSDefined
@@ -69,7 +67,7 @@ object QueueUserDeskRecsComponent {
         )))
   }
 
-  def stuff() = {
+  def terminalQueueUserDeskRecsComponent() = {
     val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
     airportConfigPotRCP(airportConfigPotMP => {
       <.div(
@@ -85,7 +83,8 @@ object QueueUserDeskRecsComponent {
               val simulationResultPotRCP = SPACircuit.connect(_.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
               val userDeskRecsRowsPotRCP = makeUserDeskRecRowsPotRCP(terminalName, queueName)
               val airportInfoPotsRCP = SPACircuit.connect(_.airportInfos)
-              QueueUserDeskRecsComponent.Props(terminalName,
+              QueueUserDeskRecsComponent.Props(
+                terminalName,
                 queueName,
                 userDeskRecsRowsPotRCP,
                 airportConfig,
