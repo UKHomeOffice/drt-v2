@@ -70,12 +70,12 @@ trait MockChroma extends ChromaFetcherLike {
   }
 }
 
-trait ProdChroma extends ChromaFetcherLike {
-  self =>
-  override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-    implicit val system: ActorSystem = self.system
+  case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
+    self =>
+    override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
+      implicit val system: ActorSystem = self.system
+    }
   }
-}
 
 case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
   flightFeed =>
@@ -305,16 +305,11 @@ class Application @Inject()(
     case Some(portCodeString) => ApiServiceForPort(portCodeString)
   }
 
-  val mysys = system
   val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
     case Some("EDI") =>
-      ChromaFlightFeed(log, new ProdChroma {
-        override def system: ActorSystem = mysys
-      }).chromaEdiFlights().map(Flights(_))
+      ChromaFlightFeed(log, ProdChroma(system)).chromaEdiFlights().map(Flights(_))
     case _ =>
-      ChromaFlightFeed(log, new ProdChroma {
-        override def system: ActorSystem = mysys
-      }).chromaVanillaFlights().map(Flights(_))
+      ChromaFlightFeed(log, ProdChroma(system)).chromaVanillaFlights().map(Flights(_))
   }
 
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
