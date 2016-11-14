@@ -121,21 +121,8 @@ object SPAMain extends js.JSApp {
 
   case class TerminalLoc(id: String) extends Loc
 
-
-  SPACircuit.zoom(_.workload).value match {
-    case Empty =>
-      SPACircuit.dispatch(GetWorkloads("", ""))
-    case default =>
-      log.info(s"was $default")
-  }
-
-  SPACircuit.zoom(_.airportConfigHolder).value match {
-    case Empty =>
-      SPACircuit.dispatch(GetAirportConfig())
-    case default =>
-      log.info(s"was $default")
-  }
-
+  SPACircuit.dispatch(GetWorkloads("", ""))
+  SPACircuit.dispatch(GetAirportConfig())
 
   import scala.scalajs.js.timers._
   import scala.concurrent.duration._
@@ -171,7 +158,6 @@ object SPAMain extends js.JSApp {
       case class Props(routeData: TerminalLoc, ctl: RouterCtl[Loc])
 
       class Backend($: BackendScope[Props, Unit]) {
-        //        def render(props: Props) = <.div("Terminal view " + props.routeData.id)
         def render(props: Props) = TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.routeData.id)
       }
 
