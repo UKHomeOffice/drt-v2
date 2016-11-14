@@ -115,10 +115,10 @@ object QueueUserDeskRecsComponent {
         cr: CrunchResult <- potcr
         dr: UserDeskRecs <- potdr
       } yield {
-        val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(96)
+        val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(model.slotsInADay)
         val every15thRecDesk: Seq[Int] = DeskRecsChart.takeEvery15th(cr.recommendedDesks)
-        val every15thCrunchWaitTime: Iterator[Int] = cr.waitTimes.grouped(15).map(_.max)
-        val every15thSimWaitTime: Iterator[Int] = simres.waitTimes.grouped(15).map(_.max)
+        val every15thCrunchWaitTime: Iterator[Int] = cr.waitTimes.grouped(model.minutesInASlot).map(_.max)
+        val every15thSimWaitTime: Iterator[Int] = simres.waitTimes.grouped(model.minutesInASlot).map(_.max)
         val allRows = (aDaysWorthOfTimes :: every15thRecDesk :: qur.items :: every15thCrunchWaitTime :: every15thSimWaitTime :: Nil).transpose
         allRows
       }

@@ -116,7 +116,9 @@ case class RootModel(
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                      airportConfig: Pot[AirportConfig] = Empty
+                      airportConfig: Pot[AirportConfig] = Empty,
+                      minutesInASlot: Int = 15,
+                      slotsInADay: Int = 96
                     ) {
   override def toString: String =
     s"""
