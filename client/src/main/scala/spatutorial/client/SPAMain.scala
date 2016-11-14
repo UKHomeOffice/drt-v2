@@ -15,7 +15,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
 import spatutorial.client.components.TableTodoList.UserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, MainMenu, QueueUserDeskRecsComponent, TableTerminalDeskRecs}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, TableTerminalDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
@@ -184,17 +184,9 @@ object SPAMain extends js.JSApp {
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
-
   // base layout for all pages
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
-    <.div(
-      // here we use plain Bootstrap class names as these are specific to the top level layout defined here
-      <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
-        <.div(^.className := "container",
-          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "DRT EDI Live Spike")),
-          <.div(^.className := "collapse navbar-collapse", MainMenu(c, r.page)))),
-      // currently active module is shown in this container
-      <.div(^.className := "container", r.render()))
+    Layout(c, r)
   }
 
   @JSExport
