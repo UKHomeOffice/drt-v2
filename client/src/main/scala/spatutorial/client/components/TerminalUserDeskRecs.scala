@@ -69,7 +69,7 @@ object TableTerminalDeskRecs {
                     terminalName: String,
                     items: Seq[TerminalUserDeskRecsRow],
                     flights: Pot[Flights],
-                    airportConfigHolder: AirportConfig,
+                    airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
@@ -115,7 +115,7 @@ object TableTerminalDeskRecs {
         model.userDeskRec
       ))
     val airportWrapper = SPACircuit.connect(_.airportInfos)
-    val airportConfigPotRCP = SPACircuit.connect(_.airportConfigHolder)
+    val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
     airportFlightsSimresWorksQcrsUdrs(peMP => {
       <.div(
         <.h1(terminalName + " Desks"),
@@ -166,7 +166,7 @@ object TableTerminalDeskRecs {
         val fill = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
-            val dangerWait = if (q.waitTimeWithUserDeskRec > p.airportConfigHolder.slaByQueue(q.queueName)) "table-danger"
+            val dangerWait = if (q.waitTimeWithUserDeskRec > p.airportConfig.slaByQueue(q.queueName)) "table-danger"
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               <.td(q.pax),

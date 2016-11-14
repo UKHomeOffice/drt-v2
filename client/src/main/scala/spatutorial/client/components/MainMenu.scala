@@ -50,7 +50,7 @@ object MainMenu {
 
   private class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
-      val airportConfigPotRCP = SPACircuit.connect(_.airportConfigHolder)
+      val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
       airportConfigPotRCP(airportConfigPotMP => {
         <.ul(bss.navbar)(
           //           build a list of menu items

@@ -6,11 +6,11 @@ import scala.collection.immutable.Seq
 case class AirportConfig(portCode: String = "n/a", queues: Seq[QueueName], slaByQueue: Map[String, Int], terminalNames: Seq[TerminalName])
 
 trait HasAirportConfig {
-  val airportConfigHolder: AirportConfig
+  val airportConfig: AirportConfig
 }
 
 trait EdiAirportConfig extends HasAirportConfig {
-  val airportConfigHolder = AirportConfig(
+  val airportConfig = AirportConfig(
     portCode = "EDI",
     queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
     slaByQueue = Map(
@@ -21,7 +21,7 @@ trait EdiAirportConfig extends HasAirportConfig {
 }
 
 trait StnAirportConfig extends HasAirportConfig {
-  val airportConfigHolder = AirportConfig(
+  val airportConfig = AirportConfig(
     portCode = "STN",
     queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
     slaByQueue = Map(
@@ -32,7 +32,7 @@ trait StnAirportConfig extends HasAirportConfig {
 }
 
 trait ManAirportConfig extends HasAirportConfig {
-  val airportConfigHolder = AirportConfig(
+  val airportConfig = AirportConfig(
     portCode = "MAN",
     queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
     slaByQueue = Map(
@@ -43,7 +43,7 @@ trait ManAirportConfig extends HasAirportConfig {
 }
 
 trait BohAirportConfig extends HasAirportConfig {
-  val airportConfigHolder = AirportConfig(
+  val airportConfig = AirportConfig(
     portCode = "BOH",
     queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
     slaByQueue = Map(
@@ -54,7 +54,7 @@ trait BohAirportConfig extends HasAirportConfig {
 }
 
 trait LtnAirportConfig extends HasAirportConfig {
-  val airportConfigHolder = AirportConfig(
+  val airportConfig = AirportConfig(
     portCode = "LTN",
     queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
     slaByQueue = Map(

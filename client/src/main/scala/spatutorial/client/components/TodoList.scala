@@ -46,7 +46,7 @@ object TableTodoList {
                             terminalName: String,
                             userDeskRecsRos: Seq[UserDeskRecsRow],
                             flightsPotRCP: ReactConnectProxy[Pot[Flights]],
-                            airportConfigHolder: AirportConfig,
+                            airportConfig: AirportConfig,
                             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                             stateChange: DeskRecTimeslot => Callback,
                             editItem: DeskRecTimeslot => Callback,
@@ -104,7 +104,7 @@ object TableTodoList {
         val popover = HoverPopover(formattedDate, p.flightsPotRCP, airportInfo, item.time)
         val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
-        val dangerWait = if (item.waitTimeWithUserDeskRec > p.airportConfigHolder.slaByQueue(p.queueName)) "table-danger"
+        val dangerWait = if (item.waitTimeWithUserDeskRec > p.airportConfig.slaByQueue(p.queueName)) "table-danger"
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
           <.td(^.cls := "date-field", popover()),

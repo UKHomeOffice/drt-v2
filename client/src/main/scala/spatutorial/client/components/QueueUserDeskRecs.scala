@@ -70,7 +70,7 @@ object QueueUserDeskRecsComponent {
   }
 
   def stuff() = {
-    val airportConfigPotRCP = SPACircuit.connect(_.airportConfigHolder)
+    val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
     airportConfigPotRCP(airportConfigPotMP => {
       <.div(
         airportConfigPotMP().renderEmpty("Hello empty"),

@@ -136,7 +136,7 @@ object SPAMain extends js.JSApp {
     import dsl._
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
-    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfigHolder)
+    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
 
     val dashboardRoute = staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {

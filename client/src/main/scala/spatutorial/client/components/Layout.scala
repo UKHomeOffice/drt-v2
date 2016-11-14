@@ -14,8 +14,8 @@ object Layout {
 
   val component = ReactComponentB[Props]("Layout")
     .renderP((_, props: Props) => {
-      val airportConfigHolderRCP = SPACircuit.connect(m => m.airportConfigHolder)
-      airportConfigHolderRCP((airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) => {
+      val airportConfigRCP = SPACircuit.connect(m => m.airportConfig)
+      airportConfigRCP((airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) => {
         <.div(
           airportConfigPotMP().renderReady(airportConfig =>
             <.div(

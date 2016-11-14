@@ -49,14 +49,14 @@ object DeskRecsChart {
                     val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
                     <.div(^.key := queueName,
                       workloads.renderReady(wl => {
-                        props.airportConfigPot.renderReady(airportConfigHolder => {
+                        props.airportConfigPot.renderReady(airportConfig => {
                           val labels = wl.labels
                           Panel(Panel.Props(s"Desk Recommendations and Wait times for '$terminalName' '${queueName}'"),
                             potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
                             potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
                             potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
                             deskRecsChart(queueName, labels, potCrunchResult),
-                            waitTimesChart(labels, potCrunchResult, airportConfigHolder.slaByQueue(queueName)))
+                            waitTimesChart(labels, potCrunchResult, airportConfig.slaByQueue(queueName)))
                         })
                       })
                     )
@@ -93,7 +93,7 @@ object DeskRecsChart {
   def userSimulationWaitTimesChart(
                                     terminalName: TerminalName,
                                     queueName: QueueName,
-                                    airportConfigHolder: AirportConfig,
+                                    airportConfig: AirportConfig,
                                     labels: IndexedSeq[String],
                                     simulationResultPotMP: ModelProxy[Pot[SimulationResult]],
                                     crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
@@ -103,7 +103,7 @@ object DeskRecsChart {
         case _ => props.crunchResult().get.waitTimes
       })
       val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-      val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfigHolder.slaByQueue(queueName).toDouble)
+      val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfig.slaByQueue(queueName).toDouble)
       val sampledLabels = takeEvery15th(labels)
       <.div(
         Chart(

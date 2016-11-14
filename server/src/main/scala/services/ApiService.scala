@@ -76,7 +76,7 @@ abstract class ApiService
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
     log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(",",", ")")}...")
     val repeat = List.fill[Int](workloads.length) _
-    val optimizerConfig = OptimizerConfig(airportConfigHolder.slaByQueue(queueName))
+    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
     //todo take the maximum desks from some durable store
     val minimumDesks: List[Int] = repeat(2)
     val maximumDesks: List[Int] = repeat(25)
@@ -86,11 +86,11 @@ abstract class ApiService
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
     val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
 
-    val optimizerConfig = OptimizerConfig(airportConfigHolder.slaByQueue(queueName))
+    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
     TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
   }
 
-  def airportConfig: AirportConfig = {
-    airportConfigHolder
+  def airportConfiguration: AirportConfig = {
+    config.airportConfig
   }
 }

@@ -63,7 +63,7 @@ case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWork
 case class GetWorkloads(begin: String, end: String) extends Action
 
 case class GetAirportConfig() extends Action
-case class UpdateAirportConfig(airportConfigHolder: AirportConfig) extends Action
+case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
@@ -116,7 +116,7 @@ case class RootModel(
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                      airportConfigHolder: Pot[AirportConfig] = Empty
+                      airportConfig: Pot[AirportConfig] = Empty
                     ) {
   override def toString: String =
     s"""
@@ -210,9 +210,9 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   protected def handle = {
     case action: GetAirportConfig =>
       log.info("requesting workloadsWrapper from server")
-      log.info(s"Airport config from server: ${AjaxClient[Api].airportConfig().call()}")
+      log.info(s"Airport config from server: ${AjaxClient[Api].airportConfiguration().call()}")
 
-      updated(Pending(), Effect(AjaxClient[Api].airportConfig().call().map(UpdateAirportConfig)))
+      updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
       updated(Ready(configHolder))
   }
@@ -390,7 +390,7 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
-      new AirportConfigHandler(zoomRW(_.airportConfigHolder)((m, v) => m.copy(airportConfigHolder = v)))
+      new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v)))
     )
   }
 
