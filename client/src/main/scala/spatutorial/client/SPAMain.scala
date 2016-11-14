@@ -164,7 +164,6 @@ object SPAMain extends js.JSApp {
       QueueUserDeskRecsComponent.stuff()
     })
 
-    //    val rule = terminalUserDeskRecs.foldLeft(dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)((rules, terminalRule) => rules | terminalRule)
     val rule = (dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)

@@ -35,6 +35,7 @@ object DeskRecsChart {
   val DeskRecs = ReactComponentB[Props]("CrunchResults")
     .initialState_P((props: Props) => State(props.deskRecsModelMP.connect(_.queueCrunchResults), props.deskRecsModelMP.connect(_.potUserDeskRecs)))
     .renderPS((_, props: Props, state) => {
+      val workloads = props.deskRecsModelMP().workloads
       <.div(
         props.deskRecsModelMP().queueCrunchResults.map {
           case (terminalName, terminalQueueCrunchResults) =>
@@ -46,11 +47,7 @@ object DeskRecsChart {
                   queueCrunchResults.renderReady(queueWorkload => {
                     log.info("We think crunch results are ready!!!!")
                     val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
-                    //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
-                    //                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
-                    val workloads = props.deskRecsModelMP().workloads
                     <.div(^.key := queueName,
-                      //                  potSimulationResult.renderReady(sr => {
                       workloads.renderReady(wl => {
                         props.airportConfigPot.renderReady(airportConfigHolder => {
                           val labels = wl.labels
@@ -62,7 +59,6 @@ object DeskRecsChart {
                             waitTimesChart(labels, potCrunchResult, airportConfigHolder.slaByQueue(queueName)))
                         })
                       })
-                      //                  })
                     )
                   }))
             }
