@@ -153,13 +153,8 @@ trait SystemActors {
     }
 
     def chromaVanillaFlights(): Source[List[ApiFlight], Cancellable] = {
-      log.info("Hello")
       val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
-      log.info("Hello")
-
-      val x = apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
-      log.info("Hello")
-      x
+      apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
     }
   }
 
