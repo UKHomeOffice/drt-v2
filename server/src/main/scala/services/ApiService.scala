@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.io.Codec
 import scala.util.Try
-import spatutorial.shared.EdiAirportConfig
+import spatutorial.shared.AirportConfig
 
 //  case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
 //                 loc2: Double, elevation: Double,dkDouble: Double, dk: String, tz: String)
@@ -74,10 +74,13 @@ abstract class ApiService
   }
 
   override def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double]): CrunchResult = {
-    //println(s"Crunch requested for $terminalName, $queueName, ${workloads}")
+    log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(",",", ")")}...")
     val repeat = List.fill[Int](workloads.length) _
     val optimizerConfig = OptimizerConfig(airportConfigHolder.slaByQueue(queueName))
-    TryRenjin.crunch(workloads, repeat(2), repeat(25), optimizerConfig)
+    //todo take the maximum desks from some durable store
+    val minimumDesks: List[Int] = repeat(2)
+    val maximumDesks: List[Int] = repeat(25)
+    TryRenjin.crunch(workloads, minimumDesks, maximumDesks, optimizerConfig)
   }
 
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {

@@ -80,7 +80,6 @@ trait WorkloadsService extends WorkloadsApi {
 
     val terminals = whatByTerminal.onSuccess {
       case s =>
-        log.info(s"========should return ${s}")
         val terminals = s.keys
         log.info(s"getWorkloads terminals a ${terminals}")
     }

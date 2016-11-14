@@ -29,6 +29,8 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
+import spatutorial.shared.AirportConfig
+
 
 
 object TableViewUtils {
@@ -163,15 +165,6 @@ object SPAMain extends js.JSApp {
         val flightsWrapper = SPACircuit.connect(m => m.flights)
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
-
-
-    //    val terminalUserDeskRecs = terminalNames.map(tn => {
-    //      staticRoute(s"#${tn}/userdeskrecs", TerminalUserDeskRecommendationsLoc(tn)) ~> renderR(ctl => {
-    //        log.info(s"routing to ${tn} userdeskrecs")
-    //        TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(tn)
-    //      })
-    //    })
-
 
     object TerminalPage {
 
