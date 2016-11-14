@@ -55,35 +55,32 @@ trait SystemActors {
   val flightsActorAskable: AskableActorRef = flightsActor
 }
 
+trait ChromaFetcherLike {
+  def system: ActorSystem
+
+  def chromafetcher: ChromaFetcher
+}
 
 
-  trait ChromaFetcherLike {
-    def system: ActorSystem
-
-    def chromafetcher: ChromaFetcher
+trait MockChroma extends ChromaFetcherLike {
+  self =>
+  system.log.info("Mock Chroma init")
+  override val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
+    implicit val system: ActorSystem = self.system
   }
+}
 
-
-  trait MockChroma extends ChromaFetcherLike {
-    self =>
-    system.log.info("Mock Chroma init")
-    override val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
-      implicit val system: ActorSystem = self.system
-    }
+trait ProdChroma extends ChromaFetcherLike {
+  self =>
+  override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
+    implicit val system: ActorSystem = self.system
   }
+}
 
-  trait ProdChroma extends ChromaFetcherLike {
-    self =>
-    override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-      implicit val system: ActorSystem = self.system
-    }
-  }
+case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
+  flightFeed =>
 
-  case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
-    flightFeed =>
-
-    //  val chromafetcher = new ChromaFetcher with MockedChromaSendReceive { implicit val system: ActorSystem = ctrl.system }
-
+  object EdiChroma {
     val ArrivalsHall1 = "A1"
     val ArrivalsHall2 = "A2"
     val ediMapTerminals = Map(
@@ -91,8 +88,6 @@ trait SystemActors {
       "T2" -> ArrivalsHall2
     )
 
-
-    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
     val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
       csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
         case Some(renamedTerminal) =>
@@ -104,160 +99,159 @@ trait SystemActors {
     def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
       if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
     }
-
-    //val ediMapping =  JsonRabbit.ediMappingAndDiff(chromaFlow)
-
-    def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
-      ediMapping.map(flights =>
-        flights.map(flight => {
-          val walkTimeMinutes = 4
-          val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-          ApiFlight(
-            Operator = flight.Operator,
-            Status = flight.Status, EstDT = flight.EstDT,
-            ActDT = flight.ActDT, EstChoxDT = flight.EstChoxDT,
-            ActChoxDT = flight.ActChoxDT,
-            Gate = flight.Gate,
-            Stand = flight.Stand,
-            MaxPax = flight.MaxPax,
-            ActPax = flight.ActPax,
-            TranPax = flight.TranPax,
-            RunwayID = flight.RunwayID,
-            BaggageReclaimId = flight.BaggageReclaimId,
-            FlightID = flight.FlightID,
-            AirportID = flight.AirportID,
-            Terminal = flight.Terminal,
-            ICAO = flight.ICAO,
-            IATA = flight.IATA,
-            Origin = flight.Origin,
-            SchDT = flight.SchDT,
-            PcpTime = pcpTime
-          )
-        }).toList)
-    }
-
-    val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
-
-    def chromaEdiFlights(): Source[List[ApiFlight], Cancellable] = {
-      val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
-
-      def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
-        csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
-          case Some(renamedTerminal) =>
-            csf.copy(Terminal = renamedTerminal)
-          case None => csf
-        })
-      )
-
-      apiFlightCopy(ediMapping)
-    }
-
-    def chromaVanillaFlights(): Source[List[ApiFlight], Cancellable] = {
-      val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
-      apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
-    }
   }
 
-  case class LHRLiveFlight(
-                            term: String,
-                            flightCode: String,
-                            operator: String,
-                            from: String,
-                            airportName: String,
-                            scheduled: org.joda.time.DateTime,
-                            estimated: Option[String],
-                            touchdown: Option[String],
-                            estChox: Option[String],
-                            actChox: Option[String],
-                            stand: Option[String],
-                            maxPax: Option[Int],
-                            actPax: Option[Int],
-                            connPax: Option[Int]
-                          ) {
-    def flightNo = 23
+  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
+
+  def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
+    ediMapping.map(flights =>
+      flights.map(flight => {
+        val walkTimeMinutes = 4
+        val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
+        ApiFlight(
+          Operator = flight.Operator,
+          Status = flight.Status, EstDT = flight.EstDT,
+          ActDT = flight.ActDT, EstChoxDT = flight.EstChoxDT,
+          ActChoxDT = flight.ActChoxDT,
+          Gate = flight.Gate,
+          Stand = flight.Stand,
+          MaxPax = flight.MaxPax,
+          ActPax = flight.ActPax,
+          TranPax = flight.TranPax,
+          RunwayID = flight.RunwayID,
+          BaggageReclaimId = flight.BaggageReclaimId,
+          FlightID = flight.FlightID,
+          AirportID = flight.AirportID,
+          Terminal = flight.Terminal,
+          ICAO = flight.ICAO,
+          IATA = flight.IATA,
+          Origin = flight.Origin,
+          SchDT = flight.SchDT,
+          PcpTime = pcpTime
+        )
+      }).toList)
   }
 
-  case class LHRCsvException(originalLine: String, idx: Int, innerException: Throwable) extends Exception {
-    override def toString = s"$originalLine : $idx $innerException"
+  val copiedToApiFlights = apiFlightCopy(EdiChroma.ediMapping).map(Flights(_))
+
+  def chromaEdiFlights(): Source[List[ApiFlight], Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
+
+    def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
+      csfs.map(EdiChroma.ediBaggageTerminalHack(_)).map(csf => EdiChroma.ediMapTerminals.get(csf.Terminal) match {
+        case Some(renamedTerminal) =>
+          csf.copy(Terminal = renamedTerminal)
+        case None => csf
+      })
+    )
+
+    apiFlightCopy(ediMapping)
   }
 
-  object LHRFlightFeed {
-    def parseDateTime(dateString: String) = pattern.parseDateTime(dateString)
-
-    val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
+  def chromaVanillaFlights(): Source[List[ApiFlight], Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
+    apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
   }
+}
 
-  case class LHRFlightFeed() {
-    val csvFile = "/LHR_DMNDDET_20161022_0547.csv"
+case class LHRLiveFlight(
+                          term: String,
+                          flightCode: String,
+                          operator: String,
+                          from: String,
+                          airportName: String,
+                          scheduled: org.joda.time.DateTime,
+                          estimated: Option[String],
+                          touchdown: Option[String],
+                          estChox: Option[String],
+                          actChox: Option[String],
+                          stand: Option[String],
+                          maxPax: Option[Int],
+                          actPax: Option[Int],
+                          connPax: Option[Int]
+                        ) {
+  def flightNo = 23
+}
 
-    def opt(s: String) = if (s.isEmpty) None else Option(s)
+case class LHRCsvException(originalLine: String, idx: Int, innerException: Throwable) extends Exception {
+  override def toString = s"$originalLine : $idx $innerException"
+}
 
-    def pd(s: String) = LHRFlightFeed.parseDateTime(s)
+object LHRFlightFeed {
+  def parseDateTime(dateString: String) = pattern.parseDateTime(dateString)
 
-    def optDate(s: String) = if (s.isEmpty) None else Option(s)
+  val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
+}
 
-    def optInt(s: String) = if (s.isEmpty) None else Option(s.toInt)
+case class LHRFlightFeed() {
+  val csvFile = "/LHR_DMNDDET_20161022_0547.csv"
 
-    lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
-      val resource: URL = getClass.getResource(csvFile)
-      val bufferedSource = scala.io.Source.fromURL(resource)
-      bufferedSource.getLines().zipWithIndex.drop(1).map { case (l, idx) =>
+  def opt(s: String) = if (s.isEmpty) None else Option(s)
 
-        val t = Try {
-          val splitRow: Array[String] = l.split(",", -1)
-          println(s"length ${splitRow.length} $l")
-          val sq: (String) => String = (x) => x
-          LHRLiveFlight(sq(splitRow(0)), sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)),
-            sq(splitRow(4)), pd(splitRow(5)),
-            opt(splitRow(6)), opt(splitRow(7)), opt(splitRow(8)), opt(sq(splitRow(9))),
-            opt(splitRow(10)),
-            optInt(splitRow(11)),
-            optInt(splitRow(12)),
-            optInt(splitRow(13)))
-        }
-        t match {
-          case Success(s) => Success(s)
-          case Failure(t) => Failure(LHRCsvException(l, idx, t))
-        }
+  def pd(s: String) = LHRFlightFeed.parseDateTime(s)
+
+  def optDate(s: String) = if (s.isEmpty) None else Option(s)
+
+  def optInt(s: String) = if (s.isEmpty) None else Option(s.toInt)
+
+  lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
+    val resource: URL = getClass.getResource(csvFile)
+    val bufferedSource = scala.io.Source.fromURL(resource)
+    bufferedSource.getLines().zipWithIndex.drop(1).map { case (l, idx) =>
+
+      val t = Try {
+        val splitRow: Array[String] = l.split(",", -1)
+        println(s"length ${splitRow.length} $l")
+        val sq: (String) => String = (x) => x
+        LHRLiveFlight(sq(splitRow(0)), sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)),
+          sq(splitRow(4)), pd(splitRow(5)),
+          opt(splitRow(6)), opt(splitRow(7)), opt(splitRow(8)), opt(sq(splitRow(9))),
+          opt(splitRow(10)),
+          optInt(splitRow(11)),
+          optInt(splitRow(12)),
+          optInt(splitRow(13)))
+      }
+      t match {
+        case Success(s) => Success(s)
+        case Failure(t) => Failure(LHRCsvException(l, idx, t))
       }
     }
-    val walkTimeMinutes = 4
-
-    lazy val successfulFlights = lhrFlights.collect { case Success(s) => s }
-
-    lazy val copiedToApiFlights = Source(
-      List(
-        List[ApiFlight](),
-        successfulFlights.map(flight => {
-          val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
-          val schDtIso = flight.scheduled.toDateTimeISO().toString()
-          val defaultPaxPerFlight = 200
-          ApiFlight(
-            Operator = flight.operator,
-            Status = "UNK",
-            EstDT = flight.estimated.getOrElse(""),
-            ActDT = flight.touchdown.getOrElse(""),
-            EstChoxDT = flight.estChox.getOrElse(""),
-            ActChoxDT = flight.actChox.getOrElse(""),
-            Gate = "",
-            Stand = flight.stand.getOrElse(""),
-            MaxPax = flight.maxPax.getOrElse(-1),
-            ActPax = flight.actPax.getOrElse(defaultPaxPerFlight),
-            TranPax = flight.connPax.getOrElse(-1),
-            RunwayID = "",
-            BaggageReclaimId = "",
-            FlightID = flight.hashCode(),
-            AirportID = "LHR",
-            Terminal = flight.term,
-            ICAO = flight.flightCode,
-            IATA = flight.flightCode,
-            Origin = flight.airportName,
-            SchDT = schDtIso,
-            PcpTime = pcpTime)
-        }).toList)).map(x => FlightsApi.Flights(x))
   }
+  val walkTimeMinutes = 4
 
+  lazy val successfulFlights = lhrFlights.collect { case Success(s) => s }
 
+  lazy val copiedToApiFlights = Source(
+    List(
+      List[ApiFlight](),
+      successfulFlights.map(flight => {
+        val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
+        val schDtIso = flight.scheduled.toDateTimeISO().toString()
+        val defaultPaxPerFlight = 200
+        ApiFlight(
+          Operator = flight.operator,
+          Status = "UNK",
+          EstDT = flight.estimated.getOrElse(""),
+          ActDT = flight.touchdown.getOrElse(""),
+          EstChoxDT = flight.estChox.getOrElse(""),
+          ActChoxDT = flight.actChox.getOrElse(""),
+          Gate = "",
+          Stand = flight.stand.getOrElse(""),
+          MaxPax = flight.maxPax.getOrElse(-1),
+          ActPax = flight.actPax.getOrElse(defaultPaxPerFlight),
+          TranPax = flight.connPax.getOrElse(-1),
+          RunwayID = "",
+          BaggageReclaimId = "",
+          FlightID = flight.hashCode(),
+          AirportID = "LHR",
+          Terminal = flight.term,
+          ICAO = flight.flightCode,
+          IATA = flight.flightCode,
+          Origin = flight.airportName,
+          SchDT = schDtIso,
+          PcpTime = pcpTime)
+      }).toList)).map(x => FlightsApi.Flights(x))
+}
 
 
 class Application @Inject()(
