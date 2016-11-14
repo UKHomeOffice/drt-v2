@@ -6,7 +6,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{ReactComponentB, _}
 import org.scalajs.dom.html
 import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.components.TableTodoList.UserDeskRecsRow
+import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}

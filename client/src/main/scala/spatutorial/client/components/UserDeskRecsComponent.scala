@@ -5,7 +5,7 @@ import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.{BackendScope, Callback, _}
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{Button, Panel}
-import spatutorial.client.components.TableTodoList.UserDeskRecsRow
+import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, _}
@@ -43,20 +43,20 @@ object UserDeskRecsComponent {
       <.div(^.cls := "user-desk-recs-container",
         p.userDeskRecsPotProxy().renderFailed(ex => "Error loading"),
         p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
-          p.userDeskRecsPotProxy().render(userDeskRecs => {
-              log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
-              <.div(^.cls := "table-responsive",
-                TableTodoList(
-                  p.queueName,
-                  p.terminalName,
-                  p.items,
-                  p.flightsPotRCP,
-                  p.airportConfig,
-                  p.airportInfos,
-                  item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
-                  item => editTodo(Some(item)),
-                  item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
-            }))
+        p.userDeskRecsPotProxy().render(userDeskRecs => {
+          log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
+          <.div(^.cls := "table-responsive",
+            DeskRecsTable(
+              p.queueName,
+              p.terminalName,
+              p.items,
+              p.flightsPotRCP,
+              p.airportConfig,
+              p.airportInfos,
+              item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
+              item => editTodo(Some(item)),
+              item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
+        }))
   }
 
   // create the React component for To Do management
@@ -76,5 +76,5 @@ object UserDeskRecsComponent {
              flightsPotRCP: ReactConnectProxy[Pot[Flights]],
              proxy: ModelProxy[Pot[UserDeskRecs]],
              simulationResult: ModelProxy[Pot[SimulationResult]]) =
-    component(Props(terminalName, queueName, items, flightsPotRCP, airportConfig, airportInfo, proxy, simulationResult))
+  component(Props(terminalName, queueName, items, flightsPotRCP, airportConfig, airportInfo, proxy, simulationResult))
 }

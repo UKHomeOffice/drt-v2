@@ -35,13 +35,13 @@ case class PopoverWrapper(
 
 }
 
-object TableTodoList {
+object DeskRecsTable {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class UserDeskRecsRow(time: Long, crunchDeskRec: Int, userDeskRec: DeskRecTimeslot, waitTimeWithCrunchDeskRec: Int, waitTimeWithUserDeskRec: Int)
 
-  case class TodoListProps(
+  case class Props(
                             queueName: String,
                             terminalName: String,
                             userDeskRecsRos: Seq[UserDeskRecsRow],
@@ -93,7 +93,7 @@ object TableTodoList {
 
   }).build
 
-  private val TodoList = ReactComponentB[TodoListProps]("TodoList")
+  private val component = ReactComponentB[Props]("DeskRecsTable")
     .render_P(p => {
       val style = bss.listGroup
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
@@ -132,5 +132,5 @@ object TableTodoList {
             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: DeskRecTimeslot => Callback,
             editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    TodoList(TodoListProps(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange, editItem, deleteItem))
+    component(Props(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange, editItem, deleteItem))
 }

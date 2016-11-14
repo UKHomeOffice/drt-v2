@@ -14,7 +14,7 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
-import spatutorial.client.components.TableTodoList.UserDeskRecsRow
+import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
 import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, TableTerminalDeskRecs, TerminalPage}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
