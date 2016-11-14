@@ -25,8 +25,8 @@ import play.api.mvc._
 import scala.util.{Success, Failure}
 import scala.util.Try
 import services.ApiService
-import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{FlightsApi, ApiFlight, Api}
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName, Flights}
+import spatutorial.shared.{CrunchResult, FlightsApi, ApiFlight, Api}
 import spray.http._
 import scala.language.postfixOps
 
@@ -48,8 +48,9 @@ trait Core {
 
 trait SystemActors {
   self: Core =>
-  val flightsActor = system.actorOf(Props(classOf[FlightsActor]), "flightsActor")
   val crunchActor = system.actorOf(Props(classOf[CrunchActor]), "crunchActor")
+  val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
+  val crunchByAnotherName = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
 }
 
@@ -252,7 +253,13 @@ class Application @Inject()(
   }
 
   val apiService = new ApiService {
-    implicit val timeout = Timeout(5 seconds)
+    implicit override val timeout: akka.util.Timeout = Timeout(5 seconds)
+    val crunchActor: AskableActorRef = ctrl.crunchActor
+    override val log = Logging.getLogger(system, this)
+
+    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
+      tryCrunch(terminalName, queueName)
+    }
 
     override def getFlights(st: Long, end: Long): Future[List[ApiFlight]] = {
       val flights: Future[Any] = flightsActorAskable ? GetFlights

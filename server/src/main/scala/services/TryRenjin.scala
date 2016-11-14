@@ -4,16 +4,19 @@ import java.io.InputStream
 import javax.script.{ScriptEngine, ScriptEngineManager}
 
 import org.renjin.sexp.{IntVector, DoubleVector}
-import spatutorial.shared.{DeskRec, SimulationResult, CrunchResult}
+import org.slf4j.LoggerFactory
+import spatutorial.shared._
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
+import scala.util.{Success, Failure, Try}
 
 case class OptimizerConfig(sla: Int)
 
 object TryRenjin {
+  val log = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
-  def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): CrunchResult = {
+  def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[CrunchResult] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
@@ -23,23 +26,25 @@ object TryRenjin {
   }
 
   case class Optimizer(engine: ScriptEngine) {
-    def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): CrunchResult = {
+    def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[CrunchResult] = {
+      val tryCrunchRes = Try {
+        loadOptimiserScript
+        initialiseWorkloads(workloads)
 
-      loadOptimiserScript
-      initialiseWorkloads(workloads)
+        engine.put("xmax", maxDesks.toArray)
+        engine.put("xmin", minDesks.toArray)
+        engine.put("sla", config.sla)
+        engine.put("weight_churn", 50)
+        engine.put("weight_pax", 0.05)
+        engine.put("weight_staff", 3)
+        engine.put("weight_sla", 10)
+        engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
 
-      engine.put("xmax", maxDesks.toArray)
-      engine.put("xmin", minDesks.toArray)
-      engine.put("sla", config.sla)
-      engine.put("weight_churn", 50)
-      engine.put("weight_pax", 0.05)
-      engine.put("weight_staff", 3)
-      engine.put("weight_sla", 10)
-      engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
-
-      val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
-      val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
-      CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
+        val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
+        val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
+        CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
+      }
+      tryCrunchRes
     }
 
     def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
@@ -54,7 +59,7 @@ object TryRenjin {
       engine.put("sla", config.sla)
       engine.eval("processed <- process.work(w, " + desks + ", sla=sla, 0)")
 
-      val waitR = engine.eval("processed$wait").asInstanceOf[IntVector]
+      val waitR = engine.eval(s"processed$$wait").asInstanceOf[IntVector]
 
       val waitTimes: IndexedSeq[Int] = (0 until waitR.length()) map (waitR.getElementAsInt(_))
 

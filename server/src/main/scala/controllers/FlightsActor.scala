@@ -32,7 +32,7 @@ import scala.concurrent.duration._
 
 case object GetFlights
 
-class FlightsActor extends Actor with ActorLogging {
+class FlightsActor(crunchActor: ActorRef) extends Actor with ActorLogging {
   implicit val timeout = Timeout(5 seconds)
   val flights = mutable.Map[Int, ApiFlight]()
 
@@ -54,6 +54,7 @@ class FlightsActor extends Actor with ActorLogging {
 
       flights ++= fs.map(f => (f.FlightID, f))
       log.info(s"Flights now ${flights.size}")
+      crunchActor ! CrunchFlightsChange(fs)
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }
 }

@@ -32,6 +32,7 @@ case class ApiFlight(
                       PcpTime: Long)
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
+case class NoCrunchAvailable()
 
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
 
@@ -62,8 +63,10 @@ trait FlightsApi {
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 trait WorkloadsHelpers {
-  def workloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
-    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads.values.toList)
+  val oneMinute = 60000L
+
+  def workloadsByQueue(workloads: Map[String, QueueWorkloads], numberOfHours: Int = 24): Map[String, List[Double]] = {
+    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(workloads.values.toList, numberOfHours = numberOfHours)
     workloads.mapValues(qwl => {
       val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
@@ -72,7 +75,7 @@ trait WorkloadsHelpers {
   }
 
   def paxloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
-    val allMins: NumericRange[Long] = allMinsFromAllQueues(workloads.values.toList)
+    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(workloads.values.toList)
     workloads.mapValues(qwl => {
       val allPaxloadByMinuteForThisQueue = oneQueuePaxload(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allPaxloadByMinuteForThisQueue)
@@ -100,10 +103,9 @@ trait WorkloadsHelpers {
     paxloads._2.map((paxLoad) => (paxLoad.time, paxLoad.pax)).toMap
   }
 
-  def allMinsFromAllQueues(workloads: Seq[QueueWorkloads]): NumericRange[Long] = {
+  def wholeDaysMinutesFromAllQueues(workloads: Seq[QueueWorkloads], numberOfHours: Int = 24): NumericRange[Long] = {
     val timesMin = minimumMinuteInWorkloads(workloads)
-    val oneMinute = 60000L
-    val timeMinPlusOneDay: Long = timesMin + oneMinute * 60 * 24
+    val timeMinPlusOneDay: Long = timesMin + oneMinute * 60 * numberOfHours
     timesMin until timeMinPlusOneDay by oneMinute
   }
 
@@ -159,7 +161,9 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): CrunchResult
+  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
+
+  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 }
