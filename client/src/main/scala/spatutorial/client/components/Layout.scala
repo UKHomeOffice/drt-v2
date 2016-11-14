@@ -7,7 +7,7 @@ import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain._
 import spatutorial.client.services.SPACircuit
-import spatutorial.shared.AirportConfigHolder
+import spatutorial.shared.AirportConfig
 
 object Layout {
   case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc])
@@ -15,7 +15,7 @@ object Layout {
   val component = ReactComponentB[Props]("Layout")
     .renderP((_, props: Props) => {
       val airportConfigHolderRCP = SPACircuit.connect(m => m.airportConfigHolder)
-      airportConfigHolderRCP((airportConfigPotMP: ModelProxy[Pot[AirportConfigHolder]]) => {
+      airportConfigHolderRCP((airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) => {
         <.div(
           airportConfigPotMP().renderReady(airportConfig =>
             <.div(

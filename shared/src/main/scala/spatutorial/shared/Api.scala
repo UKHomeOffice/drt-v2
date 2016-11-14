@@ -163,5 +163,5 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 
-  def airportConfig(): AirportConfigHolder
+  def airportConfig(): AirportConfig
 }

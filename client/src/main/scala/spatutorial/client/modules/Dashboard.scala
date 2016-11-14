@@ -38,7 +38,7 @@ object Dashboard {
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
                    dashboardModelProxy: ModelProxy[DashboardModels],
-                   airportConfigPot: Pot[AirportConfigHolder]
+                   airportConfigPot: Pot[AirportConfig]
                   )
 
 
@@ -149,7 +149,7 @@ object Dashboard {
     .componentDidMount(scope => mounted(scope.props))
     .build
 
-  def apply(router: RouterCtl[Loc], dashboardProps: ModelProxy[DashboardModels], airportConfigPot: Pot[AirportConfigHolder]) = component(Props(router, dashboardProps, airportConfigPot))
+  def apply(router: RouterCtl[Loc], dashboardProps: ModelProxy[DashboardModels], airportConfigPot: Pot[AirportConfig]) = component(Props(router, dashboardProps, airportConfigPot))
 }
 
 // object DashboardTerminals {

@@ -63,7 +63,7 @@ case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWork
 case class GetWorkloads(begin: String, end: String) extends Action
 
 case class GetAirportConfig() extends Action
-case class UpdateAirportConfig(airportConfigHolder: AirportConfigHolder) extends Action
+case class UpdateAirportConfig(airportConfigHolder: AirportConfig) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
@@ -116,7 +116,7 @@ case class RootModel(
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                      airportConfigHolder: Pot[AirportConfigHolder] = Empty
+                      airportConfigHolder: Pot[AirportConfig] = Empty
                     ) {
   override def toString: String =
     s"""
@@ -206,7 +206,7 @@ class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHand
   }
 }
 
-class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfigHolder]]) extends LoggingActionHandler(modelRW) {
+class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case action: GetAirportConfig =>
       log.info("requesting workloadsWrapper from server")

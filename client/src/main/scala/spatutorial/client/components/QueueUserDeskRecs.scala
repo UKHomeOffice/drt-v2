@@ -22,7 +22,7 @@ object QueueUserDeskRecsComponent {
                     terminalName: TerminalName,
                     queueName: QueueName,
                     userDeskRecsRowPotRCP: ReactConnectProxy[Pot[List[UserDeskRecsRow]]],
-                    airportConfig: AirportConfigHolder,
+                    airportConfig: AirportConfig,
                     airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     labelsPotRCP: ReactConnectProxy[Pot[IndexedSeq[String]]],
                     crunchResultPotRCP: ReactConnectProxy[Pot[CrunchResult]],
@@ -75,7 +75,7 @@ object QueueUserDeskRecsComponent {
       <.div(
         airportConfigPotMP().renderEmpty("Hello empty"),
         airportConfigPotMP().renderPending(_ => "Hello pending"),
-        airportConfigPotMP().renderReady((airportConfig: AirportConfigHolder) => {
+        airportConfigPotMP().renderReady((airportConfig: AirportConfig) => {
           val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = airportConfig.terminalNames.flatMap { terminalName =>
             airportConfig.queues.map { queueName =>
               val labelsPotRCP = SPACircuit.connect(_.workload.map(_.labels))

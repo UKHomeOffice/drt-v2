@@ -46,7 +46,7 @@ object TableTodoList {
                             terminalName: String,
                             userDeskRecsRos: Seq[UserDeskRecsRow],
                             flightsPotRCP: ReactConnectProxy[Pot[Flights]],
-                            airportConfigHolder: AirportConfigHolder,
+                            airportConfigHolder: AirportConfig,
                             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                             stateChange: DeskRecTimeslot => Callback,
                             editItem: DeskRecTimeslot => Callback,
@@ -128,7 +128,7 @@ object TableTodoList {
     .build
 
   def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
-            airportConfig: AirportConfigHolder,
+            airportConfig: AirportConfig,
             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: DeskRecTimeslot => Callback,
             editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =

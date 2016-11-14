@@ -30,7 +30,7 @@ object DeskRecsChart {
 
   case class Props(
                     deskRecsModelMP: ModelProxy[DeskRecsModel],
-                    airportConfigPot: Pot[AirportConfigHolder])
+                    airportConfigPot: Pot[AirportConfig])
 
   val DeskRecs = ReactComponentB[Props]("CrunchResults")
     .initialState_P((props: Props) => State(props.deskRecsModelMP.connect(_.queueCrunchResults), props.deskRecsModelMP.connect(_.potUserDeskRecs)))
@@ -93,7 +93,7 @@ object DeskRecsChart {
   def userSimulationWaitTimesChart(
                                     terminalName: TerminalName,
                                     queueName: QueueName,
-                                    airportConfigHolder: AirportConfigHolder,
+                                    airportConfigHolder: AirportConfig,
                                     labels: IndexedSeq[String],
                                     simulationResultPotMP: ModelProxy[Pot[SimulationResult]],
                                     crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
@@ -147,5 +147,5 @@ object DeskRecsChart {
     case (n, i) if (i % 15 == 0) => n
   }
 
-  def apply(deskRecsModelMP: ModelProxy[DeskRecsModel], airportConfigPot: Pot[AirportConfigHolder]) = DeskRecs(Props(deskRecsModelMP, airportConfigPot))
+  def apply(deskRecsModelMP: ModelProxy[DeskRecsModel], airportConfigPot: Pot[AirportConfig]) = DeskRecs(Props(deskRecsModelMP, airportConfigPot))
 }

@@ -69,7 +69,7 @@ object TableTerminalDeskRecs {
                     terminalName: String,
                     items: Seq[TerminalUserDeskRecsRow],
                     flights: Pot[Flights],
-                    airportConfigHolder: AirportConfigHolder,
+                    airportConfigHolder: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
@@ -202,7 +202,7 @@ object TableTerminalDeskRecs {
     .build
 
   def apply(terminalName: String, items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
-            airportConfig: AirportConfigHolder,
+            airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =
     component(Props(terminalName, items, flights, airportConfig, airportInfos, stateChange))

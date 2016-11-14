@@ -9,7 +9,7 @@ import spatutorial.client.components.TableTodoList.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, _}
-import spatutorial.shared.{AirportConfig, AirportConfigHolder, AirportInfo, SimulationResult}
+import spatutorial.shared.{HasAirportConfig, AirportConfig, AirportInfo, SimulationResult}
 
 object UserDeskRecsComponent {
 
@@ -18,7 +18,7 @@ object UserDeskRecsComponent {
                     queueName: QueueName,
                     items: Seq[UserDeskRecsRow],
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
-                    airportConfig: AirportConfigHolder,
+                    airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     userDeskRecsPotProxy: ModelProxy[Pot[UserDeskRecs]],
                     simulationResult: ModelProxy[Pot[SimulationResult]])
@@ -71,7 +71,7 @@ object UserDeskRecsComponent {
              terminalName: TerminalName,
              queueName: QueueName,
              items: Seq[UserDeskRecsRow],
-             airportConfig: AirportConfigHolder,
+             airportConfig: AirportConfig,
              airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
              flightsPotRCP: ReactConnectProxy[Pot[Flights]],
              proxy: ModelProxy[Pot[UserDeskRecs]],

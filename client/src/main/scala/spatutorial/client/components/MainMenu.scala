@@ -12,7 +12,7 @@ import spatutorial.client.SPAMain._
 import spatutorial.client.components.Bootstrap.CommonStyle
 import spatutorial.client.components.Icon._
 import spatutorial.client.services.SPACircuit
-import spatutorial.shared.{AirportConfig, AirportConfigHolder}
+import spatutorial.shared.{HasAirportConfig, AirportConfig}
 
 import scalacss.ScalaCssReact._
 
@@ -37,7 +37,7 @@ object MainMenu {
     MenuItem(2, _ => "Flights", Icon.plane, FlightsLoc),
     MenuItem(3, buildTodoMenu, Icon.calculator, UserDeskRecommendationsLoc))
 
-  def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfigHolder]]) = {
+  def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
     val terminalMenuItems = airportConfigPotMP().state match {
       case PotReady =>
         airportConfigPotMP().get.terminalNames.zipWithIndex.map { case (tn, idx) => MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalLoc(tn)) }.toList

@@ -29,7 +29,7 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
-import spatutorial.shared.AirportConfig
+import spatutorial.shared.HasAirportConfig
 
 
 
@@ -136,7 +136,7 @@ object SPAMain extends js.JSApp {
     import dsl._
     val dashboardModelsConnect = SPACircuit.connect(m =>
       DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
-    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfigHolder]] = SPACircuit.connect(_.airportConfigHolder)
+    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfigHolder)
 
     val dashboardRoute = staticRoute(root, DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
