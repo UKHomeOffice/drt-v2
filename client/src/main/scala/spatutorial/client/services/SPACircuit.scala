@@ -4,7 +4,7 @@ import java.util.Date
 
 import diode.ActionResult.EffectOnly
 
-import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.immutable.{IndexedSeq, Iterable, Seq}
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
@@ -45,7 +45,7 @@ case class DeskRecTimeslot(id: String, deskRec: Int)
 // Actions
 case object RefreshTodos extends Action
 
-case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
+  case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
 
 case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
 
@@ -61,7 +61,10 @@ case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueNa
 
 case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends Action
 
-case class GetWorkloads(begin: String, end: String, port: String) extends Action
+case class GetWorkloads(begin: String, end: String) extends Action
+
+case class GetAirportConfig() extends Action
+case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
@@ -102,7 +105,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]
   def timeStamps = timeStampsFromAllQueues(t1workload)
 
   private def t1workload = {
-    workloads("A1")
+    workloads("T1")
   }
 }
 
@@ -113,7 +116,10 @@ case class RootModel(
                       userDeskRec: Map[TerminalName, QueueUserDeskRecs] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
-                      airportInfos: Map[String, Pot[AirportInfo]] = Map()
+                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
+                      airportConfig: Pot[AirportConfig] = Empty,
+                      minutesInASlot: Int = 15,
+                      slotsInADay: Int = 96
                     ) {
   override def toString: String =
     s"""
@@ -180,7 +186,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
     log.info(s"finding handler for ${action.toString.take(100)}")
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        log.error(s"Exception from ${getClass}  ${ f.toString() }")
+        log.error(s"Exception from ${getClass}  ${f.getMessage}")
         throw f
       case Success(s) =>
         s
@@ -203,6 +209,18 @@ class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHand
   }
 }
 
+class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
+  protected def handle = {
+    case action: GetAirportConfig =>
+      log.info("requesting workloadsWrapper from server")
+      val call: Future[AirportConfig] = AjaxClient[Api].airportConfiguration().call()
+      log.info(s"Airport config from server: ${call}")
+
+      updated(Pending(), Effect(call.map(UpdateAirportConfig)))
+    case UpdateAirportConfig(configHolder) =>
+      updated(Ready(configHolder))
+  }
+}
 class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case action: GetWorkloads =>
@@ -386,7 +404,8 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
-      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v)))
+      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v)))
     )
   }
 

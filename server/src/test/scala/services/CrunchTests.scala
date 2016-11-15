@@ -9,8 +9,7 @@ import scala.util.Success
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender}
-import controllers.SystemActors
-import controllers.Core
+import controllers.{AirportConfProvider, SystemActors, Core}
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
@@ -27,7 +26,7 @@ object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
   def makeSystem = {
-    new TestKit(ActorSystem()) with SystemActors with Core {
+    new TestKit(ActorSystem()) with SystemActors with Core with AirportConfProvider {
     }
   }
 

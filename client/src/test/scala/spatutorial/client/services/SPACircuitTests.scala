@@ -175,9 +175,11 @@ object SPACircuitTests extends TestSuite {
           workload = Ready(Workloads(Map("T1" -> Map("eeaGate" ->(Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
         res match {
-          case Some(ModelUpdateEffect(newValue, effects)) =>
+          case Some(ModelUpdate(newValue)) =>
             assert(newValue == expected)
-          case default => assert(false)
+          case default =>
+            println("Was " + default.toString())
+            assert(false)
         }
       }
       "Update crunch results" - {

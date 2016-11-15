@@ -21,6 +21,7 @@ import play.api.mvc._
 import services.{CrunchCalculator, WorkloadsCalculator, ApiService}
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{ApiFlight, Api}
+import spray.caching.{Cache, LruCache}
 import spray.http._
 import scala.language.postfixOps
 import scala.util.{Failure, Try, Success}
@@ -35,16 +36,32 @@ import scala.concurrent.ExecutionContext.Implicits.global
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
 case class CrunchFlightsChange(flights: Seq[ApiFlight])
 
-case class GetLatestCrunch()
+case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
 
-class CrunchActor(crunchPeriodHours: Int) extends Actor with ActorLogging with WorkloadsCalculator with CrunchCalculator with AirportConfig {
+class CrunchActor(crunchPeriodHours: Int,
+                  override val airportConfig: AirportConfig) extends Actor
+  with ActorLogging
+  with WorkloadsCalculator
+  with CrunchCalculator
+  with HasAirportConfig {
+
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
   var flights: List[ApiFlight] = Nil
   var latestWorkloads: Option[TerminalQueueWorkloads] = None
 
   //todo put some spray caching here, I think.
   var latestCrunch: Future[CrunchResult] = Future.failed(new Exception("No Crunch Available"))
+  val terminalName: TerminalName = "A1"
+  val crunchCache: Cache[CrunchResult] = LruCache()
+
+  // we can wrap the operation with caching support
+  // (providing a caching key)
+  def cachedOp[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
+    crunchCache(terminal + "/" + queue) {
+      performCrunch(terminal, queue)
+    }
+  }
 
   def receive = {
     case CrunchFlightsChange(newFlights) =>
@@ -54,31 +71,31 @@ class CrunchActor(crunchPeriodHours: Int) extends Actor with ActorLogging with W
         case Nil =>
           log.info("No crunch, no change")
         case _ =>
-          latestCrunch = performCrunch
+          latestCrunch = cachedOp("A1", "eeaDesk")
       }
-    case GetLatestCrunch() =>
-      log.info("Received GetLatestCrunch()")
+    case GetLatestCrunch(terminalName, queueName) =>
+      log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
       val replyTo = sender()
       flights match {
         case Nil =>
           replyTo ! NoCrunchAvailable()
         case fs =>
-          for (cr <- latestCrunch) {
-            log.info(s"latestCrunch available, will send $cr")
-            replyTo ! cr
-          }
+          val futCrunch = crunchCache(terminalName + "/" + queueName)
+          futCrunch.apply(cr => replyTo ! cr )
+        //          for (cr <- latestCrunch) {
+        //            log.info(s"latestCrunch available, will send $cr")
+        //            replyTo ! cr
+        //          }
       }
     case message =>
       log.info(s"crunchActor received ${message}")
   }
 
 
-  def performCrunch: Future[CrunchResult] = {
+  def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
     val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flights))
     log.info(s"Workloads are ${workloads}")
-    val terminalName: TerminalName = "A1"
-    val queueName = "eeaDesk"
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
       log.info(s"in crunch, workloads have calced $wl")
@@ -94,7 +111,8 @@ class CrunchActor(crunchPeriodHours: Int) extends Actor with ActorLogging with W
           log.info(s"Will crunch now $tq")
           val workloads: List[Double] = terminalWorkloads(queueName)
           log.info(s"$tq Crunching on $workloads")
-          val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads)
+          val queueSla = airportConfig.slaByQueue(queueName)
+          val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads, queueSla)
           log.info(s"Crunch complete for $tq $crunchRes")
           crunchRes
       }

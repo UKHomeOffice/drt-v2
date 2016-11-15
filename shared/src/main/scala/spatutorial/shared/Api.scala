@@ -166,4 +166,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
+
+  def airportConfiguration(): AirportConfig
 }

@@ -54,7 +54,8 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting((List(
-    "org.specs2" %% "specs2-core" % "3.0" % Test,
+    "io.spray" % "spray-caching_2.11" % "1.3.4",
+    "org.specs2" %% "specs2-core" % "3.7" % Test,
     "uk.gov.homeoffice.borderforce" %% "chroma-live" % "1.0",
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
@@ -86,8 +87,8 @@ object Settings {
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
   val jsDependencies = Def.setting(Seq(
-//    "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
-//    "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
+    //    "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
+    //    "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
     //    "org.webjars.npm" % "fixed-data-table" % "0.6.3" / "dist/fixed-data-table.js" minified "dist/fixed-data-table.min.js" dependsOn "react-with-addons.js" commonJSName "ReactFixedDataTable",
     "org.webjars" % "rgraph" % "3_2014-07-27-stable" / "RGraph.bar.js",
     "org.webjars" % "jquery" % versions.jQuery / "jquery.js" minified "jquery.min.js",

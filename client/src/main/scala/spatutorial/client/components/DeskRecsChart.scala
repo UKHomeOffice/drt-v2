@@ -18,9 +18,8 @@ import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.client.modules.Dashboard._
-import spatutorial.shared.AirportConfig
 
-object DeskRecsChart extends AirportConfig{
+object DeskRecsChart {
   type DeskRecsModel = DashboardModels
 
   log.info("initialising deskrecschart")
@@ -28,11 +27,16 @@ object DeskRecsChart extends AirportConfig{
   case class State(crunchResultWrapper: ReactConnectProxy[Map[TerminalName, QueueCrunchResults]],
                    deskRecs: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]])
 
-  val DeskRecs = ReactComponentB[ModelProxy[DeskRecsModel]]("CrunchResults")
-    .initialState_P(props => State(props.connect(_.queueCrunchResults), props.connect(_.potUserDeskRecs)))
-    .renderPS((_, proxy, state) => {
+  case class Props(
+                    deskRecsModelMP: ModelProxy[DeskRecsModel],
+                    airportConfigPot: Pot[AirportConfig])
+
+  val DeskRecs = ReactComponentB[Props]("CrunchResults")
+    .initialState_P((props: Props) => State(props.deskRecsModelMP.connect(_.queueCrunchResults), props.deskRecsModelMP.connect(_.potUserDeskRecs)))
+    .renderPS((_, props: Props, state) => {
+      val workloads = props.deskRecsModelMP().workloads
       <.div(
-        proxy().queueCrunchResults.map {
+        props.deskRecsModelMP().queueCrunchResults.map {
           case (terminalName, terminalQueueCrunchResults) =>
             terminalQueueCrunchResults.map {
               case (queueName, queueCrunchResults) =>
@@ -42,21 +46,18 @@ object DeskRecsChart extends AirportConfig{
                   queueCrunchResults.renderReady(queueWorkload => {
                     log.info("We think crunch results are ready!!!!")
                     val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
-                    //todo this seems to be at the wrong level as we've passed in a map, only to reach out a thing we're dependent on
-                    //                val potSimulationResult: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] = proxy().queueCrunchResults(queueName)
-                    val workloads = proxy().workloads
                     <.div(^.key := queueName,
-                      //                  potSimulationResult.renderReady(sr => {
                       workloads.renderReady(wl => {
-                        val labels = wl.labels
-                        Panel(Panel.Props(s"Desk Recommendations and Wait times for '$terminalName' '${queueName}'"),
-                          potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
-                          potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
-                          potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
-                          deskRecsChart(queueName, labels, potCrunchResult),
-                          waitTimesChart(labels, potCrunchResult, slaFromTerminalAndQueue(terminalName, queueName)))
+                        props.airportConfigPot.renderReady(airportConfig => {
+                          val labels = wl.labels
+                          Panel(Panel.Props(s"Desk Recommendations and Wait times for '$terminalName' '${queueName}'"),
+                            potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
+                            potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
+                            potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
+                            deskRecsChart(queueName, labels, potCrunchResult),
+                            waitTimesChart(labels, potCrunchResult, airportConfig.slaByQueue(queueName)))
+                        })
                       })
-                      //                  })
                     )
                   }))
             }
@@ -91,6 +92,7 @@ object DeskRecsChart extends AirportConfig{
   def userSimulationWaitTimesChart(
                                     terminalName: TerminalName,
                                     queueName: QueueName,
+                                    airportConfig: AirportConfig,
                                     labels: IndexedSeq[String],
                                     simulationResultPotMP: ModelProxy[Pot[SimulationResult]],
                                     crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
@@ -100,7 +102,7 @@ object DeskRecsChart extends AirportConfig{
         case _ => props.crunchResult().get.waitTimes
       })
       val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-      val fakeSLAData = sampledWaitTimesSimulation.map(_ => slaFromTerminalAndQueue(terminalName, queueName).toDouble)
+      val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfig.slaByQueue(queueName).toDouble)
       val sampledLabels = takeEvery15th(labels)
       <.div(
         Chart(
@@ -144,5 +146,5 @@ object DeskRecsChart extends AirportConfig{
     case (n, i) if (i % 15 == 0) => n
   }
 
-  def apply(proxy: ModelProxy[DeskRecsModel]) = DeskRecs(proxy)
+  def apply(deskRecsModelMP: ModelProxy[DeskRecsModel], airportConfigPot: Pot[AirportConfig]) = DeskRecs(Props(deskRecsModelMP, airportConfigPot))
 }
