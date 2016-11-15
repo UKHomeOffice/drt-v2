@@ -1,15 +1,15 @@
 package spatutorial.client.components
 
 import diode.data.Pot
-import diode.react.{ReactConnectProxy, ModelProxy}
+import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.{BackendScope, Callback, _}
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.components.Bootstrap.{Button, Panel}
-import spatutorial.client.components.TableTodoList.UserDeskRecsRow
+import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
 import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, _}
-import spatutorial.shared.{AirportInfo, SimulationResult}
+import spatutorial.shared.{HasAirportConfig, AirportConfig, AirportInfo, SimulationResult}
 
 object UserDeskRecsComponent {
 
@@ -18,6 +18,7 @@ object UserDeskRecsComponent {
                     queueName: QueueName,
                     items: Seq[UserDeskRecsRow],
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+                    airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     userDeskRecsPotProxy: ModelProxy[Pot[UserDeskRecs]],
                     simulationResult: ModelProxy[Pot[SimulationResult]])
@@ -29,7 +30,7 @@ object UserDeskRecsComponent {
       log.info("*****************UserDeskRecsComponent mounted")
       // dispatch a message to refresh the todos, which will cause TodoStore to fetch todos from the server
       Callback.when(false) {
-        props.userDeskRecsPotProxy.dispatch(GetWorkloads("", "", "edi"))
+        props.userDeskRecsPotProxy.dispatch(GetWorkloads("", ""))
       }
       Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
     }
@@ -42,19 +43,20 @@ object UserDeskRecsComponent {
       <.div(^.cls := "user-desk-recs-container",
         p.userDeskRecsPotProxy().renderFailed(ex => "Error loading"),
         p.userDeskRecsPotProxy().renderPending(_ > 10, _ => "Loading..."),
-          p.userDeskRecsPotProxy().render(userDeskRecs => {
-              log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
-              <.div(^.cls := "table-responsive",
-                TableTodoList(
-                  p.queueName,
-                  p.terminalName,
-                  p.items,
-                  p.flightsPotRCP,
-                  p.airportInfos,
-                  item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
-                  item => editTodo(Some(item)),
-                  item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
-            }))
+        p.userDeskRecsPotProxy().render(userDeskRecs => {
+          log.info(s"rendering ${getClass()} ${p.terminalName}, ${p.queueName} with ${userDeskRecs.items.length}")
+          <.div(^.cls := "table-responsive",
+            DeskRecsTable(
+              p.queueName,
+              p.terminalName,
+              p.items,
+              p.flightsPotRCP,
+              p.airportConfig,
+              p.airportInfos,
+              item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
+              item => editTodo(Some(item)),
+              item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
+        }))
   }
 
   // create the React component for To Do management
@@ -69,9 +71,10 @@ object UserDeskRecsComponent {
              terminalName: TerminalName,
              queueName: QueueName,
              items: Seq[UserDeskRecsRow],
+             airportConfig: AirportConfig,
              airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
              flightsPotRCP: ReactConnectProxy[Pot[Flights]],
              proxy: ModelProxy[Pot[UserDeskRecs]],
              simulationResult: ModelProxy[Pot[SimulationResult]]) =
-    component(Props(terminalName, queueName, items, flightsPotRCP, airportInfo, proxy, simulationResult))
+  component(Props(terminalName, queueName, items, flightsPotRCP, airportConfig, airportInfo, proxy, simulationResult))
 }
