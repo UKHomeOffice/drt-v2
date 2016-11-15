@@ -48,7 +48,7 @@ trait Core {
 
 trait SystemActors {
   self: Core =>
-  val crunchActor = system.actorOf(Props(classOf[CrunchActor]), "crunchActor")
+  val crunchActor = system.actorOf(Props(classOf[CrunchActor], 24), "crunchActor")
   val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor

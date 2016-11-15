@@ -2,7 +2,7 @@ package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
 import diode.data.PotState.PotReady
-import diode.{ModelR, UseValueEq, react}
+import diode.{Effect, ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.extra.router.StaticDsl.Rule
@@ -23,6 +23,7 @@ import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
@@ -125,9 +126,16 @@ object SPAMain extends js.JSApp with AirportConfig {
   }
 
 
+
   import scala.scalajs.js.timers._
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
+
+  SPACircuit.dispatch(GetLatestCrunch())
+
+  setInterval(FiniteDuration(10L, SECONDS)) {
+    SPACircuit.dispatch(GetLatestCrunch())
+  }
 
   setInterval(FiniteDuration(10L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))

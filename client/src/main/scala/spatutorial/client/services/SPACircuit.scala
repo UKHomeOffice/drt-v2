@@ -2,6 +2,8 @@ package spatutorial.client.services
 
 import java.util.Date
 
+import diode.ActionResult.EffectOnly
+
 import scala.collection.immutable.{IndexedSeq, Seq}
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -208,24 +210,24 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-      val trytqes = terminalQueueWorkloads.flatMap {
-        case (terminalName, queueWorkloads) =>
-          val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-          val effects = workloadsByQueue.map {
-            case (queueName, queueWorkload) =>
-              val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
-                log.info(s"will request crunch for ${queueName}")
-                UpdateCrunchResult(terminalName, queueName, resp)
-              }))
-              effect
-          }
-          effects
-      }
-
-      log.info(s"have grouped stuff ${trytqes}")
-      val effects = trytqes.toList
-      val effectsAsEffectSeq = new EffectSet(effects.head, effects.tail.toSet, queue)
-      updated(Ready(Workloads(terminalQueueWorkloads)), effectsAsEffectSeq)
+//      val trytqes = terminalQueueWorkloads.flatMap {
+//        case (terminalName, queueWorkloads) =>
+//          val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
+//          val effects = workloadsByQueue.map {
+//            case (queueName, queueWorkload) =>
+//              val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
+//                log.info(s"will request crunch for ${queueName}")
+//                UpdateCrunchResult(terminalName, queueName, resp)
+//              }))
+//              effect
+//          }
+//          effects
+//      }
+//
+//      log.info(s"have grouped stuff ${trytqes}")
+//      val effects = trytqes.toList
+//      val effectsAsEffectSeq = new EffectSet(effects.head, effects.tail.toSet, queue)
+      updated(Ready(Workloads(terminalQueueWorkloads)))//, effectsAsEffectSeq)
   }
 }
 
@@ -262,6 +264,7 @@ class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[Queue
   }
 }
 
+case class GetLatestCrunch() extends Action
 case class RequestFlights(from: Long, to: Long) extends Action
 
 case class UpdateFlights(flights: Flights) extends Action
@@ -299,6 +302,15 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
   extends LoggingActionHandler(modelRW) {
 
   override def handle = {
+    case GetLatestCrunch() =>
+      //todo these should be in message, and driven by airportconfig change (coming)
+      val terminalName = "A1"
+      val queueName = "eeaDesk"
+      val effect = Effect(AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map(resp => {
+                        log.info(s"will request crunch for ${queueName}")
+                        UpdateCrunchResult(terminalName, queueName, resp)
+                      }))
+      EffectOnly(effect)
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?

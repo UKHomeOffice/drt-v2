@@ -48,11 +48,16 @@ class CrunchActor(crunchPeriodHours: Int) extends Actor with ActorLogging with W
 
   def receive = {
     case CrunchFlightsChange(newFlights) =>
-      flights = newFlights.toList
-      latestCrunch = performCrunch
+      log.info(s"CrunchFlightsChange: ${newFlights}")
+      flights = (newFlights.toSet ++ flights.toSet).toList
+      newFlights match {
+        case Nil =>
+          log.info("No crunch, no change")
+        case _ =>
+          latestCrunch = performCrunch
+      }
     case GetLatestCrunch() =>
       log.info("Received GetLatestCrunch()")
-      log.info(s"And our flights are ${flights}")
       val replyTo = sender()
       flights match {
         case Nil =>
@@ -79,7 +84,7 @@ class CrunchActor(crunchPeriodHours: Int) extends Actor with ActorLogging with W
       log.info(s"in crunch, workloads have calced $wl")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         val terminalWorkloads = wl(terminalName)
-        val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(terminalWorkloads, 1)
+        val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(terminalWorkloads, crunchPeriodHours)
         log.info("looked up " + tq + " and got " + workloadsByQueue)
         workloadsByQueue
       }
