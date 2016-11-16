@@ -25,13 +25,18 @@ import spray.caching.{Cache, LruCache}
 import spray.http._
 import scala.language.postfixOps
 import scala.util.{Failure, Try, Success}
-
+import spray.util._
 //import scala.collection.immutable.Seq
 import scala.collection.{immutable, mutable}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import spatutorial.shared._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import akka.actor.ActorSystem
+import spray.caching.{LruCache, Cache}
+import spray.util._
+
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
 case class CrunchFlightsChange(flights: Seq[ApiFlight])
@@ -48,18 +53,20 @@ class CrunchActor(crunchPeriodHours: Int,
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
   var flights: List[ApiFlight] = Nil
-  var latestWorkloads: Option[TerminalQueueWorkloads] = None
 
   //todo put some spray caching here, I think.
   var latestCrunch: Future[CrunchResult] = Future.failed(new Exception("No Crunch Available"))
-  val terminalName: TerminalName = "A1"
+//  val terminalName: TerminalName = "A1"
   val crunchCache: Cache[CrunchResult] = LruCache()
 
   // we can wrap the operation with caching support
   // (providing a caching key)
   def cachedOp[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
-    crunchCache(terminal + "/" + queue) {
-      performCrunch(terminal, queue)
+    crunchCache(cacheKey(terminal, queue)) {
+      //todo un-future this mess
+      val expensiveCrunchResult = Await.result(performCrunch(terminal, queue), 15 seconds)
+      log.info(s"Cache will soon have ${expensiveCrunchResult}")
+      expensiveCrunchResult
     }
   }
 
@@ -76,12 +83,20 @@ class CrunchActor(crunchPeriodHours: Int,
     case GetLatestCrunch(terminalName, queueName) =>
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
       val replyTo = sender()
+      log.info(s"Sender is ${sender}")
       flights match {
         case Nil =>
           replyTo ! NoCrunchAvailable()
         case fs =>
-          val futCrunch = crunchCache(terminalName + "/" + queueName)
-          futCrunch.apply(cr => replyTo ! cr )
+          val key: String = cacheKey(terminalName, queueName)
+          log.info(s"Asking cache for $key")
+          val futCrunch = cachedOp(terminalName, queueName)
+          log.info(s"got keyed thingy ${futCrunch}")
+          for(cr <- futCrunch) {
+            log.info(s"!!! cr is ${cr}")
+            log.info(s"!!! replyTo ${replyTo}")
+            replyTo ! cr
+          }
         //          for (cr <- latestCrunch) {
         //            log.info(s"latestCrunch available, will send $cr")
         //            replyTo ! cr
@@ -91,6 +106,10 @@ class CrunchActor(crunchPeriodHours: Int,
       log.info(s"crunchActor received ${message}")
   }
 
+
+  def cacheKey(terminalName: TerminalName, queueName: QueueName): String = {
+    terminalName + "/" + queueName
+  }
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
