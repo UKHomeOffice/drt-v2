@@ -4,8 +4,9 @@ import java.util.Date
 
 import diode.ActionResult.EffectOnly
 
-import scala.collection.immutable.{IndexedSeq, Iterable, Seq}
+import scala.collection.immutable.{NumericRange, IndexedSeq, Iterable, Seq}
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, ScalaJSDefined}
@@ -21,7 +22,11 @@ import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
+import scala.concurrent.duration._
 
+import scala.scalajs.js.timers._
+import scala.concurrent.duration._
+import scala.concurrent.duration.FiniteDuration
 
 /*
  //BEGIN RECEIVE ORGTBL Shortcuts
@@ -45,7 +50,7 @@ case class DeskRecTimeslot(id: String, deskRec: Int)
 // Actions
 case object RefreshTodos extends Action
 
-  case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
+case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
 
 case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
 
@@ -64,6 +69,7 @@ case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWork
 case class GetWorkloads(begin: String, end: String) extends Action
 
 case class GetAirportConfig() extends Action
+
 case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
@@ -86,27 +92,26 @@ trait WorkloadsUtil {
     workloads.values.flatMap(_._1.map(_.time)).min
   }
 
-  def firstFlightTimeTerminal(workloads: Map[String, Map[String, (Seq[WL], Seq[Pax])]]): Long = {
-    workloads.values.map(firstFlightTimeQueue(_)).min
+  def timeStampsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
+    val timesMin: Long = firstFlightTimeQueue(workloads)
+    minuteNumericRange(timesMin, 24)
   }
 
-  def timeStampsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
-    val timesMin = firstFlightTimeQueue(workloads)
+  def minuteNumericRange(start: Long, numberOfHours: Int = 24): NumericRange[Long] = {
     val oneMinute: Long = 60000
-    val allMins = timesMin until (timesMin + 60000 * 60 * 24) by oneMinute
+    val allMins = start until (start + 60000 * 60 * numberOfHours) by oneMinute
     allMins
   }
 }
 
 // The base model of our application
 case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends WorkloadsUtil {
-  lazy val labels = labelsFromAllQueues(firstFlightTimeTerminal(workloads))
+  lazy val labels = labelsFromAllQueues(firstFlightTimeAcrossTerminals)
 
-  def timeStamps = timeStampsFromAllQueues(t1workload)
+  def firstFlightTimeAcrossTerminals: Long = workloads.values.map(firstFlightTimeQueue(_)).min
 
-  private def t1workload = {
-    workloads("T1")
-  }
+  def timeStamps(terminalName: TerminalName): NumericRange[Long] = minuteNumericRange(firstFlightTimeAcrossTerminals, 24)
+
 }
 
 case class RootModel(
@@ -218,9 +223,23 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 
       updated(Pending(), Effect(call.map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
-      updated(Ready(configHolder))
+      log.info(s"Received airportConfig ${configHolder}")
+      log.info("Subscribing to crunchs for terminal/queues")
+
+      val crunchRequests: Seq[Effect] = for {tn <- configHolder.terminalNames
+                                             qn <- configHolder.queues
+      } yield Effect(Future(GetLatestCrunch(tn, qn)))
+
+      val effectSet = crunchRequests.toList match {
+        case h :: Nil =>
+          updated(Ready(configHolder), h)
+        case h :: ts =>
+          updated(Ready(configHolder), new EffectSeq(h, ts, queue))
+      }
+      effectSet
   }
 }
+
 class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case action: GetWorkloads =>
@@ -228,24 +247,24 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-//      val trytqes = terminalQueueWorkloads.flatMap {
-//        case (terminalName, queueWorkloads) =>
-//          val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-//          val effects = workloadsByQueue.map {
-//            case (queueName, queueWorkload) =>
-//              val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
-//                log.info(s"will request crunch for ${queueName}")
-//                UpdateCrunchResult(terminalName, queueName, resp)
-//              }))
-//              effect
-//          }
-//          effects
-//      }
-//
-//      log.info(s"have grouped stuff ${trytqes}")
-//      val effects = trytqes.toList
-//      val effectsAsEffectSeq = new EffectSet(effects.head, effects.tail.toSet, queue)
-      updated(Ready(Workloads(terminalQueueWorkloads)))//, effectsAsEffectSeq)
+      //      val trytqes = terminalQueueWorkloads.flatMap {
+      //        case (terminalName, queueWorkloads) =>
+      //          val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
+      //          val effects = workloadsByQueue.map {
+      //            case (queueName, queueWorkload) =>
+      //              val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
+      //                log.info(s"will request crunch for ${queueName}")
+      //                UpdateCrunchResult(terminalName, queueName, resp)
+      //              }))
+      //              effect
+      //          }
+      //          effects
+      //      }
+      //
+      //      log.info(s"have grouped stuff ${trytqes}")
+      //      val effects = trytqes.toList
+      //      val effectsAsEffectSeq = new EffectSet(effects.head, effects.tail.toSet, queue)
+      updated(Ready(Workloads(terminalQueueWorkloads))) //, effectsAsEffectSeq)
   }
 }
 
@@ -282,7 +301,8 @@ class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[Queue
   }
 }
 
-case class GetLatestCrunch() extends Action
+case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName) extends Action
+
 case class RequestFlights(from: Long, to: Long) extends Action
 
 case class UpdateFlights(flights: Flights) extends Action
@@ -320,14 +340,11 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
   extends LoggingActionHandler(modelRW) {
 
   override def handle = {
-    case GetLatestCrunch() =>
-      //todo these should be in message, and driven by airportconfig change (coming)
-      val terminalName = "A1"
-      val queueName = "eeaDesk"
+    case GetLatestCrunch(terminalName, queueName) =>
       val effect = Effect(AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map(resp => {
-                        log.info(s"will request crunch for ${queueName}")
-                        UpdateCrunchResult(terminalName, queueName, resp)
-                      }))
+        log.info(s"will request crunch for ${queueName}")
+        UpdateCrunchResult(terminalName, queueName, resp)
+      }))
       EffectOnly(effect)
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")

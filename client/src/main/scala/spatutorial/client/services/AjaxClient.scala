@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 
 import boopickle.Default._
 import org.scalajs.dom
+import org.scalajs.dom.ext.Ajax.InputData
 import spatutorial.client.SPAMain
 
 import scala.concurrent.Future
@@ -11,6 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.typedarray._
 
 object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
+
   override def doCall(req: Request): Future[ByteBuffer] = {
     dom.ext.Ajax.post(
       url = SPAMain.pathToThisApp + "/api/" + req.path.mkString("/"),

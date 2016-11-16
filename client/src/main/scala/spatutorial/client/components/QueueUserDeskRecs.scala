@@ -106,7 +106,7 @@ object QueueUserDeskRecsComponent {
   def makeUserDeskRecRowsPotRCP(terminalName: TerminalName, queueName: QueueName): ReactConnectProxy[Pot[List[UserDeskRecsRow]]] = {
     val userDeskRecRowsPotRCP = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {
-        times <- model.workload.map(_.timeStamps)
+        times <- model.workload.map(_.timeStamps(terminalName))
         qcr: (Pot[CrunchResult], Pot[UserDeskRecs]) <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
         qur: UserDeskRecs <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
         simres: SimulationResult <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Ready(SimulationResult(qcr._1.get.recommendedDesks.map(rd => DeskRec(0, rd)), qcr._1.get.waitTimes)))

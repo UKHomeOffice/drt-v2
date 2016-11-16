@@ -130,12 +130,6 @@ object SPAMain extends js.JSApp {
   import scala.concurrent.duration._
   import scala.concurrent.duration.FiniteDuration
 
-  SPACircuit.dispatch(GetLatestCrunch())
-
-  setInterval(FiniteDuration(10L, SECONDS)) {
-    SPACircuit.dispatch(GetLatestCrunch())
-  }
-
   setInterval(FiniteDuration(10L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))
   }

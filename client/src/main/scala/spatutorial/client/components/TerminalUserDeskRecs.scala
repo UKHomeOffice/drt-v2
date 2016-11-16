@@ -104,6 +104,7 @@ object TableTerminalDeskRecs {
                                   )
 
   def buildTerminalUserDeskRecsComponent(terminalName: TerminalName) = {
+    log.info(s"userdeskrecs for $terminalName")
     val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model =>
       PracticallyEverything(
         model.airportInfos,
@@ -121,7 +122,8 @@ object TableTerminalDeskRecs {
         peMP().workload.renderReady((workloads: Workloads) => {
           val crv = peMP().queueCrunchResults.getOrElse(terminalName, Map())
           val srv = peMP().simulationResult.getOrElse(terminalName, Map())
-          val timestamps = workloads.timeStamps
+          log.info(s"tud: ${terminalName}")
+          val timestamps = workloads.timeStamps(terminalName)
           val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(peMP().workload.get.workloads(terminalName))
           val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
           airportConfigPotRCP(airportConfigPotMP => {
