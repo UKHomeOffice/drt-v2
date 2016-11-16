@@ -16,7 +16,6 @@ import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
-import spatutorial.shared.EdiAirportConfig
 
 object TerminalUserDeskRecs {
 

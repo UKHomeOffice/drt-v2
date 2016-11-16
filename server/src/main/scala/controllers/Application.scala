@@ -25,7 +25,9 @@ import play.api.mvc._
 
 import scala.util.{Failure, Success}
 import scala.util.Try
-import services.{ApiService, FlightsService}
+import services.{CrunchResultProvider, ActorBackedCrunchService, ApiService, FlightsService}
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName, Flights}
+import spatutorial.shared.{CrunchResult, FlightsApi, ApiFlight, Api}
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import spray.http._
@@ -49,9 +51,10 @@ trait Core {
 }
 
 trait SystemActors {
-  self: Core =>
-  val flightsActor = system.actorOf(Props(classOf[FlightsActor]), "flightsActor")
-  val crunchActor = system.actorOf(Props(classOf[CrunchActor]), "crunchActor")
+  self: AirportConfProvider =>
+  val crunchActor = system.actorOf(Props(classOf[CrunchActor], 24, getPortConfFromEnvVar), "crunchActor")
+  val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
+  val crunchByAnotherName = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
 }
 
@@ -70,12 +73,12 @@ trait MockChroma extends ChromaFetcherLike {
   }
 }
 
-  case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
-    self =>
-    override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-      implicit val system: ActorSystem = self.system
-    }
+case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
+  self =>
+  override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
+    implicit val system: ActorSystem = self.system
   }
+}
 
 case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
   flightFeed =>
@@ -253,56 +256,59 @@ case class LHRFlightFeed() {
       }).toList)).map(x => FlightsApi.Flights(x))
 }
 
+trait AirportConfProvider extends Core {
+  self: Core =>
+  private val log = system.log
+
+  def portCode = sys.env.get("PORT_CODE")
+
+  def getPortConfFromEnvVar: AirportConfig = {
+    println(sys.env)
+//    log.info(s"PORT_CODE::: ${portCode}")
+    val conf = AirportConfigs.confByPort(portCode.get)
+    conf
+  }
+
+}
 
 class Application @Inject()(
-                             implicit
-                             val config: Configuration,
+                             implicit val config: Configuration,
                              implicit val mat: Materializer,
                              env: Environment,
                              override val system: ActorSystem,
                              ec: ExecutionContext
                            )
-  extends Controller with Core with SystemActors {
+  extends Controller with Core with SystemActors with AirportConfProvider {
   ctrl =>
   val log = system.log
 
-  def ApiServiceForPort(portCodeString: String): ApiService with HasAirportConfig with GetFlightsFromActor = {
-    portCodeString match {
-      case "EDI" =>
-        new ApiService with EdiAirportConfig with GetFlightsFromActor
-      case "STN" =>
-        new ApiService with StnAirportConfig with GetFlightsFromActor
-      case "MAN" =>
-        new ApiService with ManAirportConfig with GetFlightsFromActor
-      case "BOH" =>
-        new ApiService with BohAirportConfig with GetFlightsFromActor
-      case "LTN" =>
-        new ApiService with LtnAirportConfig with GetFlightsFromActor
-    }
-  }
+  implicit val timeout = Timeout(5 seconds)
 
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
   }
 
-  val portCode = sys.env.get("PORT_CODE")
-  log.info(s"PORT_CODE::: ${portCode}")
+  val apiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache
 
-  implicit val timeout = Timeout(5 seconds)
+
+  trait CrunchFromCache {
+    self: CrunchResultProvider =>
+    implicit val timeout: Timeout = Timeout(5 seconds)
+    val crunchActor: AskableActorRef = ctrl.crunchActor
+
+    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
+      tryCrunch(terminalName, queueName)
+    }
+  }
 
   trait GetFlightsFromActor extends FlightsService {
     override def getFlights(start: Long, end: Long): Future[List[ApiFlight]] = {
-      val flights: Future[Any] = flightsActorAskable ? GetFlights
+      val flights: Future[Any] = ctrl.flightsActorAskable ? GetFlights
       val fsFuture = flights.collect {
         case Flights(fs) => fs
       }
       fsFuture
     }
-  }
-
-  log.info(s"PORT_CODE::: ${portCode}")
-  val apiService = portCode match {
-    case Some(portCodeString) => ApiServiceForPort(portCodeString)
   }
 
   val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {

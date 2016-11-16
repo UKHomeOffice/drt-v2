@@ -18,7 +18,6 @@ import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.client.modules.Dashboard._
-import spatutorial.shared.EdiAirportConfig
 
 object DeskRecsChart {
   type DeskRecsModel = DashboardModels

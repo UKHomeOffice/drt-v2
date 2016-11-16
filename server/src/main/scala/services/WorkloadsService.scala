@@ -28,9 +28,17 @@ trait FlightsService extends FlightsApi {
   }
 }
 
-trait WorkloadsService extends WorkloadsApi {
+trait WorkloadsService extends WorkloadsApi with WorkloadsCalculator {
   self: FlightsService =>
+  type WorkloadByTerminalQueue = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
+
+  override def getWorkloads(): Future[WorkloadByTerminalQueue] = getWorkloadsByTerminal(getFlights(0, 0))
+}
+
+trait WorkloadsCalculator {
   private val log = LoggerFactory.getLogger(getClass)
+
+  type TerminalQueueWorkloads = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
 
   def numberOf15Mins = (24 * 4 * 15)
 
@@ -52,38 +60,25 @@ trait WorkloadsService extends WorkloadsApi {
     case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
   }
 
-  override def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueueWorkloads]]] = {
-    // val what: Future[Seq[(TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])])]] = for {
-    //   allFlights <- getFlights(0, 0)
-    //   flightsByTerminal = allFlights.groupBy(_.Terminal)
-    //   fbt <- flightsByTerminal.iterator 
-    //   terminal = fbt._1
-    //   flights = fbt._2
-    // } yield {
-    //   val res: Map[QueueName, (Seq[WL], Seq[Pax])] = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider)(flights)
-    //   log.info(s"workloads ${res}")
-    //   (terminal -> res)
-    // }
-    // what.map(_.toMap)
 
-    val whatByMap: Future[Map[String, List[ApiFlight]]] = getFlights(0, 0).map(fs => {
-      val flightsByTerminal = fs.filterNot(flight => Set("FRT", "ENG").contains(flight.Terminal)).groupBy(_.Terminal)
+  def getWorkloadsByTerminal(flights: Future[List[ApiFlight]]): Future[TerminalQueueWorkloads] = {
+    val flightsByTerminalFut: Future[Map[TerminalName, List[ApiFlight]]] = flights.map(fs => {
+      val flightsByTerminal = fs.filterNot(freightOrEngineering).groupBy(_.Terminal)
       flightsByTerminal
     })
     val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider) _
 
-    val whatByTerminal: Future[Map[String, Map[QueueName, (Seq[WL], Seq[Pax])]]] = whatByMap.map(flightsByTerminal => flightsByTerminal.map(fbt => {
+    val workloadByTerminal: Future[Map[String, Map[QueueName, (Seq[WL], Seq[Pax])]]] = flightsByTerminalFut.map(flightsByTerminal => flightsByTerminal.map(fbt => {
+      log.info(s"Got flights by terminal ${fbt}")
       val terminal = fbt._1
       val flights = fbt._2
       (terminal -> plc(flights))
     }))
 
-    val terminals = whatByTerminal.onSuccess {
-      case s =>
-        val terminals = s.keys
-        log.info(s"getWorkloads terminals a ${terminals}")
-    }
-
-    whatByTerminal
+    workloadByTerminal
   }
+
+  def freightOrEngineering(flight: ApiFlight): Boolean = Set("FRT", "ENG").contains(flight.Terminal)
 }
+
+object WorkloadsCalculator extends WorkloadsCalculator

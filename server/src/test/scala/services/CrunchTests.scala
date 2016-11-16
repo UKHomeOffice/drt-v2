@@ -8,9 +8,8 @@ import scala.concurrent.{Future, Await}
 import scala.util.Success
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender }
-import controllers.SystemActors
-import controllers.Core
+import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender}
+import controllers.{AirportConfProvider, SystemActors, Core}
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
@@ -27,12 +26,12 @@ object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
   def makeSystem = {
-    new TestKit(ActorSystem()) with SystemActors with Core {
+    new TestKit(ActorSystem()) with SystemActors with Core with AirportConfProvider {
     }
   }
 
   def tests = TestSuite {
-    "Given a system with flightsactor and crunch actor, flights actor can request crunch actor does a crunch"  - {
+    "Given a system with flightsactor and crunch actor, flights actor can request crunch actor does a crunch" - {
       assert(true)
     }
   }
@@ -53,9 +52,12 @@ object CrunchTests extends TestSuite {
       val maxDesks = recs.map(_ (2).toInt)
       val recDesks = recs.map(_ (3).toInt)
 
-      val cr = TryRenjin.crunch(workloads, minDesks, maxDesks, OptimizerConfig(25))
-      println(cr.recommendedDesks.toString())
-      println(recDesks.toVector)
+      val tryCrunchRes = TryRenjin.crunch(workloads, minDesks, maxDesks, OptimizerConfig(25))
+      tryCrunchRes map {
+        cr =>
+          println(cr.recommendedDesks.toString())
+          println(("recDesks", recDesks.toVector))
+      }
     }
   }
 }

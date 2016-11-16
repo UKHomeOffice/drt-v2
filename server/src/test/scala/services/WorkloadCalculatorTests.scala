@@ -11,7 +11,10 @@ import scala.collection.immutable.Seq
 import scala.language.implicitConversions
 
 object WorkloadCalculatorTests extends TestSuite {
-  def apiFlight(iataFlightCode: String, airportCode: String = "EDI", totalPax: Int, scheduledDatetime: String): ApiFlight =
+  def apiFlight(iataFlightCode: String, airportCode: String = "EDI",
+                totalPax: Int, scheduledDatetime: String,
+                terminal: String = "A1"
+               ): ApiFlight =
     ApiFlight(
       Operator = "",
       Status = "",
@@ -28,7 +31,7 @@ object WorkloadCalculatorTests extends TestSuite {
       BaggageReclaimId = "",
       FlightID = 1,
       AirportID = airportCode,
-      Terminal = "",
+      Terminal = terminal,
       ICAO = "",
       IATA = iataFlightCode,
       Origin = "",
