@@ -82,7 +82,12 @@ object DeskRecsChart {
             sampledLabels,
             Seq(
               ChartDataset(sampledWaitTimesSimulation, "Wait Times"),
-              ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red")))))
+              ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "#fff", borderColor = "red"))
+          ),
+          yAxisLabel = "Wait Times"
+        ))
+
+
     })
   }
 
@@ -114,7 +119,9 @@ object DeskRecsChart {
                   borderColor = "rgba(10,10, 110, 1)"),
                 ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "rgb(143, 35, 179)"),
                 ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "red"))
-            ))))
+            ),
+            yAxisLabel = "Wait Time (mins)"
+          )))
     }).build
 
     component(UserSimulationProps(simulationResultPotMP, crunchResultPotMP))
@@ -130,15 +137,14 @@ object DeskRecsChart {
 
   def deskRecsChart(queueName: QueueName, labels: IndexedSeq[String], potCrunchResult: Pot[CrunchResult]): ReactNode = {
     potCrunchResult.render(chartData =>
-      Chart(Chart.ChartProps(s"Desk Recs ${
-        queueName
-      }",
+      Chart(Chart.ChartProps(s"Desk Recs $queueName",
         Chart.LineChart,
         ChartData(takeEvery15th(labels), Seq(
           ChartDataset(
             takeEvery15th(chartData.recommendedDesks).map(_.toDouble), s"Desk Recommendations ${
               queueName
-            }")))
+            }"))),
+        yAxisLabel = "Recommended Desks"
       )))
   }
 

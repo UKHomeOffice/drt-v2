@@ -72,11 +72,12 @@ object Dashboard {
   val colors = IndexedSeq("red", "blue", "green", "black")
 
 
-  def ChartProps(labels: Seq[String], chartData: Seq[ChartDataset]) = {
+  def ChartProps(labels: Seq[String], chartData: Seq[ChartDataset], yAxisLabel: String) = {
     Chart.ChartProps(
       "Workloads",
       Chart.LineChart,
-      ChartData(labels, chartData)
+      ChartData(labels, chartData),
+      yAxisLabel = yAxisLabel
     )
   }
 
@@ -126,7 +127,7 @@ object Dashboard {
                       terminalName => {
                         val every15th: Seq[String] = DeskRecsChart.takeEvery15th(wl.labels)
                         val datas: Seq[ChartDataset] = chartDatas(wl, terminalName)
-                        val props1: ChartProps = ChartProps(every15th, datas)
+                        val props1: ChartProps = ChartProps(every15th, datas, "Workloads")
                         <.div(
                           <.a(^.name := terminalName),
                           <.h2(terminalName),

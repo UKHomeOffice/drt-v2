@@ -52,13 +52,39 @@ trait ChartOptions extends js.Object {
   def responsive: Boolean = js.native
 
   def animation: Boolean = false
+
+  def scales = js.Dynamic.literal(xAxes = List(js.Dynamic.literal(labelString = "Time")).toJSArray)
 }
 
+//],
+//yAxes: [ {
+//display: true,
+//scaleLabel: {
+//display: true,
+//labelString: 'Value '
+//}
+//}]
+//}
+
 object ChartOptions {
-  def apply(responsive: Boolean = true, animation: Boolean = false): ChartOptions = {
-    js.Dynamic.literal(
+  def apply(responsive: Boolean = true, animation: Boolean = false, yAxisLabel: String = "Wait Times"): ChartOptions = {
+    import js.Dynamic.literal
+    literal(
       responsive = responsive,
-      animation = animation
+      animation = animation,
+      scales = literal(
+        yAxes = List(literal(
+          display = true,
+          scaleLabel = literal(
+            labelString = yAxisLabel,
+            display = true
+          ))).toJSArray,
+        xAxes = List(literal(
+          display = true,
+          scaleLabel = literal(
+            labelString = "Time",
+            display = true
+          ))).toJSArray)
     ).asInstanceOf[ChartOptions]
   }
 }
@@ -96,7 +122,10 @@ object Chart {
 
   case object BarChart extends ChartStyle
 
-  case class ChartProps(name: String, style: ChartStyle, data: ChartData, width: Int = 800, height: Int = 400)
+  case class ChartProps(name: String, style: ChartStyle,
+                        data: ChartData,
+                        yAxisLabel: String,
+                        width: Int = 800, height: Int = 400)
 
   val Chart = ReactComponentB[ChartProps]("Chart")
     .render_P(p =>
@@ -108,7 +137,7 @@ object Chart {
       val ctx = scope.getDOMNode().getContext("2d")
       // create the actual chart using the 3rd party component
       scope.props.style match {
-        case LineChart => new JSChart(ctx, ChartConfiguration("line", scope.props.data))
+        case LineChart => new JSChart(ctx, ChartConfiguration("line", scope.props.data, ChartOptions(false, yAxisLabel = scope.props.yAxisLabel)))
         case BarChart => new JSChart(ctx, ChartConfiguration("bar", scope.props.data))
         case _ => throw new IllegalArgumentException
       }
