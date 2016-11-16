@@ -173,11 +173,13 @@ object SPAMain extends js.JSApp {
     Layout(c, r)
   }
 
+  def pathToThisApp: String = dom.document.location.pathname
+
   @JSExport
   def main(): Unit = {
     log.warn("Application starting")
     // send log messages also to the server
-    log.enableServerLogging("/logging")
+    log.enableServerLogging(pathToThisApp + "/logging")
     log.info("This message goes to server as well")
 
     // create stylesheet
