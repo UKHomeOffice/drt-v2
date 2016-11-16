@@ -26,6 +26,7 @@ import spray.http._
 import scala.language.postfixOps
 import scala.util.{Failure, Try, Success}
 import spray.util._
+
 //import scala.collection.immutable.Seq
 import scala.collection.{immutable, mutable}
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -54,15 +55,13 @@ class CrunchActor(crunchPeriodHours: Int,
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
   var flights: List[ApiFlight] = Nil
 
-  //todo put some spray caching here, I think.
   var latestCrunch: Future[CrunchResult] = Future.failed(new Exception("No Crunch Available"))
-//  val terminalName: TerminalName = "A1"
   val crunchCache: Cache[CrunchResult] = LruCache()
 
-  // we can wrap the operation with caching support
-  // (providing a caching key)
-  def cachedOp[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
-    crunchCache(cacheKey(terminal, queue)) {
+  def cacheCrunch[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
+    val key: String = s"$terminal/$queue"
+    log.info(s"getting crunch for $key")
+    crunchCache(key) {
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(performCrunch(terminal, queue), 15 seconds)
       log.info(s"Cache will soon have ${expensiveCrunchResult}")
@@ -78,7 +77,9 @@ class CrunchActor(crunchPeriodHours: Int,
         case Nil =>
           log.info("No crunch, no change")
         case _ =>
-          latestCrunch = cachedOp("A1", "eeaDesk")
+
+          for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues)
+            cacheCrunch(tn, qn)
       }
     case GetLatestCrunch(terminalName, queueName) =>
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
@@ -88,11 +89,9 @@ class CrunchActor(crunchPeriodHours: Int,
         case Nil =>
           replyTo ! NoCrunchAvailable()
         case fs =>
-          val key: String = cacheKey(terminalName, queueName)
-          log.info(s"Asking cache for $key")
-          val futCrunch = cachedOp(terminalName, queueName)
+          val futCrunch = cacheCrunch(terminalName, queueName)
           log.info(s"got keyed thingy ${futCrunch}")
-          for(cr <- futCrunch) {
+          for (cr <- futCrunch) {
             log.info(s"!!! cr is ${cr}")
             log.info(s"!!! replyTo ${replyTo}")
             replyTo ! cr

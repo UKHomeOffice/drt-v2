@@ -25,11 +25,11 @@ object WorkloadsTests extends TestSuite {
               (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
         val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
         assert(labels  == List(
-          "07:20:00 GMT",
-          "07:21:00 GMT",
-          "07:22:00 GMT",
-          "07:23:00 GMT",
-          "07:24:00 GMT"
+          "07:20",
+          "07:21",
+          "07:22",
+          "07:23",
+          "07:24"
         ))
       }
       "it doesn't matter what terminal we have in workloads we need a label per minute" - {
@@ -40,11 +40,26 @@ object WorkloadsTests extends TestSuite {
               (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
         val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
         assert(labels  == List(
-          "07:20:00 GMT",
-          "07:21:00 GMT",
-          "07:22:00 GMT",
-          "07:23:00 GMT",
-          "07:24:00 GMT"
+          "07:20",
+          "07:21",
+          "07:22",
+          "07:23",
+          "07:24"
+        ))
+      }
+      "the labels are in 24H format" - {
+        val firstTime = Date.parse("2016-11-01T14:20Z").toLong
+        val workloads = Workloads(
+          Map("A1" ->
+            Map("eeaDesk" ->
+              (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
+        val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
+        assert(labels  == List(
+          "14:20",
+          "14:21",
+          "14:22",
+          "14:23",
+          "14:24"
         ))
       }
     }
