@@ -339,7 +339,7 @@ return(x)
 
 optimise.win = function(work, sla = 25, weight.sla = 10, weight.pax = 0.3,
    weight.staff = 3, weight.churn = 45, concavity.limit = 30, win.width = 90,
-   win.step=60, block.width=15, xmin = 1, xmax = 6, starting.est=NULL, quiet=F)
+   win.step=60, block.width=15, xmin = 1, xmax = 6, starting.est=NULL, quiet=T)
 # ----------------------------------------------------------------------------
 # Obtain an optimised vector of desks for the given vector of workload,
 # each with one element per time slot. The length of the work vector must be 

@@ -16,10 +16,12 @@ case class OptimizerConfig(sla: Int)
 object TryRenjin {
   val log = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
+
   def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[CrunchResult] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
+
   def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.processWork(workloads, desks, config)
@@ -38,8 +40,9 @@ object TryRenjin {
         engine.put("weight_pax", 0.05)
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
+        log.info("about to crunch in R")
         engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
-
+        log.info("crunched in R")
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
         CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
@@ -48,7 +51,7 @@ object TryRenjin {
     }
 
     def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
-      println(s"${workloads.length}, ${desks.length}")
+      //      println(s"${workloads.length}, ${desks.length}")
       loadOptimiserScript
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
@@ -59,9 +62,8 @@ object TryRenjin {
       engine.put("sla", config.sla)
       engine.eval("processed <- process.work(w, " + desks + ", sla=sla, 0)")
 
-      val waitR = engine.eval(s"processed$$wait").asInstanceOf[IntVector]
-
-      val waitTimes: IndexedSeq[Int] = (0 until waitR.length()) map (waitR.getElementAsInt(_))
+      val waitRV = engine.eval(s"processed$$wait").asInstanceOf[IntVector]
+      val waitTimes: IndexedSeq[Int] = (0 until waitRV.length()) map (waitRV.getElementAsInt(_))
 
       waitTimes
     }
@@ -82,4 +84,5 @@ object TryRenjin {
       engine.eval(optimiserScript.bufferedReader())
     }
   }
+
 }
