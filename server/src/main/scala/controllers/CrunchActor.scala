@@ -90,10 +90,16 @@ class CrunchActor(crunchPeriodHours: Int,
         case fs =>
           val futCrunch = cacheCrunch(terminalName, queueName)
           log.info(s"got keyed thingy ${futCrunch}")
-          for (cr <- futCrunch) {
-            log.info(s"!!! cr is ${cr}")
-            log.info(s"!!! replyTo ${replyTo}")
-            replyTo ! cr
+          //todo this is NOT right
+          futCrunch.value match {
+            case Some(Success(cr)) =>
+              replyTo ! cr
+            case Some(Failure(f)) =>
+              log.info(s"unsuccessful crunch here $terminalName/$queueName")
+              replyTo ! NoCrunchAvailable()
+            case None =>
+              log.error(s"got nothing $terminalName/$queueName")
+              replyTo ! NoCrunchAvailable()
           }
       }
     case message =>
@@ -114,12 +120,19 @@ class CrunchActor(crunchPeriodHours: Int,
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
-      log.info(s"in crunch, workloads have calced $wl")
+      log.info(s"in crunch of $tq, workloads have calced $wl")
       val triedWl: Try[Map[String, List[Double]]] = Try {
-        val terminalWorkloads = wl(terminalName)
-        val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(terminalWorkloads, crunchPeriodHours)
-        log.info("looked up " + tq + " and got " + workloadsByQueue)
-        workloadsByQueue
+        log.info(s"$tq lookup wl ")
+        val terminalWorkloads = wl.get(terminalName)
+        terminalWorkloads match {
+          case Some(twl) =>
+            log.info(s"wl now $terminalWorkloads")
+            val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(twl, crunchPeriodHours)
+            log.info("looked up " + tq + " and got " + workloadsByQueue)
+            workloadsByQueue
+          case None =>
+            Map()
+        }
       }
 
       val r: Try[CrunchResult] = triedWl.flatMap {

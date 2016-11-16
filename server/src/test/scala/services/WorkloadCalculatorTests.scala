@@ -13,7 +13,8 @@ import scala.language.implicitConversions
 object WorkloadCalculatorTests extends TestSuite {
   def apiFlight(iataFlightCode: String, airportCode: String = "EDI",
                 totalPax: Int, scheduledDatetime: String,
-                terminal: String = "A1"
+                terminal: String = "A1",
+                flightId: Int = 1
                ): ApiFlight =
     ApiFlight(
       Operator = "",
@@ -29,7 +30,7 @@ object WorkloadCalculatorTests extends TestSuite {
       TranPax = 0,
       RunwayID = "",
       BaggageReclaimId = "",
-      FlightID = 1,
+      FlightID = flightId,
       AirportID = airportCode,
       Terminal = terminal,
       ICAO = "",
