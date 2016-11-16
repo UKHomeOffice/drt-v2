@@ -3,6 +3,7 @@ package controllers
 import java.nio.ByteBuffer
 
 import akka.actor._
+import akka.event.LoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
@@ -32,9 +33,9 @@ import scala.concurrent.duration._
 
 case object GetFlights
 
-class FlightsActor(crunchActor: ActorRef) extends Actor with ActorLogging {
+
+class FlightsActor(crunchActor: ActorRef) extends Actor with ActorLogging  with FlightState {
   implicit val timeout = Timeout(5 seconds)
-  val flights = mutable.Map[Int, ApiFlight]()
 
   def receive = {
     case GetFlights =>
@@ -42,18 +43,7 @@ class FlightsActor(crunchActor: ActorRef) extends Actor with ActorLogging {
       sender ! Flights(flights.values.toList)
     case Flights(fs) =>
       log.info(s"Adding ${fs.length} new flights")
-      val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
-      val existingFlightIds: Set[Int] = flights.keys.toSet
-
-      val updatingFlightIds = existingFlightIds intersect inboundFlightIds
-      val newFlightIds = inboundFlightIds diff inboundFlightIds
-
-      log.info(s"New flights ${fs.filter(newFlightIds contains _.FlightID)}")
-      log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
-      log.info(s"Updating fl ${fs.filter(updatingFlightIds contains _.FlightID)}")
-
-      flights ++= fs.map(f => (f.FlightID, f))
-      log.info(s"Flights now ${flights.size}")
+      onFlightUpdates(fs)
       crunchActor ! CrunchFlightsChange(fs)
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }

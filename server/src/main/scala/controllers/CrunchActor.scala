@@ -50,16 +50,16 @@ class CrunchActor(crunchPeriodHours: Int,
   with ActorLogging
   with WorkloadsCalculator
   with CrunchCalculator
-  with HasAirportConfig {
+  with HasAirportConfig
+  with FlightState {
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
-  var flights: List[ApiFlight] = Nil
 
   var latestCrunch: Future[CrunchResult] = Future.failed(new Exception("No Crunch Available"))
   val crunchCache: Cache[CrunchResult] = LruCache()
 
   def cacheCrunch[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
-    val key: String = s"$terminal/$queue"
+    val key: String = cacheKey(terminal, queue)
     log.info(s"getting crunch for $key")
     crunchCache(key) {
       //todo un-future this mess
@@ -69,23 +69,22 @@ class CrunchActor(crunchPeriodHours: Int,
     }
   }
 
+  def cacheKey[T](terminal: TerminalName, queue: QueueName): String = s"$terminal/$queue"
+
   def receive = {
     case CrunchFlightsChange(newFlights) =>
-      log.info(s"CrunchFlightsChange: ${newFlights}")
-      flights = (newFlights.toSet ++ flights.toSet).toList
+      onFlightUpdates(newFlights.toList)
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
         case _ =>
-
-          for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues)
-            cacheCrunch(tn, qn)
+          reCrunchAllTerminalsAndQueues()
       }
     case GetLatestCrunch(terminalName, queueName) =>
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
       val replyTo = sender()
       log.info(s"Sender is ${sender}")
-      flights match {
+      flights.values match {
         case Nil =>
           replyTo ! NoCrunchAvailable()
         case fs =>
@@ -96,23 +95,22 @@ class CrunchActor(crunchPeriodHours: Int,
             log.info(s"!!! replyTo ${replyTo}")
             replyTo ! cr
           }
-        //          for (cr <- latestCrunch) {
-        //            log.info(s"latestCrunch available, will send $cr")
-        //            replyTo ! cr
-        //          }
       }
     case message =>
       log.info(s"crunchActor received ${message}")
   }
 
 
-  def cacheKey(terminalName: TerminalName, queueName: QueueName): String = {
-    terminalName + "/" + queueName
+  def reCrunchAllTerminalsAndQueues(): Unit = {
+    for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {
+      crunchCache.remove(cacheKey(tn, qn))
+      cacheCrunch(tn, qn)
+    }
   }
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
-    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flights))
+    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flights.values.toList))
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
