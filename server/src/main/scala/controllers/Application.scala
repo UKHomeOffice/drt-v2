@@ -260,12 +260,12 @@ trait AirportConfProvider extends Core {
   self: Core =>
   private val log = system.log
 
-  def portCode = sys.env.get("PORT_CODE")
+  def portCode = sys.env.get("PORT_CODE").get.toUpperCase
 
   def getPortConfFromEnvVar: AirportConfig = {
     println(sys.env)
 //    log.info(s"PORT_CODE::: ${portCode}")
-    val conf = AirportConfigs.confByPort(portCode.get)
+    val conf = AirportConfigs.confByPort(portCode)
     conf
   }
 
@@ -312,7 +312,7 @@ class Application @Inject()(
   }
 
   val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
-    case Some("EDI") =>
+    case "EDI" =>
       ChromaFlightFeed(log, ProdChroma(system)).chromaEdiFlights().map(Flights(_))
     case _ =>
       ChromaFlightFeed(log, ProdChroma(system)).chromaVanillaFlights().map(Flights(_))
