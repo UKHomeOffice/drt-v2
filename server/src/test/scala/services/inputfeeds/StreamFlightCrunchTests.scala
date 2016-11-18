@@ -12,9 +12,10 @@ import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import org.specs2.specification.core.Fragments
-import services.WorkloadCalculatorTests
+import services.FlightCrunchInteractionTests.TestCrunchActor
+import services.{DefaultPassengerSplitRatioProvider, FlightCrunchInteractionTests, PassengerSplitRatioProvider, WorkloadCalculatorTests}
 import services.WorkloadCalculatorTests._
-import spatutorial.shared.{AirportConfigs, NoCrunchAvailable, CrunchResult}
+import spatutorial.shared.{AirportConfigs, CrunchResult, NoCrunchAvailable}
 import spatutorial.shared.FlightsApi.Flights
 
 import scala.concurrent.duration._
@@ -28,7 +29,7 @@ object CrunchTests {
     lazy val crunchActor = createCrunchActor
 
     def createCrunchActor: ActorRef = {
-      system.actorOf(Props(classOf[CrunchActor], 1, AirportConfigs.edi), "CrunchActor")
+      system.actorOf(Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, AirportConfigs.edi), "CrunchActor")
     }
 
     def getCrunchActor = system.actorSelection("CrunchActor")
@@ -113,7 +114,7 @@ class StreamFlightCrunchTests extends
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
   def createCrunchActor: ActorRef = {
-    system.actorOf(Props(classOf[CrunchActor], 1, AirportConfigs.edi), "CrunchActor")
+    system.actorOf(Props(classOf[TestCrunchActor], 1, AirportConfigs.edi), "CrunchActor")
   }
 
 

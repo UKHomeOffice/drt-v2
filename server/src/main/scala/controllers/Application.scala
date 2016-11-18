@@ -25,9 +25,9 @@ import play.api.mvc._
 
 import scala.util.{Failure, Success}
 import scala.util.Try
-import services.{CrunchResultProvider, ActorBackedCrunchService, ApiService, FlightsService}
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName, Flights}
-import spatutorial.shared.{CrunchResult, FlightsApi, ApiFlight, Api}
+import services._
+import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi}
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
 import spray.http._
@@ -49,10 +49,11 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 trait Core {
   def system: ActorSystem
 }
-
+class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with DefaultPassengerSplitRatioProvider
 trait SystemActors {
   self: AirportConfProvider =>
-  val crunchActor = system.actorOf(Props(classOf[CrunchActor], 24, getPortConfFromEnvVar), "crunchActor")
+
+  val crunchActor = system.actorOf(Props(classOf[ProdCrunchActor], 24, getPortConfFromEnvVar), "crunchActor")
   val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
@@ -288,7 +289,7 @@ class Application @Inject()(
     implicit val system: ActorSystem = ctrl.system
   }
 
-  val apiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache
+  val apiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider
 
 
   trait CrunchFromCache {

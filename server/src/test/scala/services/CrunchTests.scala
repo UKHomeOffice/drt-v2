@@ -2,14 +2,17 @@ package services
 
 import spatutorial.shared._
 import utest._
+import akka.actor.{ActorSystem, Props}
 
-import akka.actor.ActorSystem
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
 import scala.util.Success
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender}
-import controllers.{AirportConfProvider, SystemActors, Core}
+import akka.testkit.{DefaultTimeout, ImplicitSender, TestActors, TestKit}
+import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
+import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
+import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
+import services.workloadcalculator.SplitRatio
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
@@ -24,9 +27,28 @@ object CrunchStructureTests extends TestSuite {
 
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
+  class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) {
+    override def splitRatioProvider(flight: ApiFlight) = List(
+      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.03)
+    )
+
+    override def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
+      case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d
+      case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 25d / 60d
+      case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
+      case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
+      case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
+    }
+  }
+
 
   def makeSystem = {
     new TestKit(ActorSystem()) with SystemActors with Core with AirportConfProvider {
+      override val crunchActor = system.actorOf(Props(classOf[TestCrunchActor], 24, getPortConfFromEnvVar), "crunchActor")
+
     }
   }
 

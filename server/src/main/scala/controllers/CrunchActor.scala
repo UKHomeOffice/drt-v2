@@ -6,25 +6,26 @@ import akka.actor._
 import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Source, Sink}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
-import com.typesafe.config.{ConfigFactory, Config}
+import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.rabbit.JsonRabbit
-import http.{WithSendAndReceive, ProdSendAndReceive}
+import http.{ProdSendAndReceive, WithSendAndReceive}
 import play.api.{Configuration, Environment}
 import play.api.mvc._
-import services.{CrunchCalculator, WorkloadsCalculator, ApiService}
+import services.{ApiService, CrunchCalculator, PassengerSplitRatioProvider, WorkloadsCalculator}
 import spatutorial.shared.FlightsApi._
-import spatutorial.shared.{ApiFlight, Api}
+import spatutorial.shared.{Api, ApiFlight}
 import spray.caching.{Cache, LruCache}
 import spray.http._
+
 import scala.language.postfixOps
-import scala.util.{Failure, Try, Success}
+import scala.util.{Failure, Success, Try}
 import spray.util._
 
 //import scala.collection.immutable.Seq
@@ -45,8 +46,10 @@ case class CrunchFlightsChange(flights: Seq[ApiFlight])
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
 
-class CrunchActor(crunchPeriodHours: Int,
-                  override val airportConfig: AirportConfig) extends Actor
+abstract class CrunchActor(crunchPeriodHours: Int,
+                  override val airportConfig: AirportConfig
+
+                          ) extends Actor
   with ActorLogging
   with WorkloadsCalculator
   with CrunchCalculator
