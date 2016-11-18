@@ -45,19 +45,20 @@ trait WorkloadsCalculator {
   def maxLoadPerSlot: Int = 20
 
   def splitRatioProvider(flight: ApiFlight) = List(
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.03)
+    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
+    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
+    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
+    SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
+    SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
   )
 
   def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
     //    case _ => 1.0
-    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d
-    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 25d / 60d
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 20d / 60d
+    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 35d / 60d
     case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
-    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
-    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
+    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 90d / 60d
+    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 78d / 60d
   }
 
 

@@ -30,9 +30,14 @@ object AirportConfigs {
     "eGate" -> 10,
     "nonEeaDesk" -> 45
   )
+  val stnSlas: Map[String, Int] = Map(
+    "eeaDesk" -> 25,
+    "eGate" -> 5,
+    "nonEeaDesk" -> 45
+  )
 
   val edi = AirportConfig(portCode = "EDI", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("A1", "A2"))
-  val stn = AirportConfig(portCode = "STN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("T1"))
+  val stn = AirportConfig(portCode = "STN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = stnSlas, terminalNames = Seq("T1"))
   val man = AirportConfig(portCode = "MAN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = manSlas, terminalNames = Seq("T1", "T2", "T3"))
   val boh = AirportConfig(portCode = "BOH", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("T1"))
   val ltn = AirportConfig(portCode = "LTN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("T1"))
