@@ -20,6 +20,7 @@ import drt.chroma.rabbit.JsonRabbit
 import http.{ProdSendAndReceive, WithSendAndReceive}
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.LoggerFactory
+import play.Play
 import play.api.{Configuration, Environment}
 import play.api.mvc._
 
@@ -33,6 +34,8 @@ import spatutorial.shared._
 import spray.http._
 
 import scala.language.postfixOps
+
+import com.typesafe.config.ConfigFactory
 
 //import scala.collection.immutable.Seq
 import scala.collection.mutable
@@ -259,15 +262,11 @@ case class LHRFlightFeed() {
 
 trait AirportConfProvider extends Core {
   self: Core =>
-  private val log = system.log
 
-  def portCode = sys.env.get("PORT_CODE").get.toUpperCase
+  def portCode = ConfigFactory.load().getString("portcode").toUpperCase
 
   def getPortConfFromEnvVar: AirportConfig = {
-    println(sys.env)
-//    log.info(s"PORT_CODE::: ${portCode}")
-    val conf = AirportConfigs.confByPort(portCode)
-    conf
+    AirportConfigs.confByPort(portCode)
   }
 
 }
