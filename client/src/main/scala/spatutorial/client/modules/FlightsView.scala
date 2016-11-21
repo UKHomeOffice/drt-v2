@@ -41,7 +41,7 @@ case class GriddleComponentWrapper(
     p.updateDynamic("showSettings")(showSettings)
     p.updateDynamic("showFilter")(showFilter)
     p.updateDynamic("rowMetadata")(rowMetaData)
-    p.updateDynamic("showPager")(false)
+    p.updateDynamic("showPager")(true)
     p.updateDynamic("resultsPerPage")(200)
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
 
