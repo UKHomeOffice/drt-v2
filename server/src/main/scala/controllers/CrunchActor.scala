@@ -16,6 +16,8 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.rabbit.JsonRabbit
 import http.{ProdSendAndReceive, WithSendAndReceive}
+import org.joda.time.LocalDate
+import org.joda.time.format.DateTimeFormat
 import play.api.{Configuration, Environment}
 import play.api.mvc._
 import services.{ApiService, CrunchCalculator, PassengerSplitRatioProvider, WorkloadsCalculator}
@@ -76,7 +78,9 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case CrunchFlightsChange(newFlights) =>
-      onFlightUpdates(newFlights.toList)
+      val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+      val lastMidnight = LocalDate.now().toString(formatter)
+      onFlightUpdates(newFlights.toList, AllInOnebucket.findFlightUpdates(lastMidnight, log))
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
