@@ -4,43 +4,31 @@ import java.net.URL
 import java.nio.ByteBuffer
 
 import akka.actor._
+import akka.event._
 import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import akka.event._
 import boopickle.Default._
 import com.google.inject.Inject
-import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.{DiffingStage, StreamingChromaFlow}
+import com.typesafe.config.ConfigFactory
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
-import drt.chroma.rabbit.JsonRabbit
-import http.{ProdSendAndReceive, WithSendAndReceive}
+import drt.chroma.{DiffingStage, StreamingChromaFlow}
+import http.ProdSendAndReceive
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import org.slf4j.LoggerFactory
-import play.Play
-import play.api.{Configuration, Environment}
 import play.api.mvc._
-
-import scala.util.{Failure, Success}
-import scala.util.Try
+import play.api.{Configuration, Environment}
 import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi}
-import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared._
-import spray.http._
+import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
-import com.typesafe.config.ConfigFactory
-
-//import scala.collection.immutable.Seq
-import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
