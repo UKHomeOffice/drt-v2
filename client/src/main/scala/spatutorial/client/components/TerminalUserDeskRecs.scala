@@ -128,16 +128,16 @@ object TableTerminalDeskRecs {
           val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
           airportConfigPotRCP(airportConfigPotMP => {
             <.div(
-                TableTerminalDeskRecs(
-                  terminalName,
-                  rows,
-                  peMP().flights,
-                  airportConfigPotMP(),
-                  airportWrapper,
-                  (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) => {
-                    peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
-                  }
-                )
+              TableTerminalDeskRecs(
+                terminalName,
+                rows,
+                peMP().flights,
+                airportConfigPotMP(),
+                airportWrapper,
+                (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) => {
+                  peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
+                }
+              )
             )
           })
         }),
@@ -171,29 +171,33 @@ object TableTerminalDeskRecs {
               case _ =>
                 ""
             }
+            def qtd(xs: TagMod*) = <.td(((^.className := q.queueName + "-user-desk-rec") :: xs.toList): _*)
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
-              <.td(q.pax),
-              <.td(q.crunchDeskRec),
-              <.td(
+              qtd(q.pax),
+              qtd(q.crunchDeskRec),
+              qtd(
                 ^.cls := hasChangeClasses,
                 <.input.number(
                   ^.className := "desk-rec-input",
                   ^.value := q.userDeskRec.deskRec,
                   ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
                 )),
-              <.td(q.waitTimeWithCrunchDeskRec + " mins"),
-              <.td(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
+              qtd(q.waitTimeWithCrunchDeskRec + " mins"),
+              qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
         <.tr(<.td(^.cls := "date-field", popover()) :: fill: _*)
       }
-      val queueNames = TableViewUtils.queueNameMapping.values.toList
+      val queueNames = TableViewUtils.queueNameMapping.toList
       val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
       val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
+      def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.tbody(
-          <.tr(<.th("") :: queueNames.map(queueName => <.th(<.h2(queueName), ^.colSpan := 5)): _*),
+          <.tr(<.th("") :: queueNames.map {
+            case (queueName, queueDisplayName) => qth(queueName, <.h2(queueDisplayName), ^.colSpan := 5)
+          }: _*),
           <.tr(<.th("") :: flatten: _*),
           <.tr(<.th("Time") :: fill: _*),
           p.items.zipWithIndex map renderItem))
