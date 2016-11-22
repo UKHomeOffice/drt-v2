@@ -6,7 +6,6 @@ import spatutorial.shared.ApiFlight
 
 import scala.language.postfixOps
 
-//import scala.collection.immutable.Seq
 import scala.collection.mutable
 
 //todo think about where we really want this flight state, one source of truth?
