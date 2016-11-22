@@ -9,10 +9,10 @@ import spatutorial.shared.FlightsApi._
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-
 import spatutorial.shared._
 import spray.caching.{Cache, LruCache}
 
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -105,15 +105,15 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
-      log.info(s"in crunch of $tq, workloads have calced ${wl.take(50)}")
+//      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
           case Some(twl) =>
-            log.info(s"wl now $terminalWorkloads")
-            val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(twl, crunchPeriodHours)
-            log.info("looked up " + tq + " and got " + workloadsByQueue.take(50))
+            log.info(s"wl now ${twl.map((x => (x._1, (x._2._1.take(10), x._2._2.take(10)))))}")
+            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.workloadsByQueue(twl, crunchPeriodHours)
+            log.info("looked up " + tq + " and got " + workloadsByQueue.map((x => (x._1, x._2.take(10)))))
             workloadsByQueue
           case None =>
             Map()
@@ -127,7 +127,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           log.info(s"$tq Crunching on ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
           val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads, queueSla)
-          log.info(s"Crunch complete for $tq $crunchRes")
+          log.info(s"Crunch complete for $tq ${crunchRes.map(x => CrunchResult(x.recommendedDesks.take(10), x.waitTimes.take(10)))}")
           crunchRes
       }
       val asFutre = r match {
