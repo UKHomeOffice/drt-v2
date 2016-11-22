@@ -48,7 +48,7 @@ class FlightsActor(crunchActor: ActorRef) extends Actor with ActorLogging  with 
       log.info(s"Adding ${newFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
       val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(lastMidnight, log))
+      onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(lastMidnight, log))
       crunchActor ! CrunchFlightsChange(newFlights)
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }

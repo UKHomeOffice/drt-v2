@@ -78,9 +78,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case CrunchFlightsChange(newFlights) =>
-      val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-      val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(newFlights.toList, AllInOnebucket.findFlightUpdates(lastMidnight, log))
+      onFlightUpdates(newFlights.toList, AllInOneBucket.findFlightUpdates(lastMidnight, log))
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
@@ -113,6 +111,10 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       log.info(s"crunchActor received ${message}")
   }
 
+  def lastMidnight: String = {
+    val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+    LocalDate.now().toString(formatter)
+  }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
     for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {

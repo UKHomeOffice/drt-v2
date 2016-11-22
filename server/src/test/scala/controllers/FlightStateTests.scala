@@ -43,7 +43,7 @@ object FlightStateTests extends TestSuite {
           def log = context.system.log
         }
 
-        flightState.onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(startThreshold, flightState.log))
+        flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
 
         val result = flightState.flights.toList.map(_._2)
 
@@ -67,7 +67,7 @@ object FlightStateTests extends TestSuite {
           def log = context.system.log
         }
 
-        flightState.onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(startThreshold, flightState.log))
+        flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
 
         val result = flightState.flights.toList.map(_._2)
 
@@ -90,7 +90,7 @@ object FlightStateTests extends TestSuite {
           def log = context.system.log
         }
 
-        flightState.onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(startThreshold, flightState.log))
+        flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
 
         val result = flightState.flights.toList.map(_._2)
 

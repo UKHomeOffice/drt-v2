@@ -23,10 +23,10 @@ trait FlightState {
 
 }
 
-object AllInOnebucket {
+object AllInOneBucket {
   def findFlightUpdates(since: String, log: LoggingAdapter)(currentFlights: mutable.Map[Int, ApiFlight], newFlights: List[ApiFlight]): List[(Int, ApiFlight)] = {
     val updatedFlights = logFlightChanges(log, currentFlights, newFlights)
-    val filteredFlights = filterFlights(updatedFlights, since)
+    val filteredFlights = filterFlights(log, updatedFlights, since)
     filteredFlights
   }
 
@@ -44,7 +44,9 @@ object AllInOnebucket {
     newFlights
   }
 
-  def filterFlights(currentFlights: Seq[(Int, ApiFlight)], since: String): List[(Int, ApiFlight)] = {
+  def filterFlights(log: LoggingAdapter, currentFlights: Seq[(Int, ApiFlight)], since: String): List[(Int, ApiFlight)] = {
+    log.info(s"dropping flights before $since")
+
     currentFlights.filter(x => {
       x._2.EstDT >= since || x._2.SchDT >= since
     }).toList
