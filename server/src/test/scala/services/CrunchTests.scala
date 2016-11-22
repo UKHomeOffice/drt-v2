@@ -42,6 +42,8 @@ object FlightCrunchInteractionTests extends TestSuite {
       case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
       case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
     }
+
+    override def lastMidnight: String = "2000-01-01"
   }
 
 

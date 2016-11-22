@@ -1,43 +1,21 @@
 package controllers
 
-import java.nio.ByteBuffer
-
 import akka.actor._
-import akka.pattern.AskableActorRef
-import akka.stream.Materializer
-import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
-import boopickle.Default._
-import com.google.inject.Inject
-import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.{DiffingStage, StreamingChromaFlow}
-import drt.chroma.chromafetcher.ChromaFetcher
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
-import drt.chroma.rabbit.JsonRabbit
-import http.{ProdSendAndReceive, WithSendAndReceive}
-import play.api.{Configuration, Environment}
-import play.api.mvc._
-import services.{ApiService, CrunchCalculator, PassengerSplitRatioProvider, WorkloadsCalculator}
+import org.joda.time.LocalDate
+import org.joda.time.format.DateTimeFormat
+import services.{CrunchCalculator, WorkloadsCalculator}
+import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi._
-import spatutorial.shared.{Api, ApiFlight}
-import spray.caching.{Cache, LruCache}
-import spray.http._
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import spray.util._
 
-//import scala.collection.immutable.Seq
-import scala.collection.{immutable, mutable}
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration._
 import spatutorial.shared._
+import spray.caching.{Cache, LruCache}
+
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import akka.actor.ActorSystem
-import spray.caching.{LruCache, Cache}
-import spray.util._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
@@ -76,7 +54,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case CrunchFlightsChange(newFlights) =>
-      onFlightUpdates(newFlights.toList)
+      onFlightUpdates(newFlights.toList, FlightStateHandlers.findFlightUpdates(lastMidnight, log))
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
@@ -109,6 +87,10 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       log.info(s"crunchActor received ${message}")
   }
 
+  def lastMidnight: String = {
+    val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+    LocalDate.now().toString(formatter)
+  }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
     for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {
