@@ -57,7 +57,7 @@ trait ChromaFetcherLike {
 }
 
 
-trait MockChroma extends ChromaFetcherLike {
+case class MockChroma(system: ActorSystem) extends ChromaFetcherLike {
   self =>
   system.log.info("Mock Chroma init")
   override val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
@@ -252,6 +252,7 @@ trait AirportConfProvider extends Core {
   self: Core =>
 
   def portCode = ConfigFactory.load().getString("portcode").toUpperCase
+  def mockProd = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
   def getPortConfFromEnvVar: AirportConfig = {
     AirportConfigs.confByPort(portCode)
@@ -298,12 +299,16 @@ class Application @Inject()(
       fsFuture
     }
   }
+  val fetcher = mockProd match {
+    case "MOCK" => MockChroma(system)
+    case "PROD" => ProdChroma(system)
+  }
 
   val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
     case "EDI" =>
-      ChromaFlightFeed(log, ProdChroma(system)).chromaEdiFlights().map(Flights(_))
+      ChromaFlightFeed(log, fetcher).chromaEdiFlights().map(Flights(_))
     case _ =>
-      ChromaFlightFeed(log, ProdChroma(system)).chromaVanillaFlights().map(Flights(_))
+      ChromaFlightFeed(log, fetcher).chromaVanillaFlights().map(Flights(_))
   }
 
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
