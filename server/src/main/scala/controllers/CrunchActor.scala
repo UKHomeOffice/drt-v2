@@ -45,7 +45,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     crunchCache(key) {
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(performCrunch(terminal, queue), 15 seconds)
-      log.info(s"Cache will soon have ${expensiveCrunchResult}")
+//      log.info(s"Cache will soon have ${expensiveCrunchResult}")
       expensiveCrunchResult
     }
   }
@@ -70,7 +70,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           replyTo ! NoCrunchAvailable()
         case fs =>
           val futCrunch = cacheCrunch(terminalName, queueName)
-          log.info(s"got keyed thingy ${futCrunch}")
+//          log.info(s"got keyed thingy ${futCrunch}")
           //todo this is NOT right
           futCrunch.value match {
             case Some(Success(cr)) =>
@@ -105,7 +105,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
-      log.info(s"in crunch of $tq, workloads have calced $wl")
+      log.info(s"in crunch of $tq, workloads have calced ${wl.take(50)}")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
         val terminalWorkloads = wl.get(terminalName)
@@ -113,7 +113,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           case Some(twl) =>
             log.info(s"wl now $terminalWorkloads")
             val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(twl, crunchPeriodHours)
-            log.info("looked up " + tq + " and got " + workloadsByQueue)
+            log.info("looked up " + tq + " and got " + workloadsByQueue.take(50))
             workloadsByQueue
           case None =>
             Map()
@@ -124,7 +124,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         terminalWorkloads =>
           log.info(s"Will crunch now $tq")
           val workloads: List[Double] = terminalWorkloads(queueName)
-          log.info(s"$tq Crunching on $workloads")
+          log.info(s"$tq Crunching on ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
           val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads, queueSla)
           log.info(s"Crunch complete for $tq $crunchRes")
