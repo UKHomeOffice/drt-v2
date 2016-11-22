@@ -29,6 +29,8 @@ object FlightStateTests extends TestSuite {
       SchDT = schDt
     )
 
+  import services.inputfeeds.CrunchTests._
+
   def tests = TestSuite {
     "given a flight arriving after the start threshold, " +
       "when we look at the FlightState, " +
@@ -36,16 +38,8 @@ object FlightStateTests extends TestSuite {
       val startThreshold = "2016-01-01T12:00"
       val newFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
 
-      import services.inputfeeds.CrunchTests._
-
       withContext { context =>
-        val flightState = new FlightState {
-          def log = context.system.log
-        }
-
-        flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
-
-        val result = flightState.flights.toList.map(_._2)
+        val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
         assert(result == newFlights)
       }
@@ -60,16 +54,8 @@ object FlightStateTests extends TestSuite {
       val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
       val newFlights = validFlights ::: invalidFlights
 
-      import services.inputfeeds.CrunchTests._
-
       withContext { context =>
-        val flightState = new FlightState {
-          def log = context.system.log
-        }
-
-        flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
-
-        val result = flightState.flights.toList.map(_._2)
+        val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
         assert(result == validFlights)
       }
@@ -83,20 +69,23 @@ object FlightStateTests extends TestSuite {
         apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "")
       )
 
-      import services.inputfeeds.CrunchTests._
-
       withContext { context =>
-        val flightState = new FlightState {
-          def log = context.system.log
-        }
-
-        flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
-
-        val result = flightState.flights.toList.map(_._2)
+        val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
         assert(result == newFlights)
       }
     }
+  }
+
+  def getFlightStateFlightsListFromUpdate(context: TestContext, startThreshold: String, newFlights: List[ApiFlight]): List[ApiFlight] = {
+    val flightState = new FlightState {
+      def log = context.system.log
+    }
+
+    flightState.onFlightUpdates(newFlights, AllInOneBucket.findFlightUpdates(startThreshold, flightState.log))
+
+    val result = flightState.flights.toList.map(_._2)
+    result
   }
 }
 
