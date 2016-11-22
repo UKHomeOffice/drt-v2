@@ -45,6 +45,8 @@ object AllInOnebucket {
   }
 
   def filterFlights(currentFlights: Seq[(Int, ApiFlight)], since: String): List[(Int, ApiFlight)] = {
-    currentFlights.filter(_._2.EstDT >= since).toList
+    currentFlights.filter(x => {
+      x._2.EstDT >= since || x._2.SchDT >= since
+    }).toList
   }
 }

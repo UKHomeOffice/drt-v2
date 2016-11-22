@@ -4,7 +4,7 @@ import spatutorial.shared._
 import utest._
 
 object FlightStateTests extends TestSuite {
-  def apiFlight(estDt: String, flightId: Int): ApiFlight =
+  def apiFlight(flightId: Int, schDt: String, estDt: String): ApiFlight =
     ApiFlight(
       Operator = "",
       Status = "",
@@ -26,13 +26,15 @@ object FlightStateTests extends TestSuite {
       IATA = "",
       Origin = "",
       PcpTime = 0,
-      SchDT = ""
+      SchDT = schDt
     )
 
   def tests = TestSuite {
-    "given a flight arriving after the start threshold when we look at the FlightState then we should see that flight" - {
+    "given a flight arriving after the start threshold, " +
+      "when we look at the FlightState, " +
+      "then we should see that flight" - {
       val startThreshold = "2016-01-01T12:00"
-      val newFlights = List(apiFlight(estDt = "2016-01-01T12:30", flightId = 1))
+      val newFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
 
       import services.inputfeeds.CrunchTests._
 
@@ -43,16 +45,42 @@ object FlightStateTests extends TestSuite {
 
         flightState.onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(startThreshold, flightState.log))
 
-        assert(flightState.flights.toList.length == 1)
-        assert(flightState.flights == newFlights.map(x => (x.FlightID, x)).toMap)
+        val result = flightState.flights.toList.map(_._2)
+
+        assert(result == newFlights)
       }
     }
 
-    "given one flight arriving after the start threshold and one before when we look at the FlightState then we should only see the one arriving after" - {
+    "given one flight arriving after the start threshold and one before, " +
+      "when we look at the FlightState, " +
+      "then we should only see the one arriving after" - {
+      val startThreshold = "2016-01-01T12:00"
+
+      val invalidFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T11:30", estDt = "2016-01-01T11:30"))
+      val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
+      val newFlights = validFlights ::: invalidFlights
+
+      import services.inputfeeds.CrunchTests._
+
+      withContext { context =>
+        val flightState = new FlightState {
+          def log = context.system.log
+        }
+
+        flightState.onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(startThreshold, flightState.log))
+
+        val result = flightState.flights.toList.map(_._2)
+
+        assert(result == validFlights)
+      }
+    }
+
+    "given one flight scheduled after the threshold but with no estimated time, " +
+      "when we look at the FlightState, " +
+      "then we should see that one flight" - {
       val startThreshold = "2016-01-01T12:00"
       val newFlights = List(
-        apiFlight(estDt = "2016-01-01T11:30", flightId = 1),
-        apiFlight(estDt = "2016-01-01T12:30", flightId = 2)
+        apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "")
       )
 
       import services.inputfeeds.CrunchTests._
@@ -64,8 +92,9 @@ object FlightStateTests extends TestSuite {
 
         flightState.onFlightUpdates(newFlights, AllInOnebucket.findFlightUpdates(startThreshold, flightState.log))
 
-        assert(flightState.flights.toList.length == 1)
-        assert(flightState.flights == newFlights.filter(_.EstDT > startThreshold).map(x => (x.FlightID, x)).toMap)
+        val result = flightState.flights.toList.map(_._2)
+
+        assert(result == newFlights)
       }
     }
   }
