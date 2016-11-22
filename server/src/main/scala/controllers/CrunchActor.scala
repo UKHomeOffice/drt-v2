@@ -54,7 +54,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case CrunchFlightsChange(newFlights) =>
-      onFlightUpdates(newFlights.toList, AllInOneBucket.findFlightUpdates(lastMidnight, log))
+      onFlightUpdates(newFlights.toList, FlightStateHandlers.findFlightUpdates(lastMidnight, log))
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
