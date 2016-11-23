@@ -2,56 +2,53 @@ package controllers
 
 
 import akka.event.LoggingAdapter
+import org.joda.time.LocalDate
+import org.joda.time.format.DateTimeFormat
 import spatutorial.shared.ApiFlight
 
 import scala.language.postfixOps
-
 import scala.collection.mutable
 
 //todo think about where we really want this flight state, one source of truth?
 trait FlightState {
   def log: LoggingAdapter
 
-  val flights = mutable.Map[Int, ApiFlight]()
+  var flights = Map[Int, ApiFlight]()
 
-  def onFlightUpdates(fs: List[ApiFlight], findFlightUpdates: (mutable.Map[Int, ApiFlight], List[ApiFlight]) => List[(Int, ApiFlight)]) =  {
-    val newFlights: List[(Int, ApiFlight)] = findFlightUpdates(flights, fs)
-    flights ++= newFlights
-    log.info(s"Flights now ${flights.size}")
+  def onFlightUpdates(fs: List[ApiFlight], since: String) = {
+    val currentFlights = flights
+
+    val loggedFlights = logNewFlightInfo(flights, fs)
+    val withNewFlights = addNewFlights(loggedFlights, fs)
+    val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
+    flights = withoutOldFlights
   }
 
-}
-
-object FlightStateHandlers {
-  def findFlightUpdates(since: String, log: LoggingAdapter)(currentFlights: mutable.Map[Int, ApiFlight], newFlights: List[ApiFlight]): List[(Int, ApiFlight)] = {
-    val updatedFlights = logFlightChanges(log, currentFlights, newFlights)
-    val filteredFlights = filterFlights(log, updatedFlights, since)
-    filteredFlights
+  def addNewFlights(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
+    val newFlights: List[(Int, ApiFlight)] = fs.map(f => (f.FlightID, f))
+    flights ++ newFlights
   }
 
-  def logFlightChanges(log: LoggingAdapter, currentFlights: mutable.Map[Int, ApiFlight], fs: List[ApiFlight]): List[(Int, ApiFlight)] = {
+  def filterOutFlightsBeforeThreshold(flights: Map[Int, ApiFlight], since: String): Map[Int, ApiFlight] = {
+    val totalFlightsBeforeFilter = flights.size
+    val flightsWithOldDropped = flights.filter { case (key, flight) => flight.EstDT >= since || flight.SchDT >= since }
+    val totalFlightsAfterFilter = flights.size
+    log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $since")
+    flightsWithOldDropped
+  }
+
+  def logNewFlightInfo(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
+    log.info(s"Flights before change: $flights")
+
     val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
-    val existingFlightIds: Set[Int] = currentFlights.keys.toSet
+    val existingFlightIds: Set[Int] = flights.keys.toSet
 
     val updatingFlightIds = existingFlightIds intersect inboundFlightIds
     val newFlightIds = existingFlightIds diff inboundFlightIds
 
     log.info(s"New flights ${fs.filter(newFlightIds contains _.FlightID)}")
-    log.info(s"Old      fl ${currentFlights.filterKeys(updatingFlightIds).values}")
+    log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
     log.info(s"Updating fl ${fs.filter(updatingFlightIds contains _.FlightID)}")
-    val newFlights = fs.map(f => (f.FlightID, f))
-    newFlights
-  }
-
-  def filterFlights(log: LoggingAdapter, currentFlights: Seq[(Int, ApiFlight)], since: String): List[(Int, ApiFlight)] = {
-    val keptFlights = currentFlights.filter(x => {
-      x._2.EstDT >= since || x._2.SchDT >= since
-    }).toList
-
-    val droppedFlights = currentFlights.map(_._1) diff keptFlights.map(_._1)
-
-    log.info(s"dropping ${droppedFlights.length} flights before $since: $droppedFlights")
-
-    keptFlights
+    flights
   }
 }
