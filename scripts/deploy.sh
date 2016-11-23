@@ -35,7 +35,7 @@ do
     curl ${ARTIFACT_REPO_URL}/${ARTIFACT_PATH} > $LOCAL_NAME_ZIP
 
     scp $LOCAL_NAME_ZIP ci-build@${JVA_HOST}:/home/ci-build/
-    ssh ci-build@${JVA_HOST} "sudo unzip /home/ci-build/${LOCAL_NAME_ZIP} -d /usr/share/drt-v2/${PORT_CODE}/"
+    ssh ci-build@${JVA_HOST} "sudo unzip -o /home/ci-build/${LOCAL_NAME_ZIP} -d /usr/share/drt-v2/${PORT_CODE}/"
     ssh ci-build@${JVA_HOST} "sudo rm -f /usr/share/drt-v2/${PORT_CODE}/current && sudo ln -s /usr/share/drt-v2/${PORT_CODE}/${TARGET_NAME} /usr/share/drt-v2/${PORT_CODE}/current"
     ssh ci-build@${JVA_HOST} "sudo service drt-v2-${PORT_CODE} restart"
 
