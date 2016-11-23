@@ -13,9 +13,31 @@ import scala.collection.mutable
 trait FlightState {
   def log: LoggingAdapter
 
-  val flights = mutable.Map[Int, ApiFlight]()
+  var flights = Map[Int, ApiFlight]()
 
   def onFlightUpdates(fs: List[ApiFlight], since: String) = {
+    val currentFlights = flights
+
+    val loggedFlights = logNewFlightInfo(flights, fs)
+    val withNewFlights = addNewFlights(loggedFlights, fs)
+    val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
+    flights = withoutOldFlights
+  }
+
+  def addNewFlights(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
+    val newFlights: List[(Int, ApiFlight)] = fs.map(f => (f.FlightID, f))
+    flights ++ newFlights
+  }
+
+  def filterOutFlightsBeforeThreshold(flights: Map[Int, ApiFlight], since: String): Map[Int, ApiFlight] = {
+    val totalFlightsBeforeFilter = flights.size
+    val flightsWithOldDropped = flights.filter { case (key, flight) => flight.EstDT >= since || flight.SchDT >= since }
+    val totalFlightsAfterFilter = flights.size
+    log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $since")
+    flightsWithOldDropped
+  }
+
+  def logNewFlightInfo(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
     log.info(s"Flights before change: $flights")
 
     val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
@@ -27,16 +49,6 @@ trait FlightState {
     log.info(s"New flights ${fs.filter(newFlightIds contains _.FlightID)}")
     log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
     log.info(s"Updating fl ${fs.filter(updatingFlightIds contains _.FlightID)}")
-
-    val newFlights = fs.map(f => (f.FlightID, f))
-    flights ++= newFlights
-
-    val totalFlightsBeforeFilter = flights.size
-    flights.retain((key, flight) => flight.EstDT >= since || flight.SchDT >= since)
-    val totalFlightsAfterFilter = flights.size
-    log.info(s"dropping ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $since")
-
-    log.info(s"Flights after change: $flights")
-    log.info(s"Flights now ${flights.size}")
+    flights
   }
 }

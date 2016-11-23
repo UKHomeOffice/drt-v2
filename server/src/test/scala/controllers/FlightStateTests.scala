@@ -124,7 +124,7 @@ object FlightStateTests extends TestSuite {
 
         val expected = newFlightAfterThreshold :: existingFlightAfterThreshold :: Nil
 
-          assert(result == expected)
+          assert(result.toSet == expected.toSet)
       }
     }
   }
