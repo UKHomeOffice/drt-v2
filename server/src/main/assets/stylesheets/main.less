@@ -74,16 +74,34 @@ div.panel-body > div.user-desk-recs-container > div > table > tbody > tr > td.da
 // Type
 // ------------------------------
 
-.eeaDesk-user-desk-rec {
- background-color: cornflowerblue;
-}
-.nonEeaDesk-user-desk-rec {
-  background-color: aquamarine;
+@eeaDeskUserDeskColor: #d5e8f3;
+@nonEeaDeskUserDeskColor: #cce0d6;
+@eGateUserDeskColor: #f7f0e2;
 
+.eeaDesk-user-desk-rec {
+  background-color: @eeaDeskUserDeskColor;
 }
+
+.eeaDesk-user-desk-rec.table-info {
+  background-color: lighten(@eeaDeskUserDeskColor, 6%);
+}
+
+.nonEeaDesk-user-desk-rec {
+  background-color: @nonEeaDeskUserDeskColor;
+}
+
+.nonEeaDesk-user-desk-rec.table-info {
+  background-color: lighten(@nonEeaDeskUserDeskColor, 6%);
+}
+
 .eGate-user-desk-rec {
-  background-color: #00bcd4;
+  background-color: @eGateUserDeskColor;
 }
+
+.eGate-user-desk-rec.table-info {
+  background-color: lighten(@eGateUserDeskColor, 6%);
+}
+
 p {
   margin-bottom: 1em;
   margin-top: 0;
