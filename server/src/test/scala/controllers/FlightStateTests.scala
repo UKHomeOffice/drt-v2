@@ -3,6 +3,8 @@ package controllers
 import spatutorial.shared._
 import utest._
 
+import scala.collection.mutable
+
 object FlightStateTests extends TestSuite {
   def apiFlight(flightId: Int, schDt: String, estDt: String): ApiFlight =
     ApiFlight(
@@ -32,47 +34,97 @@ object FlightStateTests extends TestSuite {
   import services.inputfeeds.CrunchTests._
 
   def tests = TestSuite {
-    "given a flight arriving after the start threshold, " +
-      "when we look at the FlightState, " +
-      "then we should see that flight" - {
-      val startThreshold = "2016-01-01T12:00"
-      val newFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
+        "given a flight arriving after the start threshold, " +
+          "when we look at the FlightState, " +
+          "then we should see that flight" - {
+          val startThreshold = "2016-01-01T12:00"
+          val newFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
 
-      withContext { context =>
-        val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
+          withContext { context =>
+            val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
-        assert(result == newFlights)
+            assert(result == newFlights)
+          }
+        }
+
+        "given one flight arriving after the start threshold and one before, " +
+          "when we look at the FlightState, " +
+          "then we should only see the one arriving after" - {
+          val startThreshold = "2016-01-01T12:00"
+
+          val invalidFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T11:30", estDt = "2016-01-01T11:30"))
+          val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
+          val newFlights = validFlights ::: invalidFlights
+
+          withContext { context =>
+            val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
+
+            assert(result == validFlights)
+          }
+        }
+
+        "given one flight scheduled after the threshold but with no estimated time, " +
+          "when we look at the FlightState, " +
+          "then we should see that one flight" - {
+          val startThreshold = "2016-01-01T12:00"
+          val newFlights = List(
+            apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "")
+          )
+
+          withContext { context =>
+            val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
+
+            assert(result == newFlights)
+          }
+        }
+
+      "given one there are existing flights before the threshold, " +
+        "when new flights arrive, " +
+        "then the flight state should contain no flights before the threshold" - {
+        val startThreshold = "2016-01-01T12:00"
+        val existingFlights: List[(Int, ApiFlight)] = List((1, apiFlight(1, "2016-01-01T11:00", "2016-01-01T11:00")))
+        val newFlights = List(
+          apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30")
+        )
+
+        withContext { context =>
+          val flightState = new FlightState {
+            def log = context.system.log
+          }
+          flightState.flights ++= existingFlights
+
+          flightState.onFlightUpdates(newFlights, startThreshold)
+
+          val result = flightState.flights.toList.map(_._2)
+
+          assert(result == newFlights)
+        }
       }
-    }
 
-    "given one flight arriving after the start threshold and one before, " +
-      "when we look at the FlightState, " +
-      "then we should only see the one arriving after" - {
+    "given one there are existing flights after the threshold, " +
+      "when new flights arrive, " +
+      "then the flight state should contain old flights arriving after the threshold" - {
       val startThreshold = "2016-01-01T12:00"
 
-      val invalidFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T11:30", estDt = "2016-01-01T11:30"))
-      val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
-      val newFlights = validFlights ::: invalidFlights
+      val existingFlightAfterThreshold: ApiFlight = apiFlight(1, "2016-01-01T13:00", "2016-01-01T13:00")
+      val existingFlights: List[(Int, ApiFlight)] = List((1, existingFlightAfterThreshold))
+
+      val newFlightAfterThreshold = apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30")
+      val newFlights = List(newFlightAfterThreshold)
 
       withContext { context =>
-        val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
+        val flightState = new FlightState {
+          def log = context.system.log
+        }
+        flightState.flights ++= existingFlights
 
-        assert(result == validFlights)
-      }
-    }
+        flightState.onFlightUpdates(newFlights, startThreshold)
 
-    "given one flight scheduled after the threshold but with no estimated time, " +
-      "when we look at the FlightState, " +
-      "then we should see that one flight" - {
-      val startThreshold = "2016-01-01T12:00"
-      val newFlights = List(
-        apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "")
-      )
+        val result = flightState.flights.toList.map(_._2)
 
-      withContext { context =>
-        val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
+        val expected = newFlightAfterThreshold :: existingFlightAfterThreshold :: Nil
 
-        assert(result == newFlights)
+          assert(result == expected)
       }
     }
   }
@@ -82,14 +134,9 @@ object FlightStateTests extends TestSuite {
       def log = context.system.log
     }
 
-    flightState.onFlightUpdates(newFlights, FlightStateHandlers.findFlightUpdates(startThreshold, flightState.log))
+    flightState.onFlightUpdates(newFlights, startThreshold)
 
     val result = flightState.flights.toList.map(_._2)
     result
   }
 }
-
-
-
-
-
