@@ -140,13 +140,20 @@ object SPAMain extends js.JSApp {
       DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
     val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
 
-    val dashboardRoute = staticRoute(root, DashboardLoc) ~>
+    val dashboardRoute = staticRoute("#charts", DashboardLoc) ~>
       renderR(ctl => dashboardModelsConnect(proxy => {
-        log.info("dashboard update")
+        log.info("charts update")
         airportConfigPotRCP(airportConfigPotMP =>
           Dashboard(ctl, proxy, airportConfigPotMP())
         )
       }))
+
+    val rootRoute = staticRoute(root, FlightsLoc) ~>
+      renderR(ctl => {
+        val airportWrapper = SPACircuit.connect(_.airportInfos)
+        val flightsWrapper = SPACircuit.connect(m => m.flights)
+        airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
+      })
 
     val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
       renderR(ctl => {
@@ -166,7 +173,7 @@ object SPAMain extends js.JSApp {
       QueueUserDeskRecsComponent.terminalQueueUserDeskRecsComponent()
     })
 
-    val rule = (dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)
+    val rule = (rootRoute | dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
