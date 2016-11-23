@@ -17,7 +17,7 @@ object WorkloadsTests extends TestSuite {
   def tests = TestSuite {
 
     "Given workloads, " - {
-      "we need a label per minute" - {
+      "we need a label per minute, starting at midnight of today" - {
         val firstTime = Date.parse("2016-11-01T07:20Z").toLong
         val workloads = Workloads(
           Map("T1" ->
@@ -25,11 +25,11 @@ object WorkloadsTests extends TestSuite {
               (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
         val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
         assert(labels  == List(
-          "07:20",
-          "07:21",
-          "07:22",
-          "07:23",
-          "07:24"
+          "00:00",
+          "00:01",
+          "00:02",
+          "00:03",
+          "00:04"
         ))
       }
       "it doesn't matter what terminal we have in workloads we need a label per minute" - {
@@ -40,11 +40,11 @@ object WorkloadsTests extends TestSuite {
               (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
         val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
         assert(labels  == List(
-          "07:20",
-          "07:21",
-          "07:22",
-          "07:23",
-          "07:24"
+          "00:00",
+          "00:01",
+          "00:02",
+          "00:03",
+          "00:04"
         ))
       }
       "the labels are in 24H format" - {
@@ -53,13 +53,9 @@ object WorkloadsTests extends TestSuite {
           Map("A1" ->
             Map("eeaDesk" ->
               (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
-        val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
+        val labels: IndexedSeq[TerminalName] = workloads.labels.drop(800).take(5)
         assert(labels  == List(
-          "14:20",
-          "14:21",
-          "14:22",
-          "14:23",
-          "14:24"
+          "13:20", "13:21", "13:22", "13:23", "13:24"
         ))
       }
     }

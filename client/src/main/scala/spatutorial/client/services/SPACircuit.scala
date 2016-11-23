@@ -1,6 +1,5 @@
 package spatutorial.client.services
 
-import java.util.Date
 
 import diode.ActionResult.EffectOnly
 
@@ -9,6 +8,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
+import scala.scalajs.js.Date
 import scala.scalajs.js.annotation.{JSExport, ScalaJSDefined}
 import scala.util.{Failure, Success, Try}
 import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
@@ -84,8 +84,8 @@ trait WorkloadsUtil {
     val allMins = startTime until (startTime + 60000 * 60 * 24) by oneMinute
 
     allMins.map(millis => {
-     val d= new js.Date(millis)
-      f"${d.getHours()}%02d:${d.getMinutes()}"
+      val d = new js.Date(millis)
+      f"${d.getHours()}%02d:${d.getMinutes()}%02d"
     })
   }
 
@@ -107,11 +107,17 @@ trait WorkloadsUtil {
 
 // The base model of our application
 case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends WorkloadsUtil {
-  lazy val labels = labelsFromAllQueues(firstFlightTimeAcrossTerminals)
+  lazy val labels = labelsFromAllQueues(startTime)
+
+  def timeStamps(terminalName: TerminalName): NumericRange[Long] = minuteNumericRange(startTime, 24)
+
+  def startTime: Long = {
+    val now = new Date()
+    val thisMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    thisMorning.getTime().toLong
+  }
 
   def firstFlightTimeAcrossTerminals: Long = workloads.values.map(firstFlightTimeQueue(_)).min
-
-  def timeStamps(terminalName: TerminalName): NumericRange[Long] = minuteNumericRange(firstFlightTimeAcrossTerminals, 24)
 
 }
 
@@ -394,7 +400,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  def timeProvider() = new Date().getTime
+  def timeProvider() = new Date().getTime.toLong
 
   // initial application model
   override protected def initialModel = RootModel()

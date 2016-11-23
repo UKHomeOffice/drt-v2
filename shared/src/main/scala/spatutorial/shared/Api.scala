@@ -1,5 +1,7 @@
 package spatutorial.shared
 
+import java.util.Date
+
 import scala.collection.immutable._
 import spatutorial.shared.FlightsApi._
 
@@ -32,6 +34,7 @@ case class ApiFlight(
                       PcpTime: Long)
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
+
 case class NoCrunchAvailable()
 
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
@@ -66,7 +69,10 @@ trait WorkloadsHelpers {
   val oneMinute = 60000L
 
   def workloadsByQueue(workloads: Map[String, QueueWorkloads], numberOfHours: Int = 24): Map[String, List[Double]] = {
-    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(workloads.values.toList, numberOfHours = numberOfHours)
+    val allWorkloadsForQueuesInThisTerminal: scala.List[(Seq[WL], Seq[Pax])] = workloads.values.toList
+    val timesMin = minimumMinuteInWorkloads(allWorkloadsForQueuesInThisTerminal)
+    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(allWorkloadsForQueuesInThisTerminal, timesMin, numberOfHours = numberOfHours)
+    println(s"allMins: ${allMins.min} to ${allMins.max}")
     workloads.mapValues(qwl => {
       val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
@@ -75,7 +81,10 @@ trait WorkloadsHelpers {
   }
 
   def paxloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
-    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(workloads.values.toList)
+    val allWorkloadsForQueuesInThisTerminal: scala.List[(Seq[WL], Seq[Pax])] = workloads.values.toList
+    val timesMin = minimumMinuteInWorkloads(allWorkloadsForQueuesInThisTerminal)
+    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(allWorkloadsForQueuesInThisTerminal, timesMin)
+    println(s"allMins: ${allMins.min} to ${allMins.max}")
     workloads.mapValues(qwl => {
       val allPaxloadByMinuteForThisQueue = oneQueuePaxload(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allPaxloadByMinuteForThisQueue)
@@ -103,14 +112,16 @@ trait WorkloadsHelpers {
     paxloads._2.map((paxLoad) => (paxLoad.time, paxLoad.pax)).toMap
   }
 
-  def wholeDaysMinutesFromAllQueues(workloads: Seq[QueueWorkloads], numberOfHours: Int = 24): NumericRange[Long] = {
-    val timesMin = minimumMinuteInWorkloads(workloads)
+  def wholeDaysMinutesFromAllQueues(workloads: Seq[QueueWorkloads], timesMin: Long, numberOfHours: Int = 24): NumericRange[Long] = {
     val timeMinPlusOneDay: Long = timesMin + oneMinute * 60 * numberOfHours
     timesMin until timeMinPlusOneDay by oneMinute
   }
 
   def minimumMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
-    workloads.flatMap(_._1.map(_.time)).min
+//    workloads.flatMap(_._1.map(_.time)).min
+    val now = new Date()
+    val thisMorning = new Date(now.getYear, now.getMonth, now.getDate)
+    thisMorning.getTime()
   }
 }
 
@@ -149,13 +160,13 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
-//  def getAllTodos(): List[DeskRecTimeslot]
+  //  def getAllTodos(): List[DeskRecTimeslot]
 
-//  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
+  //  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
 
-//  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
+  //  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
 
-//  def deleteTodo(itemId: String): List[DeskRecTimeslot]
+  //  def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

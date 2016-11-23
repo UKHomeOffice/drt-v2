@@ -49,24 +49,30 @@ object Dashboard {
                   )
 
   def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
-    val timesMin = workloads.values.flatMap(_._2.map(c => c.time)).min
-    val oneMin = 6000L
-    val allMins = timesMin until (timesMin + oneMin * 60 * 24) by oneMin
-    val queueWorkloadsByMinute = workloads
-      .mapValues(queue => {
-        val minute0 = queue._1
-        val minute1 = WorkloadsHelpers.workloadsByPeriod(queue._1, 15).toList
-        //        log.info(s"by 1 mins: ${minute0.take(40)}")
-        //        log.info(s"by 15 mins: ${minute1}")
-        val workloadsByMinute = minute0.map((wl) => (wl.time, wl.workload)).toMap
-        val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
-          (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
-        res.toSeq.sortBy(_._1).map(_._2)
-          .grouped(15).map(_.sum)
-          .toList
-      })
+    //    val timesMin = workloads.values.flatMap(_._2.map(c => c.time)).min
+    val timesMin = WorkloadsHelpers.minimumMinuteInWorkloads(workloads.values.toList)
+    val queueWorkloadsByMinute = WorkloadsHelpers.workloadsByQueue(workloads)
+    val by15Minutes = queueWorkloadsByMinute.mapValues(
+      (v) => v.grouped(15).map(_.sum).toList
+    )
+    log.info(s"qwlbym ${queueWorkloadsByMinute}")
+    //    val oneMin = 6000L
+    //    val allMins = timesMin until (timesMin + oneMin * 60 * 24) by oneMin
+    //    val queueWorkloadsByMinute = workloads
+    //      .mapValues(queue => {
+    //        val minute0 = queue._1
+    //        val minute1 = WorkloadsHelpers.workloadsByPeriod(queue._1, 15).toList
+    //        //        log.info(s"by 1 mins: ${minute0.take(40)}")
+    //        //        log.info(s"by 15 mins: ${minute1}")
+    //        val workloadsByMinute = minute0.map((wl) => (wl.time, wl.workload)).toMap
+    //        val res: Map[Long, Double] = allMins.foldLeft(Map[Long, Double]())(
+    //          (m, minute) => m + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
+    //        res.toSeq.sortBy(_._1).map(_._2)
+    //          .grouped(15).map(_.sum)
+    //          .toList
+    //      })
 
-    queueWorkloadsByMinute
+    by15Minutes
   }
 
   val colors = IndexedSeq("red", "blue", "green", "black")
