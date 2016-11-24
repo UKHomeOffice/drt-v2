@@ -2,10 +2,10 @@
   {
     "Operator": "Tnt Airways Sa",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T04:40:00Z",
-    "ActDT": "2016-08-04T04:37:00Z",
+    "EstDT": "2020-08-04T04:40:00Z",
+    "ActDT": "2020-08-04T04:37:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T04:53:00Z",
+    "ActChoxDT": "2020-08-04T04:53:00Z",
     "Gate": "",
     "Stand": "207",
     "MaxPax": 0,
@@ -19,15 +19,15 @@
     "ICAO": "TAY025N",
     "IATA": "3V025N",
     "Origin": "LGG",
-    "SchDT": "2016-08-04T04:35:00Z"
+    "SchDT": "2020-08-04T04:35:00Z"
   },
   {
     "Operator": "Star Air",
     "Status": "On Chocks",
     "EstDT": "",
-    "ActDT": "2016-08-04T05:32:00Z",
+    "ActDT": "2020-08-04T05:32:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T05:41:00Z",
+    "ActChoxDT": "2020-08-04T05:41:00Z",
     "Gate": "",
     "Stand": "212",
     "MaxPax": 0,
@@ -41,15 +41,15 @@
     "ICAO": "SRR6566",
     "IATA": "S66566",
     "Origin": "CGN",
-    "SchDT": "2016-08-04T05:15:00Z"
+    "SchDT": "2020-08-04T05:15:00Z"
   },
   {
     "Operator": "American Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T05:45:00Z",
-    "ActDT": "2016-08-04T05:50:00Z",
+    "EstDT": "2020-08-04T05:45:00Z",
+    "ActDT": "2020-08-04T05:50:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T05:57:00Z",
+    "ActChoxDT": "2020-08-04T05:57:00Z",
     "Gate": "",
     "Stand": "1",
     "MaxPax": 176,
@@ -63,15 +63,15 @@
     "ICAO": "AAL278",
     "IATA": "AA278",
     "Origin": "JFK",
-    "SchDT": "2016-08-04T06:10:00Z"
+    "SchDT": "2020-08-04T06:10:00Z"
   },
   {
     "Operator": "Air Seychelles",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:19:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:26:00Z",
+    "ActChoxDT": "2020-08-04T06:26:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 262,
@@ -85,15 +85,15 @@
     "ICAO": "SEY5016",
     "IATA": "HM5016",
     "Origin": "AUH",
-    "SchDT": "2016-08-04T06:15:00Z"
+    "SchDT": "2020-08-04T06:15:00Z"
   },
   {
     "Operator": "Etihad Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:19:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:26:00Z",
+    "ActChoxDT": "2020-08-04T06:26:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 262,
@@ -107,15 +107,15 @@
     "ICAO": "ETD027",
     "IATA": "EY027",
     "Origin": "AUH",
-    "SchDT": "2016-08-04T06:15:00Z"
+    "SchDT": "2020-08-04T06:15:00Z"
   },
   {
     "Operator": "Srilankan Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:19:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:26:00Z",
+    "ActChoxDT": "2020-08-04T06:26:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 262,
@@ -129,15 +129,15 @@
     "ICAO": "ALK2427",
     "IATA": "UL2427",
     "Origin": "AUH",
-    "SchDT": "2016-08-04T06:15:00Z"
+    "SchDT": "2020-08-04T06:15:00Z"
   },
   {
     "Operator": "South African Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:19:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:26:00Z",
+    "ActChoxDT": "2020-08-04T06:26:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 262,
@@ -151,15 +151,15 @@
     "ICAO": "SAA2624",
     "IATA": "SA2624",
     "Origin": "AUH",
-    "SchDT": "2016-08-04T06:15:00Z"
+    "SchDT": "2020-08-04T06:15:00Z"
   },
   {
     "Operator": "Virgin Australia",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:19:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:26:00Z",
+    "ActChoxDT": "2020-08-04T06:26:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 262,
@@ -173,15 +173,15 @@
     "ICAO": "VOZ7175",
     "IATA": "VA7175",
     "Origin": "AUH",
-    "SchDT": "2016-08-04T06:15:00Z"
+    "SchDT": "2020-08-04T06:15:00Z"
   },
   {
     "Operator": "Jet Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:19:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:26:00Z",
+    "ActChoxDT": "2020-08-04T06:26:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 262,
@@ -195,15 +195,15 @@
     "ICAO": "JAI6596",
     "IATA": "9W6596",
     "Origin": "AUH",
-    "SchDT": "2016-08-04T06:15:00Z"
+    "SchDT": "2020-08-04T06:15:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:35:00Z",
-    "ActDT": "2016-08-04T06:35:00Z",
+    "EstDT": "2020-08-04T06:35:00Z",
+    "ActDT": "2020-08-04T06:35:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:42:00Z",
+    "ActChoxDT": "2020-08-04T06:42:00Z",
     "Gate": "",
     "Stand": "1A",
     "MaxPax": 189,
@@ -217,15 +217,15 @@
     "ICAO": "RYR812",
     "IATA": "FR812",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T06:35:00Z"
+    "SchDT": "2020-08-04T06:35:00Z"
   },
   {
     "Operator": "Klm",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:24:00Z",
-    "ActDT": "2016-08-04T06:23:00Z",
+    "EstDT": "2020-08-04T06:24:00Z",
+    "ActDT": "2020-08-04T06:23:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:28:00Z",
+    "ActChoxDT": "2020-08-04T06:28:00Z",
     "Gate": "12",
     "Stand": "11",
     "MaxPax": 142,
@@ -239,15 +239,15 @@
     "ICAO": "KLM1277",
     "IATA": "KL1277",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T06:35:00Z"
+    "SchDT": "2020-08-04T06:35:00Z"
   },
   {
     "Operator": "Thomson Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:50:00Z",
-    "ActDT": "2016-08-04T06:45:00Z",
+    "EstDT": "2020-08-04T06:50:00Z",
+    "ActDT": "2020-08-04T06:45:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:53:00Z",
+    "ActChoxDT": "2020-08-04T06:53:00Z",
     "Gate": "14",
     "Stand": "17",
     "MaxPax": 291,
@@ -261,15 +261,15 @@
     "ICAO": "TOM633",
     "IATA": "BY633",
     "Origin": "SFB",
-    "SchDT": "2016-08-04T06:40:00Z"
+    "SchDT": "2020-08-04T06:40:00Z"
   },
   {
     "Operator": "United Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:38:00Z",
-    "ActDT": "2016-08-04T06:27:00Z",
+    "EstDT": "2020-08-04T06:38:00Z",
+    "ActDT": "2020-08-04T06:27:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:37:00Z",
+    "ActChoxDT": "2020-08-04T06:37:00Z",
     "Gate": "2",
     "Stand": "2",
     "MaxPax": 169,
@@ -283,15 +283,15 @@
     "ICAO": "UAL118",
     "IATA": "UA118",
     "Origin": "ORD",
-    "SchDT": "2016-08-04T06:50:00Z"
+    "SchDT": "2020-08-04T06:50:00Z"
   },
   {
     "Operator": "United Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:46:00Z",
-    "ActDT": "2016-08-04T07:41:00Z",
+    "EstDT": "2020-08-04T07:46:00Z",
+    "ActDT": "2020-08-04T07:41:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:47:00Z",
+    "ActChoxDT": "2020-08-04T07:47:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 169,
@@ -305,15 +305,15 @@
     "ICAO": "UAL036",
     "IATA": "UA036",
     "Origin": "EWR",
-    "SchDT": "2016-08-04T06:55:00Z"
+    "SchDT": "2020-08-04T06:55:00Z"
   },
   {
     "Operator": "British Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:50:00Z",
-    "ActDT": "2016-08-04T06:52:00Z",
+    "EstDT": "2020-08-04T06:50:00Z",
+    "ActDT": "2020-08-04T06:52:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:55:00Z",
+    "ActChoxDT": "2020-08-04T06:55:00Z",
     "Gate": "",
     "Stand": "1B",
     "MaxPax": 72,
@@ -327,15 +327,15 @@
     "ICAO": "BAW8850",
     "IATA": "BA8850",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T06:55:00Z"
+    "SchDT": "2020-08-04T06:55:00Z"
   },
   {
     "Operator": "Lufthansa",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:46:00Z",
-    "ActDT": "2016-08-04T07:41:00Z",
+    "EstDT": "2020-08-04T07:46:00Z",
+    "ActDT": "2020-08-04T07:41:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:47:00Z",
+    "ActChoxDT": "2020-08-04T07:47:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 169,
@@ -349,15 +349,15 @@
     "ICAO": "DLH7642",
     "IATA": "LH7642",
     "Origin": "EWR",
-    "SchDT": "2016-08-04T06:55:00Z"
+    "SchDT": "2020-08-04T06:55:00Z"
   },
   {
     "Operator": "Air Canada",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:46:00Z",
-    "ActDT": "2016-08-04T07:41:00Z",
+    "EstDT": "2020-08-04T07:46:00Z",
+    "ActDT": "2020-08-04T07:41:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:47:00Z",
+    "ActChoxDT": "2020-08-04T07:47:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 169,
@@ -371,15 +371,15 @@
     "ICAO": "ACA2476",
     "IATA": "AC2476",
     "Origin": "EWR",
-    "SchDT": "2016-08-04T06:55:00Z"
+    "SchDT": "2020-08-04T06:55:00Z"
   },
   {
     "Operator": "Aer Lingus",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T06:50:00Z",
-    "ActDT": "2016-08-04T06:52:00Z",
+    "EstDT": "2020-08-04T06:50:00Z",
+    "ActDT": "2020-08-04T06:52:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T06:55:00Z",
+    "ActChoxDT": "2020-08-04T06:55:00Z",
     "Gate": "",
     "Stand": "1B",
     "MaxPax": 72,
@@ -393,15 +393,15 @@
     "ICAO": "EIN3250",
     "IATA": "EI3250",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T06:55:00Z"
+    "SchDT": "2020-08-04T06:55:00Z"
   },
   {
     "Operator": "Vueling Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:05:00Z",
-    "ActDT": "2016-08-04T07:11:00Z",
+    "EstDT": "2020-08-04T07:05:00Z",
+    "ActDT": "2020-08-04T07:11:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:17:00Z",
+    "ActChoxDT": "2020-08-04T07:17:00Z",
     "Gate": "",
     "Stand": "4",
     "MaxPax": 186,
@@ -415,15 +415,15 @@
     "ICAO": "VLG1380",
     "IATA": "VY1380",
     "Origin": "ALC",
-    "SchDT": "2016-08-04T07:15:00Z"
+    "SchDT": "2020-08-04T07:15:00Z"
   },
   {
     "Operator": "Aer Lingus",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:35:00Z",
-    "ActDT": "2016-08-04T07:38:00Z",
+    "EstDT": "2020-08-04T07:35:00Z",
+    "ActDT": "2020-08-04T07:38:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:47:00Z",
+    "ActChoxDT": "2020-08-04T07:47:00Z",
     "Gate": "",
     "Stand": "1B",
     "MaxPax": 72,
@@ -437,15 +437,15 @@
     "ICAO": "EIN3806",
     "IATA": "EI3806",
     "Origin": "ORK",
-    "SchDT": "2016-08-04T07:40:00Z"
+    "SchDT": "2020-08-04T07:40:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:22:00Z",
-    "ActDT": "2016-08-04T07:31:00Z",
+    "EstDT": "2020-08-04T07:22:00Z",
+    "ActDT": "2020-08-04T07:31:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:36:00Z",
+    "ActChoxDT": "2020-08-04T07:36:00Z",
     "Gate": "",
     "Stand": "1A",
     "MaxPax": 189,
@@ -459,15 +459,15 @@
     "ICAO": "RYR2752",
     "IATA": "FR2752",
     "Origin": "PSA",
-    "SchDT": "2016-08-04T07:45:00Z"
+    "SchDT": "2020-08-04T07:45:00Z"
   },
   {
     "Operator": "Finnair",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T07:54:00Z",
-    "ActDT": "2016-08-04T07:55:00Z",
+    "EstDT": "2020-08-04T07:54:00Z",
+    "ActDT": "2020-08-04T07:55:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T07:58:00Z",
+    "ActChoxDT": "2020-08-04T07:58:00Z",
     "Gate": "",
     "Stand": "4",
     "MaxPax": 138,
@@ -481,15 +481,15 @@
     "ICAO": "FIN927",
     "IATA": "AY927",
     "Origin": "HEL",
-    "SchDT": "2016-08-04T08:10:00Z"
+    "SchDT": "2020-08-04T08:10:00Z"
   },
   {
     "Operator": "Sas",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T08:22:00Z",
-    "ActDT": "2016-08-04T08:19:00Z",
+    "EstDT": "2020-08-04T08:22:00Z",
+    "ActDT": "2020-08-04T08:19:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T08:24:00Z",
+    "ActChoxDT": "2020-08-04T08:24:00Z",
     "Gate": "12",
     "Stand": "11",
     "MaxPax": 181,
@@ -503,15 +503,15 @@
     "ICAO": "SAS2541",
     "IATA": "SK2541",
     "Origin": "ARN",
-    "SchDT": "2016-08-04T08:15:00Z"
+    "SchDT": "2020-08-04T08:15:00Z"
   },
   {
     "Operator": "Vueling Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T08:10:00Z",
-    "ActDT": "2016-08-04T08:08:00Z",
+    "EstDT": "2020-08-04T08:10:00Z",
+    "ActDT": "2020-08-04T08:08:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T08:17:00Z",
+    "ActChoxDT": "2020-08-04T08:17:00Z",
     "Gate": "",
     "Stand": "1B",
     "MaxPax": 180,
@@ -525,15 +525,15 @@
     "ICAO": "VLG6320",
     "IATA": "VY6320",
     "Origin": "FCO",
-    "SchDT": "2016-08-04T08:20:00Z"
+    "SchDT": "2020-08-04T08:20:00Z"
   },
   {
     "Operator": "United Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T08:55:00Z",
-    "ActDT": "2016-08-04T08:49:00Z",
+    "EstDT": "2020-08-04T08:55:00Z",
+    "ActDT": "2020-08-04T08:49:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T08:57:00Z",
+    "ActChoxDT": "2020-08-04T08:57:00Z",
     "Gate": "2",
     "Stand": "2",
     "MaxPax": 169,
@@ -547,15 +547,15 @@
     "ICAO": "UAL108",
     "IATA": "UA108",
     "Origin": "EWR",
-    "SchDT": "2016-08-04T08:45:00Z"
+    "SchDT": "2020-08-04T08:45:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T08:56:00Z",
-    "ActDT": "2016-08-04T09:01:00Z",
+    "EstDT": "2020-08-04T08:56:00Z",
+    "ActDT": "2020-08-04T09:01:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T09:08:00Z",
+    "ActChoxDT": "2020-08-04T09:08:00Z",
     "Gate": "",
     "Stand": "1A",
     "MaxPax": 189,
@@ -569,15 +569,15 @@
     "ICAO": "RYR5578",
     "IATA": "FR5578",
     "Origin": "ALC",
-    "SchDT": "2016-08-04T09:15:00Z"
+    "SchDT": "2020-08-04T09:15:00Z"
   },
   {
     "Operator": "Jet Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T09:24:00Z",
-    "ActDT": "2016-08-04T09:20:00Z",
+    "EstDT": "2020-08-04T09:24:00Z",
+    "ActDT": "2020-08-04T09:20:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T09:23:00Z",
+    "ActChoxDT": "2020-08-04T09:23:00Z",
     "Gate": "12",
     "Stand": "11",
     "MaxPax": 180,
@@ -591,15 +591,15 @@
     "ICAO": "JAI8584",
     "IATA": "9W8584",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T09:20:00Z"
+    "SchDT": "2020-08-04T09:20:00Z"
   },
   {
     "Operator": "Klm",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T09:24:00Z",
-    "ActDT": "2016-08-04T09:20:00Z",
+    "EstDT": "2020-08-04T09:24:00Z",
+    "ActDT": "2020-08-04T09:20:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T09:23:00Z",
+    "ActChoxDT": "2020-08-04T09:23:00Z",
     "Gate": "12",
     "Stand": "11",
     "MaxPax": 180,
@@ -613,15 +613,15 @@
     "ICAO": "KLM1279",
     "IATA": "KL1279",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T09:20:00Z"
+    "SchDT": "2020-08-04T09:20:00Z"
   },
   {
     "Operator": "Iberia Express",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T09:06:00Z",
-    "ActDT": "2016-08-04T09:10:00Z",
+    "EstDT": "2020-08-04T09:06:00Z",
+    "ActDT": "2020-08-04T09:10:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T09:21:00Z",
+    "ActChoxDT": "2020-08-04T09:21:00Z",
     "Gate": "1A",
     "Stand": "1",
     "MaxPax": 177,
@@ -635,15 +635,15 @@
     "ICAO": "IBS3690",
     "IATA": "I23690",
     "Origin": "MAD",
-    "SchDT": "2016-08-04T09:30:00Z"
+    "SchDT": "2020-08-04T09:30:00Z"
   },
   {
     "Operator": "Delta Air Lines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T09:45:00Z",
-    "ActDT": "2016-08-04T09:33:00Z",
+    "EstDT": "2020-08-04T09:45:00Z",
+    "ActDT": "2020-08-04T09:33:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T09:37:00Z",
+    "ActChoxDT": "2020-08-04T09:37:00Z",
     "Gate": "",
     "Stand": "4A",
     "MaxPax": 216,
@@ -657,15 +657,15 @@
     "ICAO": "DAL409",
     "IATA": "DL409",
     "Origin": "JFK",
-    "SchDT": "2016-08-04T09:50:00Z"
+    "SchDT": "2020-08-04T09:50:00Z"
   },
   {
     "Operator": "Air France",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:28:00Z",
-    "ActDT": "2016-08-04T10:24:00Z",
+    "EstDT": "2020-08-04T10:28:00Z",
+    "ActDT": "2020-08-04T10:24:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:28:00Z",
+    "ActChoxDT": "2020-08-04T10:28:00Z",
     "Gate": "",
     "Stand": "1",
     "MaxPax": 100,
@@ -679,15 +679,15 @@
     "ICAO": "AFR1686",
     "IATA": "AF1686",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T09:55:00Z"
+    "SchDT": "2020-08-04T09:55:00Z"
   },
   {
     "Operator": "Air Europa",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:28:00Z",
-    "ActDT": "2016-08-04T10:24:00Z",
+    "EstDT": "2020-08-04T10:28:00Z",
+    "ActDT": "2020-08-04T10:24:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:28:00Z",
+    "ActChoxDT": "2020-08-04T10:28:00Z",
     "Gate": "11",
     "Stand": "1",
     "MaxPax": 100,
@@ -701,15 +701,15 @@
     "ICAO": "AEA3613",
     "IATA": "UX3613",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T09:55:00Z"
+    "SchDT": "2020-08-04T09:55:00Z"
   },
   {
     "Operator": "Flybe",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:28:00Z",
-    "ActDT": "2016-08-04T10:24:00Z",
+    "EstDT": "2020-08-04T10:28:00Z",
+    "ActDT": "2020-08-04T10:24:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:28:00Z",
+    "ActChoxDT": "2020-08-04T10:28:00Z",
     "Gate": "11",
     "Stand": "1",
     "MaxPax": 100,
@@ -723,15 +723,15 @@
     "ICAO": "BEE3054",
     "IATA": "BE3054",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T09:55:00Z"
+    "SchDT": "2020-08-04T09:55:00Z"
   },
   {
     "Operator": "Aer Lingus",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:20:00Z",
-    "ActDT": "2016-08-04T10:15:00Z",
+    "EstDT": "2020-08-04T10:20:00Z",
+    "ActDT": "2020-08-04T10:15:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:18:00Z",
+    "ActChoxDT": "2020-08-04T10:18:00Z",
     "Gate": "1F",
     "Stand": "1A",
     "MaxPax": 72,
@@ -745,15 +745,15 @@
     "ICAO": "EIN3252",
     "IATA": "EI3252",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T10:10:00Z"
+    "SchDT": "2020-08-04T10:10:00Z"
   },
   {
     "Operator": "Etihad Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:20:00Z",
-    "ActDT": "2016-08-04T10:15:00Z",
+    "EstDT": "2020-08-04T10:20:00Z",
+    "ActDT": "2020-08-04T10:15:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:18:00Z",
+    "ActChoxDT": "2020-08-04T10:18:00Z",
     "Gate": "",
     "Stand": "1A",
     "MaxPax": 72,
@@ -767,15 +767,15 @@
     "ICAO": "ETD7932",
     "IATA": "EY7932",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T10:10:00Z"
+    "SchDT": "2020-08-04T10:10:00Z"
   },
   {
     "Operator": "British Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:20:00Z",
-    "ActDT": "2016-08-04T10:15:00Z",
+    "EstDT": "2020-08-04T10:20:00Z",
+    "ActDT": "2020-08-04T10:15:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:18:00Z",
+    "ActChoxDT": "2020-08-04T10:18:00Z",
     "Gate": "",
     "Stand": "1A",
     "MaxPax": 72,
@@ -789,15 +789,15 @@
     "ICAO": "BAW8852",
     "IATA": "BA8852",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T10:10:00Z"
+    "SchDT": "2020-08-04T10:10:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:30:00Z",
-    "ActDT": "2016-08-04T10:09:00Z",
+    "EstDT": "2020-08-04T10:30:00Z",
+    "ActDT": "2020-08-04T10:09:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:14:00Z",
+    "ActChoxDT": "2020-08-04T10:14:00Z",
     "Gate": "",
     "Stand": "1B",
     "MaxPax": 189,
@@ -811,15 +811,15 @@
     "ICAO": "RYR6827",
     "IATA": "FR6827",
     "Origin": "FAO",
-    "SchDT": "2016-08-04T10:20:00Z"
+    "SchDT": "2020-08-04T10:20:00Z"
   },
   {
     "Operator": "Easyjet",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:15:00Z",
-    "ActDT": "2016-08-04T10:12:00Z",
+    "EstDT": "2020-08-04T10:15:00Z",
+    "ActDT": "2020-08-04T10:12:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:18:00Z",
+    "ActChoxDT": "2020-08-04T10:18:00Z",
     "Gate": "12",
     "Stand": "11",
     "MaxPax": 180,
@@ -833,15 +833,15 @@
     "ICAO": "EZY6962",
     "IATA": "U26962",
     "Origin": "PRG",
-    "SchDT": "2016-08-04T10:20:00Z"
+    "SchDT": "2020-08-04T10:20:00Z"
   },
   {
     "Operator": "Germanwings",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:50:00Z",
-    "ActDT": "2016-08-04T10:48:00Z",
+    "EstDT": "2020-08-04T10:50:00Z",
+    "ActDT": "2020-08-04T10:48:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:54:00Z",
+    "ActChoxDT": "2020-08-04T10:54:00Z",
     "Gate": "1F",
     "Stand": "1A",
     "MaxPax": 150,
@@ -855,15 +855,15 @@
     "ICAO": "GWI362",
     "IATA": "4U362",
     "Origin": "CGN",
-    "SchDT": "2016-08-04T10:50:00Z"
+    "SchDT": "2020-08-04T10:50:00Z"
   },
   {
     "Operator": "Lufthansa",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:55:00Z",
-    "ActDT": "2016-08-04T10:55:00Z",
+    "EstDT": "2020-08-04T10:55:00Z",
+    "ActDT": "2020-08-04T10:55:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:58:00Z",
+    "ActChoxDT": "2020-08-04T10:58:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 200,
@@ -877,15 +877,15 @@
     "ICAO": "DLH962",
     "IATA": "LH962",
     "Origin": "FRA",
-    "SchDT": "2016-08-04T10:55:00Z"
+    "SchDT": "2020-08-04T10:55:00Z"
   },
   {
     "Operator": "Austrian Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:55:00Z",
-    "ActDT": "2016-08-04T10:55:00Z",
+    "EstDT": "2020-08-04T10:55:00Z",
+    "ActDT": "2020-08-04T10:55:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:58:00Z",
+    "ActChoxDT": "2020-08-04T10:58:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 200,
@@ -899,15 +899,15 @@
     "ICAO": "AUA7307",
     "IATA": "OS7307",
     "Origin": "FRA",
-    "SchDT": "2016-08-04T10:55:00Z"
+    "SchDT": "2020-08-04T10:55:00Z"
   },
   {
     "Operator": "Lot Polish Airlines",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:55:00Z",
-    "ActDT": "2016-08-04T10:55:00Z",
+    "EstDT": "2020-08-04T10:55:00Z",
+    "ActDT": "2020-08-04T10:55:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:58:00Z",
+    "ActChoxDT": "2020-08-04T10:58:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 200,
@@ -921,15 +921,15 @@
     "ICAO": "LOT4933",
     "IATA": "LO4933",
     "Origin": "FRA",
-    "SchDT": "2016-08-04T10:55:00Z"
+    "SchDT": "2020-08-04T10:55:00Z"
   },
   {
     "Operator": "South African Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T10:55:00Z",
-    "ActDT": "2016-08-04T10:55:00Z",
+    "EstDT": "2020-08-04T10:55:00Z",
+    "ActDT": "2020-08-04T10:55:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T10:58:00Z",
+    "ActChoxDT": "2020-08-04T10:58:00Z",
     "Gate": "3",
     "Stand": "3",
     "MaxPax": 200,
@@ -943,13 +943,13 @@
     "ICAO": "SAA7510",
     "IATA": "SA7510",
     "Origin": "FRA",
-    "SchDT": "2016-08-04T10:55:00Z"
+    "SchDT": "2020-08-04T10:55:00Z"
   },
   {
     "Operator": "Signature Flight Support",
     "Status": "Actual",
-    "EstDT": "2016-08-04T11:17:00Z",
-    "ActDT": "2016-08-04T11:18:00Z",
+    "EstDT": "2020-08-04T11:17:00Z",
+    "ActDT": "2020-08-04T11:18:00Z",
     "EstChoxDT": "",
     "ActChoxDT": "",
     "Gate": "",
@@ -965,15 +965,15 @@
     "ICAO": "SIG64A",
     "IATA": "SIG64A",
     "Origin": "ZZZ",
-    "SchDT": "2016-08-04T11:00:00Z"
+    "SchDT": "2020-08-04T11:00:00Z"
   },
   {
     "Operator": "Qatar Airways",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T11:03:00Z",
-    "ActDT": "2016-08-04T11:12:00Z",
+    "EstDT": "2020-08-04T11:03:00Z",
+    "ActDT": "2020-08-04T11:12:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T11:18:00Z",
+    "ActChoxDT": "2020-08-04T11:18:00Z",
     "Gate": "11",
     "Stand": "10A",
     "MaxPax": 254,
@@ -987,15 +987,15 @@
     "ICAO": "QTR029",
     "IATA": "QR029",
     "Origin": "DOH",
-    "SchDT": "2016-08-04T11:10:00Z"
+    "SchDT": "2020-08-04T11:10:00Z"
   },
   {
     "Operator": "Easyjet",
     "Status": "On Chocks",
-    "EstDT": "2016-08-04T11:00:00Z",
-    "ActDT": "2016-08-04T11:07:00Z",
+    "EstDT": "2020-08-04T11:00:00Z",
+    "ActDT": "2020-08-04T11:07:00Z",
     "EstChoxDT": "",
-    "ActChoxDT": "2016-08-04T11:11:00Z",
+    "ActChoxDT": "2020-08-04T11:11:00Z",
     "Gate": "",
     "Stand": "1B",
     "MaxPax": 156,
@@ -1009,12 +1009,12 @@
     "ICAO": "EZY6916",
     "IATA": "U26916",
     "Origin": "STR",
-    "SchDT": "2016-08-04T11:15:00Z"
+    "SchDT": "2020-08-04T11:15:00Z"
   },
   {
     "Operator": "British Airways",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:40:00Z",
+    "EstDT": "2020-08-04T11:40:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1031,12 +1031,12 @@
     "ICAO": "BAW8926",
     "IATA": "BA8926",
     "Origin": "SNN",
-    "SchDT": "2016-08-04T11:35:00Z"
+    "SchDT": "2020-08-04T11:35:00Z"
   },
   {
     "Operator": "Aer Lingus",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:40:00Z",
+    "EstDT": "2020-08-04T11:40:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1053,12 +1053,12 @@
     "ICAO": "EIN3672",
     "IATA": "EI3672",
     "Origin": "SNN",
-    "SchDT": "2016-08-04T11:35:00Z"
+    "SchDT": "2020-08-04T11:35:00Z"
   },
   {
     "Operator": "Jet Airways",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:30:00Z",
+    "EstDT": "2020-08-04T11:30:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1075,12 +1075,12 @@
     "ICAO": "JAI8585",
     "IATA": "9W8585",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T11:40:00Z"
+    "SchDT": "2020-08-04T11:40:00Z"
   },
   {
     "Operator": "Klm",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:30:00Z",
+    "EstDT": "2020-08-04T11:30:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1097,12 +1097,12 @@
     "ICAO": "KLM1281",
     "IATA": "KL1281",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T11:40:00Z"
+    "SchDT": "2020-08-04T11:40:00Z"
   },
   {
     "Operator": "Sas",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:45:00Z",
+    "EstDT": "2020-08-04T11:45:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1119,12 +1119,12 @@
     "ICAO": "SAS2513",
     "IATA": "SK2513",
     "Origin": "CPH",
-    "SchDT": "2016-08-04T11:50:00Z"
+    "SchDT": "2020-08-04T11:50:00Z"
   },
   {
     "Operator": "Vueling Airlines",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:50:00Z",
+    "EstDT": "2020-08-04T12:50:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1141,12 +1141,12 @@
     "ICAO": "VLG9344",
     "IATA": "VY9344",
     "Origin": "ORY",
-    "SchDT": "2016-08-04T11:50:00Z"
+    "SchDT": "2020-08-04T11:50:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:14:00Z",
+    "EstDT": "2020-08-04T12:14:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1163,12 +1163,12 @@
     "ICAO": "RYR6267",
     "IATA": "FR6267",
     "Origin": "BCN",
-    "SchDT": "2016-08-04T11:55:00Z"
+    "SchDT": "2020-08-04T11:55:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:40:00Z",
+    "EstDT": "2020-08-04T11:40:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1185,12 +1185,12 @@
     "ICAO": "RYR6241",
     "IATA": "FR6241",
     "Origin": "NRN",
-    "SchDT": "2016-08-04T11:55:00Z"
+    "SchDT": "2020-08-04T11:55:00Z"
   },
   {
     "Operator": "Easyjet",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T11:45:00Z",
+    "EstDT": "2020-08-04T11:45:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1207,12 +1207,12 @@
     "ICAO": "EZY6936",
     "IATA": "U26936",
     "Origin": "VIE",
-    "SchDT": "2016-08-04T12:00:00Z"
+    "SchDT": "2020-08-04T12:00:00Z"
   },
   {
     "Operator": "Easyjet",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:25:00Z",
+    "EstDT": "2020-08-04T12:25:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1229,12 +1229,12 @@
     "ICAO": "EZY6982",
     "IATA": "U26982",
     "Origin": "LIS",
-    "SchDT": "2016-08-04T12:00:00Z"
+    "SchDT": "2020-08-04T12:00:00Z"
   },
   {
     "Operator": "Vueling Airlines",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:25:00Z",
+    "EstDT": "2020-08-04T12:25:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1251,12 +1251,12 @@
     "ICAO": "VLG7815",
     "IATA": "VY7815",
     "Origin": "BCN",
-    "SchDT": "2016-08-04T12:05:00Z"
+    "SchDT": "2020-08-04T12:05:00Z"
   },
   {
     "Operator": "British Airways",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:25:00Z",
+    "EstDT": "2020-08-04T12:25:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1273,12 +1273,12 @@
     "ICAO": "BAW2058",
     "IATA": "BA2058",
     "Origin": "BCN",
-    "SchDT": "2016-08-04T12:05:00Z"
+    "SchDT": "2020-08-04T12:05:00Z"
   },
   {
     "Operator": "Iberia",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:25:00Z",
+    "EstDT": "2020-08-04T12:25:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1295,7 +1295,7 @@
     "ICAO": "IBE5949",
     "IATA": "IB5949",
     "Origin": "BCN",
-    "SchDT": "2016-08-04T12:05:00Z"
+    "SchDT": "2020-08-04T12:05:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -1317,7 +1317,7 @@
     "ICAO": "EZY6922",
     "IATA": "U26922",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T12:25:00Z"
+    "SchDT": "2020-08-04T12:25:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -1339,12 +1339,12 @@
     "ICAO": "RYR816",
     "IATA": "FR816",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T12:45:00Z"
+    "SchDT": "2020-08-04T12:45:00Z"
   },
   {
     "Operator": "Jet2",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T13:00:00Z",
+    "EstDT": "2020-08-04T13:00:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1361,12 +1361,12 @@
     "ICAO": "LS718",
     "IATA": "LS718",
     "Origin": "PMI",
-    "SchDT": "2016-08-04T12:50:00Z"
+    "SchDT": "2020-08-04T12:50:00Z"
   },
   {
     "Operator": "Easyjet",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:57:00Z",
+    "EstDT": "2020-08-04T12:57:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1383,12 +1383,12 @@
     "ICAO": "EZY6918",
     "IATA": "U26918",
     "Origin": "BSL",
-    "SchDT": "2016-08-04T13:15:00Z"
+    "SchDT": "2020-08-04T13:15:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T12:55:00Z",
+    "EstDT": "2020-08-04T12:55:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1405,7 +1405,7 @@
     "ICAO": "RYR6657",
     "IATA": "FR6657",
     "Origin": "PMI",
-    "SchDT": "2016-08-04T13:15:00Z"
+    "SchDT": "2020-08-04T13:15:00Z"
   },
   {
     "Operator": "Jet2",
@@ -1427,7 +1427,7 @@
     "ICAO": "LS806",
     "IATA": "LS806",
     "Origin": "IBZ",
-    "SchDT": "2016-08-04T13:20:00Z"
+    "SchDT": "2020-08-04T13:20:00Z"
   },
   {
     "Operator": "Aer Lingus",
@@ -1449,7 +1449,7 @@
     "ICAO": "EIN3254",
     "IATA": "EI3254",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T13:25:00Z"
+    "SchDT": "2020-08-04T13:25:00Z"
   },
   {
     "Operator": "Etihad Airways",
@@ -1471,7 +1471,7 @@
     "ICAO": "ETD7939",
     "IATA": "EY7939",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T13:25:00Z"
+    "SchDT": "2020-08-04T13:25:00Z"
   },
   {
     "Operator": "British Airways",
@@ -1493,7 +1493,7 @@
     "ICAO": "BAW8854",
     "IATA": "BA8854",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T13:25:00Z"
+    "SchDT": "2020-08-04T13:25:00Z"
   },
   {
     "Operator": "Norwegian",
@@ -1515,7 +1515,7 @@
     "ICAO": "NAX3502",
     "IATA": "DY3502",
     "Origin": "CPH",
-    "SchDT": "2016-08-04T13:30:00Z"
+    "SchDT": "2020-08-04T13:30:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -1537,7 +1537,7 @@
     "ICAO": "EZY6984",
     "IATA": "U26984",
     "Origin": "CPH",
-    "SchDT": "2016-08-04T13:30:00Z"
+    "SchDT": "2020-08-04T13:30:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -1559,7 +1559,7 @@
     "ICAO": "RYR7922",
     "IATA": "FR7922",
     "Origin": "GDN",
-    "SchDT": "2016-08-04T13:30:00Z"
+    "SchDT": "2020-08-04T13:30:00Z"
   },
   {
     "Operator": "Jet2",
@@ -1581,12 +1581,12 @@
     "ICAO": "LS816",
     "IATA": "LS816",
     "Origin": "FAO",
-    "SchDT": "2016-08-04T13:45:00Z"
+    "SchDT": "2020-08-04T13:45:00Z"
   },
   {
     "Operator": "Turkish Airlines",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T13:26:00Z",
+    "EstDT": "2020-08-04T13:26:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1603,7 +1603,7 @@
     "ICAO": "THY1345",
     "IATA": "TK1345",
     "Origin": "IST",
-    "SchDT": "2016-08-04T13:50:00Z"
+    "SchDT": "2020-08-04T13:50:00Z"
   },
   {
     "Operator": "Klm",
@@ -1625,7 +1625,7 @@
     "ICAO": "KLM1285",
     "IATA": "KL1285",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T13:55:00Z"
+    "SchDT": "2020-08-04T13:55:00Z"
   },
   {
     "Operator": "Jet Airways",
@@ -1647,7 +1647,7 @@
     "ICAO": "JAI8586",
     "IATA": "9W8586",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T13:55:00Z"
+    "SchDT": "2020-08-04T13:55:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -1669,7 +1669,7 @@
     "ICAO": "EZY6978",
     "IATA": "U26978",
     "Origin": "SXF",
-    "SchDT": "2016-08-04T14:05:00Z"
+    "SchDT": "2020-08-04T14:05:00Z"
   },
   {
     "Operator": "Norwegian",
@@ -1691,7 +1691,7 @@
     "ICAO": "NAX4463",
     "IATA": "DY4463",
     "Origin": "ARN",
-    "SchDT": "2016-08-04T14:25:00Z"
+    "SchDT": "2020-08-04T14:25:00Z"
   },
   {
     "Operator": "Lufthansa",
@@ -1713,7 +1713,7 @@
     "ICAO": "DLH5624",
     "IATA": "LH5624",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T14:25:00Z"
+    "SchDT": "2020-08-04T14:25:00Z"
   },
   {
     "Operator": "United Airlines",
@@ -1735,7 +1735,7 @@
     "ICAO": "UAL9927",
     "IATA": "UA9927",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T14:25:00Z"
+    "SchDT": "2020-08-04T14:25:00Z"
   },
   {
     "Operator": "Bmi Regional",
@@ -1757,7 +1757,7 @@
     "ICAO": "BMR6063",
     "IATA": "BM6063",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T14:25:00Z"
+    "SchDT": "2020-08-04T14:25:00Z"
   },
   {
     "Operator": "Brussels Airlines",
@@ -1779,7 +1779,7 @@
     "ICAO": "BEL2063",
     "IATA": "SN2063",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T14:25:00Z"
+    "SchDT": "2020-08-04T14:25:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -1801,7 +1801,7 @@
     "ICAO": "RYR6696",
     "IATA": "FR6696",
     "Origin": "MLA",
-    "SchDT": "2016-08-04T14:45:00Z"
+    "SchDT": "2020-08-04T14:45:00Z"
   },
   {
     "Operator": "Aer Lingus",
@@ -1823,7 +1823,7 @@
     "ICAO": "EIN3256",
     "IATA": "EI3256",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T14:50:00Z"
+    "SchDT": "2020-08-04T14:50:00Z"
   },
   {
     "Operator": "British Airways",
@@ -1845,7 +1845,7 @@
     "ICAO": "BAW8856",
     "IATA": "BA8856",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T14:50:00Z"
+    "SchDT": "2020-08-04T14:50:00Z"
   },
   {
     "Operator": "Signature Flight Support",
@@ -1867,7 +1867,7 @@
     "ICAO": "SIG66A",
     "IATA": "SIG66A",
     "Origin": "RBA",
-    "SchDT": "2016-08-04T15:05:00Z"
+    "SchDT": "2020-08-04T15:05:00Z"
   },
   {
     "Operator": "Jet2",
@@ -1889,7 +1889,7 @@
     "ICAO": "LS848",
     "IATA": "LS848",
     "Origin": "DBV",
-    "SchDT": "2016-08-04T15:05:00Z"
+    "SchDT": "2020-08-04T15:05:00Z"
   },
   {
     "Operator": "Air France",
@@ -1911,7 +1911,7 @@
     "ICAO": "AFR1486",
     "IATA": "AF1486",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T15:10:00Z"
+    "SchDT": "2020-08-04T15:10:00Z"
   },
   {
     "Operator": "Flybe",
@@ -1933,7 +1933,7 @@
     "ICAO": "BEE3056",
     "IATA": "BE3056",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T15:10:00Z"
+    "SchDT": "2020-08-04T15:10:00Z"
   },
   {
     "Operator": "Air Europa",
@@ -1955,7 +1955,7 @@
     "ICAO": "AEA3611",
     "IATA": "UX3611",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T15:10:00Z"
+    "SchDT": "2020-08-04T15:10:00Z"
   },
   {
     "Operator": "Jet2",
@@ -1977,12 +1977,12 @@
     "ICAO": "LS776",
     "IATA": "LS776",
     "Origin": "ALC",
-    "SchDT": "2016-08-04T15:15:00Z"
+    "SchDT": "2020-08-04T15:15:00Z"
   },
   {
     "Operator": "Ryanair",
     "Status": "Estimated",
-    "EstDT": "2016-08-04T15:21:00Z",
+    "EstDT": "2020-08-04T15:21:00Z",
     "ActDT": "",
     "EstChoxDT": "",
     "ActChoxDT": "",
@@ -1999,7 +1999,7 @@
     "ICAO": "RYR8422",
     "IATA": "FR8422",
     "Origin": "FUE",
-    "SchDT": "2016-08-04T15:45:00Z"
+    "SchDT": "2020-08-04T15:45:00Z"
   },
   {
     "Operator": "Eurowings",
@@ -2021,7 +2021,7 @@
     "ICAO": "EWG4842",
     "IATA": "EW4842",
     "Origin": "DUS",
-    "SchDT": "2016-08-04T15:50:00Z"
+    "SchDT": "2020-08-04T15:50:00Z"
   },
   {
     "Operator": "Jet Airways",
@@ -2043,7 +2043,7 @@
     "ICAO": "JAI8587",
     "IATA": "9W8587",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T16:00:00Z"
+    "SchDT": "2020-08-04T16:00:00Z"
   },
   {
     "Operator": "Klm",
@@ -2065,7 +2065,7 @@
     "ICAO": "KLM1289",
     "IATA": "KL1289",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T16:00:00Z"
+    "SchDT": "2020-08-04T16:00:00Z"
   },
   {
     "Operator": "Lufthansa",
@@ -2087,7 +2087,7 @@
     "ICAO": "DLH964",
     "IATA": "LH964",
     "Origin": "FRA",
-    "SchDT": "2016-08-04T16:05:00Z"
+    "SchDT": "2020-08-04T16:05:00Z"
   },
   {
     "Operator": "Flybe",
@@ -2109,7 +2109,7 @@
     "ICAO": "BEE656",
     "IATA": "BE656",
     "Origin": "NOC",
-    "SchDT": "2016-08-04T16:10:00Z"
+    "SchDT": "2020-08-04T16:10:00Z"
   },
   {
     "Operator": "Thomson Airways",
@@ -2131,7 +2131,7 @@
     "ICAO": "TOM1455",
     "IATA": "BY1455",
     "Origin": "ACE",
-    "SchDT": "2016-08-04T16:25:00Z"
+    "SchDT": "2020-08-04T16:25:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2153,7 +2153,7 @@
     "ICAO": "EZY6956",
     "IATA": "U26956",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T16:45:00Z"
+    "SchDT": "2020-08-04T16:45:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2175,7 +2175,7 @@
     "ICAO": "EZY6906",
     "IATA": "U26906",
     "Origin": "GVA",
-    "SchDT": "2016-08-04T17:00:00Z"
+    "SchDT": "2020-08-04T17:00:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2197,7 +2197,7 @@
     "ICAO": "RYR7373",
     "IATA": "FR7373",
     "Origin": "PIS",
-    "SchDT": "2016-08-04T17:20:00Z"
+    "SchDT": "2020-08-04T17:20:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2219,7 +2219,7 @@
     "ICAO": "EZY6996",
     "IATA": "U26996",
     "Origin": "MAD",
-    "SchDT": "2016-08-04T17:30:00Z"
+    "SchDT": "2020-08-04T17:30:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2241,7 +2241,7 @@
     "ICAO": "EZY6932",
     "IATA": "U26932",
     "Origin": "HAM",
-    "SchDT": "2016-08-04T18:05:00Z"
+    "SchDT": "2020-08-04T18:05:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2263,7 +2263,7 @@
     "ICAO": "RYR7353",
     "IATA": "FR7353",
     "Origin": "CRL",
-    "SchDT": "2016-08-04T18:10:00Z"
+    "SchDT": "2020-08-04T18:10:00Z"
   },
   {
     "Operator": "British Airways",
@@ -2285,7 +2285,7 @@
     "ICAO": "BAW8858",
     "IATA": "BA8858",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T18:15:00Z"
+    "SchDT": "2020-08-04T18:15:00Z"
   },
   {
     "Operator": "Aer Lingus",
@@ -2307,7 +2307,7 @@
     "ICAO": "EIN3258",
     "IATA": "EI3258",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T18:15:00Z"
+    "SchDT": "2020-08-04T18:15:00Z"
   },
   {
     "Operator": "Etihad Airways",
@@ -2329,7 +2329,7 @@
     "ICAO": "ETD7934",
     "IATA": "EY7934",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T18:15:00Z"
+    "SchDT": "2020-08-04T18:15:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2351,7 +2351,7 @@
     "ICAO": "EZY2685",
     "IATA": "U22685",
     "Origin": "MXP",
-    "SchDT": "2016-08-04T18:35:00Z"
+    "SchDT": "2020-08-04T18:35:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2373,7 +2373,7 @@
     "ICAO": "RYR818",
     "IATA": "FR818",
     "Origin": "DUB",
-    "SchDT": "2016-08-04T19:45:00Z"
+    "SchDT": "2020-08-04T19:45:00Z"
   },
   {
     "Operator": "Norwegian",
@@ -2395,7 +2395,7 @@
     "ICAO": "NAX1354",
     "IATA": "DY1354",
     "Origin": "OSL",
-    "SchDT": "2016-08-04T20:00:00Z"
+    "SchDT": "2020-08-04T20:00:00Z"
   },
   {
     "Operator": "Sas",
@@ -2417,7 +2417,7 @@
     "ICAO": "SAS4601",
     "IATA": "SK4601",
     "Origin": "OSL",
-    "SchDT": "2016-08-04T20:15:00Z"
+    "SchDT": "2020-08-04T20:15:00Z"
   },
   {
     "Operator": "Air France",
@@ -2439,7 +2439,7 @@
     "ICAO": "AFR1886",
     "IATA": "AF1886",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T20:30:00Z"
+    "SchDT": "2020-08-04T20:30:00Z"
   },
   {
     "Operator": "Air Europa",
@@ -2461,7 +2461,7 @@
     "ICAO": "AEA3639",
     "IATA": "UX3639",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T20:30:00Z"
+    "SchDT": "2020-08-04T20:30:00Z"
   },
   {
     "Operator": "Flybe",
@@ -2483,7 +2483,7 @@
     "ICAO": "BEE3058",
     "IATA": "BE3058",
     "Origin": "CDG",
-    "SchDT": "2016-08-04T20:30:00Z"
+    "SchDT": "2020-08-04T20:30:00Z"
   },
   {
     "Operator": "Jet Airways",
@@ -2505,7 +2505,7 @@
     "ICAO": "JAI8588",
     "IATA": "9W8588",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T20:35:00Z"
+    "SchDT": "2020-08-04T20:35:00Z"
   },
   {
     "Operator": "Klm",
@@ -2527,7 +2527,7 @@
     "ICAO": "KLM1293",
     "IATA": "KL1293",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T20:35:00Z"
+    "SchDT": "2020-08-04T20:35:00Z"
   },
   {
     "Operator": "Brussels Airlines",
@@ -2549,7 +2549,7 @@
     "ICAO": "BEL2065",
     "IATA": "SN2065",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T20:55:00Z"
+    "SchDT": "2020-08-04T20:55:00Z"
   },
   {
     "Operator": "Lufthansa",
@@ -2571,7 +2571,7 @@
     "ICAO": "DLH5626",
     "IATA": "LH5626",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T20:55:00Z"
+    "SchDT": "2020-08-04T20:55:00Z"
   },
   {
     "Operator": "Bmi Regional",
@@ -2593,7 +2593,7 @@
     "ICAO": "BMR6065",
     "IATA": "BM6065",
     "Origin": "BRU",
-    "SchDT": "2016-08-04T20:55:00Z"
+    "SchDT": "2020-08-04T20:55:00Z"
   },
   {
     "Operator": "Jet2",
@@ -2615,7 +2615,7 @@
     "ICAO": "LS788",
     "IATA": "LS788",
     "Origin": "BUD",
-    "SchDT": "2016-08-04T21:00:00Z"
+    "SchDT": "2020-08-04T21:00:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2637,7 +2637,7 @@
     "ICAO": "EZY6924",
     "IATA": "U26924",
     "Origin": "AMS",
-    "SchDT": "2016-08-04T21:15:00Z"
+    "SchDT": "2020-08-04T21:15:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2659,7 +2659,7 @@
     "ICAO": "RYR4382",
     "IATA": "FR4382",
     "Origin": "HHN",
-    "SchDT": "2016-08-04T22:00:00Z"
+    "SchDT": "2020-08-04T22:00:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2681,7 +2681,7 @@
     "ICAO": "EZY6960",
     "IATA": "U26960",
     "Origin": "NCE",
-    "SchDT": "2016-08-04T22:05:00Z"
+    "SchDT": "2020-08-04T22:05:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2703,7 +2703,7 @@
     "ICAO": "RYR6655",
     "IATA": "FR6655",
     "Origin": "BOD",
-    "SchDT": "2016-08-04T22:10:00Z"
+    "SchDT": "2020-08-04T22:10:00Z"
   },
   {
     "Operator": "Jet2",
@@ -2725,7 +2725,7 @@
     "ICAO": "LS858",
     "IATA": "LS858",
     "Origin": "AGP",
-    "SchDT": "2016-08-04T22:10:00Z"
+    "SchDT": "2020-08-04T22:10:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2747,7 +2747,7 @@
     "ICAO": "EZY6914",
     "IATA": "U26914",
     "Origin": "MUC",
-    "SchDT": "2016-08-04T22:10:00Z"
+    "SchDT": "2020-08-04T22:10:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2769,7 +2769,7 @@
     "ICAO": "EZY6942",
     "IATA": "U26942",
     "Origin": "KEF",
-    "SchDT": "2016-08-04T22:40:00Z"
+    "SchDT": "2020-08-04T22:40:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2791,7 +2791,7 @@
     "ICAO": "RYR6625",
     "IATA": "FR6625",
     "Origin": "KRK",
-    "SchDT": "2016-08-04T22:40:00Z"
+    "SchDT": "2020-08-04T22:40:00Z"
   },
   {
     "Operator": "Easyjet",
@@ -2813,7 +2813,7 @@
     "ICAO": "EZY6968",
     "IATA": "U26968",
     "Origin": "FNC",
-    "SchDT": "2016-08-04T22:55:00Z"
+    "SchDT": "2020-08-04T22:55:00Z"
   },
   {
     "Operator": "Ryanair",
@@ -2835,7 +2835,7 @@
     "ICAO": "RYR6653",
     "IATA": "FR6653",
     "Origin": "AGP",
-    "SchDT": "2016-08-04T22:55:00Z"
+    "SchDT": "2020-08-04T22:55:00Z"
   },
   {
     "Operator": "Jet2",
@@ -2857,7 +2857,7 @@
     "ICAO": "LS706",
     "IATA": "LS706",
     "Origin": "ACE",
-    "SchDT": "2016-08-05T00:10:00Z"
+    "SchDT": "2020-08-05T00:10:00Z"
   },
   {
     "Operator": "Thomson Airways",
@@ -2879,6 +2879,6 @@
     "ICAO": "TOM229",
     "IATA": "BY229",
     "Origin": "DLM",
-    "SchDT": "2016-08-05T04:00:00Z"
+    "SchDT": "2020-08-05T04:00:00Z"
   }
 ]
