@@ -3,8 +3,9 @@ package spatutorial.client.components
 import diode.data.{Empty, Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.svg._
 import japgolly.scalajs.react.{ReactComponentB, _}
-import org.scalajs.dom.html
+import org.scalajs.dom.{html, svg}
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
 import spatutorial.client.logger._
@@ -96,6 +97,7 @@ object QueueUserDeskRecsComponent {
           }
           <.div(
             ^.key := "UserDeskRecsWrapper",
+            queueUserDeskRecProps.map(Heatmap.heatmap(_)),
             queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_))
           )
         }))
