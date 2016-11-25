@@ -8,12 +8,14 @@ import japgolly.scalajs.react.{ReactComponentB, _}
 import org.scalajs.dom.{html, svg}
 import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
+import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.logger._
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.collection.immutable
+import scala.collection.immutable.{Iterable, IndexedSeq, Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.ScalaJSDefined
 
@@ -95,9 +97,10 @@ object QueueUserDeskRecsComponent {
                 userDeskRecsPotRCP, flightsPotRCP, simulationResultPotRCP)
             }
           }
+          //          val heatMapProps = Heatmap.Props(serii)
+          //          queueUserDeskRecProps.map(Heatmap.heatmap(_))
           <.div(
             ^.key := "UserDeskRecsWrapper",
-            queueUserDeskRecProps.map(Heatmap.heatmap(_)),
             queueUserDeskRecProps.map(QueueUserDeskRecsComponent.component(_))
           )
         }))
