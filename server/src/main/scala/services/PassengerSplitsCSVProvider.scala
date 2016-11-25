@@ -1,13 +1,44 @@
 package services
 
 import java.net.URL
-import scala.io.Codec
+
+import com.typesafe.config.ConfigFactory
+import org.joda.time.DateTime
+import org.slf4j.LoggerFactory
 import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import services.workloadcalculator.SplitRatio
+import spatutorial.shared.ApiFlight
 
-class PassengerSplitsCSVProvider {
+import scala.io.Codec
 
+trait PassengerSplitsCSVProvider extends DefaultPassengerSplitRatioProvider {
+
+  private val log = LoggerFactory.getLogger(getClass)
+
+  def csvSplitUrl = ConfigFactory.load.getString("passenger_splits_csv_url")
+  val url = new URL(csvSplitUrl)
+  lazy val splitCSVRows = PassengerSplitsCSVReader.parseCSV(url)
+
+  override def splitRatioProvider(flight: ApiFlight): List[SplitRatio] = {
+    val flightDate = DateTime.parse(flight.SchDT)
+    flightDate.monthOfYear().getAsText
+
+    val foundFlights = splitCSVRows.filter(row =>
+      row.flightCode == flight.IATA &&
+      row.dayOfWeek == flightDate.dayOfWeek().getAsText &&
+      row.month == flightDate.monthOfYear().getAsText
+    ).toList
+
+    foundFlights match {
+      case head :: Nil =>
+        log.info(s"Found split for $flight")
+        PassengerSplitsCSVReader.parseRow(foundFlights.head)
+      case _ =>
+        log.info(s"Failed to find split for $flight in CSV - using default")
+        super.splitRatioProvider(flight)
+    }
+  }
 }
 
 object PassengerSplitsCSVReader {
@@ -83,6 +114,6 @@ object PassengerSplitsCSVReader {
         splitRow(17),
         splitRow(18)
       )
-    }.toList
+    }.toSeq
   }
 }

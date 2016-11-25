@@ -40,11 +40,21 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 trait Core {
   def system: ActorSystem
 }
-class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with DefaultPassengerSplitRatioProvider
+class ProdCrunchActorDefaultSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with DefaultPassengerSplitRatioProvider
+class ProdCrunchActorCsvSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with PassengerSplitsCSVProvider
 trait SystemActors {
   self: AirportConfProvider =>
 
-  val crunchActor = system.actorOf(Props(classOf[ProdCrunchActor], 24, getPortConfFromEnvVar), "crunchActor")
+
+  system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
+  val crunchActor = ConfigFactory.load.hasPath("passenger_splits_csv_url") match {
+    case true =>
+      system.log.info("Using CSV Splits")
+      system.actorOf(Props(classOf[ProdCrunchActorCsvSplits], 24, getPortConfFromEnvVar), "crunchActor")
+    case _ =>
+      system.log.info("Using default Splits")
+      system.actorOf(Props(classOf[ProdCrunchActorDefaultSplits], 24, getPortConfFromEnvVar), "crunchActor")
+  }
   val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
