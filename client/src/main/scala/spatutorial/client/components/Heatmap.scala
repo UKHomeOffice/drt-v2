@@ -20,6 +20,7 @@ import scala.scalajs.js.annotation.ScalaJSDefined
 import scala.util.{Success, Try, Failure}
 
 object Heatmap {
+
   def bucketScaleDev(n: Int, d: Int): Float = n.toFloat / d
 
   //  case class Props(
@@ -37,12 +38,20 @@ object Heatmap {
 
   case class Props(width: Int = 960, height: Int, numberOfBlocks: Int = 24,
                    series: Seq[Series],
-                   scaleFunction: (Double) => Int)
+                   scaleFunction: (Double) => Int,
+                   shouldShowRectValue: Boolean = true
+                  )
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
     "#E0C54B", "#DD983A", "#DA6429", "#D72A18")
 
-  def getSeries(crunchResult: CrunchResult, blockSize: Int = 60) = {
+  def seriesFromCrunchAndUserDesk(crunchDeskAndUserDesk: IndexedSeq[(Int, DeskRecTimeslot)], blockSize: Int = 60): Vector[Double] = {
+    val maxRecVsMinUser = crunchDeskAndUserDesk.grouped(blockSize).map(x => (x.map(_._1).max, x.map(_._2.deskRec).min))
+    val ratios = maxRecVsMinUser.map(x => x._1.toDouble / x._2.toDouble).toVector
+    ratios
+  }
+
+  def seriesFromCrunchResult(crunchResult: CrunchResult, blockSize: Int = 60) = {
     val maxRecDesksPerPeriod = crunchResult.recommendedDesks.grouped(blockSize).map(_.max).toVector
     maxRecDesksPerPeriod
   }
@@ -62,34 +71,34 @@ object Heatmap {
   def getRects(serie: Series, numberofblocks: Int, gridSize: Int, props: Props, sIndex: Int): vdom.ReactTagOf[G] = {
     log.info(s"Rendering rects for $serie")
     Try {
-      val rects = (0 until numberofblocks).map(idx => {
-        val deskRecsThisHour = serie.data(idx)
-        //            log.info(s"${serie.name} deskRecsThisHour: ${deskRecsThisHour} hour: $idx")
-        val colorBucket = props.scaleFunction(deskRecsThisHour) //Math.floor((deskRecsThisHour * bucketScale)).toInt
-        val colors1 = colors(colorBucket)
-        log.info(s"colorbucket  $deskRecsThisHour ${colorBucket} $colors1")
-
-        val halfGrid: Int = gridSize / 2
-
-        s.g(
-          ^.key := s"rect-${serie.name}-$idx",
-          s.rect(
-            ^.key := s"${serie.name}-$idx",
-            s.stroke := "black",
-            s.strokeWidth := "1px",
-            s.x := idx * gridSize,
-            s.y := sIndex * gridSize,
-            s.rx := 4,
-            s.ry := 4,
-            s.width := gridSize,
-            s.height := gridSize,
-            s.fill := colors1),
-          s.text(deskRecsThisHour,
-            s.x := idx * gridSize, s.y := sIndex * gridSize,
-            s.transform := s"translate(${halfGrid}, ${halfGrid})"
+      val rects = serie.data.zipWithIndex.map {
+        case (periodValue, idx) => {
+          val colorBucket = props.scaleFunction(periodValue) //Math.floor((periodValue * bucketScale)).toInt
+//          log.info(s"${serie.name} periodValue ${periodValue}, colorBucket: ${colorBucket} / ${colors.length}")
+          val clippedColorBucket = Math.min(colors.length - 1, colorBucket)
+          val colors1 = colors(clippedColorBucket)
+          val halfGrid: Int = gridSize / 2
+          s.g(
+            ^.key := s"rect-${serie.name}-$idx",
+            s.rect(
+              ^.key := s"${serie.name}-$idx",
+              s.stroke := "black",
+              s.strokeWidth := "1px",
+              s.x := idx * gridSize,
+              s.y := sIndex * gridSize,
+              s.rx := 4,
+              s.ry := 4,
+              s.width := gridSize,
+              s.height := gridSize,
+              s.fill := colors1),
+            if (props.shouldShowRectValue)
+              s.text(periodValue,
+                s.x := idx * gridSize, s.y := sIndex * gridSize,
+                s.transform := s"translate(${halfGrid}, ${halfGrid})")
+            else null
           )
-        )
-      })
+        }
+      }
       val label: vdom.ReactTagOf[Text] = s.text(
         ^.key := s"${serie.name}",
         serie.name,
@@ -119,12 +128,8 @@ object Heatmap {
         val size: Int = 60 / mult
         val gridSize = (componentWidth - margin) / numberofblocks
 
-        val rectsAndLabels = props.series.zipWithIndex.map { case (serie, sIndex) => {
-          log.info(s"Generating ${serie.name} as $sIndex")
-          val queueName = serie.name
-          val rects = HeatmapRects(RectProps(serie, numberofblocks, gridSize, props, sIndex))
-          rects
-        }
+        val rectsAndLabels = props.series.zipWithIndex.map { case (serie, sIndex) =>
+          HeatmapRects(RectProps(serie, numberofblocks, gridSize, props, sIndex))
         }
 
         val hours: IndexedSeq[vdom.ReactTagOf[Text]] = (0 until 24).map(x =>
