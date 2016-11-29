@@ -5,25 +5,24 @@ import java.net.URL
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import services.PassengerSplitsCSVReader.FlightPaxSplit
 import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import services.workloadcalculator.SplitRatio
 import spatutorial.shared.ApiFlight
 
-import scala.io.{BufferedSource, Codec}
-
 trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  def flightPassengerSplits: Seq[String] = Nil
-  lazy val splitCSVRows = PassengerSplitsCSVReader.parseCSV(flightPassengerSplits)
+  def flightPassengerSplitLines: Seq[String]
+  lazy val flightPaxSplits: Seq[FlightPaxSplit] = PassengerSplitsCSVReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 
   override def splitRatioProvider(flight: ApiFlight): List[SplitRatio] = {
     val flightDate = DateTime.parse(flight.SchDT)
     flightDate.monthOfYear.getAsText
 
-    val foundFlights = splitCSVRows.filter(row =>
+    val foundFlights = flightPaxSplits.filter(row =>
       row.flightCode == flight.IATA &&
       row.dayOfWeek == flightDate.dayOfWeek.getAsText &&
       row.month == flightDate.monthOfYear.getAsText
@@ -64,6 +63,11 @@ object PassengerSplitsCSVReader {
     )
   }
 
+  def flightPaxSplitsLinesFromConfig = {
+    val splitsFileUrl = ConfigFactory.load.getString("passenger_splits_csv_url")
+    scala.io.Source.fromURL(splitsFileUrl).getLines().toSeq
+  }
+
   case class FlightPaxSplit(
                           flightCode: String,
                           originPort: String,
@@ -86,7 +90,7 @@ object PassengerSplitsCSVReader {
                           originCountryCode: String
                         )
 
-  def parseCSV(flightPaxSplits: Seq[String]): Seq[FlightPaxSplit] = {
+  def flightPaxSplitsFromLines(flightPaxSplits: Seq[String]): Seq[FlightPaxSplit] = {
 
     flightPaxSplits.map { l =>
       val splitRow: Array[String] = l.split(",", -1)

@@ -58,7 +58,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Monday,January,STN,T1,SA"
         )
 
-        val rows = parseCSV(splitsLines)
+        val rows = flightPaxSplitsFromLines(splitsLines)
 
         rows.toList == expected
       }
@@ -69,7 +69,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         "then I should get the correct split back" >> {
 
         val splitsProvider = new CSVPassengerSplitsProvider {
-          override def flightPassengerSplits: Seq[String] = Seq(
+          override def flightPassengerSplitLines: Seq[String] = Seq(
             "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
         )
         }
@@ -89,7 +89,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         "then I should get the default split back" >> {
 
         val splitsProvider = new CSVPassengerSplitsProvider {
-          override def flightPassengerSplits: Seq[String] = Seq()
+          override def flightPassengerSplitLines: Seq[String] = Seq()
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
@@ -122,7 +122,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         val workloadsCalculator = new WorkloadsCalculator with CSVPassengerSplitsProvider {
 
           val today = new DateTime()
-          override def flightPassengerSplits: Seq[String] = Seq(
+          override def flightPassengerSplitLines: Seq[String] = Seq(
             s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"
           )
         }

@@ -42,10 +42,8 @@ trait Core {
 }
 class ProdCrunchActorDefaultSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with DefaultPassengerSplitRatioProvider
 class ProdCrunchActorCsvSplitsPassengerSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with CSVPassengerSplitsProvider{
-  override def flightPassengerSplits: Seq[String] = {
-    val splitsFileUrl = ConfigFactory.load.getString("passenger_splits_csv_url")
-    scala.io.Source.fromURL(splitsFileUrl).getLines().toSeq
-  }
+  override def flightPassengerSplitLines: Seq[String] = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
+
 }
 trait SystemActors {
   self: AirportConfProvider =>
@@ -299,7 +297,9 @@ class Application @Inject()(
 
   def createApiService: ApiService with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider = {
     if (shouldUseCsvSplitsProvider)
-      new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with CSVPassengerSplitsProvider
+      new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with CSVPassengerSplitsProvider {
+        override def flightPassengerSplitLines: Seq[String] = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
+      }
     else
       new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider
   }
