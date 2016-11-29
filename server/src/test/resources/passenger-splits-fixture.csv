@@ -1,6 +1,6 @@
 flight code,origin,EEA Machine readable,EEA Non Machine readable,Non-VISA nationals,VISA nationals,EEA Machine readable to egate,EEA Machine readable to desk,EEA Non Machine readable to desk,non-VISA to Fast Track,non-VISA to non-EEA,VISA to Fast Track,VISA to non-EEA,TR,dayofweek,month,Port,Terminal,Country
 BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA
-BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Monday,January,STN,T1,SA
+BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Monday,November,STN,T1,SA
 BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Tuesday,January,STN,T1,SA
 BA1234,JHB,96,0,2,2,70,30,100,0,100,0,100,0,Wednesday,January,STN,T1,SA
 BA1234,JHB,96,0,2,2,70,30,100,0,100,0,100,0,Thursday,January,STN,T1,SA

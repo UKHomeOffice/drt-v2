@@ -30,26 +30,26 @@ trait PassengerSplitsCSVProvider extends DefaultPassengerSplitRatioProvider {
       row.month == flightDate.monthOfYear().getAsText
     ).toList
 
-    foundFlights match {
+    val splits = foundFlights match {
       case head :: Nil =>
         log.info(s"Found split for $flight")
-        PassengerSplitsCSVReader.parseRow(foundFlights.head)
+        PassengerSplitsCSVReader.splitRatioFromFlightPaxSplit(foundFlights.head)
       case _ =>
         log.info(s"Failed to find split for $flight in CSV - using default")
         super.splitRatioProvider(flight)
     }
+    splits
   }
 }
 
 object PassengerSplitsCSVReader {
-  def parseRow(row: SplitCSVRow): List[SplitRatio] = {
+  def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
 
-    def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
-
+  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): List[SplitRatio] = {
     List(
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk),
-        calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadaleToDesk)),
+        calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadableToDesk)),
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate),
         calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadableToEgate)),
@@ -65,7 +65,7 @@ object PassengerSplitsCSVReader {
     )
   }
 
-  case class SplitCSVRow(
+  case class FlightPaxSplit(
                           flightCode: String,
                           originPort: String,
                           eeaMachineReadable: Int,
@@ -73,7 +73,7 @@ object PassengerSplitsCSVReader {
                           nonVisaNationals: Int,
                           visaNationals: Int,
                           eeaMachineReadableToEgate: Int,
-                          eeaMachineReadaleToDesk: Int,
+                          eeaMachineReadableToDesk: Int,
                           eeaNonMachineReadableToDesk: Int,
                           nonVisaToFastTrack: Int,
                           nonVisaToNonEEA: Int,
@@ -87,13 +87,13 @@ object PassengerSplitsCSVReader {
                           originCountryCode: String
                         )
 
-  def parseCSV(pathToFile: URL): Seq[SplitCSVRow] = {
+  def parseCSV(pathToFile: URL): Seq[FlightPaxSplit] = {
 
     val bufferedSource = scala.io.Source.fromURL(pathToFile)(Codec.UTF8)
     val lines = bufferedSource.getLines()
     lines.drop(1).map { l =>
       val splitRow: Array[String] = l.split(",", -1)
-      SplitCSVRow(
+      FlightPaxSplit(
         splitRow(0),
         splitRow(1),
         splitRow(2).toInt,

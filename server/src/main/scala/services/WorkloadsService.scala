@@ -73,7 +73,8 @@ trait WorkloadsCalculator extends PassengerSplitRatioProvider {
     })
     val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider) _
 
-    val workloadByTerminal: Future[Map[String, Map[QueueName, (Seq[WL], Seq[Pax])]]] = flightsByTerminalFut.map(flightsByTerminal => flightsByTerminal.map(fbt => {
+    val workloadByTerminal: Future[Map[String, Map[QueueName, (Seq[WL], Seq[Pax])]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
+      flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
       log.info(s"Got flights by terminal ${fbt}")
       val terminal = fbt._1
       val flights = fbt._2

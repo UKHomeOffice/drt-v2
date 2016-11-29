@@ -4,12 +4,15 @@ import java.net.URL
 
 import controllers.FlightStateTests
 import org.specs2.mutable.SpecificationLike
+import services.inputfeeds.CrunchTests.TestContext
 import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
 import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import services.workloadcalculator.SplitRatio
-import spatutorial.shared.ApiFlight
+import spatutorial.shared.{ApiFlight, Pax, WL}
 
+import scala.concurrent.Await
 import scala.util.Random
+import scala.concurrent.duration._
 
 class PaxSplitsFromCSVTests extends SpecificationLike {
 
@@ -40,11 +43,12 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
 
   import PassengerSplitsCSVReader._
 
+  "Split ratios from CSV" >> {
     "Given a path to the CSV file" >> {
       "Then I should be able to parse the file" >> {
         val expected = Seq(
-          SplitCSVRow("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA"),
-          SplitCSVRow("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January", "STN", "T1", "SA")
+          FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA"),
+          FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January", "STN", "T1", "SA")
         )
 
         val rows = parseCSV(getClass.getResource("/passenger-splits-fixture.csv"))
@@ -89,7 +93,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
 
     "Given a CSV containing pax splits" >> {
       "When I parse the CSV row then I should get a list of each split type for a flight" >> {
-        val row = SplitCSVRow("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
+        val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
 
         val expected = List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
@@ -97,22 +101,50 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
           SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02))
 
-        val result = parseRow(row)
+        val result = splitRatioFromFlightPaxSplit(row)
 
         result == expected
       }
     }
-
-  val rows = parseCSV(getClass.getResource("/passenger-splits-fixture.csv"))
-
-  val splitsProvider = new PassengerSplitsCSVProvider {
-    override def csvSplitUrl: String = "file:///Users/beneppel/Downloads/STN2006Final.csv"
   }
 
-  val flightCodes = parseCSV(new URL("file:///Users/beneppel/Downloads/STN2006Final.csv")).map(row => {
-    row.flightCode
-  }).toSet
+//  "Terminal workloads from CSV" >> {
+//    "Something" >> {
+//      val workloadsCalculator = new WorkloadsCalculator with PassengerSplitsCSVProvider {
+//        override def csvSplitUrl: String = getClass.getResource("/passenger-splits-fixture.csv").toString
+//      }
+//
+//      import scala.concurrent.Future
+//
+//      import scala.concurrent.ExecutionContext.Implicits.global
+//
+//      val flights = Future { List(apiFlight("BA1234", "2016-11-28")) }
+//
+//      val result: Future[workloadsCalculator.TerminalQueueWorkloads] = workloadsCalculator.getWorkloadsByTerminal(flights)
+//
+//      val expected = Map(1 -> Map(
+//        "eeaDesk" -> (List(WL(1480291200000L,0.09699999999999999)),List(Pax(1480291200000L,0.291))),
+//        "eGate" -> (List(WL(1480291200000L,0.39608333333333334)),List(Pax(1480291200000L,0.6789999999999999))),
+//        "nonEeaDesk" -> (List(WL(1480291200000L,0.041)),List(Pax(1480291200000L,0.03)))))
+//
+//
+//      val act = Await.result(result, 10 seconds)
+//
+//      println(s"Hello $act")
+//      act == expected
+//    }
+//  }
 
+//  val rows = parseCSV(getClass.getResource("/passenger-splits-fixture.csv"))
+//
+//  val splitsProvider = new PassengerSplitsCSVProvider {
+//    override def csvSplitUrl: String = "file:///Users/beneppel/Downloads/STN2006Final.csv"
+//  }
+//
+//  val flightCodes = parseCSV(new URL("file:///Users/beneppel/Downloads/STN2006Final.csv")).map(row => {
+//    row.flightCode
+//  }).toSet
+//
 //  "performance test" >> {
 //
 //    println(flightCodes.size)

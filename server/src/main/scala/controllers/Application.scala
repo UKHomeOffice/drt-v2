@@ -45,9 +45,8 @@ class ProdCrunchActorCsvSplits(hours: Int, conf: AirportConfig) extends CrunchAc
 trait SystemActors {
   self: AirportConfProvider =>
 
-
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
-  val crunchActor = ConfigFactory.load.hasPath("passenger_splits_csv_url") match {
+  val crunchActor = shouldUseCsvSplitsProvider match {
     case true =>
       system.log.info("Using CSV Splits")
       system.actorOf(Props(classOf[ProdCrunchActorCsvSplits], 24, getPortConfFromEnvVar), "crunchActor")
@@ -55,6 +54,11 @@ trait SystemActors {
       system.log.info("Using default Splits")
       system.actorOf(Props(classOf[ProdCrunchActorDefaultSplits], 24, getPortConfFromEnvVar), "crunchActor")
   }
+
+  def shouldUseCsvSplitsProvider: Boolean = {
+    ConfigFactory.load.hasPath("passenger_splits_csv_url")
+  }
+
   val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
@@ -287,8 +291,14 @@ class Application @Inject()(
     implicit val system: ActorSystem = ctrl.system
   }
 
-  val apiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider
+  val apiService = createApiService
 
+  def createApiService: ApiService with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider = {
+    if (shouldUseCsvSplitsProvider)
+      new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with PassengerSplitsCSVProvider
+    else
+      new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider
+  }
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>
