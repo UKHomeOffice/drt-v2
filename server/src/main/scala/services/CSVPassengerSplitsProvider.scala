@@ -65,7 +65,7 @@ object PassengerSplitsCSVReader {
 
   def flightPaxSplitsLinesFromConfig = {
     val splitsFileUrl = ConfigFactory.load.getString("passenger_splits_csv_url")
-    scala.io.Source.fromURL(splitsFileUrl).getLines().toSeq
+    scala.io.Source.fromURL(splitsFileUrl).getLines().drop(1).toSeq
   }
 
   case class FlightPaxSplit(
