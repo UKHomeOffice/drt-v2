@@ -56,7 +56,7 @@ trait SystemActors {
   }
 
   def shouldUseCsvSplitsProvider: Boolean = {
-    ConfigFactory.load.hasPath("passenger_splits_csv_url")
+    ConfigFactory.load.hasPath("passenger_splits_csv_url") && ConfigFactory.load.getString("passenger_splits_csv_url") != ""
   }
 
   val flightsActor = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
