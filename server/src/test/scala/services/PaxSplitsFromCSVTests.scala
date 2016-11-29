@@ -3,6 +3,8 @@ package services
 import java.net.URL
 
 import controllers.FlightStateTests
+import org.joda.time.{DateTime, LocalDate}
+import org.joda.time.format.DateTimeFormat
 import org.specs2.mutable.SpecificationLike
 import services.inputfeeds.CrunchTests.TestContext
 import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
@@ -51,9 +53,14 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January", "STN", "T1", "SA")
         )
 
-        val rows = parseCSV(getClass.getResource("/passenger-splits-fixture.csv"))
+        val splitsLines = Seq(
+          "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA",
+          "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Monday,January,STN,T1,SA"
+        )
 
-        rows.take(2) == expected
+        val rows = parseCSV(splitsLines)
+
+        rows.toList == expected
       }
     }
 
@@ -61,8 +68,10 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "When I query the pax splits for a flight on a date, " +
         "then I should get the correct split back" >> {
 
-        val splitsProvider = new PassengerSplitsCSVProvider {
-          override def csvSplitUrl: String = getClass.getResource("/passenger-splits-fixture.csv").toString
+        val splitsProvider = new CSVPassengerSplitsProvider {
+          override def flightPassengerSplits: Seq[String] = Seq(
+            "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
+        )
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
@@ -79,8 +88,8 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "When I query the pax splits for a non existent flight, " +
         "then I should get the default split back" >> {
 
-        val splitsProvider = new PassengerSplitsCSVProvider {
-          override def csvSplitUrl: String = getClass.getResource("/passenger-splits-fixture.csv").toString
+        val splitsProvider = new CSVPassengerSplitsProvider {
+          override def flightPassengerSplits: Seq[String] = Seq()
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
@@ -91,70 +100,50 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       }
     }
 
-    "Given a CSV containing pax splits" >> {
-      "When I parse the CSV row then I should get a list of each split type for a flight" >> {
-        val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
+        "Given a FlightPaxSplit" >> {
+          "When I ask for the SplitRations then I should get a list of each split type for a flight" >> {
+            val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
 
-        val expected = List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.0),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02))
+            val expected = List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
+              SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
+              SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.0),
+              SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
+              SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02))
 
-        val result = splitRatioFromFlightPaxSplit(row)
+            val result = splitRatioFromFlightPaxSplit(row)
 
-        result == expected
-      }
-    }
+            result == expected
+          }
+        }
   }
 
-//  "Terminal workloads from CSV" >> {
-//    "Something" >> {
-//      val workloadsCalculator = new WorkloadsCalculator with PassengerSplitsCSVProvider {
-//        override def csvSplitUrl: String = getClass.getResource("/passenger-splits-fixture.csv").toString
-//      }
-//
-//      import scala.concurrent.Future
-//
-//      import scala.concurrent.ExecutionContext.Implicits.global
-//
-//      val flights = Future { List(apiFlight("BA1234", "2016-11-28")) }
-//
-//      val result: Future[workloadsCalculator.TerminalQueueWorkloads] = workloadsCalculator.getWorkloadsByTerminal(flights)
-//
-//      val expected = Map(1 -> Map(
-//        "eeaDesk" -> (List(WL(1480291200000L,0.09699999999999999)),List(Pax(1480291200000L,0.291))),
-//        "eGate" -> (List(WL(1480291200000L,0.39608333333333334)),List(Pax(1480291200000L,0.6789999999999999))),
-//        "nonEeaDesk" -> (List(WL(1480291200000L,0.041)),List(Pax(1480291200000L,0.03)))))
-//
-//
-//      val act = Await.result(result, 10 seconds)
-//
-//      println(s"Hello $act")
-//      act == expected
-//    }
-//  }
+    "Given a Fligth Passenger Split" >> {
+      "When we ask for workloads by terminal, then we should see the split applied" >> {
+        val workloadsCalculator = new WorkloadsCalculator with CSVPassengerSplitsProvider {
 
-//  val rows = parseCSV(getClass.getResource("/passenger-splits-fixture.csv"))
-//
-//  val splitsProvider = new PassengerSplitsCSVProvider {
-//    override def csvSplitUrl: String = "file:///Users/beneppel/Downloads/STN2006Final.csv"
-//  }
-//
-//  val flightCodes = parseCSV(new URL("file:///Users/beneppel/Downloads/STN2006Final.csv")).map(row => {
-//    row.flightCode
-//  }).toSet
-//
-//  "performance test" >> {
-//
-//    println(flightCodes.size)
-//
-//    (1 to 100).map( _ => {
-//      val randomFlightCodes = util.Random.shuffle(flightCodes)
-//      randomFlightCodes.map(flightCode => {
-//        splitsProvider.splitRatioProvider(apiFlight(flightCode, "2017-" + (Random.nextInt(11) + 1) + "-" + (Random.nextInt(27) + 1)))
-//      })
-//    })
-//    true
-//  }
+          val today = new DateTime()
+          override def flightPassengerSplits: Seq[String] = Seq(
+            s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"
+          )
+        }
+
+        import scala.concurrent.Future
+
+        import scala.concurrent.ExecutionContext.Implicits.global
+
+        val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+        val flights = Future { List(apiFlight("BA1234", LocalDate.now().toString(formatter))) }
+
+        val result: Future[workloadsCalculator.TerminalQueueWorkloads] = workloadsCalculator.getWorkloadsByTerminal(flights)
+
+        val expected = Map("1" -> Map(
+          "eeaDesk" -> (List(WL(1480377600000L,0.09999999999999999)),List(Pax(1480377600000L,0.3))),
+          "eGate" -> (List(WL(1480377600000L,0.4083333333333333)),List(Pax(1480377600000L,0.7))),
+          "nonEeaDesk" -> (List(WL(1480377600000L,0.0)),List(Pax(1480377600000L,0.0)))))
+
+        val act: workloadsCalculator.TerminalQueueWorkloads = Await.result(result, 10 seconds)
+
+        act == expected
+      }
+    }
 }

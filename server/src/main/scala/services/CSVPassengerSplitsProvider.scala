@@ -10,24 +10,23 @@ import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
 import services.workloadcalculator.SplitRatio
 import spatutorial.shared.ApiFlight
 
-import scala.io.Codec
+import scala.io.{BufferedSource, Codec}
 
-trait PassengerSplitsCSVProvider extends DefaultPassengerSplitRatioProvider {
+trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  def csvSplitUrl = ConfigFactory.load.getString("passenger_splits_csv_url")
-  val url = new URL(csvSplitUrl)
-  lazy val splitCSVRows = PassengerSplitsCSVReader.parseCSV(url)
+  def flightPassengerSplits: Seq[String] = Nil
+  lazy val splitCSVRows = PassengerSplitsCSVReader.parseCSV(flightPassengerSplits)
 
   override def splitRatioProvider(flight: ApiFlight): List[SplitRatio] = {
     val flightDate = DateTime.parse(flight.SchDT)
-    flightDate.monthOfYear().getAsText
+    flightDate.monthOfYear.getAsText
 
     val foundFlights = splitCSVRows.filter(row =>
       row.flightCode == flight.IATA &&
-      row.dayOfWeek == flightDate.dayOfWeek().getAsText &&
-      row.month == flightDate.monthOfYear().getAsText
+      row.dayOfWeek == flightDate.dayOfWeek.getAsText &&
+      row.month == flightDate.monthOfYear.getAsText
     ).toList
 
     val splits = foundFlights match {
@@ -87,11 +86,9 @@ object PassengerSplitsCSVReader {
                           originCountryCode: String
                         )
 
-  def parseCSV(pathToFile: URL): Seq[FlightPaxSplit] = {
+  def parseCSV(flightPaxSplits: Seq[String]): Seq[FlightPaxSplit] = {
 
-    val bufferedSource = scala.io.Source.fromURL(pathToFile)(Codec.UTF8)
-    val lines = bufferedSource.getLines()
-    lines.drop(1).map { l =>
+    flightPaxSplits.map { l =>
       val splitRow: Array[String] = l.split(",", -1)
       FlightPaxSplit(
         splitRow(0),
@@ -114,6 +111,6 @@ object PassengerSplitsCSVReader {
         splitRow(17),
         splitRow(18)
       )
-    }.toSeq
+    }
   }
 }
