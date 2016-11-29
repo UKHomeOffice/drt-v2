@@ -2,6 +2,7 @@
 *.log
 .~*
 .#*
+*.DS_Store
 
 # sbt specific
 .cache/
