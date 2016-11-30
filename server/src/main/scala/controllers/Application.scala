@@ -43,7 +43,7 @@ trait Core {
 class ProdCrunchActorDefaultSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with DefaultPassengerSplitRatioProvider
 class ProdCrunchActorCsvSplitsPassengerSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with CSVPassengerSplitsProvider{
   override def flightPassengerSplitLines: Seq[String] = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
-
+  override def defaultSplitRatioProvider(flight: ApiFlight) = conf.defaultPaxSplits
 }
 trait SystemActors {
   self: AirportConfProvider =>
@@ -299,6 +299,7 @@ class Application @Inject()(
     if (shouldUseCsvSplitsProvider)
       new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with CSVPassengerSplitsProvider {
         override def flightPassengerSplitLines: Seq[String] = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
+        override def defaultSplitRatioProvider(flight: ApiFlight) = getPortConfFromEnvVar.defaultPaxSplits
       }
     else
       new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with DefaultPassengerSplitRatioProvider

@@ -1,18 +1,10 @@
 package services
 
+import akka.actor.{ActorSystem, Props}
+import akka.testkit.TestKit
+import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
 import spatutorial.shared._
 import utest._
-import akka.actor.{ActorSystem, Props}
-
-import scala.concurrent.{Await, Future}
-import scala.util.Success
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-import akka.testkit.{DefaultTimeout, ImplicitSender, TestActors, TestKit}
-import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
-import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
-import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import services.workloadcalculator.SplitRatio
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {

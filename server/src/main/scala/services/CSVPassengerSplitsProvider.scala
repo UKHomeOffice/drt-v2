@@ -6,14 +6,12 @@ import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import services.PassengerSplitsCSVReader.FlightPaxSplit
-import services.workloadcalculator.PassengerQueueTypes.{PaxTypes, Queues}
-import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import services.workloadcalculator.SplitRatio
-import spatutorial.shared.ApiFlight
+import spatutorial.shared._
 
 trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
 
   private val log = LoggerFactory.getLogger(getClass)
+  def defaultSplitRatioProvider(flight: ApiFlight): List[SplitRatio]
 
   def flightPassengerSplitLines: Seq[String]
   lazy val flightPaxSplits: Seq[FlightPaxSplit] = PassengerSplitsCSVReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
@@ -34,7 +32,7 @@ trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
         PassengerSplitsCSVReader.splitRatioFromFlightPaxSplit(foundFlights.head)
       case _ =>
         log.info(s"Failed to find split for $flight in CSV - using default")
-        super.splitRatioProvider(flight)
+        defaultSplitRatioProvider(flight)
     }
     splits
   }
