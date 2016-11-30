@@ -1,6 +1,6 @@
 package services
-import services.workloadcalculator.SplitRatio
-import spatutorial.shared.ApiFlight
+
+import spatutorial.shared.{ApiFlight, SplitRatio}
 
 trait PassengerSplitRatioProvider {
 

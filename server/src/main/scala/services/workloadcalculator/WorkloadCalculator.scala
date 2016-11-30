@@ -2,19 +2,12 @@ package services.workloadcalculator
 
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
-import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypeAndQueueCount}
-import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
+import services.workloadcalculator.PassengerQueueTypes.PaxTypeAndQueueCount
 import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads, TerminalName}
-import spatutorial.shared.{ApiFlight, FlightsApi, Pax, WL}
+import spatutorial.shared._
 
 import scala.collection.immutable.{IndexedSeq, Nil}
 
-
-object PaxLoadAt {
-  case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
-}
-
-case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
 
 object PaxLoadCalculator {
   val log = LoggerFactory.getLogger(getClass)
@@ -64,27 +57,10 @@ object PaxLoadCalculator {
 
 object PassengerQueueTypes {
 
-  sealed trait PaxType {
-    def name = getClass.getName
-  }
 
-  object Queues {
-    val eeaDesk = "eeaDesk"
-    val eGate = "eGate"
-    val nonEeaDesk = "nonEeaDesk"
-  }
 
-  object PaxTypes {
 
-    case object eeaNonMachineReadable extends PaxType
 
-    case object visaNational extends PaxType
-
-    case object eeaMachineReadable extends PaxType
-
-    case object nonVisaNational extends PaxType
-
-  }
 
   val eGatePercentage = 0.6
 

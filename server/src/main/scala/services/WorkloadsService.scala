@@ -1,23 +1,14 @@
 package services
 
-import akka.actor.ActorRef
-import akka.pattern.AskableActorRef
-import akka.util.Timeout
-import controllers.GetFlights
-import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import services.workloadcalculator.PassengerQueueTypes.{PaxType, PaxTypes, Queues}
-import services.workloadcalculator.PaxLoadAt.PaxTypeAndQueue
-import services.workloadcalculator.{PaxLoadCalculator, SplitRatio}
+import services.workloadcalculator.PaxLoadCalculator
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared._
 
-import scala.collection.immutable.{Iterable, Seq}
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.Random
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 trait FlightsService extends FlightsApi {
   def getFlights(st: Long, end: Long): Future[List[ApiFlight]]
