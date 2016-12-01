@@ -20,12 +20,12 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
   class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) {
-    override def splitRatioProvider(flight: ApiFlight) = List(
+    override def splitRatioProvider(flight: ApiFlight) = Some(List(
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
       SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),
       SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.03)
-    )
+    ))
 
     override def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
       case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d

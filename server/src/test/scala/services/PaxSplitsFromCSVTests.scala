@@ -65,16 +65,16 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
             "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
           )
 
-          override def defaultSplitRatioProvider(flight: ApiFlight) = Nil
+          override def defaultSplitRatioProvider(flight: ApiFlight) = None
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
 
-        val expected = List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
+        val expected = Some(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.0),
           SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02))
+          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02)))
 
         result == expected
       }
@@ -85,30 +85,30 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         val splitsProvider = new CSVPassengerSplitsProvider {
           override def flightPassengerSplitLines: Seq[String] = Seq()
 
-          override def defaultSplitRatioProvider(flight: ApiFlight) = List(
+          override def defaultSplitRatioProvider(flight: ApiFlight) = Some(List(
             SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)
-          )
+          ))
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
 
-        val expected = List(
+        val expected = Some(List(
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)
-        )
+        ))
 
         result == expected
       }
     }
 
     "Given a FlightPaxSplit" >> {
-      "When I ask for the SplitRations then I should get a list of each split type for a flight" >> {
+      "When I ask for the SplitRatios then I should get a list of each split type for a flight" >> {
         val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
 
-        val expected = List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
+        val expected = Some(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.0),
           SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02))
+          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02)))
 
         val result = splitRatioFromFlightPaxSplit(row)
 
@@ -127,7 +127,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"
         )
 
-        override def defaultSplitRatioProvider(flight: ApiFlight) = Nil
+        override def defaultSplitRatioProvider(flight: ApiFlight) = None
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global

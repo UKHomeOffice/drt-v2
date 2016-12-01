@@ -14,12 +14,12 @@ object PaxLoadCalculator {
   val paxOffFlowRate = 20
   val oneMinute = 60000L
 
-  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => List[SplitRatio], procTimeProvider: (PaxTypeAndQueue) => Double)(flights: List[ApiFlight]): Map[QueueName, QueueWorkloads] = {
+  def queueWorkloadCalculator(splitsRatioProvider: ApiFlight => Option[List[SplitRatio]], procTimeProvider: (PaxTypeAndQueue) => Double)(flights: List[ApiFlight]): Map[QueueName, QueueWorkloads] = {
     val paxLoadsByDesk: Map[String, (List[WL], List[Pax])] = paxLoadsByQueue(splitsRatioProvider, procTimeProvider, flights)
     paxLoadsByDesk
   }
 
-  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => List[SplitRatio], procTimeProvider: (PaxTypeAndQueue) => Double, flights: List[ApiFlight]): Map[String, (List[WL], List[Pax])] = {
+  def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => Option[List[SplitRatio]], procTimeProvider: (PaxTypeAndQueue) => Double, flights: List[ApiFlight]): Map[String, (List[WL], List[Pax])] = {
     val something = voyagePaxSplitsFromApiFlight(splitsRatioProvider)_
     val voyagePaxSplits: List[(Long, PaxTypeAndQueueCount)] = flights.flatMap(something)
     val paxLoadsByDeskAndMinute: Map[(String, Long), List[(Long, PaxTypeAndQueueCount)]] = voyagePaxSplits.groupBy(t => (t._2.paxAndQueueType.queueType, t._1))
@@ -32,9 +32,9 @@ object PaxLoadCalculator {
     queueWithPaxloads
   }
 
-  def voyagePaxSplitsFromApiFlight(splitsRatioProvider: (ApiFlight) => List[SplitRatio])(flight: ApiFlight): IndexedSeq[(Long, PaxTypeAndQueueCount)] = {
+  def voyagePaxSplitsFromApiFlight(splitsRatioProvider: (ApiFlight) => Option[List[SplitRatio]])(flight: ApiFlight): IndexedSeq[(Long, PaxTypeAndQueueCount)] = {
     val timesMin = new DateTime(flight.SchDT, DateTimeZone.UTC).getMillis
-    val splits = splitsRatioProvider(flight)
+    val splits = splitsRatioProvider(flight).get
     val splitsOverTime: IndexedSeq[(Long, PaxTypeAndQueueCount)] = minsForNextNHours(timesMin, 1)
       .zip(paxDeparturesPerMinutes(if(flight.ActPax > 0) flight.ActPax else flight.MaxPax, paxOffFlowRate))
       .flatMap {

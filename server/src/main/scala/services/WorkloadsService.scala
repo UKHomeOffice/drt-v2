@@ -27,14 +27,13 @@ trait WorkloadsService extends WorkloadsApi with WorkloadsCalculator {
 }
 
 trait DefaultPassengerSplitRatioProvider extends PassengerSplitRatioProvider {
-  override def splitRatioProvider(flight: ApiFlight):  List[SplitRatio]  = List(
+  override def splitRatioProvider(flight: ApiFlight):  Option[List[SplitRatio]]  = Some(List(
     SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
     SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
     SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
     SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
     SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
-  )
-
+  ))
 }
 
 trait WorkloadsCalculator extends PassengerSplitRatioProvider {
@@ -48,7 +47,6 @@ trait WorkloadsCalculator extends PassengerSplitRatioProvider {
 
 
   def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
-    //    case _ => 1.0
     case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 20d / 60d
     case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 35d / 60d
     case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
