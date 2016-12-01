@@ -20,7 +20,7 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
   class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) {
-    override def splitRatioProvider(flight: ApiFlight) = Some(List(
+    override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = _ => Some(List(
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
       SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),

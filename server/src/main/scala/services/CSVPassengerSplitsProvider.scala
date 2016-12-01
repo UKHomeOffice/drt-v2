@@ -8,15 +8,14 @@ import org.slf4j.LoggerFactory
 import services.PassengerSplitsCSVReader.FlightPaxSplit
 import spatutorial.shared._
 
-trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
+trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
 
   private val log = LoggerFactory.getLogger(getClass)
-  def defaultSplitRatioProvider(flight: ApiFlight): Option[List[SplitRatio]]
 
   def flightPassengerSplitLines: Seq[String]
   lazy val flightPaxSplits: Seq[FlightPaxSplit] = PassengerSplitsCSVReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 
-  override def splitRatioProvider(flight: ApiFlight): Option[List[SplitRatio]] = {
+  def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = flight => {
     val flightDate = DateTime.parse(flight.SchDT)
     flightDate.monthOfYear.getAsText
 
@@ -26,13 +25,13 @@ trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
       row.month == flightDate.monthOfYear.getAsText
     ).toList
 
-    val splits = foundFlights match {
+    val splits: Option[List[SplitRatio]] = foundFlights match {
       case head :: Nil =>
         log.info(s"Found split for $flight")
         PassengerSplitsCSVReader.splitRatioFromFlightPaxSplit(foundFlights.head)
       case _ =>
-        log.info(s"Failed to find split for $flight in CSV - using default")
-        defaultSplitRatioProvider(flight)
+        log.info(s"Failed to find split for $flight in CSV")
+        None
     }
     splits
   }

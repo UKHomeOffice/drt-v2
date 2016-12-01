@@ -64,8 +64,6 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           override def flightPassengerSplitLines: Seq[String] = Seq(
             "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
           )
-
-          override def defaultSplitRatioProvider(flight: ApiFlight) = None
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
@@ -80,23 +78,15 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       }
 
       "When I query the pax splits for a non existent flight, " +
-        "then I should get the port default split back" >> {
+        "then I should get None" >> {
 
         val splitsProvider = new CSVPassengerSplitsProvider {
           override def flightPassengerSplitLines: Seq[String] = Seq()
-
-          override def defaultSplitRatioProvider(flight: ApiFlight) = Some(List(
-            SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)
-          ))
         }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
 
-        val expected = Some(List(
-          SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)
-        ))
-
-        result == expected
+        result == None
       }
     }
 
@@ -126,8 +116,6 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         override def flightPassengerSplitLines: Seq[String] = Seq(
           s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"
         )
-
-        override def defaultSplitRatioProvider(flight: ApiFlight) = None
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global

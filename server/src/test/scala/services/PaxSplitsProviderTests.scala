@@ -1,5 +1,6 @@
 package services
 
+import controllers.NewPaxSplitsProvider
 import org.specs2.mutable.SpecificationLike
 import spatutorial.shared._
 
@@ -33,22 +34,14 @@ class PaxSplitsProviderTests extends SpecificationLike {
 //  import PassengerSplitsCSVReader._
 
   "Splits from multiple providers" >> {
-    def splitsForFlight(providers: Seq[(ApiFlight) => Option[List[SplitRatio]]])(apiFlight: ApiFlight) = {
-      providers.foldLeft(None: Option[Seq[SplitRatio]])((prev, provider) => {
-        prev match {
-          case Some(split) => prev
-          case None => provider(apiFlight)
-        }
-      })
-    }
 
     "Given 1 provider with splits for a flight, when we ask for splits then we should see Some()" >> {
       def provider(apiFlight: ApiFlight) = Some[List[SplitRatio]](List())
-      val providers: Seq[(ApiFlight) => Some[List[SplitRatio]]] = Seq(provider)
+      val providers: List[(ApiFlight) => Some[List[SplitRatio]]] = List(provider)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val result = splitsForFlight(providers)(flight)
+      val result = NewPaxSplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
     }
@@ -56,11 +49,11 @@ class PaxSplitsProviderTests extends SpecificationLike {
     "Given 2 providers, the 1st with splits and 2nd without, when we ask for splits then we should see Some()" >> {
       def providerWith(apiFlight: ApiFlight) = Some[List[SplitRatio]](List())
       def providerWithout(apiFlight: ApiFlight) = None
-      val providers: Seq[(ApiFlight) => Option[List[SplitRatio]]] = Seq(providerWith, providerWithout)
+      val providers: List[(ApiFlight) => Option[List[SplitRatio]]] = List(providerWith, providerWithout)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val result = splitsForFlight(providers)(flight)
+      val result = NewPaxSplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
     }
@@ -68,11 +61,11 @@ class PaxSplitsProviderTests extends SpecificationLike {
     "Given 2 providers, the 1st without splits and 2nd with, when we ask for splits then we should see Some()" >> {
       def providerWith(apiFlight: ApiFlight) = None
       def providerWithout(apiFlight: ApiFlight) = Some[List[SplitRatio]](List())
-      val providers: Seq[(ApiFlight) => Option[List[SplitRatio]]] = Seq(providerWith, providerWithout)
+      val providers: List[(ApiFlight) => Option[List[SplitRatio]]] = List(providerWith, providerWithout)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val result: Option[Seq[SplitRatio]] = splitsForFlight(providers)(flight)
+      val result: Option[List[SplitRatio]] = NewPaxSplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
     }
