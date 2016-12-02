@@ -1,21 +1,17 @@
 package services
 
-import java.net.URL
-
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import services.PassengerSplitsCSVReader.FlightPaxSplit
 import spatutorial.shared._
 
 trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
-
   private val log = LoggerFactory.getLogger(getClass)
 
   log.info("Using CSV Splits")
 
   def flightPassengerSplitLines: Seq[String]
-  lazy val flightPaxSplits: Seq[FlightPaxSplit] = PassengerSplitsCSVReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
+  lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 
   def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = flight => {
     val flightDate = DateTime.parse(flight.SchDT)
@@ -30,7 +26,7 @@ trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
     val splits: Option[List[SplitRatio]] = foundFlights match {
       case head :: Nil =>
         log.info(s"Found split for $flight")
-        PassengerSplitsCSVReader.splitRatioFromFlightPaxSplit(foundFlights.head)
+        CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(foundFlights.head)
       case _ =>
         log.info(s"Failed to find split for $flight in CSV")
         None
@@ -39,7 +35,7 @@ trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
   }
 }
 
-object PassengerSplitsCSVReader {
+object CsvPassengerSplitsReader {
   def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
 
   def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): Option[List[SplitRatio]] = {

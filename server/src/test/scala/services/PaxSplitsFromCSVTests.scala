@@ -35,7 +35,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       SchDT = schDT
     )
 
-  import PassengerSplitsCSVReader._
+  import CsvPassengerSplitsReader._
 
   "Split ratios from CSV" >> {
     "Given a path to the CSV file" >> {

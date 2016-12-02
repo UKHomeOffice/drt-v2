@@ -1,6 +1,5 @@
 package services
 
-import controllers.SplitsProvider
 import org.specs2.mutable.SpecificationLike
 import spatutorial.shared._
 
@@ -30,8 +29,6 @@ class PaxSplitsProviderTests extends SpecificationLike {
       PcpTime = 0,
       SchDT = schDT
     )
-
-//  import PassengerSplitsCSVReader._
 
   "Splits from multiple providers" >> {
 

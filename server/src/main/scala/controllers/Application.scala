@@ -40,45 +40,10 @@ trait Core {
   def system: ActorSystem
 }
 
-object SplitsProvider {
-  def splitsForFlight(providers: List[ApiFlight => Option[List[SplitRatio]]])(apiFlight: ApiFlight): Option[List[SplitRatio]] = {
-    providers.foldLeft(None: Option[List[SplitRatio]])((prev, provider) => {
-      prev match {
-        case Some(split) => prev
-        case None => provider(apiFlight)
-      }
-    })
-  }
-}
-
-trait ProdSplitsProvider extends AirportConfProvider {
-  def shouldUseCsvSplitsProvider: Boolean = {
-    ConfigFactory.load.hasPath("passenger_splits_csv_url") && ConfigFactory.load.getString("passenger_splits_csv_url") != ""
-  }
-
-  def emptyProvider: (ApiFlight => Option[List[SplitRatio]]) = _ => Option.empty[List[SplitRatio]]
-
-  def csvProvider: (ApiFlight) => Option[List[SplitRatio]] = {
-    if (shouldUseCsvSplitsProvider)
-      new CSVPassengerSplitsProvider {
-        override def flightPassengerSplitLines = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
-      }.splitRatioProvider
-    else
-      emptyProvider
-  }
-
-  def defaultProvider: (ApiFlight) => Some[List[SplitRatio]] = {
-    _ => Some(getPortConfFromEnvVar.defaultPaxSplits)
-  }
-
-  def splitRatioProvider = SplitsProvider.splitsForFlight(List(csvProvider, defaultProvider)) _
-}
-
 class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider
 
 trait SystemActors extends Core {
   self: AirportConfProvider =>
-
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -93,7 +58,6 @@ trait ChromaFetcherLike {
 
   def chromafetcher: ChromaFetcher
 }
-
 
 case class MockChroma(system: ActorSystem) extends ChromaFetcherLike {
   self =>
