@@ -74,10 +74,11 @@ trait ProdSplitsProvider extends AirportConfProvider {
   def splitRatioProvider = SplitsProvider.splitsForFlight(List(csvProvider, defaultProvider)) _
 }
 
+class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider
+
 trait SystemActors extends Core {
   self: AirportConfProvider =>
 
-  class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
