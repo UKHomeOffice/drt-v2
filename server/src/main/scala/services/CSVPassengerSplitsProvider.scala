@@ -8,15 +8,16 @@ import org.slf4j.LoggerFactory
 import services.PassengerSplitsCSVReader.FlightPaxSplit
 import spatutorial.shared._
 
-trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
+trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
 
   private val log = LoggerFactory.getLogger(getClass)
-  def defaultSplitRatioProvider(flight: ApiFlight): List[SplitRatio]
+
+  log.info("Using CSV Splits")
 
   def flightPassengerSplitLines: Seq[String]
   lazy val flightPaxSplits: Seq[FlightPaxSplit] = PassengerSplitsCSVReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 
-  override def splitRatioProvider(flight: ApiFlight): List[SplitRatio] = {
+  def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = flight => {
     val flightDate = DateTime.parse(flight.SchDT)
     flightDate.monthOfYear.getAsText
 
@@ -26,13 +27,13 @@ trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
       row.month == flightDate.monthOfYear.getAsText
     ).toList
 
-    val splits = foundFlights match {
+    val splits: Option[List[SplitRatio]] = foundFlights match {
       case head :: Nil =>
         log.info(s"Found split for $flight")
         PassengerSplitsCSVReader.splitRatioFromFlightPaxSplit(foundFlights.head)
       case _ =>
-        log.info(s"Failed to find split for $flight in CSV - using default")
-        defaultSplitRatioProvider(flight)
+        log.info(s"Failed to find split for $flight in CSV")
+        None
     }
     splits
   }
@@ -41,8 +42,8 @@ trait CSVPassengerSplitsProvider extends DefaultPassengerSplitRatioProvider {
 object PassengerSplitsCSVReader {
   def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
 
-  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): List[SplitRatio] = {
-    List(
+  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): Option[List[SplitRatio]] = {
+    Some(List(
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk),
         calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadableToDesk)),
@@ -58,7 +59,7 @@ object PassengerSplitsCSVReader {
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk),
         calcQueueRatio(row.nonVisaNationals, row.nonVisaToNonEEA))
-    )
+    ))
   }
 
   def flightPaxSplitsLinesFromConfig = {

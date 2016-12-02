@@ -26,18 +26,7 @@ trait WorkloadsService extends WorkloadsApi with WorkloadsCalculator {
   override def getWorkloads(): Future[WorkloadByTerminalQueue] = getWorkloadsByTerminal(getFlights(0, 0))
 }
 
-trait DefaultPassengerSplitRatioProvider extends PassengerSplitRatioProvider {
-  override def splitRatioProvider(flight: ApiFlight):  List[SplitRatio]  = List(
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
-  )
-
-}
-
-trait WorkloadsCalculator extends PassengerSplitRatioProvider {
+trait WorkloadsCalculator {
   private val log = LoggerFactory.getLogger(getClass)
 
   type TerminalQueueWorkloads = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
@@ -46,16 +35,15 @@ trait WorkloadsCalculator extends PassengerSplitRatioProvider {
 
   def maxLoadPerSlot: Int = 20
 
+  def splitRatioProvider: (ApiFlight) => Option[List[SplitRatio]]
 
   def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
-    //    case _ => 1.0
     case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 20d / 60d
     case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 35d / 60d
     case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
     case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 90d / 60d
     case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 78d / 60d
   }
-
 
   def getWorkloadsByTerminal(flights: Future[List[ApiFlight]]): Future[TerminalQueueWorkloads] = {
     val flightsByTerminalFut: Future[Map[TerminalName, List[ApiFlight]]] = flights.map(fs => {

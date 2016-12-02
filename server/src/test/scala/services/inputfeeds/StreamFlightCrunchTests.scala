@@ -13,7 +13,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import org.specs2.specification.core.Fragments
 import services.FlightCrunchInteractionTests.TestCrunchActor
-import services.{DefaultPassengerSplitRatioProvider, FlightCrunchInteractionTests, PassengerSplitRatioProvider, WorkloadCalculatorTests}
+import services.{FlightCrunchInteractionTests, PassengerSplitRatioProvider, WorkloadCalculatorTests}
 import services.WorkloadCalculatorTests._
 import spatutorial.shared.{AirportConfigs, CrunchResult, NoCrunchAvailable}
 import spatutorial.shared.FlightsApi.Flights

@@ -48,10 +48,10 @@ object WorkloadCalculatorTests extends TestSuite {
         def defaultProcTimesProvider(paxTypeAndQueue: PaxTypeAndQueue) = 1
 
         "with simple pax splits all at the same paxType" - {
-          def splitRatioProvider(flight: ApiFlight) = List(
+          def splitRatioProvider(flight: ApiFlight) = Some(List(
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
-          )
+          ))
 
           val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, defaultProcTimesProvider) _
 
@@ -197,10 +197,10 @@ object WorkloadCalculatorTests extends TestSuite {
         }
 
         "with paxSplits of differing paxType to the same queue" - {
-          def splitRatioProvider(flight: ApiFlight) = List(
+          def splitRatioProvider(flight: ApiFlight) = Some(List(
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.visaNational, Queues.eeaDesk), 0.5)
-          )
+          ))
 
           val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, defaultProcTimesProvider) _
 
