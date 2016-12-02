@@ -40,7 +40,7 @@ trait Core {
   def system: ActorSystem
 }
 
-object NewPaxSplitsProvider {
+object SplitsProvider {
   def splitsForFlight(providers: List[ApiFlight => Option[List[SplitRatio]]])(apiFlight: ApiFlight): Option[List[SplitRatio]] = {
     providers.foldLeft(None: Option[List[SplitRatio]])((prev, provider) => {
       prev match {
@@ -51,7 +51,7 @@ object NewPaxSplitsProvider {
   }
 }
 
-class ProdCrunchActorDefaultSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with PassengerSplitRatioProvider {
+trait ProdSplitsProvider extends AirportConfProvider {
   def shouldUseCsvSplitsProvider: Boolean = {
     ConfigFactory.load.hasPath("passenger_splits_csv_url") && ConfigFactory.load.getString("passenger_splits_csv_url") != ""
   }
@@ -68,32 +68,20 @@ class ProdCrunchActorDefaultSplits(hours: Int, conf: AirportConfig) extends Crun
   }
 
   def defaultProvider: (ApiFlight) => Some[List[SplitRatio]] = {
-    _ => Some(conf.defaultPaxSplits)
+    _ => Some(getPortConfFromEnvVar.defaultPaxSplits)
   }
 
-  def splitRatioProvider = NewPaxSplitsProvider.splitsForFlight(List(csvProvider, defaultProvider))
+  def splitRatioProvider = SplitsProvider.splitsForFlight(List(csvProvider, defaultProvider)) _
 }
 
-//class ProdCrunchActorCsvSplitsPassengerSplits(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with PassengerSplitRatioProvider {
-//  override def flightPassengerSplitLines: Seq[String] = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
-//  override def defaultSplitRatioProvider(flight: ApiFlight) = Some(conf.defaultPaxSplits)
-//}
-trait SystemActors {
+trait SystemActors extends Core {
   self: AirportConfProvider =>
 
+  class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider
+
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
-  val crunchActor: ActorRef = if (shouldUseCsvSplitsProvider) {
-    system.log.info("Using CSV Splits")
-    system.actorOf(Props(classOf[ProdCrunchActorDefaultSplits], 24, getPortConfFromEnvVar), "crunchActor")
-  } else {
-    system.log.info("Using default Splits")
-    system.actorOf(Props(classOf[ProdCrunchActorDefaultSplits], 24, getPortConfFromEnvVar), "crunchActor")
-  }
 
-  def shouldUseCsvSplitsProvider: Boolean = {
-    ConfigFactory.load.hasPath("passenger_splits_csv_url") && ConfigFactory.load.getString("passenger_splits_csv_url") != ""
-  }
-
+  val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24, self.getPortConfFromEnvVar), "crunchActor")
   val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
@@ -297,9 +285,7 @@ case class LHRFlightFeed() {
       }).toList)).map(x => FlightsApi.Flights(x))
 }
 
-trait AirportConfProvider extends Core {
-  self: Core =>
-
+trait AirportConfProvider {
   def portCode = ConfigFactory.load().getString("portcode").toUpperCase
 
   def mockProd = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
@@ -307,7 +293,6 @@ trait AirportConfProvider extends Core {
   def getPortConfFromEnvVar: AirportConfig = {
     AirportConfigs.confByPort(portCode)
   }
-
 }
 
 class Application @Inject()(
@@ -329,23 +314,7 @@ class Application @Inject()(
 
   val apiService = createApiService
 
-  def createApiService = {
-    if (shouldUseCsvSplitsProvider)
-      new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with PassengerSplitRatioProvider {
-        def splitRatioProvider = NewPaxSplitsProvider.splitsForFlight(List(
-          _ => Some(getPortConfFromEnvVar.defaultPaxSplits))
-        )
-
-        //override def flightPassengerSplitLines: Seq[String] = PassengerSplitsCSVReader.flightPaxSplitsLinesFromConfig
-        //override def defaultSplitRatioProvider(flight: ApiFlight) = Some(getPortConfFromEnvVar.defaultPaxSplits)
-      }
-    else
-      new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with PassengerSplitRatioProvider {
-        def splitRatioProvider = NewPaxSplitsProvider.splitsForFlight(List(
-          _ => Some(getPortConfFromEnvVar.defaultPaxSplits))
-        )
-      }
-  }
+  def createApiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with ProdSplitsProvider
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>

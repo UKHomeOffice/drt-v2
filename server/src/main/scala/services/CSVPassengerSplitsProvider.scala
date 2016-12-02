@@ -12,6 +12,8 @@ trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
 
   private val log = LoggerFactory.getLogger(getClass)
 
+  log.info("Using CSV Splits")
+
   def flightPassengerSplitLines: Seq[String]
   lazy val flightPaxSplits: Seq[FlightPaxSplit] = PassengerSplitsCSVReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 

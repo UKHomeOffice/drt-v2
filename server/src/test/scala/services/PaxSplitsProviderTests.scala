@@ -1,6 +1,6 @@
 package services
 
-import controllers.NewPaxSplitsProvider
+import controllers.SplitsProvider
 import org.specs2.mutable.SpecificationLike
 import spatutorial.shared._
 
@@ -41,7 +41,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val result = NewPaxSplitsProvider.splitsForFlight(providers)(flight)
+      val result = SplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
     }
@@ -53,7 +53,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val result = NewPaxSplitsProvider.splitsForFlight(providers)(flight)
+      val result = SplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
     }
@@ -65,7 +65,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val result: Option[List[SplitRatio]] = NewPaxSplitsProvider.splitsForFlight(providers)(flight)
+      val result: Option[List[SplitRatio]] = SplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
     }
