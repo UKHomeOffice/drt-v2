@@ -20,7 +20,7 @@ object PaxLoadCalculator {
   }
 
   def paxLoadsByQueue(splitsRatioProvider: (ApiFlight) => Option[List[SplitRatio]], procTimeProvider: (PaxTypeAndQueue) => Double, flights: List[ApiFlight]): Map[String, (List[WL], List[Pax])] = {
-    val something = voyagePaxSplitsFromApiFlight(splitsRatioProvider)_
+    val something: (ApiFlight) => IndexedSeq[(Long, PaxTypeAndQueueCount)] = voyagePaxSplitsFromApiFlight(splitsRatioProvider)_
     val voyagePaxSplits: List[(Long, PaxTypeAndQueueCount)] = flights.flatMap(something)
     val paxLoadsByDeskAndMinute: Map[(String, Long), List[(Long, PaxTypeAndQueueCount)]] = voyagePaxSplits.groupBy(t => (t._2.paxAndQueueType.queueType, t._1))
     val paxLoadsByDeskAndTime: Map[(String, Long), (Double, Double)] = paxLoadsByDeskAndMinute

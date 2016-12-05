@@ -40,7 +40,7 @@ trait Core {
   def system: ActorSystem
 }
 
-class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider
+class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider with ProcessingTimes
 
 trait SystemActors extends Core {
   self: AirportConfProvider =>
@@ -279,7 +279,7 @@ class Application @Inject()(
 
   val apiService = createApiService
 
-  def createApiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with ProdSplitsProvider
+  def createApiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with ProdSplitsProvider with ProcessingTimes
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>

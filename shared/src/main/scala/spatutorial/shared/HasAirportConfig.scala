@@ -27,8 +27,11 @@ case class AirportConfig(
                           queues: Seq[QueueName],
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
-                          defaultPaxSplits: List[SplitRatio]
-                        ) extends AirportConfigLike
+                          defaultPaxSplits: List[SplitRatio],
+                          defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]]
+                        ) extends AirportConfigLike {
+
+}
 
 trait HasAirportConfig {
   val airportConfig: AirportConfig
@@ -57,21 +60,47 @@ object AirportConfigs {
     SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
     SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
   )
+  val defaultProcessingTimes = Map(
+        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
+        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 35d / 60,
+        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 90d / 60,
+        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
+  )
 
-  val edi = AirportConfig(portCode = "EDI", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("A1", "A2"), defaultPaxSplits = Nil)
-  val stn = AirportConfig(portCode = "STN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = Map(
-    "eeaDesk" -> 25,
-    "eGate" -> 5,
-    "nonEeaDesk" -> 45
-  ), terminalNames = Seq("T1"), defaultPaxSplits = Nil)
-  val man = AirportConfig(portCode = "MAN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = Map(
-    "eeaDesk" -> 25,
-    "eGate" -> 10,
-    "nonEeaDesk" -> 45
-  ), terminalNames = Seq("T1", "T2", "T3"), defaultPaxSplits = Nil)
-  val boh = AirportConfig(portCode = "BOH", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("T1"), defaultPaxSplits = Nil)
-  val ltn = AirportConfig(portCode = "LTN", queues = Seq("eeaDesk", "eGate", "nonEeaDesk"), slaByQueue = defaultSlas, terminalNames = Seq("T1"), defaultPaxSplits = Nil)
+  val edi = AirportConfig(
+    portCode = "EDI",
+    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    slaByQueue = defaultSlas,
+    terminalNames = Seq("A1", "A2"),
+    defaultPaxSplits = defaultPaxSplits,
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
+  )
+  val stn = AirportConfig(
+    portCode = "STN",
+    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    slaByQueue = Map( "eeaDesk" -> 25, "eGate" -> 5, "nonEeaDesk" -> 45),
+    terminalNames = Seq("T1"),
+    defaultPaxSplits = defaultPaxSplits,
+    defaultProcessingTimes = Map("T1" ->defaultProcessingTimes)
+  )
+  val man = AirportConfig(
+    portCode = "MAN",
+    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    slaByQueue = Map( "eeaDesk" -> 25, "eGate" -> 10, "nonEeaDesk" -> 45),
+    terminalNames = Seq("T1", "T2", "T3"),
+    defaultPaxSplits = defaultPaxSplits,
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" ->defaultProcessingTimes)
+  )
+  val ltn = AirportConfig(
+    portCode = "LTN",
+    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    slaByQueue = defaultSlas,
+    terminalNames = Seq("T1"),
+    defaultPaxSplits = defaultPaxSplits,
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
+  )
 
-  val allPorts = edi :: stn :: man :: boh :: ltn :: Nil
+  val allPorts = edi :: stn :: man :: ltn :: Nil
   val confByPort = allPorts.map(c => (c.portCode, c)).toMap
 }
