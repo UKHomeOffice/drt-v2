@@ -3,6 +3,7 @@ package services
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, LocalDate}
 import org.specs2.mutable.SpecificationLike
+import spatutorial.shared.FlightsApi.TerminalName
 import spatutorial.shared._
 
 import scala.concurrent.Await
@@ -116,6 +117,8 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         override def flightPassengerSplitLines: Seq[String] = Seq(
           s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"
         )
+
+        def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global
