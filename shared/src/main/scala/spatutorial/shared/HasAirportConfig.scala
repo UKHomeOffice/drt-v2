@@ -83,7 +83,21 @@ object AirportConfigs {
     slaByQueue = defaultSlas,
     terminalNames = Seq("A1", "A2"),
     defaultPaxSplits = defaultPaxSplits,
-    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
+    defaultProcessingTimes = Map(
+      "A1" -> Map(
+        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 16d / 60,
+        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60,
+        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 75d / 60,
+        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 64d / 60
+      ),
+      "A2" -> Map(
+        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 30d / 60,
+        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60,
+        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 120d / 60,
+        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
+      ))
   )
   val stn = AirportConfig(
     portCode = "STN",
