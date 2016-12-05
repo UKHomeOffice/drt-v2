@@ -3,7 +3,7 @@ package spatutorial.client.components
 import diode.react.ReactConnectProxy
 
 import scala.collection.immutable._
-import diode.data.Pot
+import diode.data.{Ready, Pot}
 
 //import diode.react.ReactPot._
 import diode.react.ModelProxy
@@ -102,27 +102,33 @@ object DeskRecsChart {
                                     simulationResultPotMP: ModelProxy[Pot[SimulationResult]],
                                     crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
     val component = ReactComponentB[UserSimulationProps]("UserSimulationChart").render_P(props => {
-      val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(props.simulationResult().isReady match {
-        case true => props.simulationResult().get.waitTimes
-        case _ => props.crunchResult().get.waitTimes
-      })
-      val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(props.crunchResult().get.waitTimes)
-      val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfig.slaByQueue(queueName).toDouble)
-      val sampledLabels = takeEvery15th(labels)
       <.div(
-        Chart(
-          Chart.ChartProps("Simulated Wait Times",
-            Chart.LineChart,
-            ChartData(sampledLabels,
-              Seq(
-                ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0)",
-                  borderColor = "rgba(10,10, 110, 1)"),
-                ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "rgb(143, 35, 179)"),
-                ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "red"))
-            ),
-            yAxisLabel = "Wait Time (mins)"
-          )))
-    }).build
+        props.crunchResult().renderEmpty(<.div("Waiting for crunch result")),
+        props.crunchResult().renderReady(crunchRes => {
+          val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(props.simulationResult() match {
+            case Ready(simRes) => simRes.waitTimes
+            case _ => crunchRes.waitTimes
+          })
+          val sampledWaitTimesCrunch: List[Double] = sampledWaitTimes(crunchRes.waitTimes)
+          val fakeSLAData = sampledWaitTimesSimulation.map(_ => airportConfig.slaByQueue(queueName).toDouble)
+          val sampledLabels = takeEvery15th(labels)
+          <.div(
+            Chart(
+              Chart.ChartProps("Simulated Wait Times",
+                Chart.LineChart,
+                ChartData(sampledLabels,
+                  Seq(
+                    ChartDataset(sampledWaitTimesCrunch, "Wait Times with Recommended Desks", backgroundColor = "rgba(10, 10, 55, 0)",
+                      borderColor = "rgba(10,10, 110, 1)"),
+                    ChartDataset(sampledWaitTimesSimulation, "Wait Times with your desks", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "rgb(143, 35, 179)"),
+                    ChartDataset(fakeSLAData, label = "SLA", backgroundColor = "rgba(10, 10, 55, 0)", borderColor = "red"))
+                ),
+                yAxisLabel = "Wait Time (mins)"
+              )))
+        }))
+    }
+
+    ).build
 
     component(UserSimulationProps(simulationResultPotMP, crunchResultPotMP))
   }

@@ -27,21 +27,23 @@ import scala.util.{Success, Try, Failure}
 object TerminalHeatmaps {
   def heatmapOfWorkloads() = {
     val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(workloads(_))
-    seriiRCP((serMP: ModelProxy[List[Series]]) => {
-      val p: List[Series] = serMP()
-      p match {
-        case Nil =>
-          <.h4("No workloads yet")
-        case waitTimes =>
-          val maxAcrossAllSeries = p.map(x => emptySafeMax(x.data)).max
-          log.info(s"Got max workload of ${maxAcrossAllSeries}")
-          <.div(
-            <.h4("heatmap of workloads"),
-            Heatmap.heatmap(Heatmap.Props(series = p, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-          )
+    seriiRCP {
+      (serMP: ModelProxy[List[Series]]) => {
+        val p: List[Series] = serMP()
+        p match {
+          case Nil =>
+            <.h4("No workloads yet")
+          case waitTimes =>
+            val maxAcrossAllSeries = p.map(x => emptySafeMax(x.data)).max
+            log.info(s"Got max workload of ${maxAcrossAllSeries}")
+            <.div(
+              <.h4("heatmap of workloads"),
+              Heatmap.heatmap(Heatmap.Props(series = p, height = 200,
+                scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+            )
+        }
       }
-    })
+    }
   }
 
   def emptySafeMax(data: Seq[Double]): Double = {
@@ -61,7 +63,7 @@ object TerminalHeatmaps {
         case Nil =>
           <.h4("No waittimes in simulation yet")
         case waitTimes =>
-          val maxAcrossAllSeries = p.map(x => emptySafeMax(x.data)).max
+          val maxAcrossAllSeries = emptySafeMax(p.map(x => x.data.max))
           log.info(s"Got max waittime of ${maxAcrossAllSeries}")
           <.div(
             <.h4("heatmap of wait times"),
@@ -98,7 +100,7 @@ object TerminalHeatmaps {
 
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       val p: List[Series] = serMP()
-      val maxRatioAcrossAllSeries = p.map(_.data.max).max
+      val maxRatioAcrossAllSeries = emptySafeMax(p.map(_.data.max)) + 1
       <.div(
         <.h4("heatmap of ratio of desk rec to actual desks"),
         Heatmap.heatmap(Heatmap.Props(series = p, height = 200,
@@ -109,7 +111,6 @@ object TerminalHeatmaps {
   def workloads(rootModel: RootModel): List[Series] = {
     //      Series("T1/eeadesk", Vector(2)) :: Nil
     val terminalName = "T1"
-    log.info(s"simulation results ${rootModel.simulationResult}")
     val queueNames = rootModel.airportConfig.get.queues
     val wls = rootModel.workload.get
     log.info(s"looking up $terminalName in wls")
@@ -140,10 +141,11 @@ object TerminalHeatmaps {
       waitTimes = simResult.waitTimes
     } yield {
       Series(terminalName + "/" + queueName,
-        waitTimes.grouped(4).map(_.max.toDouble).toVector)
+        waitTimes.grouped(60).map(_.max.toDouble).toVector)
     }
-    log.info(s"gotSimResults")
-    result.toList
+    val resultList = result.toList
+    log.info(s"gotSimResults ${resultList}")
+    resultList
   }
 
   def deskRecsVsActualDesks(rootModel: RootModel): List[Series] = {
@@ -237,7 +239,7 @@ object Heatmap {
               s.height := gridSize,
               s.fill := colors1),
             if (props.shouldShowRectValue)
-              s.text(f"${periodValue}%02f",
+              s.text(f"${periodValue}%2.1f",
                 s.x := idx * gridSize, s.y := sIndex * gridSize,
                 s.transform := s"translate(${halfGrid}, ${halfGrid})", s.textAnchor := "middle")
             else null
