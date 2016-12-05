@@ -51,11 +51,6 @@ trait WorkloadsCalculator extends PassengerSplitRatioProvider {
 
   type TerminalQueueWorkloads = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
 
-  def numberOf15Mins = (24 * 4 * 15)
-
-  def maxLoadPerSlot: Int = 20
-
-
   def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
     //    case _ => 1.0
     case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 20d / 60d
