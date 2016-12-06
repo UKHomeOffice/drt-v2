@@ -23,6 +23,7 @@ import play.api.{Configuration, Environment}
 import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
+import views.html.defaultpages.notFound
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -40,7 +41,9 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 trait Core {
   def system: ActorSystem
 }
+
 class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with DefaultPassengerSplitRatioProvider
+
 trait SystemActors {
   self: AirportConfProvider =>
 
@@ -252,6 +255,7 @@ trait AirportConfProvider extends Core {
   self: Core =>
 
   def portCode = ConfigFactory.load().getString("portcode").toUpperCase
+
   def mockProd = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
   def getPortConfFromEnvVar: AirportConfig = {
@@ -299,6 +303,7 @@ class Application @Inject()(
       fsFuture
     }
   }
+
   val fetcher = mockProd match {
     case "MOCK" => MockChroma(system)
     case "PROD" => ProdChroma(system)
