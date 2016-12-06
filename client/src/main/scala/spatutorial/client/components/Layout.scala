@@ -27,7 +27,7 @@ object Layout {
               // currently active module is shown in this container
               <.div(^.className := "container", props.currentLoc.render()))),
           airportConfigPotMP().renderPending(_ => "Waiting for Airport Config"),
-          airportConfigPotMP().renderEmpty("Waiting for Airport Config")
+          airportConfigPotMP().renderEmpty(" Didn't get Airport Config")
         )
       })
     })
