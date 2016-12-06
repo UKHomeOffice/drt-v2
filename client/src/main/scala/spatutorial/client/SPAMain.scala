@@ -164,7 +164,7 @@ object SPAMain extends js.JSApp {
 
 
     val terminals = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalLoc]) ~> dynRenderR((page: TerminalLoc, ctl) => TerminalPage(page, ctl))
+      .caseClass[TerminalLoc]) ~> dynRenderR((page: TerminalLoc, ctl) => TerminalPage(page.id, ctl))
 
     val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
       //todo take the queuenames from the workloads response
@@ -188,7 +188,7 @@ object SPAMain extends js.JSApp {
   def main(): Unit = {
     log.warn("Application starting")
     // send log messages also to the server
-    log.enableServerLogging(pathToThisApp + "/logging")
+    log.enableServerLogging(pathToThisApp + "logging")
     log.info("This message goes to server as well")
 
     // create stylesheet

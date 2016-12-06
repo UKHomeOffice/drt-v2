@@ -32,9 +32,6 @@ trait WorkloadsCalculator {
 
   type TerminalQueueWorkloads = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
 
-  def numberOf15Mins = (24 * 4 * 15)
-
-  def maxLoadPerSlot: Int = 20
 
   def splitRatioProvider: (ApiFlight) => Option[List[SplitRatio]]
 

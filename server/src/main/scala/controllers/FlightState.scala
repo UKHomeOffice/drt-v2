@@ -38,8 +38,6 @@ trait FlightState {
   }
 
   def logNewFlightInfo(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
-    log.info(s"Flights before change: $flights")
-
     val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
     val existingFlightIds: Set[Int] = flights.keys.toSet
 

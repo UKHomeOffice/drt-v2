@@ -36,7 +36,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
 
-  var latestCrunch: Future[CrunchResult] = Future.failed(new Exception("No Crunch Available"))
   val crunchCache: Cache[CrunchResult] = LruCache()
 
   def cacheCrunch[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
@@ -94,6 +93,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
     for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {
+      //TODO I, LBP, fail at cache invalidation understanding. Brighter future me, or other, fix this so it's atomic
       crunchCache.remove(cacheKey(tn, qn))
       cacheCrunch(tn, qn)
     }
@@ -102,12 +102,14 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
     val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flights.values.toList))
+
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
 //      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
+        log.info(s"the workloads $wl")
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
           case Some(twl) =>
@@ -123,6 +125,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       val r: Try[CrunchResult] = triedWl.flatMap {
         terminalWorkloads =>
           log.info(s"Will crunch now $tq")
+          log.info(s"terminalWorkloads are ${terminalWorkloads.keys}")
           val workloads: List[Double] = terminalWorkloads(queueName)
           log.info(s"$tq Crunching on ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
