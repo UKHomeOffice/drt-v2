@@ -21,7 +21,7 @@ object TerminalPage {
       <.div(
 //        heatmapOfDeskRecs(),
 //        heatmapOfDeskRecsVsActualDesks(),
-//        heatmapOfWaittimes(),
+        heatmapOfWaittimes(props.terminalName),
         heatmapOfWorkloads(props.terminalName),
         <.div(
           ^.className := "terminal-desk-recs-container",

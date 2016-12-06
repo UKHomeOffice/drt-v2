@@ -182,6 +182,26 @@ object HeatmapDataTests extends TestSuite {
         assert(result == expected)
       }
     }
+
+    "Given a map of queuename to pending simulation result" +
+    "When I call waitTimes, "
+    "Then I should get a Pending back" - {
+      val potSimulationResult = Map("eeaDesk" -> Pending())
+
+      val result: Pot[List[Series]] = TerminalHeatmaps.waitTimes(potSimulationResult, "T1")
+
+      assert(result.isPending)
+    }
+    "Given a map of queuename to ready simulation result" +
+      "When I call waitTimes, "
+    "Then I should get a ready back" - {
+      val potSimulationResult = Map("eeaDesk" -> Ready(SimulationResult(IndexedSeq(), Seq())))
+
+      val result: Pot[List[Series]] = TerminalHeatmaps.waitTimes(potSimulationResult, "T1")
+
+      assert(result.isReady)
+    }
+
     //    'CrunchHandler - {
     //      val model: Pot[CrunchResult] = Ready(CrunchResult(IndexedSeq[Int](), Nil))
     //      def build = new CrunchHandler(new RootModelRW[Pot[CrunchResult]](model))

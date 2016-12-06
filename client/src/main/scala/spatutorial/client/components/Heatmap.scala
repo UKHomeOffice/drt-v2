@@ -1,6 +1,6 @@
 package spatutorial.client.components
 
-import diode.data.{Pot, Ready}
+import diode.data.{Pending, Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -22,7 +22,6 @@ object TerminalHeatmaps {
   def heatmapOfWorkloads(terminalName: TerminalName) = {
     val workloadsRCP = SPACircuit.connect(_.workload)
     workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
-
       <.div(
       workloadsMP().renderReady(wl => {
         val heatMapSeries = workloads(wl.workloads(terminalName), terminalName)
@@ -35,7 +34,6 @@ object TerminalHeatmaps {
         )
         }))
     })
-
   }
 
   def emptySafeMax(data: Seq[Double]): Double = {
@@ -47,23 +45,24 @@ object TerminalHeatmaps {
     }
   }
 
-  def heatmapOfWaittimes() = {
-    val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(waitTimes(_))
-    seriiRCP((serMP: ModelProxy[List[Series]]) => {
-      val p: List[Series] = serMP()
-      p match {
-        case Nil =>
-          <.h4("No waittimes in simulation yet")
-        case waitTimes =>
-          val maxAcrossAllSeries = emptySafeMax(p.map(x => x.data.max))
-          log.info(s"Got max waittime of ${maxAcrossAllSeries}")
-          <.div(
-            <.h4("heatmap of wait times"),
-            Heatmap.heatmap(Heatmap.Props(series = p, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-          )
-      }
+  def heatmapOfWaittimes(terminalName: TerminalName) = {
+    val simulationResultRCP = SPACircuit.connect(_.simulationResult)
+    simulationResultRCP(simulationResultMP => {
+
+      log.info(s"simulation result keys ${simulationResultMP().keys}")
+      val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(terminalName, Map()), terminalName)
+      <.div(
+      seriesPot.renderReady((queueSeries) => {
+            val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
+            log.info(s"Got max waittime of ${maxAcrossAllSeries}")
+            <.div(
+              <.h4("heatmap of wait times"),
+              Heatmap.heatmap(Heatmap.Props(series = queueSeries, height = 200,
+                scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+            )
+        }))
     })
+
   }
 
   def heatmapOfDeskRecs() = {
@@ -111,23 +110,19 @@ object TerminalHeatmaps {
     result.toList
   }
 
-  def waitTimes(rootModel: RootModel): List[Series] = {
-    //      Series("T1/eeadesk", Vector(2)) :: Nil
-    val terminalName = "T1"
-
-    log.info(s"simulation results ${rootModel.simulationResult}")
-    val terminalQueues = rootModel.simulationResult.getOrElse(terminalName, Map())
+  def waitTimes(simulationResult: Map[QueueName, Pot[SimulationResult]], terminalName: String): Pot[List[Series]] = {
     val result: Iterable[Series] = for {
-      queueName <- terminalQueues.keys
-      simResult <- rootModel.simulationResult(terminalName)(queueName)
+      queueName <- simulationResult.keys
+      simResult <- simulationResult(queueName)
       waitTimes = simResult.waitTimes
     } yield {
       Series(terminalName + "/" + queueName,
         waitTimes.grouped(60).map(_.max.toDouble).toVector)
     }
-    val resultList = result.toList
-    log.info(s"gotSimResults ${resultList}")
-    resultList
+    result.toList match {
+      case Nil => Pending()
+      case _ => Ready(result.toList)
+    }
   }
 
   def deskRecsVsActualDesks(rootModel: RootModel): List[Series] = {
