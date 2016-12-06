@@ -1,58 +1,50 @@
 package spatutorial.client.components
 
-import diode.data.{Empty, Pot, Ready}
+import diode.data.{Pot, Ready}
 import diode.react._
-import japgolly.scalajs.react.vdom.svg.{all => s}
-import japgolly.scalajs.react.vdom.{all => html, prefix_<^}
-import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
-import org.scalajs.dom.svg.{G, Text, RectElement, SVG}
-import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
+import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.svg.{all => s}
+import org.scalajs.dom.svg.{G, Text}
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard
 import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads}
 import spatutorial.shared._
-import scalacss._
-import scala.Predef
+
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
-import scala.scalajs.js
-import scala.scalajs.js.annotation.ScalaJSDefined
-import scala.util.{Success, Try, Failure}
+import scala.util.{Failure, Success, Try}
 
 
 object TerminalHeatmaps {
   def heatmapOfWorkloads() = {
-    val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(workloads(_))
-    seriiRCP {
-      (serMP: ModelProxy[List[Series]]) => {
-        val p: List[Series] = serMP()
-        p match {
-          case Nil =>
-            <.h4("No workloads yet")
-          case waitTimes =>
-            val maxAcrossAllSeries = p.map(x => emptySafeMax(x.data)).max
-            log.info(s"Got max workload of ${maxAcrossAllSeries}")
-            <.div(
-              <.h4("heatmap of workloads"),
-              Heatmap.heatmap(Heatmap.Props(series = p, height = 200,
-                scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-            )
-        }
-      }
-    }
+    val workloadsRCP = SPACircuit.connect(_.workload)
+    workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
+
+      <.div(
+      workloadsMP().renderReady(wl => {
+        val heatMapSeries = workloads(wl.workloads("T1"))
+        val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
+        log.info(s"Got max workload of ${maxAcrossAllSeries}")
+        <.div(
+          <.h4("heatmap of workloads"),
+          Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, height = 200,
+            scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+        )
+        }))
+    })
+
   }
 
   def emptySafeMax(data: Seq[Double]): Double = {
-   data match{
-     case Nil =>
-       0d
-     case d =>
-       d.max
-   }
+    data match {
+      case Nil =>
+        0d
+      case d =>
+        d.max
+    }
   }
 
   def heatmapOfWaittimes() = {
@@ -108,25 +100,16 @@ object TerminalHeatmaps {
     })
   }
 
-  def workloads(rootModel: RootModel): List[Series] = {
-    //      Series("T1/eeadesk", Vector(2)) :: Nil
+  def workloads(terminalWorkloads: Map[QueueName, QueueWorkloads]): List[Series] = {
     val terminalName = "T1"
-    val queueNames = rootModel.airportConfig.get.queues
-    val wls = rootModel.workload.get
-    log.info(s"looking up $terminalName in wls")
-    val terminalWorkloadsOpt = wls.workloads.get(terminalName)
-    terminalWorkloadsOpt match {
-      case Some(terminalWorkloads) =>
-        val queueWorkloads: Predef.Map[String, List[Double]] = Dashboard.chartDataFromWorkloads(terminalWorkloads, 60)
-        val result: Iterable[Series] = for {
-          (queue, work) <- queueWorkloads
-        } yield {
-          Series(terminalName + "/" + queue, work.toVector)
-        }
-        result.toList
-      case None =>
-        Nil
+    log.info(s"!!!!looking up $terminalName in wls")
+    val queueWorkloads: Predef.Map[String, List[Double]] = Dashboard.chartDataFromWorkloads(terminalWorkloads, 60)
+    val result: Iterable[Series] = for {
+      (queue, work) <- queueWorkloads
+    } yield {
+      Series(terminalName + "/" + queue, work.toVector)
     }
+    result.toList
   }
 
   def waitTimes(rootModel: RootModel): List[Series] = {
@@ -220,7 +203,8 @@ object Heatmap {
     Try {
       val rects = serie.data.zipWithIndex.map {
         case (periodValue, idx) => {
-          val colorBucket = props.scaleFunction(periodValue) //Math.floor((periodValue * bucketScale)).toInt
+          val colorBucket = props.scaleFunction(periodValue)
+          //Math.floor((periodValue * bucketScale)).toInt
           //          log.info(s"${serie.name} periodValue ${periodValue}, colorBucket: ${colorBucket} / ${colors.length}")
           val clippedColorBucket = Math.min(colors.length - 1, colorBucket)
           val colors1 = colors(clippedColorBucket)

@@ -21,7 +21,7 @@ object TerminalPage {
 //        heatmapOfDeskRecs(),
 //        heatmapOfDeskRecsVsActualDesks(),
 //        heatmapOfWaittimes(),
-//        heatmapOfWorkloads(),
+        heatmapOfWorkloads(),
         <.div(
           ^.className := "terminal-desk-recs-container",
           TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.routeData.id)
