@@ -52,8 +52,9 @@ object WorkloadCalculatorTests extends TestSuite {
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
           ))
+          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
 
-          val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, defaultProcTimesProvider) _
+          val sut = PaxLoadCalculator.queueWorkloadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
           "Examining workloads specifically" - {
 
@@ -201,8 +202,9 @@ object WorkloadCalculatorTests extends TestSuite {
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.visaNational, Queues.eeaDesk), 0.5)
           ))
+          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
 
-          val sut = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, defaultProcTimesProvider) _
+          val sut = PaxLoadCalculator.queueWorkloadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
           "Examining workloads specifically" - {
             "Given a single flight, we see different passenger types aggregated into one workload number" - {

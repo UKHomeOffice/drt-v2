@@ -46,12 +46,14 @@ trait WorkloadsCalculator {
       flightsByTerminal
     })
 
+    val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
+
     val workloadByTerminal = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
         log.info(s"Got flights by terminal ${fbt}")
         val terminalName = fbt._1
         val flights = fbt._2
-        val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider(terminalName)) _
+        val plc = PaxLoadCalculator.queueWorkloadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, procTimesProvider(terminalName)) _
         (terminalName -> plc(flights))
       }))
 

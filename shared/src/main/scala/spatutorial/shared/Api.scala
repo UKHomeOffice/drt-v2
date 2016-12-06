@@ -118,7 +118,6 @@ trait WorkloadsHelpers {
   }
 
   def minimumMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
-//    workloads.flatMap(_._1.map(_.time)).min
     val now = new Date()
     val thisMorning = new Date(now.getYear, now.getMonth, now.getDate)
     thisMorning.getTime()
@@ -132,19 +131,13 @@ case class WorkloadResponse(terminals: Seq[TerminalWorkload])
 case class TerminalWorkload(terminalName: String,
                             queues: Seq[QueueWorkloads])
 
-//case class QueueWorkloads(queueName: String,
-//                          workloadsByMinute: Seq[WL],
-//                          paxByMinute: Seq[Pax]
-//                         ) {
-//  def workloadsByPeriod(n: Int): scala.Seq[WL] =
-//    workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
-//
-//  //  def paxByPeriod(n: Int) = workloadsByMinute.grouped(n).map(_.sum)
-//}
+trait Time {
+  def time: Long
+}
 
-case class WL(time: Long, workload: Double)
+case class WL(time: Long, workload: Double) extends Time
 
-case class Pax(time: Long, pax: Double)
+case class Pax(time: Long, pax: Double) extends Time
 
 case class DeskRec(time: Long, desks: Int)
 
@@ -159,14 +152,6 @@ trait WorkloadsApi {
 trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
-
-  //  def getAllTodos(): List[DeskRecTimeslot]
-
-  //  def setDeskRecsTime(items: List[DeskRecTimeslot]): List[DeskRecTimeslot]
-
-  //  def updateDeskRecsTime(item: DeskRecTimeslot): List[DeskRecTimeslot]
-
-  //  def deleteTodo(itemId: String): List[DeskRecTimeslot]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
