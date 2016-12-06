@@ -1,6 +1,7 @@
 package spatutorial.client.components
 
 import diode.react.ReactConnectProxy
+import org.scalajs.dom.html
 
 import scala.collection.immutable._
 import diode.data.{Ready, Pot}
@@ -103,7 +104,7 @@ object DeskRecsChart {
                                     crunchResultPotMP: ModelProxy[Pot[CrunchResult]]) = {
     val component = ReactComponentB[UserSimulationProps]("UserSimulationChart").render_P(props => {
       <.div(
-        props.crunchResult().renderEmpty(<.div("Waiting for crunch result")),
+        props.crunchResult().renderEmpty(<.div("Waiting for crunch result", spinner)),
         props.crunchResult().renderReady(crunchRes => {
           val sampledWaitTimesSimulation: List[Double] = sampledWaitTimes(props.simulationResult() match {
             case Ready(simRes) => simRes.waitTimes
@@ -133,6 +134,10 @@ object DeskRecsChart {
     component(UserSimulationProps(simulationResultPotMP, crunchResultPotMP))
   }
 
+
+  def spinner: ReactTagOf[html.Image] = {
+    <.img(^.src := "http://cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.16.1/images/loader-large.gif")
+  }
 
   def sampledWaitTimes(times: Seq[Int]): List[Double] = {
     val grouped: Iterator[Seq[Int]] = times.grouped(15)

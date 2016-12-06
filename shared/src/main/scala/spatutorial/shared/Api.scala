@@ -35,6 +35,10 @@ case class ApiFlight(
 
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
+object CrunchResult {
+  def empty = CrunchResult(Vector[Int](), Nil)
+}
+
 case class NoCrunchAvailable()
 
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
@@ -172,7 +176,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
+//  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult]
 

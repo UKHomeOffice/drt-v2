@@ -18,10 +18,10 @@ object TerminalPage {
     import TerminalHeatmaps._
     def render(props: Props) = {
       <.div(
-        heatmapOfDeskRecs(),
-        heatmapOfDeskRecsVsActualDesks(),
-        heatmapOfWaittimes(),
-        heatmapOfWorkloads(),
+//        heatmapOfDeskRecs(),
+//        heatmapOfDeskRecsVsActualDesks(),
+//        heatmapOfWaittimes(),
+//        heatmapOfWorkloads(),
         <.div(
           ^.className := "terminal-desk-recs-container",
           TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.routeData.id)
