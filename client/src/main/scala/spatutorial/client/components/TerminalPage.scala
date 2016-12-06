@@ -9,10 +9,11 @@ import spatutorial.client.SPAMain.{Loc, TerminalLoc}
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.services.{RootModel, SPACircuit}
 import spatutorial.client.logger._
+import spatutorial.shared.FlightsApi.TerminalName
 
 object TerminalPage {
 
-  case class Props(routeData: TerminalLoc, ctl: RouterCtl[Loc])
+  case class Props(terminalName: TerminalName, ctl: RouterCtl[Loc])
 
   class Backend($: BackendScope[Props, Unit]) {
     import TerminalHeatmaps._
@@ -21,16 +22,16 @@ object TerminalPage {
 //        heatmapOfDeskRecs(),
 //        heatmapOfDeskRecsVsActualDesks(),
 //        heatmapOfWaittimes(),
-        heatmapOfWorkloads(),
+        heatmapOfWorkloads(props.terminalName),
         <.div(
           ^.className := "terminal-desk-recs-container",
-          TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.routeData.id)
+          TableTerminalDeskRecs.buildTerminalUserDeskRecsComponent(props.terminalName)
         )
       )
     }
   }
-  def apply(terminal: TerminalLoc, ctl: RouterCtl[Loc]): ReactElement =
-    component(Props(terminal, ctl))
+  def apply(terminalName: TerminalName, ctl: RouterCtl[Loc]): ReactElement =
+    component(Props(terminalName, ctl))
 
   private val component = ReactComponentB[Props]("Product")
     .renderBackend[Backend]

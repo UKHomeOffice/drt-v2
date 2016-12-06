@@ -11,7 +11,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard
 import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads}
+import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads, TerminalName}
 import spatutorial.shared._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
@@ -19,13 +19,13 @@ import scala.util.{Failure, Success, Try}
 
 
 object TerminalHeatmaps {
-  def heatmapOfWorkloads() = {
+  def heatmapOfWorkloads(terminalName: TerminalName) = {
     val workloadsRCP = SPACircuit.connect(_.workload)
     workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
 
       <.div(
       workloadsMP().renderReady(wl => {
-        val heatMapSeries = workloads(wl.workloads("T1"))
+        val heatMapSeries = workloads(wl.workloads(terminalName), terminalName)
         val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
         log.info(s"Got max workload of ${maxAcrossAllSeries}")
         <.div(
@@ -100,8 +100,7 @@ object TerminalHeatmaps {
     })
   }
 
-  def workloads(terminalWorkloads: Map[QueueName, QueueWorkloads]): List[Series] = {
-    val terminalName = "T1"
+  def workloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
     log.info(s"!!!!looking up $terminalName in wls")
     val queueWorkloads: Predef.Map[String, List[Double]] = Dashboard.chartDataFromWorkloads(terminalWorkloads, 60)
     val result: Iterable[Series] = for {
