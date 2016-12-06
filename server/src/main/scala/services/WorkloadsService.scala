@@ -38,28 +38,24 @@ trait WorkloadsCalculator {
 
   def splitRatioProvider: (ApiFlight) => Option[List[SplitRatio]]
 
-  def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
-    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 20d / 60d
-    case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 35d / 60d
-    case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
-    case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 90d / 60d
-    case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 78d / 60d
-  }
+  def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double
 
   def getWorkloadsByTerminal(flights: Future[List[ApiFlight]]): Future[TerminalQueueWorkloads] = {
     val flightsByTerminalFut: Future[Map[TerminalName, List[ApiFlight]]] = flights.map(fs => {
       val flightsByTerminal = fs.filterNot(freightOrEngineering).groupBy(_.Terminal)
       flightsByTerminal
     })
-    val plc = PaxLoadCalculator.queueWorkloadCalculator(splitRatioProvider, procTimesProvider) _
 
-    val workloadByTerminal: Future[Map[String, Map[QueueName, (Seq[WL], Seq[Pax])]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
+    val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
+
+    val workloadByTerminal = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
-      log.info(s"Got flights by terminal ${fbt}")
-      val terminal = fbt._1
-      val flights = fbt._2
-      (terminal -> plc(flights))
-    }))
+        log.info(s"Got flights by terminal ${fbt}")
+        val terminalName = fbt._1
+        val flights = fbt._2
+        val plc = PaxLoadCalculator.queueWorkloadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, procTimesProvider(terminalName)) _
+        (terminalName -> plc(flights))
+      }))
 
     workloadByTerminal
   }

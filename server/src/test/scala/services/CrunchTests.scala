@@ -3,6 +3,7 @@ package services
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
+import spatutorial.shared.FlightsApi.TerminalName
 import spatutorial.shared._
 import utest._
 
@@ -19,21 +20,24 @@ object CrunchStructureTests extends TestSuite {
 
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
-  class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) {
-    override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = _ => Some(List(
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.03)
-    ))
 
-    override def procTimesProvider(paxTypeAndQueue: PaxTypeAndQueue): Double = paxTypeAndQueue match {
-      case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d
-      case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 25d / 60d
-      case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
-      case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
-      case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
-    }
+  class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) {
+    override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) =
+      _ => Some(List(
+        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.03)
+      ))
+
+    def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double =
+      paxTypeAndQueue match {
+        case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d
+        case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 25d / 60d
+        case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
+        case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
+        case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
+      }
 
     override def lastMidnight: String = "2000-01-01"
   }
