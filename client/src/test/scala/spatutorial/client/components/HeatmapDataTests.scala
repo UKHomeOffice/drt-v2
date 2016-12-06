@@ -33,7 +33,7 @@ object HeatmapDataTests extends TestSuite {
 
         val rootModel = RootModel(queueCrunchResults = terminalQueueCrunchResult, userDeskRec = userDeskRecs)
 
-        val result: List[Series] = TerminalPage.deskRecsVsActualDesks(rootModel)
+        val result: List[Series] = TerminalHeatmaps.deskRecsVsActualDesks(rootModel)
         val expected = List(
           Series("T1/eeaDesk",
             Vector(2)
@@ -64,7 +64,7 @@ object HeatmapDataTests extends TestSuite {
 
         val rootModel = RootModel(queueCrunchResults = terminalQueueCrunchResult, userDeskRec = userDeskRecs)
 
-        val result: List[Series] = TerminalPage.deskRecsVsActualDesks(rootModel)
+        val result: List[Series] = TerminalHeatmaps.deskRecsVsActualDesks(rootModel)
 
         val recDesksRatio = 5
 
@@ -117,7 +117,7 @@ object HeatmapDataTests extends TestSuite {
 
         val rootModel = RootModel(queueCrunchResults = terminalQueueCrunchResult, userDeskRec = userDeskRecs)
 
-        val result: List[Series] = TerminalPage.deskRecsVsActualDesks(rootModel)
+        val result: List[Series] = TerminalHeatmaps.deskRecsVsActualDesks(rootModel)
 
         val expected = List(
           Series("T1/nonEeaDesk",
@@ -167,7 +167,7 @@ object HeatmapDataTests extends TestSuite {
 
         val rootModel = RootModel(queueCrunchResults = terminalQueueCrunchResult, userDeskRec = userDeskRecs)
 
-        val result: List[Series] = TerminalPage.deskRecsVsActualDesks(rootModel)
+        val result: List[Series] = TerminalHeatmaps.deskRecsVsActualDesks(rootModel)
 
         val expected = List(
           Series("T1/nonEeaDesk",

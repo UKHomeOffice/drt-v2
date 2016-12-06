@@ -13,7 +13,7 @@ import spatutorial.shared.FlightsApi._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import scala.io.Codec
 import scala.util.Try
 import spatutorial.shared.HasAirportConfig
@@ -63,33 +63,33 @@ object AirportToCountry extends AirportToCountryLike {
 
 }
 
-trait LegacyCrunchOnDemand {
-
-  private val log = LoggerFactory.getLogger(getClass)
-
-  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], airportConfig: AirportConfig): Try[CrunchResult] = {
-    log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
-    val repeat = List.fill[Int](workloads.length) _
-    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
-    //todo take the maximum desks from some durable store
-    val minimumDesks: List[Int] = repeat(2)
-    val maximumDesks: List[Int] = repeat(25)
-    TryRenjin.crunch(workloads, minimumDesks, maximumDesks, optimizerConfig)
-  }
-}
+//trait LegacyCrunchOnDemand {
+//
+//  private val log = LoggerFactory.getLogger(getClass)
+//
+//  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], airportConfig: AirportConfig): Try[CrunchResult] = {
+//    log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
+//    val repeat = List.fill[Int](workloads.length) _
+//    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
+//    //todo take the maximum desks from some durable store
+//    val minimumDesks: List[Int] = repeat(2)
+//    val maximumDesks: List[Int] = repeat(25)
+//    TryRenjin.crunch(workloads, minimumDesks, maximumDesks, optimizerConfig)
+//  }
+//}
 
 abstract class ApiService(airportConfig: AirportConfig)
   extends Api
     with WorkloadsService
     with FlightsService
-    with LegacyCrunchOnDemand
+    //    with LegacyCrunchOnDemand
     with AirportToCountryLike
     with ActorBackedCrunchService
     with CrunchResultProvider {
 
-  override def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]) = {
-    Future.fromTry(tryCrunch(terminalName, queueName, workloads, airportConfig))
-  }
+  //  override def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]) = {
+  //    Future.fromTry(tryCrunch(terminalName, queueName, workloads, airportConfig))
+  //  }
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")
@@ -127,12 +127,24 @@ trait CrunchResultProvider {
 
 trait ActorBackedCrunchService {
   self: CrunchResultProvider =>
+  private val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val timeout: akka.util.Timeout
   val crunchActor: AskableActorRef
 
   def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
-    val result = crunchActor ? GetLatestCrunch(terminalName, queueName)
-    val fr: Future[CrunchResult] = result.map(_.asInstanceOf[CrunchResult])
+    log.info("Starting crunch latest request")
+    val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
+    result onComplete (completion => completion match {
+      case comp =>
+        log.info(s"Future crunch request complete ${comp.getClass}")
+
+    })
+    val fr: Future[CrunchResult] = result.map {
+      case cr: CrunchResult => cr
+      case _ =>
+        log.warn("Returning empty CrunchResult")
+        CrunchResult.empty
+    }
     fr
   }
 }
