@@ -23,9 +23,11 @@ import play.api.{Configuration, Environment}
 import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
+import views.html.defaultpages.notFound
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
