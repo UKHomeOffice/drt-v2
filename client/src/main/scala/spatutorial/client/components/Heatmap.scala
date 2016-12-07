@@ -153,7 +153,7 @@ object TerminalHeatmaps {
     result.toList match {
       case Nil => Pending()
       case _ => Ready(result.toList)
-    }h
+    }
   }
 }
 
