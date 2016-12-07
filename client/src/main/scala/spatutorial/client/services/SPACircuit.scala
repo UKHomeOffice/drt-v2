@@ -28,23 +28,6 @@ import scala.scalajs.js.timers._
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 
-/*
- //BEGIN RECEIVE ORGTBL Shortcuts
- | modes | state | output
- | UpdateQueueUserDeskRecs | should await | nothing
-
- //END RECEIVE ORGTBL Shortcuts
- */
-//@JSExport
-//@ScalaJSDefined
-//class DeskRecTimeslot(val id: String, val deskRec: Int) extends js.Object {
-//  override def toString = s"DeskRecTimeSlot(${id}, ${deskRec})"
-//
-//}
-//
-//object DeskRecTimeslot {
-//  def apply(id: String, deskRec: Int) = new DeskRecTimeslot(id, deskRec)
-//}
 case class DeskRecTimeslot(id: String, deskRec: Int)
 
 // Actions
@@ -331,9 +314,15 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
-      val effect = Effect(AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map(resp => {
+      val effect = Effect(AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map((resp: Option[CrunchResult]) => {
         log.info(s"will request crunch for ${queueName}")
-        UpdateCrunchResult(terminalName, queueName, resp)
+        resp match {
+          case Some(cr) =>
+            UpdateCrunchResult(terminalName, queueName, cr)
+          case _ =>
+            log.info("Failed to fetch crunch, trying again")
+            GetLatestCrunch(terminalName, queueName)
+        }
       }))
       EffectOnly(effect)
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
