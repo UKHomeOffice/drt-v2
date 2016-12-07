@@ -254,24 +254,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
 
     case UpdateWorkloads(terminalQueueWorkloads) =>
-      //      val trytqes = terminalQueueWorkloads.flatMap {
-      //        case (terminalName, queueWorkloads) =>
-      //          val workloadsByQueue = WorkloadsHelpers.workloadsByQueue(queueWorkloads)
-      //          val effects = workloadsByQueue.map {
-      //            case (queueName, queueWorkload) =>
-      //              val effect = Effect(AjaxClient[Api].crunch(terminalName, queueName, queueWorkload).call().map(resp => {
-      //                log.info(s"will request crunch for ${queueName}")
-      //                UpdateCrunchResult(terminalName, queueName, resp)
-      //              }))
-      //              effect
-      //          }
-      //          effects
-      //      }
-      //
-      //      log.info(s"have grouped stuff ${trytqes}")
-      //      val effects = trytqes.toList
-      //      val effectsAsEffectSeq = new EffectSet(effects.head, effects.tail.toSet, queue)
-      updated(Ready(Workloads(terminalQueueWorkloads))) //, effectsAsEffectSeq)
+      updated(Ready(Workloads(terminalQueueWorkloads)))
   }
 }
 
