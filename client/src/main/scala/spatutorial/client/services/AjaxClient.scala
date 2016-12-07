@@ -15,7 +15,7 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
 
   override def doCall(req: Request): Future[ByteBuffer] = {
     dom.ext.Ajax.post(
-      url = SPAMain.pathToThisApp + "api/" + req.path.mkString("/"),
+      url = SPAMain.pathToThisApp + "/api/" + req.path.mkString("/"),
       data = Pickle.intoBytes(req.args),
       responseType = "arraybuffer",
       headers = Map("Content-Type" -> "application/octet-stream")
