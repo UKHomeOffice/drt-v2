@@ -188,7 +188,7 @@ object SPAMain extends js.JSApp {
   def main(): Unit = {
     log.warn("Application starting")
     // send log messages also to the server
-    log.enableServerLogging(pathToThisApp + "logging")
+    log.enableServerLogging(pathToThisApp + "/logging")
     log.info("This message goes to server as well")
 
     // create stylesheet
