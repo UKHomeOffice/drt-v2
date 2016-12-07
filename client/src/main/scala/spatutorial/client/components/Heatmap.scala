@@ -9,7 +9,7 @@ import org.scalajs.dom.svg.{G, Text}
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard
-import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads, TerminalName}
 import spatutorial.shared._
@@ -23,15 +23,15 @@ object TerminalHeatmaps {
     val workloadsRCP = SPACircuit.connect(_.workload)
     workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
       <.div(
-      workloadsMP().renderReady(wl => {
-        val heatMapSeries = workloads(wl.workloads(terminalName), terminalName)
-        val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
-        log.info(s"Got max workload of ${maxAcrossAllSeries}")
-        <.div(
-          <.h4("heatmap of workloads"),
-          Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, height = 200,
-            scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-        )
+        workloadsMP().renderReady(wl => {
+          val heatMapSeries = workloads(wl.workloads(terminalName), terminalName)
+          val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
+          log.info(s"Got max workload of ${maxAcrossAllSeries}")
+          <.div(
+            <.h4("heatmap of workloads"),
+            Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, height = 200,
+              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+          )
         }))
     })
   }
@@ -52,14 +52,14 @@ object TerminalHeatmaps {
       log.info(s"simulation result keys ${simulationResultMP().keys}")
       val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(terminalName, Map()), terminalName)
       <.div(
-      seriesPot.renderReady((queueSeries) => {
-            val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
-            log.info(s"Got max waittime of ${maxAcrossAllSeries}")
-            <.div(
-              <.h4("heatmap of wait times"),
-              Heatmap.heatmap(Heatmap.Props(series = queueSeries, height = 200,
-                scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-            )
+        seriesPot.renderReady((queueSeries) => {
+          val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
+          log.info(s"Got max waittime of ${maxAcrossAllSeries}")
+          <.div(
+            <.h4("heatmap of wait times"),
+            Heatmap.heatmap(Heatmap.Props(series = queueSeries, height = 200,
+              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+          )
         }))
     })
 
@@ -84,18 +84,20 @@ object TerminalHeatmaps {
   }
 
 
-  def heatmapOfDeskRecsVsActualDesks() = {
-    val seriiRCP = SPACircuit.connect {
-      deskRecsVsActualDesks(_)
-    }
-
-    seriiRCP((serMP: ModelProxy[List[Series]]) => {
-      val p: List[Series] = serMP()
-      val maxRatioAcrossAllSeries = emptySafeMax(p.map(_.data.max)) + 1
+  def heatmapOfDeskRecsVsActualDesks(terminalName: TerminalName) = {
+    val modelBitsRCP = SPACircuit.connect(rootModel => (rootModel.queueCrunchResults, rootModel.userDeskRec))
+    modelBitsRCP(modelBitsMP => {
+      val queueCrunchResults = modelBitsMP()._1.getOrElse(terminalName, Map())
+      val userDeskRecs = modelBitsMP()._2.getOrElse(terminalName, Map())
+      val seriesPot = deskRecsVsActualDesks(queueCrunchResults, userDeskRecs, terminalName)
       <.div(
-        <.h4("heatmap of ratio of desk rec to actual desks"),
-        Heatmap.heatmap(Heatmap.Props(series = p, height = 200,
-          scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries))))
+        seriesPot.renderReady(series => {
+          val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
+          <.div(
+            <.h4("heatmap of ratio of desk rec to actual desks"),
+            Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
+              scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries))))
+        }))
     })
   }
 
@@ -125,32 +127,33 @@ object TerminalHeatmaps {
     }
   }
 
-  def deskRecsVsActualDesks(rootModel: RootModel): List[Series] = {
-    //      Series("T1/eeadesk", Vector(2)) :: Nil
-    val terminalName = "T1"
+  def deskRecsVsActualDesks(queueCrunchResults: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], userDeskRecs: QueueUserDeskRecs, terminalName: TerminalName): Pot[List[Series]] = {
     log.info(s"deskRecsVsActualDesks")
     val result: Iterable[Series] = for {
-      queueCrunchResults <- rootModel.queueCrunchResults.get(terminalName).toSeq
       queueName: QueueName <- queueCrunchResults.keys
       queueCrunchPot: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] <- queueCrunchResults.get(queueName)
-      queueCrunch <- queueCrunchPot.toOption
-      queueUserDeskRecs: QueueUserDeskRecs <- rootModel.userDeskRec.get(terminalName)
-      userDesksPot <- queueUserDeskRecs.get(queueName)
-      userDesks <- userDesksPot.toOption
-      recDesksPair <- queueCrunch._1.toOption
-      recDesks = recDesksPair.recommendedDesks
-      userDesksVals = userDesks.items.map(_.deskRec)
+      queueCrunch: (Pot[CrunchResult], Pot[UserDeskRecs]) <- queueCrunchPot.toOption
+      userDesksPot: Pot[UserDeskRecs] <- userDeskRecs.get(queueName)
+      userDesks: UserDeskRecs <- userDesksPot.toOption
+      crunchDeskRecsPair: CrunchResult <- queueCrunch._1.toOption
+      crunchDeskRecs: IndexedSeq[Int] = crunchDeskRecsPair.recommendedDesks
+      userDesksVals: Seq[Int] = userDesks.items.map(_.deskRec)
     } yield {
-      log.info(s"UserDeskRecs Length: ${userDesks.items.length}")
-      val recDesks15MinBlocks = recDesks.grouped(15).map(_.max).toList
-      val zippedRecAndUserBy15Mins = recDesks15MinBlocks.zip(userDesksVals)
-      //      val zippedRecAndUser = maxRecDesks.zip(minUserDesks).map(x => x._1.toDouble / x._2)
-      val ratioRecToUserPerHour = zippedRecAndUserBy15Mins.grouped(4).map(
-        x => x.map(y => y._1.toDouble / y._2).max)
-      Series(terminalName + "/" + queueName, ratioRecToUserPerHour.toVector)
+      val crunchDeskRecs15MinBlocks = crunchDeskRecs.grouped(15).map(_.max).toList
+      val zippedCrunchAndUserRecsBy15Mins = crunchDeskRecs15MinBlocks.zip(userDesksVals)
+      val ratioCrunchToUserRecsPerHour = zippedCrunchAndUserRecsBy15Mins.grouped(4).map(
+        (x: List[(Int, Int)]) => x.map(y => {
+          y._1.toDouble / y._2
+        }).sum / 4
+      )
+      log.info(s"-----deskRecsVsActualDesks: ${queueName}")
+      Series(terminalName + "/" + queueName, ratioCrunchToUserRecsPerHour.toVector)
     }
-    log.info(s"gotDeskRecsvsAct")
-    result.toList
+    log.info(s"gotDeskRecsvsAct, ${result.toList.length}")
+    result.toList match {
+      case Nil => Pending()
+      case _ => Ready(result.toList)
+    }h
   }
 }
 

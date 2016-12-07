@@ -20,7 +20,7 @@ object TerminalPage {
     def render(props: Props) = {
       <.div(
         heatmapOfDeskRecs(),
-//        heatmapOfDeskRecsVsActualDesks(),
+        heatmapOfDeskRecsVsActualDesks(props.terminalName),
         heatmapOfWaittimes(props.terminalName),
         heatmapOfWorkloads(props.terminalName),
         <.div(
