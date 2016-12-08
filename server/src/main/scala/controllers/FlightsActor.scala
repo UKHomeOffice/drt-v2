@@ -25,7 +25,7 @@ class FlightsActor(crunchActor: ActorRef) extends Actor with ActorLogging  with 
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
       val lastMidnight = LocalDate.now().toString(formatter)
       onFlightUpdates(newFlights, lastMidnight)
-      crunchActor ! CrunchFlightsChange(newFlights)
+      crunchActor ! PerformCrunchOnFlights(newFlights)
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }
 }

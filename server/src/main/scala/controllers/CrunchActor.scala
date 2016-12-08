@@ -19,10 +19,9 @@ import scala.concurrent.duration._
 
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
-case class CrunchFlightsChange(flights: Seq[ApiFlight])
-
+case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
-
+case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
 
 abstract class CrunchActor(crunchPeriodHours: Int,
                   override val airportConfig: AirportConfig
@@ -52,7 +51,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   def cacheKey[T](terminal: TerminalName, queue: QueueName): String = s"$terminal/$queue"
 
   def receive = {
-    case CrunchFlightsChange(newFlights) =>
+    case PerformCrunchOnFlights(newFlights) =>
       onFlightUpdates(newFlights.toList, lastMidnight)
       newFlights match {
         case Nil =>
@@ -60,6 +59,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         case _ =>
           reCrunchAllTerminalsAndQueues()
       }
+    case SaveCrunchResult(tn, qn, crunchResult) =>
+      saveNewCrunchResult(tn, qn, crunchResult)
     case GetLatestCrunch(terminalName, queueName) =>
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
       val replyTo = sender()
@@ -94,9 +95,20 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
     for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {
-      //TODO I, LBP, fail at cache invalidation understanding. Brighter future me, or other, fix this so it's atomic
-      crunchCache.remove(cacheKey(tn, qn))
-      cacheCrunch(tn, qn)
+      val crunch: Future[CrunchResult] = performCrunch(tn, qn)
+      crunch.onSuccess {
+        case crunchResult =>
+          self ! crunchResult
+      }
+    }
+  }
+
+  private def saveNewCrunchResult(tn: TerminalName, qn: QueueName, crunchResult: CrunchResult) = {
+    log.info(s"crunch result for $tn/$qn")
+    crunchCache.remove(cacheKey(tn, qn))
+    crunchCache(cacheKey(tn, qn)) {
+      log.info(s"returning crunch result for $tn/$qn")
+      crunchResult
     }
   }
 

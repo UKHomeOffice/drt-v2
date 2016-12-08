@@ -133,6 +133,7 @@ object SPAMain extends js.JSApp {
   setInterval(FiniteDuration(10L, SECONDS)) {
     SPACircuit.dispatch(RequestFlights(0, 0))
   }
+
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._

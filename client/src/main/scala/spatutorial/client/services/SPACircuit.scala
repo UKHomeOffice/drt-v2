@@ -24,6 +24,7 @@ import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
 import scala.concurrent.duration._
 
+import diode.Implicits.runAfterImpl
 import scala.scalajs.js.timers._
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
@@ -314,17 +315,16 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
-      val effect = Effect(AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map((resp: Option[CrunchResult]) => {
-        log.info(s"will request crunch for ${queueName}")
-        resp match {
-          case Some(cr) =>
-            UpdateCrunchResult(terminalName, queueName, cr)
-          case _ =>
-            log.info("Failed to fetch crunch, trying again")
-            GetLatestCrunch(terminalName, queueName)
-        }
-      }))
-      EffectOnly(effect)
+      val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
+        case Right(cr) =>
+          UpdateCrunchResult(terminalName, queueName, cr)
+
+        case Left(ncr) =>
+          log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
+         NoAction
+      }
+
+      effectOnly(Effect(fe))
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
@@ -336,7 +336,6 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
         _1 = RootModel.mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
         _2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
       ))
-    //        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateQueueUserDeskRecs(queueName, res))))
   }
 
 }
@@ -348,7 +347,8 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
     case GetAirportInfos(codes) =>
       //      log.info(s"Will request infos for $codes")
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
-      updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))))
+      val map: Future[UpdateAirportInfos] = AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))
+      updated(stringToObject, Effect(map))
     case UpdateAirportInfos(infos) =>
       val infosReady = infos.map(kv => (kv._1, Ready(kv._2)))
       updated(value ++ infosReady)

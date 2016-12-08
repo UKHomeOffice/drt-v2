@@ -163,7 +163,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
 //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Option[CrunchResult]]
+  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 
