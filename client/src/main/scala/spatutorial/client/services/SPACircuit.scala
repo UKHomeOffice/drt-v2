@@ -347,8 +347,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
     case GetAirportInfos(codes) =>
       //      log.info(s"Will request infos for $codes")
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
-      val map: Future[UpdateAirportInfos] = AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))
-      updated(stringToObject, Effect(map))
+      updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))))
     case UpdateAirportInfos(infos) =>
       val infosReady = infos.map(kv => (kv._1, Ready(kv._2)))
       updated(value ++ infosReady)
