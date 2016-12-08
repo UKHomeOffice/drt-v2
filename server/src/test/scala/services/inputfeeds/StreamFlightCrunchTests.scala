@@ -57,7 +57,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
             List(
               apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1),
               apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30", flightId = 2)))
-          context.sendToCrunch(CrunchFlightsChange(flights.flights))
+          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
           context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
           val exp =
             CrunchResult(
@@ -74,7 +74,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
       //            List(
       //              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31"),
       //              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30")))
-      //          context.sendToCrunch(CrunchFlightsChange(flights.flights))
+      //          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
       //          context.sendToCrunch(GetLatestCrunch("A2", "eeaDesk"))
       //
       //          val expectedLowerWaitTimes = CrunchResult(
@@ -142,7 +142,7 @@ class StreamFlightCrunchTests extends
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights
-      expectMsg(CrunchFlightsChange(flights.flights))
+      expectMsg(PerformCrunchOnFlights(flights.flights))
       true
     }
     "and we have sent it a flight in A1" in {
@@ -151,7 +151,7 @@ class StreamFlightCrunchTests extends
         val flights = Flights(
           List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
 
-        crunchActor ! CrunchFlightsChange(flights.flights)
+        crunchActor ! PerformCrunchOnFlights(flights.flights)
         crunchActor ! GetLatestCrunch("A1", "eeaDesk")
         val exp = CrunchResult(Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), Vector(1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
@@ -167,7 +167,7 @@ class StreamFlightCrunchTests extends
       //            List(
       //              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31"),
       //              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30")))
-      //          crunchActor ! CrunchFlightsChange(flights.flights)
+      //          crunchActor ! PerformCrunchOnFlights(flights.flights)
       //
       //          "when we ask for the latest crunch for a terminal, we get a crunch result only including flights at that terminal" in {
       //            crunchActor ! GetLatestCrunch("A1", "eeaDesk")

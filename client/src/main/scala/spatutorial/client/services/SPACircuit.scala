@@ -24,27 +24,11 @@ import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
 import scala.concurrent.duration._
 
+import diode.Implicits.runAfterImpl
 import scala.scalajs.js.timers._
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 
-/*
- //BEGIN RECEIVE ORGTBL Shortcuts
- | modes | state | output
- | UpdateQueueUserDeskRecs | should await | nothing
-
- //END RECEIVE ORGTBL Shortcuts
- */
-//@JSExport
-//@ScalaJSDefined
-//class DeskRecTimeslot(val id: String, val deskRec: Int) extends js.Object {
-//  override def toString = s"DeskRecTimeSlot(${id}, ${deskRec})"
-//
-//}
-//
-//object DeskRecTimeslot {
-//  def apply(id: String, deskRec: Int) = new DeskRecTimeslot(id, deskRec)
-//}
 case class DeskRecTimeslot(id: String, deskRec: Int)
 
 // Actions
@@ -331,11 +315,16 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
-      val effect = Effect(AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map(resp => {
-        log.info(s"will request crunch for ${queueName}")
-        UpdateCrunchResult(terminalName, queueName, resp)
-      }))
-      EffectOnly(effect)
+      val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
+        case Right(cr) =>
+          UpdateCrunchResult(terminalName, queueName, cr)
+
+        case Left(ncr) =>
+          log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
+         NoAction
+      }
+
+      effectOnly(Effect(fe))
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResult $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
@@ -347,7 +336,6 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
         _1 = RootModel.mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
         _2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
       ))
-    //        Effect(AjaxClient[Api].setDeskRecsTime(newDeskRec.items.toList).call().map(res => UpdateQueueUserDeskRecs(queueName, res))))
   }
 
 }

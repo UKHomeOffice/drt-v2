@@ -6,16 +6,16 @@ import akka.actor.ActorRef
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.AskableActorRef
 import controllers.GetLatestCrunch
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{Logger, LoggerFactory}
 import services.workloadcalculator.PassengerQueueTypes
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Future, Promise}
 import scala.io.Codec
-import scala.util.Try
+import scala.util.{Success, Try}
 import spatutorial.shared.HasAirportConfig
 
 //  case class Row(id: Int, city: String, city2: String, country: String, code1: String, code2: String, loc1: Double,
@@ -122,7 +122,7 @@ trait CrunchCalculator {
 }
 
 trait CrunchResultProvider {
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult]
+  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 }
 
 trait ActorBackedCrunchService {
@@ -131,21 +131,17 @@ trait ActorBackedCrunchService {
   implicit val timeout: akka.util.Timeout
   val crunchActor: AskableActorRef
 
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
+  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
     log.info("Starting crunch latest request")
     val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
-    result onComplete (completion => completion match {
-      case comp =>
-        log.info(s"Future crunch request complete ${comp.getClass}")
-
-    })
-    val fr: Future[CrunchResult] = result.map {
-      case cr: CrunchResult => cr
-      case _ =>
-        log.warn("Returning empty CrunchResult")
-        CrunchResult.empty
+    result.recover {
+      case e: Throwable =>
+        log.error("Crunch not ready ", e)
+        Left(NoCrunchAvailable())
+    }.map {
+      case cr: CrunchResult =>
+        Right(cr)
     }
-    fr
   }
 }
 
