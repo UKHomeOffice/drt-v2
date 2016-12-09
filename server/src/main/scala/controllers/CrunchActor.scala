@@ -37,12 +37,12 @@ object EGateBankCrunchTransformations {
     val simulationResult = TryRenjin.processWork(workloads, recommendedDesks, optimizerConfig)
 
     crunchResult.copy(
-      recommendedDesks = recommendedDesks,
+      recommendedDesks = recommendedDesks.map(recommendedDesk => recommendedDesk / desksInBank),
       waitTimes = simulationResult.waitTimes
     )
   }
 
-  private def roundUpToNearestMultipleOf(multiple: Int)(number: Int) = math.ceil(number.toDouble / multiple).toInt * multiple
+  def roundUpToNearestMultipleOf(multiple: Int)(number: Int) = math.ceil(number.toDouble / multiple).toInt * multiple
 }
 
 abstract class CrunchActor(crunchPeriodHours: Int,
