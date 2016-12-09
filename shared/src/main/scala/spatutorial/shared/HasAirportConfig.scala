@@ -79,7 +79,7 @@ object AirportConfigs {
 
   val edi = AirportConfig(
     portCode = "EDI",
-    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    queues = Seq("eeaDesk", "nonEeaDesk"),
     slaByQueue = defaultSlas,
     terminalNames = Seq("A1", "A2"),
     defaultPaxSplits = defaultPaxSplits,

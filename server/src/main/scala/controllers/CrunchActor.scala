@@ -5,7 +5,7 @@ import java.util.Date
 import akka.actor._
 import org.joda.time.{DateTime, LocalDate}
 import org.joda.time.format.DateTimeFormat
-import services.{CrunchCalculator, WorkloadsCalculator}
+import services.{CrunchCalculator, OptimizerConfig, TryRenjin, WorkloadsCalculator}
 import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi._
 
@@ -26,6 +26,24 @@ case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
 case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
+
+case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
+
+object EGateBankCrunchTransformations {
+
+  def groupEGatesIntoBanksWithSla(desksInBank: Int, sla: Int)(crunchResult: CrunchResult, workloads: Seq[Double]): CrunchResult = {
+    val recommendedDesks = crunchResult.recommendedDesks.map(roundUpToNearestMultipleOf(desksInBank))
+    val optimizerConfig = OptimizerConfig(sla)
+    val simulationResult = TryRenjin.processWork(workloads, recommendedDesks, optimizerConfig)
+
+    crunchResult.copy(
+      recommendedDesks = recommendedDesks,
+      waitTimes = simulationResult.waitTimes
+    )
+  }
+
+  private def roundUpToNearestMultipleOf(multiple: Int)(number: Int) = math.ceil(number.toDouble / multiple).toInt * multiple
+}
 
 abstract class CrunchActor(crunchPeriodHours: Int,
                            airportConfig: AirportConfig,
@@ -149,7 +167,12 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           val queueSla = airportConfig.slaByQueue(queueName)
           val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads, queueSla)
           log.info(s"Crunch complete for $tq ${crunchRes.map(x => CrunchResult(x.recommendedDesks.take(10), x.waitTimes.take(10)))}")
-          crunchRes
+          if (queueName == "eGate")
+            crunchRes.map(crunchResSuccess => {
+              EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
+            })
+          else
+            crunchRes
       }
       val asFutre = r match {
         case Success(s) =>
