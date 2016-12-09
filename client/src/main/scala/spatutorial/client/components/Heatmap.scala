@@ -65,15 +65,11 @@ object TerminalHeatmaps {
 
   }
 
-  def heatmapOfDeskRecs() = {
-
-    val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(_.queueCrunchResults.flatMap {
-      case (terminalName, queueCrunchResult) =>
-        queueCrunchResult.collect {
-          case (queueName, Ready((Ready(crunchResult), _))) =>
-            val series = Heatmap.seriesFromCrunchResult(crunchResult)
-            Series(terminalName + "/" + queueName, series.map(_.toDouble))
-        }
+  def heatmapOfDeskRecs(terminalName: TerminalName) = {
+    val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).collect {
+      case (queueName, Ready((Ready(crunchResult), _))) =>
+        val series = Heatmap.seriesFromCrunchResult(crunchResult)
+        Series(terminalName + "/" + queueName, series.map(_.toDouble))
     }.toList)
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
