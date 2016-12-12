@@ -34,7 +34,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   with ActorLogging
   with WorkloadsCalculator
   with CrunchCalculator
-//  with HasAirportConfig
+  //  with HasAirportConfig
   with FlightState {
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
@@ -120,7 +120,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
-    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flights.values.toList))
+    val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
+    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flightsForAirportConfigTerminals))
 
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName

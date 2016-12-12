@@ -117,7 +117,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
 //    }
     "given a crunch actor with airport config for terminals A1 and A2" >> {
       "when we send it a flight for A3" >> {
-        "then the crunch should log an error and ??ignore the flight??" in {
+        "then the crunch should log an error (untested) and ??ignore the flight??, and crunch successfully" in {
           val edi: AirportConfig = AirportConfigs.edi
           val splitsProviders = List(SplitsProvider.defaultProvider(edi))
           val timeProvider = () => DateTime.parse("2016-09-01")
@@ -132,7 +132,12 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
                   apiFlight("RY789", terminal = "A3", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 3)))
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
-              context.expectMsg(FiniteDuration(50, "seconds"), NoCrunchAvailable())
+              val exp =
+                CrunchResult(
+                  Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+                  Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+              context.expectMsg(FiniteDuration(50, "seconds"), exp)
               true
           }
         }

@@ -46,8 +46,8 @@ object FlightCrunchInteractionTests extends TestSuite {
 
   def makeSystem = {
     new TestKit(ActorSystem()) with SystemActors with Core with AirportConfProvider {
-      override val crunchActor = system.actorOf(Props(classOf[TestCrunchActor], 24, getPortConfFromEnvVar), "crunchActor")
-
+      override val crunchActor = system.actorOf(Props(classOf[TestCrunchActor], 24, AirportConfigs.stn), "crunchActor")
+      def splitProviders() = List(SplitsProvider.defaultProvider(AirportConfigs.stn))
     }
   }
 

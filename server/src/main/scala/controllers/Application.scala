@@ -69,14 +69,14 @@ trait SystemActors extends Core {
 
   def splitProviders(): List[SplitsProvider]
 
-  val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
+  lazy val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     self.getPortConfFromEnvVar,
     splitProviders,
     () => DateTime.now()), "crunchActor")
 
-  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
-  val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
-  val flightsActorAskable: AskableActorRef = flightsActor
+  lazy val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
+  lazy val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
+  lazy val flightsActorAskable: AskableActorRef = flightsActor
 }
 
 trait ChromaFetcherLike {
@@ -281,9 +281,7 @@ trait AirportConfProvider {
 
   def mockProd = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
-  def getPortConfFromEnvVar(): AirportConfig = {
-    AirportConfigs.confByPort(portCode)
-  }
+  def getPortConfFromEnvVar(): AirportConfig = AirportConfigs.confByPort(portCode)
 }
 
 class Application @Inject()(
@@ -303,14 +301,13 @@ class Application @Inject()(
     implicit val system: ActorSystem = ctrl.system
   }
 
-  val apiService = createApiService
-
   val airportConfig: AirportConfig = getPortConfFromEnvVar()
+
   override val splitProviders = List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
+  log.info(s"Application using airportConfig $airportConfig")
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
-
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
   }
 
@@ -366,7 +363,7 @@ class Application @Inject()(
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
-      Router.route[Api](apiService)(
+      Router.route[Api](createApiService)(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
       ).map(buffer => {
         val data = Array.ofDim[Byte](buffer.remaining())
