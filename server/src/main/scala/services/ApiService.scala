@@ -151,6 +151,8 @@ trait ActorBackedCrunchService {
     }.map {
       case cr: CrunchResult =>
         Right(cr)
+      case _ =>
+        Left(NoCrunchAvailable())
     }
   }
 }
