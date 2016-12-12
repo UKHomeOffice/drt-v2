@@ -61,11 +61,9 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "When I query the pax splits for a flight on a date, " +
         "then I should get the correct split back" >> {
 
-        val splitsProvider = new CSVPassengerSplitsProvider {
-          override def flightPassengerSplitLines: Seq[String] = Seq(
+        val splitsProvider = CSVPassengerSplitsProvider(Seq(
             "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
-          )
-        }
+          ))
 
         val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
 
@@ -81,9 +79,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "When I query the pax splits for a non existent flight, " +
         "then I should get None" >> {
 
-        val splitsProvider = new CSVPassengerSplitsProvider {
-          override def flightPassengerSplitLines: Seq[String] = Seq()
-        }
+        val splitsProvider = CSVPassengerSplitsProvider {Seq()}
 
         val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
 
@@ -110,14 +106,11 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
 
   "Given a Flight Passenger Split" >> {
     "When we ask for workloads by terminal, then we should see the split applied" >> {
-      val workloadsCalculator = new WorkloadsCalculator with CSVPassengerSplitsProvider {
+      val today = new DateTime()
+      val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA" ))
 
-        val today = new DateTime()
-
-        override def flightPassengerSplitLines: Seq[String] = Seq(
-          s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"
-        )
-
+      val workloadsCalculator = new WorkloadsCalculator  {
+        def splitRatioProvider = csvSplitProvider.splitRatioProvider
         def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
       }
 

@@ -13,10 +13,12 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
+import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import http.ProdSendAndReceive
+import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -42,14 +44,36 @@ trait Core {
   def system: ActorSystem
 }
 
-class ProdCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf) with ProdSplitsProvider with ProcessingTimes
+class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
+                      splitsProviders: List[SplitsProvider],
+                      timeProvider: () => DateTime
+                     ) extends CrunchActor(hours, airportConfig, timeProvider) {
+
+  def splitRatioProvider = SplitsProvider.splitsForFlight(splitsProviders)
+
+  //  def splitsProviders: List[(ApiFlight) => Option[List[SplitRatio]]] = {
+  //    List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
+  //  }
+
+  def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+}
+object SystemActors {
+  type SplitsProvider = (ApiFlight) => Option[List[SplitRatio]]
+}
+// with ProcessingTimes
 
 trait SystemActors extends Core {
   self: AirportConfProvider =>
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24, self.getPortConfFromEnvVar), "crunchActor")
+  def splitProviders(): List[SplitsProvider]
+
+  val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
+    self.getPortConfFromEnvVar,
+    splitProviders,
+    () => DateTime.now()), "crunchActor")
+
   val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
@@ -257,7 +281,7 @@ trait AirportConfProvider {
 
   def mockProd = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
-  def getPortConfFromEnvVar: AirportConfig = {
+  def getPortConfFromEnvVar(): AirportConfig = {
     AirportConfigs.confByPort(portCode)
   }
 }
@@ -281,7 +305,14 @@ class Application @Inject()(
 
   val apiService = createApiService
 
-  def createApiService = new ApiService(getPortConfFromEnvVar) with GetFlightsFromActor with CrunchFromCache with ProdSplitsProvider with ProcessingTimes
+  val airportConfig: AirportConfig = getPortConfFromEnvVar()
+  override val splitProviders = List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
+
+  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
+    override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
+
+    override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+  }
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>
