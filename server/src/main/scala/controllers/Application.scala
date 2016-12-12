@@ -51,10 +51,6 @@ class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
 
   def splitRatioProvider = SplitsProvider.splitsForFlight(splitsProviders)
 
-  //  def splitsProviders: List[(ApiFlight) => Option[List[SplitRatio]]] = {
-  //    List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
-  //  }
-
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 }
 
@@ -62,7 +58,6 @@ object SystemActors {
   type SplitsProvider = (ApiFlight) => Option[List[SplitRatio]]
 }
 
-// with ProcessingTimes
 
 trait SystemActors extends Core {
   self: AirportConfProvider =>

@@ -34,7 +34,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   with ActorLogging
   with WorkloadsCalculator
   with CrunchCalculator
-  //  with HasAirportConfig
   with FlightState {
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
@@ -49,7 +48,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 15 seconds)
-      //      log.info(s"Cache will soon have ${expensiveCrunchResult}")
       expensiveCrunchResult
     }
   }
