@@ -8,35 +8,45 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import controllers._
+import org.joda.time.DateTime
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import org.specs2.specification.core.Fragments
 import services.FlightCrunchInteractionTests.TestCrunchActor
-import services.{FlightCrunchInteractionTests, PassengerSplitRatioProvider, WorkloadCalculatorTests}
+import services.{SplitsProvider, FlightCrunchInteractionTests, PassengerSplitRatioProvider, WorkloadCalculatorTests}
 import services.WorkloadCalculatorTests._
-import spatutorial.shared.{AirportConfigs, CrunchResult, NoCrunchAvailable}
+import spatutorial.shared.{AirportConfig, AirportConfigs, CrunchResult, NoCrunchAvailable}
 import spatutorial.shared.FlightsApi.Flights
 
 import scala.concurrent.duration._
 import scalaz.Alpha.T
 
 object CrunchTests {
+  val testActorProps = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, AirportConfigs.edi)
 
-  case class TestContext(override val system: ActorSystem) extends TestKit(system) with ImplicitSender {
+  case class TestContext(override val system: ActorSystem, props: Props) extends TestKit(system) with ImplicitSender {
     def sendToCrunch[T](o: T) = crunchActor ! o
 
     lazy val crunchActor = createCrunchActor
 
     def createCrunchActor: ActorRef = {
-      system.actorOf(Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, AirportConfigs.edi), "CrunchActor")
+      system.actorOf(props, "CrunchActor")
     }
 
     def getCrunchActor = system.actorSelection("CrunchActor")
   }
 
+  def withContextCustomActor[T](props: Props)(f: (TestContext) => T): T = {
+    val context = TestContext(ActorSystem("streamCrunchTests", ConfigFactory.empty()), props: Props)
+    val res = f(context)
+    TestKit.shutdownActorSystem(context.system)
+    res
+  }
+
   def withContext[T](f: (TestContext) => T): T = {
-    val context = TestContext(ActorSystem("streamCrunchTests", ConfigFactory.empty()))
+    val props = testActorProps
+    val context = TestContext(ActorSystem("streamCrunchTests", ConfigFactory.empty()), props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
     res
@@ -68,37 +78,78 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
           true
         }
       }
-      //      "when we ask for the latest crunch for  terminal A2, we get a crunch result only including flights at that terminal, and the wait times will be lower" in {
-      //        withContext { context =>
-      //          val flights = Flights(
-      //            List(
-      //              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31"),
-      //              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30")))
-      //          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-      //          context.sendToCrunch(GetLatestCrunch("A2", "eeaDesk"))
-      //
-      //          val expectedLowerWaitTimes = CrunchResult(
-      //            Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-      //            Vector(1, 1, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-      //          context.expectMsg(10 seconds, expectedLowerWaitTimes)
-      //          true
-      //        }
-      //      }
+//      "when we ask for the latest crunch for  terminal A2, we get a crunch result only including flights at that terminal, and the wait times will be lower" in {
+//        val edi: AirportConfig = AirportConfigs.edi
+//        val splitsProviders = List(SplitsProvider.defaultProvider(edi))
+//        val timeProvider = () => DateTime.parse("2016-09-01")
+//        val testActorProps = Props(classOf[ProdCrunchActor], 1, edi, splitsProviders, timeProvider)
+//        withContextCustomActor(testActorProps) { context =>
+//          val flights = Flights(
+//            List(
+//              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31"),
+//              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30")))
+//          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
+//          context.sendToCrunch(GetLatestCrunch("A2", "eeaDesk"))
+//
+//          val expectedLowerWaitTimes = CrunchResult(
+//            Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+//            Vector(1, 1, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+//          context.expectMsg(10 seconds, expectedLowerWaitTimes)
+//          true
+//        }
+//      }
     }
-    "given a crunch actor" >> {
-      "and we've not sent it flights" in {
-        "when we ask for the latest crunch, we get a NoCrunchAvailable" in {
-          withContext { context =>
+  }
+}
+
+class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
+  isolated
+  sequential
+
+  import CrunchTests._
+
+  "given a crunch actor" >> {
+    "and we've not sent it flights" in {
+      "when we ask for the latest crunch, we get a NoCrunchAvailable" in {
+        withContext {
+          context =>
             context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
             context.expectMsg(NoCrunchAvailable())
             true
+        }
+      }
+    }
+    "given a crunch actor with airport config for terminals A1 and A2" >> {
+      "when we send it a flight for A3" >> {
+        "then the crunch should log an error (untested) and ??ignore the flight??, and crunch successfully" in {
+          val edi: AirportConfig = AirportConfigs.edi
+          val splitsProviders = List(SplitsProvider.defaultProvider(edi))
+          val timeProvider = () => DateTime.parse("2016-09-01")
+          val testActorProps = Props(classOf[ProdCrunchActor], 1, edi, splitsProviders, timeProvider)
+          withContextCustomActor(testActorProps) {
+            context =>
+              println("here we are, born to be kings")
+              val flights = Flights(
+                List(
+                  apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1),
+                  apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30", flightId = 2),
+                  apiFlight("RY789", terminal = "A3", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 3)))
+              context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
+              context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
+              val exp =
+                CrunchResult(
+                  Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+                  Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+              context.expectMsg(FiniteDuration(50, "seconds"), exp)
+              true
           }
         }
       }
     }
   }
-
 }
+
 
 class StreamFlightCrunchTests extends
   TestKit(ActorSystem("streamCrunchTests", ConfigFactory.empty()))

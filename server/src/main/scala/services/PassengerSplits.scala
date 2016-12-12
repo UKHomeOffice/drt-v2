@@ -2,7 +2,7 @@ package services
 
 import com.typesafe.config.{Config, ConfigFactory}
 import controllers.AirportConfProvider
-import spatutorial.shared.{ApiFlight, SplitRatio}
+import spatutorial.shared.{AirportConfig, ApiFlight, SplitRatio}
 
 object SplitsProvider {
   def splitsForFlight(providers: List[ApiFlight => Option[List[SplitRatio]]])(apiFlight: ApiFlight): Option[List[SplitRatio]] = {
@@ -13,9 +13,6 @@ object SplitsProvider {
       }
     })
   }
-}
-
-trait ProdSplitsProvider extends AirportConfProvider {
   def shouldUseCsvSplitsProvider: Boolean = {
     val config: Config = ConfigFactory.load
 
@@ -26,16 +23,14 @@ trait ProdSplitsProvider extends AirportConfProvider {
 
   def csvProvider: (ApiFlight) => Option[List[SplitRatio]] = {
     if (shouldUseCsvSplitsProvider)
-      new CSVPassengerSplitsProvider {
-        override def flightPassengerSplitLines = CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig
-      }.splitRatioProvider
+      CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
     else
       emptyProvider
   }
 
-  def defaultProvider: (ApiFlight) => Some[List[SplitRatio]] = {
-    _ => Some(getPortConfFromEnvVar.defaultPaxSplits)
+  def defaultProvider(airportConf: AirportConfig): (ApiFlight) => Some[List[SplitRatio]] = {
+    _ => Some(airportConf.defaultPaxSplits)
   }
 
-  def splitRatioProvider = SplitsProvider.splitsForFlight(List(csvProvider, defaultProvider)) _
 }
+
