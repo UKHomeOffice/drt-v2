@@ -89,10 +89,7 @@ abstract class ApiService(airportConfig: AirportConfig)
   }
 
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    val fulldesks: List[Int] = if (queueName == "eGate")
-      desks.flatMap(x => List.fill(15)(x * 5))
-    else
-      desks.flatMap(x => List.fill(15)(x))
+    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
 
     val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
 
