@@ -74,7 +74,7 @@ trait WorkloadsHelpers {
 
   def workloadsByQueue(workloads: Map[String, QueueWorkloads], numberOfHours: Int = 24): Map[String, List[Double]] = {
     val allWorkloadsForQueuesInThisTerminal: scala.List[(Seq[WL], Seq[Pax])] = workloads.values.toList
-    val timesMin = minimumMinuteInWorkloads(allWorkloadsForQueuesInThisTerminal)
+    val timesMin = midnightBeforeEarliestWorkload(allWorkloadsForQueuesInThisTerminal)
     val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(allWorkloadsForQueuesInThisTerminal, timesMin, numberOfHours = numberOfHours)
     println(s"allMins: ${allMins.min} to ${allMins.max}")
     workloads.mapValues(qwl => {
@@ -86,7 +86,7 @@ trait WorkloadsHelpers {
 
   def paxloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
     val allWorkloadsForQueuesInThisTerminal: scala.List[(Seq[WL], Seq[Pax])] = workloads.values.toList
-    val timesMin = minimumMinuteInWorkloads(allWorkloadsForQueuesInThisTerminal)
+    val timesMin = midnightBeforeEarliestWorkload(allWorkloadsForQueuesInThisTerminal)
     val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(allWorkloadsForQueuesInThisTerminal, timesMin)
     println(s"allMins: ${allMins.min} to ${allMins.max}")
     workloads.mapValues(qwl => {
@@ -104,8 +104,11 @@ trait WorkloadsHelpers {
   }
 
   def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
-    allMins.foldLeft(Map[Long, Double]())(
-      (minuteMap, minute) => minuteMap + (minute -> workloadsByMinute.getOrElse(minute, 0d)))
+    println(s"^^^ allMins: $allMins")
+    println(s"^^^ workloadsByMinute: $workloadsByMinute")
+    allMins.foldLeft(Map[Long, Double]()) {
+      (minuteMap, minute) => minuteMap + (minute -> workloadsByMinute.getOrElse(minute, 0d))
+    }
   }
 
   def oneQueueWorkload(workloads1: QueueWorkloads): Map[Long, Double] = {
@@ -125,6 +128,13 @@ trait WorkloadsHelpers {
     val now = new Date()
     val thisMorning = new Date(now.getYear, now.getMonth, now.getDate)
     thisMorning.getTime()
+  }
+
+  def midnightBeforeEarliestWorkload(workloads: Seq[QueueWorkloads]): Long = {
+    val minWorkloadTime = workloads.map(qwl => qwl._1.map(_.time).min).min
+    val dateTimeOfMinWorkload = new Date(minWorkloadTime)
+
+    new Date(dateTimeOfMinWorkload.getYear, dateTimeOfMinWorkload.getMonth, dateTimeOfMinWorkload.getDate).getTime()
   }
 }
 
@@ -161,7 +171,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-//  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
+  //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
