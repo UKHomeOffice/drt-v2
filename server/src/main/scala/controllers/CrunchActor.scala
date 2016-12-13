@@ -27,8 +27,6 @@ case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
 case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
 
-case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
-
 object EGateBankCrunchTransformations {
 
   def groupEGatesIntoBanksWithSla(desksInBank: Int, sla: Int)(crunchResult: CrunchResult, workloads: Seq[Double]): CrunchResult = {
