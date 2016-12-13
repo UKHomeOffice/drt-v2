@@ -121,7 +121,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
     val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flightsForAirportConfigTerminals))
 
-    log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
       //      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
@@ -140,13 +139,15 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         }
       }
 
+
       val r: Try[CrunchResult] = triedWl.flatMap {
-        terminalWorkloads =>
+        (terminalWorkloads: Map[String, List[Double]]) =>
           log.info(s"Will crunch now $tq")
           log.info(s"terminalWorkloads are ${terminalWorkloads.keys}")
           val workloads: List[Double] = terminalWorkloads(queueName)
           log.info(s"$tq Crunching on ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
+          log.info(s"!!!@@@terminal workloads: $workloads")
           val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads, queueSla)
           log.info(s"Crunch complete for $tq ${crunchRes.map(x => CrunchResult(x.recommendedDesks.take(10), x.waitTimes.take(10)))}")
           crunchRes
