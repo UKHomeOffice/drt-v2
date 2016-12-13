@@ -61,7 +61,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
 
   "Streamed Flight Crunch Tests" >> {
     "and we have sent it flights for different terminals A1 and A2" in {
-      "when we ask for the latest crunch for  terminal A1, we get a crunch result only including flights at that terminal" in {
+      "when we ask for the latest crunch for eeaDesk at terminal A1, we get a crunch result only including flights at that terminal" in {
         withContext { context =>
           val flights = Flights(
             List(
@@ -73,6 +73,37 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
             CrunchResult(
               Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
               Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+          context.expectMsg(15 seconds, exp)
+          true
+        }
+      }
+
+      "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
+        withContext { context =>
+          val flights = Flights(
+            List(
+              apiFlight("BA123", terminal = "A1", totalPax = 10500, scheduledDatetime = "2016-09-01T10:31", flightId = 1),
+              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30", flightId = 2)))
+          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
+          context.sendToCrunch(GetLatestCrunch("A1", "eGate"))
+          val exp =
+            CrunchResult(
+              Vector(
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+              Vector(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
 
           context.expectMsg(15 seconds, exp)
           true
