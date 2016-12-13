@@ -9,7 +9,6 @@ import scala.collection.immutable.{IndexedSeq, Seq}
 object EGateBanksTests extends TestSuite {
 
 
-
   def tests = TestSuite {
     def intoBanksOf5WithSlaOf10 = EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, 10) _
 
@@ -77,6 +76,62 @@ object EGateBanksTests extends TestSuite {
 
       val expected = CrunchResult(IndexedSeq(1, 2, 2, 3), Seq(1, 2, 3, 4))
       val result = EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(10, 10)(crunchResult, Seq(90, 90, 90, 90))
+
+      assert(result == expected)
+    }
+
+    "Given some workload and desks " +
+      "When we run a simulation " +
+      "Then we should see wait times corresponding to those desks" - {
+      val workload = List(
+        15d, 5d, 5d, 5d, 5d,
+        5d, 5d, 5d, 5d, 5d,
+        5d, 5d, 5d, 5d, 5d
+      )
+      val eGateBanks = List(1)
+
+      val airportConfig = AirportConfig(
+        queues = Seq(),
+        slaByQueue = Map("eeaDesk" -> 5),
+        terminalNames = Seq(),
+        defaultPaxSplits = List(),
+        defaultProcessingTimes = Map()
+      )
+
+      val result = WorkloadSimulation.processWork(airportConfig)("T1", "eeaDesk", workload, eGateBanks)
+      val expected = SimulationResult(Vector(
+        DeskRec(0, 1), DeskRec(1, 1), DeskRec(2, 1), DeskRec(3, 1), DeskRec(4, 1),
+        DeskRec(5, 1), DeskRec(6, 1), DeskRec(7, 1), DeskRec(8, 1), DeskRec(9, 1),
+        DeskRec(10, 1), DeskRec(11, 1), DeskRec(12, 1), DeskRec(13, 1), DeskRec(14, 1)
+      ), Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14))
+
+      assert(result == expected)
+    }
+
+    "Given some workload and egate banks " +
+      "When we run a simulation " +
+      "Then we should see wait times corresponding to those banks of egates" - {
+      val workload = List(
+        15d, 5d, 5d, 5d, 5d,
+        5d, 5d, 5d, 5d, 5d,
+        5d, 5d, 5d, 5d, 5d
+      )
+      val eGateBanks = List(1)
+
+      val airportConfig = AirportConfig(
+        queues = Seq(),
+        slaByQueue = Map("eGate" -> 5),
+        terminalNames = Seq(),
+        defaultPaxSplits = List(),
+        defaultProcessingTimes = Map()
+      )
+
+      val result = WorkloadSimulation.processWork(airportConfig)("T1", "eGate", workload, eGateBanks)
+      val expected = SimulationResult(Vector(
+        DeskRec(0, 1), DeskRec(1, 1), DeskRec(2, 1), DeskRec(3, 1), DeskRec(4, 1),
+        DeskRec(5, 1), DeskRec(6, 1), DeskRec(7, 1), DeskRec(8, 1), DeskRec(9, 1),
+        DeskRec(10, 1), DeskRec(11, 1), DeskRec(12, 1), DeskRec(13, 1), DeskRec(14, 1)
+      ), Vector(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
 
       assert(result == expected)
     }

@@ -60,6 +60,31 @@ object AirportToCountry extends AirportToCountryLike {
 
 }
 
+object WorkloadSimulation {
+  def processWork(airportConfig: AirportConfig)(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
+    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
+
+    if (queueName == "eGate")
+      eGateSimulationResultForBanksAndWorkload(optimizerConfig, workloads, desks)
+    else
+      simulationResultForDesksAndWorkload(optimizerConfig, workloads, desks)
+  }
+
+  def simulationResultForDesksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): SimulationResult = {
+    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
+
+    TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
+  }
+
+  def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): SimulationResult = {
+    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x * 5))
+
+    val simulationResult = TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
+
+    simulationResult.copy(recommendedDesks = simulationResult.recommendedDesks.map(d => DeskRec(d.time, d.desks / 5)))
+  }
+}
+
 abstract class ApiService(airportConfig: AirportConfig)
   extends Api
     with WorkloadsCalculator
@@ -89,11 +114,7 @@ abstract class ApiService(airportConfig: AirportConfig)
   }
 
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
-
-    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
-
-    TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
+    WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads, desks)
   }
 
   override def airportConfiguration() = airportConfig
