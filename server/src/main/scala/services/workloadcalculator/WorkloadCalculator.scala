@@ -23,29 +23,6 @@ object PaxLoadCalculator {
 
   case class PaxTypeAndQueueCount(paxAndQueueType: PaxTypeAndQueue, paxSum: Load)
 
-  //  def queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)]
-  //                                    , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueName, QueuePaxAndWorkLoads] = {
-  //    val flightsPaxSplits = flights.flatMap(calcPaxTypeAndQueueCountForAFlightOverTime)
-  //    val flightsPaxSplitsByQueueAndMinute = flightsPaxSplits.groupBy(t => (t._2.paxAndQueueType.queueType, t._1))
-  //
-  //    val loadsByQueueAndMinute: Map[(QueueName, MillisSinceEpoch), (Load, Load)] = flightsPaxSplitsByQueueAndMinute
-  //      .mapValues { tmPtQcs => calcAndSumPaxAndWorkLoads(procTimeProvider, tmPtQcs.map(_._2)) }
-  //
-  //    val thing: Seq[(QueueName, (WL, Pax))] = loadsByQueueAndMinute.toList.map {
-  //      case ((queueName, time), (paxSum, workSum)) => (queueName, (WL(time, workSum), Pax(time, paxSum)))
-  //    }
-  //
-  //    val loadsByQueue = thing.groupBy(_._1).mapValues(_.map(_._2).toSeq)
-  //
-  //    val queueWithLoads: Map[QueueName, (List[WL], List[Pax])] = loadsByQueue.mapValues(tuples => {
-  //      val workLoads: List[WL] = sortLoadByTime(tuples.map(_._1))
-  //      val paxLoads: List[Pax] = sortLoadByTime(tuples.map(_._2))
-  //      (workLoads, paxLoads)
-  //    })
-  //
-  //    queueWithLoads
-  //  }
-
   def calcAndSumPaxAndWorkLoads(procTimeProvider: (PaxTypeAndQueue) => ProcTime, paxTypeAndQueueCounts: List[PaxTypeAndQueueCount]): (Load, Load) = {
     val paxSum = paxTypeAndQueueCounts.map(_.paxSum).sum
     val workloadSum = paxTypeAndQueueCounts.map(ptQc => procTimeProvider(ptQc.paxAndQueueType) * ptQc.paxSum).sum
