@@ -3,7 +3,7 @@ package spatutorial.client.services
 
 import diode.ActionResult.EffectOnly
 
-import scala.collection.immutable.{NumericRange, IndexedSeq, Iterable, Seq}
+import scala.collection.immutable.{IndexedSeq, Iterable, NumericRange, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -22,9 +22,11 @@ import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import diode.Implicits.runAfterImpl
+import spatutorial.client.services.RootModel.mergeTerminalQueues
+
 import scala.scalajs.js.timers._
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
@@ -173,7 +175,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
       log.info(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
       val newDesksPot: Pot[UserDeskRecs] = value(terminalName)(queueName).map(_.updated(item))
-      updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+      updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
 
@@ -212,6 +214,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
       val call: Future[AirportConfig] = AjaxClient[Api].airportConfiguration().call()
       log.info(s"Airport config from server: ${call}")
 
+
       updated(Pending(), Effect(call.map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
       log.info(s"Received airportConfig ${configHolder}")
@@ -219,7 +222,14 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 
       val crunchRequests: Seq[Effect] = for {tn <- configHolder.terminalNames
                                              qn <- configHolder.queues
-      } yield Effect(Future(GetLatestCrunch(tn, qn)))
+      } yield {
+        setInterval(FiniteDuration(60L, SECONDS)) {
+          log.info(s"Polling for crunch results terminal: $tn :queue $qn")
+          SPACircuit.dispatch(GetLatestCrunch(tn, qn))
+        }
+        Effect(Future(GetLatestCrunch(tn, qn)))
+      }
+
 
       val effectSet = crunchRequests.toList match {
         case h :: Nil =>
@@ -263,7 +273,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       log.info(s"Handler: ChangeDesk($terminalName, $queueName, $v, $k)")
       val model: Pot[UserDeskRecs] = value(terminalName)(queueName)
       val newUserRecs: UserDeskRecs = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
-      updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))
+      updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))
   }
 }
 
@@ -271,7 +281,7 @@ class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[Queue
   protected def handle = {
     case UpdateSimulationResult(terminalName, queueName, simResult) =>
       //      log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
-      updated(RootModel.mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
+      updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 }
 
@@ -321,7 +331,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
         case Left(ncr) =>
           log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
-         NoAction
+          NoAction
       }
 
       effectOnly(Effect(fe))
@@ -333,8 +343,8 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
         .zipWithIndex.map(t => DeskRecTimeslot(id = t._2.toString, deskRec = t._1)).toList)
 
       updated(value.copy(
-        _1 = RootModel.mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
-        _2 = RootModel.mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
+        _1 = mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
+        _2 = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
       ))
   }
 
