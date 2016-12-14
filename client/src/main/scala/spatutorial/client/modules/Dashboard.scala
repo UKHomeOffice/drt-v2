@@ -23,7 +23,7 @@ import scala.language.existentials
 import spatutorial.client.logger._
 
 import scala.Iterable
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.{Iterable, NumericRange}
 
 object Dashboard {
   type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
@@ -49,8 +49,9 @@ object Dashboard {
                   )
 
   def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
-    val timesMin = WorkloadsHelpers.minimumMinuteInWorkloads(workloads.values.toList)
-    val queueWorkloadsByMinute = WorkloadsHelpers.workloadsByQueue(workloads)
+    val firstWorkload = WorkloadsHelpers.midnightBeforeNow()
+    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(firstWorkload, 24)
+    val queueWorkloadsByMinute = WorkloadsHelpers.workloadsByQueue(workloads, minutesRangeInMillis)
     val by15Minutes = queueWorkloadsByMinute.mapValues(
       (v) => v.grouped(minutesPerGroup).map(_.sum).toList
     )

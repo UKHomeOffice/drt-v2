@@ -2,13 +2,12 @@ package spatutorial.shared
 
 import java.util.Date
 
-import scala.collection.immutable._
+import scala.collection.immutable.{IndexedSeq, Map, Seq, _}
 import spatutorial.shared.FlightsApi._
 
 import scala.List
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 case class ApiFlight(
                       Operator: String,
@@ -72,28 +71,24 @@ case class AirportInfo(airportName: String, city: String, country: String, code:
 trait WorkloadsHelpers {
   val oneMinute = 60000L
 
-  def workloadsByQueue(workloads: Map[String, QueueWorkloads], numberOfHours: Int = 24): Map[String, List[Double]] = {
-    val allWorkloadsForQueuesInThisTerminal: scala.List[(Seq[WL], Seq[Pax])] = workloads.values.toList
-    val timesMin = midnightBeforeEarliestWorkload(allWorkloadsForQueuesInThisTerminal)
-    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(allWorkloadsForQueuesInThisTerminal, timesMin, numberOfHours = numberOfHours)
-    println(s"allMins: ${allMins.min} to ${allMins.max}")
+  def workloadsByQueue(workloads: Map[String, (Seq[WL], Seq[Pax])], allMins: NumericRange[Long]): Map[String, List[Double]] = {
+    loadsByQueue(workloads, allMins, oneQueueWorkload)
+  }
+
+  def paxloadsByQueue(workloads: Map[String, QueueWorkloads], allMins: NumericRange[Long]): Map[String, List[Double]] = {
+    loadsByQueue(workloads, allMins, oneQueuePaxload)
+  }
+
+  def loadsByQueue(workloads: Map[String, QueueWorkloads], allMins: NumericRange[Long], valueExtractor: QueueWorkloads => Map[Long, Double]): Map[String, List[Double]] = {
     workloads.mapValues(qwl => {
-      val allWorkloadByMinuteForThisQueue = oneQueueWorkload(qwl)
-      val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allWorkloadByMinuteForThisQueue)
+      val allPaxloadByMinuteForThisQueue = valueExtractor(qwl)
+      val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allPaxloadByMinuteForThisQueue)
       queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
     })
   }
 
-  def paxloadsByQueue(workloads: Map[String, QueueWorkloads]): Map[String, List[Double]] = {
-    val allWorkloadsForQueuesInThisTerminal: scala.List[(Seq[WL], Seq[Pax])] = workloads.values.toList
-    val timesMin = midnightBeforeEarliestWorkload(allWorkloadsForQueuesInThisTerminal)
-    val allMins: NumericRange[Long] = wholeDaysMinutesFromAllQueues(allWorkloadsForQueuesInThisTerminal, timesMin)
-    println(s"allMins: ${allMins.min} to ${allMins.max}")
-    workloads.mapValues(qwl => {
-      val allPaxloadByMinuteForThisQueue = oneQueuePaxload(qwl)
-      val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(allMins, allPaxloadByMinuteForThisQueue)
-      queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
-    })
+  def minutesForPeriod(firstWorkloadMilli: Long, numberOfHours: Int): NumericRange[Long] = {
+    wholeDaysMinutesFromAllQueues(firstWorkloadMilli, numberOfHours)
   }
 
   def workloadsByPeriod(workloadsByMinute: Seq[WL], n: Int): scala.Seq[WL] =
@@ -104,8 +99,6 @@ trait WorkloadsHelpers {
   }
 
   def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
-    println(s"^^^ allMins: $allMins")
-    println(s"^^^ workloadsByMinute: $workloadsByMinute")
     allMins.foldLeft(Map[Long, Double]()) {
       (minuteMap, minute) => minuteMap + (minute -> workloadsByMinute.getOrElse(minute, 0d))
     }
@@ -119,12 +112,12 @@ trait WorkloadsHelpers {
     paxloads._2.map((paxLoad) => (paxLoad.time, paxLoad.pax)).toMap
   }
 
-  def wholeDaysMinutesFromAllQueues(workloads: Seq[QueueWorkloads], timesMin: Long, numberOfHours: Int = 24): NumericRange[Long] = {
+  def wholeDaysMinutesFromAllQueues(timesMin: Long, numberOfHours: Int = 24): NumericRange[Long] = {
     val timeMinPlusOneDay: Long = timesMin + oneMinute * 60 * numberOfHours
     timesMin until timeMinPlusOneDay by oneMinute
   }
 
-  def minimumMinuteInWorkloads(workloads: Seq[QueueWorkloads]): Long = {
+  def midnightBeforeNow(): Long = {
     val now = new Date()
     val thisMorning = new Date(now.getYear, now.getMonth, now.getDate)
     thisMorning.getTime()

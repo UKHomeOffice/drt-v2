@@ -250,12 +250,15 @@ object HandyStuff {
 class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]])
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case RunSimulation(terminalName, queueName, workloads, desks) =>
+    case RunSimulation(terminalName, queueName, workloads: List[Double], desks) =>
       log.info(s"Requesting simulation for $terminalName, {queueName}")
-      val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads(terminalName))(queueName)
+      val firstWorkload = WorkloadsHelpers.midnightBeforeNow()
+      val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(firstWorkload, 24)
+      val terminalWorkload = modelR.value.get.workloads(terminalName)
+      val queueWorkload: List[Double] = WorkloadsHelpers.workloadsByQueue(terminalWorkload, minutesRangeInMillis)(queueName)
       //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
-      log.info(s"Got workloads from model for $terminalName {queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
-      val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, workloads1, desks).call()
+      log.info(s"Got workloads from model for $terminalName {queueName} desks: ${desks.take(15)}... workloads: ${queueWorkload.take(15)}...")
+      val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )
