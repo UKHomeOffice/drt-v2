@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 import spatutorial.shared._
 import spray.caching.{Cache, LruCache}
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -135,26 +135,24 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
-    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flightsForAirportConfigTerminals))
+    val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
 
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
-      //      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
         log.info(s"the workloads $wl")
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
-          case Some(twl) =>
-            log.info(s"wl now ${twl.map((x => (x._1, (x._2._1.take(10), x._2._2.take(10)))))}")
-            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.workloadsByQueue(twl, crunchPeriodHours)
-            log.info("looked up " + tq + " and got " + workloadsByQueue.map((x => (x._1, x._2.take(10)))))
+          case Some(twl: Map[QueueName, Seq[WL]]) =>
+            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, crunchPeriodHours)
+            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
             workloadsByQueue
           case None =>
             Map()
         }
       }
-
 
       val r: Try[CrunchResult] = triedWl.flatMap {
         (terminalWorkloads: Map[String, List[Double]]) =>
@@ -173,7 +171,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           else
             crunchRes
       }
-      val asFutre = r match {
+      val asFuture = r match {
         case Success(s) =>
           log.info(s"Successful crunch for $tq")
           s
@@ -181,7 +179,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           log.error(f, s"Failed to crunch $tq")
           throw f
       }
-      asFutre
+      asFuture
     }
   }
 }

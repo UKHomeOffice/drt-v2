@@ -93,10 +93,10 @@ abstract class ApiService(airportConfig: AirportConfig)
     with ActorBackedCrunchService
     with CrunchResultProvider {
 
-  type WorkloadByTerminalQueue = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
   val log = LoggerFactory.getLogger(this.getClass)
   log.info(s"ApiService.airportConfig = $airportConfig")
-  override def getWorkloads(): Future[WorkloadByTerminalQueue] = {
+
+  override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads] = {
     val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
     val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
       log.info(s"AirportConfig: $airportConfig")
@@ -105,7 +105,7 @@ abstract class ApiService(airportConfig: AirportConfig)
         names.contains(flight.Terminal)
       })
     }
-    getWorkloadsByTerminal(flightsForTerminalsWeCareAbout)
+    workAndPaxLoadsByTerminal(flightsForTerminalsWeCareAbout)
   }
 
   override def welcomeMsg(name: String): String = {

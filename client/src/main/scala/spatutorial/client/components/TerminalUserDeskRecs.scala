@@ -124,9 +124,9 @@ object TableTerminalDeskRecs {
           val srv = peMP().simulationResult.getOrElse(terminalName, Map())
           log.info(s"tud: ${terminalName}")
           val timestamps = workloads.timeStamps(terminalName)
-          val firstWorkload = WorkloadsHelpers.midnightBeforeNow()
-          val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(firstWorkload, 24)
-          val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(peMP().workload.get.workloads(terminalName), minutesRangeInMillis)
+          val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+          val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+          val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(peMP().workload.get.workloads(terminalName), minutesRangeInMillis)
           val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
           airportConfigPotRCP(airportConfigPotMP => {
             <.div(

@@ -11,7 +11,7 @@ import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, QueueWorkloads, TerminalName}
+import spatutorial.shared.FlightsApi.{Flights, QueueName, QueuePaxAndWorkLoads, TerminalName}
 import spatutorial.shared._
 
 import scala.collection.immutable
@@ -48,10 +48,10 @@ object Dashboard {
                    userDeskRecsWrapper: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]]
                   )
 
-  def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
-    val firstWorkload = WorkloadsHelpers.midnightBeforeNow()
-    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(firstWorkload, 24)
-    val queueWorkloadsByMinute = WorkloadsHelpers.workloadsByQueue(workloads, minutesRangeInMillis)
+  def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
+    val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
     val by15Minutes = queueWorkloadsByMinute.mapValues(
       (v) => v.grouped(minutesPerGroup).map(_.sum).toList
     )
