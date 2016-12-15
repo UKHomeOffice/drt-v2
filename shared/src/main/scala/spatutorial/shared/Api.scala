@@ -41,25 +41,13 @@ case class NoCrunchAvailable()
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
 
 object FlightsApi {
-
-  case class Flight(scheduleArrivalDt: Long, actualArrivalDt: Option[Long], reallyADate: Long,
-                    flightNumber: String,
-                    carrierCode: String,
-                    pax: Int,
-                    iata: Option[String],
-                    icao: Option[String])
-
   case class Flights(flights: List[ApiFlight])
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
 
-  type WorkLoads = Seq[Time]
-
   type TerminalName = String
 
   type QueueName = String
-
-  type WorkloadsResult = Map[QueueName, QueuePaxAndWorkLoads]
 }
 
 trait FlightsApi {

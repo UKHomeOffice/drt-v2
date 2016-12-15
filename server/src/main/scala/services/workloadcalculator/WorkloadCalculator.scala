@@ -87,7 +87,7 @@ object PaxLoadCalculator {
   def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[List[SplitRatio]])(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val timesMin = new DateTime(flight.SchDT, DateTimeZone.UTC).getMillis
     val splits = splitsRatioProvider(flight).get
-    val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minsForNextNHours(timesMin, 1)
+    val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(timesMin, 1)
       .zip(paxDeparturesPerMinutes(if (flight.ActPax > 0) flight.ActPax else flight.MaxPax, paxOffFlowRate))
       .flatMap {
         case (m, paxInMinute) =>
@@ -97,7 +97,7 @@ object PaxLoadCalculator {
     splitsOverTime
   }
 
-  def minsForNextNHours(timesMin: MillisSinceEpoch, hours: Int) = timesMin until (timesMin + oneMinute * 60 * hours) by oneMinute
+  def minutesForHours(timesMin: MillisSinceEpoch, hours: Int) = timesMin until (timesMin + oneMinute * 60 * hours) by oneMinute
 
   def paxDeparturesPerMinutes(remainingPax: Int, departRate: Int): List[Int] = {
     if (remainingPax % departRate != 0)
