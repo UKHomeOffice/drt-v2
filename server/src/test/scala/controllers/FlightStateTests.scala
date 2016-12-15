@@ -3,8 +3,6 @@ package controllers
 import spatutorial.shared._
 import utest._
 
-import scala.collection.mutable
-
 object FlightStateTests extends TestSuite {
   def apiFlight(flightId: Int, schDt: String, estDt: String): ApiFlight =
     ApiFlight(
@@ -40,7 +38,7 @@ object FlightStateTests extends TestSuite {
           val startThreshold = "2016-01-01T12:00"
           val newFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
 
-          withContext { context =>
+          withContext() { context =>
             val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
             assert(result == newFlights)
@@ -56,7 +54,7 @@ object FlightStateTests extends TestSuite {
           val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30"))
           val newFlights = validFlights ::: invalidFlights
 
-          withContext { context =>
+          withContext() { context =>
             val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
             assert(result == validFlights)
@@ -71,7 +69,7 @@ object FlightStateTests extends TestSuite {
             apiFlight(flightId = 1, schDt = "2016-01-01T12:30", estDt = "")
           )
 
-          withContext { context =>
+          withContext() { context =>
             val result = getFlightStateFlightsListFromUpdate(context, startThreshold, newFlights)
 
             assert(result == newFlights)
@@ -87,7 +85,7 @@ object FlightStateTests extends TestSuite {
           apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30")
         )
 
-        withContext { context =>
+        withContext() { context =>
           val flightState = new FlightState {
             def log = context.system.log
           }
@@ -112,7 +110,7 @@ object FlightStateTests extends TestSuite {
       val newFlightAfterThreshold = apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30")
       val newFlights = List(newFlightAfterThreshold)
 
-      withContext { context =>
+      withContext() { context =>
         val flightState = new FlightState {
           def log = context.system.log
         }

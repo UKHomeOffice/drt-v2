@@ -36,7 +36,7 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
-  class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf, () => DateTime.now()) {
+  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = (() => DateTime.now())) extends CrunchActor(hours, conf, timeProvider) {
     override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) =
       _ => Some(List(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
@@ -54,15 +54,7 @@ object FlightCrunchInteractionTests extends TestSuite {
         case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
       }
 
-    override def lastMidnight: String = "2000-01-01"
-  }
-
-
-  def makeSystem = {
-    new TestKit(ActorSystem()) with SystemActors with Core with AirportConfProvider {
-      override val crunchActor = system.actorOf(Props(classOf[TestCrunchActor], 24, AirportConfigs.stn), "crunchActor")
-      def splitProviders() = List(SplitsProvider.defaultProvider(AirportConfigs.stn))
-    }
+    override def lastMidnightString: String = "2000-01-01"
   }
 
   def tests = TestSuite {
@@ -70,7 +62,6 @@ object FlightCrunchInteractionTests extends TestSuite {
       assert(true)
     }
   }
-
 }
 
 object CrunchTests extends TestSuite {

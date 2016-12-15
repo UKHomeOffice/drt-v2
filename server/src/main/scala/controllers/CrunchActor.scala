@@ -72,7 +72,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case PerformCrunchOnFlights(newFlights) =>
-      onFlightUpdates(newFlights.toList, lastMidnight)
+      onFlightUpdates(newFlights.toList, lastMidnightString)
+
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
@@ -108,9 +109,14 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       log.info(s"crunchActor received ${message}")
   }
 
-  def lastMidnight: String = {
+  def lastMidnightString: String = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
     timeProvider().toString(formatter)
+  }
+
+  def lastMidnight: DateTime = {
+    val t = timeProvider()
+    t.withTimeAtStartOfDay()
   }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
@@ -145,9 +151,12 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
           case Some(twl: Map[QueueName, Seq[WL]]) =>
-            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, crunchPeriodHours)
+            log.info(s"lastMidnight: $lastMidnight")
+            val startTimeMillis = lastMidnight.getMillis
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startTimeMillis, crunchPeriodHours)
+            log.info(s"^^^$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
             val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
+            log.info(s"startTimeMillis: $startTimeMillis, crunchPeriod: $crunchPeriodHours")
             workloadsByQueue
           case None =>
             Map()

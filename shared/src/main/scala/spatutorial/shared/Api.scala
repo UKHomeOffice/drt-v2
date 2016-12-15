@@ -66,6 +66,12 @@ trait WorkloadsHelpers {
     })
   }
 
+  def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
+    allMins.foldLeft(Map[Long, Double]()) {
+      (minuteMap, minute) => minuteMap + (minute -> workloadsByMinute.getOrElse(minute, 0d))
+    }
+  }
+
   def workloadPeriodByQueue(workloads: Map[String, (Seq[WL], Seq[Pax])], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
     loadPeriodByQueue(workloads, periodMinutes, workloadByMillis)
   }
@@ -91,12 +97,6 @@ trait WorkloadsHelpers {
 
   def queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(res: Map[Long, Double]): List[Double] = {
     res.toSeq.sortBy(_._1).map(_._2).toList
-  }
-
-  def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
-    allMins.foldLeft(Map[Long, Double]()) {
-      (minuteMap, minute) => minuteMap + (minute -> workloadsByMinute.getOrElse(minute, 0d))
-    }
   }
 
   def workloadToWorkLoadByTime(workload: Seq[WL]): Map[Long, Double] = {
