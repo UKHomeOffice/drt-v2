@@ -154,6 +154,8 @@ object TableTerminalDeskRecs {
       val style = bss.listGroup
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
+        val index = itemWithIndex._2
+
         val time = item.time
         val windowSize = 60000 * 15
         val flights: Pot[Flights] = p.flights.map(flights =>
@@ -161,7 +163,7 @@ object TableTerminalDeskRecs {
         val date: Date = new Date(item.time)
         val formattedDate: String = formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
-        val popover = HoverPopover(formattedDate, flights, airportInfo)
+        val airportInfoPopover = HoverPopover(formattedDate, flights, airportInfo)
         val fill = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
@@ -187,19 +189,24 @@ object TableTerminalDeskRecs {
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
-        <.tr(<.td(^.cls := "date-field", popover()) :: fill: _*)
+        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: fill: _*)
       }
       val queueNames = TableViewUtils.queueNameMapping.toList
       val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
       val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
-        <.tbody(
+        <.thead(
+          ^.display := "block",
           <.tr(<.th("") :: queueNames.map {
             case (queueName, queueDisplayName) => qth(queueName, <.h2(queueDisplayName), ^.colSpan := 5)
           }: _*),
           <.tr(<.th("") :: flatten: _*),
-          <.tr(<.th("Time") :: fill: _*),
+          <.tr(<.th("Time") :: fill: _*)),
+        <.tbody(
+          ^.display := "block",
+          ^.overflow := "scroll",
+          ^.height := "400px",
           p.items.zipWithIndex map renderItem))
     }
 
