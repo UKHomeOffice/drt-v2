@@ -5,6 +5,7 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.TableViewUtils
+import spatutorial.client.TableViewUtils._
 import spatutorial.client.logger._
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
@@ -125,7 +126,7 @@ object TableTerminalDeskRecs {
           val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
           val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
           val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(peMP().workload.get.workloads(terminalName), minutesRangeInMillis)
-          val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
+          val rows = terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
           airportConfigPotRCP(airportConfigPotMP => {
             <.div(
               TableTerminalDeskRecs(
@@ -191,10 +192,8 @@ object TableTerminalDeskRecs {
         ).toList
         <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: fill: _*)
       }
-      val queueNames: List[(QueueName, QueueName)] = TableViewUtils.queueNameMapping.toList
-
-      val subHeadingLevel1 = queueNames.flatMap(nameAndDisplayName => {
-        val deskUnitLabel = DeskRecsTable.deskUnitLabel(nameAndDisplayName._1)
+      val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
+        val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
         List(<.th(""), <.th(deskUnitLabel, ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))
       })
       val subHeadingLevel2: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
@@ -202,11 +201,12 @@ object TableTerminalDeskRecs {
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
           ^.display := "block",
-          <.tr(<.th("") :: queueNames.map {
-            case (queueName, queueDisplayName) => qth(queueName, <.h2(queueDisplayName), ^.colSpan := 5)
+          <.tr(<.th("") :: queueNameMappingOrder.map {
+            case (queueName) =>
+              qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
           }: _*),
           <.tr(<.th("") :: subHeadingLevel1: _*),
-          <.tr(<.th("Time") :: subHeadingLevel2: _*),
+          <.tr(<.th("Time") :: subHeadingLevel2: _*)),
         <.tbody(
           ^.display := "block",
           ^.overflow := "scroll",
