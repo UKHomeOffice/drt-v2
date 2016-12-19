@@ -3,16 +3,14 @@ package spatutorial.client.components
 import diode.data.{Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.logger._
-import org.scalajs.dom.html.{Div, TableCell, TableHeaderCell}
 import spatutorial.client.TableViewUtils
+import spatutorial.client.logger._
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared._
 
 import scala.collection.immutable.{Map, NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -191,17 +189,21 @@ object TableTerminalDeskRecs {
         ).toList
         <.tr(<.td(^.cls := "date-field", popover()) :: fill: _*)
       }
-      val queueNames = TableViewUtils.queueNameMapping.toList
-      val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
-      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
+      val queueNames: List[(QueueName, QueueName)] = TableViewUtils.queueNameMapping.toList
+
+      val subHeadingLevel1 = queueNames.flatMap(nameAndDisplayName => {
+        val deskUnitLabel = DeskRecsTable.deskUnitLabel(nameAndDisplayName._1)
+        List(<.th(""), <.th(deskUnitLabel, ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))
+      })
+      val subHeadingLevel2: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.tbody(
           <.tr(<.th("") :: queueNames.map {
             case (queueName, queueDisplayName) => qth(queueName, <.h2(queueDisplayName), ^.colSpan := 5)
           }: _*),
-          <.tr(<.th("") :: flatten: _*),
-          <.tr(<.th("Time") :: fill: _*),
+          <.tr(<.th("") :: subHeadingLevel1: _*),
+          <.tr(<.th("Time") :: subHeadingLevel2: _*),
           p.items.zipWithIndex map renderItem))
     }
 

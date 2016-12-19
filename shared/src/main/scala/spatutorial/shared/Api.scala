@@ -1,9 +1,7 @@
 package spatutorial.shared
 
 import java.util.Date
-
 import spatutorial.shared.FlightsApi._
-
 import scala.collection.immutable._
 import scala.concurrent.Future
 
