@@ -153,6 +153,8 @@ object TableTerminalDeskRecs {
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
+      def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         val index = itemWithIndex._2
@@ -174,7 +176,7 @@ object TableTerminalDeskRecs {
               case _ =>
                 ""
             }
-            def qtd(xs: TagMod*) = <.td(((^.className := q.queueName + "-user-desk-rec") :: xs.toList): _*)
+            def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               qtd(q.pax),
@@ -192,11 +194,20 @@ object TableTerminalDeskRecs {
         ).toList
         <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: fill: _*)
       }
+      val headerGroupStart = ^.borderLeft := "solid 1px #fff"
       val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
         val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
-        List(<.th(""), <.th(deskUnitLabel, ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))
+        val qc = queueColour(queueName)
+        List(<.th("", ^.className := qc),
+          <.th(headerGroupStart, deskUnitLabel, ^.className := qc, ^.colSpan := 2),
+          <.th(headerGroupStart, "Wait Times with", ^.className := qc, ^.colSpan := 2))
       })
-      val subHeadingLevel2: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
+      val subHeadingLevel2: List[TagMod] = queueNameMappingOrder.map( queueName =>
+        List(<.th("Pax"),
+          <.th(headerGroupStart, "Required"), <.th("Available"),
+          <.th(headerGroupStart, "Recs"), <.th("Available"))
+          .map(t => t.copy(modifiers = (List(^.className := queueColour(queueName)) :: t.modifiers)))
+      ).flatten
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
@@ -210,7 +221,7 @@ object TableTerminalDeskRecs {
         <.tbody(
           ^.display := "block",
           ^.overflow := "scroll",
-          ^.height := "400px",
+          ^.height := "500px",
           p.items.zipWithIndex map renderItem))
     }
 
