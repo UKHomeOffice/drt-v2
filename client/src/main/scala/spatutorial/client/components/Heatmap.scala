@@ -9,9 +9,9 @@ import org.scalajs.dom.svg.{G, Text}
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard
-import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
+import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads, TerminalName}
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}

@@ -22,7 +22,7 @@ import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
-
+import scala.language.postfixOps
 import scala.concurrent.duration._
 import diode.Implicits.runAfterImpl
 import spatutorial.client.services.RootModel.mergeTerminalQueues
@@ -211,33 +211,30 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   protected def handle = {
     case action: GetAirportConfig =>
       log.info("requesting workloadsWrapper from server")
-      val call: Future[AirportConfig] = AjaxClient[Api].airportConfiguration().call()
-      log.info(s"Airport config from server: ${call}")
 
-
-      updated(Pending(), Effect(call.map(UpdateAirportConfig)))
+      updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
-      log.info(s"Received airportConfig ${configHolder}")
-      log.info("Subscribing to crunchs for terminal/queues")
+      log.info(s"Received airportConfig $configHolder")
+      log.info("Subscribing to crunches for terminal/queues")
 
-      val crunchRequests: Seq[Effect] = for {tn <- configHolder.terminalNames
-                                             qn <- configHolder.queues
-      } yield {
-        setInterval(FiniteDuration(60L, SECONDS)) {
-          log.info(s"Polling for crunch results terminal: $tn :queue $qn")
-          SPACircuit.dispatch(GetLatestCrunch(tn, qn))
-        }
-        Effect(Future(GetLatestCrunch(tn, qn)))
-      }
+      val effects: Effect = createCrunchRequestEffects(configHolder)
+      updated(Ready(configHolder), effects)
+  }
 
+  def createCrunchRequestEffects(configHolder: AirportConfig): Effect = {
+    val crunchRequests: Seq[Effect] = for {tn <- configHolder.terminalNames
+                                           qn <- configHolder.queues
+    } yield {
+      Effect(Future(GetLatestCrunch(tn, qn)))
+    }
 
-      val effectSet = crunchRequests.toList match {
-        case h :: Nil =>
-          updated(Ready(configHolder), h)
-        case h :: ts =>
-          updated(Ready(configHolder), new EffectSeq(h, ts, queue))
-      }
-      effectSet
+    val effects = crunchRequests.toList match {
+      case h :: Nil =>
+        h
+      case h :: ts =>
+        new EffectSeq(h, ts, queue)
+    }
+    effects
   }
 }
 
@@ -325,23 +322,21 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
+      val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
         case Right(cr) =>
           UpdateCrunchResult(terminalName, queueName, cr)
-
         case Left(ncr) =>
           log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
           NoAction
       }
-
-      effectOnly(Effect(fe))
+      effectOnly(Effect(fe) + crunchEffect)
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
-      log.info(s"UpdateCrunchResult $queueName")
+      log.info(s"UpdateCrunchResultnoEffect $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
       val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
         .zipWithIndex.map(t => DeskRecTimeslot(id = t._2.toString, deskRec = t._1)).toList)
-
       updated(value.copy(
         _1 = mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
         _2 = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
