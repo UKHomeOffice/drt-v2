@@ -5,7 +5,7 @@ import java.util.Date
 import akka.actor._
 import org.joda.time.{DateTime, LocalDate}
 import org.joda.time.format.DateTimeFormat
-import services.{CrunchCalculator, WorkloadsCalculator}
+import services.{CrunchCalculator, OptimizerConfig, TryRenjin, WorkloadsCalculator}
 import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi._
 
@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 import spatutorial.shared._
 import spray.caching.{Cache, LruCache}
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -26,6 +26,22 @@ case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
 case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
+
+object EGateBankCrunchTransformations {
+
+  def groupEGatesIntoBanksWithSla(desksInBank: Int, sla: Int)(crunchResult: CrunchResult, workloads: Seq[Double]): CrunchResult = {
+    val recommendedDesks = crunchResult.recommendedDesks.map(roundUpToNearestMultipleOf(desksInBank))
+    val optimizerConfig = OptimizerConfig(sla)
+    val simulationResult = TryRenjin.processWork(workloads, recommendedDesks, optimizerConfig)
+
+    crunchResult.copy(
+      recommendedDesks = recommendedDesks.map(recommendedDesk => recommendedDesk / desksInBank),
+      waitTimes = simulationResult.waitTimes
+    )
+  }
+
+  def roundUpToNearestMultipleOf(multiple: Int)(number: Int) = math.ceil(number.toDouble / multiple).toInt * multiple
+}
 
 abstract class CrunchActor(crunchPeriodHours: Int,
                            airportConfig: AirportConfig,
@@ -56,7 +72,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case PerformCrunchOnFlights(newFlights) =>
-      onFlightUpdates(newFlights.toList, lastMidnight)
+      onFlightUpdates(newFlights.toList, lastMidnightString)
+
       newFlights match {
         case Nil =>
           log.info("No crunch, no change")
@@ -92,9 +109,14 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       log.info(s"crunchActor received ${message}")
   }
 
-  def lastMidnight: String = {
+  def lastMidnightString: String = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
     timeProvider().toString(formatter)
+  }
+
+  def lastMidnight: DateTime = {
+    val t = timeProvider()
+    t.withTimeAtStartOfDay()
   }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
@@ -119,21 +141,22 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
-    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flightsForAirportConfigTerminals))
+    val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
 
-    log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
-      //      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
         log.info(s"the workloads $wl")
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
-          case Some(twl) =>
-            log.info(s"wl now ${twl.map((x => (x._1, (x._2._1.take(10), x._2._2.take(10)))))}")
-            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.workloadsByQueue(twl, crunchPeriodHours)
-            log.info("looked up " + tq + " and got " + workloadsByQueue.map((x => (x._1, x._2.take(10)))))
+          case Some(twl: Map[QueueName, Seq[WL]]) =>
+            log.info(s"lastMidnight: $lastMidnight")
+            val startTimeMillis = lastMidnight.getMillis
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startTimeMillis, crunchPeriodHours)
+            log.info(s"^^^$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
+            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
+            log.info(s"startTimeMillis: $startTimeMillis, crunchPeriod: $crunchPeriodHours")
             workloadsByQueue
           case None =>
             Map()
@@ -141,17 +164,23 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       }
 
       val r: Try[CrunchResult] = triedWl.flatMap {
-        terminalWorkloads =>
+        (terminalWorkloads: Map[String, List[Double]]) =>
           log.info(s"Will crunch now $tq")
           log.info(s"terminalWorkloads are ${terminalWorkloads.keys}")
           val workloads: List[Double] = terminalWorkloads(queueName)
           log.info(s"$tq Crunching on ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
+          log.info(s"!!!@@@terminal workloads: $workloads")
           val crunchRes: Try[CrunchResult] = tryCrunch(terminalName, queueName, workloads, queueSla)
           log.info(s"Crunch complete for $tq ${crunchRes.map(x => CrunchResult(x.recommendedDesks.take(10), x.waitTimes.take(10)))}")
-          crunchRes
+          if (queueName == "eGate")
+            crunchRes.map(crunchResSuccess => {
+              EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
+            })
+          else
+            crunchRes
       }
-      val asFutre = r match {
+      val asFuture = r match {
         case Success(s) =>
           log.info(s"Successful crunch for $tq")
           s
@@ -159,7 +188,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           log.error(f, s"Failed to crunch $tq")
           throw f
       }
-      asFutre
+      asFuture
     }
   }
 }

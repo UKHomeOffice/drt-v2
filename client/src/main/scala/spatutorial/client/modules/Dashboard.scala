@@ -11,7 +11,7 @@ import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, QueueWorkloads, TerminalName}
+import spatutorial.shared.FlightsApi.{Flights, QueueName, QueuePaxAndWorkLoads, TerminalName}
 import spatutorial.shared._
 
 import scala.collection.immutable
@@ -23,7 +23,7 @@ import scala.language.existentials
 import spatutorial.client.logger._
 
 import scala.Iterable
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.{Iterable, NumericRange}
 
 object Dashboard {
   type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
@@ -48,9 +48,10 @@ object Dashboard {
                    userDeskRecsWrapper: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]]
                   )
 
-  def chartDataFromWorkloads(workloads: Map[String, QueueWorkloads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
-    val timesMin = WorkloadsHelpers.minimumMinuteInWorkloads(workloads.values.toList)
-    val queueWorkloadsByMinute = WorkloadsHelpers.workloadsByQueue(workloads)
+  def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
+    val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
     val by15Minutes = queueWorkloadsByMinute.mapValues(
       (v) => v.grouped(minutesPerGroup).map(_.sum).toList
     )

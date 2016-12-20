@@ -36,22 +36,23 @@ import spatutorial.shared.HasAirportConfig
 
 object TableViewUtils {
 
-  def queueNameMapping = Map("eeaDesk" -> "EEA", "nonEeaDesk" -> "Non-EEA", "eGate" -> "e-Gates")
+  val eeadesk: QueueName = "eeaDesk"
+  val noneeadesk: QueueName = "nonEeaDesk"
+  val egate: QueueName = "eGate"
+
+  def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
+  def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates")
 
   def terminalUserDeskRecsRows(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
-    val queueNames: List[QueueName] = queueNameMapping.keys.toList
-    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNames.map(queueName => {
+    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNameMappingOrder.map(queueName => {
       simulationResult.get(queueName) match {
         case Some(Ready(sr)) =>
-          log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ Ready")
           queueDetailsRowsFromNos(queueName, queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, queueName))
         case None =>
           queueCrunchResultsForTerminal.get(queueName) match {
             case Some(Ready(cr)) =>
-              log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Ready4")
               queueDetailsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, queueName))
             case _ =>
-              log.info(s"^^^^^^^^^^^^^^^^^^^^^^^^ queue crunch Not ready")
               List()
           }
       }

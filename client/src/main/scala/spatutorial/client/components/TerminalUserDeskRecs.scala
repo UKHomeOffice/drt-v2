@@ -3,18 +3,17 @@ package spatutorial.client.components
 import diode.data.{Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.logger._
-import org.scalajs.dom.html.{Div, TableCell, TableHeaderCell}
 import spatutorial.client.TableViewUtils
+import spatutorial.client.TableViewUtils._
+import spatutorial.client.logger._
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
-import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared._
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.{Map, NumericRange, Seq}
 import scala.scalajs.js.Date
 
 object TerminalUserDeskRecs {
@@ -124,8 +123,10 @@ object TableTerminalDeskRecs {
           val srv = peMP().simulationResult.getOrElse(terminalName, Map())
           log.info(s"tud: ${terminalName}")
           val timestamps = workloads.timeStamps(terminalName)
-          val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadsByQueue(peMP().workload.get.workloads(terminalName))
-          val rows = TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
+          val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+          val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+          val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(peMP().workload.get.workloads(terminalName), minutesRangeInMillis)
+          val rows = terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
           airportConfigPotRCP(airportConfigPotMP => {
             <.div(
               TableTerminalDeskRecs(
@@ -152,6 +153,8 @@ object TableTerminalDeskRecs {
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
+      def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         val index = itemWithIndex._2
@@ -173,7 +176,7 @@ object TableTerminalDeskRecs {
               case _ =>
                 ""
             }
-            def qtd(xs: TagMod*) = <.td(((^.className := q.queueName + "-user-desk-rec") :: xs.toList): _*)
+            def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               qtd(q.pax),
@@ -191,18 +194,30 @@ object TableTerminalDeskRecs {
         ).toList
         <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: fill: _*)
       }
-      val queueNames = TableViewUtils.queueNameMapping.toList
-      val flatten: List[TagMod] = List.fill(3)(List(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2))).flatten
-      val fill: List[TagMod] = List.fill(3)(List(<.th("Pax"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available"))).flatten
+      val headerGroupStart = ^.borderLeft := "solid 1px #fff"
+      val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
+        val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
+        val qc = queueColour(queueName)
+        List(<.th("", ^.className := qc),
+          <.th(headerGroupStart, deskUnitLabel, ^.className := qc, ^.colSpan := 2),
+          <.th(headerGroupStart, "Wait Times with", ^.className := qc, ^.colSpan := 2))
+      })
+      val subHeadingLevel2: List[TagMod] = queueNameMappingOrder.map( queueName =>
+        List(<.th("Pax"),
+          <.th(headerGroupStart, "Required"), <.th("Available"),
+          <.th(headerGroupStart, "Recs"), <.th("Available"))
+          .map(t => t.copy(modifiers = (List(^.className := queueColour(queueName)) :: t.modifiers)))
+      ).flatten
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
           ^.display := "block",
-          <.tr(<.th("") :: queueNames.map {
-            case (queueName, queueDisplayName) => qth(queueName, <.h2(queueDisplayName), ^.colSpan := 5)
+          <.tr(<.th("") :: queueNameMappingOrder.map {
+            case (queueName) =>
+              qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
           }: _*),
-          <.tr(<.th("") :: flatten: _*),
-          <.tr(<.th("Time") :: fill: _*)),
+          <.tr(<.th("") :: subHeadingLevel1: _*),
+          <.tr(<.th("Time") :: subHeadingLevel2: _*)),
         <.tbody(
           ^.display := "block",
           ^.overflow := "scroll",

@@ -11,7 +11,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard
 import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{QueueName, QueueWorkloads, TerminalName}
+import spatutorial.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads, TerminalName}
 import spatutorial.shared._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}

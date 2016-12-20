@@ -7,7 +7,7 @@
 }
 
 div.scrollable-table-body {
- overflow: scroll;
+  overflow: scroll;
 }
 
 div.user-desk-recs-container table.table > tbody > tr > td,
@@ -24,13 +24,33 @@ table.user-desk-recs > tbody > tr > td > input {
   text-align: right;
 }
 
+table.user-desk-recs thead tr th h3 {
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+table.user-desk-recs thead tr {
+  border-bottom: #000;
+}
+
 div.user-desk-recs-container table.table > tbody > tr > td.date-field,
 table.user-desk-recs > tbody > tr > td.date-field {
   text-align: left;
 }
 
+table.user-desk-recs {
+  thead th:nth-child(1) {
+    width: 180px;
+  }
+
+  tbody td:nth-child(1) {
+    width: 180px;
+  }
+}
+
 table.user-desk-recs tbody td, table.user-desk-recs thead th {
- width: 140px;
+  width: 80px;
 }
 
 table.user-desk-recs > tbody > tr > td > input:focus {
@@ -57,7 +77,7 @@ div.panel-body > div.user-desk-recs-container > div > table > tbody > tr > td.da
 
 rect.bordered {
   stroke: #E6E6E6;
-  stroke-width:2px;
+  stroke-width: 2px;
 }
 
 @media (min-width: 1200px) {
@@ -95,6 +115,10 @@ rect.bordered {
   background-color: @eeaDeskUserDeskColor;
 }
 
+tr:nth-child(odd) > td.eeaDesk-user-desk-rec {
+  background-color: darken(@eeaDeskUserDeskColor, 8%);
+}
+
 .eeaDesk-user-desk-rec.table-info {
   background-color: lighten(@eeaDeskUserDeskColor, 6%);
 }
@@ -103,12 +127,20 @@ rect.bordered {
   background-color: @nonEeaDeskUserDeskColor;
 }
 
+tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
+  background-color: darken(@nonEeaDeskUserDeskColor, 8%);
+}
+
 .nonEeaDesk-user-desk-rec.table-info {
   background-color: lighten(@nonEeaDeskUserDeskColor, 6%);
 }
 
 .eGate-user-desk-rec {
   background-color: @eGateUserDeskColor;
+}
+
+tr:nth-child(odd) > td.eGate-user-desk-rec {
+  background-color: darken(@eGateUserDeskColor, 8%);
 }
 
 .eGate-user-desk-rec.table-info {
