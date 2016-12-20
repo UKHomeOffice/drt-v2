@@ -121,7 +121,7 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
     }
   }
 
-  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
+  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>

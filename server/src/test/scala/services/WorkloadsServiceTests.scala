@@ -52,11 +52,12 @@ class WorkloadsServiceTests extends SpecificationLike {
 
       val flightsFuture = Future.successful(List(apiFlight(iataFlightCode = "BA0001", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A1")))
 
-      val resultFuture = wc.getWorkloadsByTerminal(flightsFuture)
+      val resultFuture = wc.workAndPaxLoadsByTerminal(flightsFuture)
 
       val terminalWorkload = extractTerminalWorkload(Await.result(resultFuture, 15 seconds))
 
       val expected = Set(("A1", List(10 * 20d)))
+      println(s"terminalWorkload: $terminalWorkload")
 
       terminalWorkload == expected
     }
@@ -79,7 +80,7 @@ class WorkloadsServiceTests extends SpecificationLike {
         apiFlight(iataFlightCode = "BA0002", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A2")
       ))
 
-      val resultFuture = wc.getWorkloadsByTerminal(flightsFuture)
+      val resultFuture = wc.workAndPaxLoadsByTerminal(flightsFuture)
 
       val terminalWorkload = extractTerminalWorkload(Await.result(resultFuture, 15 seconds))
 

@@ -50,7 +50,7 @@ case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, 
 
 case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
 
-case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends Action
+case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
 
 case class GetWorkloads(begin: String, end: String) extends Action
 
@@ -79,7 +79,7 @@ trait WorkloadsUtil {
     workloads.values.flatMap(_._1.map(_.time)).min
   }
 
-  def timeStampsFromAllQueues(workloads: Map[String, QueueWorkloads]) = {
+  def timeStampsFromAllQueues(workloads: Map[String, QueuePaxAndWorkLoads]) = {
     val timesMin: Long = firstFlightTimeQueue(workloads)
     minuteNumericRange(timesMin, 24)
   }
@@ -92,7 +92,7 @@ trait WorkloadsUtil {
 }
 
 // The base model of our application
-case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueueWorkloads]]) extends WorkloadsUtil {
+case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends WorkloadsUtil {
   lazy val labels = labelsFromAllQueues(startTime)
 
   def timeStamps(terminalName: TerminalName): NumericRange[Long] = minuteNumericRange(startTime, 24)
@@ -257,12 +257,14 @@ object HandyStuff {
 class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]])
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case RunSimulation(terminalName, queueName, workloads, desks) =>
+    case RunSimulation(terminalName, queueName, workloads: List[Double], desks) =>
       log.info(s"Requesting simulation for $terminalName, {queueName}")
-      val workloads1: List[Double] = WorkloadsHelpers.workloadsByQueue(modelR.value.get.workloads(terminalName))(queueName)
-      //      queueWorkloadsToFullyPopulatedDoublesList(modelR.value.get.workloads)
-      log.info(s"Got workloads from model for $terminalName {queueName} desks: ${desks.take(15)}... workloads: ${workloads1.take(15)}...")
-      val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, workloads1, desks).call()
+      val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+      val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+      val terminalWorkload = modelR.value.get.workloads(terminalName)
+      val queueWorkload: List[Double] = WorkloadsHelpers.workloadPeriodByQueue(terminalWorkload, minutesRangeInMillis)(queueName)
+      log.info(s"Got workloads from model for $terminalName {queueName} desks: ${desks.take(15)}... workloads: ${queueWorkload.take(15)}...")
+      val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )

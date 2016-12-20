@@ -1,19 +1,16 @@
 package spatutorial.client.components
 
-import diode.data.{Empty, Pot}
+import diode.data.Pot
 import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.components.Bootstrap.{Button, CommonStyle}
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.DeskRecTimeslot
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.FlightsApi.{Flights, QueueName}
 import spatutorial.shared._
-import spatutorial.client.logger._
 
 import scala.scalajs.js
-import scala.scalajs.js.{Date, JSON, Object}
-import scalacss.ScalaCssReact._
+import scala.scalajs.js.Date
 
 case class PopoverWrapper(
                            position: String = "right",
@@ -42,18 +39,25 @@ object DeskRecsTable {
   case class UserDeskRecsRow(time: Long, crunchDeskRec: Int, userDeskRec: DeskRecTimeslot, waitTimeWithCrunchDeskRec: Int, waitTimeWithUserDeskRec: Int)
 
   case class Props(
-                            queueName: String,
-                            terminalName: String,
-                            userDeskRecsRos: Seq[UserDeskRecsRow],
-                            flightsPotRCP: ReactConnectProxy[Pot[Flights]],
-                            airportConfig: AirportConfig,
-                            airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                            stateChange: DeskRecTimeslot => Callback,
-                            editItem: DeskRecTimeslot => Callback,
-                            deleteItem: DeskRecTimeslot => Callback
-                          )
+                    queueName: String,
+                    terminalName: String,
+                    userDeskRecsRos: Seq[UserDeskRecsRow],
+                    flightsPotRCP: ReactConnectProxy[Pot[Flights]],
+                    airportConfig: AirportConfig,
+                    airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+                    stateChange: DeskRecTimeslot => Callback,
+                    editItem: DeskRecTimeslot => Callback,
+                    deleteItem: DeskRecTimeslot => Callback
+                  )
 
   case class HoverPopoverState(hovered: Boolean = false)
+
+  def deskUnitLabel(queueName: QueueName): String = {
+    queueName match {
+      case "eGate" => "Banks"
+      case _ => "Desks"
+    }
+  }
 
   def HoverPopover(trigger: String,
                    flightsPotRCP: ReactConnectProxy[Pot[Flights]],
@@ -121,11 +125,12 @@ object DeskRecsTable {
       }
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
-          <.tr(<.th(""), <.th("Desks", ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
+          <.tr(<.th(""), <.th(deskUnitLabel(p.queueName), ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
           <.tr(<.th("Time"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available")),
           p.userDeskRecsRos.zipWithIndex map renderItem))
     })
     .build
+
 
   def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
             airportConfig: AirportConfig,

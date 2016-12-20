@@ -13,7 +13,6 @@ import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared._
-
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.util.{Failure, Success, Try}
 

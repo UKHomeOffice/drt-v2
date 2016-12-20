@@ -6,6 +6,7 @@ import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
 import org.joda.time.DateTime
 import spatutorial.shared.FlightsApi.TerminalName
 import spatutorial.shared._
+import scala.collection.immutable.Seq
 import utest._
 
 object CrunchStructureTests extends TestSuite {
@@ -16,13 +17,26 @@ object CrunchStructureTests extends TestSuite {
       val period: List[WL] = WorkloadsHelpers.workloadsByPeriod(workloads, 2).toList
       assert(period == WL(1, 5) :: WL(3, 9) :: Nil)
     }
+
+    "Given a sequence of workloads we should return the midnight on the day of the earliest workload" - {
+      val queueWorkloads = Seq((Seq(WL(getMilisFromDate(2016, 11, 1, 13, 0),1.0), WL(getMilisFromDate(2016, 11, 1, 14, 30),1.0), WL(getMilisFromDate(2016, 11, 1, 14, 45), 1.0)), Seq[Pax]()))
+
+      val expected = getMilisFromDate(2016, 11, 1, 0, 0);
+
+      val result = new WorkloadsHelpers{}.midnightBeforeEarliestWorkload(queueWorkloads)
+      assert(expected == result)
+    }
+  }
+
+  private def getMilisFromDate(year: Int, monthOfYear: Int, dayOfMonth: Int, hourOfDay: Int, minuteOfHour: Int) = {
+    new DateTime(year, monthOfYear, dayOfMonth, hourOfDay, minuteOfHour).getMillis
   }
 }
 
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
-  class TestCrunchActor(hours: Int, conf: AirportConfig) extends CrunchActor(hours, conf, () => DateTime.now()) {
+  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = (() => DateTime.now())) extends CrunchActor(hours, conf, timeProvider) {
     override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) =
       _ => Some(List(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
@@ -40,15 +54,7 @@ object FlightCrunchInteractionTests extends TestSuite {
         case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
       }
 
-    override def lastMidnight: String = "2000-01-01"
-  }
-
-
-  def makeSystem = {
-    new TestKit(ActorSystem()) with SystemActors with Core with AirportConfProvider {
-      override val crunchActor = system.actorOf(Props(classOf[TestCrunchActor], 24, AirportConfigs.stn), "crunchActor")
-      def splitProviders() = List(SplitsProvider.defaultProvider(AirportConfigs.stn))
-    }
+    override def lastMidnightString: String = "2000-01-01"
   }
 
   def tests = TestSuite {
@@ -56,7 +62,6 @@ object FlightCrunchInteractionTests extends TestSuite {
       assert(true)
     }
   }
-
 }
 
 object CrunchTests extends TestSuite {

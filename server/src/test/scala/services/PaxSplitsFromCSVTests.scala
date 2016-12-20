@@ -122,9 +122,9 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         List(apiFlight("BA1234", LocalDate.now().toString(formatter)))
       }
 
-      val result: Future[workloadsCalculator.TerminalQueueWorkloads] = workloadsCalculator.getWorkloadsByTerminal(flights)
+      val result: Future[workloadsCalculator.TerminalQueuePaxAndWorkLoads] = workloadsCalculator.workAndPaxLoadsByTerminal(flights)
 
-      val act: workloadsCalculator.TerminalQueueWorkloads = Await.result(result, 10 seconds)
+      val act: workloadsCalculator.TerminalQueuePaxAndWorkLoads = Await.result(result, 10 seconds)
 
       act("1").toList match {
         case List(("eeaDesk", (_, List(Pax(_, 0.3)))), ("eGate", (_, List(Pax(_, 0.7)))), ("nonEeaDesk", (_, List(Pax(_, 0.0))))) => true
