@@ -206,7 +206,7 @@ object TableTerminalDeskRecs {
         <.tbody(
           ^.display := "block",
           ^.overflow := "scroll",
-          ^.height := "400px",
+          ^.height := "500px",
           p.items.zipWithIndex map renderItem))
     }
 
