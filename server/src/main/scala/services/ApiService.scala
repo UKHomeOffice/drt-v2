@@ -80,16 +80,26 @@ object AirportToCountry extends AirportToCountryLike {
 
 abstract class ApiService(airportConfig: AirportConfig)
   extends Api
-    with WorkloadsService
+    with WorkloadsCalculator
     with FlightsService
-    //    with LegacyCrunchOnDemand
     with AirportToCountryLike
     with ActorBackedCrunchService
     with CrunchResultProvider {
 
-  //  override def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]) = {
-  //    Future.fromTry(tryCrunch(terminalName, queueName, workloads, airportConfig))
-  //  }
+  type WorkloadByTerminalQueue = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
+  val log = LoggerFactory.getLogger(this.getClass)
+  log.info(s"ApiService.airportConfig = $airportConfig")
+  override def getWorkloads(): Future[WorkloadByTerminalQueue] = {
+    val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
+    val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
+      log.info(s"AirportConfig: $airportConfig")
+      val names: Set[TerminalName] = airportConfig.terminalNames.toSet
+      allFlights.filter(flight => {
+        names.contains(flight.Terminal)
+      })
+    }
+    getWorkloadsByTerminal(flightsForTerminalsWeCareAbout)
+  }
 
   override def welcomeMsg(name: String): String = {
     println("welcomeMsg")
@@ -107,7 +117,7 @@ abstract class ApiService(airportConfig: AirportConfig)
 }
 
 trait CrunchCalculator {
-  self: HasAirportConfig =>
+  //  self: HasAirportConfig =>
   def log: LoggingAdapter
 
   def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int): Try[CrunchResult] = {
@@ -141,6 +151,8 @@ trait ActorBackedCrunchService {
     }.map {
       case cr: CrunchResult =>
         Right(cr)
+      case _ =>
+        Left(NoCrunchAvailable())
     }
   }
 }

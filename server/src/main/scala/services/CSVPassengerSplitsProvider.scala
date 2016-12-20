@@ -5,12 +5,11 @@ import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import spatutorial.shared._
 
-trait CSVPassengerSplitsProvider extends PassengerSplitRatioProvider {
+case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
   private val log = LoggerFactory.getLogger(getClass)
 
   log.info("Using CSV Splits")
 
-  def flightPassengerSplitLines: Seq[String]
   lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 
   def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = flight => {

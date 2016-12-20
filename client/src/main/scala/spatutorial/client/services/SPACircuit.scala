@@ -172,7 +172,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
       //      effectOnly(Effect(AjaxClient[Api].geAllTodos().call().map(UpdateAllTodos)))
       noChange
     case UpdateDeskRecsTime(terminalName, queueName, item) =>
-      log.info(s"Update Desk Recs time ${item} into ${value}")
+//      log.debug(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
       val newDesksPot: Pot[UserDeskRecs] = value(terminalName)(queueName).map(_.updated(item))
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))

@@ -21,10 +21,7 @@ trait FlightsService extends FlightsApi {
 }
 
 trait WorkloadsService extends WorkloadsApi with WorkloadsCalculator {
-  self: FlightsService =>
-  type WorkloadByTerminalQueue = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
-
-  override def getWorkloads(): Future[WorkloadByTerminalQueue] = getWorkloadsByTerminal(getFlights(0, 0))
+  self: (FlightsService) =>
 }
 
 trait WorkloadsCalculator {

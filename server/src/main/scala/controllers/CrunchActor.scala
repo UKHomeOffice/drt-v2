@@ -1,7 +1,9 @@
 package controllers
 
+import java.util.Date
+
 import akka.actor._
-import org.joda.time.LocalDate
+import org.joda.time.{DateTime, LocalDate}
 import org.joda.time.format.DateTimeFormat
 import services.{CrunchCalculator, WorkloadsCalculator}
 import spatutorial.shared.ApiFlight
@@ -20,17 +22,18 @@ import scala.concurrent.duration._
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
 case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
+
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
+
 case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
 
 abstract class CrunchActor(crunchPeriodHours: Int,
-                  override val airportConfig: AirportConfig
-
+                           airportConfig: AirportConfig,
+                           timeProvider: () => DateTime
                           ) extends Actor
   with ActorLogging
   with WorkloadsCalculator
   with CrunchCalculator
-  with HasAirportConfig
   with FlightState {
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
@@ -41,9 +44,10 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     val key: String = cacheKey(terminal, queue)
     log.info(s"getting crunch for $key")
     crunchCache(key) {
+      val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
+      crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
       //todo un-future this mess
-      val expensiveCrunchResult = Await.result(performCrunch(terminal, queue), 15 seconds)
-//      log.info(s"Cache will soon have ${expensiveCrunchResult}")
+      val expensiveCrunchResult = Await.result(crunch, 15 seconds)
       expensiveCrunchResult
     }
   }
@@ -71,7 +75,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           replyTo ! NoCrunchAvailable()
         case fs =>
           val futCrunch = cacheCrunch(terminalName, queueName)
-//          log.info(s"got keyed thingy ${futCrunch}")
+          //          log.info(s"got keyed thingy ${futCrunch}")
           //todo this is NOT right
           futCrunch.value match {
             case Some(Success(cr)) =>
@@ -90,7 +94,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def lastMidnight: String = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-    LocalDate.now().toString(formatter)
+    timeProvider().toString(formatter)
   }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
@@ -114,12 +118,13 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     log.info("Performing a crunch")
-    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flights.values.toList))
+    val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
+    val workloads: Future[TerminalQueueWorkloads] = getWorkloadsByTerminal(Future(flightsForAirportConfigTerminals))
 
     log.info(s"Workloads are ${workloads}")
     val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
-//      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
+      //      log.info(s"in crunch of $tq, workloads have calced ${wl.take(10)}")
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
         log.info(s"the workloads $wl")
