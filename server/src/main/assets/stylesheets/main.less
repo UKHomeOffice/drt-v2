@@ -6,6 +6,10 @@
   width: 4em;
 }
 
+div.scrollable-table-body {
+ overflow: scroll;
+}
+
 div.user-desk-recs-container table.table > tbody > tr > td,
 div.user-desk-recs-container table.table > tbody > tr > th,
 table.table.user-desk-recs > tbody > tr > td,
@@ -23,6 +27,10 @@ table.user-desk-recs > tbody > tr > td > input {
 div.user-desk-recs-container table.table > tbody > tr > td.date-field,
 table.user-desk-recs > tbody > tr > td.date-field {
   text-align: left;
+}
+
+table.user-desk-recs tbody td, table.user-desk-recs thead th {
+ width: 140px;
 }
 
 table.user-desk-recs > tbody > tr > td > input:focus {
@@ -162,7 +170,7 @@ p {
 
 .terminal-desk-recs-container {
   height: 800px;
-  overflow: scroll;
+  //overflow: scroll;
 }
 
 .user-desk-recs-container {

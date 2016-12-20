@@ -27,22 +27,25 @@ object GriddleComponentWrapper {
 class RowMetaData(val key: String) extends js.Object
 
 case class GriddleComponentWrapper(
-  results: js.Any, //Seq[Map[String, Any]],
-  columns: Seq[String],
-  columnMeta: Option[Seq[ColumnMeta]] = None,
-  rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
-  showSettings: Boolean = true,
-  showFilter: Boolean = true
-) {
+                                    results: js.Any, //Seq[Map[String, Any]],
+                                    columns: Seq[String],
+                                    columnMeta: Option[Seq[ColumnMeta]] = None,
+                                    rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
+                                    showSettings: Boolean = true,
+                                    showFilter: Boolean = true,
+                                    initialSort: js.UndefOr[String] = js.undefined
+                                  ) {
   def toJS = {
-    val p = js.Dynamic.literal()
-    p.updateDynamic("results")(results)
-    p.updateDynamic("columns")(columns)
-    p.updateDynamic("showSettings")(showSettings)
-    p.updateDynamic("showFilter")(showFilter)
-    p.updateDynamic("rowMetadata")(rowMetaData)
-    p.updateDynamic("showPager")(true)
-    p.updateDynamic("resultsPerPage")(200)
+    val p = js.Dynamic.literal(
+      results = results,
+      columns = columns,
+      showSettings = showSettings,
+      showFilter = showFilter,
+      initialSort = initialSort,
+      rowMetadata = rowMetaData,
+      useFixedHeader = true,
+      showPager = true,
+      resultsPerPage = 200)
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
 
     fixWeirdCharacterEncoding(p)
@@ -80,29 +83,29 @@ object FlightsView {
   import scala.language.existentials
 
   case class Props(
-    flightsModelProxy: Pot[Flights],
-    airportInfoProxy: Map[String, Pot[AirportInfo]],
-    activeCols: List[String] = List(
-      "SchDT",
-      "Origin",
-      "Operator",
-      "Status",
-      "EstDT",
-      "ActDT",
-      "ActChoxDT",
-      "Gate",
-      "Stand",
-      "MaxPax",
-      "ActPax",
-      "Terminal",
-      "IATA"
-    )
-  )
+                    flightsModelProxy: Pot[Flights],
+                    airportInfoProxy: Map[String, Pot[AirportInfo]],
+                    activeCols: List[String] = List(
+                      "SchDT",
+                      "Origin",
+                      "Operator",
+                      "Status",
+                      "EstDT",
+                      "ActDT",
+                      "ActChoxDT",
+                      "Gate",
+                      "Stand",
+                      "MaxPax",
+                      "ActPax",
+                      "Terminal",
+                      "IATA"
+                    )
+                  )
 
   case class State(
-    flights: ReactConnectProxy[Pot[Flights]],
-    airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
-  )
+                    flights: ReactConnectProxy[Pot[Flights]],
+                    airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
+                  )
 
   val component = ReactComponentB[Props]("Flights")
     .render_P((props) => {

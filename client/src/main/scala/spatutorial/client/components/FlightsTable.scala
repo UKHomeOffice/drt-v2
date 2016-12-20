@@ -65,6 +65,7 @@ object FlightsTable {
         props.flightsModelProxy.renderReady(flights => {
           GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
             columnMeta = columnMeta,
+            initialSort = "SchDt",
             columns = props.activeCols)()
         })
       )
