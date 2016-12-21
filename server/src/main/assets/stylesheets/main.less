@@ -210,20 +210,20 @@ p {
   overflow: scroll;
 }
 
-tr.table-warning td {
-  background-color: @alert-warning-bg;
-}
-
-td.table-info {
+table.user-desk-recs tbody tr td.table-info {
   background-color: @alert-info-bg;
 }
 
-td.table-danger {
+table.user-desk-recs tbody tr:nth-child(odd) td.table-info {
+  background-color: darken(@alert-info-bg, 1%);
+}
+
+table.user-desk-recs tbody tr td.table-danger {
   background-color: @alert-danger-bg;
 }
 
-tr.table-warning td.table-danger {
-  background-color: @alert-danger-bg;
+table.user-desk-recs tbody tr:nth-child(odd) > td.table-danger{
+  background-color: darken(@alert-danger-bg, 1%);
 }
 
 .minutes {
