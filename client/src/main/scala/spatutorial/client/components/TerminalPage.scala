@@ -1,14 +1,9 @@
 package spatutorial.client.components
 
-import diode.data.{Pot, Ready}
-import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{BackendScope, ReactComponentB, ReactElement}
-import spatutorial.client.SPAMain.{Loc, TerminalLoc}
-import spatutorial.client.components.Heatmap.Series
-import spatutorial.client.services.{RootModel, SPACircuit}
-import spatutorial.client.logger._
+import spatutorial.client.SPAMain.Loc
 import spatutorial.shared.FlightsApi.TerminalName
 
 object TerminalPage {

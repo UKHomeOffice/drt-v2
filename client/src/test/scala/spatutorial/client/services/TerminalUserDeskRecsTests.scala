@@ -19,7 +19,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val workload = Map("eeaDesk" -> List(5.0))
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 1))))))
+          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 1))))))
       )
       val simulationResult = Map(
         "eeaDesk" ->
@@ -42,9 +42,9 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 1)))))),
+          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 1)))))),
         "eGate" ->
-          Ready((Ready(CrunchResult(IndexedSeq(2), Seq(20))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 2)))))))
+          Ready((Ready(CrunchResult(IndexedSeq(2), Seq(20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 2)))))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
@@ -69,11 +69,11 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 1)))))),
+          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 1)))))),
         "nonEeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 1)))))),
+          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 1)))))),
         "eGate" ->
-          Ready((Ready(CrunchResult(IndexedSeq(2), Seq(20))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 2)))))))
+          Ready((Ready(CrunchResult(IndexedSeq(2), Seq(20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 2)))))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
@@ -98,7 +98,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(2, 1), Seq(10, 20))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2)))))))
+          Ready((Ready(CrunchResult(IndexedSeq(2, 1), Seq(10, 20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2)))))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))))
@@ -121,11 +121,11 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(recommendedDesks = IndexedSeq(2, 1), waitTimes = Seq(10, 20))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2)))))),
+          Ready((Ready(CrunchResult(recommendedDesks = IndexedSeq(2, 1), waitTimes = Seq(10, 20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2)))))),
         "eGate" ->
-          Ready((Ready(CrunchResult(IndexedSeq(23, 3), Seq(20, 27))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 5), DeskRecTimeslot("1", 15)))))),
+          Ready((Ready(CrunchResult(IndexedSeq(23, 3), Seq(20, 27))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 5), DeskRecTimeslot("1", 15)))))),
         "nonEeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(15, 21), Seq(34, 23))), Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 45), DeskRecTimeslot("1", 30)))))))
+          Ready((Ready(CrunchResult(IndexedSeq(15, 21), Seq(34, 23))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 45), DeskRecTimeslot("1", 30)))))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))),
@@ -152,7 +152,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
         "eeaDesk" ->
           Ready((
             Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))),
-            Ready(UserDeskRecs(Seq(
+            Ready(DeskRecTimeSlots(Seq(
               DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2),
               DeskRecTimeslot("2", 1), DeskRecTimeslot("3", 2),
               DeskRecTimeslot("4", 8), DeskRecTimeslot("5", 2),
@@ -213,7 +213,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
             "eeaDesk" ->
               Ready((
                 Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))),
-                Ready(UserDeskRecs(Seq(
+                Ready(DeskRecTimeSlots(Seq(
                   DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2),
                   DeskRecTimeslot("2", 1), DeskRecTimeslot("3", 2),
                   DeskRecTimeslot("4", 8), DeskRecTimeslot("5", 2),
@@ -291,7 +291,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
             "eeaDesk" ->
               Ready((
                 Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))),
-                Ready(UserDeskRecs(Seq(
+                Ready(DeskRecTimeSlots(Seq(
                   DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2),
                   DeskRecTimeslot("2", 1), DeskRecTimeslot("3", 2),
                   DeskRecTimeslot("4", 8), DeskRecTimeslot("5", 2),
@@ -304,7 +304,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
             "nonEeaDesk" ->
               Ready((
                 Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4), Seq(1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 5))),
-                Ready(UserDeskRecs(Seq(
+                Ready(DeskRecTimeSlots(Seq(
                   DeskRecTimeslot("0", 1), DeskRecTimeslot("1", 2),
                   DeskRecTimeslot("2", 1), DeskRecTimeslot("3", 2),
                   DeskRecTimeslot("4", 8), DeskRecTimeslot("5", 2),

@@ -81,7 +81,7 @@ object TableViewUtils {
     }
   }
 
-  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName): Seq[List[Long]] = {
+  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]], simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName): Seq[List[Long]] = {
     Seq(
       DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
@@ -93,7 +93,7 @@ object TableViewUtils {
     )
   }
 
-  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], qn: QueueName): Seq[List[Long]] = {
+  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]], qn: QueueName): Seq[List[Long]] = {
     Seq(
       DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
@@ -139,7 +139,7 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
     val dashboardModelsConnect = SPACircuit.connect(m =>
-      DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult, m.userDeskRec))
+      DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult))
     val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
 
     val dashboardRoute = staticRoute("#charts", DashboardLoc) ~>

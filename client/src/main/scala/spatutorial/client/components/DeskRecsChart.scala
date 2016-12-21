@@ -25,16 +25,12 @@ object DeskRecsChart {
 
   log.info("initialising deskrecschart")
 
-  case class State(crunchResultWrapper: ReactConnectProxy[Map[TerminalName, QueueCrunchResults]],
-                   deskRecs: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]])
-
   case class Props(
                     deskRecsModelMP: ModelProxy[DeskRecsModel],
                     airportConfigPot: Pot[AirportConfig])
 
   val DeskRecs = ReactComponentB[Props]("CrunchResults")
-    .initialState_P((props: Props) => State(props.deskRecsModelMP.connect(_.queueCrunchResults), props.deskRecsModelMP.connect(_.potUserDeskRecs)))
-    .renderPS((_, props: Props, state) => {
+    .renderP((_, props: Props) => {
       val workloads = props.deskRecsModelMP().workloads
       <.div(
         props.deskRecsModelMP().queueCrunchResults.map {
