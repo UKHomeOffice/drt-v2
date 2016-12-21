@@ -5,6 +5,7 @@ import diode.data.PotState.PotReady
 import diode.{Effect, ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
+import japgolly.scalajs.react.Addons.Perf
 import japgolly.scalajs.react.CompScope.DuringCallbackU
 import japgolly.scalajs.react.ReactComponentB.PSB
 import japgolly.scalajs.react.ReactComponentC.ReqProps
@@ -188,6 +189,8 @@ object SPAMain extends js.JSApp {
 
   @JSExport
   def main(): Unit = {
+//    Perf.start()
+//    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
     log.warn("Application starting")
     // send log messages also to the server
     log.enableServerLogging(pathToThisApp + "/logging")

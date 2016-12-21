@@ -5,6 +5,11 @@ import spatutorial.shared.FlightsApi._
 import scala.collection.immutable._
 import scala.concurrent.Future
 
+case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
+  def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
+
+}
+
 case class ApiFlight(
                       Operator: String,
                       Status: String,
