@@ -144,18 +144,18 @@ object RootModel {
   }
 }
 
-case class UserDeskRecs(items: Seq[DeskRecTimeslot]) {
+case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
   def updated(newItem: DeskRecTimeslot) = {
     log.info(s"will update ${newItem} into ${items.take(5)}...")
     items.indexWhere(_.id == newItem.id) match {
       case -1 =>
         // add new
         log.info("add new")
-        UserDeskRecs(items :+ newItem)
+        DeskRecTimeSlots(items :+ newItem)
       case idx =>
         log.info("add old")
         // replace old
-        UserDeskRecs(items.updated(idx, newItem))
+        DeskRecTimeSlots(items.updated(idx, newItem))
     }
   }
 }
@@ -172,9 +172,9 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
       //      effectOnly(Effect(AjaxClient[Api].geAllTodos().call().map(UpdateAllTodos)))
       noChange
     case UpdateDeskRecsTime(terminalName, queueName, item) =>
-//      log.debug(s"Update Desk Recs time ${item} into ${value}")
+      //      log.debug(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
-      val newDesksPot: Pot[UserDeskRecs] = value(terminalName)(queueName).map(_.updated(item))
+      val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(item))
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
@@ -250,8 +250,8 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
 }
 
 object HandyStuff {
-  type CrunchResultAndDeskRecs = (Pot[CrunchResult], Pot[UserDeskRecs])
-  type QueueUserDeskRecs = Map[String, Pot[UserDeskRecs]]
+  type CrunchResultAndDeskRecs = (Pot[CrunchResult], Pot[DeskRecTimeSlots])
+  type QueueUserDeskRecs = Map[String, Pot[DeskRecTimeSlots]]
 }
 
 class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]])
@@ -270,8 +270,8 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       )
     case ChangeDeskUsage(terminalName, queueName, v, k) =>
       log.info(s"Handler: ChangeDesk($terminalName, $queueName, $v, $k)")
-      val model: Pot[UserDeskRecs] = value(terminalName)(queueName)
-      val newUserRecs: UserDeskRecs = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
+      val model: Pot[DeskRecTimeSlots] = value(terminalName)(queueName)
+      val newUserRecs: DeskRecTimeSlots = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))
   }
 }
@@ -336,12 +336,16 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
     case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
       log.info(s"UpdateCrunchResultnoEffect $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
-      val newDeskRec: UserDeskRecs = UserDeskRecs(DeskRecsChart
+      val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(DeskRecsChart
         .takeEvery15th(crunchResult.recommendedDesks)
         .zipWithIndex.map(t => DeskRecTimeslot(id = t._2.toString, deskRec = t._1)).toList)
+      val userDeskRecs = value._1.getOrElse(terminalName, Map()).getOrElse(queueName, Empty) match {
+        case Empty => mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(updatedDeskRecTimeSlots))))
+        case _ => value._1
+      }
       updated(value.copy(
-        _1 = mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(newDeskRec)))),
-        _2 = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(newDeskRec))))))
+        _1 = userDeskRecs,
+        _2 = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(updatedDeskRecTimeSlots))))))
       ))
   }
 

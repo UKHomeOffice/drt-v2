@@ -28,12 +28,11 @@ import scala.collection.immutable.{Iterable, NumericRange}
 object Dashboard {
   type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
   type QueueSimulationResults = Map[QueueName, Pot[SimulationResult]]
-  type QueueUserDeskRecs = Map[String, Pot[UserDeskRecs]]
+  type QueueUserDeskRecs = Map[String, Pot[DeskRecTimeSlots]]
 
   case class DashboardModels(workloads: Pot[Workloads],
                              queueCrunchResults: Map[TerminalName, QueueCrunchResults],
-                             potSimulationResult: Map[TerminalName, QueueSimulationResults],
-                             potUserDeskRecs: Map[TerminalName, QueueUserDeskRecs]
+                             potSimulationResult: Map[TerminalName, QueueSimulationResults]
                             )
 
   case class Props(router: RouterCtl[Loc], // proxy: ModelProxy[Pot[String]],
@@ -44,8 +43,7 @@ object Dashboard {
 
   case class State(workloadsWrapper: ReactConnectProxy[Pot[Workloads]],
                    crunchResultWrapper: ReactConnectProxy[Map[TerminalName, QueueCrunchResults]],
-                   simulationResultWrapper: ReactConnectProxy[Map[TerminalName, QueueSimulationResults]],
-                   userDeskRecsWrapper: ReactConnectProxy[Map[TerminalName, QueueUserDeskRecs]]
+                   simulationResultWrapper: ReactConnectProxy[Map[TerminalName, QueueSimulationResults]]
                   )
 
   def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
@@ -89,8 +87,7 @@ object Dashboard {
     .initialState_P(props => State(
     props.dashboardModelProxy.connect(m => m.workloads),
     props.dashboardModelProxy.connect(m => m.queueCrunchResults),
-    props.dashboardModelProxy.connect(m => m.potSimulationResult),
-    props.dashboardModelProxy.connect(_.potUserDeskRecs)
+    props.dashboardModelProxy.connect(m => m.potSimulationResult)
   ))
     .renderPS { (_, props, state: State) =>
       //      log.info(s"evaluating dashboard ${props}:${state}")

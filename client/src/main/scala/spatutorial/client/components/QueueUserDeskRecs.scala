@@ -29,7 +29,7 @@ object QueueUserDeskRecsComponent {
                     airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     labelsPotRCP: ReactConnectProxy[Pot[IndexedSeq[String]]],
                     crunchResultPotRCP: ReactConnectProxy[Pot[CrunchResult]],
-                    userDeskRecsPotRCP: ReactConnectProxy[Pot[UserDeskRecs]],
+                    userDeskRecsPotRCP: ReactConnectProxy[Pot[DeskRecTimeSlots]],
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     simulationResultPotRCP: ReactConnectProxy[Pot[SimulationResult]]
                   )
@@ -112,13 +112,13 @@ object QueueUserDeskRecsComponent {
     val userDeskRecRowsPotRCP = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {
         times <- model.workload.map(_.timeStamps(terminalName))
-        qcr: (Pot[CrunchResult], Pot[UserDeskRecs]) <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        qur: UserDeskRecs <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        qcr: (Pot[CrunchResult], Pot[DeskRecTimeSlots]) <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        qur: DeskRecTimeSlots <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
         simres: SimulationResult <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Ready(SimulationResult(qcr._1.get.recommendedDesks.map(rd => DeskRec(0, rd)), qcr._1.get.waitTimes)))
         potcr: Pot[CrunchResult] = qcr._1
-        potdr: Pot[UserDeskRecs] = qcr._2
+        potdr: Pot[DeskRecTimeSlots] = qcr._2
         cr: CrunchResult <- potcr
-        dr: UserDeskRecs <- potdr
+        dr: DeskRecTimeSlots <- potdr
       } yield {
         val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(model.slotsInADay)
         val every15thRecDesk: Seq[Int] = DeskRecsChart.takeEvery15th(cr.recommendedDesks)

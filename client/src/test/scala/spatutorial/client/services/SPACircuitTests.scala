@@ -16,7 +16,7 @@ object SPACircuitTests extends TestSuite {
 
       val queueName: QueueName = "eeaDesk"
       val terminalName: TerminalName = "T1"
-      val model = Map(terminalName -> Map(queueName -> Ready(UserDeskRecs(Seq(
+      val model = Map(terminalName -> Map(queueName -> Ready(DeskRecTimeSlots(Seq(
         DeskRecTimeslot("1", 30),
         DeskRecTimeslot("2", 30),
         DeskRecTimeslot("3", 30),
@@ -34,7 +34,7 @@ object SPACircuitTests extends TestSuite {
         val result = h.handle(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot("4", 25)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
-            val newUserDeskRecs: UserDeskRecs = newValue(terminalName)(queueName).get
+            val newUserDeskRecs: DeskRecTimeSlots = newValue(terminalName)(queueName).get
             assert(newUserDeskRecs.items.size == 4)
             assert(newUserDeskRecs.items(3).id == "4")
             assert(newUserDeskRecs.items(3).deskRec == 25)
@@ -199,7 +199,7 @@ object SPACircuitTests extends TestSuite {
                   )
                 ),
                 Ready(
-                  UserDeskRecs(
+                  DeskRecTimeSlots(
                     List(
                       DeskRecTimeslot("0", 33)
                     )
@@ -209,7 +209,7 @@ object SPACircuitTests extends TestSuite {
             )
           )),
           userDeskRec = Map("A1" -> Map("EEA" -> Ready(
-            UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+            DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))
           ))
         )
         res match {
@@ -224,10 +224,10 @@ object SPACircuitTests extends TestSuite {
         " when we apply the results for a new queue then we should see both existing queue and new queue" - {
         val model = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
-            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))))
           )),
           userDeskRec = Map("A1" -> Map("EEA" -> Ready(
-            UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+            DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))
           ))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
@@ -237,12 +237,12 @@ object SPACircuitTests extends TestSuite {
 
         val expected = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
-            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))))),
-            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33)))))),
+            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))))
           )),
           userDeskRec = Map("A1" -> Map(
-            "EEA" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))),
-            "eGates" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+            "EEA" -> Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33)))),
+            "eGates" -> Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))))
         )
         res match {
           case Some(ModelUpdate(newValue)) =>
@@ -256,11 +256,11 @@ object SPACircuitTests extends TestSuite {
         " when we apply an update for one queue then we should see both existing queue and updated queue" - {
         val model = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
-            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))))),
-            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33))))))
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33)))))),
+            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))))
           )),
           userDeskRec = Map("A1" -> Map("EEA" -> Ready(
-            UserDeskRecs(List(DeskRecTimeslot("0", 33))))
+            DeskRecTimeSlots(List(DeskRecTimeslot("0", 33))))
           ))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
@@ -270,12 +270,12 @@ object SPACircuitTests extends TestSuite {
 
         val expected = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
-            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))))),
-            "eGates" -> Ready((Ready(CrunchResult(Vector(22), List(23))), Ready(UserDeskRecs(List(DeskRecTimeslot("0", 22))))))
+            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33)))))),
+            "eGates" -> Ready((Ready(CrunchResult(Vector(22), List(23))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 22))))))
           )),
           userDeskRec = Map("A1" -> Map(
-            "EEA" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 33)))),
-            "eGates" -> Ready(UserDeskRecs(List(DeskRecTimeslot("0", 22))))))
+            "EEA" -> Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 33)))),
+            "eGates" -> Ready(DeskRecTimeSlots(List(DeskRecTimeslot("0", 22))))))
         )
         res match {
           case Some(ModelUpdate(newValue)) =>
@@ -348,13 +348,13 @@ object SPACircuitTests extends TestSuite {
       }
       "Given a model with user desk recs, when we update a user desk rec, then that value should be updated in the model" - {
         val model = RootModel().copy(
-          userDeskRec = Map("A1" -> Map("EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5))))))
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("1", 5))))))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
 
         val expected = RootModel().copy(
-          userDeskRec = Map("A1" -> Map("EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 6))))))
+          userDeskRec = Map("A1" -> Map("EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("1", 6))))))
         )
         res match {
           case Some(ModelUpdate(newValue)) =>
@@ -367,8 +367,8 @@ object SPACircuitTests extends TestSuite {
       "Given a model with two queues of desk recs, when we update one of them, then we should see desk recs for both queues with the updated values" - {
         val model = RootModel().copy(
           userDeskRec = Map("A1" -> Map(
-            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5)))),
-            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5))))
+            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("1", 5)))),
+            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("1", 5))))
           ))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
@@ -376,8 +376,8 @@ object SPACircuitTests extends TestSuite {
 
         val expected = RootModel().copy(
           userDeskRec = Map("A1" -> Map(
-            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 6)))),
-            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("1", 5))))
+            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("1", 6)))),
+            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("1", 5))))
           ))
         )
         res match {
@@ -391,14 +391,14 @@ object SPACircuitTests extends TestSuite {
       "Given a model with user desk recs, when we update UserDeskRecsTime then we should see updated wait times" - {
         val model = RootModel().copy(
           simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),
-          userDeskRec = Map("A1" -> Map("eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6))))))
+          userDeskRec = Map("A1" -> Map("eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 6))))))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(model, UpdateDeskRecsTime("A1", "eGates", DeskRecTimeslot("0", 5)))
 
         val expected = RootModel().copy(
           simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),
-          userDeskRec = Map("A1" -> Map("eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 5))))))
+          userDeskRec = Map("A1" -> Map("eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 5))))))
         )
         res match {
           case Some(ModelUpdateEffect(newValue, effect)) =>
@@ -415,8 +415,8 @@ object SPACircuitTests extends TestSuite {
             "EEA" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))
           )),
           userDeskRec = Map("A1" -> Map(
-            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6)))),
-            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6))))
+            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 6)))),
+            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 6))))
           ))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
@@ -428,8 +428,8 @@ object SPACircuitTests extends TestSuite {
             "EEA" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))
           )),
           userDeskRec = Map("A1" -> Map(
-            "eGates" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 5)))),
-            "EEA" -> Ready(UserDeskRecs(Seq(DeskRecTimeslot("0", 6))))
+            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 5)))),
+            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot("0", 6))))
           ))
         )
         res match {

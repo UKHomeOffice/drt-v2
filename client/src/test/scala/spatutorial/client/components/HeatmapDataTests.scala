@@ -4,7 +4,7 @@ import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
 import spatutorial.client.components.Heatmap.Series
-import spatutorial.client.services.{RootModel, UpdateDeskRecsTime, UserDeskRecs, DeskRecTimeslot}
+import spatutorial.client.services.{RootModel, UpdateDeskRecsTime, DeskRecTimeSlots, DeskRecTimeslot}
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._
@@ -20,7 +20,7 @@ object HeatmapDataTests extends TestSuite {
         val userDesks = 1
         val userDeskRecs = Map(
           queueName ->
-            Ready(UserDeskRecs(
+            Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesks).zipWithIndex.map {
                 case (dr, idx) =>
                   DeskRecTimeslot(idx.toString, dr)
@@ -45,7 +45,7 @@ object HeatmapDataTests extends TestSuite {
         val userDesks = 2
         val userDeskRecs = Map(
           queueName ->
-            Ready(UserDeskRecs(
+            Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesks).zipWithIndex.map {
                 case (dr, idx) =>
                   DeskRecTimeslot(idx.toString, dr)
@@ -80,14 +80,14 @@ object HeatmapDataTests extends TestSuite {
 
         val userDeskRecs = Map(
           nonEeaDesk ->
-            Ready(UserDeskRecs(
+            Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesksNonEea).zipWithIndex.map {
                 case (dr, idx) =>
                   DeskRecTimeslot(idx.toString, dr)
               }.toVector)
             ),
           eeaDesk ->
-            Ready(UserDeskRecs(
+            Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesksEea).zipWithIndex.map {
                 case (dr, idx) =>
                   DeskRecTimeslot(idx.toString, dr)
@@ -130,12 +130,12 @@ object HeatmapDataTests extends TestSuite {
         val userDesksEea = 2
 
         val userDeskRecs = Map(
-          nonEeaDesk -> Ready(UserDeskRecs(
+          nonEeaDesk -> Ready(DeskRecTimeSlots(
             (oneHourOfDeskRecs(userDesksNonEea) ::: oneHourOfDeskRecs(2)).zipWithIndex.map {
               case (dr, idx) =>
                 DeskRecTimeslot(idx.toString, dr)
             }.toVector)),
-          eeaDesk -> Ready(UserDeskRecs(
+          eeaDesk -> Ready(DeskRecTimeSlots(
             (oneHourOfDeskRecs(userDesksEea) ::: oneHourOfDeskRecs(2)).zipWithIndex.map {
               case (dr, idx) =>
                 DeskRecTimeslot(idx.toString, dr)

@@ -78,7 +78,6 @@ object TerminalHeatmaps {
     })
   }
 
-
   def heatmapOfDeskRecsVsActualDesks(terminalName: TerminalName) = {
     val modelBitsRCP = SPACircuit.connect(rootModel => (rootModel.queueCrunchResults, rootModel.userDeskRec))
     modelBitsRCP(modelBitsMP => {
@@ -122,14 +121,14 @@ object TerminalHeatmaps {
     }
   }
 
-  def deskRecsVsActualDesks(queueCrunchResults: Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]], userDeskRecs: QueueUserDeskRecs, terminalName: TerminalName): Pot[List[Series]] = {
+  def deskRecsVsActualDesks(queueCrunchResults: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]], userDeskRecs: QueueUserDeskRecs, terminalName: TerminalName): Pot[List[Series]] = {
     log.info(s"deskRecsVsActualDesks")
     val result: Iterable[Series] = for {
       queueName: QueueName <- queueCrunchResults.keys
-      queueCrunchPot: Pot[(Pot[CrunchResult], Pot[UserDeskRecs])] <- queueCrunchResults.get(queueName)
-      queueCrunch: (Pot[CrunchResult], Pot[UserDeskRecs]) <- queueCrunchPot.toOption
-      userDesksPot: Pot[UserDeskRecs] <- userDeskRecs.get(queueName)
-      userDesks: UserDeskRecs <- userDesksPot.toOption
+      queueCrunchPot: Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])] <- queueCrunchResults.get(queueName)
+      queueCrunch: (Pot[CrunchResult], Pot[DeskRecTimeSlots]) <- queueCrunchPot.toOption
+      userDesksPot: Pot[DeskRecTimeSlots] <- userDeskRecs.get(queueName)
+      userDesks: DeskRecTimeSlots <- userDesksPot.toOption
       crunchDeskRecsPair: CrunchResult <- queueCrunch._1.toOption
       crunchDeskRecs: IndexedSeq[Int] = crunchDeskRecsPair.recommendedDesks
       userDesksVals: Seq[Int] = userDesks.items.map(_.deskRec)

@@ -19,7 +19,7 @@ object TerminalUserDeskRecs {
 
   case class Props(terminalName: TerminalName,
                    workloads: Map[QueueName, Seq[Int]],
-                   userDeskRecs: Map[QueueName, UserDeskRecs])
+                   userDeskRecs: Map[QueueName, DeskRecTimeSlots])
 
   val component = ReactComponentB[Props]("TerminalUserDeskRecs")
     .render_P(props =>
@@ -97,8 +97,7 @@ object TableTerminalDeskRecs {
                                     flights: Pot[Flights],
                                     simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
-                                    queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[UserDeskRecs])]]],
-                                    userDeskRec: Map[TerminalName, QueueUserDeskRecs]
+                                    queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]]
                                   )
 
   def buildTerminalUserDeskRecsComponent(terminalName: TerminalName) = {
@@ -109,8 +108,7 @@ object TableTerminalDeskRecs {
         model.flights,
         model.simulationResult,
         model.workload,
-        model.queueCrunchResults,
-        model.userDeskRec
+        model.queueCrunchResults
       ))
     val airportWrapper = SPACircuit.connect(_.airportInfos)
     val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)

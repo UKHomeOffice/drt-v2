@@ -20,7 +20,7 @@ object UserDeskRecsComponent {
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    userDeskRecsPotProxy: ModelProxy[Pot[UserDeskRecs]],
+                    userDeskRecsPotProxy: ModelProxy[Pot[DeskRecTimeSlots]],
                     simulationResult: ModelProxy[Pot[SimulationResult]])
 
   case class State(selectedItem: Option[DeskRecTimeslot] = None, showTodoForm: Boolean = false)
@@ -74,7 +74,7 @@ object UserDeskRecsComponent {
              airportConfig: AirportConfig,
              airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
              flightsPotRCP: ReactConnectProxy[Pot[Flights]],
-             proxy: ModelProxy[Pot[UserDeskRecs]],
+             proxy: ModelProxy[Pot[DeskRecTimeSlots]],
              simulationResult: ModelProxy[Pot[SimulationResult]]) =
   component(Props(terminalName, queueName, items, flightsPotRCP, airportConfig, airportInfo, proxy, simulationResult))
 }
