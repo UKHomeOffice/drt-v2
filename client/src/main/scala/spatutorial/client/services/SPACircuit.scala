@@ -107,6 +107,10 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 
 }
 
+
+case class Shifts(rawShifts: String) {
+  val parsedShifts =
+}
 case class RootModel(
                       motd: Pot[String] = Empty,
                       workload: Pot[Workloads] = Empty,
@@ -117,6 +121,8 @@ case class RootModel(
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
+                      shiftsRaw: String,
+
                       slotsInADay: Int = 96
                     ) {
   override def toString: String =
