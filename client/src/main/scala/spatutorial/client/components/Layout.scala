@@ -26,8 +26,7 @@ object Layout {
                   <.div(^.className := "collapse navbar-collapse", MainMenu(props.ctl, props.currentLoc.page)))),
               // currently active module is shown in this container
               <.div(^.className := "container", props.currentLoc.render()))),
-          airportConfigPotMP().renderPending(_ => "Waiting for Airport Config"),
-          airportConfigPotMP().renderEmpty(" Didn't get Airport Config")
+          airportConfigPotMP().renderPending(_ => "loading config...")
         )
       })
     })

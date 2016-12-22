@@ -1,17 +1,14 @@
 package spatutorial.client.services
 
 import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.client.services.StaffMovements.StaffMovement
-import spatutorial.shared.FlightsApi.QueueName
-import spatutorial.shared.{WorkloadsHelpers, MilliDate}
+import spatutorial.shared.{MilliDate, WorkloadsHelpers}
 import utest._
 
-import scala.collection.immutable.{SortedMap, SortedSet}
 import scala.scalajs.js.Date
 
 object ShiftsServiceTests extends TestSuite {
 
-  import JSDateConversions._
+  import spatutorial.client.services.JSDateConversions._
 
   def tests = TestSuite {
     'StaffShifts - {
@@ -199,13 +196,11 @@ object ShiftsServiceTests extends TestSuite {
 //
 //
           "asking for a whole days shape with movements of grouped staff" - {
-            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts).toList)
+            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts.toList).toList)
             val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
             val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
             val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
 
-            val vecMovements = SortedMap(1, 3, 4, 5)
-            vecMovements
             TestTimer.timeIt("movements")(1000) {
               val staffAtTIme = daysWorthOf15Minutes.map {
                 time => (time) -> shiftService.staffAt(time)
@@ -233,40 +228,6 @@ object ShiftsServiceTests extends TestSuite {
     }
   }
 }
-
-object JSDateConversions {
-  implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
-
-  implicit def jsDateToMilliDate(jsDate: Date): MilliDate = MilliDate(jsDateToMillis(jsDate))
-
-  implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
-
-  object SDate {
-    def apply(y: Int, m: Int, d: Int, h: Int, mm: Int) = new Date(y, m, d, h, mm)
-  }
-
-}
-
-object StaffMovements {
-
-  def shiftsToMovements(shifts: Seq[Shift]) = {
-    shifts.flatMap(shift =>
-      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff ) ::
-       StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff ) :: Nil
-    ).sortBy(_.time)
-  }
-
-  case class StaffMovement(reason: String, time: MilliDate, delta: Int, queue: Option[QueueName] = None)
-
-  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate) = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
-
-  def staffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(dateTime: MilliDate) = {
-    val baseStaff = shiftService.staffAt(dateTime)
-    baseStaff + adjustmentsAt(movements)(dateTime)
-  }
-}
-
-
 object TestTimer {
   def timeIt(name: String)(times: Int)(f:  => Unit) = {
     val start = new Date()
@@ -279,53 +240,5 @@ object TestTimer {
     println(s"${name} Trial done at ${end}")
     val timeTaken = (end.getTime() - start.getTime())
     println(s"${name} Time taken in ${times} runs ${timeTaken}ms, ${timeTaken.toDouble/times} per run")
-  }
-}
-
-case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int)
-
-
-object Shift {
-
-  import JSDateConversions._
-
-  def apply(name: String, startDate: String, startTime: String, endTime: String): Shift = {
-    val ymd = startDate.split("/").toVector
-
-    val (d, m, y) = (ymd(0).toInt, ymd(1).toInt, ymd(2).toInt + 2000)
-
-    val startT = startTime.split(":").toVector
-    val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
-    val startDt = SDate(y, m, d, startHour, startMinute)
-
-    val endT = endTime.split(":").toVector
-    val (endHour, endMinute) = (endT(0).toInt, endT(1).toInt)
-    val endDt = SDate(y, m, d, endHour, endMinute)
-    println(name, y, m, d, startT, endT)
-    Shift(name, startDt, endDt, 1)
-  }
-}
-
-case class ShiftService(shifts: List[Shift]) {
-  def staffAt(date: MilliDate): Int = shifts.filter(shift =>
-    (shift.startDt <= date && date <= shift.endDt)).map(_.numberOfStaff).sum
-}
-
-case class MovementsShiftService(shifts: List[Shift]) {
-  val movements = StaffMovements.shiftsToMovements(shifts).groupBy(_.time).map(m =>
-    StaffMovement(m._1.toString(),m._1, m._2.map(_.delta).sum, None)).toList
-  println(s"Movements are: ${movements.mkString("\n")}")
-  def staffAt(date: MilliDate): Int = StaffMovements.adjustmentsAt(movements)(date)
-}
-
-
-
-
-object ShiftService {
-  def groupPeopleByShiftTimes(shifts: Seq[Shift]) = {
-    shifts.groupBy(shift => (shift.startDt, shift.endDt, shift.name))
-        .map{case ((startDt, endDt, name), shifts) => {
-          Shift(name, startDt, endDt, shifts.map(_.numberOfStaff).sum)
-        }}
   }
 }

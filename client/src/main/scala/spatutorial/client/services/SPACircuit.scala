@@ -22,10 +22,12 @@ import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
+
 import scala.language.postfixOps
 import scala.concurrent.duration._
 import diode.Implicits.runAfterImpl
 import spatutorial.client.services.RootModel.mergeTerminalQueues
+import spatutorial.client.services.StaffMovements.StaffMovement
 
 import scala.scalajs.js.timers._
 import scala.concurrent.duration._
@@ -107,10 +109,6 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 
 }
 
-
-case class Shifts(rawShifts: String) {
-  val parsedShifts =
-}
 case class RootModel(
                       motd: Pot[String] = Empty,
                       workload: Pot[Workloads] = Empty,
@@ -121,7 +119,12 @@ case class RootModel(
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
-                      shiftsRaw: String,
+                      shiftsRaw: String = """
+                                            |shift 1	01/12/16	06:30	15:18
+                                            |shift 2	01/12/16	08:00	16:48
+                                            |shift 3	01/12/16	12:00	20:00
+                                            |shift 4	01/12/16	20:00	06:30
+                                          """,
 
                       slotsInADay: Int = 96
                     ) {

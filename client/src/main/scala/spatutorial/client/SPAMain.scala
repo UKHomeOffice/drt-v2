@@ -1,38 +1,30 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.data.PotState.PotReady
-import diode.{Effect, ModelR, UseValueEq, react}
 import diode.data.{Empty, Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import japgolly.scalajs.react.Addons.Perf
-import japgolly.scalajs.react.CompScope.DuringCallbackU
-import japgolly.scalajs.react.ReactComponentB.PSB
-import japgolly.scalajs.react.ReactComponentC.ReqProps
 import japgolly.scalajs.react.extra.router.StaticDsl.{DynamicRouteB, Rule}
 import japgolly.scalajs.react.{ReactDOM, _}
 import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
-import spatutorial.client.components.DeskRecsTable.UserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, TableTerminalDeskRecs, TerminalPage}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalPage}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.DashboardModels
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
+import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.client.services._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
-import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
-import spatutorial.shared.HasAirportConfig
-
 
 
 object TableViewUtils {
@@ -42,6 +34,7 @@ object TableViewUtils {
   val egate: QueueName = "eGate"
 
   def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
+
   def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates")
 
   def terminalUserDeskRecsRows(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
@@ -124,6 +117,8 @@ object SPAMain extends js.JSApp {
 
   case class TerminalLoc(id: String) extends Loc
 
+  case object StaffingLoc extends Loc
+
   SPACircuit.dispatch(GetWorkloads("", ""))
   SPACircuit.dispatch(GetAirportConfig())
 
@@ -176,7 +171,12 @@ object SPAMain extends js.JSApp {
       QueueUserDeskRecsComponent.terminalQueueUserDeskRecsComponent()
     })
 
-    val rule = (rootRoute | dashboardRoute | flightsRoute | userDeskRecsRoute | terminals)
+    val staffing = staticRoute("#staffing", StaffingLoc) ~>
+      renderR(ctl => {
+        Staffing()
+      })
+
+    val rule = (rootRoute | dashboardRoute | flightsRoute | userDeskRecsRoute | terminals | staffing)
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 
@@ -189,8 +189,8 @@ object SPAMain extends js.JSApp {
 
   @JSExport
   def main(): Unit = {
-//    Perf.start()
-//    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
+    //    Perf.start()
+    //    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
     log.warn("Application starting")
     // send log messages also to the server
     log.enableServerLogging(pathToThisApp + "/logging")
