@@ -33,7 +33,6 @@ import scalacss.Defaults._
 import spatutorial.shared.HasAirportConfig
 
 
-
 object TableViewUtils {
 
   val eeadesk: QueueName = "eeaDesk"
@@ -41,6 +40,7 @@ object TableViewUtils {
   val egate: QueueName = "eGate"
 
   def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
+
   def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates")
 
   def terminalUserDeskRecsRows(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
@@ -123,17 +123,8 @@ object SPAMain extends js.JSApp {
 
   case class TerminalLoc(id: String) extends Loc
 
-  SPACircuit.dispatch(GetWorkloads("", ""))
-  SPACircuit.dispatch(GetAirportConfig())
-
-
-  import scala.scalajs.js.timers._
-  import scala.concurrent.duration._
-  import scala.concurrent.duration.FiniteDuration
-
-  setInterval(FiniteDuration(10L, SECONDS)) {
-    SPACircuit.dispatch(RequestFlights(0, 0))
-  }
+  val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: Nil
+  initActions.foreach(SPACircuit.dispatch(_))
 
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>

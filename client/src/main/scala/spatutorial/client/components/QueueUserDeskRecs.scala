@@ -50,9 +50,9 @@ object QueueUserDeskRecsComponent {
   def currentUserDeskRecView(props: Props): ReactTagOf[html.Div] = {
     <.div(
       ^.key := props.queueName,
-      props.userDeskRecsRowPotRCP(userDeskRecsRosPotMP =>
+      props.userDeskRecsRowPotRCP(userDeskRecsRowsPotMP =>
         Panel(Panel.Props(s"Queue Simulation for ${props.terminalName} ${props.queueName}"),
-          userDeskRecsRosPotMP().renderReady(userDeskRecsRows =>
+          userDeskRecsRowsPotMP().renderReady(userDeskRecsRows =>
             props.simulationResultPotRCP(simulationResultPotMP => {
               props.userDeskRecsPotRCP(
                 userDeskRecsPotMP => UserDeskRecsComponent(props.terminalName, props.queueName, userDeskRecsRows,
