@@ -3,7 +3,7 @@ package spatutorial.client.services
 
 import diode.ActionResult.EffectOnly
 
-import scala.collection.immutable.{IndexedSeq, Iterable, NumericRange, Seq}
+import scala.collection.immutable.{IndexedSeq, Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -18,7 +18,7 @@ import diode._
 import diode.data._
 import diode.react.ReactConnector
 import diode.util._
-import spatutorial.client.components.DeskRecsChart
+import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
@@ -26,6 +26,8 @@ import spatutorial.shared.FlightsApi._
 import scala.language.postfixOps
 import scala.concurrent.duration._
 import diode.Implicits.runAfterImpl
+import spatutorial.client.TableViewUtils
+import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
 import spatutorial.client.services.RootModel.mergeTerminalQueues
 import spatutorial.client.services.StaffMovements.StaffMovement
 
@@ -119,15 +121,43 @@ case class RootModel(
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
-                      shiftsRaw: String = """
-                                            |shift 1	01/12/16	06:30	15:18
-                                            |shift 2	01/12/16	08:00	16:48
-                                            |shift 3	01/12/16	12:00	20:00
-                                            |shift 4	01/12/16	20:00	06:30
-                                          """,
+                      shiftsRaw: String =
+                      """
+                        |shift 1	01/12/16	06:30	15:18
+                        |shift 2	01/12/16	08:00	16:48
+                        |shift 3	01/12/16	12:00	20:00
+                        |shift 4	01/12/16	20:00	06:30
+                      """,
 
                       slotsInADay: Int = 96
                     ) {
+
+  import TerminalUserDeskRecs._
+
+  lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
+    timeIt("calculateAllTerminalsRows")(calculateAllTerminalsRows)
+  }
+
+  def calculateAllTerminalsRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
+    airportConfig.map(ac => ac.terminalNames.map(terminalName => {
+      timeIt(s"calculateTerminalRows${terminalName}")(calculateTerminalRows(terminalName))
+    }).toMap)
+  }
+
+  def calculateTerminalRows(terminalName: TerminalName): (TerminalName, Pot[List[TableTerminalDeskRecs.TerminalUserDeskRecsRow]]) = {
+    val crv = queueCrunchResults.getOrElse(terminalName, Map())
+    val srv = simulationResult.getOrElse(terminalName, Map())
+    log.info(s"tud: ${terminalName}")
+    val x: Pot[List[TerminalUserDeskRecsRow]] = workload.map(workloads => {
+      val timestamps = workloads.timeStamps(terminalName)
+      val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+      val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+      val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(workloads.workloads(terminalName), minutesRangeInMillis)
+      TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
+    })
+    terminalName -> x
+  }
+
   override def toString: String =
     s"""
        |RootModel(
@@ -352,10 +382,16 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
         case Empty => mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(updatedDeskRecTimeSlots))))
         case _ => value._1
       }
-      updated(value.copy(
-        _1 = userDeskRecs,
-        _2 = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(updatedDeskRecTimeSlots))))))
-      ))
+
+      val queues: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]] = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(updatedDeskRecTimeSlots))))))
+
+      if (value._2 != queues)
+        updated(value.copy(
+          _1 = userDeskRecs,
+          _2 = queues
+        ))
+      else
+        noChange
   }
 
 }
