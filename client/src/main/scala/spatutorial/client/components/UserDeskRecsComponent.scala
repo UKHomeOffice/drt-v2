@@ -53,7 +53,7 @@ object UserDeskRecsComponent {
               p.flightsPotRCP,
               p.airportConfig,
               p.airportInfos,
-              item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item))))
+              deskRecTimeslot => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, deskRecTimeslot))))
         }))
   }
 

@@ -1,39 +1,28 @@
 package spatutorial.client.services
 
 
-import diode.ActionResult.EffectOnly
-
-import scala.collection.immutable.{IndexedSeq, Iterable, Map, NumericRange, Seq}
-import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import scala.scalajs.js
-import scala.scalajs.js.Date
-import scala.scalajs.js.annotation.{JSExport, ScalaJSDefined}
-import scala.util.{Failure, Success, Try}
-import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
 import autowire._
-import boopickle.Default._
+import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import diode.util._
-import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
-import spatutorial.client.logger._
-import spatutorial.shared._
-import spatutorial.shared.FlightsApi._
-
-import scala.language.postfixOps
-import scala.concurrent.duration._
-import diode.Implicits.runAfterImpl
 import spatutorial.client.TableViewUtils
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
+import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
+import spatutorial.client.logger._
+import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
 import spatutorial.client.services.RootModel.mergeTerminalQueues
-import spatutorial.client.services.StaffMovements.StaffMovement
-
-import scala.scalajs.js.timers._
+import spatutorial.shared.FlightsApi._
+import spatutorial.shared._
+import boopickle.Default._
+import scala.collection.immutable.{Map, NumericRange, Seq}
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.duration.FiniteDuration
+import scala.language.postfixOps
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import scala.scalajs.js
+import scala.scalajs.js.Date
+import scala.util.{Failure, Success, Try}
 
 case class DeskRecTimeslot(id: String, deskRec: Int)
 
