@@ -40,17 +40,9 @@ case class DeskRecTimeslot(id: String, deskRec: Int)
 // Actions
 case object RefreshTodos extends Action
 
-case class UpdateQueueUserDeskRecs(terminalName: TerminalName, queueName: QueueName, todos: Seq[DeskRecTimeslot]) extends Action
-
 case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
 
-case class DeleteTodo(item: DeskRecTimeslot) extends Action
-
-case class UpdateMotd(potResult: Pot[String] = Empty) extends PotAction[String, UpdateMotd] {
-  override def next(value: Pot[String]) = UpdateMotd(value)
-}
-
-case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult) extends Action
+case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResultWithTimeAndInterval: CrunchResultWithTimeAndInterval) extends Action
 
 case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
 
@@ -210,10 +202,10 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRec
       log.info("RefreshTodos")
       //      effectOnly(Effect(AjaxClient[Api].geAllTodos().call().map(UpdateAllTodos)))
       noChange
-    case UpdateDeskRecsTime(terminalName, queueName, item) =>
+    case UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot) =>
       //      log.debug(s"Update Desk Recs time ${item} into ${value}")
       // make a local update and inform server
-      val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(item))
+      val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeslot))
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
   }
 }
@@ -228,21 +220,6 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
       case Success(s) =>
         s
     }
-  }
-}
-
-/**
-  * Handles actions related to the Motd
-  *
-  * @param modelRW Reader/Writer to access the model
-  */
-class MotdHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
-  implicit val runner = new RunAfterJS
-
-  override def handle = {
-    case action: UpdateMotd =>
-      val updateF = action.effect(AjaxClient[Api].welcomeMsg("User X").call())(identity _)
-      action.handleWith(this, updateF)(PotAction.handler())
   }
 }
 
@@ -366,25 +343,26 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
         case Right(crti) =>
-          val cr = CrunchResult(crti.recommendedDesks, crti.waitTimes)
-          UpdateCrunchResult(terminalName, queueName, cr)
+          UpdateCrunchResult(terminalName, queueName, crti)
         case Left(ncr) =>
           log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
           NoAction
       }
       effectOnly(Effect(fe) + crunchEffect)
-    case UpdateCrunchResult(terminalName, queueName, crunchResult) =>
+    case UpdateCrunchResult(terminalName, queueName, crti) =>
+      val cr = CrunchResult(crti.recommendedDesks, crti.waitTimes)
       log.info(s"UpdateCrunchResultnoEffect $queueName")
       //todo zip with labels?, or, probably better, get these prepoluated from the server response?
-      val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(DeskRecsChart
-        .takeEvery15th(crunchResult.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(id = t._2.toString, deskRec = t._1)).toList)
+      val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
+        DeskRecsChart
+        .takeEvery15th(crti.recommendedDesks)
+        .zipWithIndex.map(t => DeskRecTimeslot(id = (crti.firstTimeMillis + t._2).toString, deskRec = t._1)).toList)
       val userDeskRecs = value._1.getOrElse(terminalName, Map()).getOrElse(queueName, Empty) match {
         case Empty => mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(updatedDeskRecTimeSlots))))
         case _ => value._1
       }
 
-      val queues: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]] = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResult), Ready(updatedDeskRecTimeSlots))))))
+      val queues: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]] = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
 
       if (value._2 != queues)
         updated(value.copy(
@@ -438,7 +416,6 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     println("composing handlers")
     composeHandlers(
       new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
-      new MotdHandler(zoomRW(_.motd)((m, v) => m.copy(motd = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => {
         //        log.info(s"Updateing workloads to $v")
         m.copy(workload = v)

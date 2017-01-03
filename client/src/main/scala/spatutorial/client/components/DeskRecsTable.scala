@@ -45,9 +45,7 @@ object DeskRecsTable {
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     airportConfig: AirportConfig,
                     airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    stateChange: DeskRecTimeslot => Callback,
-                    editItem: DeskRecTimeslot => Callback,
-                    deleteItem: DeskRecTimeslot => Callback
+                    stateChange: DeskRecTimeslot => Callback
                   )
 
   case class HoverPopoverState(hovered: Boolean = false)
@@ -135,7 +133,6 @@ object DeskRecsTable {
   def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
             airportConfig: AirportConfig,
             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            stateChange: DeskRecTimeslot => Callback,
-            editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    component(Props(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange, editItem, deleteItem))
+            stateChange: DeskRecTimeslot => Callback) =
+    component(Props(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange))
 }

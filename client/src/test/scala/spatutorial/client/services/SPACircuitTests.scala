@@ -187,7 +187,7 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateCrunchResult("A1", "EEA", CrunchResult(IndexedSeq(33), Seq(29))))
+          UpdateCrunchResult("A1", "EEA", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(33), Seq(29))))
 
         val expected = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
@@ -233,7 +233,7 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateCrunchResult("A1", "eGates", CrunchResult(IndexedSeq(33), Seq(29))))
+          UpdateCrunchResult("A1", "eGates", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(33), Seq(29))))
 
         val expected = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
@@ -266,7 +266,7 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateCrunchResult("A1", "eGates", CrunchResult(IndexedSeq(22), Seq(23))))
+          UpdateCrunchResult("A1", "eGates", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(22), Seq(23))))
 
         val expected = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(

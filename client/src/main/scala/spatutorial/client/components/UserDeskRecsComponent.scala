@@ -53,9 +53,7 @@ object UserDeskRecsComponent {
               p.flightsPotRCP,
               p.airportConfig,
               p.airportInfos,
-              item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
-              item => editTodo(Some(item)),
-              item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
+              item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item))))
         }))
   }
 
