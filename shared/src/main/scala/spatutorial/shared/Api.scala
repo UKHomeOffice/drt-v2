@@ -39,11 +39,18 @@ object CrunchResult {
   def empty = CrunchResult(Vector[Int](), Nil)
 }
 
+case class CrunchResultWithTimeAndInterval(
+                                            firstTimeMillis: Long,
+                                            intervalMillis: Long,
+                                            recommendedDesks: IndexedSeq[Int],
+                                            waitTimes: Seq[Int])
+
 case class NoCrunchAvailable()
 
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
 
 object FlightsApi {
+
   case class Flights(flights: List[ApiFlight])
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
@@ -168,7 +175,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
+  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 

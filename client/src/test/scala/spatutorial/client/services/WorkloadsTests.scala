@@ -12,8 +12,6 @@ object WorkloadsTests extends TestSuite {
 
   import spatutorial.client.TableViewUtils._
 
-  val s1 = 1000
-
   def tests = TestSuite {
 
     "Given workloads, " - {

@@ -25,7 +25,7 @@ case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
 
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
-case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
+case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResultWithTimeAndInterval)
 
 object EGateBankCrunchTransformations {
 
@@ -54,13 +54,13 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
 
-  val crunchCache: Cache[CrunchResult] = LruCache()
+  val crunchCache: Cache[CrunchResultWithTimeAndInterval] = LruCache()
 
-  def cacheCrunch[T](terminal: TerminalName, queue: QueueName): Future[CrunchResult] = {
+  def cacheCrunch[T](terminal: TerminalName, queue: QueueName): Future[CrunchResultWithTimeAndInterval] = {
     val key: String = cacheKey(terminal, queue)
     log.info(s"getting crunch for $key")
     crunchCache(key) {
-      val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
+      val crunch: Future[CrunchResultWithTimeAndInterval] = performCrunch(terminal, queue)
       crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 15 seconds)
@@ -95,9 +95,9 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           //          log.info(s"got keyed thingy ${futCrunch}")
           //todo this is NOT right
           futCrunch.value match {
-            case Some(Success(cr)) =>
+            case Some(Success(cr: CrunchResultWithTimeAndInterval)) =>
               replyTo ! cr
-            case Some(Failure(f)) =>
+            case Some(Failure(_)) =>
               log.info(s"unsuccessful crunch here $terminalName/$queueName")
               replyTo ! NoCrunchAvailable()
             case None =>
@@ -121,7 +121,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
     for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {
-      val crunch: Future[CrunchResult] = performCrunch(tn, qn)
+      val crunch: Future[CrunchResultWithTimeAndInterval] = performCrunch(tn, qn)
       crunch.onSuccess {
         case crunchResult =>
           self ! crunchResult
@@ -129,21 +129,23 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     }
   }
 
-  private def saveNewCrunchResult(tn: TerminalName, qn: QueueName, crunchResult: CrunchResult) = {
+  private def saveNewCrunchResult(tn: TerminalName, qn: QueueName, crunchResultWithTimeAndInterval: CrunchResultWithTimeAndInterval) = {
     log.info(s"crunch result for $tn/$qn")
     crunchCache.remove(cacheKey(tn, qn))
     crunchCache(cacheKey(tn, qn)) {
       log.info(s"returning crunch result for $tn/$qn")
-      crunchResult
+      crunchResultWithTimeAndInterval
     }
   }
 
-  def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
+  def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResultWithTimeAndInterval] = {
     log.info("Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
     val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
 
+    val crunchStartTimeMillis = lastMidnight.getMillis
     val tq: QueueName = terminalName + "/" + queueName
+
     for (wl <- workloads) yield {
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
@@ -152,11 +154,10 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         terminalWorkloads match {
           case Some(twl: Map[QueueName, Seq[WL]]) =>
             log.info(s"lastMidnight: $lastMidnight")
-            val startTimeMillis = lastMidnight.getMillis
-            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startTimeMillis, crunchPeriodHours)
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchStartTimeMillis, crunchPeriodHours)
             log.info(s"^^^$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
             val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
-            log.info(s"startTimeMillis: $startTimeMillis, crunchPeriod: $crunchPeriodHours")
+            log.info(s"crunchStartTimeMillis: $crunchStartTimeMillis, crunchPeriod: $crunchPeriodHours")
             workloadsByQueue
           case None =>
             Map()
@@ -183,7 +184,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       val asFuture = r match {
         case Success(s) =>
           log.info(s"Successful crunch for $tq")
-          s
+          CrunchResultWithTimeAndInterval(crunchStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
         case Failure(f) =>
           log.error(f, s"Failed to crunch $tq")
           throw f

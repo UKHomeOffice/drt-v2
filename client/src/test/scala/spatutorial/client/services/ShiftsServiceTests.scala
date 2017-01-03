@@ -195,19 +195,19 @@ object ShiftsServiceTests extends TestSuite {
 //          }
 //
 //
-          "asking for a whole days shape with movements of grouped staff" - {
-            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts.toList).toList)
-            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
-            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
-            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
-
-            TestTimer.timeIt("movements")(1000) {
-              val staffAtTIme = daysWorthOf15Minutes.map {
-                time => (time) -> shiftService.staffAt(time)
-              }
-            }
-
-          }
+//          "asking for a whole days shape with movements of grouped staff" - {
+//            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts.toList).toList)
+//            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
+//            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
+//            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
+//
+//            TestTimer.timeIt("movements")(1000) {
+//              val staffAtTIme = daysWorthOf15Minutes.map {
+//                time => (time) -> shiftService.staffAt(time)
+//              }
+//            }
+//
+//          }
 
           "Staff movements" - {
             import StaffMovements._
