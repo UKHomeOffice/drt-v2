@@ -203,7 +203,7 @@ object TableTerminalDeskRecs {
                 <.input.number(
                   ^.className := "desk-rec-input",
                   ^.value := q.userDeskRec.deskRec,
-                  ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.id, deskRec = e.target.value.toInt)))
+                  ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.timeInMillis, deskRec = e.target.value.toInt)))
                 )),
               qtd(q.waitTimeWithCrunchDeskRec + " mins"),
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))

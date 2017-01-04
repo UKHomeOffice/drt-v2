@@ -24,7 +24,7 @@ import scala.scalajs.js
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 
-case class DeskRecTimeslot(id: String, deskRec: Int)
+case class DeskRecTimeslot(timeInMillis: Long, deskRec: Int)
 
 // Actions
 case object RefreshTodos extends Action
@@ -165,15 +165,15 @@ object RootModel {
 }
 
 case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
-  def updated(newItem: DeskRecTimeslot) = {
+  def updated(newItem: DeskRecTimeslot): DeskRecTimeSlots = {
     log.info(s"will update ${newItem} into ${items.take(5)}...")
-    items.indexWhere(_.id == newItem.id) match {
+    items.indexWhere(_.timeInMillis == newItem.timeInMillis) match {
       case -1 =>
         // add new
         log.info("add new")
         DeskRecTimeSlots(items :+ newItem)
       case idx =>
-        log.info("add old")
+        log.info(s"add old: idx: $idx, newItem: $newItem, ${items(idx)}")
         // replace old
         DeskRecTimeSlots(items.updated(idx, newItem))
     }
@@ -276,7 +276,7 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
     case ChangeDeskUsage(terminalName, queueName, v, k) =>
       log.info(s"Handler: ChangeDesk($terminalName, $queueName, $v, $k)")
       val model: Pot[DeskRecTimeSlots] = value(terminalName)(queueName)
-      val newUserRecs: DeskRecTimeSlots = model.get.updated(DeskRecTimeslot(k.toString, v.toInt))
+      val newUserRecs: DeskRecTimeSlots = model.get.updated(DeskRecTimeslot(k, v.toInt))
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))
   }
 }
@@ -331,8 +331,8 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
     case GetLatestCrunch(terminalName, queueName) =>
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
-        case Right(crti) =>
-          UpdateCrunchResult(terminalName, queueName, crti)
+        case Right(crunchResultWithTimeAndInterval) =>
+          UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
         case Left(ncr) =>
           log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
           NoAction
@@ -341,11 +341,14 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
     case UpdateCrunchResult(terminalName, queueName, crti) =>
       val cr = CrunchResult(crti.recommendedDesks, crti.waitTimes)
       log.info(s"UpdateCrunchResultnoEffect $queueName")
-      //todo zip with labels?, or, probably better, get these prepoluated from the server response?
+      val timeIntervalMinutes = 15
+      val millis = Iterator.iterate(crti.firstTimeMillis)(_ + timeIntervalMinutes * crti.intervalMillis).toIterable
       val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
         DeskRecsChart
-        .takeEvery15th(crti.recommendedDesks)
-        .zipWithIndex.map(t => DeskRecTimeslot(id = (crti.firstTimeMillis + t._2).toString, deskRec = t._1)).toList)
+          .takeEveryNth(timeIntervalMinutes)(crti.recommendedDesks)
+          .zip(millis).map {
+          case (deskRec, timeInMillis) => DeskRecTimeslot(timeInMillis = timeInMillis, deskRec = deskRec)
+        }.toList)
       val userDeskRecs = value._1.getOrElse(terminalName, Map()).getOrElse(queueName, Empty) match {
         case Empty => mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(updatedDeskRecTimeSlots))))
         case _ => value._1

@@ -67,7 +67,7 @@ object TableViewUtils {
           timestamp = timestamp,
           pax = pax.toDouble,
           crunchDeskRec = crunchDeskRec.toInt,
-          userDeskRec = DeskRecTimeslot(rowIndex.toString, userDeskRec.toInt),
+          userDeskRec = DeskRecTimeslot(timestamp, userDeskRec.toInt),
           waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
           waitTimeWithUserDeskRec = waitTimeUser.toInt,
           qn

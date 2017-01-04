@@ -23,7 +23,7 @@ object HeatmapDataTests extends TestSuite {
             Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesks).zipWithIndex.map {
                 case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
+                  DeskRecTimeslot(idx, dr)
               }.toVector)
             ))
         val recommendedDesks = Vector.fill(60)(2)
@@ -48,7 +48,7 @@ object HeatmapDataTests extends TestSuite {
             Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesks).zipWithIndex.map {
                 case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
+                  DeskRecTimeslot(idx, dr)
               }.toVector)
             ))
 
@@ -83,14 +83,14 @@ object HeatmapDataTests extends TestSuite {
             Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesksNonEea).zipWithIndex.map {
                 case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
+                  DeskRecTimeslot(idx, dr)
               }.toVector)
             ),
           eeaDesk ->
             Ready(DeskRecTimeSlots(
               oneHourOfDeskRecs(userDesksEea).zipWithIndex.map {
                 case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
+                  DeskRecTimeslot(idx, dr)
               }.toVector)
             )
         )
@@ -133,12 +133,12 @@ object HeatmapDataTests extends TestSuite {
           nonEeaDesk -> Ready(DeskRecTimeSlots(
             (oneHourOfDeskRecs(userDesksNonEea) ::: oneHourOfDeskRecs(2)).zipWithIndex.map {
               case (dr, idx) =>
-                DeskRecTimeslot(idx.toString, dr)
+                DeskRecTimeslot(idx, dr)
             }.toVector)),
           eeaDesk -> Ready(DeskRecTimeSlots(
             (oneHourOfDeskRecs(userDesksEea) ::: oneHourOfDeskRecs(2)).zipWithIndex.map {
               case (dr, idx) =>
-                DeskRecTimeslot(idx.toString, dr)
+                DeskRecTimeslot(idx, dr)
             }.toVector)
           ))
 

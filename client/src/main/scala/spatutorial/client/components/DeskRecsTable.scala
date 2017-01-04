@@ -116,7 +116,7 @@ object DeskRecsTable {
             <.input.number(
               ^.className := "desk-rec-input",
               ^.value := item.userDeskRec.deskRec,
-              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
+              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.timeInMillis, deskRec = e.target.value.toInt))))),
           <.td(^.cls := "minutes", item.waitTimeWithCrunchDeskRec + " mins"),
           <.td(^.cls := dangerWait + " " + warningClasses + " minutes", item.waitTimeWithUserDeskRec + " mins")
         )
