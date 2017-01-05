@@ -218,10 +218,12 @@ object Heatmap {
               s.width := gridSize,
               s.height := gridSize,
               s.fill := colors1),
-            if (props.shouldShowRectValue)
+            if (props.shouldShowRectValue) {
+              val verticalAlignmentOffset = 5
               s.text(props.valueDisplayFormatter(periodValue),
-                s.x := idx * gridSize, s.y := sIndex * gridSize + 5,
+                s.x := idx * gridSize, s.y := sIndex * gridSize + verticalAlignmentOffset,
                 s.transform := s"translate(${halfGrid}, ${halfGrid})", s.textAnchor := "middle")
+            }
             else null
           )
         }
