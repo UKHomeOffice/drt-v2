@@ -28,8 +28,11 @@ object TerminalHeatmaps {
           log.info(s"Got max workload of ${maxAcrossAllSeries}")
           <.div(
             <.h4("heatmap of workloads"),
-            Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+            Heatmap.heatmap(Heatmap.Props(
+              series = heatMapSeries,
+              height = 200,
+              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)
+            ))
           )
         }))
     })
@@ -90,7 +93,8 @@ object TerminalHeatmaps {
           <.div(
             <.h4("heatmap of ratio of desk rec to actual desks"),
             Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries))))
+              scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries),
+              valueDisplayFormatter = v => f"${v}%.1f")))
         }))
     })
   }
@@ -160,7 +164,8 @@ object Heatmap {
   case class Props(width: Int = 960, height: Int, numberOfBlocks: Int = 24,
                    series: Seq[Series],
                    scaleFunction: (Double) => Int,
-                   shouldShowRectValue: Boolean = true
+                   shouldShowRectValue: Boolean = true,
+                   valueDisplayFormatter: (Double) => String = _.toInt.toString
                   )
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
@@ -214,8 +219,8 @@ object Heatmap {
               s.height := gridSize,
               s.fill := colors1),
             if (props.shouldShowRectValue)
-              s.text(f"${periodValue}%2.1f",
-                s.x := idx * gridSize, s.y := sIndex * gridSize,
+              s.text(props.valueDisplayFormatter(periodValue),
+                s.x := idx * gridSize, s.y := sIndex * gridSize + 5,
                 s.transform := s"translate(${halfGrid}, ${halfGrid})", s.textAnchor := "middle")
             else null
           )
@@ -256,7 +261,7 @@ object Heatmap {
 
         val hours: IndexedSeq[vdom.ReactTagOf[Text]] = (0 until 24).map(x =>
           s.text(^.key := s"bucket-$x", f"${x.toInt}%02d", s.x := x * gridSize, s.y := 0,
-            s.transform := s"translate(${gridSize / 2}, -6)"))
+            s.transform := s"translate(${gridSize / 2}, -10)", s.textAnchor := "middle"))
 
         <.div(
           s.svg(
