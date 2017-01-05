@@ -3,7 +3,7 @@ package spatutorial.client.services
 import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
-import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.client.UserDeskRecFixtures._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._
@@ -16,12 +16,7 @@ object SPACircuitTests extends TestSuite {
 
       val queueName: QueueName = "eeaDesk"
       val terminalName: TerminalName = "T1"
-      val model = Map(terminalName -> Map(queueName -> Ready(DeskRecTimeSlots(Seq(
-        DeskRecTimeslot(1, 30),
-        DeskRecTimeslot(2, 30),
-        DeskRecTimeslot(3, 30),
-        DeskRecTimeslot(4, 30)
-      )))))
+      val model = Map(terminalName -> makeUserDeskRecs(queueName, List(30, 30, 30, 30)))
 
       val newTodos = Seq(
         DeskRecTimeslot(3, 15)
@@ -31,12 +26,12 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateDeskRecInModel - {
         val h = build
-        val result = h.handle(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot(4, 25)))
+        val result = h.handle(UpdateDeskRecsTime(terminalName, queueName, DeskRecTimeslot(3 * 15 * 60000L, 25)))
         result match {
           case ModelUpdateEffect(newValue, effects) =>
             val newUserDeskRecs: DeskRecTimeSlots = newValue(terminalName)(queueName).get
             assert(newUserDeskRecs.items.size == 4)
-            assert(newUserDeskRecs.items(3).timeInMillis == 4)
+            assert(newUserDeskRecs.items(3).timeInMillis == 3 * 15 * 60000L)
             assert(newUserDeskRecs.items(3).deskRec == 25)
             assert(effects.size == 1)
           case message =>
