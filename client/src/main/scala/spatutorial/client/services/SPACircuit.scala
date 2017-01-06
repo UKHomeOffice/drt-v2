@@ -299,7 +299,9 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"client requesting flights $from $to")
-      effectOnly(Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights)))
+      val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(10L seconds)
+      val fe: EffectSingle[UpdateFlights] = Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights))
+      effectOnly(fe + flightsEffect)
     case UpdateFlights(flights) =>
       log.info(s"client got ${flights.flights.length} flights")
       val result = if (value.isReady) {

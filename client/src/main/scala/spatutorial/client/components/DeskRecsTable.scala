@@ -41,7 +41,7 @@ object DeskRecsTable {
   case class Props(
                     queueName: String,
                     terminalName: String,
-                    userDeskRecsRos: Seq[UserDeskRecsRow],
+                    userDeskRecsRows: Seq[UserDeskRecsRow],
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     airportConfig: AirportConfig,
                     airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -125,7 +125,7 @@ object DeskRecsTable {
         <.tbody(
           <.tr(<.th(""), <.th(deskUnitLabel(p.queueName), ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
           <.tr(<.th("Time"), <.th("Required"), <.th("Available"), <.th("With Reqs"), <.th("With Available")),
-          p.userDeskRecsRos.zipWithIndex map renderItem))
+          p.userDeskRecsRows.zipWithIndex map renderItem))
     })
     .build
 

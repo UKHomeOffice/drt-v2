@@ -26,7 +26,6 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 
-
 object TableViewUtils {
 
   val eeadesk: QueueName = "eeaDesk"
@@ -117,19 +116,8 @@ object SPAMain extends js.JSApp {
 
   case class TerminalLoc(id: String) extends Loc
 
-  case object StaffingLoc extends Loc
-
-  SPACircuit.dispatch(GetWorkloads("", ""))
-  SPACircuit.dispatch(GetAirportConfig())
-
-
-  import scala.scalajs.js.timers._
-  import scala.concurrent.duration._
-  import scala.concurrent.duration.FiniteDuration
-
-  setInterval(FiniteDuration(10L, SECONDS)) {
-    SPACircuit.dispatch(RequestFlights(0, 0))
-  }
+  val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: Nil
+  initActions.foreach(SPACircuit.dispatch(_))
 
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
