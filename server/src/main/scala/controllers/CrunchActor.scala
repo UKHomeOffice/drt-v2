@@ -183,7 +183,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       }
       val asFuture = r match {
         case Success(s) =>
-          log.info(s"Successful crunch for $tq")
+          log.info(s"Successful crunch for $tq starting at $crunchStartTimeMillis")
           CrunchResultWithTimeAndInterval(crunchStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
         case Failure(f) =>
           log.error(f, s"Failed to crunch $tq")

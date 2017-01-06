@@ -29,7 +29,7 @@ object Shift {
   def apply(name: String, startDate: String, startTime: String, endTime: String): Shift = {
     val ymd = startDate.split("/").toVector
 
-    val (d, m, y) = (ymd(0).toInt, ymd(1).toInt, ymd(2).toInt + 2000)
+    val (d, m, y) = (ymd(0).toInt, ymd(1).toInt - 1, ymd(2).toInt + 2000)
 
     val startT = startTime.split(":").toVector
     val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)

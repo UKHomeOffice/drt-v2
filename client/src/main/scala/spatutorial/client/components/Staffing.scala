@@ -20,7 +20,7 @@ object Staffing {
         log.info(s"shiftsRaw: $rawShifts")
         val shifts = Shifts(rawShifts).parsedShifts.toList
         val ss = ShiftService(shifts)
-        val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
+        val startOfDay: Long = SDate(2017, 0, 6, 0, 0)
         val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 24
         val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
         <.div(

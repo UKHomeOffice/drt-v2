@@ -105,35 +105,49 @@ case class RootModel(
                       minutesInASlot: Int = 15,
                       shiftsRaw: String =
                       """
-                        |shift 0	01/12/16	00:00	06:30
-                        |shift 0	01/12/16	00:00	06:30
-                        |shift 0	01/12/16	00:00	06:30
-                        |shift 0	01/12/16	00:00	06:30
-                        |shift 1	01/12/16	06:30	15:18
-                        |shift 1	01/12/16	06:30	15:18
-                        |shift 1	01/12/16	06:30	15:18
-                        |shift 1	01/12/16	06:30	15:18
-                        |shift 1	01/12/16	06:30	15:18
-                        |shift 1	01/12/16	06:30	15:18
-                        |shift 2	01/12/16	08:00	16:48
-                        |shift 2	01/12/16	08:00	16:48
-                        |shift 2	01/12/16	08:00	16:48
-                        |shift 2	01/12/16	08:00	16:48
-                        |shift 2	01/12/16	08:00	16:48
-                        |shift 2	01/12/16	08:00	16:48
-                        |shift 3	01/12/16	12:00	20:00
-                        |shift 3	01/12/16	12:00	20:00
-                        |shift 3	01/12/16	12:00	20:00
-                        |shift 3	01/12/16	12:00	20:00
-                        |shift 3	01/12/16	12:00	20:00
-                        |shift 3	01/12/16	12:00	20:00
-                        |shift 4	01/12/16	20:00	23:59
-                        |shift 4	01/12/16	20:00	23:59
-                        |shift 4	01/12/16	20:00	23:59
-                        |shift 4	01/12/16	20:00	23:59
-                        |shift 4	01/12/16	20:00	23:59
-                        |shift 4	01/12/16	20:00	23:59
-                      """,
+                        |shift 0	06/01/17	00:00	06:30
+                        |shift 0	06/01/17	00:00	06:30
+                        |shift 0	06/01/17	00:00	06:30
+                        |shift 0	06/01/17	00:00	06:30
+                        |shift 1	06/01/17	06:30	15:18
+                        |shift 1	06/01/17	06:30	15:18
+                        |shift 1	06/01/17	06:30	15:18
+                        |shift 1	06/01/17	06:30	15:18
+                        |shift 1	06/01/17	06:30	15:18
+                        |shift 1	06/01/17	06:30	15:18
+                        |shift 2	06/01/17	08:00	16:48
+                        |shift 2	06/01/17	08:00	16:48
+                        |shift 2	06/01/17	08:00	16:48
+                        |shift 2	06/01/17	08:00	16:48
+                        |shift 2	06/01/17	08:00	16:48
+                        |shift 2	06/01/17	08:00	16:48
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 3	06/01/17	12:00	20:00
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                        |shift 4	06/01/17	20:00	23:59
+                      """.stripMargin,
 
                       slotsInADay: Int = 96
                     ) {
@@ -341,7 +355,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
   }
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs], Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]])])
+class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs], Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]], String)])
   extends LoggingActionHandler(modelRW) {
 
   override def handle = {
@@ -357,7 +371,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
       effectOnly(Effect(fe) + crunchEffect)
     case UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval) =>
       val cr = CrunchResult(crunchResultWithTimeAndInterval.recommendedDesks, crunchResultWithTimeAndInterval.waitTimes)
-      log.info(s"UpdateCrunchResultnoEffect $queueName")
+      log.info(s"UpdateCrunchResult $queueName. firstTimeMillis: ${crunchResultWithTimeAndInterval.firstTimeMillis}")
       val timeIntervalMinutes = 15
       val millis = Iterator.iterate(crunchResultWithTimeAndInterval.firstTimeMillis)(_ + timeIntervalMinutes * crunchResultWithTimeAndInterval.intervalMillis).toIterable
       val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
@@ -369,13 +383,16 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
       val queues = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
 
+      val staffAt = staffAvailability(value._3)
+
       val queuesDeployed = queues.mapValues(q => {
         val queueDeskRecsOverTime = q.transpose {
-          case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items.map(drts => drts.deskRec)
+          case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
         }
 
-        val deployments = queueDeskRecsOverTime.map(deskRecsAtPointInTime => {
-          queueRecsToDeployments(_.floor.toInt)(deskRecsAtPointInTime.toList, 15)
+        val deployments = queueDeskRecsOverTime.map((deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
+          val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
+          queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
         }).transpose
 
         val times: Seq[Long] = q.headOption.map(qd => {
@@ -398,6 +415,12 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
         noChange
   }
 
+  def staffAvailability(rawShifts: String): (MilliDate) => Int = {
+    val shifts = Shifts(rawShifts).parsedShifts.toList
+    val ss = ShiftService(shifts)
+    StaffMovements.staffAt(ss)(Nil)
+  }
+
   def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
     val totalStaffRec = queueRecs.sum
     queueRecs.foldLeft(List[Int]()) {
@@ -415,7 +438,6 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
   override def handle = {
     case GetAirportInfos(codes) =>
-      //      log.info(s"Will request infos for $codes")
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))))
     case UpdateAirportInfos(infos) =>
@@ -452,11 +474,9 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     composeHandlers(
       new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => {
-        //        log.info(s"Updateing workloads to $v")
         m.copy(workload = v)
       })),
-      new CrunchHandler(zoomRW(m => (m.userDeskRec, m.queueCrunchResults))((m, v) => {
-        //        log.info(s"setting crunch result and userdesk recs desks in model ${v}")
+      new CrunchHandler(zoomRW(m => (m.userDeskRec, m.queueCrunchResults, m.shiftsRaw))((m, v) => {
         m.copy(
           userDeskRec = v._1,
           queueCrunchResults = v._2
