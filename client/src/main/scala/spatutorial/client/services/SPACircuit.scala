@@ -15,7 +15,8 @@ import spatutorial.client.services.RootModel.mergeTerminalQueues
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared._
 import boopickle.Default._
-import scala.collection.immutable.{Map, NumericRange, Seq}
+
+import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -45,7 +46,7 @@ case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
-case class ChangeDeskUsage(terminalName: TerminalName, queueName: QueueName, value: String, index: Int) extends Action
+//case class ChangeDeskUsage(terminalName: TerminalName, queueName: QueueName, value: String, index: Int) extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
@@ -104,10 +105,34 @@ case class RootModel(
                       minutesInASlot: Int = 15,
                       shiftsRaw: String =
                       """
+                        |shift 0	01/12/16	00:00	06:30
+                        |shift 0	01/12/16	00:00	06:30
+                        |shift 0	01/12/16	00:00	06:30
+                        |shift 0	01/12/16	00:00	06:30
+                        |shift 1	01/12/16	06:30	15:18
+                        |shift 1	01/12/16	06:30	15:18
+                        |shift 1	01/12/16	06:30	15:18
+                        |shift 1	01/12/16	06:30	15:18
+                        |shift 1	01/12/16	06:30	15:18
                         |shift 1	01/12/16	06:30	15:18
                         |shift 2	01/12/16	08:00	16:48
+                        |shift 2	01/12/16	08:00	16:48
+                        |shift 2	01/12/16	08:00	16:48
+                        |shift 2	01/12/16	08:00	16:48
+                        |shift 2	01/12/16	08:00	16:48
+                        |shift 2	01/12/16	08:00	16:48
                         |shift 3	01/12/16	12:00	20:00
-                        |shift 4	01/12/16	20:00	06:30
+                        |shift 3	01/12/16	12:00	20:00
+                        |shift 3	01/12/16	12:00	20:00
+                        |shift 3	01/12/16	12:00	20:00
+                        |shift 3	01/12/16	12:00	20:00
+                        |shift 3	01/12/16	12:00	20:00
+                        |shift 4	01/12/16	20:00	23:59
+                        |shift 4	01/12/16	20:00	23:59
+                        |shift 4	01/12/16	20:00	23:59
+                        |shift 4	01/12/16	20:00	23:59
+                        |shift 4	01/12/16	20:00	23:59
+                        |shift 4	01/12/16	20:00	23:59
                       """,
 
                       slotsInADay: Int = 96
@@ -128,13 +153,14 @@ case class RootModel(
   def calculateTerminalRows(terminalName: TerminalName): (TerminalName, Pot[List[TableTerminalDeskRecs.TerminalUserDeskRecsRow]]) = {
     val crv = queueCrunchResults.getOrElse(terminalName, Map())
     val srv = simulationResult.getOrElse(terminalName, Map())
+    val udr = userDeskRec.getOrElse(terminalName, Map())
     log.info(s"tud: ${terminalName}")
     val x: Pot[List[TerminalUserDeskRecsRow]] = workload.map(workloads => {
       val timestamps = workloads.timeStamps(terminalName)
       val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
       val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
       val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(workloads.workloads(terminalName), minutesRangeInMillis)
-      TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv)
+      TableViewUtils.terminalUserDeskRecsRows(timestamps, paxloads, crv, srv, udr)
     })
     terminalName -> x
   }
@@ -187,15 +213,11 @@ case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
   */
 class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]]) extends LoggingActionHandler(modelRW) {
   override def handle = {
-    case RefreshTodos =>
-      log.info("RefreshTodos")
-      //      effectOnly(Effect(AjaxClient[Api].geAllTodos().call().map(UpdateAllTodos)))
-      noChange
-    case UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot) =>
-      //      log.debug(s"Update Desk Recs time ${item} into ${value}")
-      // make a local update and inform server
-      val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeslot))
-      updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))), Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList)))) //, Effect(AjaxClient[Api].updateDeskRecsTime(item).call().map(UpdateAllTodos)))
+    case UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
+      val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeSlot))
+      updated(
+        mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> newDesksPot))),
+        Effect(Future(RunSimulation(terminalName, queueName, Nil, newDesksPot.get.items.map(_.deskRec).toList))))
   }
 }
 
@@ -268,23 +290,16 @@ class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M
       val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
       val terminalWorkload = modelR.value.get.workloads(terminalName)
       val queueWorkload: List[Double] = WorkloadsHelpers.workloadPeriodByQueue(terminalWorkload, minutesRangeInMillis)(queueName)
-      log.info(s"Got workloads from model for $terminalName {queueName} desks: ${desks.take(15)}... workloads: ${queueWorkload.take(15)}...")
       val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )
-    case ChangeDeskUsage(terminalName, queueName, v, k) =>
-      log.info(s"Handler: ChangeDesk($terminalName, $queueName, $v, $k)")
-      val model: Pot[DeskRecTimeSlots] = value(terminalName)(queueName)
-      val newUserRecs: DeskRecTimeSlots = model.get.updated(DeskRecTimeslot(k, v.toInt))
-      updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(newUserRecs)))))
   }
 }
 
 class SimulationResultHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case UpdateSimulationResult(terminalName, queueName, simResult) =>
-      //      log.info(s"Got simulation result $queueName ${simResult.waitTimes}")
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 }
@@ -340,31 +355,57 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
           NoAction
       }
       effectOnly(Effect(fe) + crunchEffect)
-    case UpdateCrunchResult(terminalName, queueName, crti) =>
-      val cr = CrunchResult(crti.recommendedDesks, crti.waitTimes)
+    case UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval) =>
+      val cr = CrunchResult(crunchResultWithTimeAndInterval.recommendedDesks, crunchResultWithTimeAndInterval.waitTimes)
       log.info(s"UpdateCrunchResultnoEffect $queueName")
       val timeIntervalMinutes = 15
-      val millis = Iterator.iterate(crti.firstTimeMillis)(_ + timeIntervalMinutes * crti.intervalMillis).toIterable
+      val millis = Iterator.iterate(crunchResultWithTimeAndInterval.firstTimeMillis)(_ + timeIntervalMinutes * crunchResultWithTimeAndInterval.intervalMillis).toIterable
       val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
         DeskRecsChart
-          .takeEveryNth(timeIntervalMinutes)(crti.recommendedDesks)
+          .takeEveryNth(timeIntervalMinutes)(crunchResultWithTimeAndInterval.recommendedDesks)
           .zip(millis).map {
           case (deskRec, timeInMillis) => DeskRecTimeslot(timeInMillis = timeInMillis, deskRec = deskRec)
         }.toList)
-      val userDeskRecs = value._1.getOrElse(terminalName, Map()).getOrElse(queueName, Empty) match {
-        case Empty => mergeTerminalQueues(value._1, Map(terminalName -> Map(queueName -> Ready(updatedDeskRecTimeSlots))))
-        case _ => value._1
-      }
 
-      val queues: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]] = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
+      val queues = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
 
-      if (value._2 != queues)
-        updated(value.copy(
-          _1 = userDeskRecs,
-          _2 = queues
-        ))
-      else
+      val queuesDeployed = queues.mapValues(q => {
+        val queueDeskRecsOverTime = q.transpose {
+          case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items.map(drts => drts.deskRec)
+        }
+
+        val deployments = queueDeskRecsOverTime.map(deskRecsAtPointInTime => {
+          queueRecsToDeployments(_.floor.toInt)(deskRecsAtPointInTime.toList, 15)
+        }).transpose
+
+        val times: Seq[Long] = q.headOption.map(qd => {
+          qd._2.get._2.get.items.map(drts => drts.timeInMillis)
+        }).getOrElse(Seq())
+
+        val zipped = q.keys.zip({
+          deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
+        })
+
+        zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
+      })
+
+      if (value._2 != queues) {
+        updated(
+          value.copy(
+            _1 = queuesDeployed,
+            _2 = queues))
+      } else
         noChange
+  }
+
+  def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
+    val totalStaffRec = queueRecs.sum
+    queueRecs.foldLeft(List[Int]()) {
+      case (agg, queueRec) if (agg.length < queueRecs.length - 1) =>
+        agg :+ round(staffAvailable * (queueRec.toDouble / totalStaffRec))
+      case (agg, _) =>
+        agg :+ staffAvailable - agg.sum
+    }
   }
 
 }

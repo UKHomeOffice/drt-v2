@@ -341,48 +341,48 @@ object SPACircuitTests extends TestSuite {
             assert(false)
         }
       }
-      "Given a model with user desk recs, when we update a user desk rec, then that value should be updated in the model" - {
-        val model = RootModel().copy(
-          userDeskRec = Map("A1" -> Map("EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5))))))
-        )
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
-
-        val expected = RootModel().copy(
-          userDeskRec = Map("A1" -> Map("EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 6))))))
-        )
-        res match {
-          case Some(ModelUpdate(newValue)) =>
-            assert(newValue == expected)
-          case default =>
-            println(default)
-            assert(false)
-        }
-      }
-      "Given a model with two queues of desk recs, when we update one of them, then we should see desk recs for both queues with the updated values" - {
-        val model = RootModel().copy(
-          userDeskRec = Map("A1" -> Map(
-            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5)))),
-            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5))))
-          ))
-        )
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
-
-        val expected = RootModel().copy(
-          userDeskRec = Map("A1" -> Map(
-            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 6)))),
-            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5))))
-          ))
-        )
-        res match {
-          case Some(ModelUpdate(newValue)) =>
-            assert(newValue == expected)
-          case default =>
-            println(default)
-            assert(false)
-        }
-      }
+//      "Given a model with user desk recs, when we update a user desk rec, then that value should be updated in the model" - {
+//        val model = RootModel().copy(
+//          userDeskRec = Map("A1" -> Map("EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5))))))
+//        )
+//        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+//        val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
+//
+//        val expected = RootModel().copy(
+//          userDeskRec = Map("A1" -> Map("EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 6))))))
+//        )
+//        res match {
+//          case Some(ModelUpdate(newValue)) =>
+//            assert(newValue == expected)
+//          case default =>
+//            println(default)
+//            assert(false)
+//        }
+//      }
+//      "Given a model with two queues of desk recs, when we update one of them, then we should see desk recs for both queues with the updated values" - {
+//        val model = RootModel().copy(
+//          userDeskRec = Map("A1" -> Map(
+//            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5)))),
+//            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5))))
+//          ))
+//        )
+//        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
+//        val res = handler.apply(model, ChangeDeskUsage("A1", "EEA", "6", 1))
+//
+//        val expected = RootModel().copy(
+//          userDeskRec = Map("A1" -> Map(
+//            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 6)))),
+//            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(1, 5))))
+//          ))
+//        )
+//        res match {
+//          case Some(ModelUpdate(newValue)) =>
+//            assert(newValue == expected)
+//          case default =>
+//            println(default)
+//            assert(false)
+//        }
+//      }
       "Given a model with user desk recs, when we update UserDeskRecsTime then we should see updated wait times" - {
         val model = RootModel().copy(
           simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),

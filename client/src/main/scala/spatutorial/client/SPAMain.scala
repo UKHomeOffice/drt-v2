@@ -36,15 +36,21 @@ object TableViewUtils {
 
   def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates")
 
-  def terminalUserDeskRecsRows(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]], simulationResult: Map[QueueName, Pot[SimulationResult]]): List[TerminalUserDeskRecsRow] = {
+  def terminalUserDeskRecsRows(
+                                timestamps: Seq[Long],
+                                paxload: Map[String, List[Double]],
+                                queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]],
+                                simulationResult: Map[QueueName, Pot[SimulationResult]],
+                                userDeskRec: QueueUserDeskRecs
+                              ): List[TerminalUserDeskRecsRow] = {
     val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNameMappingOrder.map(queueName => {
       simulationResult.get(queueName) match {
         case Some(Ready(sr)) =>
-          queueDetailsRowsFromNos(queueName, queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, queueName))
+          queueDetailsRowsFromNos(queueName, queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName))
         case None =>
           queueCrunchResultsForTerminal.get(queueName) match {
             case Some(Ready(cr)) =>
-              queueDetailsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, queueName))
+              queueDetailsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
             case _ =>
               List()
           }
@@ -74,25 +80,34 @@ object TableViewUtils {
     }
   }
 
-  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]], simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName): Seq[List[Long]] = {
+  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
+                                   queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]],
+                                   userDeskRec: QueueUserDeskRecs,
+                                   simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
+                                  ): Seq[List[Long]] = {
+    log.info("queueNosFromSimulationResult")
     Seq(
       DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
       queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-      simulationResult(qn).get.recommendedDesks.map(rec => rec.desks).map(_.toLong).grouped(15).map(_.max).toList,
+      userDeskRec(qn).get.items.map(_.deskRec.toLong).toList,
       queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
       simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     )
   }
 
-  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]], qn: QueueName): Seq[List[Long]] = {
+  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
+                               queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]],
+                               userDeskRec: QueueUserDeskRecs, qn: QueueName
+                              ): Seq[List[Long]] = {
+    log.info(s"queueNosFromCrunchResult: userDeskRecs: ${userDeskRec(qn).get.items.map(_.deskRec.toLong).grouped(15).map(_.max).toList}")
     Seq(
       DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       List.range(0, queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.length, 15).map(_.toLong),
       queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-      queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      userDeskRec(qn).get.items.map(_.deskRec.toLong).toList,
       queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
       queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     )

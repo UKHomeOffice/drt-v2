@@ -32,7 +32,7 @@ object UserDeskRecsComponent {
       Callback.when(false) {
         props.userDeskRecsPotProxy.dispatch(GetWorkloads("", ""))
       }
-      Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
+//      Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
     }
 
     def editTodo(item: Option[DeskRecTimeslot]) =
