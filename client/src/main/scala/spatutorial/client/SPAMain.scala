@@ -116,6 +116,8 @@ object SPAMain extends js.JSApp {
 
   case class TerminalLoc(id: String) extends Loc
 
+  case object StaffingLoc extends Loc
+
   val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: Nil
   initActions.foreach(SPACircuit.dispatch(_))
 
