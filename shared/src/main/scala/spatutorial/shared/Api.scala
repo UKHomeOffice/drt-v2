@@ -7,7 +7,6 @@ import scala.concurrent.Future
 
 case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
   def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
-
 }
 
 case class ApiFlight(

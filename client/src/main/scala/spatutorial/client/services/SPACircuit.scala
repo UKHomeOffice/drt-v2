@@ -46,6 +46,8 @@ case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]) extends Action
 
+case class UpdateShifts(shifts: String) extends Action
+
 //case class ChangeDeskUsage(terminalName: TerminalName, queueName: QueueName, value: String, index: Int) extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
@@ -103,51 +105,7 @@ case class RootModel(
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
-                      shiftsRaw: String =
-                      """
-                        |shift 0	06/01/17	00:00	06:30
-                        |shift 0	06/01/17	00:00	06:30
-                        |shift 0	06/01/17	00:00	06:30
-                        |shift 0	06/01/17	00:00	06:30
-                        |shift 1	06/01/17	06:30	15:18
-                        |shift 1	06/01/17	06:30	15:18
-                        |shift 1	06/01/17	06:30	15:18
-                        |shift 1	06/01/17	06:30	15:18
-                        |shift 1	06/01/17	06:30	15:18
-                        |shift 1	06/01/17	06:30	15:18
-                        |shift 2	06/01/17	08:00	16:48
-                        |shift 2	06/01/17	08:00	16:48
-                        |shift 2	06/01/17	08:00	16:48
-                        |shift 2	06/01/17	08:00	16:48
-                        |shift 2	06/01/17	08:00	16:48
-                        |shift 2	06/01/17	08:00	16:48
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 3	06/01/17	12:00	20:00
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                        |shift 4	06/01/17	20:00	23:59
-                      """.stripMargin,
+                      shiftsRaw: String = "",
 
                       slotsInADay: Int = 96
                     ) {
@@ -459,6 +417,12 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
   }
 }
 
+class ShiftsHandler[M](modelRW: ModelRW[M, String]) extends LoggingActionHandler(modelRW) {
+  protected def handle = {
+    case UpdateShifts(shifts) => updated(shifts)
+  }
+}
+
 // Application circuit
 object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
@@ -489,7 +453,8 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
-      new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v)))
+      new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
+      new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v)))
     )
   }
 

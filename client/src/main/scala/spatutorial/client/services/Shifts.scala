@@ -20,13 +20,14 @@ object JSDateConversions {
   }
 
 }
+
 case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int)
 
 object Shift {
 
   import JSDateConversions._
 
-  def apply(name: String, startDate: String, startTime: String, endTime: String): Shift = {
+  def apply(name: String, startDate: String, startTime: String, endTime: String, numberOfStaff: Int = 1): Shift = {
     val ymd = startDate.split("/").toVector
 
     val (d, m, y) = (ymd(0).toInt, ymd(1).toInt - 1, ymd(2).toInt + 2000)
@@ -37,17 +38,24 @@ object Shift {
 
     val endT = endTime.split(":").toVector
     val (endHour, endMinute) = (endT(0).toInt, endT(1).toInt)
-    val endDt = SDate(y, m, d, endHour, endMinute)
-    println(name, y, m, d, startT, endT)
-    Shift(name, startDt, endDt, 1)
+    val endDtTry = SDate(y, m, d, endHour, endMinute)
+    val endDt = if (endDtTry.millisSinceEpoch < startDt.millisSinceEpoch)
+      SDate(y, m, d + 1, endHour, endMinute)
+    else
+      endDtTry
+//    println(name, y, m, d, startT, endT)
+    Shift(name, startDt, endDt, numberOfStaff)
   }
 }
 
 case class Shifts(rawShifts: String) {
   val lines = rawShifts.split("\n")
-  val parsedShifts = lines.map(l => l.split("\t"))
-    .filter(_.length == 4)
-    .map(pl => Shift(pl(0), pl(1), pl(2), pl(3)))
+  val parsedShifts = lines.map(l => l.split(","))
+    .filter(parts => parts.length == 4 || parts.length == 5)
+    .map(pl => pl.length match {
+      case 4 => Shift(pl(0), pl(1), pl(2), pl(3))
+      case 5 => Shift(pl(0), pl(1), pl(2), pl(3), pl(4).toInt)
+    })
 }
 
 case class ShiftService(shifts: List[Shift]) {
@@ -58,9 +66,10 @@ case class ShiftService(shifts: List[Shift]) {
 object ShiftService {
   def groupPeopleByShiftTimes(shifts: Seq[Shift]) = {
     shifts.groupBy(shift => (shift.startDt, shift.endDt, shift.name))
-      .map{case ((startDt, endDt, name), shifts) => {
+      .map { case ((startDt, endDt, name), shifts) => {
         Shift(name, startDt, endDt, shifts.map(_.numberOfStaff).sum)
-      }}
+      }
+      }
   }
 }
 
@@ -68,8 +77,8 @@ object StaffMovements {
 
   def shiftsToMovements(shifts: Seq[Shift]) = {
     shifts.flatMap(shift =>
-      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff ) ::
-        StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff ) :: Nil
+      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff) ::
+        StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff) :: Nil
     ).sortBy(_.time)
   }
 
@@ -85,7 +94,8 @@ object StaffMovements {
 
 case class MovementsShiftService(shifts: List[Shift]) {
   val movements = StaffMovements.shiftsToMovements(shifts).groupBy(_.time).map(m =>
-    StaffMovement(m._1.toString(),m._1, m._2.map(_.delta).sum, None)).toList
+    StaffMovement(m._1.toString(), m._1, m._2.map(_.delta).sum, None)).toList
   println(s"Movements are: ${movements.mkString("\n")}")
+
   def staffAt(date: MilliDate): Int = StaffMovements.adjustmentsAt(movements)(date)
 }

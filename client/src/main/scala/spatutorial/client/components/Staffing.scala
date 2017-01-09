@@ -2,11 +2,12 @@ package spatutorial.client.components
 
 import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
-import japgolly.scalajs.react.{BackendScope, ReactComponentB, ReactElement}
+import japgolly.scalajs.react._
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
-import spatutorial.client.services.{SPACircuit, ShiftService, Shifts, StaffMovements}
+import spatutorial.client.services._
 import spatutorial.shared.WorkloadsHelpers
+import scala.scalajs.js.Date
 
 object Staffing {
 
@@ -17,20 +18,33 @@ object Staffing {
       val shiftsRawRCP = SPACircuit.connect(_.shiftsRaw)
       shiftsRawRCP((shiftsMP: ModelProxy[String]) => {
         val rawShifts = shiftsMP()
-        log.info(s"shiftsRaw: $rawShifts")
         val shifts = Shifts(rawShifts).parsedShifts.toList
         val ss = ShiftService(shifts)
-        val startOfDay: Long = SDate(2017, 0, 6, 0, 0)
+        val today = new Date
+        val startOfDay: Long = SDate(today.getFullYear, today.getMonth, today.getDate, 0, 0)
         val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 24
         val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
         <.div(
           <.h1("Staffing"),
           <.h2("Shifts"),
-          <.div(shifts.map(s => {
-            <.div(s"${s.name}, ${s.startDt}, ${s.endDt}, ${s.numberOfStaff}")
-          }).toSeq),
+          <.div("One shift per line with values separated by commas, e.g.:"),
+          <.div("Morning A,20/01/17,00:00,08:00,5"),
+          <.textarea(^.value := rawShifts,
+            ^.className := "staffing-editor",
+            ^.onChange ==> ((e: ReactEventI) => shiftsMP.dispatch(UpdateShifts(e.target.value)))),
           <.h2("Staff over the day"),
-          <.div(daysWorthOf15Minutes.map(t => <.div(s"time: $t -> ${StaffMovements.staffAt(ss)(Nil)(t)}")))
+          <.table(
+            <.tr(
+                daysWorthOf15Minutes.map((t: Long) => {
+                  val d = new Date(t)
+                  val display = s"${d.getHours}:${d.getMinutes}"
+                  <.td(display)
+                })
+            ),
+            <.tr(
+                daysWorthOf15Minutes.map(t => <.td(s"${StaffMovements.staffAt(ss)(Nil)(t)}"))
+            )
+          )
         )
       })
     }
