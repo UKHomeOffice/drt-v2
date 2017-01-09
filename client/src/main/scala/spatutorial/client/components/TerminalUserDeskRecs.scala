@@ -127,7 +127,8 @@ object TableTerminalDeskRecs {
                                     simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]],
-                                    userDeskRec: Map[TerminalName, QueueUserDeskRecs]
+                                    userDeskRec: Map[TerminalName, QueueUserDeskRecs],
+                                    shiftsRaw: String
                                   )
 
   def buildTerminalUserDeskRecsComponent(terminalName: TerminalName) = {
@@ -139,7 +140,8 @@ object TableTerminalDeskRecs {
         model.simulationResult,
         model.workload,
         model.queueCrunchResults,
-        model.userDeskRec
+        model.userDeskRec,
+        model.shiftsRaw
       ))
 
     val terminalUserDeskRecsRows: ReactConnectProxy[Option[Pot[List[TerminalUserDeskRecsRow]]]] = SPACircuit.connect(model => model.calculatedRows.getOrElse(Map()).get(terminalName))

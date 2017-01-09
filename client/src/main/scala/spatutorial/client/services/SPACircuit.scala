@@ -106,7 +106,6 @@ case class RootModel(
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
                       shiftsRaw: String = "",
-
                       slotsInADay: Int = 96
                     ) {
 
@@ -364,7 +363,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
         zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
       })
 
-      if (value._2 != queues) {
+      if (value._2 != queues || value._1 != queuesDeployed) {
         updated(
           value.copy(
             _1 = queuesDeployed,

@@ -43,7 +43,6 @@ object Shift {
       SDate(y, m, d + 1, endHour, endMinute)
     else
       endDtTry
-//    println(name, y, m, d, startT, endT)
     Shift(name, startDt, endDt, numberOfStaff)
   }
 }
