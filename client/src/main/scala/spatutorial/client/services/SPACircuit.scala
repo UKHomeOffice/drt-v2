@@ -340,42 +340,46 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
 
       val queues = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
 
-      val staffAt = staffAvailability(value._3)
+      val rawShiftsString = value._3
 
-      val queuesDeployed = queues.mapValues(q => {
-        val queueDeskRecsOverTime = q.transpose {
-          case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
-        }
 
-        val deployments = queueDeskRecsOverTime.map((deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
-          val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
-          queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
-        }).transpose
+      val shifts = Shifts(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
+      if (shifts.exists(s => s.isFailure)) {
+        log.error("Couldn't parse raw shifts")
+        noChange
+      } else {
+        val successfulShifts = shifts.collect { case Success(s) => s }
+        val ss = ShiftService(successfulShifts)
+        val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
+        val queuesDeployed = queues.mapValues(q => {
+          val queueDeskRecsOverTime = q.transpose {
+            case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
+          }
 
-        val times: Seq[Long] = q.headOption.map(qd => {
-          qd._2.get._2.get.items.map(drts => drts.timeInMillis)
-        }).getOrElse(Seq())
+          val deployments = queueDeskRecsOverTime.map((deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
+            val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
+            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
+          }).transpose
 
-        val zipped = q.keys.zip({
-          deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
+          val times: Seq[Long] = q.headOption.map(qd => {
+            qd._2.get._2.get.items.map(drts => drts.timeInMillis)
+          }).getOrElse(Seq())
+
+          val zipped = q.keys.zip({
+            deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
+          })
+
+          zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
         })
 
-        zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
-      })
-
-      if (value._2 != queues || value._1 != queuesDeployed) {
-        updated(
-          value.copy(
-            _1 = queuesDeployed,
-            _2 = queues))
-      } else
-        noChange
-  }
-
-  def staffAvailability(rawShifts: String): (MilliDate) => Int = {
-    val shifts = Shifts(rawShifts).parsedShifts.toList
-    val ss = ShiftService(shifts)
-    StaffMovements.staffAt(ss)(Nil)
+        if (value._2 != queues || value._1 != queuesDeployed) {
+          updated(
+            value.copy(
+              _1 = queuesDeployed,
+              _2 = queues))
+        } else
+          noChange
+      }
   }
 
   def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {

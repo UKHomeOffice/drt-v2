@@ -2,10 +2,11 @@ package spatutorial.client.services
 
 import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.shared.FlightsApi._
-import spatutorial.shared.MilliDate
+import spatutorial.shared.{MilliDate, SDate}
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
+import scala.util.{Failure, Success, Try}
 
 
 object JSDateConversions {
@@ -13,10 +14,39 @@ object JSDateConversions {
 
   implicit def jsDateToMilliDate(jsDate: Date): MilliDate = MilliDate(jsDateToMillis(jsDate))
 
+  implicit def jsSDateToMilliDate(jsSDate: SDate): MilliDate = MilliDate(jsSDate.millisSinceEpoch)
+
   implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
 
   object SDate {
-    def apply(y: Int, m: Int, d: Int, h: Int, mm: Int) = new Date(y, m, d, h, mm)
+
+    case class JSSDate(date: Date) extends SDate {
+
+
+      def getFullYear(): Int = date.getFullYear()
+
+      // js Date Months are 0 based, but joda dates are 1 based. We've decided to match joda, because it is sane.
+      def getMonth(): Int = date.getMonth() + 1
+
+      def getDate(): Int = date.getDate()
+
+      def getHours(): Int = date.getHours()
+
+      def getMinutes(): Int = date.getMinutes()
+
+      def addDays(daysToAdd: Int): SDate = {
+        val newDate = new Date(millisSinceEpoch)
+        newDate.setDate(newDate.getDate() + daysToAdd)
+        newDate
+      }
+
+      def millisSinceEpoch: Long = date.getTime().toLong
+
+    }
+
+    implicit def jsDateToSDate(date: Date): SDate = JSSDate(date)
+
+    def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDate = new Date(y, m - 1, d, h, mm)
   }
 
 }
@@ -27,42 +57,72 @@ object Shift {
 
   import JSDateConversions._
 
-  def apply(name: String, startDate: String, startTime: String, endTime: String, numberOfStaff: Int = 1): Shift = {
+  def apply(name: String, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[Shift] = {
+    val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
-    val (d, m, y) = (ymd(0).toInt, ymd(1).toInt - 1, ymd(2).toInt + 2000)
+    val tryDMY: Try[(Int, Int, Int)] = Try((ymd(0).toInt, ymd(1).toInt - 1, ymd(2).toInt + 2000))
 
-    val startT = startTime.split(":").toVector
-    val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
-    val startDt = SDate(y, m, d, startHour, startMinute)
+    for {
+      dmy <- tryDMY
+      (d, m, y) = dmy
 
-    val endT = endTime.split(":").toVector
-    val (endHour, endMinute) = (endT(0).toInt, endT(1).toInt)
-    val endDtTry = SDate(y, m, d, endHour, endMinute)
-    val endDt = if (endDtTry.millisSinceEpoch < startDt.millisSinceEpoch)
-      SDate(y, m, d + 1, endHour, endMinute)
-    else
-      endDtTry
-    Shift(name, startDt, endDt, numberOfStaff)
+      startDtTry: Try[SDate] = parseTimeWithStartTime(startTime, d, m, y)
+      endDtTry: Try[SDate] = parseTimeWithStartTime(endTime, d, m, y)
+      startDt <- startDtTry
+      endDt <- endDtTry
+      staffDelta: Int <- staffDeltaTry
+    } yield {
+      Shift(name, startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta)
+    }
+  }
+
+  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDate, endDt: SDate): SDate = {
+    if (endDt.millisSinceEpoch < startDt.millisSinceEpoch) {
+      SDate(y, m, d, endDt.getHours(), endDt.getMinutes()).addDays(1)
+    }
+    else {
+      endDt
+    }
+  }
+
+  private def parseTimeWithStartTime(startTime: String, d: Int, m: Int, y: Int): Try[SDate] = {
+    Try {
+      val startT = startTime.split(":").toVector
+      val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
+      val startDt = SDate(y, m, d, startHour, startMinute)
+      startDt
+    }
   }
 }
 
 case class Shifts(rawShifts: String) {
   val lines = rawShifts.split("\n")
-  val parsedShifts = lines.map(l => l.split(","))
+  val parsedShifts: Array[Try[Shift]] = lines.map(l => l.split(","))
     .filter(parts => parts.length == 4 || parts.length == 5)
-    .map(pl => pl.length match {
-      case 4 => Shift(pl(0), pl(1), pl(2), pl(3))
-      case 5 => Shift(pl(0), pl(1), pl(2), pl(3), pl(4).toInt)
+    .map(pl => pl match {
+      case Array(description, startDay, startTime, endTime) =>
+        Shift(description, startDay, startTime, endTime)
+      case Array(description, startDay, startTime, endTime, staffNumberDelta) =>
+        Shift(description, startDay, startTime, endTime, staffNumberDelta)
     })
 }
 
-case class ShiftService(shifts: List[Shift]) {
+case class ShiftService(shifts: Seq[Shift]) {
   def staffAt(date: MilliDate): Int = shifts.filter(shift =>
     (shift.startDt <= date && date <= shift.endDt)).map(_.numberOfStaff).sum
 }
 
 object ShiftService {
+  def apply(shifts: Seq[Try[Shift]]): Try[ShiftService] = {
+    if (shifts.exists(_.isFailure))
+      Failure(new Exception("Couldn't parse shifts"))
+    else {
+      val successfulShifts = shifts.map { case Success(s) => s }
+      Success(ShiftService(successfulShifts))
+    }
+  }
+
   def groupPeopleByShiftTimes(shifts: Seq[Shift]) = {
     shifts.groupBy(shift => (shift.startDt, shift.endDt, shift.name))
       .map { case ((startDt, endDt, name), shifts) => {

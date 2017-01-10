@@ -32,6 +32,18 @@ case class ApiFlight(
                       SchDT: String,
                       PcpTime: Long)
 
+trait SDate {
+  def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
+
+  def getFullYear(): Int
+  def getMonth(): Int
+  def getDate(): Int
+  def getHours(): Int
+  def getMinutes(): Int
+  def millisSinceEpoch: Long
+  def addDays(daysToAdd: Int): SDate
+}
+
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
 object CrunchResult {

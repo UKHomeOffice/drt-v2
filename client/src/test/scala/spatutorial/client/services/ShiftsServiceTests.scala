@@ -1,7 +1,5 @@
 package spatutorial.client.services
 
-import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.shared.{MilliDate, WorkloadsHelpers}
 import utest._
 
 import scala.scalajs.js.Date
@@ -17,8 +15,8 @@ object ShiftsServiceTests extends TestSuite {
         "So that I can easily get an initial state for the system" - {
 
         "some implicits make things nicer whether we're server side or client side " - {
-          val startDt = MilliDate(SDate(2016, 12, 10, 10, 0))
-          val endDate = MilliDate(SDate(2016, 12, 19, 12, 0))
+          val startDt = SDate(2016, 12, 10, 10, 0)
+          val endDate = SDate(2016, 12, 19, 12, 0)
           val shifts = Shift("alpha", startDt, endDate, 10)
 
           assert(shifts == Shift("alpha", 1484042400000L, 1484827200000L, 10))
@@ -34,8 +32,8 @@ object ShiftsServiceTests extends TestSuite {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 19, 0)) == 10)
           }
           "can compare dates" - {
-            assert(MilliDate(SDate(2015, 10, 10, 10, 10)) < MilliDate(SDate(2016, 12, 12, 12, 12)))
-            assert(MilliDate(SDate(2015, 10, 10, 10, 10)) <= MilliDate(SDate(2016, 12, 12, 12, 12)))
+            assert((SDate(2015, 10, 10, 10, 10)) < (SDate(2016, 12, 12, 12, 12)))
+            assert((SDate(2015, 10, 10, 10, 10)) <= (SDate(2016, 12, 12, 12, 12)))
           }
 
 
@@ -166,61 +164,70 @@ object ShiftsServiceTests extends TestSuite {
 
           println(parsedShifts.mkString("\n"))
 
-//
-//          "asking for a whole days shape with individual stuff" - {
-//            val shiftService = ShiftService(parsedShifts.toList)
-//            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
-//            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
-//            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
-//
-//            TestTimer.timeIt("individuals")(50) {
-//              val staffAtTIme = daysWorthOf15Minutes.map {
-//                time => (time) -> shiftService.staffAt(time)
-//              }
-//            }
-//
-//          }
+          //
+          //          "asking for a whole days shape with individual stuff" - {
+          //            val shiftService = ShiftService(parsedShifts.toList)
+          //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
+          //            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
+          //            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
+          //
+          //            TestTimer.timeIt("individuals")(50) {
+          //              val staffAtTIme = daysWorthOf15Minutes.map {
+          //                time => (time) -> shiftService.staffAt(time)
+          //              }
+          //            }
+          //
+          //          }
 
-//          "asking for a whole days shape with grouped staff" - {
-//            val shiftService = ShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts).toList)
-//            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
-//            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
-//            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
-//
-//            TestTimer.timeIt("grouped")(50) {
-//              val staffAtTIme = daysWorthOf15Minutes.map {
-//                time => (time) -> shiftService.staffAt(time)
-//              }
-//            }
-//          }
-//
-//
-//          "asking for a whole days shape with movements of grouped staff" - {
-//            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts.toList).toList)
-//            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
-//            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
-//            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
-//
-//            TestTimer.timeIt("movements")(1000) {
-//              val staffAtTIme = daysWorthOf15Minutes.map {
-//                time => (time) -> shiftService.staffAt(time)
-//              }
-//            }
-//
-//          }
+          //          "asking for a whole days shape with grouped staff" - {
+          //            val shiftService = ShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts).toList)
+          //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
+          //            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
+          //            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
+          //
+          //            TestTimer.timeIt("grouped")(50) {
+          //              val staffAtTIme = daysWorthOf15Minutes.map {
+          //                time => (time) -> shiftService.staffAt(time)
+          //              }
+          //            }
+          //          }
+          //
+          //
+          //          "asking for a whole days shape with movements of grouped staff" - {
+          //            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts.toList).toList)
+          //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
+          //            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
+          //            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
+          //
+          //            TestTimer.timeIt("movements")(1000) {
+          //              val staffAtTIme = daysWorthOf15Minutes.map {
+          //                time => (time) -> shiftService.staffAt(time)
+          //              }
+          //            }
+          //
+          //          }
 
           "Staff movements" - {
             import StaffMovements._
-            val shiftService = ShiftService(parsedShifts.toList)
-            val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2) :: Nil).sortBy(_.time)
+            val shiftServiceTry = ShiftService(parsedShifts.toList)
+
+            assert(shiftServiceTry.isSuccess)
 
             "Shifts can be represented as staff movements" - {
-              val sDate: MilliDate = SDate(2016, 12, 10, 10, 0)
-              assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate) - 2)
+              for (shiftService <- shiftServiceTry) yield {
+                val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2) :: Nil).sortBy(_.time)
+
+                val sDate = SDate(2016, 12, 10, 10, 0)
+                assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate) - 2)
+              }
             }
             "Movements from after the asked for date are not included" - {
-              val sDate: MilliDate = SDate(2016, 12, 10, 9, 0)
-              assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate))
+              for (shiftService <- shiftServiceTry) yield {
+                val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2) :: Nil).sortBy(_.time)
+
+                val sDate = SDate(2016, 12, 10, 9, 0)
+                assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate))
+              }
             }
           }
         }
@@ -228,8 +235,10 @@ object ShiftsServiceTests extends TestSuite {
     }
   }
 }
+
+
 object TestTimer {
-  def timeIt(name: String)(times: Int)(f:  => Unit) = {
+  def timeIt(name: String)(times: Int)(f: => Unit) = {
     val start = new Date()
     println(s"${name}: Starting timer at ${start}")
     (1 to times).foreach(n => {
@@ -239,6 +248,6 @@ object TestTimer {
     val end = new Date()
     println(s"${name} Trial done at ${end}")
     val timeTaken = (end.getTime() - start.getTime())
-    println(s"${name} Time taken in ${times} runs ${timeTaken}ms, ${timeTaken.toDouble/times} per run")
+    println(s"${name} Time taken in ${times} runs ${timeTaken}ms, ${timeTaken.toDouble / times} per run")
   }
 }
