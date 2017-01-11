@@ -48,7 +48,7 @@ object JSDateConversions {
     }
 
 
-    def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDate = new Date(y, m - 1, d, h, mm)
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDate = new Date(y, m - 1, d, h, mm)
   }
 
 }
@@ -63,7 +63,7 @@ object Shift {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
-    val tryDMY: Try[(Int, Int, Int)] = Try((ymd(0).toInt, ymd(1).toInt - 1, ymd(2).toInt + 2000))
+    val tryDMY: Try[(Int, Int, Int)] = Try((ymd(0).toInt, ymd(1).toInt, ymd(2).toInt + 2000))
 
     for {
       dmy <- tryDMY
