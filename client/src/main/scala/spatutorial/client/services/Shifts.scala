@@ -1,5 +1,6 @@
 package spatutorial.client.services
 
+import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{MilliDate, SDate}
@@ -17,6 +18,8 @@ object JSDateConversions {
   implicit def jsSDateToMilliDate(jsSDate: SDate): MilliDate = MilliDate(jsSDate.millisSinceEpoch)
 
   implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
+
+  implicit def jsDateToSDate(date: Date): SDate = JSSDate(date)
 
   object SDate {
 
@@ -44,7 +47,6 @@ object JSDateConversions {
 
     }
 
-    implicit def jsDateToSDate(date: Date): SDate = JSSDate(date)
 
     def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDate = new Date(y, m - 1, d, h, mm)
   }
