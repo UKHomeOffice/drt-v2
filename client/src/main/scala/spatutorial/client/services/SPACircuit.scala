@@ -10,13 +10,14 @@ import spatutorial.client.TableViewUtils
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
 import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
 import spatutorial.client.logger._
-import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueUserDeskRecs}
+import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueStaffDeployments}
 import spatutorial.client.services.RootModel.mergeTerminalQueues
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared._
 import boopickle.Default._
+import spatutorial.client.modules.Dashboard.QueueCrunchResults
 
-import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
+import scala.collection.immutable.{Map, NumericRange, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -36,7 +37,11 @@ case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, 
 
 case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
 
+
 case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
+
+case class RecalculateStaffDeployments() extends Action
+
 
 case class GetWorkloads(begin: String, end: String) extends Action
 
@@ -99,7 +104,7 @@ case class RootModel(
                       motd: Pot[String] = Empty,
                       workload: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]] = Map(),
-                      userDeskRec: Map[TerminalName, QueueUserDeskRecs] = Map(),
+                      staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
@@ -124,7 +129,7 @@ case class RootModel(
   def calculateTerminalRows(terminalName: TerminalName): (TerminalName, Pot[List[TableTerminalDeskRecs.TerminalUserDeskRecsRow]]) = {
     val crv = queueCrunchResults.getOrElse(terminalName, Map())
     val srv = simulationResult.getOrElse(terminalName, Map())
-    val udr = userDeskRec.getOrElse(terminalName, Map())
+    val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
     log.info(s"tud: ${terminalName}")
     val x: Pot[List[TerminalUserDeskRecsRow]] = workload.map(workloads => {
       val timestamps = workloads.timeStamps(terminalName)
@@ -142,7 +147,7 @@ case class RootModel(
        |motd: $motd
        |paxload: $workload
        |queueCrunchResults: $queueCrunchResults
-       |userDeskRec: $userDeskRec
+       |userDeskRec: $staffDeploymentsByTerminalAndQueue
        |simulationResult: $simulationResult
        |flights: $flights
        |airportInfos: $airportInfos
@@ -182,7 +187,7 @@ case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
   *
   * @param modelRW Reader/Writer to access the model
   */
-class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]]) extends LoggingActionHandler(modelRW) {
+class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeployments]]) extends LoggingActionHandler(modelRW) {
   override def handle = {
     case UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
       val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeSlot))
@@ -248,11 +253,11 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
 }
 
 object HandyStuff {
-  type CrunchResultAndDeskRecs = (Pot[CrunchResult], Pot[DeskRecTimeSlots])
-  type QueueUserDeskRecs = Map[String, Pot[DeskRecTimeSlots]]
+  type CrunchResultAndDeskRecs = Pot[CrunchResult]//, Pot[DeskRecTimeSlots])
+  type QueueStaffDeployments = Map[String, Pot[DeskRecTimeSlots]]
 }
 
-class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Map[TerminalName, QueueUserDeskRecs]])
+class SimulationHandler[M](modelR: ModelR[M, Pot[Workloads]], modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeployments]])
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunSimulation(terminalName, queueName, workloads: List[Double], desks) =>
@@ -312,12 +317,11 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
   }
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs], Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]], String)])
+class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]]])
   extends LoggingActionHandler(modelRW) {
 
-  def modelUserDeskRecs = value._1
-  def modelQueueCrunchResults = value._2
-  def rawShiftsString = value._3
+
+  def modelQueueCrunchResults = value
 
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
@@ -331,72 +335,86 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
       }
       effectOnly(Effect(fe) + crunchEffect)
     case UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval) =>
-      val cr = CrunchResult(crunchResultWithTimeAndInterval.recommendedDesks, crunchResultWithTimeAndInterval.waitTimes)
+      val recommendedDesks = crunchResultWithTimeAndInterval.recommendedDesks
+
+      val cr = CrunchResult(recommendedDesks, crunchResultWithTimeAndInterval.waitTimes)
       log.info(s"UpdateCrunchResult $queueName. firstTimeMillis: ${crunchResultWithTimeAndInterval.firstTimeMillis}")
       val timeIntervalMinutes = 15
       val millis = Iterator.iterate(crunchResultWithTimeAndInterval.firstTimeMillis)(_ + timeIntervalMinutes * crunchResultWithTimeAndInterval.intervalMillis).toIterable
+
       val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
         DeskRecsChart
-          .takeEveryNth(timeIntervalMinutes)(crunchResultWithTimeAndInterval.recommendedDesks)
+          .takeEveryNth(timeIntervalMinutes)(recommendedDesks)
           .zip(millis).map {
           case (deskRec, timeInMillis) => DeskRecTimeslot(timeInMillis = timeInMillis, deskRec = deskRec)
         }.toList)
 
-      val queueCrunchResults = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
+      val crunchResultsByQueue: Map[String, Map[String, Pot[Pot[CrunchResult]]]] = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready((Ready(cr))))))
 
-
-      val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
-      if (shifts.exists(s => s.isFailure)) {
-        log.error("Couldn't parse raw shifts")
+      if (modelQueueCrunchResults != crunchResultsByQueue) {
+        updated(crunchResultsByQueue)
+      } else
         noChange
-      } else {
-        log.info(s"raw shifts are ${rawShiftsString}")
-        log.info(s"Shifts are ${shifts}")
-        val successfulShifts = shifts.collect { case Success(s) => s }
-        val ss = ShiftService(successfulShifts)
-        val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
-        val newUserDeskRecs = queueCrunchResults.mapValues(q => {
-          val queueDeskRecsOverTime = q.transpose {
-            case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
-          }
-
-          val deployments = queueDeskRecsOverTime.map((deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
-            val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
-            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
-          }).transpose
-
-          val times: Seq[Long] = q.headOption.map(qd => {
-            qd._2.get._2.get.items.map(drts => drts.timeInMillis)
-          }).getOrElse(Seq())
-
-          val zipped = q.keys.zip({
-            deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
-          })
-
-          zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
-        })
-
-        if (modelQueueCrunchResults != queueCrunchResults || modelUserDeskRecs != newUserDeskRecs) {
-          updated(
-            value.copy(
-              _1 = newUserDeskRecs,
-              _2 = queueCrunchResults))
-        } else
-          noChange
-      }
   }
-
-  def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
-    val totalStaffRec = queueRecs.sum
-    queueRecs.foldLeft(List[Int]()) {
-      case (agg, queueRec) if (agg.length < queueRecs.length - 1) =>
-        agg :+ round(staffAvailable * (queueRec.toDouble / totalStaffRec))
-      case (agg, _) =>
-        agg :+ staffAvailable - agg.sum
-    }
-  }
-
 }
+
+
+//class StaffDeploymentHandler[RM, M](
+//                                     rawShiftsModel: ModelR[RM, String],
+//                                     terminalQueueCrunchResults: Map[TerminalName, QueueCrunchResults],
+//                                     modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeployments]]) extends LoggingActionHandler(modelRW) {
+//  override def handle = {
+//    case RecalculateStaffDeployments() =>
+//      val rawShiftsString = rawShiftsModel.value
+//      val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
+//      if (shifts.exists(s => s.isFailure)) {
+//        log.error("Couldn't parse raw shifts")
+//        noChange
+//      } else {
+//        log.info(s"raw shifts are ${rawShiftsString}")
+//        log.info(s"Shifts are ${shifts}")
+//        val successfulShifts = shifts.collect { case Success(s) => s }
+//        val ss = ShiftService(successfulShifts)
+//        val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
+//        val newSuggestedStaffDeployments = terminalQueueCrunchResults.mapValues(queueCrunchResult => {
+//          val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
+//            case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
+//          }
+//
+//          val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
+//            val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
+//            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
+//          }
+//          val deployments = queueDeskRecsOverTime.map(timeslotsToInts).transpose
+//
+//          val times: Seq[Long] = queueCrunchResult.headOption.map(qd => {
+//            qd._2.get._2.get.items.map(drts => drts.timeInMillis)
+//          }).getOrElse(Seq())
+//
+//          val zipped = queueCrunchResult.keys.zip({
+//            deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
+//          })
+//
+//          zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
+//        })
+//
+//        if (modelRW != newSuggestedStaffDeployments) {
+//          updated(newSuggestedStaffDeployments)
+//        } else
+//          noChange
+//      }
+//  }
+//
+//  def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
+//    val totalStaffRec = queueRecs.sum
+//    queueRecs.foldLeft(List[Int]()) {
+//      case (agg, queueRec) if (agg.length < queueRecs.length - 1) =>
+//        agg :+ round(staffAvailable * (queueRec.toDouble / totalStaffRec))
+//      case (agg, _) =>
+//        agg :+ staffAvailable - agg.sum
+//    }
+//  }
+//}
 
 class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
   def mkPending = Pending(timeProvider())
@@ -430,8 +448,8 @@ class ShiftsHandler[M](modelRW: ModelRW[M, String]) extends LoggingActionHandler
   }
 }
 
-// Application circuit
-object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
+
+trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
   def timeProvider() = new Date().getTime.toLong
@@ -443,19 +461,14 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   override val actionHandler = {
     println("composing handlers")
     composeHandlers(
-      new DeskTimesHandler(zoomRW(_.userDeskRec)((m, v) => m.copy(userDeskRec = v))),
+      new DeskTimesHandler(zoomRW(_.staffDeploymentsByTerminalAndQueue)((m, v) => m.copy(staffDeploymentsByTerminalAndQueue = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => {
         m.copy(workload = v)
       })),
-      new CrunchHandler(zoomRW(m => (m.userDeskRec, m.queueCrunchResults, m.shiftsRaw))((m, v) => {
-        m.copy(
-          userDeskRec = v._1,
-          queueCrunchResults = v._2
-        )
-      })),
-      new SimulationHandler(zoom(_.workload), zoomRW(m => m.userDeskRec)((m, v) => {
+      new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v))),
+      new SimulationHandler(zoom(_.workload), zoomRW(m => m.staffDeploymentsByTerminalAndQueue)((m, v) => {
         log.info("setting simulation result in model")
-        m.copy(userDeskRec = v)
+        m.copy(staffDeploymentsByTerminalAndQueue = v)
       })),
       new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
@@ -464,8 +477,9 @@ object SPACircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v)))
     )
   }
-
 }
+
+object SPACircuit extends DrtCircuit
 
 case class GetAirportInfos(code: Set[String]) extends Action
 

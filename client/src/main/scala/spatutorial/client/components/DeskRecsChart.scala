@@ -42,7 +42,7 @@ object DeskRecsChart {
                   queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
                   queueCrunchResults.renderReady(queueWorkload => {
                     log.info("We think crunch results are ready!!!!")
-                    val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
+                    val potCrunchResult: Pot[CrunchResult] = queueWorkload
                     <.div(^.key := queueName,
                       workloads.renderReady(wl => {
                         props.airportConfigPot.renderReady(airportConfig => {

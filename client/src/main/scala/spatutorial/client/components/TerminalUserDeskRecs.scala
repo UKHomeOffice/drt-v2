@@ -9,8 +9,9 @@ import spatutorial.client.TableViewUtils
 import spatutorial.client.TableViewUtils._
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
 import spatutorial.client.logger._
+import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.modules.FlightsView
-import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.client.services.HandyStuff.QueueStaffDeployments
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
@@ -126,8 +127,8 @@ object TableTerminalDeskRecs {
                                     flights: Pot[Flights],
                                     simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
-                                    queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]],
-                                    userDeskRec: Map[TerminalName, QueueUserDeskRecs],
+                                    queueCrunchResults: Map[TerminalName, QueueCrunchResults],
+                                    userDeskRec: Map[TerminalName, QueueStaffDeployments],
                                     shiftsRaw: String
                                   )
 
@@ -140,7 +141,7 @@ object TableTerminalDeskRecs {
         model.simulationResult,
         model.workload,
         model.queueCrunchResults,
-        model.userDeskRec,
+        model.staffDeploymentsByTerminalAndQueue,
         model.shiftsRaw
       ))
 
