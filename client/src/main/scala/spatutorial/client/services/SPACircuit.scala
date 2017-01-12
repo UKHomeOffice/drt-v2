@@ -315,6 +315,10 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
 class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs], Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]], String)])
   extends LoggingActionHandler(modelRW) {
 
+  def modelUserDeskRecs = value._1
+  def modelQueueCrunchResults = value._2
+  def rawShiftsString = value._3
+
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
@@ -338,20 +342,20 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
           case (deskRec, timeInMillis) => DeskRecTimeslot(timeInMillis = timeInMillis, deskRec = deskRec)
         }.toList)
 
-      val queues = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
-
-      val rawShiftsString = value._3
+      val queueCrunchResults = mergeTerminalQueues(value._2, Map(terminalName -> Map(queueName -> Ready((Ready(cr), Ready(updatedDeskRecTimeSlots))))))
 
 
-      val shifts = Shifts(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
+      val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
       if (shifts.exists(s => s.isFailure)) {
         log.error("Couldn't parse raw shifts")
         noChange
       } else {
+        log.info(s"raw shifts are ${rawShiftsString}")
+        log.info(s"Shifts are ${shifts}")
         val successfulShifts = shifts.collect { case Success(s) => s }
         val ss = ShiftService(successfulShifts)
         val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
-        val queuesDeployed = queues.mapValues(q => {
+        val newUserDeskRecs = queueCrunchResults.mapValues(q => {
           val queueDeskRecsOverTime = q.transpose {
             case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
           }
@@ -372,11 +376,11 @@ class CrunchHandler[M](modelRW: ModelRW[M, (Map[TerminalName, QueueUserDeskRecs]
           zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
         })
 
-        if (value._2 != queues || value._1 != queuesDeployed) {
+        if (modelQueueCrunchResults != queueCrunchResults || modelUserDeskRecs != newUserDeskRecs) {
           updated(
             value.copy(
-              _1 = queuesDeployed,
-              _2 = queues))
+              _1 = newUserDeskRecs,
+              _2 = queueCrunchResults))
         } else
           noChange
       }

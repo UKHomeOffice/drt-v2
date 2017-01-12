@@ -22,7 +22,7 @@ object Staffing {
       shiftsRawRCP((shiftsMP: ModelProxy[String]) => {
         val rawShifts = shiftsMP()
 
-        val shifts: List[Try[Shift]] = Shifts(rawShifts).parsedShifts.toList
+        val shifts: List[Try[Shift]] = ShiftParser(rawShifts).parsedShifts.toList
         val didParseFail = shifts exists (s => s.isFailure)
 
 

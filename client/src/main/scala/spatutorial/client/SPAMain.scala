@@ -46,7 +46,10 @@ object TableViewUtils {
     val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNameMappingOrder.map(queueName => {
       simulationResult.get(queueName) match {
         case Some(Ready(sr)) =>
-          queueDetailsRowsFromNos(queueName, queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName))
+          val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
+          log.info(s"before transpose it is ${result}")
+          log.info(s"before transpose it is ${result.map(_.length)}")
+          queueDetailsRowsFromNos(queueName, result)
         case None =>
           queueCrunchResultsForTerminal.get(queueName) match {
             case Some(Ready(cr)) =>
@@ -80,18 +83,29 @@ object TableViewUtils {
     }
   }
 
+  private val numberOf15MinuteSlots = 96
+
   def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]],
                                    userDeskRec: QueueUserDeskRecs,
                                    simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
                                   ): Seq[List[Long]] = {
-    log.info("queueNosFromSimulationResult")
+    val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
+
+    log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
+    log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
+    val queueUserDeskRecs = userDeskRec.get(qn)
+    val userDeskRecsSample = queueUserDeskRecs match {
+      case Some(Ready(udr)) => udr.items.map(_.deskRec.toLong).toList
+      case _ => List.fill(timestamps.length)(0L)
+    }
+
     Seq(
-      DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
+      ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
       queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-      userDeskRec(qn).get.items.map(_.deskRec.toLong).toList,
+      userDeskRecsSample,
       queueCrunchResultsForTerminal(qn).get._1.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
       simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     )
@@ -103,7 +117,7 @@ object TableViewUtils {
                               ): Seq[List[Long]] = {
     log.info(s"queueNosFromCrunchResult: userDeskRecs: ${userDeskRec(qn).get.items.map(_.deskRec.toLong).grouped(15).map(_.max).toList}")
     Seq(
-      DeskRecsChart.takeEvery15th(timestamps).take(96).toList,
+      DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       List.range(0, queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.length, 15).map(_.toLong),
       queueCrunchResultsForTerminal(qn).get._1.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,

@@ -1,8 +1,11 @@
 package spatutorial.client.services
 
+import spatutorial.client.services.JSDateConversions.SDate.JSSDate
+import spatutorial.shared.SDate
 import utest._
 
 import scala.scalajs.js.Date
+import scala.util.{Failure, Success}
 
 object ShiftsServiceTests extends TestSuite {
 
@@ -19,7 +22,16 @@ object ShiftsServiceTests extends TestSuite {
           val endDate = SDate(2016, 12, 19, 12, 0)
           val shifts = Shift("alpha", startDt, endDate, 10)
 
-          assert(shifts == Shift("alpha", 1484042400000L, 1484827200000L, 10))
+          assert(shifts == Shift("alpha", 1481364000000L, 1482148800000L, 10))
+        }
+        "round trip the above magic numbers 1481364000000d is 2016/12/10 10:00" - {
+          val sdate: SDate = SDate.JSSDate(new Date(1481364000000d))
+          assert((2016, 12, 10, 10, 0) == (sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
+        }
+
+        "round trip the above magic numbers 1482148800000L is 2016/12/19 12:00" - {
+          val sdate: SDate = SDate.JSSDate(new Date(1482148800000d))
+          assert((2016, 12, 19, 12, 0) == (sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
         }
 
         "Given a shift of 10 people, if we ask how many staff are available" - {
@@ -60,6 +72,89 @@ object ShiftsServiceTests extends TestSuite {
           }
           "before the lower bound of the first shift the staff is 0" - {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 9, 59)) == 0)
+          }
+        }
+
+        "Shift parsing " - {
+          "Parse a single shift line" - {
+            val shiftsRawCsv =
+              """
+                |Shift 1,01/12/16,06:30,15:18,2
+              """.stripMargin
+
+
+            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            assert(shifts == Success(Shift("Shift 1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2)) :: Nil)
+          }
+
+          " Parse a couple of shift lines" - {
+            val shiftsRawCsv =
+              """
+                |Shift 1,01/12/16,06:30,15:18,2
+                |Shift 2,01/12/16,19:00,22:24,4
+              """.stripMargin
+
+
+            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            val expectedShifts = Success(Shift("Shift 1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2)) ::
+              Success(Shift("Shift 2", SDate(2016, 12, 1, 19, 0), SDate(2016, 12, 1, 22, 24), 4)) ::
+              Nil
+            assert(shifts == expectedShifts
+            )
+          }
+
+          "-ve numbers are fine in movements" - {
+            val shiftsRawCsv =
+              """
+                |Shift 1,01/12/16,06:30,15:18,-2
+              """.stripMargin
+
+
+            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            val expectedShifts = Success(Shift("Shift 1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
+            assert(shifts == expectedShifts)
+          }
+
+          "We can make comments by not using commas" - {
+            val shiftsRawCsv =
+              """
+                |# here be a comment - not because of the hash but because no commas
+                |Shift 1,01/12/16,06:30,15:18,-2
+              """.stripMargin
+
+
+            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            val expectedShifts = Success(Shift("Shift 1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
+            assert(shifts == expectedShifts)
+          }
+
+          "empty lines are ignored" - {
+            val shiftsRawCsv =
+              """
+                |
+                |Shift 1,01/12/16,06:30,15:18,-2
+              """.stripMargin
+
+
+            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            val expectedShifts = Success(Shift("Shift 1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
+            assert(shifts == expectedShifts)
+          }
+
+          "failure to read a date will return an error for that line" - {
+            val shiftsRawCsv =
+              """
+                |Bad line,01/1b/16,06:30,15:18,-2
+              """.stripMargin
+
+
+            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            shifts match {
+              case Failure(t) :: Nil => assert(true)
+              case other =>
+                println(s"Should have failed that bad line ${other}")
+                assert(false)
+            }
           }
         }
 
@@ -164,7 +259,9 @@ object ShiftsServiceTests extends TestSuite {
 
           println(parsedShifts.mkString("\n"))
 
-          //
+
+          // Commented out some performance tests we used to evaluate different approaches.
+
           //          "asking for a whole days shape with individual stuff" - {
           //            val shiftService = ShiftService(parsedShifts.toList)
           //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)

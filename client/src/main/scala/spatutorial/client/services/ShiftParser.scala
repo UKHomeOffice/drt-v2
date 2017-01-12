@@ -98,7 +98,7 @@ object Shift {
   }
 }
 
-case class Shifts(rawShifts: String) {
+case class ShiftParser(rawShifts: String) {
   val lines = rawShifts.split("\n")
   val parsedShifts: Array[Try[Shift]] = lines.map(l => l.split(","))
     .filter(parts => parts.length == 4 || parts.length == 5)

@@ -52,6 +52,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   with CrunchCalculator
   with FlightState {
 
+  log.info(s"airportConfig is $airportConfig")
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
 
   val crunchCache: Cache[CrunchResultWithTimeAndInterval] = LruCache()
