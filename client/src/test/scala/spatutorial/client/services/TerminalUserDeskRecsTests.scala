@@ -29,7 +29,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(Seq(0L), workload, queueCrunchResults, simulationResult, Map())
 
       val expected = Seq(TerminalUserDeskRecsRow(0L, Seq(
-        QueueDetailsRow(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 2), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "eeaDesk"))))
+        QueueDetailsRow(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "eeaDesk"))))
 
       assert(expected == result)
     }
@@ -53,8 +53,8 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(Seq(0L), workload, queueCrunchResults, simulationResult, Map())
 
       val expected = Seq(TerminalUserDeskRecsRow(0L, Seq(
-        QueueDetailsRow(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 2), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "eeaDesk"),
-        QueueDetailsRow(0, pax = 6, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 4), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eGate")
+        QueueDetailsRow(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "eeaDesk"),
+        QueueDetailsRow(0, pax = 6, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eGate")
       )))
 
       assert(expected == result)
@@ -83,9 +83,9 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(Seq(0L), workload, queueCrunchResults, simulationResult, Map())
 
       val expected = Seq(TerminalUserDeskRecsRow(0L, Seq(
-        QueueDetailsRow(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 2), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "eeaDesk"),
-        QueueDetailsRow(0, pax = 6, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 2), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "nonEeaDesk"),
-        QueueDetailsRow(0, pax = 7, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 4), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eGate")
+        QueueDetailsRow(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "eeaDesk"),
+        QueueDetailsRow(0, pax = 6, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, "nonEeaDesk"),
+        QueueDetailsRow(0, pax = 7, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eGate")
       )))
 
       assert(expected == result)
@@ -106,7 +106,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map())
 
       val expected = List(TerminalUserDeskRecsRow(0L, Seq(
-        QueueDetailsRow(0, pax = 5, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 2), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eeaDesk")
+        QueueDetailsRow(0, pax = 5, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eeaDesk")
       )))
 
       assert(expected == result)
@@ -135,9 +135,9 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map())
 
       val expected = Seq(TerminalUserDeskRecsRow(0L, Seq(
-        QueueDetailsRow(0, pax = 6, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 2), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eeaDesk"),
-        QueueDetailsRow(0, pax = 8, crunchDeskRec = 21, userDeskRec = DeskRecTimeslot(0, 11), waitTimeWithCrunchDeskRec = 34, waitTimeWithUserDeskRec = 30, "nonEeaDesk"),
-        QueueDetailsRow(0, pax = 7, crunchDeskRec = 23, userDeskRec = DeskRecTimeslot(0, 7), waitTimeWithCrunchDeskRec = 27, waitTimeWithUserDeskRec = 25, "eGate")
+        QueueDetailsRow(0, pax = 6, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, "eeaDesk"),
+        QueueDetailsRow(0, pax = 8, crunchDeskRec = 21, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 34, waitTimeWithUserDeskRec = 30, "nonEeaDesk"),
+        QueueDetailsRow(0, pax = 7, crunchDeskRec = 23, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 27, waitTimeWithUserDeskRec = 25, "eGate")
       )))
 
       assert(expected == result)
@@ -179,8 +179,8 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(timestamps, workload, queueCrunchResults, simulationResult, userDeskRec = Map())
 
       val expected = Seq(
-        TerminalUserDeskRecsRow(0L, Seq(QueueDetailsRow(0L, pax = 75, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 11), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, "eeaDesk"))),
-        TerminalUserDeskRecsRow(15L * 60000, Seq(QueueDetailsRow(15L * 60000, pax = 5, crunchDeskRec = 3, userDeskRec = DeskRecTimeslot(15L * 60000, 5), waitTimeWithCrunchDeskRec = 4, waitTimeWithUserDeskRec = 9, "eeaDesk")))
+        TerminalUserDeskRecsRow(0L, Seq(QueueDetailsRow(0L, pax = 75, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, "eeaDesk"))),
+        TerminalUserDeskRecsRow(15L * 60000, Seq(QueueDetailsRow(15L * 60000, pax = 5, crunchDeskRec = 3, userDeskRec = DeskRecTimeslot(15L * 60000, 0), waitTimeWithCrunchDeskRec = 4, waitTimeWithUserDeskRec = 9, "eeaDesk")))
       )
 
       assert(expected == result)
@@ -257,9 +257,9 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val result = terminalUserDeskRecsRows(timestamps, workload, queueCrunchResults, simulationResult, Map())
 
       val expected = Seq(
-        TerminalUserDeskRecsRow(0L, Seq(QueueDetailsRow(0L, pax = 71, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 11), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, "eeaDesk"))),
-        TerminalUserDeskRecsRow(15L * 60000, Seq(QueueDetailsRow(15L * 60000, pax = 76, crunchDeskRec = 9, userDeskRec = DeskRecTimeslot(15L * 60000, 11), waitTimeWithCrunchDeskRec = 9, waitTimeWithUserDeskRec = 14, "eeaDesk"))),
-        TerminalUserDeskRecsRow(30L * 60000, Seq(QueueDetailsRow(30L * 60000, pax = 12, crunchDeskRec = 3, userDeskRec = DeskRecTimeslot(30L * 60000, 5), waitTimeWithCrunchDeskRec = 4, waitTimeWithUserDeskRec = 9, "eeaDesk")))
+        TerminalUserDeskRecsRow(0L, Seq(QueueDetailsRow(0L, pax = 71, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, "eeaDesk"))),
+        TerminalUserDeskRecsRow(15L * 60000, Seq(QueueDetailsRow(15L * 60000, pax = 76, crunchDeskRec = 9, userDeskRec = DeskRecTimeslot(15L * 60000, 0), waitTimeWithCrunchDeskRec = 9, waitTimeWithUserDeskRec = 14, "eeaDesk"))),
+        TerminalUserDeskRecsRow(30L * 60000, Seq(QueueDetailsRow(30L * 60000, pax = 12, crunchDeskRec = 3, userDeskRec = DeskRecTimeslot(30L * 60000, 0), waitTimeWithCrunchDeskRec = 4, waitTimeWithUserDeskRec = 9, "eeaDesk")))
       )
 
       assert(expected == result)
@@ -344,11 +344,11 @@ object TerminalUserDeskRecsTests extends TestSuite {
 
       val expected = Seq(
         TerminalUserDeskRecsRow(0L, Seq(
-          QueueDetailsRow(0L, pax = 71, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 11), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, "eeaDesk"),
-          QueueDetailsRow(0L, pax = 72, crunchDeskRec = 8, userDeskRec = DeskRecTimeslot(0, 12), waitTimeWithCrunchDeskRec = 9, waitTimeWithUserDeskRec = 16, "nonEeaDesk"))),
+          QueueDetailsRow(0L, pax = 71, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, "eeaDesk"),
+          QueueDetailsRow(0L, pax = 72, crunchDeskRec = 8, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 9, waitTimeWithUserDeskRec = 16, "nonEeaDesk"))),
         TerminalUserDeskRecsRow(15L * 60000, Seq(
-          QueueDetailsRow(15L * 60000, pax = 9, crunchDeskRec = 3, userDeskRec = DeskRecTimeslot(15L * 60000, 5), waitTimeWithCrunchDeskRec = 4, waitTimeWithUserDeskRec = 9, "eeaDesk"),
-          QueueDetailsRow(15L * 60000, pax = 11, crunchDeskRec = 4, userDeskRec = DeskRecTimeslot(15L * 60000, 5), waitTimeWithCrunchDeskRec = 5, waitTimeWithUserDeskRec = 10, "nonEeaDesk")
+          QueueDetailsRow(15L * 60000, pax = 9, crunchDeskRec = 3, userDeskRec = DeskRecTimeslot(15L * 60000, 0), waitTimeWithCrunchDeskRec = 4, waitTimeWithUserDeskRec = 9, "eeaDesk"),
+          QueueDetailsRow(15L * 60000, pax = 11, crunchDeskRec = 4, userDeskRec = DeskRecTimeslot(15L * 60000, 0), waitTimeWithCrunchDeskRec = 5, waitTimeWithUserDeskRec = 10, "nonEeaDesk")
         ))
       )
 

@@ -97,7 +97,7 @@ object TableViewUtils {
     val queueUserDeskRecs = userDeskRec.get(qn)
     val userDeskRecsSample = queueUserDeskRecs match {
       case Some(Ready(udr)) => udr.items.map(_.deskRec.toLong).toList
-      case _ => List.fill(timestamps.length)(0L)
+      case _ => List.fill(ts.length)(0L)
     }
 
     Seq(
