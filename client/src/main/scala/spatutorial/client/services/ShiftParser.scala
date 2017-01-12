@@ -49,6 +49,13 @@ object JSDateConversions {
 
 
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDate = new Date(y, m - 1, d, h, mm)
+    def today(): SDate = {
+      val d = new Date()
+      d.setHours(0)
+      d.setMinutes(0)
+      d.setMilliseconds(0)
+      JSSDate(d)
+    }
   }
 
 }
