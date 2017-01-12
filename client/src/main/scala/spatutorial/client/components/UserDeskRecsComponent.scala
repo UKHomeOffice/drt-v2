@@ -32,7 +32,7 @@ object UserDeskRecsComponent {
       Callback.when(false) {
         props.userDeskRecsPotProxy.dispatch(GetWorkloads("", ""))
       }
-      Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
+//      Callback.when(props.userDeskRecsPotProxy().isEmpty)(props.userDeskRecsPotProxy.dispatch(RefreshTodos))
     }
 
     def editTodo(item: Option[DeskRecTimeslot]) =
@@ -53,9 +53,7 @@ object UserDeskRecsComponent {
               p.flightsPotRCP,
               p.airportConfig,
               p.airportInfos,
-              item => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, item)),
-              item => editTodo(Some(item)),
-              item => p.userDeskRecsPotProxy.dispatch(DeleteTodo(item))))
+              deskRecTimeslot => p.userDeskRecsPotProxy.dispatch(UpdateDeskRecsTime(p.terminalName, p.queueName, deskRecTimeslot))))
         }))
   }
 

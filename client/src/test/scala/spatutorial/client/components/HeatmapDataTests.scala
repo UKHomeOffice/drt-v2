@@ -4,6 +4,7 @@ import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
 import spatutorial.client.components.Heatmap.Series
+import spatutorial.client.UserDeskRecFixtures._
 import spatutorial.client.services.{RootModel, UpdateDeskRecsTime, DeskRecTimeSlots, DeskRecTimeslot}
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
@@ -18,14 +19,7 @@ object HeatmapDataTests extends TestSuite {
       "Given eeaDesk queue, can get heatmap series from ratio of deskrecs to actual desks, for 1 hour, where rec is 2 and user is 1 then it should be a 2" - {
         val queueName: QueueName = "eeaDesk"
         val userDesks = 1
-        val userDeskRecs = Map(
-          queueName ->
-            Ready(DeskRecTimeSlots(
-              oneHourOfDeskRecs(userDesks).zipWithIndex.map {
-                case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
-              }.toVector)
-            ))
+        val userDeskRecs: Map[QueueName, Ready[DeskRecTimeSlots]] = makeUserDeskRecs(queueName, userDesks)
         val recommendedDesks = Vector.fill(60)(2)
         val terminalQueueCrunchResult = Map(
           queueName ->
@@ -43,14 +37,7 @@ object HeatmapDataTests extends TestSuite {
       "Given eeaDesk queue get heatmap series from ratio of deskrecs to actual desks, for 1 hour, where rec is 10 and user is 2 then it should be a 5" - {
         val queueName: QueueName = "eeaDesk"
         val userDesks = 2
-        val userDeskRecs = Map(
-          queueName ->
-            Ready(DeskRecTimeSlots(
-              oneHourOfDeskRecs(userDesks).zipWithIndex.map {
-                case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
-              }.toVector)
-            ))
+        val userDeskRecs: Map[QueueName, Ready[DeskRecTimeSlots]] = makeUserDeskRecs(queueName, userDesks)
 
         val recommendedDesks = Vector.fill(60)(10)
         val terminalQueueCrunchResult = Map(
@@ -77,23 +64,9 @@ object HeatmapDataTests extends TestSuite {
         "for 1 hour, where rec is 10 and user is 2 then it should be a 5" - {
         val userDesksNonEea = 3
         val userDesksEea = 2
-
-        val userDeskRecs = Map(
-          nonEeaDesk ->
-            Ready(DeskRecTimeSlots(
-              oneHourOfDeskRecs(userDesksNonEea).zipWithIndex.map {
-                case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
-              }.toVector)
-            ),
-          eeaDesk ->
-            Ready(DeskRecTimeSlots(
-              oneHourOfDeskRecs(userDesksEea).zipWithIndex.map {
-                case (dr, idx) =>
-                  DeskRecTimeslot(idx.toString, dr)
-              }.toVector)
-            )
-        )
+        val userDeskRecsNonEea: Map[QueueName, Ready[DeskRecTimeSlots]] = makeUserDeskRecs(nonEeaDesk, userDesksNonEea)
+        val userDeskRecsEea = makeUserDeskRecs(eeaDesk, userDesksEea)
+        val userDeskRecs = userDeskRecsEea ++ userDeskRecsNonEea
 
         val recommendedDesksEeaNon = Vector.fill(60)(6)
         val recommendedDesksEea = Vector.fill(60)(10)
@@ -128,19 +101,10 @@ object HeatmapDataTests extends TestSuite {
         "for 2 hours, where rec is 10 and user is 2 then it should be a 5" - {
         val userDesksNonEea = 3
         val userDesksEea = 2
+        val nonEea = makeUserDeskRecs(nonEeaDesk, oneHourOfDeskRecs(userDesksNonEea) ::: oneHourOfDeskRecs(2))
+        val eea = makeUserDeskRecs(eeaDesk, oneHourOfDeskRecs(userDesksEea) ::: oneHourOfDeskRecs(2))
 
-        val userDeskRecs = Map(
-          nonEeaDesk -> Ready(DeskRecTimeSlots(
-            (oneHourOfDeskRecs(userDesksNonEea) ::: oneHourOfDeskRecs(2)).zipWithIndex.map {
-              case (dr, idx) =>
-                DeskRecTimeslot(idx.toString, dr)
-            }.toVector)),
-          eeaDesk -> Ready(DeskRecTimeSlots(
-            (oneHourOfDeskRecs(userDesksEea) ::: oneHourOfDeskRecs(2)).zipWithIndex.map {
-              case (dr, idx) =>
-                DeskRecTimeslot(idx.toString, dr)
-            }.toVector)
-          ))
+        val userDeskRecs = nonEea ++ eea
 
         val terminalQueueCrunchResult = Map(
           nonEeaDesk ->
@@ -190,12 +154,8 @@ object HeatmapDataTests extends TestSuite {
     }
   }
 
-  def oneHourOfDeskRecs(userDesksNonEea: Int): List[Int] = {
-    //desk recs are currently in 15 minute blocks
-    List.fill(4)(userDesksNonEea)
-  }
-
   def oneHourOfMinutes(userDesksNonEea: Int): List[Int] = {
     List.fill(60)(userDesksNonEea)
   }
 }
+

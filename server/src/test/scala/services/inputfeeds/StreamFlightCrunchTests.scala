@@ -76,7 +76,8 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
     "and we have sent it flights for different terminals A1 and A2" in {
       "when we ask for the latest crunch for eeaDesk at terminal A1, we get a crunch result only including flights at that terminal" in {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
-        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, () => new DateTime(2016, 1, 1, 0, 0))
+        val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
+        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider)
 
         withContextCustomActor(props) { context =>
           val flights = Flights(
@@ -86,7 +87,10 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
           context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
           context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
           val exp =
-            CrunchResult(Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),Vector(1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+            CrunchResultWithTimeAndInterval(
+              timeProvider().getMillis,
+              60000,
+              Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),Vector(1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
           context.expectMsg(15 seconds, exp)
           true
@@ -95,7 +99,8 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
 
       "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
-        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, () => new DateTime(2016, 1, 1, 0, 0))
+        val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
+        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider)
 
         withContextCustomActor(props) { context =>
           val flights = Flights(
@@ -105,7 +110,9 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
           context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
           context.sendToCrunch(GetLatestCrunch("A1", "eGate"))
           val exp =
-            CrunchResult(
+            CrunchResultWithTimeAndInterval(
+              timeProvider().getMillis,
+              60000,
               Vector(
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -185,7 +192,9 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
               val exp =
-                CrunchResult(
+                CrunchResultWithTimeAndInterval(
+                  timeProvider().getMillis,
+                  60000,
                   Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
                   Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
@@ -251,10 +260,11 @@ class StreamFlightCrunchTests extends
 
         crunchActor ! PerformCrunchOnFlights(flights.flights)
         crunchActor ! GetLatestCrunch("A1", "eeaDesk")
-        val exp = CrunchResult(Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), Vector(1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
         expectMsg(10 seconds,
-          CrunchResult(
+          CrunchResultWithTimeAndInterval(
+            DateTime.parse("2016-09-01").getMillis,
+            60000,
             Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
             Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
         true

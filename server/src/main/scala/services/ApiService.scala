@@ -136,7 +136,7 @@ trait CrunchCalculator {
 }
 
 trait CrunchResultProvider {
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
+  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]]
 }
 
 trait ActorBackedCrunchService {
@@ -145,7 +145,7 @@ trait ActorBackedCrunchService {
   implicit val timeout: akka.util.Timeout
   val crunchActor: AskableActorRef
 
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
+  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]] = {
     log.info("Starting crunch latest request")
     val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
     result.recover {
@@ -153,7 +153,7 @@ trait ActorBackedCrunchService {
         log.error("Crunch not ready ", e)
         Left(NoCrunchAvailable())
     }.map {
-      case cr: CrunchResult =>
+      case cr: CrunchResultWithTimeAndInterval =>
         Right(cr)
       case _ =>
         Left(NoCrunchAvailable())

@@ -45,9 +45,7 @@ object DeskRecsTable {
                     flightsPotRCP: ReactConnectProxy[Pot[Flights]],
                     airportConfig: AirportConfig,
                     airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    stateChange: DeskRecTimeslot => Callback,
-                    editItem: DeskRecTimeslot => Callback,
-                    deleteItem: DeskRecTimeslot => Callback
+                    stateChange: DeskRecTimeslot => Callback
                   )
 
   case class HoverPopoverState(hovered: Boolean = false)
@@ -118,7 +116,7 @@ object DeskRecsTable {
             <.input.number(
               ^.className := "desk-rec-input",
               ^.value := item.userDeskRec.deskRec,
-              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.id, deskRec = e.target.value.toInt))))),
+              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.timeInMillis, deskRec = e.target.value.toInt))))),
           <.td(^.cls := "minutes", item.waitTimeWithCrunchDeskRec + " mins"),
           <.td(^.cls := dangerWait + " " + warningClasses + " minutes", item.waitTimeWithUserDeskRec + " mins")
         )
@@ -135,7 +133,6 @@ object DeskRecsTable {
   def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
             airportConfig: AirportConfig,
             airportInfoPotsRCP: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            stateChange: DeskRecTimeslot => Callback,
-            editItem: DeskRecTimeslot => Callback, deleteItem: DeskRecTimeslot => Callback) =
-    component(Props(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange, editItem, deleteItem))
+            stateChange: DeskRecTimeslot => Callback) =
+    component(Props(queueName, terminalName, userDeskRecRows, flightsPotRCP, airportConfig, airportInfoPotsRCP, stateChange))
 }

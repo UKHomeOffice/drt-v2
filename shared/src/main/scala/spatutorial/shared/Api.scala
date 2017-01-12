@@ -5,6 +5,10 @@ import spatutorial.shared.FlightsApi._
 import scala.collection.immutable._
 import scala.concurrent.Future
 
+case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
+  def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
+}
+
 case class ApiFlight(
                       Operator: String,
                       Status: String,
@@ -28,17 +32,36 @@ case class ApiFlight(
                       SchDT: String,
                       PcpTime: Long)
 
+trait SDate {
+  def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
+
+  def getFullYear(): Int
+  def getMonth(): Int
+  def getDate(): Int
+  def getHours(): Int
+  def getMinutes(): Int
+  def millisSinceEpoch: Long
+  def addDays(daysToAdd: Int): SDate
+}
+
 case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
 object CrunchResult {
   def empty = CrunchResult(Vector[Int](), Nil)
 }
 
+case class CrunchResultWithTimeAndInterval(
+                                            firstTimeMillis: Long,
+                                            intervalMillis: Long,
+                                            recommendedDesks: IndexedSeq[Int],
+                                            waitTimes: Seq[Int])
+
 case class NoCrunchAvailable()
 
 case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
 
 object FlightsApi {
+
   case class Flights(flights: List[ApiFlight])
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
@@ -163,7 +186,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
+  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 

@@ -159,5 +159,9 @@ object DeskRecsChart {
     case (n, i) if (i % 15 == 0) => n
   }
 
+  def takeEveryNth[N](n: Int)(desks: Seq[N]) = desks.zipWithIndex.collect {
+    case (v, i) if (i % n == 0) => v
+  }
+
   def apply(deskRecsModelMP: ModelProxy[DeskRecsModel], airportConfigPot: Pot[AirportConfig]) = DeskRecs(Props(deskRecsModelMP, airportConfigPot))
 }
