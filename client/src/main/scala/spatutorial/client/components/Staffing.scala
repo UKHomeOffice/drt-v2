@@ -64,22 +64,22 @@ object Staffing {
 
   def staffingTableHourPerColumn(daysWorthOf15Minutes: NumericRange[Long], ss: ShiftService) = {
     <.table(
-      ^.className := "table table-striped table-condensed table-sm",
+      ^.className := "table table-striped table-xcondensed table-sm",
       <.tbody(
-      daysWorthOf15Minutes.grouped(16).flatMap {
-       hoursWorthOf15Minutes =>
-        Seq(
-          <.tr({
-          hoursWorthOf15Minutes.map((t: Long) => {
-            val d = new Date(t)
-            val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
-            <.th(^.key := t, display)
-          })
-        }),
-        <.tr(
-          hoursWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}"))
-        ))
-      }
+        daysWorthOf15Minutes.grouped(16).flatMap {
+          hoursWorthOf15Minutes =>
+            Seq(
+              <.tr(^.key := s"hr-${hoursWorthOf15Minutes.head}", {
+                hoursWorthOf15Minutes.map((t: Long) => {
+                  val d = new Date(t)
+                  val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
+                  <.th(^.key := t, display)
+                })
+              }),
+              <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
+                hoursWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}"))
+              ))
+        }
       )
     )
   }

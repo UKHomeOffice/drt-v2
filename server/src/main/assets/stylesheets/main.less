@@ -2,6 +2,22 @@
 @import "lib/font-awesome/less/font-awesome.less";
 @import "popover-styles.less";
 
+
+// Condensed table w/ half padding
+
+.table-xcondensed {
+  > thead,
+  > tbody,
+  > tfoot {
+    > tr {
+      > th,
+      > td {
+        padding: @table-condensed-cell-padding / 2;
+      }
+    }
+  }
+}
+
 .desk-rec-input {
   width: 4em;
 }
