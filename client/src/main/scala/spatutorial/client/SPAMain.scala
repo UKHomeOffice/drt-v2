@@ -12,7 +12,7 @@ import org.scalajs.dom
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
 import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalPage}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.DashboardModels
+import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueStaffDeployments}
@@ -87,7 +87,7 @@ object TableViewUtils {
   private val numberOf15MinuteSlots = 96
 
   def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
-                                   queueCrunchResultsForTerminal: Map[QueueName, Pot[Pot[CrunchResult]]],
+                                   queueCrunchResultsForTerminal: QueueCrunchResults,
                                    userDeskRec: QueueStaffDeployments,
                                    simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
                                   ): Seq[List[Long]] = {
@@ -110,7 +110,7 @@ object TableViewUtils {
 
 
   def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
-                               queueCrunchResultsForTerminal: Map[QueueName, Pot[Pot[CrunchResult]]],
+                               queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
 //    log.info(s"queueNosFromCrunchResult: userDeskRecs: ${userDeskRec(qn).get.items.map(_.deskRec.toLong).grouped(15).map(_.max).toList}")

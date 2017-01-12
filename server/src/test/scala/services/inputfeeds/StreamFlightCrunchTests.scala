@@ -87,7 +87,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
           context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
           context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
           val exp =
-            CrunchResultWithTimeAndInterval(
+            CrunchResult(
               timeProvider().getMillis,
               60000,
               Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),Vector(1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
@@ -110,7 +110,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
           context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
           context.sendToCrunch(GetLatestCrunch("A1", "eGate"))
           val exp =
-            CrunchResultWithTimeAndInterval(
+            CrunchResult(
               timeProvider().getMillis,
               60000,
               Vector(
@@ -192,7 +192,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
               val exp =
-                CrunchResultWithTimeAndInterval(
+                CrunchResult(
                   timeProvider().getMillis,
                   60000,
                   Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
@@ -262,7 +262,7 @@ class StreamFlightCrunchTests extends
         crunchActor ! GetLatestCrunch("A1", "eeaDesk")
 
         expectMsg(10 seconds,
-          CrunchResultWithTimeAndInterval(
+          CrunchResult(
             DateTime.parse("2016-09-01").getMillis,
             60000,
             Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),

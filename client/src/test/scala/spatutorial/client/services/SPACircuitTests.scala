@@ -129,14 +129,14 @@ object SPACircuitTests extends TestSuite {
 
       'UpdateCrunch - {
         "on updateCrunch the queueCrunchResults are set - we separate the desk recs and estimated " - {
-          circuit.dispatch(UpdateCrunchResult("T1", "eeaDesk", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(33), Seq(29))))
+          circuit.dispatch(UpdateCrunchResult("T1", "eeaDesk", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
           val newModel: ModelR[RootModel, Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]]] = circuit.zoom(_.queueCrunchResults)
           val actualQueueCrunchResults = newModel.value
           val expectedQueueCrunchResults = Map("T1" -> Map("eeaDesk" -> Ready((Ready(CrunchResult(Vector(33),List(29))),Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0,33))))))))
           assert(actualQueueCrunchResults == expectedQueueCrunchResults)
         }
         "on updateCrunch the UserDeskRecs (sp?) should be calculated according to Staff Availability" - {
-          circuit.dispatch(UpdateCrunchResult("T1", "eeaDesk", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(33), Seq(29))))
+          circuit.dispatch(UpdateCrunchResult("T1", "eeaDesk", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
           val newModel: ModelR[RootModel, Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]]] = circuit.zoom(_.queueCrunchResults)
           val actualQueueCrunchResults = newModel.value
           val expectedQueueCrunchResults = Map("T1" -> Map("eeaDesk" -> Ready((Ready(CrunchResult(Vector(33),List(29))),Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0,33))))))))
@@ -180,7 +180,7 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateCrunchResult("A1", "EEA", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(33), Seq(29))))
+          UpdateCrunchResult("A1", "EEA", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
 
         val expectedQueueCrunchResults = Map("A1" -> Map(
           "EEA" -> Ready((
@@ -202,7 +202,7 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateCrunchResult("A1", "eGates", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(33), Seq(29))))
+          UpdateCrunchResult("A1", "eGates", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
 
         val expectedQueueCrunchResults = Map("A1" -> Map(
           "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33)))))),
@@ -225,7 +225,7 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateCrunchResult("A1", "eGates", CrunchResultWithTimeAndInterval(0, 60000, IndexedSeq(22), Seq(23))))
+          UpdateCrunchResult("A1", "eGates", CrunchResult(0, 60000, IndexedSeq(22), Seq(23))))
 
         val expectedQueueCrunchResults = Map("A1" -> Map(
           "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33)))))),

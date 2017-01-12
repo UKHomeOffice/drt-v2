@@ -124,7 +124,7 @@ trait CrunchCalculator {
   //  self: HasAirportConfig =>
   def log: LoggingAdapter
 
-  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int): Try[CrunchResult] = {
+  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int): Try[OptimizerCrunchResult] = {
     log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
     val repeat = List.fill[Int](workloads.length) _
     val optimizerConfig = OptimizerConfig(sla)
@@ -136,7 +136,7 @@ trait CrunchCalculator {
 }
 
 trait CrunchResultProvider {
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]]
+  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 }
 
 trait ActorBackedCrunchService {
@@ -145,7 +145,7 @@ trait ActorBackedCrunchService {
   implicit val timeout: akka.util.Timeout
   val crunchActor: AskableActorRef
 
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]] = {
+  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
     log.info("Starting crunch latest request")
     val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
     result.recover {
@@ -153,7 +153,7 @@ trait ActorBackedCrunchService {
         log.error("Crunch not ready ", e)
         Left(NoCrunchAvailable())
     }.map {
-      case cr: CrunchResultWithTimeAndInterval =>
+      case cr: CrunchResult =>
         Right(cr)
       case _ =>
         Left(NoCrunchAvailable())

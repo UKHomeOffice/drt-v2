@@ -325,7 +325,7 @@ class Application @Inject()(
     implicit val timeout: Timeout = Timeout(5 seconds)
     val crunchActor: AskableActorRef = ctrl.crunchActor
 
-    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]] = {
+    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
       tryCrunch(terminalName, queueName)
     }
   }

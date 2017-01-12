@@ -13,11 +13,15 @@ import scala.util.{Success, Failure, Try}
 
 case class OptimizerConfig(sla: Int)
 
+case class OptimizerCrunchResult(
+                         recommendedDesks: IndexedSeq[Int],
+                         waitTimes: Seq[Int])
+
 object TryRenjin {
   val log = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
 
-  def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[CrunchResult] = {
+  def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
@@ -28,7 +32,7 @@ object TryRenjin {
   }
 
   case class Optimizer(engine: ScriptEngine) {
-    def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[CrunchResult] = {
+    def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
       val tryCrunchRes = Try {
         loadOptimiserScript
         initialiseWorkloads(workloads)
@@ -45,7 +49,7 @@ object TryRenjin {
         log.info("crunched in R")
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
-        CrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
+        OptimizerCrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
       }
       tryCrunchRes
     }

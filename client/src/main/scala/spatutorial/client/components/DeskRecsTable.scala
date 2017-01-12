@@ -98,6 +98,20 @@ object DeskRecsTable {
   private val component = ReactComponentB[Props]("DeskRecsTable")
     .render_P(p => {
       val style = bss.listGroup
+
+      val enableUserOverride = false
+
+      def userOverridenDeskRecs(item: UserDeskRecsRow) = {
+        if (enableUserOverride) {
+          <.input.number(
+            ^.className := "desk-rec-input",
+            ^.value := item.userDeskRec.deskRec,
+            ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.timeInMillis, deskRec = e.target.value.toInt))))
+        } else {
+          <.td(item.userDeskRec.deskRec)
+        }
+      }
+
       def renderItem(itemWithIndex: (UserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         val date: Date = new Date(item.time)
@@ -107,20 +121,20 @@ object DeskRecsTable {
         val hasChangeClasses = if (item.userDeskRec.deskRec != item.crunchDeskRec) "table-info" else ""
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (item.waitTimeWithUserDeskRec > p.airportConfig.slaByQueue(p.queueName)) "table-danger"
+
+
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
           <.td(^.cls := "date-field", popover()),
           <.td(item.crunchDeskRec),
           <.td(
             ^.cls := hasChangeClasses,
-            <.input.number(
-              ^.className := "desk-rec-input",
-              ^.value := item.userDeskRec.deskRec,
-              ^.onChange ==> ((e: ReactEventI) => p.stateChange(DeskRecTimeslot(item.userDeskRec.timeInMillis, deskRec = e.target.value.toInt))))),
+            userOverridenDeskRecs(item)),
           <.td(^.cls := "minutes", item.waitTimeWithCrunchDeskRec + " mins"),
           <.td(^.cls := dangerWait + " " + warningClasses + " minutes", item.waitTimeWithUserDeskRec + " mins")
         )
       }
+
       <.table(^.cls := "table table-striped table-hover table-sm",
         <.tbody(
           <.tr(<.th(""), <.th(deskUnitLabel(p.queueName), ^.colSpan := 2), <.th("Wait Times", ^.colSpan := 2)),
