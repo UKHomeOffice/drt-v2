@@ -66,7 +66,7 @@ object Staffing {
     <.table(
       ^.className := "table table-striped table-condensed table-sm",
       <.tbody(
-      daysWorthOf15Minutes.grouped(8).flatMap {
+      daysWorthOf15Minutes.grouped(16).flatMap {
        hoursWorthOf15Minutes =>
         Seq(
           <.tr({
