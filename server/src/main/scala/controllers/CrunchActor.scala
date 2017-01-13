@@ -165,7 +165,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         }
       }
 
-      val r = triedWl.flatMap {
+      val r: Try[OptimizerCrunchResult] = triedWl.flatMap {
         (terminalWorkloads: Map[String, List[Double]]) =>
           log.info(s"Will crunch now $tq")
           log.info(s"terminalWorkloads are ${terminalWorkloads.keys}")

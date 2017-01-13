@@ -6,9 +6,6 @@ import spatutorial.shared.FlightsApi.QueueName
 
 import scala.collection.immutable.Map
 
-/**
-  * Created by rich on 04/01/17.
-  */
 object UserDeskRecFixtures {
   def makeUserDeskRecs(queueName: QueueName, userDesks: Int): Map[QueueName, Ready[DeskRecTimeSlots]] = {
     makeUserDeskRecs(queueName, oneHourOfDeskRecs(userDesks))

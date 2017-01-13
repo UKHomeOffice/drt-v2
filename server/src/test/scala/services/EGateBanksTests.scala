@@ -27,10 +27,10 @@ object EGateBanksTests extends TestSuite {
       "When the recommendation is 1, " +
       "Then it should be 1" - {
 
-      val crunchResult = CrunchResult(IndexedSeq(1), Seq(1))
+      val optimizerCrunchResult = OptimizerCrunchResult(IndexedSeq(1), Seq(1))
 
-      val expected = CrunchResult(IndexedSeq(1), Seq(1))
-      val result = intoBanksOf5WithSlaOf10(crunchResult, Seq(20))
+      val expected = OptimizerCrunchResult(IndexedSeq(1), Seq(1))
+      val result = intoBanksOf5WithSlaOf10(optimizerCrunchResult, Seq(20))
 
       assert(result == expected)
     }
@@ -38,10 +38,10 @@ object EGateBanksTests extends TestSuite {
       "When the recommendation is 6, " +
       "Then it should be rounded up to 10" - {
 
-      val crunchResult = CrunchResult(IndexedSeq(6), Seq(1))
+      val optimizerCrunchResult = OptimizerCrunchResult(IndexedSeq(6), Seq(1))
 
-      val expected = CrunchResult(IndexedSeq(2), Seq(1))
-      val result = intoBanksOf5WithSlaOf10(crunchResult, Seq(20))
+      val expected = OptimizerCrunchResult(IndexedSeq(2), Seq(1))
+      val result = intoBanksOf5WithSlaOf10(optimizerCrunchResult, Seq(20))
 
       assert(result == expected)
     }
@@ -49,10 +49,10 @@ object EGateBanksTests extends TestSuite {
       "When the recommendations are [6, 11, 15, 21], " +
       "Then it should be rounded up to [10, 15, 15, 25]" - {
 
-      val crunchResult = CrunchResult(IndexedSeq(6, 11, 15, 21), Seq(1))
+      val optimizerCrunchResult = OptimizerCrunchResult(IndexedSeq(6, 11, 15, 21), Seq(1))
 
-      val expected = CrunchResult(IndexedSeq(2, 3, 3, 5), Seq(1, 1, 1, 1))
-      val result = intoBanksOf5WithSlaOf10(crunchResult, Seq(20, 20, 20, 20))
+      val expected = OptimizerCrunchResult(IndexedSeq(2, 3, 3, 5), Seq(1, 1, 1, 1))
+      val result = intoBanksOf5WithSlaOf10(optimizerCrunchResult, Seq(20, 20, 20, 20))
 
       assert(result == expected)
     }
@@ -61,10 +61,10 @@ object EGateBanksTests extends TestSuite {
       "When the desk recommendations have been rounded up, " +
       "Then the wait times should reflect the revised desk recs" - {
 
-      val crunchResult = CrunchResult(IndexedSeq(6, 11, 15, 21), Seq(1, 1, 1, 1))
+      val optimizerCrunchResult = OptimizerCrunchResult(IndexedSeq(6, 11, 15, 21), Seq(1, 1, 1, 1))
 
-      val expected = CrunchResult(IndexedSeq(2, 3, 3, 5), Seq(1, 2, 3, 4))
-      val result = intoBanksOf5WithSlaOf10(crunchResult, Seq(90, 90, 90, 90))
+      val expected = OptimizerCrunchResult(IndexedSeq(2, 3, 3, 5), Seq(1, 2, 3, 4))
+      val result = intoBanksOf5WithSlaOf10(optimizerCrunchResult, Seq(90, 90, 90, 90))
 
       assert(result == expected)
     }
@@ -72,10 +72,10 @@ object EGateBanksTests extends TestSuite {
       "When the number of eGates per bank is 10," +
       "Then the revised desk recs should be multiples of 10" - {
 
-      val crunchResult = CrunchResult(IndexedSeq(6, 11, 15, 21), Seq(1, 1, 1, 1))
+      val optimizerCrunchResult = OptimizerCrunchResult(IndexedSeq(6, 11, 15, 21), Seq(1, 1, 1, 1))
 
-      val expected = CrunchResult(IndexedSeq(1, 2, 2, 3), Seq(1, 2, 3, 4))
-      val result = EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(10, 10)(crunchResult, Seq(90, 90, 90, 90))
+      val expected = OptimizerCrunchResult(IndexedSeq(1, 2, 2, 3), Seq(1, 2, 3, 4))
+      val result = EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(10, 10)(optimizerCrunchResult, Seq(90, 90, 90, 90))
 
       assert(result == expected)
     }

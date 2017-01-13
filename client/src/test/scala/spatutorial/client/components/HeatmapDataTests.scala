@@ -12,7 +12,8 @@ import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
-object HeatmapDataTests extends TestSuite {
+object
+HeatmapDataTests extends TestSuite {
   def tests = TestSuite {
     'HeatmapData - {
 
@@ -21,13 +22,8 @@ object HeatmapDataTests extends TestSuite {
         val userDesks = 1
         val userDeskRecs: Map[QueueName, Ready[DeskRecTimeSlots]] = makeUserDeskRecs(queueName, userDesks)
         val recommendedDesks = Vector.fill(60)(2)
-        val terminalQueueCrunchResult = Map(
-          queueName ->
-            Ready(
-              Ready(CrunchResult(recommendedDesks, Nil)),
-              Empty
-            )
-        )
+        val waitTimes = Vector.fill(60)(2)
+        val terminalQueueCrunchResult = Map(queueName -> Ready(Ready(CrunchResult(0, 60000, recommendedDesks, waitTimes))))
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
         val expected = Ready(List(Series("T1/eeaDesk", Vector(2))))
@@ -42,10 +38,7 @@ object HeatmapDataTests extends TestSuite {
         val recommendedDesks = Vector.fill(60)(10)
         val terminalQueueCrunchResult = Map(
           queueName ->
-            Ready(
-              Ready(CrunchResult(recommendedDesks, Nil)),
-              Empty
-            )
+            Ready(Ready(CrunchResult(0, 60000, recommendedDesks, Nil)))
         )
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
@@ -72,16 +65,8 @@ object HeatmapDataTests extends TestSuite {
         val recommendedDesksEea = Vector.fill(60)(10)
 
         val terminalQueueCrunchResult = Map(
-          nonEeaDesk ->
-            Ready(
-              Ready(CrunchResult(recommendedDesksEeaNon, Nil)),
-              Empty
-            ),
-          eeaDesk ->
-            Ready(
-              Ready(CrunchResult(recommendedDesksEea, Nil)),
-              Empty
-            )
+          nonEeaDesk -> Ready(Ready(CrunchResult(0, 60000, recommendedDesksEeaNon, Nil))),
+          eeaDesk -> Ready(Ready(CrunchResult(0, 60000, recommendedDesksEea, Nil)))
         )
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
@@ -107,16 +92,8 @@ object HeatmapDataTests extends TestSuite {
         val userDeskRecs = nonEea ++ eea
 
         val terminalQueueCrunchResult = Map(
-          nonEeaDesk ->
-            Ready(
-              Ready(CrunchResult((oneHourOfMinutes(6) ::: oneHourOfMinutes(4)).toVector, Nil)),
-              Empty
-            ),
-          eeaDesk ->
-            Ready(
-              Ready(CrunchResult((oneHourOfMinutes(10) ::: oneHourOfMinutes(4)).toVector, Nil)),
-              Empty
-            )
+          nonEeaDesk -> Ready(Ready(CrunchResult(0, 60000, (oneHourOfMinutes(6) ::: oneHourOfMinutes(4)).toVector, Nil))),
+          eeaDesk -> Ready(Ready(CrunchResult(0, 60000, (oneHourOfMinutes(10) ::: oneHourOfMinutes(4)).toVector, Nil)))
         )
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")

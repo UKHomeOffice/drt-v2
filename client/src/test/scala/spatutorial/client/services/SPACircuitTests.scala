@@ -4,6 +4,7 @@ import diode.ActionResult._
 import diode.{ActionResult, ModelR, RootModelRW}
 import diode.data._
 import spatutorial.client.UserDeskRecFixtures._
+import spatutorial.client.services.HandyStuff.PotCrunchResult
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._
@@ -123,23 +124,21 @@ object SPACircuitTests extends TestSuite {
     }
 
     'CrunchHandler - {
-      type TerminalQueueCrunchResults = Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]]
-
       val circuit = new DrtCircuit {}
 
       'UpdateCrunch - {
         "on updateCrunch the queueCrunchResults are set - we separate the desk recs and estimated " - {
           circuit.dispatch(UpdateCrunchResult("T1", "eeaDesk", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
-          val newModel: ModelR[RootModel, Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]]] = circuit.zoom(_.queueCrunchResults)
+          val newModel: ModelR[RootModel, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]] = circuit.zoom(_.queueCrunchResults)
           val actualQueueCrunchResults = newModel.value
-          val expectedQueueCrunchResults = Map("T1" -> Map("eeaDesk" -> Ready((Ready(CrunchResult(Vector(33),List(29))),Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0,33))))))))
+          val expectedQueueCrunchResults = Map("T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(0, 60000, Vector(33), List(29))))))
           assert(actualQueueCrunchResults == expectedQueueCrunchResults)
         }
         "on updateCrunch the UserDeskRecs (sp?) should be calculated according to Staff Availability" - {
           circuit.dispatch(UpdateCrunchResult("T1", "eeaDesk", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
-          val newModel: ModelR[RootModel, Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]]] = circuit.zoom(_.queueCrunchResults)
+          val newModel: ModelR[RootModel, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]] = circuit.zoom(_.queueCrunchResults)
           val actualQueueCrunchResults = newModel.value
-          val expectedQueueCrunchResults = Map("T1" -> Map("eeaDesk" -> Ready((Ready(CrunchResult(Vector(33),List(29))),Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0,33))))))))
+          val expectedQueueCrunchResults = Map("T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(0, 60000, Vector(33), List(29))))))
           assert(actualQueueCrunchResults == expectedQueueCrunchResults)
         }
       }
@@ -161,8 +160,7 @@ object SPACircuitTests extends TestSuite {
           model,
           UpdateWorkloads(
             Map("T1" ->
-              (Map("eeaGate" ->
-                (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+              Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0)))))))
 
         val expected = RootModel().copy(
           workload = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
@@ -183,21 +181,14 @@ object SPACircuitTests extends TestSuite {
           UpdateCrunchResult("A1", "EEA", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
 
         val expectedQueueCrunchResults = Map("A1" -> Map(
-          "EEA" -> Ready((
-            Ready(CrunchResult(Vector(33), List(29))),
-            Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33))))))))
+          "EEA" -> Ready(Ready(CrunchResult(0, 60000, Vector(33), List(29))))))
 
         assertQueueCrunchResult(res, expectedQueueCrunchResults)
       }
       "Given a model that already has a crunch result for a queue," +
         " when we apply the results for a new queue then we should see both existing queue and new queue" - {
         val model = RootModel().copy(
-          queueCrunchResults = Map("A1" -> Map(
-            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33))))))
-          )),
-          staffDeploymentsByTerminalAndQueue = Map("A1" -> Map("EEA" -> Ready(
-            DeskRecTimeSlots(List(DeskRecTimeslot(0, 33))))
-          ))
+          queueCrunchResults = Map("A1" -> Map("EEA" -> Ready(Ready(CrunchResult(0, 60000, Vector(33), List(29))))))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
@@ -205,8 +196,8 @@ object SPACircuitTests extends TestSuite {
           UpdateCrunchResult("A1", "eGates", CrunchResult(0, 60000, IndexedSeq(33), Seq(29))))
 
         val expectedQueueCrunchResults = Map("A1" -> Map(
-          "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33)))))),
-          "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33))))))
+          "EEA" -> Ready((Ready(CrunchResult(0, 60000, Vector(33), List(29))))),
+          "eGates" -> Ready((Ready(CrunchResult(0, 60000, Vector(33), List(29)))))
         ))
 
         assertQueueCrunchResult(res, expectedQueueCrunchResults)
@@ -215,11 +206,8 @@ object SPACircuitTests extends TestSuite {
         " when we apply an update for one queue then we should see both existing queue and updated queue in the queueCrunchResults" - {
         val model = RootModel().copy(
           queueCrunchResults = Map("A1" -> Map(
-            "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33)))))),
-            "eGates" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33))))))
-          )),
-          staffDeploymentsByTerminalAndQueue = Map("A1" -> Map("EEA" -> Ready(
-            DeskRecTimeSlots(List(DeskRecTimeslot(0, 33))))
+            "EEA" -> Ready((Ready(CrunchResult(0, 60000, Vector(33), List(29))))),
+            "eGates" -> Ready((Ready(CrunchResult(0, 60000, Vector(33), List(29)))))
           ))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
@@ -228,8 +216,8 @@ object SPACircuitTests extends TestSuite {
           UpdateCrunchResult("A1", "eGates", CrunchResult(0, 60000, IndexedSeq(22), Seq(23))))
 
         val expectedQueueCrunchResults = Map("A1" -> Map(
-          "EEA" -> Ready((Ready(CrunchResult(Vector(33), List(29))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 33)))))),
-          "eGates" -> Ready((Ready(CrunchResult(Vector(22), List(23))), Ready(DeskRecTimeSlots(List(DeskRecTimeslot(0, 22))))))
+          "EEA" -> Ready((Ready(CrunchResult(0, 60000, Vector(33), List(29))))),
+          "eGates" -> Ready((Ready(CrunchResult(0, 60000, Vector(22), List(23)))))
         ))
 
         assertQueueCrunchResult(res, expectedQueueCrunchResults)
@@ -295,62 +283,10 @@ object SPACircuitTests extends TestSuite {
             assert(false)
         }
       }
-      "Given a model with user desk recs, when we update UserDeskRecsTime then we should see updated wait times" - {
-        val model = RootModel().copy(
-          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),
-          staffDeploymentsByTerminalAndQueue = Map("A1" -> Map("eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 6))))))
-        )
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, UpdateDeskRecsTime("A1", "eGates", DeskRecTimeslot(0, 5)))
-
-        val expected = RootModel().copy(
-          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))))),
-          staffDeploymentsByTerminalAndQueue = Map("A1" -> Map("eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 5))))))
-        )
-        res match {
-          case Some(ModelUpdateEffect(newValue, effect)) =>
-            assert(newValue == expected)
-          case default =>
-            println(s"Failure: $default")
-            assert(false)
-        }
-      }
-      "Given a model with desk recs for two queues, when we update one, we should see both queues desk recs" - {
-        val model = RootModel().copy(
-          simulationResult = Map("A1" -> Map(
-            "eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))),
-            "EEA" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))
-          )),
-          staffDeploymentsByTerminalAndQueue = Map("A1" -> Map(
-            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 6)))),
-            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 6))))
-          ))
-        )
-        val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
-        val res = handler.apply(model, UpdateDeskRecsTime("A1", "eGates", DeskRecTimeslot(0, 5)))
-
-        val expected = RootModel().copy(
-          simulationResult = Map("A1" -> Map(
-            "eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))),
-            "EEA" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))
-          )),
-          staffDeploymentsByTerminalAndQueue = Map("A1" -> Map(
-            "eGates" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 5)))),
-            "EEA" -> Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 6))))
-          ))
-        )
-        res match {
-          case Some(ModelUpdateEffect(newValue, effect)) =>
-            assert(newValue == expected)
-          case default =>
-            println(s"Failure: $default")
-            assert(false)
-        }
-      }
     }
   }
 
-  private def assertQueueCrunchResult(res: Option[ActionResult[RootModel]], expectedQueueCrunchResults: Map[QueueName, Map[QueueName, Ready[(Ready[CrunchResult], Ready[DeskRecTimeSlots])]]]) = {
+  private def assertQueueCrunchResult(res: Option[ActionResult[RootModel]], expectedQueueCrunchResults: Map[QueueName, Map[QueueName, Ready[(Ready[CrunchResult])]]]) = {
     res match {
       case Some(ModelUpdate(newValue)) =>
         val actualQueueCrunchResults = newValue.queueCrunchResults

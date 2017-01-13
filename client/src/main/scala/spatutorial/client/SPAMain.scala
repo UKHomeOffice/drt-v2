@@ -15,7 +15,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
 import spatutorial.client.modules.FlightsView._
 import spatutorial.client.modules.{FlightsView, _}
-import spatutorial.client.services.HandyStuff.{CrunchResultAndDeskRecs, QueueStaffDeployments}
+import spatutorial.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.client.services._
 import spatutorial.shared._
@@ -39,7 +39,7 @@ object TableViewUtils {
   def terminalUserDeskRecsRows(
                                 timestamps: Seq[Long],
                                 paxload: Map[String, List[Double]],
-                                queueCrunchResultsForTerminal: Map[QueueName, Pot[CrunchResultAndDeskRecs]],
+                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
                                 simulationResult: Map[QueueName, Pot[SimulationResult]],
                                 userDeskRec: QueueStaffDeployments
                               ): List[TerminalUserDeskRecsRow] = {

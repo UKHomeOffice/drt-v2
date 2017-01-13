@@ -106,7 +106,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 case class RootModel(
                       motd: Pot[String] = Empty,
                       workload: Pot[Workloads] = Empty,
-                      queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]] = Map(),
+                      queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[Flights] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
@@ -257,7 +257,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
 }
 
 object HandyStuff {
-  type CrunchResultAndDeskRecs = Pot[CrunchResult]
+  type PotCrunchResult = Pot[CrunchResult]
   //, Pot[DeskRecTimeSlots])
   type QueueStaffDeployments = Map[String, Pot[DeskRecTimeSlots]]
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
@@ -349,7 +349,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
   }
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[CrunchResultAndDeskRecs]]]])
+class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]])
   extends LoggingActionHandler(modelRW) {
 
 
