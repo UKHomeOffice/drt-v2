@@ -80,8 +80,8 @@ object QueueUserDeskRecsComponent {
           val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = airportConfig.terminalNames.flatMap { terminalName =>
             airportConfig.queues.map { queueName =>
               val labelsPotRCP = SPACircuit.connect(_.workload.map(_.labels))
-              val crunchResultPotRCP = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty).flatMap(_._1))
-              val userDeskRecsPotRCP = SPACircuit.connect(_.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
+              val crunchResultPotRCP = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty).flatten)
+              val userDeskRecsPotRCP = SPACircuit.connect(_.staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
               val flightsPotRCP = SPACircuit.connect(_.flights)
               val simulationResultPotRCP = SPACircuit.connect(_.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))
               val userDeskRecsRowsPotRCP = makeUserDeskRecRowsPotRCP(terminalName, queueName)
@@ -112,13 +112,13 @@ object QueueUserDeskRecsComponent {
     val userDeskRecRowsPotRCP = SPACircuit.connect(model => {
       val potRows: Pot[List[List[Any]]] = for {
         times <- model.workload.map(_.timeStamps(terminalName))
-        qcr: (Pot[CrunchResult], Pot[DeskRecTimeSlots]) <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        qur: DeskRecTimeSlots <- model.userDeskRec.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
-        simres: SimulationResult <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName, Ready(SimulationResult(qcr._1.get.recommendedDesks.map(rd => DeskRec(0, rd)), qcr._1.get.waitTimes)))
-        potcr: Pot[CrunchResult] = qcr._1
-        potdr: Pot[DeskRecTimeSlots] = qcr._2
-        cr: CrunchResult <- potcr
-        dr: DeskRecTimeSlots <- potdr
+        qcrPot: Pot[CrunchResult] <- model.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        cr <- qcrPot
+        qur: DeskRecTimeSlots <- model.staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map()).getOrElse(queueName, Empty)
+        simres: SimulationResult <- model.simulationResult.getOrElse(terminalName, Map()).getOrElse(queueName,
+          Ready(SimulationResult(
+            cr.recommendedDesks.map(rd => DeskRec(0, rd)),
+            cr.waitTimes)))
       } yield {
         val aDaysWorthOfTimes: Seq[Long] = DeskRecsChart.takeEvery15th(times).take(model.slotsInADay)
         val every15thRecDesk: Seq[Int] = DeskRecsChart.takeEvery15th(cr.recommendedDesks)

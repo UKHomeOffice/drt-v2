@@ -9,7 +9,7 @@ import spatutorial.client.SPAMain.{Loc, UserDeskRecommendationsLoc}
 import spatutorial.client.components.Chart.ChartProps
 import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
-import spatutorial.client.services.HandyStuff.CrunchResultAndDeskRecs
+import spatutorial.client.services.HandyStuff.PotCrunchResult
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, QueuePaxAndWorkLoads, TerminalName}
 import spatutorial.shared._
@@ -26,7 +26,7 @@ import scala.Iterable
 import scala.collection.immutable.{Iterable, NumericRange}
 
 object Dashboard {
-  type QueueCrunchResults = Map[QueueName, Pot[CrunchResultAndDeskRecs]]
+  type QueueCrunchResults = Map[QueueName, Pot[PotCrunchResult]]
   type QueueSimulationResults = Map[QueueName, Pot[SimulationResult]]
   type QueueUserDeskRecs = Map[String, Pot[DeskRecTimeSlots]]
 

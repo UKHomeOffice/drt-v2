@@ -19,7 +19,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       val workload = Map("eeaDesk" -> List(5.0))
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 1))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1), Seq(10))))
       )
       val simulationResult = Map(
         "eeaDesk" ->
@@ -41,10 +41,8 @@ object TerminalUserDeskRecsTests extends TestSuite {
         "eGate" -> List(6.0)
       )
       val queueCrunchResults = Map(
-        "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 1)))))),
-        "eGate" ->
-          Ready((Ready(CrunchResult(IndexedSeq(2), Seq(20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 2)))))))
+        "eeaDesk" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1), Seq(10)))),
+        "eGate" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2), Seq(20)))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
@@ -69,11 +67,11 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 1)))))),
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1), Seq(10)))),
         "nonEeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(1), Seq(10))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 1)))))),
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1), Seq(10)))),
         "eGate" ->
-          Ready((Ready(CrunchResult(IndexedSeq(2), Seq(20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 2)))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2), Seq(20)))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
@@ -98,7 +96,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(2, 1), Seq(10, 20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 1), DeskRecTimeslot(1, 2)))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 1), Seq(10, 20)))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))))
@@ -121,11 +119,11 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((Ready(CrunchResult(recommendedDesks = IndexedSeq(2, 1), waitTimes = Seq(10, 20))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 1), DeskRecTimeslot(1, 2)))))),
+          Ready(Ready(CrunchResult(0, 60000, recommendedDesks = IndexedSeq(2, 1), waitTimes = Seq(10, 20)))),
         "eGate" ->
-          Ready((Ready(CrunchResult(IndexedSeq(23, 3), Seq(20, 27))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 5), DeskRecTimeslot(1, 15)))))),
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(23, 3), Seq(20, 27)))),
         "nonEeaDesk" ->
-          Ready((Ready(CrunchResult(IndexedSeq(15, 21), Seq(34, 23))), Ready(DeskRecTimeSlots(Seq(DeskRecTimeslot(0, 45), DeskRecTimeslot(1, 30)))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(15, 21), Seq(34, 23)))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))),
@@ -150,18 +148,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
       )
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((
-            Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))),
-            Ready(DeskRecTimeSlots(Seq(
-              DeskRecTimeslot(0, 1), DeskRecTimeslot(1, 2),
-              DeskRecTimeslot(2, 1), DeskRecTimeslot(3, 2),
-              DeskRecTimeslot(4, 8), DeskRecTimeslot(5, 2),
-              DeskRecTimeslot(6, 1), DeskRecTimeslot(7, 2),
-              DeskRecTimeslot(8, 1), DeskRecTimeslot(9, 11),
-              DeskRecTimeslot(10, 1), DeskRecTimeslot(11, 2),
-              DeskRecTimeslot(12, 1), DeskRecTimeslot(13, 2),
-              DeskRecTimeslot(14, 1), DeskRecTimeslot(15, 5)
-            ))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4)))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(
@@ -196,9 +183,7 @@ object TerminalUserDeskRecsTests extends TestSuite {
         5.0, 5.0,
         5.0, 5.0,
         5.0, 5.0,
-        5.0,
-
-        5.0,
+        5.0, 5.0,
         5.0, 6.0,
         5.0, 5.0,
         5.0, 5.0,
@@ -211,27 +196,9 @@ object TerminalUserDeskRecsTests extends TestSuite {
       ))
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((
-            Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3),
-              Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))),
-            Ready(DeskRecTimeSlots(Seq(
-              DeskRecTimeslot(0, 1), DeskRecTimeslot(1, 2),
-              DeskRecTimeslot(2, 1), DeskRecTimeslot(3, 2),
-              DeskRecTimeslot(4, 8), DeskRecTimeslot(5, 2),
-              DeskRecTimeslot(6, 1), DeskRecTimeslot(7, 2),
-              DeskRecTimeslot(8, 1), DeskRecTimeslot(9, 11),
-              DeskRecTimeslot(10, 1), DeskRecTimeslot(11, 2),
-              DeskRecTimeslot(12, 1), DeskRecTimeslot(13, 2),
-              DeskRecTimeslot(14, 1), DeskRecTimeslot(15, 5),
-              DeskRecTimeslot(16, 1), DeskRecTimeslot(17, 2),
-              DeskRecTimeslot(18, 1), DeskRecTimeslot(19, 2),
-              DeskRecTimeslot(20, 8), DeskRecTimeslot(21, 2),
-              DeskRecTimeslot(22, 1), DeskRecTimeslot(23, 2),
-              DeskRecTimeslot(24, 1), DeskRecTimeslot(25, 11),
-              DeskRecTimeslot(26, 1), DeskRecTimeslot(27, 2),
-              DeskRecTimeslot(28, 1), DeskRecTimeslot(29, 2),
-              DeskRecTimeslot(30, 1), DeskRecTimeslot(31, 5)
-            ))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3),
+            Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))
+          )))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(
@@ -290,31 +257,9 @@ object TerminalUserDeskRecsTests extends TestSuite {
 
       val queueCrunchResults = Map(
         "eeaDesk" ->
-          Ready((
-            Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4))),
-            Ready(DeskRecTimeSlots(Seq(
-              DeskRecTimeslot(0, 1), DeskRecTimeslot(1, 2),
-              DeskRecTimeslot(2, 1), DeskRecTimeslot(3, 2),
-              DeskRecTimeslot(4, 8), DeskRecTimeslot(5, 2),
-              DeskRecTimeslot(6, 1), DeskRecTimeslot(7, 2),
-              DeskRecTimeslot(8, 1), DeskRecTimeslot(9, 11),
-              DeskRecTimeslot(10, 1), DeskRecTimeslot(11, 2),
-              DeskRecTimeslot(12, 1), DeskRecTimeslot(13, 2),
-              DeskRecTimeslot(14, 1), DeskRecTimeslot(15, 5)
-            ))))),
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4)))),
         "nonEeaDesk" ->
-          Ready((
-            Ready(CrunchResult(IndexedSeq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4), Seq(1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 5))),
-            Ready(DeskRecTimeSlots(Seq(
-              DeskRecTimeslot(0, 1), DeskRecTimeslot(1, 2),
-              DeskRecTimeslot(2, 1), DeskRecTimeslot(3, 2),
-              DeskRecTimeslot(4, 8), DeskRecTimeslot(5, 2),
-              DeskRecTimeslot(6, 1), DeskRecTimeslot(7, 2),
-              DeskRecTimeslot(8, 1), DeskRecTimeslot(9, 11),
-              DeskRecTimeslot(10, 1), DeskRecTimeslot(11, 2),
-              DeskRecTimeslot(12, 1), DeskRecTimeslot(13, 2),
-              DeskRecTimeslot(14, 1), DeskRecTimeslot(15, 5)
-            ))))))
+          Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4), Seq(1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 5)))))
 
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(

@@ -36,25 +36,30 @@ trait SDate {
   def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
 
   def getFullYear(): Int
+
   def getMonth(): Int
+
   def getDate(): Int
+
   def getHours(): Int
+
   def getMinutes(): Int
+
   def millisSinceEpoch: Long
+
   def addDays(daysToAdd: Int): SDate
 }
 
-case class CrunchResult(recommendedDesks: IndexedSeq[Int], waitTimes: Seq[Int])
 
 object CrunchResult {
-  def empty = CrunchResult(Vector[Int](), Nil)
+  def empty = CrunchResult(0, 0, Vector[Int](), Nil)
 }
 
-case class CrunchResultWithTimeAndInterval(
-                                            firstTimeMillis: Long,
-                                            intervalMillis: Long,
-                                            recommendedDesks: IndexedSeq[Int],
-                                            waitTimes: Seq[Int])
+case class CrunchResult(
+                         firstTimeMillis: Long,
+                         intervalMillis: Long,
+                         recommendedDesks: IndexedSeq[Int],
+                         waitTimes: Seq[Int])
 
 case class NoCrunchAvailable()
 
@@ -186,7 +191,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResultWithTimeAndInterval]]
+  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
 

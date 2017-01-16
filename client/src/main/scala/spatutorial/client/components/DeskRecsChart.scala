@@ -42,17 +42,16 @@ object DeskRecsChart {
                   queueCrunchResults.renderPending(t => s"Waiting for crunchResult for ${queueName}"),
                   queueCrunchResults.renderReady(queueWorkload => {
                     log.info("We think crunch results are ready!!!!")
-                    val potCrunchResult: Pot[CrunchResult] = queueWorkload._1
                     <.div(^.key := queueName,
                       workloads.renderReady(wl => {
                         props.airportConfigPot.renderReady(airportConfig => {
                           val labels = wl.labels
                           Panel(Panel.Props(s"Desk Recommendations and Wait times for '$terminalName' '${queueName}'"),
-                            potCrunchResult.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
-                            potCrunchResult.renderEmpty(<.p("Waiting for crunch result")),
-                            potCrunchResult.renderFailed((t) => <.p("Error retrieving crunch result")),
-                            deskRecsChart(queueName, labels, potCrunchResult),
-                            waitTimesChart(labels, potCrunchResult, airportConfig.slaByQueue(queueName)))
+                            queueWorkload.renderPending(time => <.p(s"Waiting for crunch result ${time}")),
+                            queueWorkload.renderEmpty(<.p("Waiting for crunch result")),
+                            queueWorkload.renderFailed((t) => <.p("Error retrieving crunch result")),
+                            deskRecsChart(queueName, labels, queueWorkload),
+                            waitTimesChart(labels, queueWorkload, airportConfig.slaByQueue(queueName)))
                         })
                       })
                     )

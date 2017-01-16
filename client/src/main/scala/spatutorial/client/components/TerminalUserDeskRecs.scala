@@ -4,13 +4,16 @@ import diode.data.{Pot, Ready}
 import diode.react
 import diode.react._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
+import org.scalajs.dom.html.TableCell
 import spatutorial.client.TableViewUtils
 import spatutorial.client.TableViewUtils._
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
 import spatutorial.client.logger._
+import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.modules.FlightsView
-import spatutorial.client.services.HandyStuff.QueueUserDeskRecs
+import spatutorial.client.services.HandyStuff.QueueStaffDeployments
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
@@ -126,8 +129,8 @@ object TableTerminalDeskRecs {
                                     flights: Pot[Flights],
                                     simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
-                                    queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[(Pot[CrunchResult], Pot[DeskRecTimeSlots])]]],
-                                    userDeskRec: Map[TerminalName, QueueUserDeskRecs],
+                                    queueCrunchResults: Map[TerminalName, QueueCrunchResults],
+                                    userDeskRec: Map[TerminalName, QueueStaffDeployments],
                                     shiftsRaw: String
                                   )
 
@@ -140,7 +143,7 @@ object TableTerminalDeskRecs {
         model.simulationResult,
         model.workload,
         model.queueCrunchResults,
-        model.userDeskRec,
+        model.staffDeploymentsByTerminalAndQueue,
         model.shiftsRaw
       ))
 
@@ -176,6 +179,18 @@ object TableTerminalDeskRecs {
       val style = bss.listGroup
       def queueColour(queueName: String): String = queueName + "-user-desk-rec"
 
+      def userDeskRecOverride(q: QueueDetailsRow, qtd: (TagMod*) => ReactTagOf[TableCell], hasChangeClasses: QueueName) = {
+        qtd(
+          ^.cls := hasChangeClasses,
+          <.input.number(
+            ^.className := "desk-rec-input",
+            ^.disabled := true,
+            ^.value := q.userDeskRec.deskRec,
+            ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.timeInMillis, deskRec = e.target.value.toInt)))
+          ))
+      }
+
+
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
         val index = itemWithIndex._2
@@ -202,13 +217,7 @@ object TableTerminalDeskRecs {
             Seq(
               qtd(q.pax),
               qtd(q.crunchDeskRec),
-              qtd(
-                ^.cls := hasChangeClasses,
-                <.input.number(
-                  ^.className := "desk-rec-input",
-                  ^.value := q.userDeskRec.deskRec,
-                  ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.timeInMillis, deskRec = e.target.value.toInt)))
-                )),
+              userDeskRecOverride(q, qtd _, hasChangeClasses),
               qtd(q.waitTimeWithCrunchDeskRec + " mins"),
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
@@ -247,6 +256,7 @@ object TableTerminalDeskRecs {
     }
 
   }
+
 
   private val component = ReactComponentB[Props]("TerminalUserDeskRecs")
     .renderBackend[Backend]

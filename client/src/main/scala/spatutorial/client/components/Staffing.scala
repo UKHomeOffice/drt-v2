@@ -30,9 +30,11 @@ object Staffing {
         val todayString = today.ddMMyyString
 
         val shiftExamples = Seq(
-          s"Morning shift,${todayString},00:00,07:59,5",
-          s"Day shift,${todayString},08:00,15:59,20",
-          s"Evening shift,${todayString},16:00,23:59,15"
+          s"Midnight shift,${todayString},00:00,00:59,14",
+          s"Night shift,${todayString},01:00,06:59,6",
+          s"Morning shift,${todayString},07:00,13:59,25",
+          s"Afternoon shift,${todayString},14:00,16:59,13",
+          s"Evening shift,${todayString},17:00,23:59,20"
         )
         <.div(
           <.h1("Staffing"),
