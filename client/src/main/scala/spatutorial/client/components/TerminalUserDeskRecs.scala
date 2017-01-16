@@ -177,9 +177,10 @@ object TableTerminalDeskRecs {
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
       val style = bss.listGroup
+
       def queueColour(queueName: String): String = queueName + "-user-desk-rec"
 
-      def userDeskRecOverride(q: QueueDetailsRow, qtd: (TagMod*) => ReactTagOf[TableCell], hasChangeClasses: QueueName) = {
+      def userDeskRecOverride(q: QueueDetailsRow, qtd: (TagMod *) => ReactTagOf[TableCell], hasChangeClasses: QueueName) = {
         qtd(
           ^.cls := hasChangeClasses,
           <.input.number(
@@ -203,7 +204,7 @@ object TableTerminalDeskRecs {
         val formattedDate: String = formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val airportInfoPopover = HoverPopover(formattedDate, flights, airportInfo)
-        val fill = item.queueDetails.flatMap(
+        val queueRowCells = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
             val dangerWait = p.airportConfigPot match {
@@ -212,7 +213,9 @@ object TableTerminalDeskRecs {
               case _ =>
                 ""
             }
+
             def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
+
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               qtd(q.pax),
@@ -222,30 +225,36 @@ object TableTerminalDeskRecs {
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
-        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: fill: _*)
+        val totalDeployed = item.queueDetails.map(_.userDeskRec.deskRec).sum
+        val queueRowCellsWithTotal = queueRowCells :+ <.td(^.className := "total-deployed", totalDeployed)
+        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
       }
+
+      def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
+
       val headerGroupStart = ^.borderLeft := "solid 1px #fff"
+
+      val headings = queueNameMappingOrder.map {
+        case (queueName) =>
+          qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
+      } :+ <.th(^.className := "total-deployed")
       val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
         val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
         val qc = queueColour(queueName)
         List(<.th("", ^.className := qc),
           <.th(headerGroupStart, deskUnitLabel, ^.className := qc, ^.colSpan := 2),
           <.th(headerGroupStart, "Wait Times with", ^.className := qc, ^.colSpan := 2))
-      })
+      }) :+ <.th(^.className := "total-deployed")
       val subHeadingLevel2: List[TagMod] = queueNameMappingOrder.map(queueName =>
         List(<.th("Pax"),
-          <.th(headerGroupStart, "Required"), <.th("Available"),
-          <.th(headerGroupStart, "Recs"), <.th("Available"))
+          <.th(headerGroupStart, "Required"), <.th("Deployed"),
+          <.th(headerGroupStart, "Required"), <.th("Deployed"))
           .map(t => t.copy(modifiers = (List(^.className := queueColour(queueName)) :: t.modifiers)))
-      ).flatten
-      def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
+      ).flatten :+ <.th(^.className := "total-deployed", "Total Deployed")
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
           ^.display := "block",
-          <.tr(<.th("") :: queueNameMappingOrder.map {
-            case (queueName) =>
-              qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
-          }: _*),
+          <.tr(<.th("") :: headings: _*),
           <.tr(<.th("") :: subHeadingLevel1: _*),
           <.tr(<.th("Time") :: subHeadingLevel2: _*)),
         <.tbody(
