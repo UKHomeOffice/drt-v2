@@ -204,7 +204,7 @@ object TableTerminalDeskRecs {
         val formattedDate: String = formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val airportInfoPopover = HoverPopover(formattedDate, flights, airportInfo)
-        val fill = item.queueDetails.flatMap(
+        val queueRowCells = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
             val dangerWait = p.airportConfigPot match {
@@ -226,8 +226,8 @@ object TableTerminalDeskRecs {
           }
         ).toList
         val totalDeployed = item.queueDetails.map(_.userDeskRec.deskRec).sum
-        val cells = fill :+ <.td(^.className := "total-deployed", totalDeployed)
-        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: cells: _*)
+        val queueRowCellsWithTotal = queueRowCells :+ <.td(^.className := "total-deployed", totalDeployed)
+        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
       }
 
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
