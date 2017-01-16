@@ -44,8 +44,8 @@ object ShiftsServiceTests extends TestSuite {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 19, 0)) == 10)
           }
           "can compare dates" - {
-            assert((SDate(2015, 10, 10, 10, 10)) < (SDate(2016, 12, 12, 12, 12)))
-            assert((SDate(2015, 10, 10, 10, 10)) <= (SDate(2016, 12, 12, 12, 12)))
+            assert(SDate(2015, 10, 10, 10, 10) < SDate(2016, 12, 12, 12, 12))
+            assert(SDate(2015, 10, 10, 10, 10) <= SDate(2016, 12, 12, 12, 12))
           }
 
 

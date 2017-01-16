@@ -119,7 +119,7 @@ case class RootModel(
   import TerminalUserDeskRecs._
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
-    StaffDeploymentCalculator(shiftsRaw, queueCrunchResults).getOrElse(Map())
+    StaffDeploymentCalculator(shiftsRaw, queueCrunchResults, "T1").getOrElse(Map())
   }
 
   lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
@@ -387,10 +387,8 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
 object StaffDeploymentCalculator {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-  def apply[M](rawShiftsModel: String,
-               terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults]):
+  def apply[M](rawShiftsModel: String, terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName):
   Try[TerminalQueueStaffDeployments] = {
-
 
     val rawShiftsString = rawShiftsModel
     val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
@@ -400,22 +398,22 @@ object StaffDeploymentCalculator {
     } else {
       // TODO this is hard-coded to one terminal
       val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
-      val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults("T1")("eeaDesk").get.get)
+      val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(terminalName)("eeaDesk").get.get)
 
       crunchResultWithTimeAndIntervalTry.map( crunchResultWithTimeAndInterval => {
+        log.info(s"crunchResultWithTimeAndInterval::: $crunchResultWithTimeAndInterval")
 
-
-        val drts = calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval)
-
+        val drts: DeskRecTimeSlots = calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval)
+        log.info(s"drts::: {${drts.items.length}} $drts")
         log.info(s"raw shifts are ${rawShiftsString}")
         log.info(s"Shifts are ${shifts}")
         val successfulShifts = shifts.collect { case Success(s) => s }
         val ss = ShiftService(successfulShifts)
         val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
         val newSuggestedStaffDeployments = terminalQueueCrunchResults.mapValues((queueCrunchResult: QueueCrunchResults) => {
-          val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
-            case _ => drts.items
-          }
+          log.info(s"queueCrunchResult::: $queueCrunchResult")
+          val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose(_ => drts.items)
+          log.info(s"queueDeskRecsOverTime::: $queueDeskRecsOverTime")
 
           val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
             val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
@@ -431,6 +429,7 @@ object StaffDeploymentCalculator {
 
           zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
         })
+        log.info(s"newSuggestedStaffDeployments::: $newSuggestedStaffDeployments")
         newSuggestedStaffDeployments
       })
     }
