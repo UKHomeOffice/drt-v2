@@ -65,6 +65,8 @@ table.user-desk-recs {
   }
 }
 
+
+
 table.user-desk-recs tbody td, table.user-desk-recs thead th {
   width: 80px;
 }
@@ -126,6 +128,15 @@ rect.bordered {
 @eeaDeskUserDeskColor: #d5e8f3;
 @nonEeaDeskUserDeskColor: #cce0d6;
 @eGateUserDeskColor: #f7f0e2;
+@totalDeployedColor: #eeeff0;
+
+.total-deployed {
+  background-color: @totalDeployedColor;
+}
+
+tr:nth-child(odd) > td.total-deployed {
+  background-color: darken(@totalDeployedColor, 8%);
+}
 
 .eeaDesk-user-desk-rec {
   background-color: @eeaDeskUserDeskColor;
