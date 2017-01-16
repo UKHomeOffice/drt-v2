@@ -398,7 +398,7 @@ object StaffDeploymentCalculator {
     } else {
       // TODO this is hard-coded to one terminal
       val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
-      val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(terminalName)("eeaDesk").get.get)
+      val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(terminalName).head._2.get.get)
 
       crunchResultWithTimeAndIntervalTry.map( crunchResultWithTimeAndInterval => {
         log.info(s"crunchResultWithTimeAndInterval::: $crunchResultWithTimeAndInterval")
@@ -412,7 +412,9 @@ object StaffDeploymentCalculator {
         val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
         val newSuggestedStaffDeployments = terminalQueueCrunchResults.mapValues((queueCrunchResult: QueueCrunchResults) => {
           log.info(s"queueCrunchResult::: $queueCrunchResult")
-          val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose(_ => drts.items)
+          val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose{
+            case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
+          }
           log.info(s"queueDeskRecsOverTime::: $queueDeskRecsOverTime")
 
           val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
