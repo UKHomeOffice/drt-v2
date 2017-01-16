@@ -16,65 +16,6 @@ import scala.util.{Failure, Success, Try}
 object StaffDeploymentCalculatorTests extends TestSuite {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-//  object StaffDeployment {
-//    def apply[M](rawShiftsString: String, terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName): Try[TerminalQueueStaffDeployments] = {
-//      val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
-//      if (shifts.exists(s => s.isFailure)) {
-//        log.error("Couldn't parse raw shifts")
-//        Failure(new Exception("Couldn't parse"))
-//      } else {
-//        log.info(s"raw shifts are ${rawShiftsString}")
-//        log.info(s"Shifts are ${shifts}")
-//        val successfulShifts = shifts.collect { case Success(s) => s }
-//        val ss = ShiftService(successfulShifts)
-//        val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
-//        val queueCrunchResults = terminalQueueCrunchResultsModel(terminalName)
-//        val newUserDeskRecs = queueCrunchResults.mapValues(q => {
-//          val queueDeskRecsOverTime = q.transpose {
-//            case (_, Ready((_, Ready(DeskRecTimeSlots(items))))) => items
-//          }
-//
-//          val deployments = queueDeskRecsOverTime.map((deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
-//            val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
-//            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
-//          }).transpose
-//
-//          val times: Seq[Long] = calculateDeskRecTimeSlots().map(drts => drts.timeInMillis)
-//
-//
-//          val zipped = q.keys.zip({
-//            deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
-//          })
-//
-//          zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
-//        })
-//      }
-//    }
-//
-//    def calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval: CrunchResult): DeskRecTimeSlots = {
-//      val timeIntervalMinutes = 15
-//      val millis = Iterator.iterate(crunchResultWithTimeAndInterval.firstTimeMillis)(_ + timeIntervalMinutes * crunchResultWithTimeAndInterval.intervalMillis).toIterable
-//
-//      val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
-//        DeskRecsChart
-//          .takeEveryNth(timeIntervalMinutes)(crunchResultWithTimeAndInterval.recommendedDesks)
-//          .zip(millis).map {
-//          case (deskRec, timeInMillis) => DeskRecTimeslot(timeInMillis = timeInMillis, deskRec = deskRec)
-//        }.toList)
-//      updatedDeskRecTimeSlots
-//    }
-//
-//    def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
-//      val totalStaffRec = queueRecs.sum
-//      queueRecs.foldLeft(List[Int]()) {
-//        case (agg, queueRec) if (agg.length < queueRecs.length - 1) =>
-//          agg :+ round(staffAvailable * (queueRec.toDouble / totalStaffRec))
-//        case (agg, _) =>
-//          agg :+ staffAvailable - agg.sum
-//      }
-//    }
-//  }
-
     def tests = TestSuite {
       "Given terminal queue crunch results for one queue and staff shifts we should get suggested deployments for the queue" - {
         val shiftsRawCsv =

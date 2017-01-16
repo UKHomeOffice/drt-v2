@@ -122,7 +122,6 @@ object DeskRecsTable {
         val warningClasses = if (item.waitTimeWithCrunchDeskRec < item.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (item.waitTimeWithUserDeskRec > p.airportConfig.slaByQueue(p.queueName)) "table-danger"
 
-
         <.tr(^.key := item.time,
           ^.cls := warningClasses,
           <.td(^.cls := "date-field", popover()),
@@ -142,7 +141,6 @@ object DeskRecsTable {
           p.userDeskRecsRows.zipWithIndex map renderItem))
     })
     .build
-
 
   def apply(queueName: String, terminalName: String, userDeskRecRows: Seq[UserDeskRecsRow], flightsPotRCP: ReactConnectProxy[Pot[Flights]],
             airportConfig: AirportConfig,

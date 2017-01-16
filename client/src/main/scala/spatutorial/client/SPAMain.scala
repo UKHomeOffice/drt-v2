@@ -95,14 +95,12 @@ object TableViewUtils {
 
     log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
     log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
-    val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
-
     Seq(
       ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
       queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-      userDeskRecsSample,
+      getSafeUserDeskRecs(userDeskRec, qn, ts),
       queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
       simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     )

@@ -100,7 +100,6 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
   }
 
   def firstFlightTimeAcrossTerminals: Long = workloads.values.map(firstFlightTimeQueue(_)).min
-
 }
 
 case class RootModel(
@@ -159,7 +158,6 @@ case class RootModel(
        |airportInfos: $airportInfos
        |)
      """.stripMargin
-
 }
 
 object RootModel {
@@ -241,8 +239,6 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
     val effects = seqOfEffectsToEffectSeq(crunchRequests)
     effects
   }
-
-
 }
 
 class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
@@ -258,7 +254,6 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
 
 object HandyStuff {
   type PotCrunchResult = Pot[CrunchResult]
-  //, Pot[DeskRecTimeSlots])
   type QueueStaffDeployments = Map[String, Pot[DeskRecTimeSlots]]
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
@@ -352,7 +347,6 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
 class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]])
   extends LoggingActionHandler(modelRW) {
 
-
   def modelQueueCrunchResults = value
 
   override def handle = {
@@ -367,22 +361,17 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
       }
       effectOnly(Effect(fe) + crunchEffect)
     case UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval) =>
-      //      val recommendedDesks = crunchResultWithTimeAndInterval.recommendedDesks
-      //
-      //      val cr = CrunchResult(recommendedDesks, crunchResultWithTimeAndInterval.waitTimes)
+
       log.info(s"UpdateCrunchResult $queueName. firstTimeMillis: ${crunchResultWithTimeAndInterval.firstTimeMillis}")
 
-      val crunchResultsByQueue = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready((Ready(crunchResultWithTimeAndInterval))))))
+      val crunchResultsByQueue = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(Ready(crunchResultWithTimeAndInterval)))))
 
       if (modelQueueCrunchResults != crunchResultsByQueue) {
         updated(crunchResultsByQueue)
       } else
         noChange
   }
-
-
 }
-
 
 object StaffDeploymentCalculator {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
@@ -396,26 +385,21 @@ object StaffDeploymentCalculator {
       log.error("Couldn't parse raw shifts")
       Failure(new Exception("Couldn't parse"))
     } else {
-      // TODO this is hard-coded to one terminal
       val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
       val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(terminalName).head._2.get.get)
 
       crunchResultWithTimeAndIntervalTry.map( crunchResultWithTimeAndInterval => {
-        log.info(s"crunchResultWithTimeAndInterval::: $crunchResultWithTimeAndInterval")
 
         val drts: DeskRecTimeSlots = calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval)
-        log.info(s"drts::: {${drts.items.length}} $drts")
-        log.info(s"raw shifts are ${rawShiftsString}")
-        log.info(s"Shifts are ${shifts}")
+
         val successfulShifts = shifts.collect { case Success(s) => s }
         val ss = ShiftService(successfulShifts)
         val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
         val newSuggestedStaffDeployments = terminalQueueCrunchResults.mapValues((queueCrunchResult: QueueCrunchResults) => {
-          log.info(s"queueCrunchResult::: $queueCrunchResult")
+
           val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose{
             case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
           }
-          log.info(s"queueDeskRecsOverTime::: $queueDeskRecsOverTime")
 
           val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
             val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
@@ -431,7 +415,7 @@ object StaffDeploymentCalculator {
 
           zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
         })
-        log.info(s"newSuggestedStaffDeployments::: $newSuggestedStaffDeployments")
+
         newSuggestedStaffDeployments
       })
     }
@@ -494,7 +478,6 @@ class ShiftsHandler[M](modelRW: ModelRW[M, String]) extends LoggingActionHandler
   }
 }
 
-
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -507,27 +490,14 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   override val actionHandler = {
     println("composing handlers")
     composeHandlers(
-      //      new DeskTimesHandler(zoomRW(m => m.staffDeploymentsByTerminalAndQueue)((m, v) => m.copy(staffDeploymentsByTerminalAndQueue = v))),
       new WorkloadHandler(zoomRW(_.workload)((m, v) => {
         m.copy(workload = v)
       })),
       new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v))),
-      //      new StaffDeploymentHandler[RootModel](
-      //        zoom(m => m.shiftsRaw),
-      //        zoom(m => m.queueCrunchResults),
-      //        zoomRW(m => m.staffDeploymentsByTerminalAndQueue))(
-      //        (m: RootModel, v: Map[TerminalName, QueueStaffDeployments]) => {
-      //          m.copy(staffDeploymentsByTerminalAndQueue = v)
-      //        }
-      //      ),
       new SimulationHandler(zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workload), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
-      //      new SimulationResultHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
-      new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v)))
-      ,
-      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v)))
-      ,
-      new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v)))
-      ,
+      new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
+      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v)))
     )
   }

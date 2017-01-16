@@ -10,7 +10,6 @@ object MapMergeTests extends TestSuite {
       val m2 = Map("T1" -> Map("eGates" -> Seq(2)))
 
       val cleaned = mergeTerminalQueues(m1, m2)
-
       val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(2)))
 
       assert(expected == cleaned)
@@ -20,9 +19,8 @@ object MapMergeTests extends TestSuite {
       val m2 = Map("T1" -> Map("EEA" -> Seq(1)))
 
       val cleaned = mergeTerminalQueues(m1, m2)
-
-
       val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(3)))
+
       assert(expected == cleaned)
 
     }
@@ -31,7 +29,6 @@ object MapMergeTests extends TestSuite {
       val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
 
       val cleaned = mergeTerminalQueues(m1, m2)
-
       val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
 
       assert(expected == cleaned)
@@ -41,7 +38,6 @@ object MapMergeTests extends TestSuite {
       val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
 
       val cleaned = mergeTerminalQueues(m1, m2)
-
       val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
 
       assert(expected == cleaned)
@@ -51,7 +47,6 @@ object MapMergeTests extends TestSuite {
       val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
 
       val cleaned = mergeTerminalQueues(m1, m2)
-
       val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)), "T2" -> Map("eGates" -> Seq(0), "EEA" -> Seq(8)))
 
       assert(expected == cleaned)
@@ -61,7 +56,6 @@ object MapMergeTests extends TestSuite {
       val m2 = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)), "T2" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)))
 
       val cleaned = mergeTerminalQueues(m1, m2)
-
       val expected = Map("T1" -> Map("EEA" -> Seq(1), "eGates" -> Seq(1)), "T2" -> Map("eGates" -> Seq(1), "EEA" -> Seq(1)))
 
       assert(expected == cleaned)
