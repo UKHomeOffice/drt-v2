@@ -6,7 +6,7 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import org.scalajs.dom.html.TableCell
+import org.scalajs.dom.html.{TableCell, TableHeaderCell}
 import spatutorial.client.TableViewUtils
 import spatutorial.client.TableViewUtils._
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
@@ -172,13 +172,16 @@ object TableTerminalDeskRecs {
 
   class Backend($: BackendScope[Props, Unit]) {
 
+
     import jsDateFormat.formatDate
+
 
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
+
+
       val style = bss.listGroup
 
-      def queueColour(queueName: String): String = queueName + "-user-desk-rec"
 
       def userDeskRecOverride(q: QueueDetailsRow, qtd: (TagMod *) => ReactTagOf[TableCell], hasChangeClasses: QueueName) = {
         qtd(
@@ -190,7 +193,6 @@ object TableTerminalDeskRecs {
             ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.timeInMillis, deskRec = e.target.value.toInt)))
           ))
       }
-
 
       def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
         val item = itemWithIndex._1
@@ -232,25 +234,11 @@ object TableTerminalDeskRecs {
 
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
 
-      val headerGroupStart = ^.borderLeft := "solid 1px #fff"
-
       val headings = queueNameMappingOrder.map {
         case (queueName) =>
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
       } :+ <.th(^.className := "total-deployed")
-      val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
-        val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
-        val qc = queueColour(queueName)
-        List(<.th("", ^.className := qc),
-          <.th(headerGroupStart, deskUnitLabel, ^.className := qc, ^.colSpan := 2),
-          <.th(headerGroupStart, "Wait Times with", ^.className := qc, ^.colSpan := 2))
-      }) :+ <.th(^.className := "total-deployed")
-      val subHeadingLevel2: List[TagMod] = queueNameMappingOrder.map(queueName =>
-        List(<.th("Pax"),
-          <.th(headerGroupStart, "Required"), <.th("Deployed"),
-          <.th(headerGroupStart, "Required"), <.th("Deployed"))
-          .map(t => t.copy(modifiers = (List(^.className := queueColour(queueName)) :: t.modifiers)))
-      ).flatten :+ <.th(^.className := "total-deployed", "Total Deployed")
+
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
           ^.display := "block",
@@ -264,6 +252,38 @@ object TableTerminalDeskRecs {
           p.items.zipWithIndex map renderItem))
     }
 
+
+    private def subHeadingLevel1 = {
+
+      val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
+        val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
+        val qc = queueColour(queueName)
+        List(<.th("", ^.className := qc),
+          thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 2),
+          thHeaderGroupStart("Wait Times with", ^.className := qc, ^.colSpan := 2))
+      }) :+ <.th(^.className := "total-deployed")
+      subHeadingLevel1
+    }
+
+    def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+
+    val headerGroupStart = ^.borderLeft := "solid 1px #fff"
+
+    private def subHeadingLevel2() = {
+      val subHeadingLevel2 = queueNameMappingOrder.flatMap(queueName =>
+        List(<.th("Pax"),
+          thHeaderGroupStart("Required"), <.th("Deployed"),
+          thHeaderGroupStart("Required"), <.th("Deployed"))
+          .map(
+            t => t.copy(
+              modifiers = List(^.className := queueColour(queueName)) :: t.modifiers
+            ))) :+ <.th(^.className := "total-deployed", "Total Deployed")
+      subHeadingLevel2
+    }
+
+    private def thHeaderGroupStart(title: QueueName, xs: TagMod*): ReactTagOf[TableHeaderCell] = {
+      <.th(headerGroupStart, title, xs)
+    }
   }
 
 
