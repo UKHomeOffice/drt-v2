@@ -62,7 +62,6 @@ object jsDateFormat {
   }
 }
 
-
 object TableTerminalDeskRecs {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
@@ -252,7 +251,6 @@ object TableTerminalDeskRecs {
           p.items.zipWithIndex map renderItem))
     }
 
-
     private def subHeadingLevel1 = {
 
       val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
@@ -261,7 +259,7 @@ object TableTerminalDeskRecs {
         List(<.th("", ^.className := qc),
           thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 2),
           thHeaderGroupStart("Wait Times with", ^.className := qc, ^.colSpan := 2))
-      }) :+ <.th(^.className := "total-deployed")
+      }) :+ <.th(^.className := "total-deployed", "Total")
       subHeadingLevel1
     }
 
@@ -269,15 +267,15 @@ object TableTerminalDeskRecs {
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2() = {
-      val subHeadingLevel2 = queueNameMappingOrder.flatMap(queueName =>
-        List(<.th("Pax"),
-          thHeaderGroupStart("Required"), <.th("Deployed"),
-          thHeaderGroupStart("Required"), <.th("Deployed"))
-          .map(
-            t => t.copy(
-              modifiers = List(^.className := queueColour(queueName)) :: t.modifiers
-            ))) :+ <.th(^.className := "total-deployed", "Total Deployed")
+    private def subHeadingLevel2 = {
+      val subHeadingLevel2 = queueNameMappingOrder.flatMap(queueName => {
+        val sh: List[ReactTagOf[TableHeaderCell]] = List(thHeaderGroupStart("Required", ^.className := queueColour(queueName)),
+          <.th(^.title := "Suggested deployment given available staff", "Suggested", ^.className := queueColour(queueName)))
+
+        val subHeadingColumns = <.th("Pax") :: (sh ::: sh ::: (thHeaderGroupStart("Required", ^.className := queueColour(queueName)) :: <.th("Suggested") :: Nil))
+
+        subHeadingColumns :+ <.th(^.className := "total-deployed", "Staff")
+      })
       subHeadingLevel2
     }
 
