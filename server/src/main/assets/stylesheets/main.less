@@ -130,6 +130,10 @@ rect.bordered {
 @eGateUserDeskColor: #f7f0e2;
 @totalDeployedColor: #eeeff0;
 
+th.total-deployed {
+  background-color: @totalDeployedColor;
+  text-align: right;
+}
 .total-deployed {
   background-color: @totalDeployedColor;
 }
@@ -145,6 +149,9 @@ tr:nth-child(odd) > td.total-deployed {
 tr:nth-child(odd) > td.eeaDesk-user-desk-rec {
   background-color: darken(@eeaDeskUserDeskColor, 8%);
 }
+tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
+  background-color: darken(@eeaDeskUserDeskColor, 2%);
+}
 
 .eeaDesk-user-desk-rec.table-info {
   background-color: lighten(@eeaDeskUserDeskColor, 6%);
@@ -157,6 +164,9 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec {
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
   background-color: darken(@nonEeaDeskUserDeskColor, 8%);
 }
+tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
+  background-color: darken(@nonEeaDeskUserDeskColor, 2%);
+}
 
 .nonEeaDesk-user-desk-rec.table-info {
   background-color: lighten(@nonEeaDeskUserDeskColor, 6%);
@@ -168,6 +178,9 @@ tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
 
 tr:nth-child(odd) > td.eGate-user-desk-rec {
   background-color: darken(@eGateUserDeskColor, 8%);
+}
+tr:nth-child(odd) > td.eGate-user-desk-rec.table-info {
+  background-color: darken(@eGateUserDeskColor, 2%);
 }
 
 .eGate-user-desk-rec.table-info {
@@ -237,13 +250,6 @@ p {
   overflow: scroll;
 }
 
-table.user-desk-recs tbody tr td.table-info {
-  background-color: @alert-info-bg;
-}
-
-table.user-desk-recs tbody tr:nth-child(odd) td.table-info {
-  background-color: darken(@alert-info-bg, 1%);
-}
 
 table.user-desk-recs tbody tr td.table-danger {
   background-color: @alert-danger-bg;
