@@ -258,7 +258,7 @@ object TableTerminalDeskRecs {
         val qc = queueColour(queueName)
         List(<.th("", ^.className := qc),
           thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 2),
-          thHeaderGroupStart("Wait Times with", ^.className := qc, ^.colSpan := 2))
+          thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 2))
       }) :+ <.th(^.className := "total-deployed", "Total")
       subHeadingLevel1
     }
