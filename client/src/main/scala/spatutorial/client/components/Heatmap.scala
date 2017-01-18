@@ -84,20 +84,31 @@ object TerminalHeatmaps {
   }
 
   def heatmapOfDeskRecsVsActualDesks(terminalName: TerminalName) = {
-    val modelBitsRCP = SPACircuit.connect(rootModel => (rootModel.queueCrunchResults, rootModel.staffDeploymentsByTerminalAndQueue))
-    modelBitsRCP(modelBitsMP => {
-      val queueCrunchResults = modelBitsMP()._1.getOrElse(terminalName, Map())
-      val userDeskRecs = modelBitsMP()._2.getOrElse(terminalName, Map())
-      val seriesPot = deskRecsVsActualDesks(queueCrunchResults, userDeskRecs, terminalName)
+    val modelBitsRCP = SPACircuit.connect(rootModel => (
+      rootModel.queueCrunchResults,
+      rootModel.staffDeploymentsByTerminalAndQueue
+    ))
+    val shiftsRawRCP = SPACircuit.connect(rootModel => (rootModel.shiftsRaw))
+
+    shiftsRawRCP((shiftsRawMP: ModelProxy[Pot[String]]) => {
       <.div(
-        seriesPot.renderReady(series => {
-          val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
-          <.div(
-            <.h4("heatmap of ratio of desk rec to actual desks"),
-            Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries),
-              valueDisplayFormatter = v => f"${v}%.1f")))
-        }))
+        shiftsRawMP().renderReady(shiftsRaw =>
+          modelBitsRCP(modelBitsMP => {
+            val queueCrunchResults = modelBitsMP()._1.getOrElse(terminalName, Map())
+            val userDeskRecs = modelBitsMP()._2.getOrElse(terminalName, Map())
+            val seriesPot = deskRecsVsActualDesks(queueCrunchResults, userDeskRecs, terminalName)
+            <.div(
+              seriesPot.renderReady(series => {
+                val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
+                <.div(
+                  <.h4("heatmap of ratio of desk rec to actual desks"),
+                  Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
+                    scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries),
+                    valueDisplayFormatter = v => f"${v}%.1f")))
+              }))
+          })
+        )
+      )
     })
   }
 
@@ -202,8 +213,6 @@ object Heatmap {
       val rects = serie.data.zipWithIndex.map {
         case (periodValue, idx) => {
           val colorBucket = props.scaleFunction(periodValue)
-          //Math.floor((periodValue * bucketScale)).toInt
-          //          log.info(s"${serie.name} periodValue ${periodValue}, colorBucket: ${colorBucket} / ${colors.length}")
           val clippedColorBucket = Math.min(colors.length - 1, colorBucket)
           val colors1 = colors(clippedColorBucket)
           val halfGrid: Int = gridSize / 2

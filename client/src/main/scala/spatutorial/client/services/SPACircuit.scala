@@ -111,7 +111,7 @@ case class RootModel(
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
-                      shiftsRaw: String = "",
+                      shiftsRaw: Pot[String] = Empty,
                       slotsInADay: Int = 96
                     ) {
 
@@ -376,10 +376,14 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
 object StaffDeploymentCalculator {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-  def apply[M](rawShiftsModel: String, terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName):
+  def apply[M](rawShiftsModel: Pot[String], terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName):
   Try[TerminalQueueStaffDeployments] = {
 
-    val rawShiftsString = rawShiftsModel
+    val rawShiftsString = rawShiftsModel match {
+      case Ready(rawShifts) => rawShifts
+      case _ => ""
+    }
+
     val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
     if (shifts.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
@@ -471,10 +475,10 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
   }
 }
 
-class ShiftsHandler[M](modelRW: ModelRW[M, String]) extends LoggingActionHandler(modelRW) {
+class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case UpdateShifts(shifts) =>
-      updated(shifts, Effect(Future(RunAllSimulations())))
+    case UpdateShifts(shifts: String) =>
+      updated(Ready(shifts), Effect(Future(RunAllSimulations())))
   }
 }
 

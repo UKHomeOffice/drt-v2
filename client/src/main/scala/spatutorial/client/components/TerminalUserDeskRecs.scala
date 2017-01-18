@@ -130,7 +130,7 @@ object TableTerminalDeskRecs {
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
                                     userDeskRec: Map[TerminalName, QueueStaffDeployments],
-                                    shiftsRaw: String
+                                    shiftsRaw: Pot[String]
                                   )
 
   def buildTerminalUserDeskRecsComponent(terminalName: TerminalName) = {
@@ -215,7 +215,7 @@ object TableTerminalDeskRecs {
                 ""
             }
 
-            def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
+            def qtd(xs: TagMod *) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
 
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
@@ -226,8 +226,16 @@ object TableTerminalDeskRecs {
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
+        val totalRequired = item.queueDetails.map(_.crunchDeskRec).sum
         val totalDeployed = item.queueDetails.map(_.userDeskRec.deskRec).sum
-        val queueRowCellsWithTotal = queueRowCells :+ <.td(^.className := "total-deployed", totalDeployed)
+        val ragClass = totalRequired.toDouble / totalDeployed match {
+          case diff if diff >= 1 => "red"
+          case diff if diff >= 0.75 => "amber"
+          case _ => ""
+        }
+        val queueRowCellsWithTotal = queueRowCells :+
+          <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
+          <.td(^.className := s"total-deployed $ragClass", totalDeployed)
         <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
       }
 
@@ -236,7 +244,7 @@ object TableTerminalDeskRecs {
       val headings = queueNameMappingOrder.map {
         case (queueName) =>
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
-      } :+ <.th(^.className := "total-deployed")
+      } :+ <.th(^.className := "total-deployed", ^.colSpan := 2)
 
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
@@ -259,7 +267,7 @@ object TableTerminalDeskRecs {
         List(<.th("", ^.className := qc),
           thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 2),
           thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 2))
-      }) :+ <.th(^.className := "total-deployed", "Total")
+      }) :+ <.th(^.className := "total-deployed", "Total", ^.colSpan := 2)
       subHeadingLevel1
     }
 
@@ -274,7 +282,9 @@ object TableTerminalDeskRecs {
 
         <.th(^.className := queueColour(queueName), "Pax") :: (reqSug ::: reqSug)
       })
-      subHeadingLevel2 :+ <.th(^.className := "total-deployed", "Staff")
+      subHeadingLevel2 :+
+        <.th(^.className := "total-deployed", "Req") :+
+        <.th(^.className := "total-deployed", "Avail")
     }
 
     private def thHeaderGroupStart(title: String, xs: TagMod*): ReactTagOf[TableHeaderCell] = {

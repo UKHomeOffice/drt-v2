@@ -1,5 +1,6 @@
 package spatutorial.client.components
 
+import diode.data.{Empty, Pot, Ready}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
@@ -19,8 +20,11 @@ object Staffing {
   class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
       val shiftsRawRCP = SPACircuit.connect(_.shiftsRaw)
-      shiftsRawRCP((shiftsMP: ModelProxy[String]) => {
-        val rawShifts = shiftsMP()
+      shiftsRawRCP((shiftsMP: ModelProxy[Pot[String]]) => {
+        val rawShifts = shiftsMP() match {
+          case Ready(shifts) => shifts
+          case Empty => ""
+        }
 
         val shifts: List[Try[Shift]] = ShiftParser(rawShifts).parsedShifts.toList
         val didParseFail = shifts exists (s => s.isFailure)

@@ -129,12 +129,30 @@ rect.bordered {
 @nonEeaDeskUserDeskColor: #cce0d6;
 @eGateUserDeskColor: #f7f0e2;
 @totalDeployedColor: #eeeff0;
+@amberColor: #FFEEBB;
+@redColor: #FFCCCC;
 
 th.total-deployed {
   background-color: @totalDeployedColor;
 }
 .total-deployed {
   background-color: @totalDeployedColor;
+}
+
+.amber {
+  background-color: @amberColor;
+}
+
+tr:nth-child(odd) > td.total-deployed.amber {
+  background-color: darken(@amberColor, 8%);
+}
+
+.red {
+  background-color: @redColor;
+}
+
+tr:nth-child(odd) > td.total-deployed.red {
+  background-color: darken(@redColor, 8%);
 }
 
 tr:nth-child(odd) > td.total-deployed {
