@@ -269,17 +269,15 @@ object TableTerminalDeskRecs {
 
     private def subHeadingLevel2 = {
       val subHeadingLevel2 = queueNameMappingOrder.flatMap(queueName => {
-        val sh: List[ReactTagOf[TableHeaderCell]] = List(thHeaderGroupStart("Required", ^.className := queueColour(queueName)),
-          <.th(^.title := "Suggested deployment given available staff", "Suggested", ^.className := queueColour(queueName)))
+        val reqSug: List[ReactTagOf[TableHeaderCell]] = List(thHeaderGroupStart("Req", ^.className := queueColour(queueName)),
+          <.th(^.title := "Suggested deployment given available staff", "Sug", ^.className := queueColour(queueName)))
 
-        val subHeadingColumns = <.th("Pax") :: (sh ::: sh ::: (thHeaderGroupStart("Required", ^.className := queueColour(queueName)) :: <.th("Suggested") :: Nil))
-
-        subHeadingColumns :+ <.th(^.className := "total-deployed", "Staff")
+        <.th(^.className := queueColour(queueName), "Pax") :: (reqSug ::: reqSug)
       })
-      subHeadingLevel2
+      subHeadingLevel2 :+ <.th(^.className := "total-deployed", "Staff")
     }
 
-    private def thHeaderGroupStart(title: QueueName, xs: TagMod*): ReactTagOf[TableHeaderCell] = {
+    private def thHeaderGroupStart(title: String, xs: TagMod*): ReactTagOf[TableHeaderCell] = {
       <.th(headerGroupStart, title, xs)
     }
   }
