@@ -31,7 +31,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
           "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
         )
 
-        val result = StaffDeploymentCalculator(shiftsRawCsv, terminalQueueCrunchResults, "T1")
+        val result = StaffDeploymentCalculator(Ready(shiftsRawCsv), terminalQueueCrunchResults, "T1")
         val expected = Success(Map("T1" -> Map(
           "eeaDesk" -> Ready(DeskRecTimeSlots(
             List(
@@ -61,7 +61,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
             "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
         )
 
-        val result = StaffDeploymentCalculator(shiftsRawCsv, terminalQueueCrunchResults, "T1")
+        val result = StaffDeploymentCalculator(Ready(shiftsRawCsv), terminalQueueCrunchResults, "T1")
         val expected = Success(Map("T1" -> Map(
           "eeaDesk" -> Ready(DeskRecTimeSlots(List(
             DeskRecTimeslot(1480550400000L, 4),
