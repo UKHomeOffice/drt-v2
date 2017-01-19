@@ -475,6 +475,8 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
   protected def handle = {
     case SetShifts(shifts: String) =>
       updated(Ready(shifts), Effect(Future(RunAllSimulations())))
+    case AddShift(shift) =>
+      updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
   }
 }
 

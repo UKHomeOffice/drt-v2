@@ -6,6 +6,7 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
+import org.scalajs.dom.html
 import org.scalajs.dom.html.{TableCell, TableHeaderCell}
 import spatutorial.client.TableViewUtils
 import spatutorial.client.TableViewUtils._
@@ -14,6 +15,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.services.HandyStuff.QueueStaffDeployments
+import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
@@ -120,37 +122,36 @@ object TableTerminalDeskRecs {
                                       )
 
   def staffMovementPopover(trigger: String) = ReactComponentB[Unit]("staffMovementPopover")
-    .initialState_P((p) =>
-      StaffMovementPopoverState()
-    ).renderS((scope, state) => {
+    .initialState_P((p) => {
+      val d = SDate.today
+      StaffMovementPopoverState(
+        reason = "IS81",
+        date = f"${d.getDate}%02d/${d.getMonth}%02d/${d.getFullYear - 2000}%02d",
+        startTime = f"${d.getHours}%02d:${d.getMinutes}%02d",
+        endTime = f"${d.getHours}%02d:${d.getMinutes}%02d")
+    }).renderS((scope, state) => {
     val popover = <.div(
-      ^.onClick ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))),
-//      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
+      ^.onMouseEnter ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))),
+      //      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
       if (state.hovered) {
         PopoverWrapper(trigger = trigger, className = "staff-movement-popover")({
+          def labelledInput(labelText: String, value: String, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState): ReactTagOf[html.Div] = {
+            <.div(^.className := "form-group row",
+              <.label(labelText, ^.className := "col-sm-2 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.text(^.value := value, ^.onChange ==> ((e: ReactEventI) => {
+                val newValue: String = e.target.value
+                scope.modState(callback(newValue))
+              })))
+            )
+          }
           <.div(^.className := "container",
-            <.div(^.className := "form-group row",
-              <.label("Reason", ^.className := "col-sm-3 col-form-label"),
-              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(reason = e.target.value.toString)))))
-            ),
-            <.div(^.className := "form-group row",
-              <.label("Date", ^.className := "col-sm-2 col-form-label"),
-              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(date = e.target.value.toString)))))
-            ),
-            <.div(^.className := "form-group row",
-              <.label("Start time", ^.className := "col-sm-2 col-form-label"),
-              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(startTime = e.target.value.toString)))))
-            ),
-            <.div(^.className := "form-group row",
-              <.label("End time", ^.className := "col-sm-2 col-form-label"),
-              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(endTime = e.target.value.toString)))))
-            ),
-            <.div(^.className := "form-group row",
-              <.label("No. staff", ^.className := "col-sm-2 col-form-label"),
-              <.div(^.className := "col-sm-10", <.input.number(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(numberOfStaff = e.target.value.toInt)))))
-            ),
+            labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
+            labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
+            labelledInput("Start time", state.startTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(startTime = v)),
+            labelledInput("End time", state.endTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(endTime = v)),
+            labelledInput("Number of staff", state.numberOfStaff.toString, (v: String) => (s: StaffMovementPopoverState) => s.copy(numberOfStaff = v.toInt)),
             <.div("Save", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
-              val shiftTry = Shift(state.reason, state.date, state.startTime, state.endTime, state.numberOfStaff.toString)
+              val shiftTry = Shift(state.reason, state.date, state.startTime, state.endTime, s"-${state.numberOfStaff.toString}")
               shiftTry match {
                 case Success(shift) =>
                   SPACircuit.dispatch(AddShift(shift))
@@ -160,6 +161,9 @@ object TableTerminalDeskRecs {
                   log.info("Invalid shift")
               }
               scope.modState(_.copy(hovered = true))
+            })),
+            <.div("Cancel", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
+              scope.modState(_.copy(hovered = false))
             }))
           )
         })
@@ -265,7 +269,7 @@ object TableTerminalDeskRecs {
         val formattedDate: String = formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val airportInfoPopover = HoverPopover(formattedDate, flights, airportInfo)
-        val staffMovement = staffMovementPopover("Hi there")
+
         val queueRowCells = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
@@ -297,7 +301,7 @@ object TableTerminalDeskRecs {
         val queueRowCellsWithTotal = queueRowCells :+
           <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
           <.td(^.className := s"total-deployed $ragClass", totalDeployed)
-        <.tr(<.td(^.cls := "date-field", airportInfoPopover(), staffMovement()) :: queueRowCellsWithTotal: _*)
+        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
       }
 
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
@@ -307,17 +311,21 @@ object TableTerminalDeskRecs {
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
       } :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
-      <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
-        <.thead(
-          ^.display := "block",
-          <.tr(<.th("") :: headings: _*),
-          <.tr(<.th("") :: subHeadingLevel1: _*),
-          <.tr(<.th("Time") :: subHeadingLevel2: _*)),
-        <.tbody(
-          ^.display := "block",
-          ^.overflow := "scroll",
-          ^.height := "500px",
-          p.items.zipWithIndex map renderItem))
+      val staffMovement = staffMovementPopover("+IS81")
+
+      <.div(
+        staffMovement(),
+        <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
+          <.thead(
+            ^.display := "block",
+            <.tr(<.th("") :: headings: _*),
+            <.tr(<.th("") :: subHeadingLevel1: _*),
+            <.tr(<.th("Time") :: subHeadingLevel2: _*)),
+          <.tbody(
+            ^.display := "block",
+            ^.overflow := "scroll",
+            ^.height := "500px",
+            p.items.zipWithIndex map renderItem)))
     }
 
     private def subHeadingLevel1 = {
