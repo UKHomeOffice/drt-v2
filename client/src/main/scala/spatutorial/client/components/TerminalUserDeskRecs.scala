@@ -283,8 +283,8 @@ object TableTerminalDeskRecs {
         <.th(^.className := queueColour(queueName), "Pax") :: (reqSug ::: reqSug)
       })
       subHeadingLevel2 :+
-        <.th(^.className := "total-deployed", "Req") :+
-        <.th(^.className := "total-deployed", "Avail")
+        <.th(^.className := "total-deployed", "Req", ^.title := "Total staff required for desks") :+
+        <.th(^.className := "total-deployed", "Avail", ^.title := "Total staff available based on shifts entered")
     }
 
     private def thHeaderGroupStart(title: String, xs: TagMod*): ReactTagOf[TableHeaderCell] = {
