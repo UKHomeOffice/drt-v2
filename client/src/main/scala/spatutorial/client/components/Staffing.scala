@@ -47,7 +47,7 @@ object Staffing {
           <.div(shiftExamples.map(<.p(_))),
           <.textarea(^.value := rawShifts,
             ^.className := "staffing-editor",
-            ^.onChange ==> ((e: ReactEventI) => shiftsMP.dispatch(UpdateShifts(e.target.value)))),
+            ^.onChange ==> ((e: ReactEventI) => shiftsMP.dispatch(SetShifts(e.target.value)))),
           <.h2("Staff over the day"), if (didParseFail) {
             <.div(^.className := "error", "Error in shifts")
           }

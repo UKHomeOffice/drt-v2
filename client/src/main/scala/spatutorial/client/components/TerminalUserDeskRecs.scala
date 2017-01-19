@@ -20,6 +20,7 @@ import spatutorial.shared._
 
 import scala.collection.immutable.{Map, NumericRange, Seq}
 import scala.scalajs.js.Date
+import scala.util.{Failure, Success}
 
 object TerminalUserDeskRecs {
 
@@ -103,6 +104,65 @@ object TableTerminalDeskRecs {
         PopoverWrapper(trigger = trigger)(
           airportInfos(airportInfo =>
             FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))))
+      } else {
+        trigger
+      })
+    popover
+  }).build
+
+  case class StaffMovementPopoverState(
+                                        hovered: Boolean = false,
+                                        reason: String = "",
+                                        date: String = "",
+                                        startTime: String = "",
+                                        endTime: String = "",
+                                        numberOfStaff: Int = 1
+                                      )
+
+  def staffMovementPopover(trigger: String) = ReactComponentB[Unit]("staffMovementPopover")
+    .initialState_P((p) =>
+      StaffMovementPopoverState()
+    ).renderS((scope, state) => {
+    val popover = <.div(
+      ^.onClick ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))),
+//      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
+      if (state.hovered) {
+        PopoverWrapper(trigger = trigger, className = "staff-movement-popover")({
+          <.div(^.className := "container",
+            <.div(^.className := "form-group row",
+              <.label("Reason", ^.className := "col-sm-3 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(reason = e.target.value.toString)))))
+            ),
+            <.div(^.className := "form-group row",
+              <.label("Date", ^.className := "col-sm-2 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(date = e.target.value.toString)))))
+            ),
+            <.div(^.className := "form-group row",
+              <.label("Start time", ^.className := "col-sm-2 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(startTime = e.target.value.toString)))))
+            ),
+            <.div(^.className := "form-group row",
+              <.label("End time", ^.className := "col-sm-2 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.text(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(endTime = e.target.value.toString)))))
+            ),
+            <.div(^.className := "form-group row",
+              <.label("No. staff", ^.className := "col-sm-2 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.number(^.onChange ==> ((e: ReactEventI) => scope.modState(_.copy(numberOfStaff = e.target.value.toInt)))))
+            ),
+            <.div("Save", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
+              val shiftTry = Shift(state.reason, state.date, state.startTime, state.endTime, state.numberOfStaff.toString)
+              shiftTry match {
+                case Success(shift) =>
+                  SPACircuit.dispatch(AddShift(shift))
+                  log.info(s"Dispatched AddShift(${shift}")
+                  scope.modState(_.copy(hovered = false))
+                case Failure(e) =>
+                  log.info("Invalid shift")
+              }
+              scope.modState(_.copy(hovered = true))
+            }))
+          )
+        })
       } else {
         trigger
       })
@@ -205,6 +265,7 @@ object TableTerminalDeskRecs {
         val formattedDate: String = formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val airportInfoPopover = HoverPopover(formattedDate, flights, airportInfo)
+        val staffMovement = staffMovementPopover("Hi there")
         val queueRowCells = item.queueDetails.flatMap(
           (q: QueueDetailsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
@@ -215,7 +276,7 @@ object TableTerminalDeskRecs {
                 ""
             }
 
-            def qtd(xs: TagMod *) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
+            def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
 
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
@@ -236,7 +297,7 @@ object TableTerminalDeskRecs {
         val queueRowCellsWithTotal = queueRowCells :+
           <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
           <.td(^.className := s"total-deployed $ragClass", totalDeployed)
-        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
+        <.tr(<.td(^.cls := "date-field", airportInfoPopover(), staffMovement()) :: queueRowCellsWithTotal: _*)
       }
 
       def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)

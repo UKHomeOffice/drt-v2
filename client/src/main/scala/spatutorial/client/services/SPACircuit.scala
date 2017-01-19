@@ -29,20 +29,15 @@ import scala.util.{Failure, Success, Try}
 
 case class DeskRecTimeslot(timeInMillis: Long, deskRec: Int)
 
-// Actions
-case object RefreshTodos extends Action
-
 case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
 
 case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResultWithTimeAndInterval: CrunchResult) extends Action
 
 case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
 
-
 case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
 
 case class RecalculateStaffDeployments() extends Action
-
 
 case class GetWorkloads(begin: String, end: String) extends Action
 
@@ -54,11 +49,12 @@ case class RunAllSimulations() extends Action
 
 case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
 
-case class UpdateShifts(shifts: String) extends Action
+case class SetShifts(shifts: String) extends Action
 
-//case class ChangeDeskUsage(terminalName: TerminalName, queueName: QueueName, value: String, index: Int) extends Action
+case class AddShift(shift: Shift) extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
+
 
 trait WorkloadsUtil {
   def labelsFromAllQueues(startTime: Long) = {
@@ -477,7 +473,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
 class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case UpdateShifts(shifts: String) =>
+    case SetShifts(shifts: String) =>
       updated(Ready(shifts), Effect(Future(RunAllSimulations())))
   }
 }

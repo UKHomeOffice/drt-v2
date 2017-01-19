@@ -1,5 +1,6 @@
 package spatutorial.client.services
 
+import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.shared.FlightsApi._
@@ -25,7 +26,6 @@ object JSDateConversions {
 
     case class JSSDate(date: Date) extends SDate {
 
-
       def getFullYear(): Int = date.getFullYear()
 
       // js Date Months are 0 based, but joda dates are 1 based. We've decided to match joda, because it is sane.
@@ -47,7 +47,7 @@ object JSDateConversions {
 
     }
 
-
+    def apply(milliDate: MilliDate): SDate = new Date(milliDate.millisSinceEpoch)
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDate = new Date(y, m - 1, d, h, mm)
     def today(): SDate = {
       val d = new Date()
@@ -60,7 +60,17 @@ object JSDateConversions {
 
 }
 
-case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int)
+case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
+  def toCsv = {
+    val startDate: SDate = SDate(startDt)
+    val endDate: SDate = SDate(endDt)
+    val startDateString = f"${startDate.getDate}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
+    val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+    val endTimeString = f"${endDate.getHours}%02d:${endDate.getMinutes}%02d"
+
+    s"$name,$startDateString,$startTimeString,$endTimeString,$numberOfStaff"
+  }
+}
 
 object Shift {
 
