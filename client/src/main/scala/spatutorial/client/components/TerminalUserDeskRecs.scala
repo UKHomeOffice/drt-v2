@@ -244,7 +244,7 @@ object TableTerminalDeskRecs {
       val headings = queueNameMappingOrder.map {
         case (queueName) =>
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
-      } :+ <.th(^.className := "total-deployed", ^.colSpan := 2)
+      } :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
       <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
         <.thead(
@@ -267,7 +267,7 @@ object TableTerminalDeskRecs {
         List(<.th("", ^.className := qc),
           thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 2),
           thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 2))
-      }) :+ <.th(^.className := "total-deployed", "Total", ^.colSpan := 2)
+      }) :+ <.th(^.className := "total-deployed", "Staff", ^.colSpan := 2)
       subHeadingLevel1
     }
 
