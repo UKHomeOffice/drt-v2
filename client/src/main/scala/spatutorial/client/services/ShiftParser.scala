@@ -56,6 +56,10 @@ object JSDateConversions {
       d.setMilliseconds(0)
       JSSDate(d)
     }
+    def now(): SDate = {
+      val d = new Date()
+      JSSDate(d)
+    }
   }
 
 }
