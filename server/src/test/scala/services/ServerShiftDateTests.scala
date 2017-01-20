@@ -19,6 +19,8 @@ object SDate {
 
     def addDays(daysToAdd: Int): SDate = dateTime.plusDays(daysToAdd)
 
+    def addHours(hoursToAdd: Int): SDate = dateTime.plusHours(hoursToAdd)
+
     def millisSinceEpoch: Long = dateTime.getMillis
   }
 
@@ -43,6 +45,16 @@ object ServerShiftDateTests extends TestSuite {
 
         val march = 3
         val expected = (2016, march, 11, 10, 23)
+        assert(ymdhm == expected)
+      }
+      "You can add hours to an SDate" - {
+        val february = 2
+        val baseDate = SDate(2016, february, 1, 0, 0)
+        val date = baseDate.addHours(1)
+
+        val ymdhm: (Int, Int, Int, Int, Int) = (date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes())
+
+        val expected = (2016, february, 1, 1, 0)
         assert(ymdhm == expected)
       }
       "SDates can provide a human oriented dmy formatted string" - {
