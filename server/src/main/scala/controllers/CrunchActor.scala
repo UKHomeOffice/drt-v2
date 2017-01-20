@@ -63,8 +63,9 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     crunchCache(key) {
       val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
       crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
+
       //todo un-future this mess
-      val expensiveCrunchResult = Await.result(crunch, 15 seconds)
+      val expensiveCrunchResult = Await.result(crunch, 40 seconds)
       expensiveCrunchResult
     }
   }
@@ -82,6 +83,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           reCrunchAllTerminalsAndQueues()
       }
     case SaveCrunchResult(tn, qn, crunchResult) =>
+      log.info(s"Should SaveCrunchResult for $tn/$qn")
       saveNewCrunchResult(tn, qn, crunchResult)
     case GetLatestCrunch(terminalName, queueName) =>
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
@@ -107,7 +109,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           }
       }
     case message =>
-      log.info(s"crunchActor received ${message}")
+      log.error(s"crunchActor received unhandled ${message}")
   }
 
   def lastMidnightString: String = {
@@ -125,13 +127,13 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       val crunch: Future[CrunchResult] = performCrunch(tn, qn)
       crunch.onSuccess {
         case crunchResult =>
-          self ! crunchResult
+          self ! SaveCrunchResult(tn, qn, crunchResult)
       }
     }
   }
 
   private def saveNewCrunchResult(tn: TerminalName, qn: QueueName, crunchResultWithTimeAndInterval: CrunchResult) = {
-    log.info(s"crunch result for $tn/$qn")
+    log.info(s"saving new crunch result for $tn/$qn")
     crunchCache.remove(cacheKey(tn, qn))
     crunchCache(cacheKey(tn, qn)) {
       log.info(s"returning crunch result for $tn/$qn")
