@@ -5,7 +5,7 @@ import spatutorial.shared.SDate
 import utest._
 
 import scala.scalajs.js.Date
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object ShiftsServiceTests extends TestSuite {
 
@@ -155,6 +155,19 @@ object ShiftsServiceTests extends TestSuite {
                 println(s"Should have failed that bad line ${other}")
                 assert(false)
             }
+          }
+        }
+
+        "Shift to csv string representation" - {
+          "Given a shift when I ask for a csv string then I should get a string with the fields separated by commas" - {
+            val shiftTry: Try[Shift] = Shift("My shift", "01/01/17", "08:00", "11:59", "2")
+            val shift = shiftTry.get
+
+            val csvString = shift.toCsv
+
+            val expected = "My shift,01/01/17,08:00,11:59,2"
+
+            assert(csvString == expected)
           }
         }
 
