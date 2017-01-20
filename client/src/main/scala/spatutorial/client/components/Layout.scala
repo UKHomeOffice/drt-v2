@@ -17,7 +17,7 @@ object Layout {
   @inline private def bss = GlobalStyles.bootstrapStyles
   val component = ReactComponentB[Props]("Layout")
     .renderP((_, props: Props) => {
-      val is81Popover = TableTerminalDeskRecs.staffMovementPopover("+IS81", "IS81", SDate.today(), SDate.today(), "bottom")
+      val is81Popover = TableTerminalDeskRecs.staffMovementPopover("+IS81", "IS81", SDate.now(), SDate.now().addHours(1), "bottom")
       val airportConfigRCP = SPACircuit.connect(m => m.airportConfig)
       airportConfigRCP((airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) => {
         <.div(

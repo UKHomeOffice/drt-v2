@@ -43,6 +43,12 @@ object JSDateConversions {
         newDate
       }
 
+      def addHours(hoursToAdd: Int): SDate = {
+        val newDate = new Date(millisSinceEpoch)
+        newDate.setHours(newDate.getHours() + hoursToAdd)
+        newDate
+      }
+
       def millisSinceEpoch: Long = date.getTime().toLong
 
     }

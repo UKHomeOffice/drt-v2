@@ -150,7 +150,12 @@ object TableTerminalDeskRecs {
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
             labelledInput("Start time", state.startTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(startTime = v)),
             labelledInput("End time", state.endTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(endTime = v)),
-            labelledInput("Number of staff", state.numberOfStaff.toString, (v: String) => (s: StaffMovementPopoverState) => s.copy(numberOfStaff = v.toInt)),
+            <.div(^.className := "form-group row",
+              <.label("Number of staff", ^.className := "col-sm-2 col-form-label"),
+              <.div(^.className := "col-sm-10", <.input.number(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventI) => {
+                val newValue: String = e.target.value
+                scope.modState((s: StaffMovementPopoverState) => s.copy(numberOfStaff = newValue.toInt))
+              })))),
 
             <.div(^.className := "form-group-row",
               <.div(^.className := "col-sm-2"),
