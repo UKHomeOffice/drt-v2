@@ -15,10 +15,10 @@ import spatutorial.client.services.RootModel.mergeTerminalQueues
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
-import diode.ActionResult.NoChange
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
+import spatutorial.client.services.StaffMovements.StaffMovement
 
-import scala.collection.immutable.{IndexedSeq, Iterable, Map, NumericRange, Seq}
+import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -37,8 +37,6 @@ case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueNa
 
 case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
 
-case class RecalculateStaffDeployments() extends Action
-
 case class GetWorkloads(begin: String, end: String) extends Action
 
 case class GetAirportConfig() extends Action
@@ -52,6 +50,8 @@ case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks
 case class SetShifts(shifts: String) extends Action
 
 case class AddShift(shift: Shift) extends Action
+
+case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
@@ -108,13 +108,14 @@ case class RootModel(
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
                       shiftsRaw: Pot[String] = Empty,
+                      staffMovements: Seq[StaffMovement] = Seq(),
                       slotsInADay: Int = 96
                     ) {
 
   import TerminalUserDeskRecs._
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
-    StaffDeploymentCalculator(shiftsRaw, queueCrunchResults, "T1").getOrElse(Map())
+    StaffDeploymentCalculator(shiftsRaw, staffMovements, queueCrunchResults, "T1").getOrElse(Map())
   }
 
   lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
@@ -372,7 +373,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
 object StaffDeploymentCalculator {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-  def apply[M](rawShiftsModel: Pot[String], terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName):
+  def apply[M](rawShiftsModel: Pot[String], staffMovements: Seq[StaffMovement], terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName):
   Try[TerminalQueueStaffDeployments] = {
 
     val rawShiftsString = rawShiftsModel match {
@@ -394,7 +395,7 @@ object StaffDeploymentCalculator {
 
         val successfulShifts = shifts.collect { case Success(s) => s }
         val ss = ShiftService(successfulShifts)
-        val staffAt = StaffMovements.staffAt(ss)(movements = Nil) _
+        val staffFromShiftsAndMovementsAt = StaffMovements.staffAt(ss)(staffMovements) _
         val newSuggestedStaffDeployments = terminalQueueCrunchResults.mapValues((queueCrunchResult: QueueCrunchResults) => {
 
           val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose{
@@ -403,7 +404,7 @@ object StaffDeploymentCalculator {
 
           val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
             val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
-            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffAt(timeInMillis))
+            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffFromShiftsAndMovementsAt(timeInMillis))
           }
           val deployments = queueDeskRecsOverTime.map(timeslotsToInts).transpose
 
@@ -480,6 +481,14 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
   }
 }
 
+class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends LoggingActionHandler(modelRW) {
+  protected def handle = {
+    case AddStaffMovement(staffMovement) =>
+      val v: Seq[StaffMovement] = value
+      updated(v :+ staffMovement)
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -500,7 +509,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
-      new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v)))
+      new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
+      new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v)))
     )
   }
 }

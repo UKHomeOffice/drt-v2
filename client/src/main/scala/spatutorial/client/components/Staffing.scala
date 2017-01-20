@@ -6,8 +6,9 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
+import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.client.services._
-import spatutorial.shared.{SDate, WorkloadsHelpers}
+import spatutorial.shared.{MilliDate, SDate, WorkloadsHelpers}
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -19,16 +20,18 @@ object Staffing {
 
   class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
-      val shiftsRawRCP = SPACircuit.connect(_.shiftsRaw)
-      shiftsRawRCP((shiftsMP: ModelProxy[Pot[String]]) => {
-        val rawShifts = shiftsMP() match {
-          case Ready(shifts) => shifts
-          case Empty => ""
+      val shiftsAndMovementsRCP = SPACircuit.connect(m => (m.shiftsRaw, m.staffMovements))
+      shiftsAndMovementsRCP(shiftsAndMovementsMP => {
+        val rawShifts = shiftsAndMovementsMP() match {
+          case (Ready(shifts), _) => shifts
+          case _ => ""
+        }
+        val movements = shiftsAndMovementsMP() match {
+          case (_, sm) => sm
         }
 
         val shifts: List[Try[Shift]] = ShiftParser(rawShifts).parsedShifts.toList
         val didParseFail = shifts exists (s => s.isFailure)
-
 
         val today: SDate = SDate.today
         val todayString = today.ddMMyyString
@@ -41,22 +44,34 @@ object Staffing {
           s"Evening shift,${todayString},17:00,23:59,20"
         )
         <.div(
-          <.h1("Staffing"),
-          <.h2("Shifts"),
-          <.div("One shift per line with values separated by commas, e.g.:"),
-          <.div(shiftExamples.map(<.p(_))),
-          <.textarea(^.value := rawShifts,
-            ^.className := "staffing-editor",
-            ^.onChange ==> ((e: ReactEventI) => shiftsMP.dispatch(SetShifts(e.target.value)))),
-          <.h2("Staff over the day"), if (didParseFail) {
-            <.div(^.className := "error", "Error in shifts")
-          }
-          else {
-            val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
-            val ss = ShiftService(successfulShifts)
+          <.div(^.className := "container",
+            <.div(^.className := "col-md-5",
+              <.h1("Staffing"),
+              <.h2("Shifts"),
+              <.div("One shift per line with values separated by commas, e.g.:"),
+              <.div(shiftExamples.map(<.div(_))),
+              <.textarea(^.value := rawShifts,
+                ^.className := "staffing-editor",
+                ^.onChange ==> ((e: ReactEventI) => shiftsAndMovementsMP.dispatch(SetShifts(e.target.value))))
+            ),
+            <.div(^.className := "col-md-5",
+              <.h1("Staff movements"),
+              <.ul(movements.map(m => <.li(m.reason)))
+            )
+          ),
+          <.div(^.className := "container",
+            <.div(^.className := "col-md-10",
+              <.h2("Staff over the day"), if (didParseFail) {
+                <.div(^.className := "error", "Error in shifts")
+              }
+              else {
+                val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
+                val ss = ShiftService(successfulShifts)
+                val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss)(movements) _
 
-            staffingTableHourPerColumn(daysWorthOf15Minutes(today), ss)
-          }
+                staffingTableHourPerColumn(daysWorthOf15Minutes(today), staffWithShiftsAndMovementsAt)
+              }
+            ))
         )
       })
     }
@@ -68,7 +83,7 @@ object Staffing {
     daysWorthOf15Minutes
   }
 
-  def staffingTableHourPerColumn(daysWorthOf15Minutes: NumericRange[Long], ss: ShiftService) = {
+  def staffingTableHourPerColumn(daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (MilliDate) => Int) = {
     <.table(
       ^.className := "table table-striped table-xcondensed table-sm",
       <.tbody(
@@ -83,7 +98,7 @@ object Staffing {
                 })
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
-                hoursWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}"))
+                hoursWorthOf15Minutes.map(t => <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}"))
               ))
         }
       )
