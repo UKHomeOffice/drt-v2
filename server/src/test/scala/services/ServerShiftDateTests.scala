@@ -50,9 +50,9 @@ object ServerShiftDateTests extends TestSuite {
       "You can add hours to an SDate" - {
         val february = 2
         val baseDate = SDate(2016, february, 1, 0, 0)
-        val wtf = baseDate.addHours(1)
+        val date = baseDate.addHours(1)
 
-        val ymdhm: (Int, Int, Int, Int, Int) = (wtf.getFullYear(), wtf.getMonth(), wtf.getDate(), wtf.getHours(), wtf.getMinutes())
+        val ymdhm: (Int, Int, Int, Int, Int) = (date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes())
 
         val expected = (2016, february, 1, 1, 0)
         assert(ymdhm == expected)
