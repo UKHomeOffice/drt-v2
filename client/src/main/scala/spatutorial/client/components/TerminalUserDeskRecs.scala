@@ -3,6 +3,7 @@ package spatutorial.client.components
 import diode.data.{Pot, Ready}
 import diode.react
 import diode.react._
+import japgolly.scalajs.react.ReactComponentC.ConstProps
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -121,20 +122,19 @@ object TableTerminalDeskRecs {
                                         numberOfStaff: Int = 1
                                       )
 
-  def staffMovementPopover(trigger: String) = ReactComponentB[Unit]("staffMovementPopover")
+  def staffMovementPopover(trigger: String, reason: String, startDate: SDate, endDate: SDate, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
     .initialState_P((p) => {
-      val d = SDate.today
       StaffMovementPopoverState(
-        reason = "IS81",
-        date = f"${d.getDate}%02d/${d.getMonth}%02d/${d.getFullYear - 2000}%02d",
-        startTime = f"${d.getHours}%02d:${d.getMinutes}%02d",
-        endTime = f"${d.getHours}%02d:${d.getMinutes}%02d")
+        reason = reason,
+        date = f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d",
+        startTime = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d",
+        endTime = f"${endDate.getHours}%02d:${endDate.getMinutes}%02d")
     }).renderS((scope, state) => {
     val popover = <.div(
       ^.onMouseEnter ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))),
       //      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
       if (state.hovered) {
-        PopoverWrapper(trigger = trigger, className = "staff-movement-popover")({
+        PopoverWrapper(trigger = trigger, className = "staff-movement-popover", position = bottom)({
           def labelledInput(labelText: String, value: String, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState): ReactTagOf[html.Div] = {
             <.div(^.className := "form-group row",
               <.label(labelText, ^.className := "col-sm-2 col-form-label"),
@@ -144,31 +144,37 @@ object TableTerminalDeskRecs {
               })))
             )
           }
+
           <.div(^.className := "container",
             labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
             labelledInput("Start time", state.startTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(startTime = v)),
             labelledInput("End time", state.endTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(endTime = v)),
             labelledInput("Number of staff", state.numberOfStaff.toString, (v: String) => (s: StaffMovementPopoverState) => s.copy(numberOfStaff = v.toInt)),
-            <.div("Save", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
-              val shiftTry = Shift(state.reason, state.date, state.startTime, state.endTime, s"-${state.numberOfStaff.toString}")
-              shiftTry match {
-                case Success(shift) =>
-                  SPACircuit.dispatch(AddShift(shift))
-                  log.info(s"Dispatched AddShift(${shift}")
-                  scope.modState(_.copy(hovered = false))
-                case Failure(e) =>
-                  log.info("Invalid shift")
-              }
-              scope.modState(_.copy(hovered = true))
-            })),
-            <.div("Cancel", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
-              scope.modState(_.copy(hovered = false))
-            }))
+
+            <.div(^.className := "form-group-row",
+              <.div(^.className := "col-sm-2"),
+              <.div(^.className := "offset-sm-2 col-sm-10 btn-toolbar",
+              <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
+                val shiftTry = Shift(state.reason, state.date, state.startTime, state.endTime, s"-${state.numberOfStaff.toString}")
+                shiftTry match {
+                  case Success(shift) =>
+                    SPACircuit.dispatch(AddShift(shift))
+                    log.info(s"Dispatched AddShift(${shift}")
+                    scope.modState(_.copy(hovered = false))
+                  case Failure(e) =>
+                    log.info("Invalid shift")
+                }
+                scope.modState(_.copy(hovered = true))
+              })),
+              <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> ((e: ReactEventI) => {
+                scope.modState(_.copy(hovered = false))
+              }))
+            ))
           )
         })
       } else {
-        trigger
+        <.div(^.className := "popover-trigger", trigger)
       })
     popover
   }).build
@@ -311,10 +317,8 @@ object TableTerminalDeskRecs {
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
       } :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
-      val staffMovement = staffMovementPopover("+IS81")
 
       <.div(
-        staffMovement(),
         <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
           <.thead(
             ^.display := "block",

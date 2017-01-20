@@ -54,7 +54,7 @@ object MainMenu {
     def render(props: Props) = {
       val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
       airportConfigPotRCP(airportConfigPotMP => {
-        <.ul(bss.navbar)(
+        <.ul(bss.navbar, ^.className := "mr-auto")(
           //           build a list of menu items
           for (item <- menuItems(airportConfigPotMP)) yield {
             <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
