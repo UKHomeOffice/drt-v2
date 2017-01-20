@@ -49,6 +49,8 @@ trait SDate {
   def millisSinceEpoch: Long
 
   def addDays(daysToAdd: Int): SDate
+
+  def addHours(hoursToAdd: Int): SDate
 }
 
 
