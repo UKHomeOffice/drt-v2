@@ -53,6 +53,8 @@ case class AddShift(shift: Shift) extends Action
 
 case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
+case class RemoveStaffMovement(idx: Int) extends Action
+
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
 
@@ -485,7 +487,9 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
   protected def handle = {
     case AddStaffMovement(staffMovement) =>
       val v: Seq[StaffMovement] = value
-      updated(v :+ staffMovement)
+      updated((v :+ staffMovement).sortBy(_.time))
+    case RemoveStaffMovement(idx) =>
+      updated(value.patch(idx, Nil, 1))
   }
 }
 

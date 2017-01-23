@@ -170,7 +170,15 @@ object StaffMovements {
     ).sortBy(_.time)
   }
 
-  case class StaffMovement(reason: String, time: MilliDate, delta: Int, queue: Option[QueueName] = None)
+  case class StaffMovement(reason: String, time: MilliDate, delta: Int, queue: Option[QueueName] = None) {
+    def toCsv = {
+      val startDate: SDate = SDate(time)
+      val startDateString = f"${startDate.getDate}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
+      val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+
+      s"$reason,$startDateString,$startTimeString,$delta"
+    }
+  }
 
   def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate) = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
 

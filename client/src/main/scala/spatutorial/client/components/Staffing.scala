@@ -1,12 +1,10 @@
 package spatutorial.client.components
 
 import diode.data.{Empty, Pot, Ready}
-import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
-import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.client.services._
 import spatutorial.shared.{MilliDate, SDate, WorkloadsHelpers}
 
@@ -45,18 +43,25 @@ object Staffing {
         )
         <.div(
           <.div(^.className := "container",
-            <.div(^.className := "col-md-5",
-              <.h1("Staffing"),
+            <.h1("Staffing"),
+            <.div(^.className := "col-md-3",
               <.h2("Shifts"),
-              <.div("One shift per line with values separated by commas, e.g.:"),
-              <.div(shiftExamples.map(<.div(_))),
+              <.p("One shift per line with values separated by commas, e.g.:"),
+              <.pre(shiftExamples.map(<.div(_))),
               <.textarea(^.value := rawShifts,
                 ^.className := "staffing-editor",
                 ^.onChange ==> ((e: ReactEventI) => shiftsAndMovementsMP.dispatch(SetShifts(e.target.value))))
             ),
-            <.div(^.className := "col-md-5",
-              <.h1("Staff movements"),
-              <.ul(movements.map(m => <.li(m.reason)))
+            <.div(^.className := "col-md-2"),
+            <.div(^.className := "col-md-3",
+              <.h1("Movements"),
+              if (movements.length > 0)
+                <.ul(^.className := "list-unstyled", movements.map(m => {
+                  val remove = <.a(Icon.remove, ^.onClick ==> ((e: ReactEventI) => shiftsAndMovementsMP.dispatch(RemoveStaffMovement(0))))
+                  <.li(remove, " ", m.toCsv)
+                }))
+              else
+                <.p("No movements recorded")
             )
           ),
           <.div(^.className := "container",
@@ -68,6 +73,7 @@ object Staffing {
                 val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
                 val ss = ShiftService(successfulShifts)
                 val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss)(movements) _
+                log.info(s"Looking at staff nos with movements: ${movements.map(m => m.toCsv)}")
 
                 staffingTableHourPerColumn(daysWorthOf15Minutes(today), staffWithShiftsAndMovementsAt)
               }
@@ -98,7 +104,10 @@ object Staffing {
                 })
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
-                hoursWorthOf15Minutes.map(t => <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}"))
+                hoursWorthOf15Minutes.map(t => {
+                  log.info(s"$t => ${staffWithShiftsAndMovements(t)}")
+                  <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
+                })
               ))
         }
       )
