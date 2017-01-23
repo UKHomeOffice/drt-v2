@@ -1,10 +1,14 @@
 package spatutorial.client.components
 
 import diode.data.{Empty, Pot, Ready}
+import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
+import org.scalajs.dom.html
+import org.scalajs.dom.html.Div
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
+import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.client.services._
 import spatutorial.shared.{MilliDate, SDate, WorkloadsHelpers}
 
@@ -19,7 +23,7 @@ object Staffing {
   class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
       val shiftsAndMovementsRCP = SPACircuit.connect(m => (m.shiftsRaw, m.staffMovements))
-      shiftsAndMovementsRCP(shiftsAndMovementsMP => {
+      shiftsAndMovementsRCP((shiftsAndMovementsMP: ModelProxy[(Pot[String], Seq[StaffMovement])]) => {
         val rawShifts = shiftsAndMovementsMP() match {
           case (Ready(shifts), _) => shifts
           case _ => ""
@@ -30,57 +34,68 @@ object Staffing {
 
         val shifts: List[Try[Shift]] = ShiftParser(rawShifts).parsedShifts.toList
         val didParseFail = shifts exists (s => s.isFailure)
-
-        val today: SDate = SDate.today
-        val todayString = today.ddMMyyString
-
-        val shiftExamples = Seq(
-          s"Midnight shift,${todayString},00:00,00:59,14",
-          s"Night shift,${todayString},01:00,06:59,6",
-          s"Morning shift,${todayString},07:00,13:59,25",
-          s"Afternoon shift,${todayString},14:00,16:59,13",
-          s"Evening shift,${todayString},17:00,23:59,20"
-        )
         <.div(
           <.div(^.className := "container",
             <.h1("Staffing"),
-            <.div(^.className := "col-md-3",
-              <.h2("Shifts"),
-              <.p("One shift per line with values separated by commas, e.g.:"),
-              <.pre(shiftExamples.map(<.div(_))),
-              <.textarea(^.value := rawShifts,
-                ^.className := "staffing-editor",
-                ^.onChange ==> ((e: ReactEventI) => shiftsAndMovementsMP.dispatch(SetShifts(e.target.value))))
-            ),
+            <.div(^.className := "col-md-3", shiftsEditor(rawShifts, shiftsAndMovementsMP)),
             <.div(^.className := "col-md-2"),
-            <.div(^.className := "col-md-3",
-              <.h1("Movements"),
-              if (movements.length > 0)
-                <.ul(^.className := "list-unstyled", movements.map(m => {
-                  val remove = <.a(Icon.remove, ^.onClick ==> ((e: ReactEventI) => shiftsAndMovementsMP.dispatch(RemoveStaffMovement(0))))
-                  <.li(remove, " ", m.toCsv)
-                }))
-              else
-                <.p("No movements recorded")
-            )
+            <.div(^.className := "col-md-3", movementsEditor(movements, shiftsAndMovementsMP))
           ),
           <.div(^.className := "container",
-            <.div(^.className := "col-md-10",
-              <.h2("Staff over the day"), if (didParseFail) {
-                <.div(^.className := "error", "Error in shifts")
-              }
-              else {
-                val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
-                val ss = ShiftService(successfulShifts)
-                val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss)(movements) _
-                log.info(s"Looking at staff nos with movements: ${movements.map(m => m.toCsv)}")
-
-                staffingTableHourPerColumn(daysWorthOf15Minutes(today), staffWithShiftsAndMovementsAt)
-              }
-            ))
+            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, didParseFail)))
         )
       })
     }
+  }
+
+  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[Shift]], didParseFail: Boolean): ReactTagOf[Div] = {
+    <.div(
+      <.h2("Staff over the day"), if (didParseFail) {
+        <.div(^.className := "error", "Error in shifts")
+      }
+      else {
+        val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
+        val ss = ShiftService(successfulShifts)
+        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss)(movements) _
+        staffingTableHourPerColumn(daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
+      }
+    )
+  }
+
+  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[Div] = {
+    <.div(
+      <.h2("Movements"),
+      if (movements.length > 0)
+        <.ul(^.className := "list-unstyled", movements.map(m => {
+          val remove = <.a(Icon.remove, ^.onClick ==> ((e: ReactEventI) => mp.dispatch(RemoveStaffMovement(0))))
+          <.li(remove, " ", m.toCsv)
+        }))
+      else
+        <.p("No movements recorded")
+    )
+  }
+
+  def shiftsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[html.Div] = {
+
+    val today: SDate = SDate.today
+    val todayString = today.ddMMyyString
+
+    val shiftExamples = Seq(
+      s"Midnight shift,${todayString},00:00,00:59,14",
+      s"Night shift,${todayString},01:00,06:59,6",
+      s"Morning shift,${todayString},07:00,13:59,25",
+      s"Afternoon shift,${todayString},14:00,16:59,13",
+      s"Evening shift,${todayString},17:00,23:59,20"
+    )
+
+    <.div(
+      <.h2("Shifts"),
+      <.p("One shift per line with values separated by commas, e.g.:"),
+      <.pre(shiftExamples.map(<.div(_))),
+      <.textarea(^.value := rawShifts,
+        ^.className := "staffing-editor",
+        ^.onChange ==> ((e: ReactEventI) => mp.dispatch(SetShifts(e.target.value))))
+    )
   }
 
   def daysWorthOf15Minutes(startOfDay: SDate): NumericRange[Long] = {
