@@ -145,6 +145,20 @@ object TableTerminalDeskRecs {
     }
 
 
+    def trySaveMovement = (e: ReactEventI) => {
+      val shiftTry = Shift(state.reason, state.date, f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d", s"-${state.numberOfStaff.toString}")
+      shiftTry match {
+        case Success(shift) =>
+          SPACircuit.dispatch(AddShift(shift))
+          log.info(s"Dispatched AddShift(${shift}")
+          scope.modState(_.copy(hovered = false))
+        case Failure(e) =>
+          log.info("Invalid shift")
+          scope.modState(_.copy(hovered = true))
+      }
+    }
+
+
     val popover = <.div(
       ^.onMouseEnter ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))),
       //      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
@@ -196,18 +210,7 @@ object TableTerminalDeskRecs {
             <.div(^.className := "form-group-row",
               <.div(^.className := "col-sm-2"),
               <.div(^.className := "offset-sm-2 col-sm-10 btn-toolbar",
-                <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
-                  val shiftTry = Shift(state.reason, state.date, f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d", s"-${state.numberOfStaff.toString}")
-                  shiftTry match {
-                    case Success(shift) =>
-                      SPACircuit.dispatch(AddShift(shift))
-                      log.info(s"Dispatched AddShift(${shift}")
-                      scope.modState(_.copy(hovered = false))
-                    case Failure(e) =>
-                      log.info("Invalid shift")
-                  }
-                  scope.modState(_.copy(hovered = true))
-                })),
+                <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> trySaveMovement),
                 <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> ((e: ReactEventI) => {
                   scope.modState(_.copy(hovered = false))
                 }))
