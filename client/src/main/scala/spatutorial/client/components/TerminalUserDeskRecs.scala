@@ -149,8 +149,10 @@ object TableTerminalDeskRecs {
       val shiftTry = Shift(state.reason, state.date, f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d", s"-${state.numberOfStaff.toString}")
       shiftTry match {
         case Success(shift) =>
-          SPACircuit.dispatch(AddShift(shift))
-          log.info(s"Dispatched AddShift(${shift}")
+          for (movement <- StaffMovements.shiftsToMovements(Seq(shift))) yield {
+            SPACircuit.dispatch(AddStaffMovement(movement))
+            log.info(s"Dispatched AddStaffMovement(${movement}")
+          }
           scope.modState(_.copy(hovered = false))
         case Failure(e) =>
           log.info("Invalid shift")
