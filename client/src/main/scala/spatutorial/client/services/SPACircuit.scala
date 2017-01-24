@@ -1,6 +1,8 @@
 package spatutorial.client.services
 
 
+import java.util.UUID
+
 import autowire._
 import diode.Implicits.runAfterImpl
 import diode._
@@ -16,7 +18,6 @@ import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
-import spatutorial.client.services.StaffMovements.StaffMovement
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -53,7 +54,7 @@ case class AddShift(shift: Shift) extends Action
 
 case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
-case class RemoveStaffMovement(idx: Int) extends Action
+case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
@@ -484,12 +485,12 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
 }
 
 class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends LoggingActionHandler(modelRW) {
-  protected def handle = {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
       val v: Seq[StaffMovement] = value
       updated((v :+ staffMovement).sortBy(_.time))
-    case RemoveStaffMovement(idx) =>
-      updated(value.patch(idx, Nil, 1))
+    case RemoveStaffMovement(idx, uUID) =>
+      updated(value.filter(_.uUID != uUID))
   }
 }
 

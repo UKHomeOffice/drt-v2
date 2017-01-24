@@ -8,7 +8,6 @@ import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
-import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.client.services._
 import spatutorial.shared.{MilliDate, SDate, WorkloadsHelpers}
 
@@ -66,9 +65,9 @@ object Staffing {
     <.div(
       <.h2("Movements"),
       if (movements.length > 0)
-        <.ul(^.className := "list-unstyled", movements.map(m => {
-          val remove = <.a(Icon.remove, ^.onClick ==> ((e: ReactEventI) => mp.dispatch(RemoveStaffMovement(0))))
-          <.li(remove, " ", m.toCsv)
+        <.ul(^.className := "list-unstyled", movements.map(movement => {
+          val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventI) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
+          <.li(remove, " ", movement.toCsv)
         }))
       else
         <.p("No movements recorded")
