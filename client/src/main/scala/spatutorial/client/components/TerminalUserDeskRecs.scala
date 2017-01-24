@@ -138,10 +138,10 @@ object TableTerminalDeskRecs {
     def selectFromRange(range: Range, value: Int, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState) = {
       <.select(
 
-        range.map(x => <.option(^.value := x, f"$x%02d", ^.selected := (value == x), <.input.text(^.value := value, ^.onChange ==> ((e: ReactEventI) => {
+        range.map(x => <.option(^.value := x, f"$x%02d", ^.selected := (value == x), ^.onChange ==> ((e: ReactEventI) => {
           val newValue: String = e.target.value
           scope.modState(callback(newValue))
-        })))))
+        }))))
     }
 
 
