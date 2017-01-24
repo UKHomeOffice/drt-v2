@@ -117,8 +117,10 @@ object TableTerminalDeskRecs {
                                         hovered: Boolean = false,
                                         reason: String = "",
                                         date: String = "",
-                                        startTime: String = "",
-                                        endTime: String = "",
+                                        startTimeHours: Int = 0,
+                                        startTimeMinutes: Int = 0,
+                                        endTimeHours: Int = 0,
+                                        endTimeMinutes: Int = 0,
                                         numberOfStaff: Int = 1
                                       )
 
@@ -127,9 +129,22 @@ object TableTerminalDeskRecs {
       StaffMovementPopoverState(
         reason = reason,
         date = f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d",
-        startTime = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d",
-        endTime = f"${endDate.getHours}%02d:${endDate.getMinutes}%02d")
+        startTimeHours = startDate.getHours(),
+        startTimeMinutes = startDate.getMinutes(),
+        endTimeHours = endDate.getHours(),
+        endTimeMinutes = endDate.getMinutes())
     }).renderS((scope, state) => {
+
+    def selectFromRange(range: Range, value: Int, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState) = {
+      <.select(
+
+        range.map(x => <.option(^.value := x, f"$x%02d", ^.selected := (value == x), <.input.text(^.value := value, ^.onChange ==> ((e: ReactEventI) => {
+          val newValue: String = e.target.value
+          scope.modState(callback(newValue))
+        })))))
+    }
+
+
     val popover = <.div(
       ^.onMouseEnter ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))),
       //      ^.onMouseLeave ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = false))),
@@ -148,9 +163,31 @@ object TableTerminalDeskRecs {
           <.div(^.className := "container",
             labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
-            labelledInput("Start time", state.startTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(startTime = v)),
-            labelledInput("End time", state.endTime, (v: String) => (s: StaffMovementPopoverState) => s.copy(endTime = v)),
             <.div(^.className := "form-group row",
+              <.label("Start time", ^.className := "col-sm-2 col-form-label"),
+              <.div(
+                ^.className := "col-sm-10",
+                selectFromRange(
+                  0 to 23, startDate.getHours(),
+                  (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeHours = v.toInt)
+                ),
+                selectFromRange(
+                  0 to 59,
+                  startDate.getMinutes(),
+                  (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeMinutes = v.toInt)))),
+            <.div(^.className := "form-group row",
+              <.label("End time", ^.className := "col-sm-2 col-form-label"),
+              <.div(
+                ^.className := "col-sm-10",
+                selectFromRange(
+                  0 to 23, endDate.getHours(),
+                  (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeHours = v.toInt)
+                ),
+                selectFromRange(
+                  0 to 59,
+                  endDate.getMinutes(),
+                  (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeMinutes = v.toInt)))),
+              <.div(^.className := "form-group row",
               <.label("Number of staff", ^.className := "col-sm-2 col-form-label"),
               <.div(^.className := "col-sm-10", <.input.number(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventI) => {
                 val newValue: String = e.target.value
@@ -161,7 +198,7 @@ object TableTerminalDeskRecs {
               <.div(^.className := "col-sm-2"),
               <.div(^.className := "offset-sm-2 col-sm-10 btn-toolbar",
               <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> ((e: ReactEventI) => {
-                val shiftTry = Shift(state.reason, state.date, state.startTime, state.endTime, s"-${state.numberOfStaff.toString}")
+                val shiftTry = Shift(state.reason, state.date, f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d", s"-${state.numberOfStaff.toString}")
                 shiftTry match {
                   case Success(shift) =>
                     SPACircuit.dispatch(AddShift(shift))
@@ -175,14 +212,16 @@ object TableTerminalDeskRecs {
               <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> ((e: ReactEventI) => {
                 scope.modState(_.copy(hovered = false))
               }))
-            ))
-          )
+            )
+          ))
         })
       } else {
         <.div(^.className := "popover-trigger", trigger)
       })
     popover
   }).build
+
+
 
   def renderTerminalUserTable(terminalName: TerminalName, airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                               peMP: ModelProxy[PracticallyEverything], rows: List[TerminalUserDeskRecsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): ReactElement = {
