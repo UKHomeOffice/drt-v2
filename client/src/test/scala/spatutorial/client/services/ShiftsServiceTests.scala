@@ -1,5 +1,7 @@
 package spatutorial.client.services
 
+import java.util.UUID
+
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.shared.SDate
 import utest._
@@ -324,20 +326,47 @@ object ShiftsServiceTests extends TestSuite {
             assert(shiftServiceTry.isSuccess)
 
             "Shifts can be represented as staff movements" - {
-              for (shiftService <- shiftServiceTry) yield {
-                val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2) :: Nil).sortBy(_.time)
+              shiftServiceTry match {
+                case Success(shiftService) =>
+                  val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
 
-                val sDate = SDate(2016, 12, 10, 10, 0)
-                assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate) - 2)
+                  val sDate = SDate(2016, 12, 10, 10, 0)
+                  assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate) - 2)
               }
             }
             "Movements from after the asked for date are not included" - {
-              for (shiftService <- shiftServiceTry) yield {
-                val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2) :: Nil).sortBy(_.time)
+              shiftServiceTry match {
+                case Success(shiftService) =>
+                  val movements = (StaffMovement("IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
 
-                val sDate = SDate(2016, 12, 10, 9, 0)
-                assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate))
+                  val sDate = SDate(2016, 12, 10, 9, 0)
+                  assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate))
               }
+            }
+            "Two movements at the same time are both taken into account" - {
+              shiftServiceTry match {
+                case Success(shiftService) =>
+                  val movements = (
+                    StaffMovement("IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
+                      StaffMovement("IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) :: Nil
+                    ).sortBy(_.time)
+
+                  val sDate = SDate(2016, 12, 11, 0, 0)
+                  assert(staffAt(shiftService)(movements)(sDate) == -2)
+              }
+            }
+            "Two movements at the same time as a shift entry are all taken into account" - {
+              val shiftServiceWithOneShift = ShiftService(List(Shift("blah", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
+              val movements = (
+                StaffMovement("IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
+                  StaffMovement("IS81", SDate(2016, 12, 11, 1, 0), 1, UUID.randomUUID) ::
+                  StaffMovement("IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
+                  StaffMovement("IS81", SDate(2016, 12, 11, 1, 0), 1, UUID.randomUUID) :: Nil
+                ).sortBy(_.time)
+
+              val sDate = SDate(2016, 12, 11, 0, 0)
+              val staff: Int = staffAt(shiftServiceWithOneShift)(movements)(sDate)
+              assert(staff == 8)
             }
           }
         }
@@ -345,7 +374,6 @@ object ShiftsServiceTests extends TestSuite {
     }
   }
 }
-
 
 object TestTimer {
   def timeIt(name: String)(times: Int)(f: => Unit) = {

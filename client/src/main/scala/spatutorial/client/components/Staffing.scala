@@ -4,10 +4,12 @@ import diode.data.{Empty, Pot, Ready}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
+import org.scalajs.dom.html
+import org.scalajs.dom.html.Div
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
 import spatutorial.client.services._
-import spatutorial.shared.{SDate, WorkloadsHelpers}
+import spatutorial.shared.{MilliDate, SDate, WorkloadsHelpers}
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -19,47 +21,80 @@ object Staffing {
 
   class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
-      val shiftsRawRCP = SPACircuit.connect(_.shiftsRaw)
-      shiftsRawRCP((shiftsMP: ModelProxy[Pot[String]]) => {
-        val rawShifts = shiftsMP() match {
-          case Ready(shifts) => shifts
-          case Empty => ""
+      val shiftsAndMovementsRCP = SPACircuit.connect(m => (m.shiftsRaw, m.staffMovements))
+      shiftsAndMovementsRCP((shiftsAndMovementsMP: ModelProxy[(Pot[String], Seq[StaffMovement])]) => {
+        val rawShifts = shiftsAndMovementsMP() match {
+          case (Ready(shifts), _) => shifts
+          case _ => ""
+        }
+        val movements = shiftsAndMovementsMP() match {
+          case (_, sm) => sm
         }
 
         val shifts: List[Try[Shift]] = ShiftParser(rawShifts).parsedShifts.toList
         val didParseFail = shifts exists (s => s.isFailure)
-
-
-        val today: SDate = SDate.today
-        val todayString = today.ddMMyyString
-
-        val shiftExamples = Seq(
-          s"Midnight shift,${todayString},00:00,00:59,14",
-          s"Night shift,${todayString},01:00,06:59,6",
-          s"Morning shift,${todayString},07:00,13:59,25",
-          s"Afternoon shift,${todayString},14:00,16:59,13",
-          s"Evening shift,${todayString},17:00,23:59,20"
-        )
         <.div(
-          <.h1("Staffing"),
-          <.h2("Shifts"),
-          <.div("One shift per line with values separated by commas, e.g.:"),
-          <.div(shiftExamples.map(<.p(_))),
-          <.textarea(^.value := rawShifts,
-            ^.className := "staffing-editor",
-            ^.onChange ==> ((e: ReactEventI) => shiftsMP.dispatch(SetShifts(e.target.value)))),
-          <.h2("Staff over the day"), if (didParseFail) {
-            <.div(^.className := "error", "Error in shifts")
-          }
-          else {
-            val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
-            val ss = ShiftService(successfulShifts)
-
-            staffingTableHourPerColumn(daysWorthOf15Minutes(today), ss)
-          }
+          <.div(^.className := "container",
+            <.h1("Staffing"),
+            <.div(^.className := "col-md-3", shiftsEditor(rawShifts, shiftsAndMovementsMP)),
+            <.div(^.className := "col-md-2"),
+            <.div(^.className := "col-md-3", movementsEditor(movements, shiftsAndMovementsMP))
+          ),
+          <.div(^.className := "container",
+            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, didParseFail)))
         )
       })
     }
+  }
+
+  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[Shift]], didParseFail: Boolean): ReactTagOf[Div] = {
+    <.div(
+      <.h2("Staff over the day"), if (didParseFail) {
+        <.div(^.className := "error", "Error in shifts")
+      }
+      else {
+        val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
+        val ss = ShiftService(successfulShifts)
+        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss)(movements) _
+        staffingTableHourPerColumn(daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
+      }
+    )
+  }
+
+  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[Div] = {
+    <.div(
+      <.h2("Movements"),
+      if (movements.length > 0)
+        <.ul(^.className := "list-unstyled", movements.map(movement => {
+          val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventI) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
+          <.li(remove, " ", movement.toCsv)
+        }))
+      else
+        <.p("No movements recorded")
+    )
+  }
+
+  def shiftsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[html.Div] = {
+
+    val today: SDate = SDate.today
+    val todayString = today.ddMMyyString
+
+    val shiftExamples = Seq(
+      s"Midnight shift,${todayString},00:00,00:59,14",
+      s"Night shift,${todayString},01:00,06:59,6",
+      s"Morning shift,${todayString},07:00,13:59,25",
+      s"Afternoon shift,${todayString},14:00,16:59,13",
+      s"Evening shift,${todayString},17:00,23:59,20"
+    )
+
+    <.div(
+      <.h2("Shifts"),
+      <.p("One shift per line with values separated by commas, e.g.:"),
+      <.pre(shiftExamples.map(<.div(_))),
+      <.textarea(^.value := rawShifts,
+        ^.className := "staffing-editor",
+        ^.onChange ==> ((e: ReactEventI) => mp.dispatch(SetShifts(e.target.value))))
+    )
   }
 
   def daysWorthOf15Minutes(startOfDay: SDate): NumericRange[Long] = {
@@ -68,7 +103,7 @@ object Staffing {
     daysWorthOf15Minutes
   }
 
-  def staffingTableHourPerColumn(daysWorthOf15Minutes: NumericRange[Long], ss: ShiftService) = {
+  def staffingTableHourPerColumn(daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (MilliDate) => Int) = {
     <.table(
       ^.className := "table table-striped table-xcondensed table-sm",
       <.tbody(
@@ -83,7 +118,10 @@ object Staffing {
                 })
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
-                hoursWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}"))
+                hoursWorthOf15Minutes.map(t => {
+                  log.info(s"$t => ${staffWithShiftsAndMovements(t)}")
+                  <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
+                })
               ))
         }
       )

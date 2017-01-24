@@ -1,8 +1,9 @@
 package spatutorial.client.services
 
+import java.util.UUID
+
 import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.client.services.StaffMovements.StaffMovement
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{MilliDate, SDate}
 
@@ -161,16 +162,24 @@ object ShiftService {
   }
 }
 
-object StaffMovements {
+case class StaffMovement(reason: String, time: MilliDate, delta: Int, uUID: UUID, queue: Option[QueueName] = None) {
+  def toCsv = {
+    val startDate: SDate = SDate(time)
+    val startDateString = f"${startDate.getDate}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
+    val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
 
-  def shiftsToMovements(shifts: Seq[Shift]) = {
-    shifts.flatMap(shift =>
-      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff) ::
-        StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff) :: Nil
-    ).sortBy(_.time)
+    s"$reason,$startDateString,$startTimeString,$delta"
   }
+}
 
-  case class StaffMovement(reason: String, time: MilliDate, delta: Int, queue: Option[QueueName] = None)
+object StaffMovements {
+  def shiftsToMovements(shifts: Seq[Shift]) = {
+    shifts.flatMap(shift => {
+      val uuid: UUID = UUID.randomUUID()
+      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff, uuid) ::
+        StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff, uuid) :: Nil
+    }).sortBy(_.time)
+  }
 
   def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate) = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
 
@@ -178,12 +187,4 @@ object StaffMovements {
     val baseStaff = shiftService.staffAt(dateTime)
     baseStaff + adjustmentsAt(movements)(dateTime)
   }
-}
-
-case class MovementsShiftService(shifts: List[Shift]) {
-  val movements = StaffMovements.shiftsToMovements(shifts).groupBy(_.time).map(m =>
-    StaffMovement(m._1.toString(), m._1, m._2.map(_.delta).sum, None)).toList
-  println(s"Movements are: ${movements.mkString("\n")}")
-
-  def staffAt(date: MilliDate): Int = StaffMovements.adjustmentsAt(movements)(date)
 }
