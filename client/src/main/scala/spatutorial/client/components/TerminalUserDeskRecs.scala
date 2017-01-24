@@ -173,7 +173,7 @@ object TableTerminalDeskRecs {
             })))
           }
 
-          def popoverFormRow(label: QueueName, xs: TagMod*) = {
+          def popoverFormRow(label: String, xs: TagMod*) = {
             <.div(^.className := "form-group row",
               <.label(label, ^.className := "col-sm-2 col-form-label"),
               <.div(
@@ -181,7 +181,7 @@ object TableTerminalDeskRecs {
                 xs))
           }
 
-          <.div(^.className := "container",
+          <.div(^.className := "container", ^.key := "IS81",
             labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
             popoverFormRow("Start time",
