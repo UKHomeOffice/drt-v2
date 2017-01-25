@@ -6,11 +6,9 @@ import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{MilliDate, SDate}
-
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
-import scala.util.{Failure, Success, Try}
-
+import scala.util.{Failure, Success, Try} 
 
 object JSDateConversions {
   implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
@@ -55,7 +53,9 @@ object JSDateConversions {
     }
 
     def apply(milliDate: MilliDate): SDate = new Date(milliDate.millisSinceEpoch)
+
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDate = new Date(y, m - 1, d, h, mm)
+
     def today(): SDate = {
       val d = new Date()
       d.setHours(0)
@@ -63,6 +63,7 @@ object JSDateConversions {
       d.setMilliseconds(0)
       JSSDate(d)
     }
+
     def now(): SDate = {
       val d = new Date()
       JSSDate(d)
@@ -128,14 +129,14 @@ object Shift {
 
 case class ShiftParser(rawShifts: String) {
   val lines = rawShifts.split("\n")
-  val parsedShifts: Array[Try[Shift]] = lines.map(l => l.split(","))
+  val parsedShifts: Array[Try[Shift]] = lines.map(l => l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\""))
     .filter(parts => parts.length == 4 || parts.length == 5)
-    .map(pl => pl match {
+    .map {
       case Array(description, startDay, startTime, endTime) =>
         Shift(description, startDay, startTime, endTime)
       case Array(description, startDay, startTime, endTime, staffNumberDelta) =>
         Shift(description, startDay, startTime, endTime, staffNumberDelta)
-    })
+    }
 }
 
 case class ShiftService(shifts: Seq[Shift]) {
@@ -164,11 +165,17 @@ object ShiftService {
 
 case class StaffMovement(reason: String, time: MilliDate, delta: Int, uUID: UUID, queue: Option[QueueName] = None) {
   def toCsv = {
-    val startDate: SDate = SDate(time)
-    val startDateString = f"${startDate.getDate}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
-    val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+    s"$reason,$displayDate,$displayTime,$delta"
+  }
 
-    s"$reason,$startDateString,$startTimeString,$delta"
+  def displayTime: String = {
+    val startDate: SDate = SDate(time)
+    f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+  }
+
+  def displayDate: String = {
+    val startDate: SDate = SDate(time)
+    f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
   }
 }
 
