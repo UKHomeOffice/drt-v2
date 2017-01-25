@@ -5,6 +5,7 @@
 *.DS_Store
 
 # sbt specific
+.sbtopts
 .cache/
 .history/
 .lib/
