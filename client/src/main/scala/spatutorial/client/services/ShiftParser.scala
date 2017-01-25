@@ -8,7 +8,7 @@ import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{MilliDate, SDate}
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
-import scala.util.{Failure, Success, Try} 
+import scala.util.{Failure, Success, Try}
 
 object JSDateConversions {
   implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
@@ -156,9 +156,8 @@ object ShiftService {
 
   def groupPeopleByShiftTimes(shifts: Seq[Shift]) = {
     shifts.groupBy(shift => (shift.startDt, shift.endDt, shift.name))
-      .map { case ((startDt, endDt, name), shifts) => {
+      .map { case ((startDt, endDt, name), shifts) =>
         Shift(name, startDt, endDt, shifts.map(_.numberOfStaff).sum)
-      }
       }
   }
 }
