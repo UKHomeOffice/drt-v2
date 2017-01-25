@@ -45,7 +45,6 @@ object MainMenu {
       case PotReady =>
         airportConfigPotMP().get.terminalNames.zipWithIndex.map {
           case (tn, idx) =>
-            log.info(s"Adding terminal menu item for $tn")
             MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalLoc(tn))
         }.toList
       case _ =>
@@ -63,14 +62,9 @@ object MainMenu {
           airportConfigPotMP().renderReady(airportConfig =>
             <.ul(bss.navbar, ^.className := "mr-auto")(
               //           build a list of menu items
-              for (item <- menuItems(airportConfigPotMP)) yield {
+              for (item <- menuItems(airportConfigPotMP)) yield
                 <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
-                  props.router.link(item.location)(item.icon, " ", item.label(props))
-                )
-              }
-            )
-          )
-        )
+                  props.router.link(item.location)(item.icon, " ", item.label(props))))))
       })
     }
   }

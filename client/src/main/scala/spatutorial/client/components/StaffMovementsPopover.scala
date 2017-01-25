@@ -4,9 +4,11 @@ import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
+import org.scalajs.dom.html.{Div, Select}
 import spatutorial.client.logger._
 import spatutorial.client.services.{AddStaffMovement, SPACircuit, Shift, StaffMovements}
 import spatutorial.shared.SDate
+
 import scala.util.{Failure, Success}
 import scala.collection.immutable.Seq
 
@@ -71,6 +73,18 @@ object StaffMovementsPopover {
             })))
           }
 
+          def timeSelector(label: String, startDate: SDate): ReactTagOf[Div] = {
+            popoverFormRow(label,
+              selectFromRange(
+                0 to 23, startDate.getHours(),
+                (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeHours = v.toInt)
+              ), ":",
+              selectFromRange(
+                0 to 59, startDate.getMinutes(),
+                (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeMinutes = v.toInt))
+            )
+          }
+
           def popoverFormRow(label: String, xs: TagMod*) = {
             <.div(^.className := "form-group row",
               <.label(label, ^.className := "col-sm-2 col-form-label"),
@@ -82,26 +96,8 @@ object StaffMovementsPopover {
           <.div(^.className := "container", ^.key := "IS81",
             labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
-            popoverFormRow("Start time",
-              selectFromRange(
-                0 to 23, startDate.getHours(),
-                (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeHours = v.toInt)
-              ), ":",
-              selectFromRange(
-                0 to 59,
-                startDate.getMinutes(),
-                (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeMinutes = v.toInt))
-            ),
-            popoverFormRow("End time",
-              selectFromRange(
-                0 to 23, endDate.getHours(),
-                (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeHours = v.toInt)
-              ), ":",
-              selectFromRange(
-                0 to 59,
-                endDate.getMinutes(),
-                (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeMinutes = v.toInt))
-            ),
+            timeSelector("Start time", startDate),
+            timeSelector("End time", endDate),
             popoverFormRow("Number of staff", <.input.number(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventI) => {
               val newValue: String = e.target.value
               scope.modState((s: StaffMovementPopoverState) => s.copy(numberOfStaff = newValue.toInt))
