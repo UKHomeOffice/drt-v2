@@ -13,6 +13,7 @@ import spatutorial.client.components.Bootstrap.CommonStyle
 import spatutorial.client.components.Icon._
 import spatutorial.client.services.SPACircuit
 import spatutorial.shared.{HasAirportConfig, AirportConfig}
+import spatutorial.client.logger._
 
 import scalacss.ScalaCssReact._
 
@@ -42,7 +43,11 @@ object MainMenu {
   def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
     val terminalMenuItems = airportConfigPotMP().state match {
       case PotReady =>
-        airportConfigPotMP().get.terminalNames.zipWithIndex.map { case (tn, idx) => MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalLoc(tn)) }.toList
+        airportConfigPotMP().get.terminalNames.zipWithIndex.map {
+          case (tn, idx) =>
+            log.info(s"Adding terminal menu item for $tn")
+            MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalLoc(tn))
+        }.toList
       case _ =>
         List()
     }
@@ -54,13 +59,17 @@ object MainMenu {
     def render(props: Props) = {
       val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
       airportConfigPotRCP(airportConfigPotMP => {
-        <.ul(bss.navbar, ^.className := "mr-auto")(
-          //           build a list of menu items
-          for (item <- menuItems(airportConfigPotMP)) yield {
-            <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
-              props.router.link(item.location)(item.icon, " ", item.label(props))
+        <.div(
+          airportConfigPotMP().renderReady(airportConfig =>
+            <.ul(bss.navbar, ^.className := "mr-auto")(
+              //           build a list of menu items
+              for (item <- menuItems(airportConfigPotMP)) yield {
+                <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
+                  props.router.link(item.location)(item.icon, " ", item.label(props))
+                )
+              }
             )
-          }
+          )
         )
       })
     }
