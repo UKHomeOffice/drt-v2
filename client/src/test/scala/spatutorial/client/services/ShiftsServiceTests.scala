@@ -266,14 +266,9 @@ object ShiftsServiceTests extends TestSuite {
               |Night	01/12/16	22:30	07:18
             """.stripMargin
 
-          val lines = shiftsRawTsv.split("\n")
-          val parsedShifts = lines.map(l => l.split("\t"))
-            .filter(_.length == 4)
-            .map(pl => Shift(pl(0), pl(1), pl(2), pl(3)))
-
+          val parsedShifts: Array[Try[Shift]] = parseRawTsv(shiftsRawTsv)
 
           println(parsedShifts.mkString("\n"))
-
 
           // Commented out some performance tests we used to evaluate different approaches.
 
@@ -368,10 +363,30 @@ object ShiftsServiceTests extends TestSuite {
               val staff: Int = staffAt(shiftServiceWithOneShift)(movements)(sDate)
               assert(staff == 8)
             }
+            "escaped commas are allowed in shift name" - {
+              val shiftsRawCsv =
+                """
+                  |Alpha\, 1 ODM,01/12/16,06:30,15:18
+                """.stripMargin
+              val parsedShift: Try[Shift] = ShiftParser(shiftsRawCsv).parsedShifts.head
+
+              parsedShift match {
+                case Success(Shift(name, _, _, _)) =>
+                  assert(name == "Alpha\\, 1 ODM")
+              }
+            }
           }
         }
       }
     }
+  }
+
+  def parseRawTsv(shiftsRawTsv: String): Array[Try[Shift]] = {
+    val lines = shiftsRawTsv.split("\n")
+    val parsedShifts = lines.map(l => l.split("\t"))
+      .filter(_.length == 4)
+      .map(pl => Shift(pl(0), pl(1), pl(2), pl(3)))
+    parsedShifts
   }
 }
 
