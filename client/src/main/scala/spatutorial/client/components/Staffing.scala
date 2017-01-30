@@ -20,6 +20,7 @@ object Staffing {
   case class Props()
 
   class Backend($: BackendScope[Props, Unit]) {
+
     def render(props: Props) = {
       val shiftsAndMovementsRCP = SPACircuit.connect(m => (m.shiftsRaw, m.staffMovements))
       shiftsAndMovementsRCP((shiftsAndMovementsMP: ModelProxy[(Pot[String], Seq[StaffMovement])]) => {
@@ -93,7 +94,8 @@ object Staffing {
       <.pre(shiftExamples.map(<.div(_))),
       <.textarea(^.value := rawShifts,
         ^.className := "staffing-editor",
-        ^.onChange ==> ((e: ReactEventI) => mp.dispatch(SetShifts(e.target.value))))
+        ^.onChange ==> ((e: ReactEventI) => mp.dispatch(SetShifts(e.target.value)))),
+      <.button("Save", ^.onClick ==> ((e: ReactEventI) => mp.dispatch(SaveShifts(rawShifts))))
     )
   }
 

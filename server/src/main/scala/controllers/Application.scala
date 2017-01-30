@@ -314,10 +314,18 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
+  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache with ShiftPersistence{
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+  }
+
+  trait ShiftPersistence {
+    def saveShifts(rawShifts: String): String = {
+      log.info(s"Got shifts: $rawShifts")
+
+      rawShifts
+    }
   }
 
   trait CrunchFromCache {
