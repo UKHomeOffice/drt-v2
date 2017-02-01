@@ -14,27 +14,27 @@ object StaffDeploymentCalculatorTests extends TestSuite {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
   def tests = TestSuite {
-    val portCrunchResult = Map(
-      "T1" -> Map(
-        "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)))),
-        "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)))),
-        "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1))))
-      ),
-      "T2" -> Map(
-        "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)))),
-        "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)))),
-        "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1))))
-      ),
-      "T3" -> Map(
-        "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)))),
-        "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)))),
-        "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1))))
-      )
-    )
-
     "Given crunch results for a multi-terminal port, " +
       "when we ask for ask for total desk recs per terminal by minute, " +
       "then we should see the sum of the desk recs per minute for each terminal" - {
+
+      val portCrunchResult = Map(
+        "T1" -> Map(
+          "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)))),
+          "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)))),
+          "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1))))
+        ),
+        "T2" -> Map(
+          "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)))),
+          "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)))),
+          "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1))))
+        ),
+        "T3" -> Map(
+          "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)))),
+          "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)))),
+          "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1))))
+        )
+      )
 
       val result = PortDeployment.portDeskRecs(portCrunchResult)
       val expected = List(
