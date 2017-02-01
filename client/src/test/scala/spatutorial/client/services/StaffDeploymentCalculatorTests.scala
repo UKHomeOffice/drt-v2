@@ -55,7 +55,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
         (60000L, List((6, "T1"), (9, "T2"), (12, "T3"))),
         (120000L, List((9, "T1"), (12, "T2"), (15, "T3")))
       )
-      val result = PortDeployment.portDeployments(terminalRecsOverTime) //30
+      val staffAvailableAt: (MilliDate) => Int = (md: MilliDate) => 30
+      val result = PortDeployment.portDeployments(terminalRecsOverTime, staffAvailableAt)
       val expected = List(
         (0L, List((5, "T1"), (10, "T2"), (15, "T3"))),
         (60000L, List((6, "T1"), (10, "T2"), (14, "T3"))),
@@ -117,6 +118,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
 
       assert(result == expected)
     }
+
     "Given terminal queue crunch results for two queues and staff shifts we should get suggested deployments for each queue" - {
       val shiftsRawCsv =
         """

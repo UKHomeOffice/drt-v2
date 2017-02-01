@@ -126,20 +126,18 @@ case class RootModel(
     val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
     val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
-      tn: TerminalName => m: MilliDate => 0
+      m: MilliDate => 0
     } else {
       val successfulShifts = shifts.collect { case Success(s) => s }
       val ss = ShiftService(successfulShifts)
-      (tn: TerminalName) => StaffMovements.staffAt(ss)(staffMovements) _
+      StaffMovements.staffAt(ss)(staffMovements) _
     }
 
     val pdr = PortDeployment.portDeskRecs(queueCrunchResults)
-    val pd = PortDeployment.portDeployments(pdr)
-    log.info(s"")
+    val pd = PortDeployment.portDeployments(pdr, staffFromShiftsAndMovementsAt)
     val tsa = PortDeployment.terminalStaffAvailable(pd) _
 
     StaffDeploymentCalculator2(tsa, queueCrunchResults).getOrElse(Map())
-//    StaffDeploymentCalculator2(staffFromShiftsAndMovementsAt, queueCrunchResults).getOrElse(Map())
   }
 
   lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {

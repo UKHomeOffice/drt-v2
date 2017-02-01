@@ -10,7 +10,6 @@ import scala.collection.immutable.{IndexedSeq, Iterable, Map, Seq}
 
 object PortDeployment {
   def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]): List[(Long, List[(Int, String)])] = {
-//    val x: List[Map[QueueName, Pot[PotCrunchResult]]] = portRecs.values.toList
     val seconds: Range = secondsRangeFromPortCrunchResult(portRecs.values.toList)
     val portRecsByTerminal: List[List[(Int, TerminalName)]] = portRecs.map {
       case (terminalName, queueRecs: Map[String, Seq[Int]]) =>
@@ -23,13 +22,11 @@ object PortDeployment {
         deskRecsByMinute.transpose.map((x: Iterable[Int]) => x.sum).map((_, terminalName)).toList
       case _ => List()
     }.toList
-    log.info(s"untransposed: ${portRecsByTerminal}")
-    log.info(s"transposed: ${portRecsByTerminal.transpose}")
-    val d: List[(List[(Int, TerminalName)], Int)] = portRecsByTerminal.transpose.zip(seconds)
-    val e: List[(Long, List[(Int, TerminalName)])] = d.map((y: (List[(Int, TerminalName)], Int)) => (y._2.toLong * 1000, y._1))
-//    val e = d.map((x: (List[(Int, String)], Int)) => (x._2.toLong * 1000, x._1))
-    //      .toList.zip(seconds).map((x: (List[(Int, String)], Int)) => (x._2.toLong * 1000, x._1))
-    e
+    val portRecsByTimeInSeconds: List[(Int, List[(Int, TerminalName)])] = seconds.zip(portRecsByTerminal.transpose).toList
+    val portRecsByTimeInMillis: List[(Long, List[(Int, TerminalName)])] = portRecsByTimeInSeconds.map {
+      case (seconds, deskRecsWithTerminal) => (seconds.toLong * 1000, deskRecsWithTerminal)
+    }
+    portRecsByTimeInMillis
   }
 
   def secondsRangeFromPortCrunchResult(terminalRecs: List[Map[QueueName, Pot[PotCrunchResult]]]): Range = {
@@ -44,16 +41,11 @@ object PortDeployment {
     Range(firstSec.toInt, firstSec.toInt + (60 * 60 * 24), 60)
   }
 
-  def portDeployments(portDeskRecs: List[(Long, List[(Int, String)])]): List[(Long, List[(Int, String)])] = {
-    //    for {
-    //      minuteDeskRecs <- portDeskRecs
-    //    } yield {
-    //      (minuteDeskRecs._1, recsToDeployments(_.toInt)(minuteDeskRecs._2.map(_._1), 30).zip(minuteDeskRecs._2.map(_._2)).toList)
-    //    }
-    log.info(s"${portDeskRecs.length} portDeskRecs")
-    portDeskRecs.map(minuteDeskRecs => {
-      (minuteDeskRecs._1, recsToDeployments(_.toInt)(minuteDeskRecs._2.map(_._1), 30).zip(minuteDeskRecs._2.map(_._2)).toList)
-    })
+  def portDeployments(portDeskRecs: List[(Long, List[(Int, String)])], staffAvailable: MilliDate => Int): List[(Long, List[(Int, String)])] = {
+    portDeskRecs.map {
+      case (millis, deskRecsWithTerminal) =>
+        (millis, recsToDeployments(_.toInt)(deskRecsWithTerminal.map(_._1), staffAvailable(MilliDate(millis))).zip(deskRecsWithTerminal.map(_._2)).toList)
+    }
   }
 
   def recsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
