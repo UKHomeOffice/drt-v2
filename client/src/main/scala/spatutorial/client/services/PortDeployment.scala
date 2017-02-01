@@ -9,9 +9,9 @@ import spatutorial.client.logger._
 import scala.collection.immutable.{IndexedSeq, Iterable, Map, Seq}
 
 object PortDeployment {
-  def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]): List[(Long, List[(Int, String)])] = {
+  def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]): List[(Long, List[(Int, TerminalName)])] = {
     val portRecsByTerminal: List[List[(Int, TerminalName)]] = portRecs.map {
-      case (terminalName, queueRecs: Map[String, Seq[Int]]) =>
+      case (terminalName, queueRecs: Map[TerminalName, Seq[Int]]) =>
         val deskRecsByMinute: Iterable[IndexedSeq[Int]] = queueRecs.values.transpose((deskRecs: Pot[Pot[CrunchResult]]) => {
           for {
             crunchResultPot: Pot[CrunchResult] <- deskRecs
@@ -41,10 +41,12 @@ object PortDeployment {
     Range(firstSec.toInt, firstSec.toInt + (60 * 60 * 24), 60)
   }
 
-  def portDeployments(portDeskRecs: List[(Long, List[(Int, String)])], staffAvailable: MilliDate => Int): List[(Long, List[(Int, String)])] = {
+  def portDeployments(portDeskRecs: List[(Long, List[(Int, TerminalName)])], staffAvailable: MilliDate => Int): List[(Long, List[(Int, TerminalName)])] = {
+    val roundToInt: (Double) => Int = _.toInt
+    val deploymentsWithRounding = recsToDeployments(roundToInt) _
     portDeskRecs.map {
       case (millis, deskRecsWithTerminal) =>
-        (millis, recsToDeployments(_.toInt)(deskRecsWithTerminal.map(_._1), staffAvailable(MilliDate(millis))).zip(deskRecsWithTerminal.map(_._2)).toList)
+        (millis, deploymentsWithRounding(deskRecsWithTerminal.map(_._1), staffAvailable(MilliDate(millis))).zip(deskRecsWithTerminal.map(_._2)).toList)
     }
   }
 
@@ -58,7 +60,7 @@ object PortDeployment {
     }
   }
 
-  def terminalStaffAvailable(deployments: List[(Long, List[(Int, TerminalName)])])(terminalName: String): (MilliDate) => Int = {
+  def terminalStaffAvailable(deployments: List[(Long, List[(Int, TerminalName)])])(terminalName: TerminalName): (MilliDate) => Int = {
     val terminalDeployments: Map[Long, Int] = deployments.map(timeStaff => (timeStaff._1, timeStaff._2.find(_._2 == terminalName).map(_._1).getOrElse(0))).toMap
     (milliDate: MilliDate) => terminalDeployments.getOrElse(milliDate.millisSinceEpoch, 0)
   }
