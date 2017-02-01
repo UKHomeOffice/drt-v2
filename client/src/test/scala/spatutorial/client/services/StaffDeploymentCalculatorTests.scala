@@ -15,7 +15,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
 
   def tests = TestSuite {
     "Given crunch results for a multi-terminal port, " +
-      "when we ask for ask for total desk recs per terminal by minute, " +
+      "when we ask for total desk recs per terminal by minute, " +
       "then we should see the sum of the desk recs per minute for each terminal" - {
 
       val portCrunchResult = Map(
@@ -47,7 +47,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
     }
 
     "Given terminal requirements over time, " +
-      "when we ask how to deploy available staff" +
+      "when we ask how to deploy available staff, " +
       "then we should see the available staff split across the terminal in the ratio of requirements" - {
 
       val terminalRecsOverTime = List(
@@ -67,7 +67,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
     }
 
     "Given terminal deployments over time, " +
-      "when we ask for a staff available function for a specific terminal" +
+      "when we ask for a staff available function for a specific terminal, " +
       "then we get a function which returns the available staff for that terminal at a given time" - {
       val terminalDeploymentsOverTime: List[(Long, List[(Int, TerminalName)])] = List(
         (0L, List((5, "T1"), (10, "T2"), (15, "T3"))),
