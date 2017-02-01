@@ -92,11 +92,6 @@ object StaffDeploymentCalculatorTests extends TestSuite {
     }
 
     "Given terminal queue crunch results for one queue and staff shifts we should get suggested deployments for the queue" - {
-      val shiftsRawCsv =
-        """
-          |Shift 1,01/12/16,00:00,01:00,6
-        """.stripMargin
-
       val startTime = SDate(2016, 12, 1).millisSinceEpoch
       val oneHour = 60000
       val deskRecs = List.fill(60)(2).toIndexedSeq
@@ -105,7 +100,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
         "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
       )
 
-      val result = StaffDeploymentCalculator(Ready(shiftsRawCsv), Seq(), terminalQueueCrunchResults, "T1")
+      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults)
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(
           List(
@@ -120,11 +116,6 @@ object StaffDeploymentCalculatorTests extends TestSuite {
     }
 
     "Given terminal queue crunch results for two queues and staff shifts we should get suggested deployments for each queue" - {
-      val shiftsRawCsv =
-        """
-          |Shift 1,01/12/16,00:00,01:00,6
-        """.stripMargin
-
       val startTime = SDate(2016, 12, 1).millisSinceEpoch
       val oneHour = 60000
       val eeaDeskRecs = List.fill(60)(4).toIndexedSeq
@@ -136,7 +127,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
           "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
       )
 
-      val result = StaffDeploymentCalculator(Ready(shiftsRawCsv), Seq(), terminalQueueCrunchResults, "T1")
+      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults)
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(List(
           DeskRecTimeslot(1480550400000L, 4),
