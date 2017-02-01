@@ -326,7 +326,7 @@ class Application @Inject()(
     def saveShifts(rawShifts: String): String = {
       log.info(s"Got shifts: $rawShifts")
 
-      shiftsActor ! Cmd(rawShifts)
+      shiftsActor ! rawShifts
       rawShifts
     }
   }
