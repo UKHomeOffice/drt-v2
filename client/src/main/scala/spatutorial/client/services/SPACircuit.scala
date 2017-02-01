@@ -118,7 +118,26 @@ case class RootModel(
   import TerminalUserDeskRecs._
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
-    StaffDeploymentCalculator(shiftsRaw, staffMovements, queueCrunchResults, "T1").getOrElse(Map())
+    val rawShiftsString = shiftsRaw match {
+      case Ready(rawShifts) => rawShifts
+      case _ => ""
+    }
+
+    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
+    val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
+      log.error("Couldn't parse raw shifts")
+      m: MilliDate => 0
+    } else {
+      val successfulShifts = shifts.collect { case Success(s) => s }
+      val ss = ShiftService(successfulShifts)
+      StaffMovements.staffAt(ss)(staffMovements) _
+    }
+
+    val pdr = PortDeployment.portDeskRecs(queueCrunchResults)
+    val pd = PortDeployment.portDeployments(pdr, staffFromShiftsAndMovementsAt)
+    val tsa = PortDeployment.terminalStaffAvailable(pd) _
+
+    StaffDeploymentCalculator(tsa, queueCrunchResults).getOrElse(Map())
   }
 
   lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
@@ -376,53 +395,44 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
 object StaffDeploymentCalculator {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-  def apply[M](rawShiftsModel: Pot[String], staffMovements: Seq[StaffMovement], terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults], terminalName: TerminalName):
+  def apply[M](staffAvailable: (TerminalName) => (MilliDate) => Int, terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults]):
   Try[TerminalQueueStaffDeployments] = {
 
-    val rawShiftsString = rawShiftsModel match {
-      case Ready(rawShifts) => rawShifts
-      case _ => ""
-    }
+    val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
+    val firstTerminalName = terminalQueueCrunchResults.keys.headOption.getOrElse("")
+    val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(firstTerminalName).head._2.get.get)
 
-    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
-    if (shifts.exists(s => s.isFailure)) {
-      log.error("Couldn't parse raw shifts")
-      Failure(new Exception("Couldn't parse"))
-    } else {
-      val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
-      val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(terminalName).head._2.get.get)
+    crunchResultWithTimeAndIntervalTry.map(crunchResultWithTimeAndInterval => {
 
-      crunchResultWithTimeAndIntervalTry.map( crunchResultWithTimeAndInterval => {
+      val drts: DeskRecTimeSlots = calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval)
 
-        val drts: DeskRecTimeSlots = calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval)
+      val newSuggestedStaffDeployments: Map[TerminalName, Map[QueueName, Ready[DeskRecTimeSlots]]] = terminalQueueCrunchResults.map((terminalQueueCrunchResult: (TerminalName, QueueCrunchResults)) => {
+        val terminalName: TerminalName = terminalQueueCrunchResult._1
+        val terminalStaffAvailable = staffAvailable(terminalName)
+        val queueCrunchResult = terminalQueueCrunchResult._2
 
-        val successfulShifts = shifts.collect { case Success(s) => s }
-        val ss = ShiftService(successfulShifts)
-        val staffFromShiftsAndMovementsAt = StaffMovements.staffAt(ss)(staffMovements) _
-        val newSuggestedStaffDeployments = terminalQueueCrunchResults.mapValues((queueCrunchResult: QueueCrunchResults) => {
+        val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
+          case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
+        }
 
-          val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose{
-            case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
-          }
+        val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
+          val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
+          queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, terminalStaffAvailable(timeInMillis))
+        }
+        val deployments = queueDeskRecsOverTime.map(timeslotsToInts).transpose
 
-          val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
-            val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
-            queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, staffFromShiftsAndMovementsAt(timeInMillis))
-          }
-          val deployments = queueDeskRecsOverTime.map(timeslotsToInts).transpose
+        val times: Seq[Long] = drts.items.map(_.timeInMillis)
 
-          val times: Seq[Long] = drts.items.map(_.timeInMillis)
-
-          val zipped = queueCrunchResult.keys.zip({
-            deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
-          })
-
-          zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x)))
+        val zipped = queueCrunchResult.keys.zip({
+          deployments.map(times.zip(_).map { case (t, r) => DeskRecTimeslot(t, r) })
         })
 
-        newSuggestedStaffDeployments
+        (terminalName, zipped.toMap.mapValues((x: Seq[DeskRecTimeslot]) => Ready(DeskRecTimeSlots(x))))
       })
-    }
+
+      newSuggestedStaffDeployments
+    })
+
   }
 
   def calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval: CrunchResult) = {
