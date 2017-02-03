@@ -496,11 +496,10 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
     case SaveShifts(shifts: String) =>
       AjaxClient[Api].saveShifts(shifts).call()
       noChange
-
-     case AddShift(shift) =>
+    case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
-     case GetShifts() =>
-       effectOnly(Effect(AjaxClient[Api].getShifts().call().map(res => SetShifts(res))))
+    case GetShifts() =>
+      effectOnly(Effect(AjaxClient[Api].getShifts().call().map(res => SetShifts(res))))
   }
 }
 

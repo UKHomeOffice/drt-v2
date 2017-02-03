@@ -319,7 +319,7 @@ class Application @Inject()(
 
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
-    override def actorSystem: ActorSystem = system
+    def actorSystem: ActorSystem = system
 
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
@@ -397,29 +397,4 @@ class Application @Inject()(
   }
 }
 
-trait ShiftPersistence {
-  implicit val timeout: Timeout = Timeout(5 seconds)
 
-  def actorSystem: ActorSystem
-
-  def shiftsActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsActor]))
-
-  def saveShifts(rawShifts: String): String = {
-    actorSystem.log.info(s"Got shifts: $rawShifts")
-
-    shiftsActor ! rawShifts
-    rawShifts
-  }
-
-  def getShifts(): Future[String] = {
-    val res: Future[Any] = shiftsActor ? GetState
-
-    println(s"waiting for shifts: ${Await.result(res, 1 second)}")
-    val shiftsFuture = res.collect {
-      case shifts: String =>
-        actorSystem.log.info(s"Found Shift: $shifts")
-        shifts
-    }
-    shiftsFuture
-  }
-}

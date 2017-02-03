@@ -12,7 +12,7 @@ case object GetState
 
 class ShiftsActor extends PersistentActor {
 
-    override def persistenceId = "shifts-actor-id-1"
+    override def persistenceId = "shifts-store"
 
     var state = ShiftsState()
 
@@ -30,7 +30,7 @@ class ShiftsActor extends PersistentActor {
 
     val receiveCommand: Receive = {
       case GetState =>
-        sender() ! state.events.headOption.getOrElse("missing")
+        sender() ! state.events.headOption.getOrElse("")
       case data: String =>
         persist(data) { event =>
           updateState(event)
