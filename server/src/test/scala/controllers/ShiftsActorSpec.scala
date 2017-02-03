@@ -56,6 +56,7 @@ class ShiftsActorSpec extends Specification {
       expectMsg("first message")
 
     }
+
     "return the most recent message if more than one message is sent" in new AkkaTestkitSpecs2Support {
 
       val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
