@@ -1,11 +1,13 @@
 package services
 
+import actors.CrunchActor
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
-import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
+import controllers.{AirportConfProvider, Core, SystemActors}
 import org.joda.time.DateTime
 import spatutorial.shared.FlightsApi.TerminalName
 import spatutorial.shared._
+
 import scala.collection.immutable.Seq
 import utest._
 

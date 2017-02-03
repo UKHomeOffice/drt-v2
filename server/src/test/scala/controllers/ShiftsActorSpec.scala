@@ -3,6 +3,7 @@ package controllers
 import java.io.File
 import java.util.concurrent.TimeUnit
 
+import actors.{GetState, ShiftsActor}
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout

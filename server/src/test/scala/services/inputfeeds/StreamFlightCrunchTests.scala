@@ -1,5 +1,6 @@
 package services.inputfeeds
 
+import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source

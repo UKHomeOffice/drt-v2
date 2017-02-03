@@ -2,11 +2,12 @@ package services
 
 import java.util.{Date, UUID}
 
+import actors.GetLatestCrunch
 import akka.actor.ActorRef
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{GetLatestCrunch, ShiftPersistence}
+import controllers.ShiftPersistence
 import org.slf4j.{Logger, LoggerFactory}
 import services.workloadcalculator.PassengerQueueTypes
 import spatutorial.shared._

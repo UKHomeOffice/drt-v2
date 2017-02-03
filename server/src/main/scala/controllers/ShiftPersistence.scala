@@ -1,7 +1,9 @@
 package controllers
 
+import actors.{GetState, ShiftsActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
+
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import ExecutionContext.Implicits.global

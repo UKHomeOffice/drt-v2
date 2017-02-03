@@ -1,4 +1,4 @@
-package controllers
+package actors
 
 import akka.persistence._
 

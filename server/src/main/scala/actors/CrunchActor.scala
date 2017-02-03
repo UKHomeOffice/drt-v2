@@ -1,23 +1,20 @@
-package controllers
-
-import java.util.Date
+package actors
 
 import akka.actor._
-import org.joda.time.{DateTime, LocalDate}
+import controllers.FlightState
+import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import services._
-import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi._
-
-import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
-import spatutorial.shared._
+import spatutorial.shared.{ApiFlight, _}
 import spray.caching.{Cache, LruCache}
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.

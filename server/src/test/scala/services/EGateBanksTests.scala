@@ -1,6 +1,6 @@
 package services
 
-import controllers.EGateBankCrunchTransformations
+import actors.EGateBankCrunchTransformations
 import spatutorial.shared._
 import utest._
 
