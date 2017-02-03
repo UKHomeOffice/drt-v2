@@ -1,5 +1,8 @@
 package services
 
+import actors.ShiftsActor
+import akka.actor.{ActorRef, Props}
+import akka.pattern.AskableActorRef
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
 import spatutorial.shared.FlightsApi._

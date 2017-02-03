@@ -1,11 +1,13 @@
 package services
 
+import actors.CrunchActor
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
-import controllers.{AirportConfProvider, Core, CrunchActor, SystemActors}
+import controllers.{AirportConfProvider, Core, SystemActors}
 import org.joda.time.DateTime
 import spatutorial.shared.FlightsApi.TerminalName
 import spatutorial.shared._
+
 import scala.collection.immutable.Seq
 import utest._
 
@@ -36,7 +38,7 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
-  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = (() => DateTime.now())) extends CrunchActor(hours, conf, timeProvider) {
+  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now()) extends CrunchActor(hours, conf, timeProvider) {
     override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) =
       _ => Some(List(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),

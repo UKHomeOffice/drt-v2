@@ -2,10 +2,12 @@ package services
 
 import java.util.{Date, UUID}
 
+import actors.GetLatestCrunch
 import akka.actor.ActorRef
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.AskableActorRef
-import controllers.GetLatestCrunch
+import akka.util.Timeout
+import controllers.ShiftPersistence
 import org.slf4j.{Logger, LoggerFactory}
 import services.workloadcalculator.PassengerQueueTypes
 import spatutorial.shared._
@@ -16,6 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.io.Codec
 import scala.util.{Success, Try}
+import scala.concurrent.duration._
 import spatutorial.shared.HasAirportConfig
 
 
@@ -91,7 +94,10 @@ abstract class ApiService(airportConfig: AirportConfig)
     with FlightsService
     with AirportToCountryLike
     with ActorBackedCrunchService
-    with CrunchResultProvider {
+    with CrunchResultProvider
+    with ShiftPersistence {
+
+  override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
   val log = LoggerFactory.getLogger(this.getClass)
   log.info(s"ApiService.airportConfig = $airportConfig")

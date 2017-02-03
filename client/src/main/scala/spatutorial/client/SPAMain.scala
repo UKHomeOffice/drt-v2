@@ -155,7 +155,7 @@ object SPAMain extends js.JSApp {
 
   case object StaffingLoc extends Loc
 
-  val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: Nil
+  val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: GetShifts() :: Nil
   initActions.foreach(SPACircuit.dispatch(_))
 
   // configure the router
@@ -203,7 +203,7 @@ object SPAMain extends js.JSApp {
         Staffing()
       })
 
-    val rule = (rootRoute | dashboardRoute | flightsRoute | userDeskRecsRoute | terminals | staffing)
+    val rule = rootRoute | dashboardRoute | flightsRoute | userDeskRecsRoute | terminals | staffing
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 

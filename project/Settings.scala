@@ -62,6 +62,9 @@ object Settings {
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
     "com.typesafe.akka" %% "akka-testkit" % "2.4.9" % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % "2.4.9" % "test",
+    "com.typesafe.akka" %% "akka-persistence" % "2.4.11",
+    "org.iq80.leveldb" % "leveldb" % "0.7",
+    "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
     "org.renjin" % "renjin-script-engine" % "0.8.2195",
     "joda-time" % "joda-time" % "2.9.4") :::

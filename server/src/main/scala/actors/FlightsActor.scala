@@ -1,14 +1,14 @@
-package controllers
+package actors
 
 import akka.actor._
 import akka.util.Timeout
+import controllers.FlightState
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
 import spatutorial.shared.FlightsApi.Flights
 
-import scala.language.postfixOps
-
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 case object GetFlights
 
