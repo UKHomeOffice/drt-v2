@@ -1,5 +1,8 @@
 package services
 
+import akka.actor.{ActorRef, Props}
+import akka.pattern.AskableActorRef
+import controllers.ShiftsActor
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
 import spatutorial.shared.FlightsApi._
@@ -19,6 +22,9 @@ trait FlightsService extends FlightsApi {
     Flights(Await.result(fsFuture, Duration.Inf))
   }
 }
+
+
+
 
 trait WorkloadsService extends WorkloadsApi with WorkloadsCalculator {
   self: (FlightsService) =>

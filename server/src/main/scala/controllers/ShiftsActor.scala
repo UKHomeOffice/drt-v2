@@ -30,12 +30,11 @@ class ShiftsActor extends PersistentActor {
 
     val receiveCommand: Receive = {
       case GetState =>
-        sender() ! state.events.headOption.getOrElse("")
+        sender() ! state.events.headOption.getOrElse("missing")
       case data: String =>
         persist(data) { event =>
           updateState(event)
           context.system.eventStream.publish(event)
         }
     }
-
   }

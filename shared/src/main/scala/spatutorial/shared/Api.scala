@@ -201,4 +201,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def airportConfiguration(): AirportConfig
 
   def saveShifts(rawShifts: String): String
+
+  def getShifts(): Future[String]
 }

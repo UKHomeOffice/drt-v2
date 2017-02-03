@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 
 import akka.actor._
 import akka.event._
+import akka.pattern._
 import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
@@ -29,9 +30,9 @@ import views.html.defaultpages.notFound
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -293,6 +294,7 @@ trait ProdPassengerSplitProviders {
   self: AirportConfiguration =>
   val splitProviders = List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
 }
+
 class Application @Inject()(
                              implicit val config: Configuration,
                              implicit val mat: Materializer,
@@ -311,25 +313,19 @@ class Application @Inject()(
     implicit val system: ActorSystem = ctrl.system
   }
 
-
   log.info(s"Application using airportConfig $airportConfig")
 
-  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache with ShiftPersistence{
+  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
+
+    override implicit val timeout: Timeout = Timeout(5 seconds)
+
+    override def actorSystem: ActorSystem = system
+
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
   }
 
-  trait ShiftPersistence {
-    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
-
-    def saveShifts(rawShifts: String): String = {
-      log.info(s"Got shifts: $rawShifts")
-
-      shiftsActor ! rawShifts
-      rawShifts
-    }
-  }
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>
@@ -398,5 +394,32 @@ class Application @Inject()(
         println(s"CLIENT - $msg")
       }
       Ok("")
+  }
+}
+
+trait ShiftPersistence {
+  implicit val timeout: Timeout = Timeout(5 seconds)
+
+  def actorSystem: ActorSystem
+
+  def shiftsActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsActor]))
+
+  def saveShifts(rawShifts: String): String = {
+    actorSystem.log.info(s"Got shifts: $rawShifts")
+
+    shiftsActor ! rawShifts
+    rawShifts
+  }
+
+  def getShifts(): Future[String] = {
+    val res: Future[Any] = shiftsActor ? GetState
+
+    println(s"waiting for shifts: ${Await.result(res, 1 second)}")
+    val shiftsFuture = res.collect {
+      case shifts: String =>
+        actorSystem.log.info(s"Found Shift: $shifts")
+        shifts
+    }
+    shiftsFuture
   }
 }

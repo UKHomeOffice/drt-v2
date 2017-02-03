@@ -52,6 +52,8 @@ case class SetShifts(shifts: String) extends Action
 
 case class SaveShifts(shifts: String) extends Action
 
+case class GetShifts() extends Action
+
 case class AddShift(shift: Shift) extends Action
 
 case class AddStaffMovement(staffMovement: StaffMovement) extends Action
@@ -497,6 +499,8 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
 
      case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
+     case GetShifts() =>
+       effectOnly(Effect(AjaxClient[Api].getShifts().call().map(res => SetShifts(res))))
   }
 }
 
