@@ -26,7 +26,7 @@ abstract class AkkaTestkitSpecs2Support extends TestKit(ActorSystem("testActorSy
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
   "akka.persistence.journal.leveldb.dir" -> "target/test",
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
-)).withFallback(ConfigFactory.load("application.conf"))))
+)).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString))))
   with After
   with ImplicitSender {
 
