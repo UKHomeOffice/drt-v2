@@ -155,7 +155,7 @@ object SPAMain extends js.JSApp {
 
   case object StaffingLoc extends Loc
 
-  val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: GetShifts() :: Nil
+  val initActions = GetWorkloads("", "") :: GetAirportConfig() :: RequestFlights(0, 0) :: GetShifts() :: GetStaffMovements() :: Nil
   initActions.foreach(SPACircuit.dispatch(_))
 
   // configure the router

@@ -3,7 +3,7 @@ package spatutorial.client.services
 import java.util.UUID
 
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.SDate
+import spatutorial.shared.{SDate, StaffMovement}
 import utest._
 
 import scala.scalajs.js.Date

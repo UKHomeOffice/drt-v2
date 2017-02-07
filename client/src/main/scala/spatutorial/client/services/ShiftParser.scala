@@ -5,7 +5,8 @@ import java.util.UUID
 import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.shared.FlightsApi._
-import spatutorial.shared.{MilliDate, SDate}
+import spatutorial.shared.{MilliDate, SDate, StaffMovement}
+
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
@@ -162,21 +163,7 @@ object ShiftService {
   }
 }
 
-case class StaffMovement(reason: String, time: MilliDate, delta: Int, uUID: UUID, queue: Option[QueueName] = None) {
-  def toCsv = {
-    s"$reason,$displayDate,$displayTime,$delta"
-  }
 
-  def displayTime: String = {
-    val startDate: SDate = SDate(time)
-    f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
-  }
-
-  def displayDate: String = {
-    val startDate: SDate = SDate(time)
-    f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
-  }
-}
 
 object StaffMovements {
   def shiftsToMovements(shifts: Seq[Shift]) = {

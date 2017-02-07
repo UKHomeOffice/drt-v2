@@ -60,6 +60,12 @@ case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
 case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action
 
+case class SaveStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
+
+case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
+
+case class GetStaffMovements() extends Action
+
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
 
@@ -507,9 +513,14 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
       val v: Seq[StaffMovement] = value
-      updated((v :+ staffMovement).sortBy(_.time))
+      val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
+      updated(updatedValue, Effect(Future(SaveStaffMovements(updatedValue))))
     case RemoveStaffMovement(idx, uUID) =>
       updated(value.filter(_.uUID != uUID))
+    case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
+      updated(staffMovements, Effect(Future(RunAllSimulations())))
+    case GetStaffMovements() =>
+      effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
   }
 }
 
