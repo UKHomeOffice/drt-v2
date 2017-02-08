@@ -60,7 +60,7 @@ case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
 case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action
 
-case class SaveStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
+case class SaveStaffMovements() extends Action
 
 case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
@@ -514,16 +514,16 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
     case AddStaffMovement(staffMovement) =>
       val v: Seq[StaffMovement] = value
       val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
-      updated(updatedValue, Effect(Future(SaveStaffMovements(updatedValue))))
+      updated(updatedValue)
     case RemoveStaffMovement(idx, uUID) =>
       val updatedValue = value.filter(_.uUID != uUID)
-      updated(updatedValue, Effect(Future(SaveStaffMovements(updatedValue))))
+      updated(updatedValue, Effect(Future(SaveStaffMovements())))
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
       updated(staffMovements, Effect(Future(RunAllSimulations())))
     case GetStaffMovements() =>
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
-    case SaveStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      AjaxClient[Api].saveStaffMovements(staffMovements).call()
+    case SaveStaffMovements() =>
+      AjaxClient[Api].saveStaffMovements(value).call()
       noChange
   }
 }
