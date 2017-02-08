@@ -516,7 +516,8 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
       val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
       updated(updatedValue, Effect(Future(SaveStaffMovements(updatedValue))))
     case RemoveStaffMovement(idx, uUID) =>
-      updated(value.filter(_.uUID != uUID))
+      val updatedValue = value.filter(_.uUID != uUID)
+      updated(updatedValue, Effect(Future(SaveStaffMovements(updatedValue))))
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
       updated(staffMovements, Effect(Future(RunAllSimulations())))
     case GetStaffMovements() =>
