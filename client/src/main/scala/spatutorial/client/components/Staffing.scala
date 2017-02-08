@@ -121,7 +121,6 @@ object Staffing {
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
                 hoursWorthOf15Minutes.map(t => {
-                  log.info(s"$t => ${staffWithShiftsAndMovements(t)}")
                   <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
                 })
               ))

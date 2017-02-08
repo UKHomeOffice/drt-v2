@@ -521,6 +521,9 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
       updated(staffMovements, Effect(Future(RunAllSimulations())))
     case GetStaffMovements() =>
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
+    case SaveStaffMovements(staffMovements: Seq[StaffMovement]) =>
+      AjaxClient[Api].saveStaffMovements(staffMovements).call()
+      noChange
   }
 }
 

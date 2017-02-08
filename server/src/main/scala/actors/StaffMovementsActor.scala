@@ -2,9 +2,12 @@ package actors
 
 import akka.persistence._
 import spatutorial.shared.StaffMovement
+import scala.collection.immutable.Seq
 
-case class StaffMovementsState(events: List[Seq[StaffMovement]] = Nil) {
-  def updated(data: Seq[StaffMovement]): StaffMovementsState = copy(data :: events)
+case class StaffMovements(staffMovements: Seq[StaffMovement])
+
+case class StaffMovementsState(events: List[StaffMovements] = Nil) {
+  def updated(data: StaffMovements): StaffMovementsState = copy(data :: events)
   def size: Int = events.length
   override def toString: String = events.reverse.toString
 }
@@ -15,14 +18,14 @@ class StaffMovementsActor extends PersistentActor {
 
     var state = StaffMovementsState()
 
-    def updateState(data: Seq[StaffMovement]): Unit = {
+    def updateState(data: StaffMovements): Unit = {
       state = state.updated(data)
     }
 
     def numEvents = state.size
 
     val receiveRecover: Receive = {
-      case data: Seq[StaffMovement]  =>
+      case data: StaffMovements  =>
         updateState(data)
       case SnapshotOffer(_, snapshot: StaffMovementsState) => state = snapshot
     }
@@ -30,7 +33,7 @@ class StaffMovementsActor extends PersistentActor {
     val receiveCommand: Receive = {
       case GetState =>
         sender() ! state.events.headOption.getOrElse("")
-      case data: Seq[StaffMovement] =>
+      case data: StaffMovements =>
         persist(data) { event =>
           updateState(event)
           context.system.eventStream.publish(event)
