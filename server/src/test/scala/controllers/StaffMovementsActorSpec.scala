@@ -1,28 +1,14 @@
 package controllers
 
-import java.io.File
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
-import actors.{GetState, ShiftsActor}
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
-import org.specs2.mutable.{After, Specification}
-import services.WorkloadCalculatorTests.apiFlight
-import spatutorial.shared.FlightsApi.Flights
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
-import collection.JavaConversions._
-import scala.util.Success
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-import akka.pattern._
+import org.specs2.mutable.Specification
 import spatutorial.shared.{MilliDate, StaffMovement}
+
 import scala.collection.immutable.Seq
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class StaffMovementsActorSpec extends Specification {
   sequential
@@ -47,6 +33,5 @@ class StaffMovementsActorSpec extends Specification {
         assert(Seq(StaffMovement("is81", MilliDate(0L), -1, uuid)) == result)
       }, 2 seconds)
     }
-
   }
 }
