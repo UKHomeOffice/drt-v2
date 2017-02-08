@@ -7,7 +7,7 @@ import akka.actor.ActorRef
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.ShiftPersistence
+import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import org.slf4j.{Logger, LoggerFactory}
 import services.workloadcalculator.PassengerQueueTypes
 import spatutorial.shared._
@@ -95,7 +95,8 @@ abstract class ApiService(airportConfig: AirportConfig)
     with AirportToCountryLike
     with ActorBackedCrunchService
     with CrunchResultProvider
-    with ShiftPersistence {
+    with ShiftPersistence
+    with StaffMovementsPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 

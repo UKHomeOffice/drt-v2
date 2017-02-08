@@ -9,7 +9,7 @@ import org.scalajs.dom.html.Div
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
 import spatutorial.client.services._
-import spatutorial.shared.{MilliDate, SDate, WorkloadsHelpers}
+import spatutorial.shared.{MilliDate, SDate, StaffMovement, WorkloadsHelpers}
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -68,7 +68,7 @@ object Staffing {
       if (movements.length > 0)
         <.ul(^.className := "list-unstyled", movements.map(movement => {
           val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventI) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
-          <.li(remove, " ", movement.toCsv)
+          <.li(remove, " ", MovementDisplay.toCsv(movement))
         }))
       else
         <.p("No movements recorded")
@@ -121,7 +121,6 @@ object Staffing {
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
                 hoursWorthOf15Minutes.map(t => {
-                  log.info(s"$t => ${staffWithShiftsAndMovements(t)}")
                   <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
                 })
               ))
@@ -129,7 +128,6 @@ object Staffing {
       )
     )
   }
-
 
   private def simpleStaffingTable(daysWorthOf15Minutes: NumericRange[Long], ss: ShiftService) = {
     <.table(
@@ -152,4 +150,21 @@ object Staffing {
   private val component = ReactComponentB[Props]("Staffing")
     .renderBackend[Backend]
     .build
+}
+
+
+object MovementDisplay  {
+  def toCsv(movement: StaffMovement) = {
+    s"${movement.reason},${displayDate(movement.time)},${displayTime(movement.time)},${movement.delta}"
+  }
+
+  def displayTime(time: MilliDate): String = {
+    val startDate: SDate = SDate(time)
+    f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+  }
+
+  def displayDate(time: MilliDate): String = {
+    val startDate: SDate = SDate(time)
+    f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
+  }
 }

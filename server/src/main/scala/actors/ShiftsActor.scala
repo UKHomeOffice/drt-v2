@@ -20,8 +20,6 @@ class ShiftsActor extends PersistentActor {
       state = state.updated(data)
     }
 
-    def numEvents = state.size
-
     val receiveRecover: Receive = {
       case data: String  =>
         updateState(data)
