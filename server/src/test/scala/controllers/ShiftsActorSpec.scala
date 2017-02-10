@@ -21,10 +21,10 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import akka.pattern._
 
-abstract class AkkaTestkitSpecs2Support extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
-  "akka.persistence.journal.leveldb.dir" -> "target/test",
+  "akka.persistence.journal.leveldb.dir" -> dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
 )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString))))
   with After
@@ -32,11 +32,14 @@ abstract class AkkaTestkitSpecs2Support extends TestKit(ActorSystem("testActorSy
 
   def after = {
     shutDownActorSystem
-    new File("target/test").listFiles().map(_.delete())
+    new File(dbLocation).listFiles().map(_.delete())
   }
 
   def shutDownActorSystem = {
-    Await.ready(system.terminate(), 1 second)
+    //TODO figure out how to wait for the actor to finish saving rather than this nasty timer.
+    Thread.sleep(20)
+    Await.ready(system.terminate(), 2 second)
+    Await.ready(system.whenTerminated, 2 second)
   }
 }
 
@@ -45,7 +48,7 @@ class ShiftsActorSpec extends Specification {
 
   "ShiftsActor" should {
 
-    "return the message it that was set if only one message is sent" in new AkkaTestkitSpecs2Support {
+    "return the message it that was set if only one message is sent" in new AkkaTestkitSpecs2Support("target/test") {
 
       val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
 
@@ -57,7 +60,7 @@ class ShiftsActorSpec extends Specification {
 
     }
 
-    "return the most recent message if more than one message is sent" in new AkkaTestkitSpecs2Support {
+    "return the most recent message if more than one message is sent" in new AkkaTestkitSpecs2Support("target/test") {
 
       val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
 
@@ -70,7 +73,7 @@ class ShiftsActorSpec extends Specification {
       expectMsg("second message")
     }
 
-    "restore the most recent message sent after a restart" in new AkkaTestkitSpecs2Support {
+    "restore the most recent message sent after a restart" in new AkkaTestkitSpecs2Support("target/test") {
 
       val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
 
@@ -86,7 +89,7 @@ class ShiftsActorSpec extends Specification {
 
       shutDownActorSystem
 
-      new AkkaTestkitSpecs2Support {
+      new AkkaTestkitSpecs2Support("target/test") {
 
         val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
 
@@ -96,7 +99,7 @@ class ShiftsActorSpec extends Specification {
       }
     }
 
-    "return recent message if a message is sent after a restart" in new AkkaTestkitSpecs2Support {
+    "return recent message if a message is sent after a restart" in new AkkaTestkitSpecs2Support("target/test") {
 
       val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
 
@@ -112,7 +115,7 @@ class ShiftsActorSpec extends Specification {
 
       shutDownActorSystem
 
-      new AkkaTestkitSpecs2Support {
+      new AkkaTestkitSpecs2Support("target/test") {
 
         val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
         actor ! "fourth message"
@@ -122,7 +125,7 @@ class ShiftsActorSpec extends Specification {
       }
     }
 
-    "return the shift when asked using GetState" in new AkkaTestkitSpecs2Support {
+    "return the shift when asked using GetState" in new AkkaTestkitSpecs2Support("target/test") {
       implicit val timeout: Timeout = Timeout(5 seconds)
 
       val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsActor")
@@ -138,7 +141,7 @@ class ShiftsActorSpec extends Specification {
     }
 
     "ShiftsPersistenceApi" should {
-      "allow setting and getting of shift data" in new AkkaTestkitSpecs2Support {
+      "allow setting and getting of shift data" in new AkkaTestkitSpecs2Support("target/test") {
 
         val shiftPersistenceApi = new ShiftPersistence {
 

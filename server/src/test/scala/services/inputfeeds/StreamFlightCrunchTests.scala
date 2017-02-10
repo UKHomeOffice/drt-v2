@@ -18,13 +18,23 @@ import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 import spatutorial.shared.FlightsApi.Flights
 import spatutorial.shared._
+import collection.JavaConversions._
 
 import scala.concurrent.duration._
 import scala.collection.immutable.Seq
 
 object CrunchTests {
 
-  case class TestContext(override val system: ActorSystem, props: Props) extends TestKit(system) with ImplicitSender {
+
+  val levelDbTestActorSystem = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+    "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
+    "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
+    "akka.persistence.journal.leveldb.dir" -> "target/test",
+    "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
+  )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString)))
+
+  case class TestContext(override val system: ActorSystem, props: Props) extends
+    TestKit(levelDbTestActorSystem) with ImplicitSender {
     def sendToCrunch[T](o: T) = crunchActor ! o
 
     lazy val crunchActor = createCrunchActor
@@ -211,7 +221,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
 
 
 class StreamFlightCrunchTests extends
-  TestKit(ActorSystem("streamCrunchTests", ConfigFactory.empty()))
+  TestKit(CrunchTests.levelDbTestActorSystem)
   with ImplicitSender
   with AfterAll
   with SpecificationLike {
