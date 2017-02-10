@@ -6,7 +6,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 import spatutorial.client.logger._
-import spatutorial.client.services.{AddStaffMovement, SPACircuit, Shift, StaffMovements}
+import spatutorial.client.services._
 import spatutorial.shared.SDate
 
 import scala.util.{Failure, Success}
@@ -54,6 +54,7 @@ object StaffMovementsPopover {
             SPACircuit.dispatch(AddStaffMovement(movement))
             log.info(s"Dispatched AddStaffMovement(${movement}")
           }
+          SPACircuit.dispatch(SaveStaffMovements())
           scope.modState(_.copy(hovered = false))
         case Failure(e) =>
           log.info("Invalid shift")
