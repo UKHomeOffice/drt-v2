@@ -1,25 +1,18 @@
 package controllers
 
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 import actors.{GetState, ShiftsActor}
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.pattern._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.{After, Specification}
-import services.WorkloadCalculatorTests.apiFlight
-import spatutorial.shared.FlightsApi.Flights
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.FiniteDuration
+import scala.collection.JavaConversions._
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import collection.JavaConversions._
-import scala.util.Success
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-import akka.pattern._
 
 abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
@@ -47,7 +40,7 @@ class ShiftsActorSpec extends Specification {
   sequential
 
 
-  private def flightsActor(system: ActorSystem) = {
+  private def shiftsActor(system: ActorSystem) = {
     val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsactor")
     actor
   }
@@ -55,8 +48,8 @@ class ShiftsActorSpec extends Specification {
   implicit val timeout: Timeout = Timeout(5 seconds)
 
   def getTestKit = {
-    new AkkaTestkitSpecs2Support("target/testFlightsActor") {
-      def getActor = flightsActor(system)
+    new AkkaTestkitSpecs2Support("target/test") {
+      def getActor = shiftsActor(system)
       def getState(actor: ActorRef) = {
         Await.result(actor ? GetState, 1 second)
       }

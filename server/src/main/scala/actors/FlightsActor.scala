@@ -14,13 +14,10 @@ import spatutorial.shared.ApiFlight
 
 case object GetFlights
 
-
-
 class FlightsActor(crunchActor: ActorRef) extends PersistentActor with ActorLogging  with FlightState {
   implicit val timeout = Timeout(5 seconds)
 
   override def persistenceId = "flights-store"
-
 
   val receiveRecover: Receive = {
     case Flights(recoveredFlights)  =>
@@ -31,14 +28,13 @@ class FlightsActor(crunchActor: ActorRef) extends PersistentActor with ActorLogg
     case SnapshotOffer(_, snapshot: Map[Int, ApiFlight]) =>
       log.info(s"Restoring from snapshot")
       flights = snapshot
-
     case message => log.info(s"unhandled message - $message")
   }
 
   val receiveCommand: Receive = {
     case GetFlights =>
       log.info(s"Being asked for flights and I know about ${flights.size}")
-      sender() ! Flights(flights.values.toList)
+      sender ! Flights(flights.values.toList)
     case Flights(newFlights) =>
       log.info(s"Adding ${newFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
