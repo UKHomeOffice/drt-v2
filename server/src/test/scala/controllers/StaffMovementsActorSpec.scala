@@ -14,7 +14,7 @@ class StaffMovementsActorSpec extends Specification {
   sequential
 
   "StaffMovementsPersistenceApi" should {
-    "allow setting and getting of staff movements" in new AkkaTestkitSpecs2Support {
+    "allow setting and getting of staff movements" in new AkkaTestkitSpecs2Support("target/test") {
 
       val staffMovementsApi = new StaffMovementsPersistence {
         override implicit val timeout: Timeout = Timeout(5 seconds)
