@@ -1,6 +1,8 @@
 import sbt.Keys._
 import sbt.Project.projectToRef
 
+scalaVersion := Settings.versions.scala
+
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
