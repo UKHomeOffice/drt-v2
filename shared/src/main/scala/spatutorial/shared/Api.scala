@@ -1,8 +1,13 @@
 package spatutorial.shared
 
 import java.util.Date
+
 import spatutorial.shared.FlightsApi._
+import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
+import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
+
 import scala.collection.immutable._
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 
@@ -179,6 +184,39 @@ case class DeskRec(time: Long, desks: Int)
 case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
 
 
+
+object PassengerQueueTypes {
+  object Desks {
+    val eeaDesk = 'desk
+    val egate = 'egate
+    val nationalsDesk = 'nationalsDesk
+  }
+
+  object PaxTypes {
+    val EEANONMACHINEREADABLE = "eea-non-machine-readable"
+    val NATIONALVISA = "national-visa"
+    val EEAMACHINEREADABLE = "eea-machine-readable"
+    val NATIONALNONVISA = "national-non-visa"
+  }
+
+  def egatePercentage = 0.6d
+
+  type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
+}
+
+object PassengerSplits {
+  type QueueType = String
+
+  case class PaxTypeAndQueueCount(passengerType: String, queueType: QueueType, paxCount: Int)
+
+  case class VoyagePaxSplits(destinationPort: String, carrierCode: String,
+                             voyageNumber: String,
+                             totalPaxCount: Int,
+                             scheduledArrivalDateTime: MilliDate,
+                             paxSplits: PaxTypeAndQueueCount)
+
+}
+
 trait WorkloadsApi {
   def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]]
 }
@@ -187,6 +225,8 @@ trait WorkloadsApi {
 trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
+
+  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

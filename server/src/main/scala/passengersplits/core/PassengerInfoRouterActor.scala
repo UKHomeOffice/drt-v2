@@ -5,8 +5,8 @@ import akka.actor._
 import akka.event.LoggingReceive
 import passengersplits.core
 import core.PassengerInfoRouterActor._
-import core.PassengerQueueTypes.PaxTypeAndQueueCounts
 import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
+import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import spray.http.DateTime
 
 object PassengerInfoRouterActor {
@@ -23,6 +23,7 @@ object PassengerInfoRouterActor {
                              totalPaxCount: Int,
                              scheduledArrivalDateTime: DateTime,
                              paxSplits: PaxTypeAndQueueCounts)
+
   case class VoyagesPaxSplits(voyageSplits: List[VoyagePaxSplits])
   case class ReportFlightCode(flightCode: String)
 
@@ -49,7 +50,7 @@ trait SimpleRouterActor[C <: Actor] {
   }
 }
 
-class PassengerInfoByPortRouter extends
+class PassengerSplitsInfoByPortRouter extends
   Actor with PassengerQueueCalculator with ActorLogging
   with SimpleRouterActor[PassengerInfoRouterActor] {
 

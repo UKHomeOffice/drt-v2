@@ -6,6 +6,7 @@ import akka.pattern.AskableActorRef
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
 import spatutorial.shared.FlightsApi._
+import spatutorial.shared.SplitRatios.SplitRatios
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq
@@ -34,7 +35,7 @@ trait WorkloadsCalculator {
   type TerminalQueueWorkLoads = Map[TerminalName, Map[QueueName, Seq[WL]]]
   type TerminalQueuePaxLoads = Map[TerminalName, Map[QueueName, Seq[Pax]]]
 
-  def splitRatioProvider: (ApiFlight) => Option[List[SplitRatio]]
+  def splitRatioProvider: (ApiFlight) => Option[SplitRatios]
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double
 

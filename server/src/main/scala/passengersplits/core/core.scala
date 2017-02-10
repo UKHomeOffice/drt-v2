@@ -42,6 +42,6 @@ trait CoreLogging {
 trait CoreActors extends CoreLogging {
   this: Core =>
 //  val httpPollingActor = system.actorOf(Props[HttpConsumerActor])
-  val flightPassengerReporter = system.actorOf(Props[PassengerInfoByPortRouter], name="flight-pax-reporter")
+  val flightPassengerReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name="flight-pax-reporter")
   val log = system.log
 }

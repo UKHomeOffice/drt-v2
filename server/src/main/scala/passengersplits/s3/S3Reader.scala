@@ -1,5 +1,6 @@
 package passengersplits.s3
 
+import scala.language.postfixOps
 import java.io.{FileInputStream, InputStream, File => JFile}
 import java.nio.file.Path
 import java.util.Date
@@ -239,6 +240,7 @@ object WorkerPool {
 }
 
 class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber with ActorLogging {
+
   import ActorSubscriberMessage._
   import PassengerInfoParser._
 
@@ -276,6 +278,7 @@ class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber wi
 case class FlightId(flightNumber: String, carrier: String, schDateTime: DateTime)
 
 class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
+
   import ActorSubscriberMessage._
   import PassengerInfoParser._
 
@@ -297,12 +300,12 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
     case unknown =>
       log.error(s"WorkerPool got unknown ${unknown}")
   }
-  
+
 }
 
 
-
 object VoyagePassengerInfoParser {
+
   import WorkerPool._
   import ActorSubscriberMessage._
   import PassengerInfoParser._

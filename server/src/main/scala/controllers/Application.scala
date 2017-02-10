@@ -10,7 +10,7 @@ import akka.pattern._
 import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
@@ -22,11 +22,14 @@ import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import http.ProdSendAndReceive
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import passengersplits.core.PassengerInfoByPortRouter
+import passengersplits.core.PassengerSplitsInfoByPortRouter
+import passengersplits.core.ZipUtils.UnzippedFileContent
+import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared.SplitRatios.SplitRatios
 import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
 
@@ -35,6 +38,7 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import ExecutionContext.Implicits.global
+import scala.collection.immutable.Seq
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -58,7 +62,7 @@ class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
 }
 
 object SystemActors {
-  type SplitsProvider = (ApiFlight) => Option[List[SplitRatio]]
+  type SplitsProvider = (ApiFlight) => Option[SplitRatios]
 }
 
 
@@ -66,8 +70,6 @@ trait SystemActors extends Core {
   self: AirportConfProvider =>
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
-
-  def splitProviders(): List[SplitsProvider]
 
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,
@@ -77,7 +79,9 @@ trait SystemActors extends Core {
   val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
-  val flightPassengerReporter = system.actorOf(Props[PassengerInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+
+  def splitProviders(): List[SplitsProvider]
 
 }
 
@@ -295,7 +299,7 @@ trait AirportConfProvider extends AirportConfiguration {
 }
 
 trait ProdPassengerSplitProviders {
-  self: AirportConfiguration =>
+  self: AirportConfiguration with SystemActors =>
   val splitProviders = List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
@@ -327,6 +331,8 @@ class Application @Inject()(
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
+
+    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
@@ -370,8 +376,10 @@ class Application @Inject()(
   }
 
   val copiedToApiFlights = flightsSource(mockProd, portCode)
-
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+
+  /// PassengerSplits reader
+
 
   //  val lhrfeed = LHRFlightFeed()
   //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
@@ -406,6 +414,32 @@ class Application @Inject()(
         println(s"CLIENT - $msg")
       }
       Ok("")
+  }
+}
+
+
+object FilePolling {
+  def beginPolling(log: LoggingAdapter, flightPassengerReporter: ActorRef)(implicit actorSystem: ActorSystem, mat: Materializer) = {
+    val statefulPoller = StatefulLocalFileSystemPoller(Some("drt_dq_1701"))
+
+    val promiseDone = PromiseSignals.promisedDone
+
+    val subscriberFlightActor = Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter))
+
+    val runOnce = FileSystemAkkaStreamReading.runOnce(log)(statefulPoller.unzippedFileProvider) _
+    val unzipFlow = Flow[String].mapAsync(128)(statefulPoller.unzippedFileProvider.zipFilenameToEventualFileContent(_))
+      .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
+      .collect {
+        case Success(vpi) if vpi.ArrivalPortCode == "STN" => vpi
+      }.map(uzfc => {
+      log.info(s"Processing $uzfc")
+      uzfc
+    })
+
+    val unzippedSink = unzipFlow.to(subscriberFlightActor)
+    val i = 1
+    runOnce(i, (td) => promiseDone.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
+    val resultOne = Await.result(promiseDone.future, 10 seconds)
   }
 }
 

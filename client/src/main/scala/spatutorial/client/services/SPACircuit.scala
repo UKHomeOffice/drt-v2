@@ -13,11 +13,14 @@ import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsR
 import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
-import spatutorial.client.services.RootModel.mergeTerminalQueues
+import spatutorial.client.services.RootModel.{FlightCode, mergeTerminalQueues}
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
+import spatutorial.client.services.JSDateConversions.SDate
+import spatutorial.client.services.JSDateConversions.SDate.JSSDate
+import spatutorial.shared.PassengerSplits.VoyagePaxSplits
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -68,6 +71,7 @@ case class GetStaffMovements() extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
+case class UpdateFlightPaxSplits(splits: VoyagePaxSplits)
 
 trait WorkloadsUtil {
   def labelsFromAllQueues(startTime: Long) = {
@@ -122,7 +126,8 @@ case class RootModel(
                       minutesInASlot: Int = 15,
                       shiftsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
-                      slotsInADay: Int = 96
+                      slotsInADay: Int = 96,
+                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
                     ) {
 
   import TerminalUserDeskRecs._
@@ -133,7 +138,8 @@ case class RootModel(
       case _ => ""
     }
 
-    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
+    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList
+    //todo we have essentially this code elsewhere, look for successfulShifts
     val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
       m: MilliDate => 0
@@ -185,11 +191,13 @@ case class RootModel(
        |simulationResult: $simulationResult
        |flights: $flights
        |airportInfos: $airportInfos
+       |flightPaxSplits: ${flightSplits}
        |)
      """.stripMargin
 }
 
 object RootModel {
+  type FlightCode = String
 
   def mergeTerminalQueues[A](m1: Map[QueueName, Map[QueueName, A]], m2: Map[QueueName, Map[QueueName, A]]): Map[String, Map[String, A]] = {
     val merged = m1.toSeq ++ m2.toSeq
@@ -356,19 +364,19 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
         val oldFlightsSet = oldFlights.flights.toSet
         val newFlightsSet = flights.flights.toSet
         if (oldFlightsSet != newFlightsSet) {
-          val i: Flights = flights
-          val j: List[ApiFlight] = flights.flights
-          val codes = flights.flights.map(_.Origin).toSet
-          updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
+          val airportCodes = flights.flights.map(_.Origin).toSet
+          val flightSplitRequests = flights.flights.map(flight =>
+            AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
+              .call().map(UpdateFlightPaxSplits))
+          updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
         } else {
           log.info("no changes to flights")
           noChange
         }
       } else {
-        val codes = flights.flights.map(_.Origin).toSet
-        updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
+        val airportCodes = flights.flights.map(_.Origin).toSet
+        updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
       }
-
       result
   }
 }

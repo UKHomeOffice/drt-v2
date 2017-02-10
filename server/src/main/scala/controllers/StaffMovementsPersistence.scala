@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.collection.immutable.Seq
+import scala.language.postfixOps
 
 trait StaffMovementsPersistence {
   implicit val timeout: Timeout = Timeout(5 seconds)

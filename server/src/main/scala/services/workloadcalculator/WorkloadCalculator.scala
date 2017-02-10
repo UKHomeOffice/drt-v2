@@ -3,6 +3,7 @@ package services.workloadcalculator
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import spatutorial.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads}
+import spatutorial.shared.SplitRatios.SplitRatios
 import spatutorial.shared._
 
 import scala.List
@@ -84,7 +85,7 @@ object PaxLoadCalculator {
     paxTypeAndQueueCounts.map(ptQc => procTimeProvider(ptQc.paxAndQueueType) * ptQc.paxSum).sum
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[List[SplitRatio]])(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios])(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val timesMin = new DateTime(flight.SchDT, DateTimeZone.UTC).getMillis
     val splits = splitsRatioProvider(flight).get
     val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(timesMin, 1)

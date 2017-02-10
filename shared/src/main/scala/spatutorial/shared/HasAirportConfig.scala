@@ -2,6 +2,7 @@ package spatutorial.shared
 
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared.PaxTypes.{eeaMachineReadable, eeaNonMachineReadable, nonVisaNational, visaNational}
+import spatutorial.shared.SplitRatios.SplitRatio
 
 import scala.collection.immutable.Seq
 
@@ -30,7 +31,11 @@ object PaxTypes {
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
-case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
+object SplitRatios {
+  type SplitRatios = List[SplitRatio]
+  case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
+}
+
 
 case class AirportConfig(
                           portCode: String = "n/a",

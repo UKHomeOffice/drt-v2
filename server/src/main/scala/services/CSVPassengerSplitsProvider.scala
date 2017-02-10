@@ -3,6 +3,7 @@ package services
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import spatutorial.shared.SplitRatios.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 
 case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
@@ -12,7 +13,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
 
   lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
 
-  def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) = flight => {
+  def splitRatioProvider: (ApiFlight => Option[SplitRatios]) = flight => {
     val flightDate = DateTime.parse(flight.SchDT)
     flightDate.monthOfYear.getAsText
 
@@ -22,7 +23,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
       row.month == flightDate.monthOfYear.getAsText
     ).toList
 
-    val splits: Option[List[SplitRatio]] = foundFlights match {
+    val splits: Option[SplitRatios] = foundFlights match {
       case head :: Nil =>
         log.info(s"Found split for $flight")
         CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(foundFlights.head)
@@ -37,7 +38,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
 object CsvPassengerSplitsReader {
   def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
 
-  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): Option[List[SplitRatio]] = {
+  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): Option[SplitRatios] = {
     Some(List(
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk),
