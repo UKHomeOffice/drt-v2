@@ -22,6 +22,7 @@ import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import http.ProdSendAndReceive
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import passengersplits.core.PassengerInfoByPortRouter
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
@@ -76,6 +77,8 @@ trait SystemActors extends Core {
   val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
+  val flightPassengerReporter = system.actorOf(Props[PassengerInfoByPortRouter], name = "flight-pax-reporter")
+
 }
 
 trait ChromaFetcherLike {
@@ -303,7 +306,10 @@ class Application @Inject()(
                              override val system: ActorSystem,
                              ec: ExecutionContext
                            )
-  extends Controller with Core with AirportConfProvider with ProdPassengerSplitProviders with SystemActors {
+  extends Controller with Core
+    with AirportConfProvider
+    with ProdPassengerSplitProviders
+    with SystemActors {
   ctrl =>
   val log = system.log
 
@@ -348,17 +354,22 @@ class Application @Inject()(
     }
   }
 
-  val fetcher = mockProd match {
-    case "MOCK" => MockChroma(system)
-    case "PROD" => ProdChroma(system)
+  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
+    val fetcher = prodMock match {
+      case "MOCK" => MockChroma(system)
+      case "PROD" => ProdChroma(system)
+    }
+    val chromaFlightFeed = ChromaFlightFeed(log, fetcher)
+
+    portCode match {
+      case "EDI" =>
+        chromaFlightFeed.chromaEdiFlights().map(Flights(_))
+      case _ =>
+        chromaFlightFeed.chromaVanillaFlights().map(Flights(_))
+    }
   }
 
-  val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
-    case "EDI" =>
-      ChromaFlightFeed(log, fetcher).chromaEdiFlights().map(Flights(_))
-    case _ =>
-      ChromaFlightFeed(log, fetcher).chromaVanillaFlights().map(Flights(_))
-  }
+  val copiedToApiFlights = flightsSource(mockProd, portCode)
 
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 

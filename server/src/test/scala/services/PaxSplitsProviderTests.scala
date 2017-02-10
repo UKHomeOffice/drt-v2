@@ -3,6 +3,12 @@ package services
 import org.specs2.mutable.SpecificationLike
 import spatutorial.shared._
 
+import scala.collection.immutable.Seq
+import scala.concurrent.duration._
+import scala.collection.mutable
+import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success}
+
 class PaxSplitsProviderTests extends SpecificationLike {
 
   def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
@@ -34,6 +40,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
     "Given 1 provider with splits for a flight, when we ask for splits then we should see Some()" >> {
       def provider(apiFlight: ApiFlight) = Some[List[SplitRatio]](List())
+
       val providers: List[(ApiFlight) => Some[List[SplitRatio]]] = List(provider)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
@@ -45,7 +52,9 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
     "Given 2 providers, the 1st with splits and 2nd without, when we ask for splits then we should see Some()" >> {
       def providerWith(apiFlight: ApiFlight) = Some[List[SplitRatio]](List())
+
       def providerWithout(apiFlight: ApiFlight) = None
+
       val providers: List[(ApiFlight) => Option[List[SplitRatio]]] = List(providerWith, providerWithout)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
@@ -57,7 +66,9 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
     "Given 2 providers, the 1st without splits and 2nd with, when we ask for splits then we should see Some()" >> {
       def providerWith(apiFlight: ApiFlight) = None
+
       def providerWithout(apiFlight: ApiFlight) = Some[List[SplitRatio]](List())
+
       val providers: List[(ApiFlight) => Option[List[SplitRatio]]] = List(providerWith, providerWithout)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
@@ -65,6 +76,40 @@ class PaxSplitsProviderTests extends SpecificationLike {
       val result: Option[List[SplitRatio]] = SplitsProvider.splitsForFlight(providers)(flight)
 
       result.isDefined
+    }
+
+    "Given a stateful, non-idempotent provider, we get the different result each time" >> {
+      val ratios1 = List(
+        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 23),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 10))
+      val ratios2 = List(
+        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 4),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 3))
+      var ratios = mutable.Queue(
+        ratios1,
+        ratios2)
+
+      def statefulProvider(apiFlight: ApiFlight): Option[List[SplitRatio]] = {
+        val head = ratios.dequeue()
+        Option(head)
+      }
+
+
+      val providers: List[(ApiFlight) => Option[List[SplitRatio]]] = List(statefulProvider)
+
+      val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
+
+      val splitsForFlight = SplitsProvider.splitsForFlight(providers)
+
+      val result1: Option[List[SplitRatio]] = splitsForFlight(flight)
+
+      assert(result1 == ratios1)
+
+      val result2: Option[List[SplitRatio]] = splitsForFlight(flight)
+
+      result2 == ratios2
+
+
     }
   }
 }
