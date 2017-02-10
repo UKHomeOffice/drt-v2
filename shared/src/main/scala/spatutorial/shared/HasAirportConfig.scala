@@ -1,6 +1,7 @@
 package spatutorial.shared
 
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
+import spatutorial.shared.PaxTypes.{eeaMachineReadable, eeaNonMachineReadable, nonVisaNational, visaNational}
 
 import scala.collection.immutable.Seq
 
@@ -63,18 +64,18 @@ object AirportConfigs {
     "nonEeaDesk" -> 45
   )
   val defaultPaxSplits = List(
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
+    SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk), 0.4875),
+    SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eGate), 0.1625),
+    SplitRatio(PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
+    SplitRatio(PaxTypeAndQueue(visaNational, Queues.nonEeaDesk), 0.05),
+    SplitRatio(PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk), 0.05)
   )
   val defaultProcessingTimes = Map(
-    PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
-    PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 35d / 60,
-    PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-    PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 90d / 60,
-    PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
+    PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
+    PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> 35d / 60,
+    PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+    PaxTypeAndQueue(visaNational, Queues.nonEeaDesk) -> 90d / 60,
+    PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
   )
 
   val edi = AirportConfig(
@@ -85,18 +86,18 @@ object AirportConfigs {
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map(
       "A1" -> Map(
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 16d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 75d / 60,
-        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 64d / 60
+        PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> 16d / 60,
+        PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> 25d / 60,
+        PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+        PaxTypeAndQueue(visaNational, Queues.nonEeaDesk) -> 75d / 60,
+        PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk) -> 64d / 60
       ),
       "A2" -> Map(
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 30d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 120d / 60,
-        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
+        PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> 30d / 60,
+        PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> 25d / 60,
+        PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+        PaxTypeAndQueue(visaNational, Queues.nonEeaDesk) -> 120d / 60,
+        PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
       ))
   )
   val stn = AirportConfig(
@@ -105,18 +106,18 @@ object AirportConfigs {
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5, "nonEeaDesk" -> 45),
     terminalNames = Seq("T1"),
     defaultPaxSplits = List(
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
+      SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk), 0.4875),
+      SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eGate), 0.1625),
+      SplitRatio(PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
+      SplitRatio(PaxTypeAndQueue(visaNational, Queues.nonEeaDesk), 0.05),
+      SplitRatio(PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk), 0.05)
     ),
     defaultProcessingTimes = Map("T1" -> Map(
-      PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
-      PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 35d / 60,
-      PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-      PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 90d / 60,
-      PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
+      PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
+      PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> 35d / 60,
+      PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
+      PaxTypeAndQueue(visaNational, Queues.nonEeaDesk) -> 90d / 60,
+      PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
     ))
   )
   val man = AirportConfig(

@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.SpecificationLike
+import services.SplitsProvider.SplitRatios
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq
@@ -85,29 +86,28 @@ class PaxSplitsProviderTests extends SpecificationLike {
       val ratios2 = List(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 4),
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 3))
-      var ratios = mutable.Queue(
-        ratios1,
-        ratios2)
 
-      def statefulProvider(apiFlight: ApiFlight): Option[List[SplitRatio]] = {
+      val ratios = mutable.Queue(ratios1, ratios2)
+
+      def statefulProvider(apiFlight: ApiFlight): Option[SplitRatios] = {
         val head = ratios.dequeue()
         Option(head)
       }
 
 
-      val providers: List[(ApiFlight) => Option[List[SplitRatio]]] = List(statefulProvider)
+      val providers: List[(ApiFlight) => Option[SplitRatios]] = List(statefulProvider)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
-      val splitsForFlight = SplitsProvider.splitsForFlight(providers)
+      val splitsForFlight = SplitsProvider.splitsForFlight(providers) _
 
-      val result1: Option[List[SplitRatio]] = splitsForFlight(flight)
+      val result1: Option[SplitRatios] = splitsForFlight(flight)
 
-      assert(result1 == ratios1)
+      assert(result1 === Some(ratios1))
 
-      val result2: Option[List[SplitRatio]] = splitsForFlight(flight)
+      val result2: Option[SplitRatios] = splitsForFlight(flight)
 
-      result2 == ratios2
+      result2 == Some(ratios2)
 
 
     }
