@@ -4,6 +4,7 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, LocalDate}
 import org.specs2.mutable.SpecificationLike
 import spatutorial.shared.FlightsApi.TerminalName
+import spatutorial.shared.SplitRatios.SplitRatio
 import spatutorial.shared._
 
 import scala.concurrent.Await

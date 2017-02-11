@@ -6,6 +6,7 @@ import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
 import org.joda.time.DateTime
 import spatutorial.shared.FlightsApi.TerminalName
+import spatutorial.shared.SplitRatios.SplitRatio
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq
