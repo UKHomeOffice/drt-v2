@@ -60,6 +60,7 @@ object Settings {
   val jvmDependencies = Def.setting((List(
     "io.spray" % "spray-caching_2.11" % "1.3.4",
     "org.specs2" %% "specs2-core" % "3.7" % Test,
+    "org.specs2" %% "specs2-junit" % "3.7" % Test,
     "uk.gov.homeoffice.borderforce" %% "chroma-live" % "1.0",
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,

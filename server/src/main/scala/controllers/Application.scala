@@ -326,13 +326,13 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
+  def createApiService = new ApiService(airportConfig, ctrl.flightPassengerSplitReporter) with GetFlightsFromActor with CrunchFromCache {
 
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
 
-    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
+//    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 

@@ -95,7 +95,7 @@ object WorkloadSimulation {
   }
 }
 
-abstract class ApiService(airportConfig: AirportConfig)
+abstract class ApiService(airportConfig: AirportConfig, flightPassengerReporter: ActorRef)
   extends Api
     with WorkloadsCalculator
     with FlightsService
@@ -110,24 +110,24 @@ abstract class ApiService(airportConfig: AirportConfig)
   val log = LoggerFactory.getLogger(this.getClass)
   log.info(s"ApiService.airportConfig = $airportConfig")
 
-  def flightPassengerReporter: ActorRef
+//  def flightPassengerReporter: ActorRef
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
-  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits] = {
-    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, DateTime(scheduledDateTime.millisSinceEpoch))
-    splits.map(v => v match {
-      case Success(value: VoyagePaxSplits) =>
-        val asList = value :: Nil
-        log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
-        value
-      case Success(FlightNotFound(cc, fc, sadt)) =>
-        throw new Exception("Did not find flight")
-      case Failure(f) =>
-        throw f
-    }
-    )
-  }
+//  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits] = {
+//    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, DateTime(scheduledDateTime.millisSinceEpoch))
+//    splits.map(v => v match {
+//      case Success(value: VoyagePaxSplits) =>
+//        val asList = value :: Nil
+//        log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
+//        value
+//      case Success(FlightNotFound(cc, fc, sadt)) =>
+//        throw new Exception("Did not find flight")
+//      case Failure(f) =>
+//        throw f
+//    }
+//    )
+//  }
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads] = {
     val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
