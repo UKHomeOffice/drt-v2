@@ -3,7 +3,7 @@ package services
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import spatutorial.shared.SplitRatios.{SplitRatio, SplitRatios}
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 
 case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
@@ -26,7 +26,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
     val splits: Option[SplitRatios] = foundFlights match {
       case head :: Nil =>
         log.info(s"Found split for $flight")
-        CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(foundFlights.head)
+        Option(SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(head)))
       case _ =>
         log.info(s"Failed to find split for $flight in CSV")
         None
@@ -38,8 +38,8 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
 object CsvPassengerSplitsReader {
   def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
 
-  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): Option[SplitRatios] = {
-    Some(List(
+  def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): List[SplitRatio] = {
+    List(
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk),
         calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadableToDesk)),
@@ -55,7 +55,7 @@ object CsvPassengerSplitsReader {
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk),
         calcQueueRatio(row.nonVisaNationals, row.nonVisaToNonEEA))
-    ))
+    )
   }
 
   def flightPaxSplitsLinesFromConfig = {

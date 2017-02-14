@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import services.workloadcalculator.PassengerQueueTypes._
 import services.workloadcalculator._
 import spatutorial.shared.FlightsApi.QueueName
-import spatutorial.shared.SplitRatios.SplitRatio
+import spatutorial.shared.SplitRatiosNs.SplitRatio
 import spatutorial.shared._
 import utest.{TestSuite, _}
 

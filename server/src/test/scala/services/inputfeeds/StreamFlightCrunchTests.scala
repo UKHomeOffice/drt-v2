@@ -17,7 +17,7 @@ import services.FlightCrunchInteractionTests.TestCrunchActor
 import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.SplitRatios.SplitRatio
+import spatutorial.shared.SplitRatiosNs.SplitRatio
 import spatutorial.shared._
 
 import scala.concurrent.duration._

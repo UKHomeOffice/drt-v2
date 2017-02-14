@@ -29,7 +29,7 @@ import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import spatutorial.shared.SplitRatios.SplitRatios
+import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
 
@@ -326,7 +326,7 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  def createApiService = new ApiService(airportConfig, ctrl.flightPassengerSplitReporter) with GetFlightsFromActor with CrunchFromCache {
+  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
 
     override implicit val timeout: Timeout = Timeout(5 seconds)
 

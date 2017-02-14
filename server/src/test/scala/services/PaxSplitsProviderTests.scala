@@ -1,7 +1,7 @@
 package services
 
 import org.specs2.mutable.SpecificationLike
-import spatutorial.shared.SplitRatios.{SplitRatio, SplitRatios}
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq

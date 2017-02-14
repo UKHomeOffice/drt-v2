@@ -2,7 +2,7 @@ package spatutorial.shared
 
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared.PaxTypes.{eeaMachineReadable, eeaNonMachineReadable, nonVisaNational, visaNational}
-import spatutorial.shared.SplitRatios.SplitRatio
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 
 import scala.collection.immutable.Seq
 
@@ -31,18 +31,13 @@ object PaxTypes {
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
-object SplitRatios {
-  type SplitRatios = List[SplitRatio]
-  case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
-}
-
 
 case class AirportConfig(
                           portCode: String = "n/a",
                           queues: Seq[QueueName],
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
-                          defaultPaxSplits: List[SplitRatio],
+                          defaultPaxSplits: SplitRatios,
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]]
                         ) extends AirportConfigLike {
 
@@ -68,13 +63,13 @@ object AirportConfigs {
     "eGate" -> 25,
     "nonEeaDesk" -> 45
   )
-  val defaultPaxSplits = List(
+  val defaultPaxSplits: SplitRatios = SplitRatios(List(
     SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk), 0.4875),
     SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eGate), 0.1625),
     SplitRatio(PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
     SplitRatio(PaxTypeAndQueue(visaNational, Queues.nonEeaDesk), 0.05),
     SplitRatio(PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk), 0.05)
-  )
+  ))
   val defaultProcessingTimes = Map(
     PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
     PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> 35d / 60,
@@ -110,13 +105,13 @@ object AirportConfigs {
     queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5, "nonEeaDesk" -> 45),
     terminalNames = Seq("T1"),
-    defaultPaxSplits = List(
+    defaultPaxSplits = SplitRatios(List(
       SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk), 0.4875),
       SplitRatio(PaxTypeAndQueue(eeaMachineReadable, Queues.eGate), 0.1625),
       SplitRatio(PaxTypeAndQueue(eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
       SplitRatio(PaxTypeAndQueue(visaNational, Queues.nonEeaDesk), 0.05),
       SplitRatio(PaxTypeAndQueue(nonVisaNational, Queues.nonEeaDesk), 0.05)
-    ),
+    )),
     defaultProcessingTimes = Map("T1" -> Map(
       PaxTypeAndQueue(eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
       PaxTypeAndQueue(eeaMachineReadable, Queues.eGate) -> 35d / 60,

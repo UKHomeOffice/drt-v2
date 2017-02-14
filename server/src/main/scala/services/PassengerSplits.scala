@@ -2,7 +2,7 @@ package services
 
 import com.typesafe.config.{Config, ConfigFactory}
 import controllers.AirportConfProvider
-import spatutorial.shared.SplitRatios.SplitRatios
+import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spatutorial.shared.{AirportConfig, ApiFlight}
 
 object SplitsProvider {

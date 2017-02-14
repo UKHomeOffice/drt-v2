@@ -1,6 +1,6 @@
 package services
 
-import spatutorial.shared.SplitRatios.SplitRatio
+import spatutorial.shared.SplitRatiosNs.SplitRatio
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike

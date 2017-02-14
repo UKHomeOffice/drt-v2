@@ -6,7 +6,7 @@ import akka.pattern.AskableActorRef
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
 import spatutorial.shared.FlightsApi._
-import spatutorial.shared.SplitRatios.SplitRatios
+import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq

@@ -24,7 +24,7 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import spatutorial.shared.HasAirportConfig
 import spatutorial.shared.PassengerSplits.VoyagePaxSplits
-import spatutorial.shared.SplitRatios.SplitRatios
+import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spray.http.{DateTime, StatusCodes}
 
 import scala.language.postfixOps
@@ -95,7 +95,7 @@ object WorkloadSimulation {
   }
 }
 
-abstract class ApiService(airportConfig: AirportConfig, flightPassengerReporter: ActorRef)
+abstract class ApiService(airportConfig: AirportConfig)
   extends Api
     with WorkloadsCalculator
     with FlightsService
@@ -112,7 +112,7 @@ abstract class ApiService(airportConfig: AirportConfig, flightPassengerReporter:
 
 //  def flightPassengerReporter: ActorRef
 
-  val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
+//  val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
 //  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits] = {
 //    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, DateTime(scheduledDateTime.millisSinceEpoch))
