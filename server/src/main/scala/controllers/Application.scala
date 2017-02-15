@@ -12,6 +12,9 @@ import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import autowire.Core.Router
+import autowire.Macros
+import autowire.Macros.MacroHelp
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
@@ -39,10 +42,16 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import ExecutionContext.Implicits.global
 import scala.collection.immutable.Seq
+import scala.reflect.macros.Context
+
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
+  import scala.language.experimental.macros
+
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
+
+  def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
 
   override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
 }
@@ -332,7 +341,7 @@ class Application @Inject()(
 
     def actorSystem: ActorSystem = system
 
-//    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
+    //    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
@@ -399,7 +408,9 @@ class Application @Inject()(
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
-      Router.route[Api](createApiService)(
+      val router = Router.myroute[Api](createApiService)
+      //      router.§
+      router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
       ).map(buffer => {
         val data = Array.ofDim[Byte](buffer.remaining())
