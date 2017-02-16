@@ -41,17 +41,26 @@ object MainMenu {
   )
 
   def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
-    val terminalMenuItems = airportConfigPotMP().state match {
+    val terminalRecsMenuItems = airportConfigPotMP().state match {
       case PotReady =>
         airportConfigPotMP().get.terminalNames.zipWithIndex.map {
           case (tn, idx) =>
-            MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalLoc(tn))
+            MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalRecsLoc(tn))
+        }.toList
+      case _ =>
+        List()
+    }
+    val terminalDepsMenuItems = airportConfigPotMP().state match {
+      case PotReady =>
+        airportConfigPotMP().get.terminalNames.zipWithIndex.map {
+          case (tn, idx) =>
+            MenuItem(idx + staticMenuItems.length + terminalRecsMenuItems.length + 1, _ => s"$tn - simplified", Icon.calculator, TerminalDepsLoc(tn))
         }.toList
       case _ =>
         List()
     }
 
-    staticMenuItems ::: terminalMenuItems
+    staticMenuItems ::: terminalRecsMenuItems ::: terminalDepsMenuItems
   }
 
   private class Backend($: BackendScope[Props, Unit]) {
