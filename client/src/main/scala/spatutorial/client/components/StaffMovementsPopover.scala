@@ -74,7 +74,7 @@ object StaffMovementsPopover {
             })))
           }
 
-          def timeSelector(label: String, startDate: SDate): ReactTagOf[Div] = {
+          def startTimeSelector(label: String, startDate: SDate): ReactTagOf[Div] = {
             popoverFormRow(label,
               selectFromRange(
                 0 to 23, startDate.getHours(),
@@ -83,6 +83,18 @@ object StaffMovementsPopover {
               selectFromRange(
                 0 to 59, startDate.getMinutes(),
                 (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeMinutes = v.toInt))
+            )
+          }
+
+          def endTimeSelector(label: String, startDate: SDate): ReactTagOf[Div] = {
+            popoverFormRow(label,
+              selectFromRange(
+                0 to 23, startDate.getHours(),
+                (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeHours = v.toInt)
+              ), ":",
+              selectFromRange(
+                0 to 59, startDate.getMinutes(),
+                (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeMinutes = v.toInt))
             )
           }
 
@@ -97,8 +109,8 @@ object StaffMovementsPopover {
           <.div(^.className := "container", ^.key := "IS81",
             labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
-            timeSelector("Start time", startDate),
-            timeSelector("End time", endDate),
+            startTimeSelector("Start time", startDate),
+            endTimeSelector("End time", endDate),
             popoverFormRow("Number of staff", <.input.number(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventI) => {
               val newValue: String = e.target.value
               scope.modState((s: StaffMovementPopoverState) => s.copy(numberOfStaff = newValue.toInt))
