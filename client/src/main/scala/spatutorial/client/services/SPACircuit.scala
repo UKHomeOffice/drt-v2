@@ -71,7 +71,7 @@ case class GetStaffMovements() extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
-case class UpdateFlightPaxSplits(splits: VoyagePaxSplits)
+case class UpdateFlightPaxSplits(splits: VoyagePaxSplits) extends Action
 
 trait WorkloadsUtil {
   def labelsFromAllQueues(startTime: Long) = {
@@ -365,10 +365,14 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
         val newFlightsSet = flights.flights.toSet
         if (oldFlightsSet != newFlightsSet) {
           val airportCodes = flights.flights.map(_.Origin).toSet
-//          val flightSplitRequests = flights.flights.map(flight =>
-//            AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
-//              .call().map(UpdateFlightPaxSplits))
-          updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
+          val flightSplitRequests = flights.flights.map(flight =>
+            AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
+              .call().map(UpdateFlightPaxSplits))
+          val flightSplits = flightSplitRequests.map(f => Effect(f))
+          val flightSplitEffectSet = seqOfEffectsToEffectSeq(flightSplits)
+          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
+          val allEffects = airportInfos + flightSplitEffectSet
+          updated(Ready(flights), allEffects)
         } else {
           log.info("no changes to flights")
           noChange

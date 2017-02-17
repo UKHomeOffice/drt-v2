@@ -226,7 +226,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
-//  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits]
+  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

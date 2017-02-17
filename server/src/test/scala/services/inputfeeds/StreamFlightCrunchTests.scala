@@ -17,10 +17,10 @@ import services.FlightCrunchInteractionTests.TestCrunchActor
 import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.SplitRatiosNs.SplitRatio
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
-import collection.JavaConversions._
 
+import collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.collection.immutable.Seq
 
@@ -55,9 +55,9 @@ object CrunchTests {
   }
 
   lazy val airportConfig = AirportConfig(
-    defaultPaxSplits = List(
+    defaultPaxSplits = SplitRatios(List(
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.5))),
     defaultProcessingTimes = Map(
       "A1" ->
         Map(

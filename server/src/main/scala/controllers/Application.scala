@@ -45,8 +45,8 @@ import ExecutionContext.Implicits.global
 import scala.reflect.macros.Context
 
 
-
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
+
   import scala.language.experimental.macros
 
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
@@ -341,7 +341,7 @@ class Application @Inject()(
 
     def actorSystem: ActorSystem = system
 
-    //    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
+    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 

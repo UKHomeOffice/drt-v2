@@ -40,7 +40,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
   "Splits from multiple providers" >> {
 
     "Given 1 provider with splits for a flight, when we ask for splits then we should see Some()" >> {
-      def provider(apiFlight: ApiFlight) = Some[SplitRatios](List())
+      def provider(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios())
 
       val providers: List[(ApiFlight) => Some[SplitRatios]] = List(provider)
 
@@ -52,7 +52,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
     }
 
     "Given 2 providers, the 1st with splits and 2nd without, when we ask for splits then we should see Some()" >> {
-      def providerWith(apiFlight: ApiFlight) = Some[SplitRatios](List())
+      def providerWith(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios())
 
       def providerWithout(apiFlight: ApiFlight) = None
 
@@ -68,7 +68,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
     "Given 2 providers, the 1st without splits and 2nd with, when we ask for splits then we should see Some()" >> {
       def providerWith(apiFlight: ApiFlight) = None
 
-      def providerWithout(apiFlight: ApiFlight) = Some[SplitRatios](List())
+      def providerWithout(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios())
 
       val providers: List[(ApiFlight) => Option[SplitRatios]] = List(providerWith, providerWithout)
 
@@ -80,10 +80,10 @@ class PaxSplitsProviderTests extends SpecificationLike {
     }
 
     "Given a stateful, non-idempotent provider, we get the different result each time" >> {
-      val ratios1 = List(
+      val ratios1 = SplitRatios(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 23),
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 10))
-      val ratios2 = List(
+      val ratios2 = SplitRatios(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 4),
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 3))
 

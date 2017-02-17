@@ -1,6 +1,7 @@
 package services
 
 import actors.EGateBankCrunchTransformations
+import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spatutorial.shared._
 import utest._
 
@@ -94,7 +95,7 @@ object EGateBanksTests extends TestSuite {
         queues = Seq(),
         slaByQueue = Map("eeaDesk" -> 5),
         terminalNames = Seq(),
-        defaultPaxSplits = List(),
+        defaultPaxSplits = SplitRatios(),
         defaultProcessingTimes = Map()
       )
 
@@ -122,7 +123,7 @@ object EGateBanksTests extends TestSuite {
         queues = Seq(),
         slaByQueue = Map("eGate" -> 5),
         terminalNames = Seq(),
-        defaultPaxSplits = List(),
+        defaultPaxSplits = SplitRatios(),
         defaultProcessingTimes = Map()
       )
 
