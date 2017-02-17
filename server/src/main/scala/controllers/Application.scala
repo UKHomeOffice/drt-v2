@@ -41,7 +41,7 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import ExecutionContext.Implicits.global
-import scala.collection.immutable.Seq
+//import scala.collection.immutable.Seq
 import scala.reflect.macros.Context
 
 
