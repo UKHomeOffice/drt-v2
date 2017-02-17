@@ -54,13 +54,13 @@ object MainMenu {
       case PotReady =>
         airportConfigPotMP().get.terminalNames.zipWithIndex.map {
           case (tn, idx) =>
-            MenuItem(idx + staticMenuItems.length + terminalRecsMenuItems.length + 1, _ => s"$tn - simplified", Icon.calculator, TerminalDepsLoc(tn))
+            MenuItem(idx + staticMenuItems.length + terminalRecsMenuItems.length + 1, _ => tn, Icon.calculator, TerminalDepsLoc(tn))
         }.toList
       case _ =>
         List()
     }
 
-    staticMenuItems ::: terminalRecsMenuItems ::: terminalDepsMenuItems
+    staticMenuItems ::: terminalDepsMenuItems
   }
 
   private class Backend($: BackendScope[Props, Unit]) {
