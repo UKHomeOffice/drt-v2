@@ -37,7 +37,8 @@ case class AirportConfig(
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
                           defaultPaxSplits: List[SplitRatio],
-                          defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]]
+                          defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
+                          shiftExamples: Seq[String] = Seq()
                         ) extends AirportConfigLike {
 
 }
@@ -97,7 +98,14 @@ object AirportConfigs {
         PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
         PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 120d / 60,
         PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
-      ))
+      )),
+    shiftExamples = Seq(
+      "Midnight shift,{date},00:00,00:59,10",
+      "Night shift,{date},01:00,06:59,4",
+      "Morning shift,{date},07:00,13:59,15",
+      "Afternoon shift,{date},14:00,16:59,10",
+      "Evening shift,{date},17:00,23:59,17"
+    )
   )
   val stn = AirportConfig(
     portCode = "STN",
@@ -117,7 +125,14 @@ object AirportConfigs {
       PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
       PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 90d / 60,
       PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
-    ))
+    )),
+    shiftExamples = Seq(
+      "Midnight shift,{date},00:00,00:59,14",
+      "Night shift,{date},01:00,06:59,6",
+      "Morning shift,{date},07:00,13:59,25",
+      "Afternoon shift,{date},14:00,16:59,13",
+      "Evening shift,{date},17:00,23:59,20"
+    )
   )
   val man = AirportConfig(
     portCode = "MAN",
@@ -125,7 +140,14 @@ object AirportConfigs {
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 10, "nonEeaDesk" -> 45),
     terminalNames = Seq("T1", "T2", "T3"),
     defaultPaxSplits = defaultPaxSplits,
-    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes)
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
+    shiftExamples = Seq(
+      "Midnight shift,{date},00:00,00:59,25",
+      "Night shift,{date},01:00,06:59,10",
+      "Morning shift,{date},07:00,13:59,30",
+      "Afternoon shift,{date},14:00,16:59,18",
+      "Evening shift,{date},17:00,23:59,22"
+    )
   )
   val ltn = AirportConfig(
     portCode = "LTN",

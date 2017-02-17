@@ -80,18 +80,28 @@ object Staffing {
     val today: SDate = SDate.today
     val todayString = today.ddMMyyString
 
-    val shiftExamples = Seq(
-      s"Midnight shift,${todayString},00:00,00:59,14",
-      s"Night shift,${todayString},01:00,06:59,6",
-      s"Morning shift,${todayString},07:00,13:59,25",
-      s"Afternoon shift,${todayString},14:00,16:59,13",
-      s"Evening shift,${todayString},17:00,23:59,20"
+    val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
+
+    val defaultExamples = Seq(
+      "Midnight shift,{date},00:00,00:59,14",
+      "Night shift,{date},01:00,06:59,6",
+      "Morning shift,{date},07:00,13:59,25",
+      "Afternoon shift,{date},14:00,16:59,13",
+      "Evening shift,{date},17:00,23:59,20"
     )
 
     <.div(
       <.h2("Shifts"),
       <.p("One shift per line with values separated by commas, e.g.:"),
-      <.pre(shiftExamples.map(<.div(_))),
+      airportConfigRCP(airportConfigMP => {
+        <.pre(
+          airportConfigMP().renderReady(airportConfig => {
+            val examples = if (airportConfig.shiftExamples.length > 0) airportConfig.shiftExamples
+            else defaultExamples
+            examples.map (line => <.div (line.replace ("{date}", todayString)))
+          })
+        )
+      }),
       <.textarea(^.value := rawShifts,
         ^.className := "staffing-editor",
         ^.onChange ==> ((e: ReactEventI) => mp.dispatch(SetShifts(e.target.value)))),
@@ -153,7 +163,7 @@ object Staffing {
 }
 
 
-object MovementDisplay  {
+object MovementDisplay {
   def toCsv(movement: StaffMovement) = {
     s"${movement.reason},${displayDate(movement.time)},${displayTime(movement.time)},${movement.delta}"
   }
