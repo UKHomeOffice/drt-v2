@@ -86,19 +86,19 @@ object FlightsView {
                     flightsModelProxy: Pot[Flights],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
-                      "SchDT",
-                      "Origin",
+                      "IATA",
                       "Operator",
+                      "Origin",
+                      "Gate",
+                      "Stand",
                       "Status",
+                      "SchDT",
                       "EstDT",
                       "ActDT",
                       "ActChoxDT",
-                      "Gate",
-                      "Stand",
                       "MaxPax",
                       "ActPax",
-                      "Terminal",
-                      "IATA"
+                      "Terminal"
                     )
                   )
 
