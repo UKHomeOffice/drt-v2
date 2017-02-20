@@ -127,11 +127,11 @@ object AirportConfigs {
       PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
     )),
     shiftExamples = Seq(
-      "Midnight shift,{date},00:00,00:59,14",
-      "Night shift,{date},01:00,06:59,6",
-      "Morning shift,{date},07:00,13:59,25",
-      "Afternoon shift,{date},14:00,16:59,13",
-      "Evening shift,{date},17:00,23:59,20"
+      "Alpha,{date},07:00,15:48,0",
+      "Bravo,{date},07:45,16:33,0",
+      "Charlie,{date},15:00,23:48,0",
+      "Delta,{date},16:00,00:48,0",
+      "Night,{date},22:36,07:24,0"
     )
   )
   val man = AirportConfig(
