@@ -10,13 +10,14 @@ import diode.data._
 import diode.react.ReactConnector
 import spatutorial.client.TableViewUtils
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
+import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalDeploymentsTable, TerminalUserDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
 import spatutorial.client.services.RootModel.mergeTerminalQueues
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
+import spatutorial.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
@@ -148,6 +149,31 @@ case class RootModel(
     val tsa = PortDeployment.terminalStaffAvailable(pd) _
 
     StaffDeploymentCalculator(tsa, queueCrunchResults).getOrElse(Map())
+  }
+
+  lazy val calculatedDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
+    timeIt("calculateAllTerminalsRows")(calculateAllTerminalDeploymentRows)
+  }
+
+  def calculateAllTerminalDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
+    airportConfig.map(ac => ac.terminalNames.map(terminalName => {
+      timeIt(s"calculateTerminalRows${terminalName}")(calculateTerminalDeploymentRows(terminalName))
+    }).toMap)
+  }
+
+  def calculateTerminalDeploymentRows(terminalName: TerminalName): (TerminalName, Pot[List[TerminalDeploymentsRow]]) = {
+    val crv = queueCrunchResults.getOrElse(terminalName, Map())
+    val srv = simulationResult.getOrElse(terminalName, Map())
+    val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
+    log.info(s"tud: ${terminalName}")
+    val x: Pot[List[TerminalDeploymentsRow]] = workload.map(workloads => {
+      val timestamps = workloads.timeStamps(terminalName)
+      val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+      val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+      val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(workloads.workloads(terminalName), minutesRangeInMillis)
+      TableViewUtils.terminalDeploymentsRows(timestamps, paxloads, crv, srv, udr)
+    })
+    terminalName -> x
   }
 
   lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
