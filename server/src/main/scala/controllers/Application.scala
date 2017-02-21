@@ -409,7 +409,7 @@ class Application @Inject()(
 
       // call Autowire route
       val router = Router.myroute[Api](createApiService)
-      //      router.§
+
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
       ).map(buffer => {

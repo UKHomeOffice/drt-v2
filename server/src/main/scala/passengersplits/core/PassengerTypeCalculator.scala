@@ -19,14 +19,14 @@ trait PassengerQueueCalculator {
   def calculateQueuesFromPaxTypes(paxTypeAndCount: (PassengerType, Int)): Seq[PaxTypeAndQueueCount] = {
     paxTypeAndCount match {
       case (EEANONMACHINEREADABLE, c) =>
-        Seq(PaxTypeAndQueueCount(EEANONMACHINEREADABLE, eeaDesk.name, c))
+        Seq(PaxTypeAndQueueCount(EEANONMACHINEREADABLE, eeaDesk, c))
       case (EEAMACHINEREADABLE, paxCount) =>
         val egatePaxCount = (PassengerQueueTypes.egatePercentage * paxCount).toInt
         Seq(
-          PaxTypeAndQueueCount(EEAMACHINEREADABLE, eeaDesk.name,  (paxCount - egatePaxCount)),
-          PaxTypeAndQueueCount(EEAMACHINEREADABLE, egate.name, egatePaxCount)
+          PaxTypeAndQueueCount(EEAMACHINEREADABLE, eeaDesk,  (paxCount - egatePaxCount)),
+          PaxTypeAndQueueCount(EEAMACHINEREADABLE, egate, egatePaxCount)
         )
-      case (otherPaxType, c) => Seq(PaxTypeAndQueueCount(otherPaxType, nationalsDesk.name, c))
+      case (otherPaxType, c) => Seq(PaxTypeAndQueueCount(otherPaxType, nationalsDesk, c))
     }
   }
 

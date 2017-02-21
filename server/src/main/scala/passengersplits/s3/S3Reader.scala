@@ -1,41 +1,30 @@
 package passengersplits.s3
 
-import scala.language.postfixOps
-import java.io.{FileInputStream, InputStream, File => JFile}
-import java.nio.file.Path
-import java.util.Date
+import java.io.{InputStream, File => JFile}
+import java.nio.file.{Path => JPath}
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
-import java.io.{FileInputStream, InputStream}
-import java.nio.file.{Path => JPath}
-import java.io.{File => JFile}
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import akka.routing.ActorRefRoutee
-import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, MaxInFlightRequestStrategy}
-import akka.{Done, NotUsed}
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
 import akka.event.LoggingAdapter
 import akka.stream._
-import akka.stream.actor.ActorSubscriberMessage.OnComplete
+import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, MaxInFlightRequestStrategy}
 import akka.stream.scaladsl.{Flow, Sink, Source, StreamConverters}
+import akka.{Done, NotUsed}
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import passengersplits._
-import core.PassengerInfoRouterActor.VoyagePaxSplits
-import core.{Core, CoreActors, CoreLogging, ZipUtils}
-import core.ZipUtils.UnzippedFileContent
-import org.apache.commons.logging.LogFactory
-import org.apache.commons.logging.LogFactory
+import passengersplits.core.ZipUtils.UnzippedFileContent
+import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
 import passengersplits.parsing.PassengerInfoParser
-import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
-import spray.http.DateTime
+import spatutorial.shared.PassengerSplits.VoyagePaxSplits
+import spatutorial.shared.SDate
 
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
-import scala.concurrent.duration.FiniteDuration
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
@@ -275,7 +264,7 @@ class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber wi
 
 }
 
-case class FlightId(flightNumber: String, carrier: String, schDateTime: DateTime)
+case class FlightId(flightNumber: String, carrier: String, schDateTime: SDate)
 
 class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 
@@ -306,12 +295,10 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 
 object VoyagePassengerInfoParser {
 
-  import WorkerPool._
-  import ActorSubscriberMessage._
   import PassengerInfoParser._
   import FlightPassengerInfoProtocol._
-  import spray.json._
   import PassengerInfoParser._
+  import spray.json._
 
   def parseVoyagePassengerInfo(content: String) = {
     Try(content.parseJson.convertTo[VoyagePassengerInfo])

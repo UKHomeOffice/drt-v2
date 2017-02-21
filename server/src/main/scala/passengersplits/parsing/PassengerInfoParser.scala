@@ -1,7 +1,9 @@
 package passengersplits.parsing
 
-import spray.http.DateTime
-import spray.json.{RootJsonFormat, DefaultJsonProtocol}
+import spatutorial.shared.SDate
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import org.joda.time.DateTime
+import services.SDate.JodaSDate
 
 import scala.util.Try
 
@@ -35,8 +37,8 @@ object PassengerInfoParser {
                                  PassengerList: List[PassengerInfoJson]) {
     def flightCode: String = CarrierCode + VoyageNumber
 
-    def scheduleArrivalDateTime: Option[DateTime] = {
-      DateTime.fromIsoDateTimeString(scheduleDateTimeString)
+    def scheduleArrivalDateTime: Option[SDate] = {
+      Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate(_))
     }
 
     def passengerInfos: Seq[PassengerInfo] = PassengerList.map(_.toPassengerInfo)

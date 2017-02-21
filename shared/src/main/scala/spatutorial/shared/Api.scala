@@ -39,6 +39,7 @@ case class ApiFlight(
                       PcpTime: Long)
 
 trait SDate {
+
   def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
 
   def getFullYear(): Int
@@ -56,6 +57,8 @@ trait SDate {
   def addDays(daysToAdd: Int): SDate
 
   def addHours(hoursToAdd: Int): SDate
+
+  override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }
 
 
@@ -187,9 +190,9 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 object PassengerQueueTypes {
   object Desks {
-    val eeaDesk = 'desk
-    val egate = 'egate
-    val nationalsDesk = 'nationalsDesk
+    val eeaDesk = "desk"
+    val egate = "egate"
+    val nationalsDesk = "nationalsDesk"
   }
 
   object PaxTypes {
@@ -213,7 +216,7 @@ object PassengerSplits {
                              voyageNumber: String,
                              totalPaxCount: Int,
                              scheduledArrivalDateTime: MilliDate,
-                             paxSplits: PaxTypeAndQueueCount)
+                             paxSplits: List[PaxTypeAndQueueCount])
 
 }
 

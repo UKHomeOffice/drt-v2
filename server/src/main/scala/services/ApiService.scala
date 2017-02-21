@@ -4,7 +4,7 @@ import java.util.Date
 
 import actors.GetLatestCrunch
 import akka.actor.ActorRef
-import akka.event.{LoggingAdapter}
+import akka.event.LoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
@@ -14,7 +14,8 @@ import passengersplits.query.FlightPassengerSplitsReportingService
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.PassengerSplits.VoyagePaxSplits
 import spatutorial.shared._
-import spray.http.DateTime
+import org.joda.time.DateTime
+import services.SDate.implicits._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -109,7 +110,7 @@ abstract class ApiService(airportConfig: AirportConfig)
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
   override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits] = {
-    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, DateTime(scheduledDateTime.millisSinceEpoch))
+    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, scheduledDateTime)
     splits.map(v => v match {
       case value: VoyagePaxSplits =>
         log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
