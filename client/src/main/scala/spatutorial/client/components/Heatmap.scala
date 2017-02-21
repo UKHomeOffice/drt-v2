@@ -29,7 +29,6 @@ object TerminalHeatmaps {
           val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
           log.info(s"Got max workload of ${maxAcrossAllSeries}")
           <.div(
-            <.h4("Workloads"),
             Heatmap.heatmap(Heatmap.Props(
               series = heatMapSeries,
               height = 200,
@@ -60,7 +59,6 @@ object TerminalHeatmaps {
           val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
           log.info(s"Got max waittime of ${maxAcrossAllSeries}")
           <.div(
-            <.h4("Wait times"),
             Heatmap.heatmap(Heatmap.Props(series = queueSeries, height = 200,
               scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
           )
@@ -77,7 +75,6 @@ object TerminalHeatmaps {
     }.toList)
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
-        <.h4("Desk recommendations"),
         Heatmap.heatmap(Heatmap.Props(series = serMP(), height = 200, scaleFunction = Heatmap.bucketScale(20)))
       )
     })
@@ -101,7 +98,6 @@ object TerminalHeatmaps {
               seriesPot.renderReady(series => {
                 val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
                 <.div(
-                  <.h4("Desk recs to actual desks"),
                   Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
                     scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries),
                     valueDisplayFormatter = v => f"${v}%.1f")))

@@ -148,7 +148,8 @@ object TerminalDeploymentsTable {
             val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               qtd(q.pax),
-              userDeskRecOverride(q, qtd _, hasChangeClasses),
+              qtd(q.userDeskRec.deskRec),
+              /*userDeskRecOverride(q, qtd _, hasChangeClasses),*/
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList

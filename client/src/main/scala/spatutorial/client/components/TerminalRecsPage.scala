@@ -58,7 +58,7 @@ object TerminalDepsPage {
         val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(props.terminalName, Map()), props.terminalName)
         <.div(
           <.ul(^.className := "nav nav-tabs",
-            <.li(<.a(^.className := "active", "data-toggle".reactAttr := "tab", ^.href := "#deskrecs", "Desk recs")),
+            <.li(^.className := "active", <.a("data-toggle".reactAttr := "tab", ^.href := "#deskrecs", "Desk recommendations")),
             <.li(<.a("data-toggle".reactAttr := "tab", ^.href := "#workloads", "Workloads")),
             seriesPot.renderReady(s =>
               <.li(<.a("data-toggle".reactAttr := "tab", ^.href := "#waits", "Wait times"))
