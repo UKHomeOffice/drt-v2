@@ -137,15 +137,15 @@ case class RootModel(
     val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
     val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
-      m: MilliDate => 0
+      (t: TerminalName, m: MilliDate) => 0
     } else {
       val successfulShifts = shifts.collect { case Success(s) => s }
       val ss = ShiftService(successfulShifts)
-      StaffMovements.staffAt(ss)(staffMovements) _
+      StaffMovements.terminalStaffAt(ss)(staffMovements) _
     }
 
     val pdr = PortDeployment.portDeskRecs(queueCrunchResults)
-    val pd = PortDeployment.portDeployments(pdr, staffFromShiftsAndMovementsAt)
+    val pd = PortDeployment.terminalDeployments(pdr, staffFromShiftsAndMovementsAt)
     val tsa = PortDeployment.terminalStaffAvailable(pd) _
 
     StaffDeploymentCalculator(tsa, queueCrunchResults).getOrElse(Map())
