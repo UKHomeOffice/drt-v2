@@ -25,7 +25,7 @@ trait SimpleLocalFileSystemReader extends
   implicit val flowMaterializer = ActorMaterializer()
   implicit val ec = system.dispatcher
 
-  val path = "c:/users/lance/clients/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
+  val path = "c:/users/lance/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
   private val file: File = new File(path)
 
   def allFilePaths: Iterator[String] = file.list(new FilenameFilter {

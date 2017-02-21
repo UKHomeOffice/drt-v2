@@ -365,13 +365,15 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
         val newFlightsSet = flights.flights.toSet
         if (oldFlightsSet != newFlightsSet) {
           val airportCodes = flights.flights.map(_.Origin).toSet
-          val flightSplitRequests = flights.flights.map(flight =>
+          val flightSplitRequests = flights.flights.map(flight => {
+            log.info(s"flightSplits for ${flight}")
             AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
-              .call().map(UpdateFlightPaxSplits))
+              .call().map(UpdateFlightPaxSplits)
+          })
           val flightSplits = flightSplitRequests.map(f => Effect(f))
           val flightSplitEffectSet = seqOfEffectsToEffectSeq(flightSplits)
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
-          val allEffects = airportInfos + flightSplitEffectSet
+          val allEffects = flightSplitEffectSet
           updated(Ready(flights), allEffects)
         } else {
           log.info("no changes to flights")

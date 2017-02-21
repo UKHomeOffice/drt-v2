@@ -25,6 +25,7 @@ object PassengerInfoRouterActor {
                              paxSplits: PaxTypeAndQueueCounts)
 
   case class VoyagesPaxSplits(voyageSplits: List[VoyagePaxSplits])
+
   case class ReportFlightCode(flightCode: String)
 
   case class FlightNotFound(carrierCode: String, flightCode: String, scheduledArrivalDateTime: DateTime)
@@ -58,11 +59,13 @@ class PassengerSplitsInfoByPortRouter extends
 
   def receive: PartialFunction[Any, Unit] = LoggingReceive {
     case info: VoyagePassengerInfo =>
-      log.info(s"telling children about ${info}")
+      log.info(s"telling children about ${info.summary}")
       val child = getRCActor(childName(info.ArrivalPortCode))
       child.tell(info, sender)
     case report: ReportVoyagePaxSplit =>
-      val child = getRCActor(childName(report.destinationPort))
+      val name = childName(report.destinationPort)
+      log.info(s"Looking for ${report} in $name")
+      val child = getRCActor(name)
       child.tell(report, sender)
     case report: ReportVoyagePaxSplitBetween =>
       log.info(s"top level router asked to ${report}")
@@ -109,7 +112,7 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
   }
 
   def childName(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDt: DateTime) = {
-    s"flight-pax-calculator-$port-$carrierCode-$voyageNumber-$scheduledArrivalDt"
+    s"flight-pax-calculator-$port-$voyageNumber-$scheduledArrivalDt"
   }
 }
 
@@ -120,11 +123,12 @@ class SingleFlightActor
   def receive = LoggingReceive {
     case info: VoyagePassengerInfo =>
       latestMessage = Option(info)
-      log.info(s"${self} received ${info}")
+      log.info(s"${self} received ${info.summary}")
       sender ! ProcessedFlightInfo
     case ReportVoyagePaxSplit(port, carrierCode, voyageNumber, scheduledArrivalDateTime) =>
-      log.info(s"Report flight split for $port $carrierCode $voyageNumber $scheduledArrivalDateTime")
-//      log.info(s"Current flights ${latestMessage}")
+
+      log.info(s"I am ${latestMessage.map(_.summary)}: Report flight split for $port $carrierCode $voyageNumber $scheduledArrivalDateTime")
+      //      log.info(s"Current flights ${latestMessage}")
       val matchingFlights: Option[VoyagePassengerInfo] = latestMessage.find {
         (flight) => {
           doesFlightMatch(carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
@@ -184,7 +188,9 @@ class SingleFlightActor
   }
 
   def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: DateTime, flight: VoyagePassengerInfo): Boolean = {
-    flight.VoyageNumber == voyageNumber && carrierCode == flight.CarrierCode && Some(scheduledArrivalDateTime) == flight.scheduleArrivalDateTime
+    flight.VoyageNumber == voyageNumber &&
+      //carrierCode == flight.CarrierCode &&
+      Some(scheduledArrivalDateTime) == flight.scheduleArrivalDateTime
   }
 }
 
@@ -204,8 +210,8 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
     case "begin" =>
       log.info(s"Sending requests to the children ${childActors.length}")
       if (childActors.isEmpty) {
-         log.info(s"No children to get responses for")
-         checkIfDoneAndDie()
+        log.info(s"No children to get responses for")
+        checkIfDoneAndDie()
       } else {
         childActors.foreach(ref => {
           log.info(s"Telling ${ref} to send me a report ${report}")

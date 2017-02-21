@@ -1,33 +1,27 @@
 package services
 
-import java.util.{Date, UUID}
+import java.util.Date
 
 import actors.GetLatestCrunch
-import akka.actor.{ActorRef, Props}
-import akka.event.{Logging, LoggingAdapter}
+import akka.actor.ActorRef
+import akka.event.{LoggingAdapter}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerInfoRouterActor.FlightNotFound
-import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.query.FlightPassengerSplitsReportingService
-import services.workloadcalculator.PassengerQueueTypes
-import spatutorial.shared._
 import spatutorial.shared.FlightsApi._
-
-import scala.collection.immutable.Seq
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
-import scala.io.Codec
-import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration._
-import spatutorial.shared.HasAirportConfig
 import spatutorial.shared.PassengerSplits.VoyagePaxSplits
-import spatutorial.shared.SplitRatiosNs.SplitRatios
-import spray.http.{DateTime, StatusCodes}
+import spatutorial.shared._
+import spray.http.DateTime
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.io.Codec
 import scala.language.postfixOps
+import scala.util.{Failure, Try}
 
 trait AirportToCountryLike {
   lazy val airportInfo: Map[String, AirportInfo] = {
@@ -118,7 +112,6 @@ abstract class ApiService(airportConfig: AirportConfig)
     val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, DateTime(scheduledDateTime.millisSinceEpoch))
     splits.map(v => v match {
       case value: VoyagePaxSplits =>
-        val asList = value :: Nil
         log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
         value
       case FlightNotFound(cc, fc, sadt) =>

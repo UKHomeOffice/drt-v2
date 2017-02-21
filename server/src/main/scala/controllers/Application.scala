@@ -388,7 +388,7 @@ class Application @Inject()(
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   /// PassengerSplits reader
-
+  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter)
 
   //  val lhrfeed = LHRFlightFeed()
   //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
@@ -431,7 +431,7 @@ class Application @Inject()(
 
 object FilePolling {
   def beginPolling(log: LoggingAdapter, flightPassengerReporter: ActorRef)(implicit actorSystem: ActorSystem, mat: Materializer) = {
-    val statefulPoller = StatefulLocalFileSystemPoller(Some("drt_dq_1701"))
+    val statefulPoller = StatefulLocalFileSystemPoller(Some("drt_dq_17022"))
 
     val promiseDone = PromiseSignals.promisedDone
 
@@ -443,14 +443,14 @@ object FilePolling {
       .collect {
         case Success(vpi) if vpi.ArrivalPortCode == "STN" => vpi
       }.map(uzfc => {
-      log.info(s"Processing $uzfc")
+      log.info(s"VoyagePaxSplits ${uzfc.summary}")
       uzfc
     })
 
     val unzippedSink = unzipFlow.to(subscriberFlightActor)
     val i = 1
     runOnce(i, (td) => promiseDone.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
-    val resultOne = Await.result(promiseDone.future, 10 seconds)
+//    val resultOne = Await.result(promiseDone.future, 10 seconds)
   }
 }
 
