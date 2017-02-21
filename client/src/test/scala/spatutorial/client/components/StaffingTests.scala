@@ -18,7 +18,7 @@ object StaffingTests extends TestSuite {
   def tests = TestSuite {
     'Staffing - {
       val shiftStart = SDate(2016, 10, 1, 1, 0)
-      val shiftService = ShiftService(Shift("shift1", shiftStart, SDate(2016, 10, 1, 1, 45), 5) :: Nil)
+      val shiftService = ShiftService(Shift("shift1", "any", shiftStart, SDate(2016, 10, 1, 1, 45), 5) :: Nil)
       // todo figure out how to use ComponentTester from the scalatest utils. We started looking but it was a rabbit hole
       // of version bumping.
 //      val table = Staffing.staffingTableHourPerColumn(Staffing.daysWorthOf15Minutes(SDate(2016, 10, 1, 0, 0)), shiftService)
