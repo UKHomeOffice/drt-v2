@@ -29,11 +29,7 @@ object TerminalHeatmaps {
           val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
           log.info(s"Got max workload of ${maxAcrossAllSeries}")
           <.div(
-            Heatmap.heatmap(Heatmap.Props(
-              series = heatMapSeries,
-              height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)
-            ))
+            Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
           )
         }))
     })
@@ -59,8 +55,7 @@ object TerminalHeatmaps {
           val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
           log.info(s"Got max waittime of ${maxAcrossAllSeries}")
           <.div(
-            Heatmap.heatmap(Heatmap.Props(series = queueSeries, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+            Heatmap.heatmap(Heatmap.Props(series = queueSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
           )
         }))
     })
@@ -75,7 +70,7 @@ object TerminalHeatmaps {
     }.toList)
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
-        Heatmap.heatmap(Heatmap.Props(series = serMP(), height = 200, scaleFunction = Heatmap.bucketScale(20)))
+        Heatmap.heatmap(Heatmap.Props(series = serMP(), scaleFunction = Heatmap.bucketScale(20)))
       )
     })
   }
@@ -98,9 +93,7 @@ object TerminalHeatmaps {
               seriesPot.renderReady(series => {
                 val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
                 <.div(
-                  Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
-                    scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries),
-                    valueDisplayFormatter = v => f"${v}%.1f")))
+                  Heatmap.heatmap(Heatmap.Props(series = series, scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries), valueDisplayFormatter = v => f"${v}%.1f")))
               }))
           })
         )
@@ -170,12 +163,9 @@ object Heatmap {
 
   case class Series(name: String, data: IndexedSeq[Double])
 
-  case class Props(width: Int = 960, height: Int, numberOfBlocks: Int = 24,
-                   series: Seq[Series],
-                   scaleFunction: (Double) => Int,
-                   shouldShowRectValue: Boolean = true,
-                   valueDisplayFormatter: (Double) => String = _.toInt.toString
-                  )
+  case class Props(width: Int = 960, numberOfBlocks: Int = 24, series: Seq[Series], scaleFunction: (Double) => Int, shouldShowRectValue: Boolean = true, valueDisplayFormatter: (Double) => String = _.toInt.toString) {
+    def height = 50 * (series.length + 1)
+  }
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
     "#E0C54B", "#DD983A", "#DA6429", "#D72A18")

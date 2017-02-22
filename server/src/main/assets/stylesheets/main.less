@@ -55,7 +55,7 @@ table.user-desk-recs > tbody > tr > td.date-field {
   text-align: left;
 }
 
-table.user-desk-recs {
+table.user-desk-recs.cols-2, table.user-desk-recs.cols-3, table.user-desk-recs.cols-4 {
   thead th:nth-child(1) {
     width: 180px;
   }
@@ -65,10 +65,44 @@ table.user-desk-recs {
   }
 }
 
+table.user-desk-recs.cols-4 {
+  thead th:nth-last-child(-n+2) {
+    width: 66px;
+  }
 
+  tbody td:nth-last-child(-n+2) {
+    width: 66px;
+  }
+}
 
-table.user-desk-recs tbody td, table.user-desk-recs thead th {
+table.user-desk-recs.cols-3 {
+  thead th:nth-last-child(1) {
+    width: 88px;
+  }
+
+  tbody td:nth-last-child(1) {
+    width: 88px;
+  }
+
+  thead th:nth-last-child(2) {
+    width: 89px;
+  }
+
+  tbody td:nth-last-child(2) {
+    width: 89px;
+  }
+}
+
+table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
+  width: 69px;
+}
+
+table.user-desk-recs.cols-3 tbody td, table.user-desk-recs.cols-3 thead th {
   width: 87px;
+}
+
+table.user-desk-recs.cols-2 tbody td, table.user-desk-recs.cols-2 thead th {
+  width: 120px;
 }
 
 table.user-desk-recs > tbody > tr > td > input:focus {
@@ -259,8 +293,7 @@ p {
 
 .terminal-desk-recs-container {
   height: 800px;
-  width: 1152px;
-  //overflow: scroll;
+  width: 1155px;
 }
 
 .user-desk-recs-container {
