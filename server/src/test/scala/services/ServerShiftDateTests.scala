@@ -1,7 +1,7 @@
 package services
 
 import org.joda.time.DateTime
-import spatutorial.shared.{MilliDate, SDate}
+import spatutorial.shared.{MilliDate, SDateLike}
 import utest.{TestSuite, _}
 
 

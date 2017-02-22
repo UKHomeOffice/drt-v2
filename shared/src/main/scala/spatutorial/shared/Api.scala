@@ -4,7 +4,7 @@ import java.util.Date
 
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
+import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
 
 import scala.collection.immutable._
 import scala.collection.immutable.Seq
@@ -38,7 +38,7 @@ case class ApiFlight(
                       SchDT: String,
                       PcpTime: Long)
 
-trait SDate {
+trait SDateLike {
 
   def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
 
@@ -54,9 +54,9 @@ trait SDate {
 
   def millisSinceEpoch: Long
 
-  def addDays(daysToAdd: Int): SDate
+  def addDays(daysToAdd: Int): SDateLike
 
-  def addHours(hoursToAdd: Int): SDate
+  def addHours(hoursToAdd: Int): SDateLike
 
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }
@@ -212,6 +212,10 @@ object PassengerSplits {
 
   case class PaxTypeAndQueueCount(passengerType: String, queueType: QueueType, paxCount: Int)
 
+  case object FlightsNotFound
+
+  case class FlightNotFound(carrierCode: String, flightCode: String, scheduledArrivalDateTime: MilliDate)
+
   case class VoyagePaxSplits(destinationPort: String, carrierCode: String,
                              voyageNumber: String,
                              totalPaxCount: Int,
@@ -229,7 +233,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
-  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits]
+  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 

@@ -20,7 +20,7 @@ import boopickle.Default._
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.PassengerSplits.VoyagePaxSplits
+import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -71,7 +71,7 @@ case class GetStaffMovements() extends Action
 
 case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
-case class UpdateFlightPaxSplits(splits: VoyagePaxSplits) extends Action
+case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
 
 trait WorkloadsUtil {
   def labelsFromAllQueues(startTime: Long) = {
@@ -384,6 +384,12 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
         updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
       }
       result
+    case UpdateFlightPaxSplits(Left(failure)) =>
+      log.info(s"Did not find flightPaxSplits for ${failure}")
+      noChange
+    case UpdateFlightPaxSplits(Right(result)) =>
+      log.info(s"Found flightPaxSplits ${result}")
+      noChange
   }
 }
 

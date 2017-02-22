@@ -25,8 +25,8 @@ trait SimpleLocalFileSystemReader extends
   implicit val flowMaterializer = ActorMaterializer()
   implicit val ec = system.dispatcher
 
-  val path = "c:/users/lance/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
-  private val file: File = new File(path)
+  def path: String
+  private def file: File = new File(path)
 
   def allFilePaths: Iterator[String] = file.list(new FilenameFilter {
     def accept(dir: File, name: String) = {
@@ -90,6 +90,7 @@ object FileSystemAkkaStreamReading {
       ClosedShape
     })
 
+    log.info(s"runOnce ${runId}")
     g.run()
   }
 }
@@ -119,14 +120,15 @@ class StatefulFilenameProvider(log: LoggingAdapter, var latestFileSeen: Option[S
   }
 }
 
-case class StatefulLocalFileSystemPoller(initialLatestFile: Option[String] = None)(implicit outersystem: ActorSystem) {
+case class StatefulLocalFileSystemPoller(initialLatestFile: Option[String] = None,
+                                         zipFilePath: String)(implicit outersystem: ActorSystem) {
   val statefulPoller = new StatefulFilenameProvider(outersystem.log, initialLatestFile)
 
   import statefulPoller._
 
   val unzippedFileProvider = new SimpleLocalFileSystemReader {
     implicit def system = outersystem
-
+    override def path = zipFilePath
     override def zipFileNameFilter(filename: String) = statefulPoller.defaultFilenameFilter(filename)
   }
 

@@ -7,7 +7,7 @@ import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 import spatutorial.client.logger._
 import spatutorial.client.services._
-import spatutorial.shared.SDate
+import spatutorial.shared.SDateLike
 
 import scala.util.{Failure, Success}
 import scala.collection.immutable.Seq
@@ -25,7 +25,7 @@ object StaffMovementsPopover {
                                         numberOfStaff: Int = 1
                                       )
 
-  def apply(trigger: String, reason: String, startDate: SDate, endDate: SDate, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
+  def apply(trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
     .initialState_P((p) => {
       StaffMovementPopoverState(
         reason = reason,
@@ -74,7 +74,7 @@ object StaffMovementsPopover {
             })))
           }
 
-          def timeSelector(label: String, startDate: SDate): ReactTagOf[Div] = {
+          def timeSelector(label: String, startDate: SDateLike): ReactTagOf[Div] = {
             popoverFormRow(label,
               selectFromRange(
                 0 to 23, startDate.getHours(),

@@ -3,7 +3,7 @@ package spatutorial.client.services
 import java.util.UUID
 
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.{SDate, StaffMovement}
+import spatutorial.shared.{SDateLike, StaffMovement}
 import utest._
 
 import scala.scalajs.js.Date
@@ -27,12 +27,12 @@ object ShiftsServiceTests extends TestSuite {
           assert(shifts == Shift("alpha", 1481364000000L, 1482148800000L, 10))
         }
         "round trip the above magic numbers 1481364000000d is 2016/12/10 10:00" - {
-          val sdate: SDate = SDate.JSSDate(new Date(1481364000000d))
+          val sdate: SDateLike = SDate.JSSDate(new Date(1481364000000d))
           assert((2016, 12, 10, 10, 0) == (sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
         }
 
         "round trip the above magic numbers 1482148800000L is 2016/12/19 12:00" - {
-          val sdate: SDate = SDate.JSSDate(new Date(1482148800000d))
+          val sdate: SDateLike = SDate.JSSDate(new Date(1482148800000d))
           assert((2016, 12, 19, 12, 0) == (sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
         }
 

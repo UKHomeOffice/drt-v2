@@ -20,7 +20,7 @@ import spray.http._
 import core.User
 import passengersplits.parsing.jsonparsing.DefaultJsonFormats
 import spatutorial.shared.PassengerSplits.PaxTypeAndQueueCount
-import spatutorial.shared.SDate
+import spatutorial.shared.SDateLike
 import services.SDate.implicits._
 import org.joda.time.DateTime
 
@@ -142,7 +142,7 @@ object FlightPassengerSplitsReportingService {
   }
 
   def calculateSplits(aggregator: AskableActorRef)
-                     (destPort: String, terminalName: String, flightCode: String, arrivalTime: SDate)(implicit timeout: Timeout, ec: ExecutionContext) = {
+                     (destPort: String, terminalName: String, flightCode: String, arrivalTime: SDateLike)(implicit timeout: Timeout, ec: ExecutionContext) = {
     getCarrierCodeAndFlightNumber(flightCode) match {
       case Some((cc, fn)) => aggregator ? ReportVoyagePaxSplit(destPort, cc, fn, arrivalTime)
       case None => Future.failed(new Exception(s"couldn't get carrier and voyage number from $flightCode"))

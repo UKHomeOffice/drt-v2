@@ -9,10 +9,9 @@ import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.PassengerInfoRouterActor.FlightNotFound
 import passengersplits.query.FlightPassengerSplitsReportingService
 import spatutorial.shared.FlightsApi._
-import spatutorial.shared.PassengerSplits.VoyagePaxSplits
+import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import spatutorial.shared._
 import org.joda.time.DateTime
 import services.SDate.implicits._
@@ -109,16 +108,16 @@ abstract class ApiService(airportConfig: AirportConfig)
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
-  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[VoyagePaxSplits] = {
+  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]] = {
     val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, scheduledDateTime)
     splits.map(v => v match {
       case value: VoyagePaxSplits =>
         log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
-        value
-      case FlightNotFound(cc, fc, sadt) =>
-        throw new Exception(s"Did not find flight $cc $fc $sadt")
+        Right(value)
+      case fnf: FlightNotFound =>
+        Left(fnf)
       case Failure(f) =>
-        throw f
+       throw f
     }
     )
   }

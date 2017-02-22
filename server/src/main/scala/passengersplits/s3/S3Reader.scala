@@ -20,7 +20,7 @@ import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
 import passengersplits.parsing.PassengerInfoParser
 import spatutorial.shared.PassengerSplits.VoyagePaxSplits
-import spatutorial.shared.SDate
+import spatutorial.shared.SDateLike
 
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
@@ -199,8 +199,9 @@ trait PollingAtmosReader[-In, +Out] {
       val unzipFlow = Flow[String].mapAsync(10)(statefulPoller.unzippedFileProvider.zipFilenameToEventualFileContent(_)).mapConcat(t => t)
 
       val unzippedSink = unzipFlow.to(sink)
-      runOnce(i, (td) => promisedDone.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
-      val resultOne = Await.result(promisedDone.future, atMostForResponsesFromAtmos)
+      val myDonePromise = promisedDone
+      runOnce(i, (td) => myDonePromise.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
+      val resultOne = Await.result(myDonePromise.future, atMostForResponsesFromAtmos)
       log.info(s"Got result ${i}")
 
       //todo get rid of the sleep by inverting the flow such that this is triggered by a pulse, embrace the streams!
@@ -264,7 +265,7 @@ class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber wi
 
 }
 
-case class FlightId(flightNumber: String, carrier: String, schDateTime: SDate)
+case class FlightId(flightNumber: String, carrier: String, schDateTime: SDateLike)
 
 class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 

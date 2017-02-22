@@ -4,6 +4,8 @@ import java.net.URL
 import java.nio.ByteBuffer
 
 import actors.{CrunchActor, FlightsActor, GetFlights}
+import akka.Done
+import akka.actor.Actor.Receive
 import akka.actor._
 import akka.event._
 import akka.pattern._
@@ -25,6 +27,7 @@ import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import http.ProdSendAndReceive
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.s3._
@@ -39,7 +42,7 @@ import views.html.defaultpages.notFound
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import ExecutionContext.Implicits.global
 //import scala.collection.immutable.Seq
 import scala.reflect.macros.Context
@@ -388,7 +391,9 @@ class Application @Inject()(
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   /// PassengerSplits reader
-  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter)
+  val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
+
+  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170222"))
 
   //  val lhrfeed = LHRFlightFeed()
   //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
@@ -408,7 +413,7 @@ class Application @Inject()(
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
-      val router = Router.myroute[Api](createApiService)
+      val router = Router.route[Api](createApiService)
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
@@ -430,14 +435,27 @@ class Application @Inject()(
 
 
 object FilePolling {
-  def beginPolling(log: LoggingAdapter, flightPassengerReporter: ActorRef)(implicit actorSystem: ActorSystem, mat: Materializer) = {
-    val statefulPoller = StatefulLocalFileSystemPoller(Some("drt_dq_17022"))
+  def beginPolling(log: LoggingAdapter, flightPassengerReporter: ActorRef, zipFilePath: String, initialFileFilter: Option[String])(implicit actorSystem: ActorSystem, mat: Materializer): Future[Done] = {
+    val statefulPoller = StatefulLocalFileSystemPoller(initialFileFilter, zipFilePath)
 
-    val promiseDone = PromiseSignals.promisedDone
+    val promiseBatchDone = PromiseSignals.promisedDone
+    val eventualDone = promiseBatchDone.future
 
-    val subscriberFlightActor = Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter))
+    class CompletionMonitor(promise: Promise[Done]) extends Actor with ActorLogging {
+      def receive: Receive = {
+        case FlightPaxSplitBatchComplete(_) =>
+          log.info(s"$self FlightPaxSplitBatchComplete")
+          promise.complete(Try(Done))
+      }
+    }
+    val props = Props(classOf[CompletionMonitor], promiseBatchDone)
+    val completionMonitor = actorSystem.actorOf(props)
 
-    val runOnce = FileSystemAkkaStreamReading.runOnce(log)(statefulPoller.unzippedFileProvider) _
+
+    val completionMessage = FlightPaxSplitBatchComplete(completionMonitor)
+
+    val subscriberFlightActor = Sink.actorRefWithAck(flightPassengerReporter, FlightPaxSplitBatchInit, PassengerSplitsAck, completionMessage)
+
     val unzipFlow = Flow[String].mapAsync(128)(statefulPoller.unzippedFileProvider.zipFilenameToEventualFileContent(_))
       .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
       .collect {
@@ -449,8 +467,21 @@ object FilePolling {
 
     val unzippedSink = unzipFlow.to(subscriberFlightActor)
     val i = 1
-    runOnce(i, (td) => promiseDone.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
-//    val resultOne = Await.result(promiseDone.future, 10 seconds)
+
+    val runOnce = FileSystemAkkaStreamReading.runOnce(log)(statefulPoller.unzippedFileProvider) _
+
+    runOnce(i, (td) => {
+      log.info(s"Reading files finished")
+    }, statefulPoller.onNewFileSeen, unzippedSink)
+    eventualDone.onComplete {
+      case Success(complete) =>
+        log.info(s"FilePolling complete ${complete}")
+      case Failure(f) =>
+        log.error(f, s"FilePolling failed ${f}")
+
+    }
+    eventualDone
+    //    val resultOne = Await.result(promiseDone.future, 10 seconds)
   }
 }
 

@@ -108,6 +108,7 @@ lazy val server = (project in file("server"))
     publishArtifact in (Compile, packageDoc) := false,
     // Disable source jar for this project (useless)
     publishArtifact in (Compile, packageSrc) := false,
+    javaOptions += "-Xmx3G",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
     LessKeys.compress in Assets := true

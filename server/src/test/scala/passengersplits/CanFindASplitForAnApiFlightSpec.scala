@@ -2,7 +2,7 @@ package passengersplits
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
-import controllers.FilePolling
+import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.core.PassengerInfoRouterActor.{FlightNotFound, PassengerSplitsAck, ReportVoyagePaxSplit}
@@ -13,10 +13,8 @@ import services.SDate.implicits._
 import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
 import spatutorial.shared.{PassengerQueueTypes, SDateLike}
 
-
-
-class FlightPassengerInfoRouterActorSpec extends
-  TestKit(ActorSystem()) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
+class CanFindASplitForAnApiFlightSpec extends
+  TestKit(ActorSystem("CanFindASplitForAnApiFlightSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
   test =>
 
   isolated
@@ -24,7 +22,7 @@ class FlightPassengerInfoRouterActorSpec extends
     case PassengerSplitsAck => true
   }
 
-  "Router should accept PassengerFlightInfo messages" >> {
+  "Should be able to find a flight" >> {
     "Given a single flight, with just one GBR passenger" in {
       flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "LGW", "BRG", "12345", "EZ", "2017-04-02", "15:33:00",
         PassengerInfoJson(Some("P"), "GBR", "EEA", None) :: Nil)

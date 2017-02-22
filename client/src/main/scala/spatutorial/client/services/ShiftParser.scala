@@ -7,22 +7,22 @@ import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.{MilliDate, SDate, StaffMovement}
+import spatutorial.shared.{MilliDate, SDateLike, StaffMovement}
 
 object JSDateConversions {
   implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
 
   implicit def jsDateToMilliDate(jsDate: Date): MilliDate = MilliDate(jsDateToMillis(jsDate))
 
-  implicit def jsSDateToMilliDate(jsSDate: SDate): MilliDate = MilliDate(jsSDate.millisSinceEpoch)
+  implicit def jsSDateToMilliDate(jsSDate: SDateLike): MilliDate = MilliDate(jsSDate.millisSinceEpoch)
 
   implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
 
-  implicit def jsDateToSDate(date: Date): SDate = JSSDate(date)
+  implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(date)
 
   object SDate {
 
-    case class JSSDate(date: Date) extends SDate {
+    case class JSSDate(date: Date) extends SDateLike {
 
       def getFullYear(): Int = date.getFullYear()
 
@@ -35,13 +35,13 @@ object JSDateConversions {
 
       def getMinutes(): Int = date.getMinutes()
 
-      def addDays(daysToAdd: Int): SDate = {
+      def addDays(daysToAdd: Int): SDateLike = {
         val newDate = new Date(millisSinceEpoch)
         newDate.setDate(newDate.getDate() + daysToAdd)
         newDate
       }
 
-      def addHours(hoursToAdd: Int): SDate = {
+      def addHours(hoursToAdd: Int): SDateLike = {
         val newDate = new Date(millisSinceEpoch)
         newDate.setHours(newDate.getHours() + hoursToAdd)
         newDate
@@ -51,13 +51,13 @@ object JSDateConversions {
 
     }
 
-    def apply(milliDate: MilliDate): SDate = new Date(milliDate.millisSinceEpoch)
+    def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDate = new Date(y, m - 1, d, h, mm)
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
 
-    def parse(dateString: String): SDate = new Date(dateString)
+    def parse(dateString: String): SDateLike = new Date(dateString)
 
-    def today(): SDate = {
+    def today(): SDateLike = {
       val d = new Date()
       d.setHours(0)
       d.setMinutes(0)
@@ -65,7 +65,7 @@ object JSDateConversions {
       JSSDate(d)
     }
 
-    def now(): SDate = {
+    def now(): SDateLike = {
       val d = new Date()
       JSSDate(d)
     }
@@ -75,8 +75,8 @@ object JSDateConversions {
 
 case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
   def toCsv = {
-    val startDate: SDate = SDate(startDt)
-    val endDate: SDate = SDate(endDt)
+    val startDate: SDateLike = SDate(startDt)
+    val endDate: SDateLike = SDate(endDt)
     val startDateString = f"${startDate.getDate}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
     val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
     val endTimeString = f"${endDate.getHours}%02d:${endDate.getMinutes}%02d"
@@ -99,8 +99,8 @@ object Shift {
       dmy <- tryDMY
       (d, m, y) = dmy
 
-      startDtTry: Try[SDate] = parseTimeWithStartTime(startTime, d, m, y)
-      endDtTry: Try[SDate] = parseTimeWithStartTime(endTime, d, m, y)
+      startDtTry: Try[SDateLike] = parseTimeWithStartTime(startTime, d, m, y)
+      endDtTry: Try[SDateLike] = parseTimeWithStartTime(endTime, d, m, y)
       startDt <- startDtTry
       endDt <- endDtTry
       staffDelta: Int <- staffDeltaTry
@@ -109,7 +109,7 @@ object Shift {
     }
   }
 
-  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDate, endDt: SDate): SDate = {
+  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDateLike, endDt: SDateLike): SDateLike = {
     if (endDt.millisSinceEpoch < startDt.millisSinceEpoch) {
       SDate(y, m, d, endDt.getHours(), endDt.getMinutes()).addDays(1)
     }
@@ -118,7 +118,7 @@ object Shift {
     }
   }
 
-  private def parseTimeWithStartTime(startTime: String, d: Int, m: Int, y: Int): Try[SDate] = {
+  private def parseTimeWithStartTime(startTime: String, d: Int, m: Int, y: Int): Try[SDateLike] = {
     Try {
       val startT = startTime.split(":").toVector
       val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)

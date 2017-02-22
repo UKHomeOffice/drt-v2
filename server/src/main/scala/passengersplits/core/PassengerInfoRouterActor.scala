@@ -1,41 +1,36 @@
 package passengersplits.core
 
-import akka.actor.Actor.Receive
 import akka.actor._
 import akka.event.LoggingReceive
 import passengersplits.core
 import core.PassengerInfoRouterActor._
 import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
 import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import spatutorial.shared.SDate
-import spray.http.DateTime
+import spatutorial.shared.SDateLike
 import services.SDate.implicits._
-import spatutorial.shared.PassengerSplits.VoyagePaxSplits
+import spatutorial.shared.PassengerSplits.{FlightNotFound, FlightsNotFound, VoyagePaxSplits}
 
 object PassengerInfoRouterActor {
 
   case class ReportVoyagePaxSplit(destinationPort: String,
-                                  carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDate)
+                                  carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike)
 
   case class ReportVoyagePaxSplitBetween(destinationPort: String,
-                                         scheduledArrivalDateTimeFrom: SDate,
-                                         scheduledArrivalDateTimeTo: SDate)
-
-//  case class VoyagePaxSplits(destinationPort: String, carrierCode: String,
-//                             voyageNumber: String,
-//                             totalPaxCount: Int,
-//                             scheduledArrivalDateTime: SDate,
-//                             paxSplits: PaxTypeAndQueueCounts)
+                                         scheduledArrivalDateTimeFrom: SDateLike,
+                                         scheduledArrivalDateTimeTo: SDateLike)
 
   case class VoyagesPaxSplits(voyageSplits: List[VoyagePaxSplits])
+  case class InternalVoyagesPaxSplits(splits: VoyagesPaxSplits, replyTo: ActorRef)
 
   case class ReportFlightCode(flightCode: String)
 
-  case class FlightNotFound(carrierCode: String, flightCode: String, scheduledArrivalDateTime: SDate)
-
-  case object ProcessedFlightInfo
 
   case object LogStatus
+
+  case class FlightPaxSplitBatchComplete(completionMonitor: ActorRef)
+
+  case object FlightPaxSplitBatchInit
+  case object PassengerSplitsAck
 
 }
 
@@ -61,6 +56,8 @@ class PassengerSplitsInfoByPortRouter extends
   def childProps = Props[PassengerInfoRouterActor]
 
   def receive: PartialFunction[Any, Unit] = LoggingReceive {
+    case FlightPaxSplitBatchInit =>
+      sender ! PassengerSplitsAck
     case info: VoyagePassengerInfo =>
       log.info(s"telling children about ${info.summary}")
       val child = getRCActor(childName(info.ArrivalPortCode))
@@ -68,18 +65,24 @@ class PassengerSplitsInfoByPortRouter extends
     case report: ReportVoyagePaxSplit =>
       val name = childName(report.destinationPort)
       log.info(s"Looking for ${report} in $name")
-      val child = getRCActor(name)
-      child.tell(report, sender)
+      val child = childActorMap get (name)
+      child match {
+        case Some(c) => c.tell(report, sender)
+        case None => log.error("Child singleflight actor doesn't exist yet  ")
+      }
     case report: ReportVoyagePaxSplitBetween =>
       log.info(s"top level router asked to ${report}")
       val child = getRCActor(childName(report.destinationPort))
       child.tell(report, sender)
+    case FlightPaxSplitBatchComplete(completionMonitor) =>
+      log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
+      completionMonitor ! FlightPaxSplitBatchComplete(Actor.noSender)
     case report: ReportFlightCode =>
       childActorMap.values.foreach(_.tell(report, sender))
     case LogStatus =>
       childActorMap.values.foreach(_ ! LogStatus)
     case default =>
-      log.error(s"got an unhandled message ${default}")
+      log.error(s"$self got an unhandled message ${default}")
   }
 
   def childName(arrivalPortCode: String): String = {
@@ -114,7 +117,7 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
       childActorMap.values.foreach(_ ! LogStatus)
   }
 
-  def childName(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDt: SDate) = {
+  def childName(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDt: SDateLike) = {
     s"flight-pax-calculator-$port-$voyageNumber-$scheduledArrivalDt"
   }
 }
@@ -123,11 +126,25 @@ class SingleFlightActor
   extends Actor with PassengerQueueCalculator with ActorLogging {
   var latestMessage: Option[VoyagePassengerInfo] = None
 
+  @scala.throws[Exception](classOf[Exception])
+  override def preStart(): Unit = {
+    log.info(s"SingleFlightActor starting $self ")
+    super.preStart()
+  }
+
+  @scala.throws[Exception](classOf[Exception])
+  override def postRestart(reason: Throwable): Unit = {
+    log.info(s"SingleFlightActor restarting ${self} ")
+    super.postRestart(reason)
+  }
+
   def receive = LoggingReceive {
     case info: VoyagePassengerInfo =>
+      log.info(s"${self} SingleFlightActor received ${info.summary}")
       latestMessage = Option(info)
-      log.info(s"${self} received ${info.summary}")
-      sender ! ProcessedFlightInfo
+      log.info(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
+      log.info(s"$self Acking to $sender")
+      sender ! PassengerSplitsAck
     case ReportVoyagePaxSplit(port, carrierCode, voyageNumber, scheduledArrivalDateTime) =>
 
       log.info(s"I am ${latestMessage.map(_.summary)}: Report flight split for $port $carrierCode $voyageNumber $scheduledArrivalDateTime")
@@ -159,7 +176,7 @@ class SingleFlightActor
         case Some(f) =>
           calculateAndSendPaxSplits(sender, f.ArrivalPortCode, f.CarrierCode, f.VoyageNumber,
             f.scheduleArrivalDateTime.get, f)
-        case None => sender ! FlightNotFound
+        case None => sender ! FlightsNotFound
       }
     case ReportFlightCode(flightCode) =>
       val matchingFlights: Option[VoyagePassengerInfo] = latestMessage.filter(_.flightCode == flightCode)
@@ -169,17 +186,17 @@ class SingleFlightActor
     case LogStatus =>
       log.info(s"Current Status ${latestMessage}")
     case default =>
-      log.info(s"Got unhandled $default")
+      log.error(s"Got unhandled $default")
   }
 
   def calculateAndSendPaxSplits(replyTo: ActorRef,
-                                port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDate, flight: VoyagePassengerInfo): Unit = {
+                                port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Unit = {
     val splits: VoyagePaxSplits = calculateFlightSplits(port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
     replyTo ! splits
     log.info(s"$self sent response")
   }
 
-  def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDate, flight: VoyagePassengerInfo) = {
+  def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo) = {
     log.info(s"$self calculating splits")
     val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
       convertPassengerInfoToPaxQueueCounts(flight.PassengerList)
@@ -193,7 +210,7 @@ class SingleFlightActor
       info.VoyageNumber, info.scheduleArrivalDateTime.get, existingMessage)
   }
 
-  def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDate, flight: VoyagePassengerInfo): Boolean = {
+  def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Boolean = {
     flight.VoyageNumber == voyageNumber &&
       //carrierCode == flight.CarrierCode &&
       Some(scheduledArrivalDateTime) == flight.scheduleArrivalDateTime
@@ -230,7 +247,7 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
       responseCount += 1
       responses = vpi :: responses
       checkIfDoneAndDie()
-    case FlightNotFound =>
+    case fnf: FlightNotFound =>
       log.info(s"Got a not found")
       responseCount += 1
       checkIfDoneAndDie()

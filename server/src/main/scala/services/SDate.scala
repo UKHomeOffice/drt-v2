@@ -1,11 +1,11 @@
 package services
 
 import org.joda.time.DateTime
-import spatutorial.shared.{MilliDate, SDate}
+import spatutorial.shared.{MilliDate, SDateLike}
 
 object SDate {
 
-  case class JodaSDate(dateTime: DateTime) extends SDate {
+  case class JodaSDate(dateTime: DateTime) extends SDateLike {
     import implicits._
 
     def getFullYear(): Int = dateTime.getYear
@@ -18,22 +18,22 @@ object SDate {
 
     def getMinutes(): Int = dateTime.getMinuteOfHour
 
-    def addDays(daysToAdd: Int): SDate = dateTime.plusDays(daysToAdd)
+    def addDays(daysToAdd: Int): SDateLike = dateTime.plusDays(daysToAdd)
 
-    def addHours(hoursToAdd: Int): SDate = dateTime.plusHours(hoursToAdd)
+    def addHours(hoursToAdd: Int): SDateLike = dateTime.plusHours(hoursToAdd)
 
     def millisSinceEpoch: Long = dateTime.getMillis
   }
 
   object implicits {
-    implicit def jodaToSDate(dateTime: DateTime): SDate = JodaSDate(dateTime)
+    implicit def jodaToSDate(dateTime: DateTime): SDateLike = JodaSDate(dateTime)
 
 //    implicit def sprayToSDate(dateTime: spray.http.DateTime): SDate = JodaSDate(dateTime.year, dateTime.
 
-    implicit def sdateToMilliDate(sdate: SDate): MilliDate = MilliDate(sdate.millisSinceEpoch)
+    implicit def sdateToMilliDate(sdate: SDateLike): MilliDate = MilliDate(sdate.millisSinceEpoch)
 
-    implicit def sdateFromMilliDate(milliDate: MilliDate): SDate = new DateTime(milliDate.millisSinceEpoch)
+    implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
   }
 
-  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDate = implicits.jodaToSDate(new DateTime(y, m, d, h, mm))
+  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm))
 }
