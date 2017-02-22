@@ -33,7 +33,10 @@ object TableViewUtils {
   val fasttrack: QueueName = "fastTrack"
   val egate: QueueName = "eGate"
 
-  def queueNameMappingOrder = eeadesk :: noneeadesk :: /*fasttrack ::*/ egate :: Nil
+  /**
+    * Fixme: remove this line once we've removed the old terminal page
+    */
+  def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
 
   def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
 
@@ -166,7 +169,6 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
-    //    log.info(s"queueNosFromCrunchResult: userDeskRecs: ${userDeskRec(qn).get.items.map(_.deskRec.toLong).grouped(15).map(_.max).toList}")
     val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
