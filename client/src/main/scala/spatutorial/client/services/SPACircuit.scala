@@ -171,7 +171,7 @@ case class RootModel(
       val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
       val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
       val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(workloads.workloads(terminalName), minutesRangeInMillis)
-      TableViewUtils.terminalDeploymentsRows(timestamps, paxloads, crv, srv, udr)
+      TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxloads, crv, srv, udr)
     })
     terminalName -> x
   }
@@ -285,8 +285,9 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 
   def createCrunchRequestEffects(configHolder: AirportConfig): Effect = {
-    val crunchRequests: Seq[Effect] = for {tn <- configHolder.terminalNames
-                                           qn <- configHolder.queues
+    val crunchRequests: Seq[Effect] = for {
+      tn <- configHolder.terminalNames
+      qn <- configHolder.queues(tn)
     } yield {
       Effect(Future(GetLatestCrunch(tn, qn)))
     }
@@ -447,6 +448,9 @@ object StaffDeploymentCalculator {
         val terminalStaffAvailable = staffAvailable(terminalName)
         val queueCrunchResult = terminalQueueCrunchResult._2
 
+        /*
+         Fixme: This transpose loses the queue name and thus certainty of order
+         */
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
           case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
         }

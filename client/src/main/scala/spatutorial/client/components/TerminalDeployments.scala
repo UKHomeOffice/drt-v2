@@ -85,7 +85,6 @@ object TerminalDeploymentsTable {
 
     airportFlightsSimresWorksQcrsUdrs(peMP => {
       <.div(
-        <.h1(terminalName + " Desks"),
         terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
           rowsOptMP() match {
             case None => <.div()
@@ -108,17 +107,6 @@ object TerminalDeploymentsTable {
       log.info("%%%%%%%rendering table...")
 
       val style = bss.listGroup
-
-      def userDeskRecOverride(q: QueueDeploymentsRow, qtd: (TagMod *) => ReactTagOf[TableCell], hasChangeClasses: QueueName) = {
-        qtd(
-          ^.cls := hasChangeClasses,
-          <.input.number(
-            ^.className := "desk-rec-input",
-            ^.disabled := true,
-            ^.value := q.userDeskRec.deskRec,
-            ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.timeInMillis, deskRec = e.target.value.toInt)))
-          ))
-      }
 
       def renderItem(itemWithIndex: (TerminalDeploymentsRow, Int)) = {
         val item = itemWithIndex._1
@@ -145,11 +133,9 @@ object TerminalDeploymentsTable {
 
             def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
 
-            val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               qtd(q.pax),
               qtd(q.userDeskRec.deskRec),
-              /*userDeskRecOverride(q, qtd _, hasChangeClasses),*/
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
@@ -166,21 +152,21 @@ object TerminalDeploymentsTable {
         <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
       }
 
-      def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
+      def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-      val headings = queueNameMappingOrder.map {
+      val headings = p.airportConfigPot.get.queues(p.terminalName).map {
         case (queueName) =>
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
-      } :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
+      }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
+      val numQueues = p.items.head.queueDetails.length
 
       <.div(
-        <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
+        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
           <.thead(
             ^.display := "block",
             <.tr(<.th("") :: headings: _*),
-//            <.tr(<.th("") :: subHeadingLevel1: _*),
-            <.tr(<.th("Time") :: subHeadingLevel2: _*)),
+            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(p.airportConfigPot.get.queues(p.terminalName).toList): _*)),
           <.tbody(
             ^.display := "block",
             ^.overflow := "scroll",
@@ -189,7 +175,6 @@ object TerminalDeploymentsTable {
     }
 
     private def subHeadingLevel1 = {
-
       val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
         val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
         val qc = queueColour(queueName)
@@ -204,8 +189,8 @@ object TerminalDeploymentsTable {
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2 = {
-      val subHeadingLevel2 = queueNameMappingOrder.flatMap(queueName => {
+    private def subHeadingLevel2(queueNames: List[QueueName]) = {
+      val subHeadingLevel2 = queueNames.flatMap(queueName => {
         val depls: List[ReactTagOf[TableHeaderCell]] = List(
           <.th(^.title := "Suggested deployment given available staff", DeskRecsTable.deskUnitLabel(queueName), ^.className := queueColour(queueName)),
           <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
