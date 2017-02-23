@@ -128,12 +128,14 @@ object Shift {
 
 case class ShiftParser(rawShifts: String) {
   val lines = rawShifts.split("\n")
-  val parsedShifts: Array[Try[Shift]] = lines.map(l => l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\""))
+  val parsedShifts: Array[Try[Shift]] = lines.map(l => {
+    l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
+  })
     .filter(parts => parts.length == 4 || parts.length == 5)
     .map {
-      case Array(description, startDay, startTime, endTime) =>
+      case List(description, startDay, startTime, endTime) =>
         Shift(description, startDay, startTime, endTime)
-      case Array(description, startDay, startTime, endTime, staffNumberDelta) =>
+      case List(description, startDay, startTime, endTime, staffNumberDelta) =>
         Shift(description, startDay, startTime, endTime, staffNumberDelta)
     }
 }

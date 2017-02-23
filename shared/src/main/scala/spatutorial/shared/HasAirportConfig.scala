@@ -100,11 +100,11 @@ object AirportConfigs {
         PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
       )),
     shiftExamples = Seq(
-      "Midnight shift,{date},00:00,00:59,10",
-      "Night shift,{date},01:00,06:59,4",
-      "Morning shift,{date},07:00,13:59,15",
-      "Afternoon shift,{date},14:00,16:59,10",
-      "Evening shift,{date},17:00,23:59,17"
+      "Midnight shift, {date}, 00:00, 00:59, 10",
+      "Night shift, {date}, 01:00, 06:59, 4",
+      "Morning shift, {date}, 07:00, 13:59, 15",
+      "Afternoon shift, {date}, 14:00, 16:59, 10",
+      "Evening shift, {date}, 17:00, 23:59,17"
     )
   )
   val stn = AirportConfig(
@@ -127,11 +127,11 @@ object AirportConfigs {
       PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
     )),
     shiftExamples = Seq(
-      "Alpha,{date},07:00,15:48,0",
-      "Bravo,{date},07:45,16:33,0",
-      "Charlie,{date},15:00,23:48,0",
-      "Delta,{date},16:00,00:48,0",
-      "Night,{date},22:36,07:24,0"
+      "Alpha, {date}, 07:00, 15:48, 0",
+      "Bravo, {date}, 07:45, 16:33, 0",
+      "Charlie, {date}, 15:00, 23:48, 0",
+      "Delta, {date}, 16:00, 00:48, 0",
+      "Night, {date}, 22:36, 07:24, 0"
     )
   )
   val man = AirportConfig(
@@ -142,11 +142,11 @@ object AirportConfigs {
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
     shiftExamples = Seq(
-      "Midnight shift,{date},00:00,00:59,25",
-      "Night shift,{date},01:00,06:59,10",
-      "Morning shift,{date},07:00,13:59,30",
-      "Afternoon shift,{date},14:00,16:59,18",
-      "Evening shift,{date},17:00,23:59,22"
+      "Midnight shift, {date}, 00:00, 00:59, 25",
+      "Night shift, {date}, 01:00, 06:59, 10",
+      "Morning shift, {date}, 07:00, 13:59, 30",
+      "Afternoon shift, {date}, 14:00, 16:59, 18",
+      "Evening shift, {date}, 17:00, 23:59, 22"
     )
   )
   val ltn = AirportConfig(
@@ -161,3 +161,24 @@ object AirportConfigs {
   val allPorts = edi :: stn :: man :: ltn :: Nil
   val confByPort = allPorts.map(c => (c.portCode, c)).toMap
 }
+
+/**
+  * LGW shift examples
+  */
+/*
+"A (P/T), {date}, 00:01, 07:25, 0",
+"A, {date}, 00:01, 08:25, 0",
+"S (P/T), {date}, 06:00, 13:24, 0",
+"S, {date}, 06:00, 14:24, 0",
+"E non team (P/T), {date}, 07:00, 14:24, 0",
+"E non team, {date}, 07:00, 15:24, 0",
+"E team, {date}, 07:00, 17:30, 0",
+"L non team, {date}, 11:36, 20:00, 0",
+"L non team (P/T), {date}, 12:36, 20:00, 0",
+"L team, {date}, 13:00, 23:30, 0",
+"LN non team, {date}, 15:36, 00:00, 0",
+"LN Non team (P/T), {date}, 16:36, 00:00, 0",
+"Night team, {date}, 21:00, 07:30, 0",
+"Night non team (P/T), {date}, 23:00, 06:24, 0",
+"Night non team, {date}, 23:00, 07:24, 0"
+*/
