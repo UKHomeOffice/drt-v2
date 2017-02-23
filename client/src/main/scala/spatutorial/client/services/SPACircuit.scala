@@ -10,13 +10,14 @@ import diode.data._
 import diode.react.ReactConnector
 import spatutorial.client.TableViewUtils
 import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
-import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalUserDeskRecs}
+import spatutorial.client.components.{DeskRecsChart, TableTerminalDeskRecs, TerminalDeploymentsTable, TerminalUserDeskRecs}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
 import spatutorial.client.services.RootModel.mergeTerminalQueues
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
+import spatutorial.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
@@ -136,18 +137,43 @@ case class RootModel(
     val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
     val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
-      m: MilliDate => 0
+      (t: TerminalName, m: MilliDate) => 0
     } else {
       val successfulShifts = shifts.collect { case Success(s) => s }
       val ss = ShiftService(successfulShifts)
-      StaffMovements.staffAt(ss)(staffMovements) _
+      StaffMovements.terminalStaffAt(ss)(staffMovements) _
     }
 
     val pdr = PortDeployment.portDeskRecs(queueCrunchResults)
-    val pd = PortDeployment.portDeployments(pdr, staffFromShiftsAndMovementsAt)
+    val pd = PortDeployment.terminalDeployments(pdr, staffFromShiftsAndMovementsAt)
     val tsa = PortDeployment.terminalStaffAvailable(pd) _
 
     StaffDeploymentCalculator(tsa, queueCrunchResults).getOrElse(Map())
+  }
+
+  lazy val calculatedDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
+    timeIt("calculateAllTerminalsRows")(calculateAllTerminalDeploymentRows)
+  }
+
+  def calculateAllTerminalDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
+    airportConfig.map(ac => ac.terminalNames.map(terminalName => {
+      timeIt(s"calculateTerminalRows${terminalName}")(calculateTerminalDeploymentRows(terminalName))
+    }).toMap)
+  }
+
+  def calculateTerminalDeploymentRows(terminalName: TerminalName): (TerminalName, Pot[List[TerminalDeploymentsRow]]) = {
+    val crv = queueCrunchResults.getOrElse(terminalName, Map())
+    val srv = simulationResult.getOrElse(terminalName, Map())
+    val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
+    log.info(s"tud: ${terminalName}")
+    val x: Pot[List[TerminalDeploymentsRow]] = workload.map(workloads => {
+      val timestamps = workloads.timeStamps(terminalName)
+      val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+      val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+      val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(workloads.workloads(terminalName), minutesRangeInMillis)
+      TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxloads, crv, srv, udr)
+    })
+    terminalName -> x
   }
 
   lazy val calculatedRows: Pot[Map[TerminalName, Pot[List[TerminalUserDeskRecsRow]]]] = {
@@ -259,8 +285,9 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 
   def createCrunchRequestEffects(configHolder: AirportConfig): Effect = {
-    val crunchRequests: Seq[Effect] = for {tn <- configHolder.terminalNames
-                                           qn <- configHolder.queues
+    val crunchRequests: Seq[Effect] = for {
+      tn <- configHolder.terminalNames
+      qn <- configHolder.queues(tn)
     } yield {
       Effect(Future(GetLatestCrunch(tn, qn)))
     }
@@ -421,6 +448,9 @@ object StaffDeploymentCalculator {
         val terminalStaffAvailable = staffAvailable(terminalName)
         val queueCrunchResult = terminalQueueCrunchResult._2
 
+        /*
+         Fixme: This transpose loses the queue name and thus certainty of order
+         */
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
           case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
         }

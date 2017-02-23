@@ -10,7 +10,8 @@ import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalPage}
+import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalDepsPage, TerminalRecsPage}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
 import spatutorial.client.modules.FlightsView._
@@ -29,11 +30,54 @@ object TableViewUtils {
 
   val eeadesk: QueueName = "eeaDesk"
   val noneeadesk: QueueName = "nonEeaDesk"
+  val fasttrack: QueueName = "fastTrack"
   val egate: QueueName = "eGate"
 
+  /**
+    * Fixme: remove this line once we've removed the old terminal page
+    */
   def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
 
-  def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates")
+  def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
+
+  def terminalDeploymentsRows(
+                               terminalName: TerminalName,
+                               airportConfigPot: Pot[AirportConfig],
+                               timestamps: Seq[Long],
+                               paxload: Map[String, List[Double]],
+                               queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
+                               simulationResult: Map[QueueName, Pot[SimulationResult]],
+                               userDeskRec: QueueStaffDeployments
+                             ): List[TerminalDeploymentsRow] = {
+    airportConfigPot match {
+      case Ready(airportConfig) =>
+        log.info(s"call terminalUserDeskRecsRows")
+        val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map(queueName => {
+          simulationResult.get(queueName) match {
+            case Some(Ready(sr)) =>
+              val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
+              log.info(s"before transpose it is ${result}")
+              log.info(s"before transpose it is ${result.map(_.length)}")
+              queueDeploymentsRowsFromNos(queueName, result)
+            case None =>
+              queueCrunchResultsForTerminal.get(queueName) match {
+                case Some(Ready(cr)) =>
+                  queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
+                case _ =>
+                  List()
+              }
+          }
+        }).toList
+
+        val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
+
+        queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDeploymentsRow)])) => {
+          val qr = queueRows._2.map(_._2)
+          TerminalDeploymentsRow(queueRows._1, qr)
+        }).toList.sortWith(_.time < _.time)
+      case _ => List()
+    }
+  }
 
   def terminalUserDeskRecsRows(
                                 timestamps: Seq[Long],
@@ -66,6 +110,21 @@ object TableViewUtils {
       val qr = queueRows._2.map(_._2)
       TerminalUserDeskRecsRow(queueRows._1, qr)
     }).toList.sortWith(_.time < _.time)
+  }
+
+  def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRow)] = {
+    queueNos.toList.transpose.zipWithIndex.map {
+      case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
+        (timestamp, qn) -> QueueDeploymentsRow(
+          timestamp = timestamp,
+          pax = pax.toDouble,
+          crunchDeskRec = crunchDeskRec.toInt,
+          userDeskRec = DeskRecTimeslot(timestamp, userDeskRec.toInt),
+          waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
+          waitTimeWithUserDeskRec = waitTimeUser.toInt,
+          qn
+        )
+    }
   }
 
   def queueDetailsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDetailsRow)] = {
@@ -110,7 +169,6 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
-//    log.info(s"queueNosFromCrunchResult: userDeskRecs: ${userDeskRec(qn).get.items.map(_.deskRec.toLong).grouped(15).map(_.max).toList}")
     val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
@@ -151,7 +209,9 @@ object SPAMain extends js.JSApp {
 
   case class TerminalUserDeskRecommendationsLoc(terminalName: TerminalName) extends Loc
 
-  case class TerminalLoc(id: String) extends Loc
+  case class TerminalRecsLoc(id: String) extends Loc
+
+  case class TerminalDepsLoc(id: String) extends Loc
 
   case object StaffingLoc extends Loc
 
@@ -168,17 +228,6 @@ object SPAMain extends js.JSApp {
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
-    val dashboardModelsConnect = SPACircuit.connect(m =>
-      DashboardModels(m.workload, m.queueCrunchResults, m.simulationResult))
-    val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
-
-    val dashboardRoute = staticRoute("#charts", DashboardLoc) ~>
-      renderR(ctl => dashboardModelsConnect(proxy => {
-        log.info("charts update")
-        airportConfigPotRCP(airportConfigPotMP =>
-          Dashboard(ctl, proxy, airportConfigPotMP())
-        )
-      }))
 
     val rootRoute = staticRoute(root, FlightsLoc) ~>
       renderR(ctl => {
@@ -194,23 +243,15 @@ object SPAMain extends js.JSApp {
         airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
       })
 
-
-    val terminals = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalLoc]) ~> dynRenderR((page: TerminalLoc, ctl) => TerminalPage(page.id, ctl))
-
-    val userDeskRecsRoute = staticRoute("#userdeskrecs", UserDeskRecommendationsLoc) ~> renderR(ctl => {
-      //todo take the queuenames from the workloads response
-      log.info("running our user desk recs route")
-
-      QueueUserDeskRecsComponent.terminalQueueUserDeskRecsComponent()
-    })
+    val terminalDeps = dynamicRouteCT("#terminal-deps" / string("[a-zA-Z0-9]+")
+      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDepsPage(page.id, ctl))
 
     val staffing = staticRoute("#staffing", StaffingLoc) ~>
       renderR(ctl => {
         Staffing()
       })
 
-    val rule = rootRoute | dashboardRoute | flightsRoute | userDeskRecsRoute | terminals | staffing
+    val rule = rootRoute | flightsRoute | terminalDeps | staffing
     rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
   }.renderWith(layout)
 

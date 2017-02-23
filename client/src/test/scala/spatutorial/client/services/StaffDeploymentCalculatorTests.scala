@@ -56,7 +56,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
         (120000L, List((9, "T1"), (12, "T2"), (15, "T3")))
       )
       val staffAvailableAt: (MilliDate) => Int = (md: MilliDate) => 30
-      val result = PortDeployment.portDeployments(terminalRecsOverTime, staffAvailableAt)
+      val result = PortDeployment.terminalAutoDeployments(terminalRecsOverTime, staffAvailableAt)
       val expected = List(
         (0L, List((5, "T1"), (10, "T2"), (15, "T3"))),
         (60000L, List((6, "T1"), (10, "T2"), (14, "T3"))),

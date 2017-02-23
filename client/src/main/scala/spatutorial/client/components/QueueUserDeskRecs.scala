@@ -78,7 +78,7 @@ object QueueUserDeskRecsComponent {
         airportConfigPotMP().renderPending(_ => "Hello pending"),
         airportConfigPotMP().renderReady((airportConfig: AirportConfig) => {
           val queueUserDeskRecProps: Seq[QueueUserDeskRecsComponent.Props] = airportConfig.terminalNames.flatMap { terminalName =>
-            airportConfig.queues.map { queueName =>
+            airportConfig.queues(terminalName).map { queueName =>
               val labelsPotRCP = SPACircuit.connect(_.workload.map(_.labels))
               val crunchResultPotRCP = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).getOrElse(queueName, Empty).flatten)
               val userDeskRecsPotRCP = SPACircuit.connect(_.staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map()).getOrElse(queueName, Empty))

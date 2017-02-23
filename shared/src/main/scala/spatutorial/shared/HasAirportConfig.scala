@@ -9,6 +9,7 @@ object Queues {
   val eeaDesk = "eeaDesk"
   val eGate = "eGate"
   val nonEeaDesk = "nonEeaDesk"
+  val fastTrack = "fastTrack"
 }
 
 sealed trait PaxType {
@@ -33,7 +34,7 @@ case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
 
 case class AirportConfig(
                           portCode: String = "n/a",
-                          queues: Seq[QueueName],
+                          queues: Map[TerminalName, Seq[QueueName]],
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
                           defaultPaxSplits: List[SplitRatio],
@@ -50,7 +51,7 @@ trait HasAirportConfig {
 trait AirportConfigLike {
   def portCode: String
 
-  def queues: Seq[QueueName]
+  def queues: Map[TerminalName, Seq[QueueName]]
 
   def slaByQueue: Map[String, Int]
 
@@ -80,7 +81,10 @@ object AirportConfigs {
 
   val edi = AirportConfig(
     portCode = "EDI",
-    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    queues = Map(
+      "A1" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "A2" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("A1", "A2"),
     defaultPaxSplits = defaultPaxSplits,
@@ -100,17 +104,19 @@ object AirportConfigs {
         PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
       )),
     shiftExamples = Seq(
-      "Midnight shift, {date}, 00:00, 00:59, 10",
-      "Night shift, {date}, 01:00, 06:59, 4",
-      "Morning shift, {date}, 07:00, 13:59, 15",
-      "Afternoon shift, {date}, 14:00, 16:59, 10",
-      "Evening shift, {date}, 17:00, 23:59,17"
+      "Midnight shift, A1, {date}, 00:00, 00:59, 10",
+      "Night shift, A1, {date}, 01:00, 06:59, 4",
+      "Morning shift, A1, {date}, 07:00, 13:59, 15",
+      "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
+      "Evening shift, A1, {date}, 17:00, 23:59,17"
     )
   )
   val stn = AirportConfig(
     portCode = "STN",
-    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
-    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5, "nonEeaDesk" -> 45),
+    queues = Map(
+      "T1" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
+    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5,"nonEeaDesk" -> 45),
     terminalNames = Seq("T1"),
     defaultPaxSplits = List(
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
@@ -127,31 +133,37 @@ object AirportConfigs {
       PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
     )),
     shiftExamples = Seq(
-      "Alpha, {date}, 07:00, 15:48, 0",
-      "Bravo, {date}, 07:45, 16:33, 0",
-      "Charlie, {date}, 15:00, 23:48, 0",
-      "Delta, {date}, 16:00, 00:48, 0",
-      "Night, {date}, 22:36, 07:24, 0"
+      "Alpha, T1, {date}, 07:00, 15:48, 0",
+      "Bravo, T1, {date}, 07:45, 16:33, 0",
+      "Charlie, T1, {date}, 15:00, 23:48, 0",
+      "Delta, T1, {date}, 16:00, 00:48, 0",
+      "Night, T1, {date}, 22:36, 07:24, 0"
     )
   )
   val man = AirportConfig(
     portCode = "MAN",
-    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    queues = Map(
+      "T1" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "T2" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "T3" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 10, "nonEeaDesk" -> 45),
     terminalNames = Seq("T1", "T2", "T3"),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
     shiftExamples = Seq(
-      "Midnight shift, {date}, 00:00, 00:59, 25",
-      "Night shift, {date}, 01:00, 06:59, 10",
-      "Morning shift, {date}, 07:00, 13:59, 30",
-      "Afternoon shift, {date}, 14:00, 16:59, 18",
-      "Evening shift, {date}, 17:00, 23:59, 22"
+      "Midnight shift, T1, {date}, 00:00, 00:59, 25",
+      "Night shift, T1, {date}, 01:00, 06:59, 10",
+      "Morning shift, T1, {date}, 07:00, 13:59, 30",
+      "Afternoon shift, T1, {date}, 14:00, 16:59, 18",
+      "Evening shift, T1, {date}, 17:00, 23:59, 22"
     )
   )
   val ltn = AirportConfig(
     portCode = "LTN",
-    queues = Seq("eeaDesk", "eGate", "nonEeaDesk"),
+    queues = Map(
+      "T1" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1"),
     defaultPaxSplits = defaultPaxSplits,

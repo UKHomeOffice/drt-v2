@@ -15,7 +15,7 @@ object Navbar {
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
           airportConfigPotMP().renderReady(airportConfig =>
-            <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live Spike"))
+            <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"))
           ,
           <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
             <.ul(^.className := "nav navbar-nav navbar-right",
