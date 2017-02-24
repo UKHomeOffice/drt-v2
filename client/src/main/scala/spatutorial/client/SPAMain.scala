@@ -1,7 +1,7 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.data.{Empty, Pot, PotState, Ready}
+import diode.data.{Pot, PotState, Ready}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react.extra.router.StaticDsl.{DynamicRouteB, Rule}
 import japgolly.scalajs.react.{ReactDOM, _}
@@ -9,7 +9,6 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
-import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
 import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
 import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalDepsPage, TerminalRecsPage}
 import spatutorial.client.logger._
@@ -79,58 +78,10 @@ object TableViewUtils {
     }
   }
 
-  def terminalUserDeskRecsRows(
-                                timestamps: Seq[Long],
-                                paxload: Map[String, List[Double]],
-                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                                simulationResult: Map[QueueName, Pot[SimulationResult]],
-                                userDeskRec: QueueStaffDeployments
-                              ): List[TerminalUserDeskRecsRow] = {
-    log.info(s"call terminalUserDeskRecsRows")
-    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNameMappingOrder.map(queueName => {
-      simulationResult.get(queueName) match {
-        case Some(Ready(sr)) =>
-          val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
-          log.info(s"before transpose it is ${result}")
-          log.info(s"before transpose it is ${result.map(_.length)}")
-          queueDetailsRowsFromNos(queueName, result)
-        case None =>
-          queueCrunchResultsForTerminal.get(queueName) match {
-            case Some(Ready(cr)) =>
-              queueDetailsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
-            case _ =>
-              List()
-          }
-      }
-    })
-
-    val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
-
-    queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDetailsRow)])) => {
-      val qr = queueRows._2.map(_._2)
-      TerminalUserDeskRecsRow(queueRows._1, qr)
-    }).toList.sortWith(_.time < _.time)
-  }
-
   def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRow)] = {
     queueNos.toList.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, qn) -> QueueDeploymentsRow(
-          timestamp = timestamp,
-          pax = pax.toDouble,
-          crunchDeskRec = crunchDeskRec.toInt,
-          userDeskRec = DeskRecTimeslot(timestamp, userDeskRec.toInt),
-          waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
-          waitTimeWithUserDeskRec = waitTimeUser.toInt,
-          qn
-        )
-    }
-  }
-
-  def queueDetailsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDetailsRow)] = {
-    queueNos.toList.transpose.zipWithIndex.map {
-      case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
-        (timestamp, qn) -> QueueDetailsRow(
           timestamp = timestamp,
           pax = pax.toDouble,
           crunchDeskRec = crunchDeskRec.toInt,

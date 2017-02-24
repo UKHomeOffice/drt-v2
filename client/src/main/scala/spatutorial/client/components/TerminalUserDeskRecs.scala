@@ -16,31 +16,6 @@ import spatutorial.shared._
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
 
-object TerminalUserDeskRecs {
-
-  case class Props(terminalName: TerminalName,
-                   workloads: Map[QueueName, Seq[Int]],
-                   userDeskRecs: Map[QueueName, DeskRecTimeSlots])
-
-  val component = ReactComponentB[Props]("TerminalUserDeskRecs")
-    .render_P(props =>
-      <.table(
-        <.tr(<.td())
-      )
-    )
-
-  def timeIt[T](name: String)(f: => T): T = {
-    val start = new Date()
-    log.info(s"${name}: Starting timer at ${start}")
-    val ret = f
-    val end = new Date()
-    log.info(s"${name} Trial done at ${end}")
-    val timeTaken = (end.getTime() - start.getTime())
-    log.info(s"${name} Time taken runs ${timeTaken}ms per run")
-    ret
-  }
-}
-
 object jsDateFormat {
 
   def zeroPadTo2Digits(number: Int) = {
@@ -119,24 +94,9 @@ object TableTerminalDeskRecs {
         model.shiftsRaw
       ))
 
-    val terminalUserDeskRecsRows: ReactConnectProxy[Option[Pot[List[TerminalUserDeskRecsRow]]]] = SPACircuit.connect(model => model.calculatedRows.getOrElse(Map()).get(terminalName))
-    val airportWrapper = SPACircuit.connect(_.airportInfos)
-    val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
-
     airportFlightsSimresWorksQcrsUdrs(peMP => {
       <.div(
         <.h1(terminalName + " Desks"),
-        terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalUserDeskRecsRow]]]]) => {
-          rowsOptMP() match {
-            case None => <.div()
-            case Some(rowsPot) =>
-              <.div(
-                rowsPot.renderReady(rows =>
-                  airportConfigPotRCP(airportConfigPotMP => {
-                    renderTerminalUserTable(terminalName, airportWrapper, peMP, rows, airportConfigPotMP)
-                  })))
-          }
-        }),
         peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
     })
   }
