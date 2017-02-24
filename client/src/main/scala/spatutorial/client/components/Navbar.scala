@@ -19,7 +19,7 @@ object Navbar {
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
                 <.ul(^.className := "nav navbar-nav navbar-right",
-                  <.li(StaffMovementsPopover(airportConfig, page, "IS81", "IS81", SDate.now(), SDate.now().addHours(1), "bottom")()))))
+                  <.li(StaffMovementsPopover(airportConfig.terminalNames, page, "IS81", "IS81", SDate.now(), SDate.now().addHours(1), "bottom")()))))
 
           }))
       })
