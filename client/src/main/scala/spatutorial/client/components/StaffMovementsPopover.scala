@@ -9,6 +9,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.PopoverWrapper
 import spatutorial.client.services._
 import spatutorial.shared.SDate
+import spatutorial.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
 
 import scala.util.{Failure, Success}
 import scala.collection.immutable.Seq

@@ -8,14 +8,13 @@ import japgolly.scalajs.react.vdom.svg.{all => s}
 import org.scalajs.dom.svg.{G, Text}
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard
-import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.services.HandyStuff.QueueStaffDeployments
+import spatutorial.client.services.RootModel.QueueCrunchResults
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
+import spatutorial.shared.FlightsApi._
 import spatutorial.shared._
 
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
 import scala.util.{Failure, Success, Try}
 
 
@@ -101,9 +100,19 @@ object TerminalHeatmaps {
     })
   }
 
+  def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
+    val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
+    val by15Minutes = queueWorkloadsByMinute.mapValues(
+      (v) => v.grouped(minutesPerGroup).map(_.sum).toList
+    )
+    by15Minutes
+  }
+
   def workloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
     log.info(s"!!!!looking up $terminalName in wls")
-    val queueWorkloads: Predef.Map[String, List[Double]] = Dashboard.chartDataFromWorkloads(terminalWorkloads, 60)
+    val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60)
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
     } yield {

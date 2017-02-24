@@ -5,14 +5,15 @@ import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
 import spatutorial.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules.FlightsView._
+import spatutorial.client.actions.Actions._
+import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import spatutorial.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import spatutorial.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
-import spatutorial.client.services._
+import spatutorial.client.services.RootModel.QueueCrunchResults
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared._
 

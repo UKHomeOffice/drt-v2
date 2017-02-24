@@ -1,8 +1,6 @@
 package spatutorial.client.services
 
 
-import java.util.UUID
-
 import autowire._
 import diode.Implicits.runAfterImpl
 import diode._
@@ -11,12 +9,12 @@ import diode.react.ReactConnector
 import spatutorial.client.{SPAMain, TableViewUtils}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
-import spatutorial.client.services.RootModel.mergeTerminalQueues
+import spatutorial.client.services.RootModel.{QueueCrunchResults, mergeTerminalQueues}
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
 import spatutorial.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
-import spatutorial.client.modules.Dashboard.QueueCrunchResults
+import spatutorial.client.actions.Actions._
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -28,45 +26,6 @@ import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 
 case class DeskRecTimeslot(timeInMillis: Long, deskRec: Int)
-
-case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
-
-case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResultWithTimeAndInterval: CrunchResult) extends Action
-
-case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
-
-case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
-
-case class GetWorkloads(begin: String, end: String) extends Action
-
-case class GetAirportConfig() extends Action
-
-case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
-
-case class RunAllSimulations() extends Action
-
-case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
-
-case class SetShifts(shifts: String) extends Action
-
-case class SaveShifts(shifts: String) extends Action
-
-case class GetShifts() extends Action
-
-case class AddShift(shift: Shift) extends Action
-
-case class AddStaffMovement(staffMovement: StaffMovement) extends Action
-
-case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action
-
-case class SaveStaffMovements() extends Action
-
-case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
-
-case class GetStaffMovements() extends Action
-
-case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
-
 
 trait WorkloadsUtil {
   def labelsFromAllQueues(startTime: Long) = {
@@ -185,6 +144,8 @@ case class RootModel(
 }
 
 object RootModel {
+
+  type QueueCrunchResults = Map[QueueName, Pot[PotCrunchResult]]
 
   def mergeTerminalQueues[A](m1: Map[QueueName, Map[QueueName, A]], m2: Map[QueueName, Map[QueueName, A]]): Map[String, Map[String, A]] = {
     val merged = m1.toSeq ++ m2.toSeq

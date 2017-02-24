@@ -8,11 +8,12 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html.TableHeaderCell
 import spatutorial.client.TableViewUtils._
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.services.HandyStuff.QueueStaffDeployments
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
+import spatutorial.client.actions.Actions.UpdateDeskRecsTime
+import spatutorial.client.services.RootModel.QueueCrunchResults
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date

@@ -4,6 +4,7 @@ import diode.ActionResult._
 import diode.{ActionResult, ModelR, RootModelRW}
 import diode.data._
 import spatutorial.client.UserDeskRecFixtures._
+import spatutorial.client.actions.Actions.{UpdateCrunchResult, UpdateDeskRecsTime, UpdateSimulationResult, UpdateWorkloads}
 import spatutorial.client.services.HandyStuff.PotCrunchResult
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
