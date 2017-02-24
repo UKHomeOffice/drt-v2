@@ -6,6 +6,7 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 import spatutorial.client.logger._
+import spatutorial.client.modules.PopoverWrapper
 import spatutorial.client.services._
 import spatutorial.shared.SDate
 

@@ -6,6 +6,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.SPAMain.{Loc, UserDeskRecommendationsLoc}
+import spatutorial.client.TableViewUtils
 import spatutorial.client.components.Chart.ChartProps
 import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
@@ -111,20 +112,13 @@ object Dashboard {
                   <.div(
                     keys.map(
                       terminalName => {
-                        val every15th: Seq[String] = DeskRecsChart.takeEvery15th(wl.labels)
+                        val every15th: Seq[String] = TableViewUtils.takeEveryNth(15)(wl.labels)
                         val datas: Seq[ChartDataset] = chartDatas(wl, terminalName)
                         val props1: ChartProps = ChartProps(every15th, datas, "Workloads")
                         <.div(
                           <.a(^.name := terminalName),
                           <.h2(terminalName),
-                          Chart(props1),
-                          state.crunchResultWrapper(s => {
-                            DeskRecsChart(
-                              props.dashboardModelProxy.zoom(model => model.copy(
-                                queueCrunchResults = model.queueCrunchResults.filterKeys(_ == terminalName))),
-                              props.airportConfigPot
-                            )
-                          }))
+                          Chart(props1))
                       })
                   )
                 )

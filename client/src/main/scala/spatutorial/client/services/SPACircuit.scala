@@ -8,8 +8,7 @@ import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import spatutorial.client.TableViewUtils
-import spatutorial.client.components.DeskRecsChart
+import spatutorial.client.{SPAMain, TableViewUtils}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
 import spatutorial.client.services.RootModel.mergeTerminalQueues
@@ -450,7 +449,7 @@ object StaffDeploymentCalculator {
     val millis = Iterator.iterate(crunchResultWithTimeAndInterval.firstTimeMillis)(_ + timeIntervalMinutes * crunchResultWithTimeAndInterval.intervalMillis).toIterable
 
     val updatedDeskRecTimeSlots: DeskRecTimeSlots = DeskRecTimeSlots(
-      DeskRecsChart
+      TableViewUtils
         .takeEveryNth(timeIntervalMinutes)(crunchResultWithTimeAndInterval.recommendedDesks)
         .zip(millis).map {
         case (deskRec, timeInMillis) => DeskRecTimeslot(timeInMillis = timeInMillis, deskRec = deskRec)

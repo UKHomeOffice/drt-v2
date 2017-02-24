@@ -17,21 +17,6 @@ import spatutorial.shared._
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
 
-object jsDateFormat {
-
-  def zeroPadTo2Digits(number: Int) = {
-    if (number < 10)
-      "0" + number
-    else
-      number.toString
-  }
-
-  def formatDate(date: Date): String = {
-    val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
-    formattedDate
-  }
-}
-
 object TerminalDeploymentsTable {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
@@ -56,6 +41,28 @@ object TerminalDeploymentsTable {
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
+
+  object jsDateFormat {
+
+    def zeroPadTo2Digits(number: Int) = {
+      if (number < 10)
+        "0" + number
+      else
+        number.toString
+    }
+
+    def formatDate(date: Date): String = {
+      val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+      formattedDate
+    }
+  }
+
+  def deskUnitLabel(queueName: QueueName): String = {
+    queueName match {
+      case "eGate" => "Banks"
+      case _ => "Desks"
+    }
+  }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                               peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): ReactElement = {
@@ -190,10 +197,9 @@ object TerminalDeploymentsTable {
 
     private def subHeadingLevel1 = {
       val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
-        val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
         val qc = queueColour(queueName)
         List(<.th("", ^.className := qc),
-          thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 1),
+          thHeaderGroupStart(deskUnitLabel(queueName), ^.className := qc, ^.colSpan := 1),
           thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 1))
       }) :+ <.th(^.className := "total-deployed", "Staff", ^.colSpan := 2)
       subHeadingLevel1
@@ -206,7 +212,7 @@ object TerminalDeploymentsTable {
     private def subHeadingLevel2(queueNames: List[QueueName]) = {
       val subHeadingLevel2 = queueNames.flatMap(queueName => {
         val depls: List[ReactTagOf[TableHeaderCell]] = List(
-          <.th(^.title := "Suggested deployment given available staff", DeskRecsTable.deskUnitLabel(queueName), ^.className := queueColour(queueName)),
+          <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
           <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
         )
 

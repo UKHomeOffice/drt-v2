@@ -6,7 +6,7 @@ import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, Staffing, TerminalDepsPage}
+import spatutorial.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.modules.FlightsView
@@ -96,7 +96,7 @@ object TableViewUtils {
                                    userDeskRec: QueueStaffDeployments,
                                    simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
                                   ): Seq[List[Long]] = {
-    val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
+    val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
 
     log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
     log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
@@ -116,11 +116,11 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
-    val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
+    val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
     Seq(
-      DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList,
+      takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       List.range(0, queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.length, 15).map(_.toLong),
       queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
@@ -139,7 +139,9 @@ object TableViewUtils {
     userDeskRecsSample
   }
 
-
+  def takeEveryNth[N](n: Int)(desks: Seq[N]) = desks.zipWithIndex.collect {
+    case (v, i) if (i % n == 0) => v
+  }
 }
 
 @JSExport("SPAMain")
@@ -191,7 +193,7 @@ object SPAMain extends js.JSApp {
       })
 
     val terminalDeps = dynamicRouteCT("#terminal-deps" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDepsPage(page.id, ctl))
+      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDeploymentsPage(page.id, ctl))
 
     val staffing = staticRoute("#staffing", StaffingLoc) ~>
       renderR(ctl => {

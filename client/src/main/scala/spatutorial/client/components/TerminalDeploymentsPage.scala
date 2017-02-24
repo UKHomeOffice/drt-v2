@@ -12,7 +12,7 @@ import spatutorial.client.logger._
 import spatutorial.client.services.{SPACircuit, Workloads}
 import spatutorial.shared.FlightsApi.TerminalName
 
-object TerminalDepsPage {
+object TerminalDeploymentsPage {
 
   case class Props(terminalName: TerminalName, ctl: RouterCtl[Loc])
 
