@@ -19,6 +19,7 @@ trait StaffMovementsPersistence {
   def staffMovementsActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsActor]))
 
   def saveStaffMovements(staffMovements: Seq[StaffMovement]) = {
+    actorSystem.log.info(s"Sending StaffMovements to staffMovementsActor")
     staffMovementsActor ! StaffMovements(staffMovements)
   }
 

@@ -162,8 +162,8 @@ object StaffMovements {
   def shiftsToMovements(shifts: Seq[Shift]) = {
     shifts.flatMap(shift => {
       val uuid: UUID = UUID.randomUUID()
-      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff, uuid) ::
-        StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff, uuid) :: Nil
+      StaffMovement(shift.terminalName, shift.name + " start", time = shift.startDt, shift.numberOfStaff, uuid) ::
+        StaffMovement(shift.terminalName, shift.name + " end", time = shift.endDt, -shift.numberOfStaff, uuid) :: Nil
     }).sortBy(_.time)
   }
 
@@ -176,6 +176,6 @@ object StaffMovements {
 
   def terminalStaffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
     val baseStaff = shiftService.terminalStaffAt(terminalName, dateTime)
-    baseStaff + adjustmentsAt(movements)(dateTime)
+    baseStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
   }
 }

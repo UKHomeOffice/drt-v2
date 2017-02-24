@@ -5,9 +5,11 @@ import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
+import spatutorial.client.SPAMain.{Loc, TerminalDepsLoc}
 import spatutorial.client.logger._
 import spatutorial.client.services._
-import spatutorial.shared.SDate
+import spatutorial.shared.FlightsApi.TerminalName
+import spatutorial.shared.{AirportConfig, SDate}
 
 import scala.util.{Failure, Success}
 import scala.collection.immutable.Seq
@@ -17,6 +19,7 @@ object StaffMovementsPopover {
   case class StaffMovementPopoverState(
                                         hovered: Boolean = false,
                                         reason: String = "",
+                                        terminalName: TerminalName,
                                         date: String = "",
                                         startTimeHours: Int = 0,
                                         startTimeMinutes: Int = 0,
@@ -29,16 +32,32 @@ object StaffMovementsPopover {
     (x.toDouble / nearest).round.toInt * nearest
   }
 
-  def apply(trigger: String, reason: String, startDate: SDate, endDate: SDate, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
+  def defaultTerminal(airportConfig: AirportConfig, page: Loc) = page match {
+    case p: TerminalDepsLoc => p.id
+    case _ => airportConfig.terminalNames.head
+  }
+
+  def apply(airportConfig: AirportConfig, page: Loc, trigger: String, reason: String, startDate: SDate, endDate: SDate, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
     .initialState_P((p) => {
       StaffMovementPopoverState(
         reason = reason,
+        terminalName = defaultTerminal(airportConfig, page),
         date = f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d",
         startTimeHours = startDate.getHours(),
         startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
         endTimeHours = endDate.getHours(),
         endTimeMinutes = roundToNearest(5)(endDate.getMinutes()))
     }).renderS((scope, state) => {
+
+    def selectTerminal(defaultValue: String) = {
+      <.select(
+        ^.defaultValue := defaultValue,
+        ^.onChange ==> ((e: ReactEventI) => {
+          val newValue: String = e.target.value
+          scope.modState(_.copy(terminalName = newValue))
+        }),
+        airportConfig.terminalNames.map(x => <.option(^.value := x, x)))
+    }
 
     def selectFromRange(range: Range, defaultValue: Int, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState, applyRounding: Int => Int) = {
       <.select(
@@ -51,7 +70,10 @@ object StaffMovementsPopover {
     }
 
     def trySaveMovement = (e: ReactEventI) => {
-      val shiftTry = Shift(state.reason, state.date, f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d", s"-${state.numberOfStaff.toString}")
+      val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
+      val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
+      val numberOfStaff: String = s"-${state.numberOfStaff.toString}"
+      val shiftTry = Shift(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff)
       shiftTry match {
         case Success(shift) =>
           for (movement <- StaffMovements.shiftsToMovements(Seq(shift))) yield {
@@ -102,6 +124,7 @@ object StaffMovementsPopover {
           }
 
           <.div(^.className := "container", ^.key := "IS81",
+            popoverFormRow("Terminal", selectTerminal(defaultTerminal(airportConfig, page))),
             labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
             labelledInput("Date", state.date, (v: String) => (s: StaffMovementPopoverState) => s.copy(date = v)),
             timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
