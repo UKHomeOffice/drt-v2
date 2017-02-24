@@ -7,7 +7,7 @@ import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
-object TerminalUserDeskRecsTests extends TestSuite {
+object TerminalDepolymentTests extends TestSuite {
 
   import spatutorial.client.TableViewUtils._
   

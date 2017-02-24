@@ -5,7 +5,7 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import org.scalajs.dom.html.{TableCell, TableHeaderCell}
+import org.scalajs.dom.html.TableHeaderCell
 import spatutorial.client.TableViewUtils._
 import spatutorial.client.logger._
 import spatutorial.client.modules.Dashboard.QueueCrunchResults
@@ -13,9 +13,24 @@ import spatutorial.client.services.HandyStuff.QueueStaffDeployments
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
+
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
 
+object jsDateFormat {
+
+  def zeroPadTo2Digits(number: Int) = {
+    if (number < 10)
+      "0" + number
+    else
+      number.toString
+  }
+
+  def formatDate(date: Date): String = {
+    val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+    formattedDate
+  }
+}
 
 object TerminalDeploymentsTable {
   // shorthand for styles
@@ -101,7 +116,6 @@ object TerminalDeploymentsTable {
   }
 
   class Backend($: BackendScope[Props, Unit]) {
-    import jsDateFormat.formatDate
 
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
@@ -117,7 +131,7 @@ object TerminalDeploymentsTable {
         val flights: Pot[Flights] = p.flights.map(flights =>
           flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
         val date: Date = new Date(item.time)
-        val formattedDate: String = formatDate(date)
+        val formattedDate: String = jsDateFormat.formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
@@ -131,7 +145,7 @@ object TerminalDeploymentsTable {
                 ""
             }
 
-            def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
+            def qtd(xs: TagMod*) = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
 
             Seq(
               qtd(q.pax),

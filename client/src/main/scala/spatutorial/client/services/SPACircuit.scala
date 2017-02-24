@@ -9,7 +9,6 @@ import diode._
 import diode.data._
 import diode.react.ReactConnector
 import spatutorial.client.TableViewUtils
-import spatutorial.client.components.TableTerminalDeskRecs.TerminalUserDeskRecsRow
 import spatutorial.client.components.DeskRecsChart
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._

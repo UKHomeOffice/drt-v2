@@ -1,26 +1,22 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.data.{Pot, PotState, Ready}
-import diode.react.{ModelProxy, ReactConnectProxy}
-import japgolly.scalajs.react.extra.router.StaticDsl.{DynamicRouteB, Rule}
-import japgolly.scalajs.react.{ReactDOM, _}
+import diode.data.{Pot, Ready}
+import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.ReactTagOf
-import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
 import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalDepsPage, TerminalRecsPage}
+import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, Staffing, TerminalDepsPage}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
+import spatutorial.client.modules.Dashboard.QueueCrunchResults
+import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules.FlightsView._
-import spatutorial.client.modules.{FlightsView, _}
 import spatutorial.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import spatutorial.client.services._
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
