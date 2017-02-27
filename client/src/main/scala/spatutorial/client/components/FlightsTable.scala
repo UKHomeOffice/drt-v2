@@ -5,7 +5,7 @@ import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.modules.{FlightsView, GriddleComponentWrapper}
+import spatutorial.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}
 import spatutorial.shared.AirportInfo
 import spatutorial.shared.FlightsApi.Flights
 
@@ -60,8 +60,8 @@ object FlightsTable {
 
       val columnMeta = Some(Seq(new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
       <.div(^.className := "table-responsive timeslot-flight-popover",
-        props.flightsModelProxy.renderPending((t) => DeskRecsChart.spinner),
-        props.flightsModelProxy.renderEmpty(DeskRecsChart.spinner),
+        props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
+        props.flightsModelProxy.renderEmpty(ViewTools.spinner),
         props.flightsModelProxy.renderReady(flights => {
           GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
             columnMeta = columnMeta,

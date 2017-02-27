@@ -5,62 +5,24 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
-import org.scalajs.dom.html.{TableCell, TableHeaderCell}
+import org.scalajs.dom.html.TableHeaderCell
 import spatutorial.client.TableViewUtils._
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.services.HandyStuff.QueueStaffDeployments
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
+import spatutorial.client.actions.Actions.UpdateDeskRecsTime
+import spatutorial.client.services.RootModel.QueueCrunchResults
+
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
 
-object TerminalUserDeskRecs {
-
-  case class Props(terminalName: TerminalName,
-                   workloads: Map[QueueName, Seq[Int]],
-                   userDeskRecs: Map[QueueName, DeskRecTimeSlots])
-
-  val component = ReactComponentB[Props]("TerminalUserDeskRecs")
-    .render_P(props =>
-      <.table(
-        <.tr(<.td())
-      )
-    )
-
-  def timeIt[T](name: String)(f: => T): T = {
-    val start = new Date()
-    log.info(s"${name}: Starting timer at ${start}")
-    val ret = f
-    val end = new Date()
-    log.info(s"${name} Trial done at ${end}")
-    val timeTaken = (end.getTime() - start.getTime())
-    log.info(s"${name} Time taken runs ${timeTaken}ms per run")
-    ret
-  }
-}
-
-object jsDateFormat {
-
-  def zeroPadTo2Digits(number: Int) = {
-    if (number < 10)
-      "0" + number
-    else
-      number.toString
-  }
-
-  def formatDate(date: Date): String = {
-    val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
-    formattedDate
-  }
-}
-
-object TableTerminalDeskRecs {
+object TerminalDeploymentsTable {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class QueueDetailsRow(
+  case class QueueDeploymentsRow(
                               timestamp: Long,
                               pax: Double,
                               crunchDeskRec: Int,
@@ -70,22 +32,43 @@ object TableTerminalDeskRecs {
                               queueName: QueueName
                             )
 
-  case class TerminalUserDeskRecsRow(time: Long, queueDetails: Seq[QueueDetailsRow])
-
+  case class TerminalDeploymentsRow(time: Long, queueDetails: Seq[QueueDeploymentsRow])
 
   case class Props(
                     terminalName: String,
-                    items: Seq[TerminalUserDeskRecsRow],
+                    items: Seq[TerminalDeploymentsRow],
                     flights: Pot[Flights],
                     airportConfigPot: Pot[AirportConfig],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
 
+  object jsDateFormat {
+
+    def zeroPadTo2Digits(number: Int) = {
+      if (number < 10)
+        "0" + number
+      else
+        number.toString
+    }
+
+    def formatDate(date: Date): String = {
+      val formattedDate: String = date.getFullYear() + "-" + zeroPadTo2Digits(date.getMonth() + 1) + "-" + zeroPadTo2Digits(date.getDate()) + " " + date.toLocaleTimeString().replaceAll(":00$", "")
+      formattedDate
+    }
+  }
+
+  def deskUnitLabel(queueName: QueueName): String = {
+    queueName match {
+      case "eGate" => "Banks"
+      case _ => "Desks"
+    }
+  }
+
   def renderTerminalUserTable(terminalName: TerminalName, airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalUserDeskRecsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): ReactElement = {
+                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): ReactElement = {
     <.div(
-      TableTerminalDeskRecs(
+      TerminalDeploymentsTable(
         terminalName,
         rows,
         peMP().flights,
@@ -106,7 +89,7 @@ object TableTerminalDeskRecs {
                                     shiftsRaw: Pot[String]
                                   )
 
-  def buildTerminalUserDeskRecsComponent(terminalName: TerminalName) = {
+  def terminalDeploymentsComponent(terminalName: TerminalName) = {
     log.info(s"userdeskrecs for $terminalName")
     val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model =>
       PracticallyEverything(
@@ -119,14 +102,13 @@ object TableTerminalDeskRecs {
         model.shiftsRaw
       ))
 
-    val terminalUserDeskRecsRows: ReactConnectProxy[Option[Pot[List[TerminalUserDeskRecsRow]]]] = SPACircuit.connect(model => model.calculatedRows.getOrElse(Map()).get(terminalName))
+    val terminalUserDeskRecsRows: ReactConnectProxy[Option[Pot[List[TerminalDeploymentsRow]]]] = SPACircuit.connect(model => model.calculatedDeploymentRows.getOrElse(Map()).get(terminalName))
     val airportWrapper = SPACircuit.connect(_.airportInfos)
     val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
 
     airportFlightsSimresWorksQcrsUdrs(peMP => {
       <.div(
-        <.h1(terminalName + " Desks"),
-        terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalUserDeskRecsRow]]]]) => {
+        terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
           rowsOptMP() match {
             case None => <.div()
             case Some(rowsPot) =>
@@ -142,25 +124,13 @@ object TableTerminalDeskRecs {
   }
 
   class Backend($: BackendScope[Props, Unit]) {
-    import jsDateFormat.formatDate
 
     def render(p: Props) = {
       log.info("%%%%%%%rendering table...")
 
       val style = bss.listGroup
 
-      def userDeskRecOverride(q: QueueDetailsRow, qtd: (TagMod *) => ReactTagOf[TableCell], hasChangeClasses: QueueName) = {
-        qtd(
-          ^.cls := hasChangeClasses,
-          <.input.number(
-            ^.className := "desk-rec-input",
-            ^.disabled := true,
-            ^.value := q.userDeskRec.deskRec,
-            ^.onChange ==> ((e: ReactEventI) => p.stateChange(q.queueName, DeskRecTimeslot(q.userDeskRec.timeInMillis, deskRec = e.target.value.toInt)))
-          ))
-      }
-
-      def renderItem(itemWithIndex: (TerminalUserDeskRecsRow, Int)) = {
+      def renderItem(itemWithIndex: (TerminalDeploymentsRow, Int)) = {
         val item = itemWithIndex._1
         val index = itemWithIndex._2
 
@@ -169,12 +139,12 @@ object TableTerminalDeskRecs {
         val flights: Pot[Flights] = p.flights.map(flights =>
           flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
         val date: Date = new Date(item.time)
-        val formattedDate: String = formatDate(date)
+        val formattedDate: String = jsDateFormat.formatDate(date)
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
         val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
         val queueRowCells = item.queueDetails.flatMap(
-          (q: QueueDetailsRow) => {
+          (q: QueueDeploymentsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
             val dangerWait = p.airportConfigPot match {
               case Ready(airportConfig) =>
@@ -183,14 +153,11 @@ object TableTerminalDeskRecs {
                 ""
             }
 
-            def qtd(xs: TagMod*) = <.td(((^.className := queueColour(q.queueName)) :: xs.toList): _*)
+            def qtd(xs: TagMod*) = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
 
-            val hasChangeClasses = if (q.userDeskRec.deskRec != q.crunchDeskRec) "table-info" else ""
             Seq(
               qtd(q.pax),
-              qtd(q.crunchDeskRec),
-              userDeskRecOverride(q, qtd _, hasChangeClasses),
-              qtd(q.waitTimeWithCrunchDeskRec + " mins"),
+              qtd(q.userDeskRec.deskRec),
               qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
           }
         ).toList
@@ -207,21 +174,21 @@ object TableTerminalDeskRecs {
         <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
       }
 
-      def qth(queueName: String, xs: TagMod*) = <.th(((^.className := queueName + "-user-desk-rec") :: xs.toList): _*)
+      def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-      val headings = queueNameMappingOrder.map {
+      val headings = p.airportConfigPot.get.queues(p.terminalName).map {
         case (queueName) =>
-          qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 5)
-      } :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
+          qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+      }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
+      val numQueues = p.items.head.queueDetails.length
 
       <.div(
-        <.table(^.cls := "table table-striped table-hover table-sm user-desk-recs",
+        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
           <.thead(
             ^.display := "block",
             <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("") :: subHeadingLevel1: _*),
-            <.tr(<.th("Time") :: subHeadingLevel2: _*)),
+            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(p.airportConfigPot.get.queues(p.terminalName).toList): _*)),
           <.tbody(
             ^.display := "block",
             ^.overflow := "scroll",
@@ -230,13 +197,11 @@ object TableTerminalDeskRecs {
     }
 
     private def subHeadingLevel1 = {
-
       val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
-        val deskUnitLabel = DeskRecsTable.deskUnitLabel(queueName)
         val qc = queueColour(queueName)
         List(<.th("", ^.className := qc),
-          thHeaderGroupStart(deskUnitLabel, ^.className := qc, ^.colSpan := 2),
-          thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 2))
+          thHeaderGroupStart(deskUnitLabel(queueName), ^.className := qc, ^.colSpan := 1),
+          thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 1))
       }) :+ <.th(^.className := "total-deployed", "Staff", ^.colSpan := 2)
       subHeadingLevel1
     }
@@ -245,15 +210,17 @@ object TableTerminalDeskRecs {
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2 = {
-      val subHeadingLevel2 = queueNameMappingOrder.flatMap(queueName => {
-        val reqSug: List[ReactTagOf[TableHeaderCell]] = List(thHeaderGroupStart("Req", ^.className := queueColour(queueName)),
-          <.th(^.title := "Suggested deployment given available staff", "Sug", ^.className := queueColour(queueName)))
+    private def subHeadingLevel2(queueNames: List[QueueName]) = {
+      val subHeadingLevel2 = queueNames.flatMap(queueName => {
+        val depls: List[ReactTagOf[TableHeaderCell]] = List(
+          <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
+          <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
+        )
 
-        <.th(^.className := queueColour(queueName), "Pax") :: (reqSug ::: reqSug)
+        <.th(^.className := queueColour(queueName), "Pax") :: depls
       })
       subHeadingLevel2 :+
-        <.th(^.className := "total-deployed", "Req", ^.title := "Total staff required for desks") :+
+        <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks") :+
         <.th(^.className := "total-deployed", "Avail", ^.title := "Total staff available based on shifts entered")
     }
 
@@ -262,11 +229,11 @@ object TableTerminalDeskRecs {
     }
   }
 
-  private val component = ReactComponentB[Props]("TerminalUserDeskRecs")
+  private val component = ReactComponentB[Props]("TerminalDeployments")
     .renderBackend[Backend]
     .build
 
-  def apply(terminalName: String, items: Seq[TerminalUserDeskRecsRow], flights: Pot[Flights],
+  def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[Flights],
             airportConfigPot: Pot[AirportConfig],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =

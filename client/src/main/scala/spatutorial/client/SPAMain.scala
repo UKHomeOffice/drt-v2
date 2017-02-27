@@ -1,27 +1,23 @@
 package spatutorial.client
 
 import chandu0101.scalajs.react.components.ReactTable
-import diode.data.{Empty, Pot, PotState, Ready}
-import diode.react.{ModelProxy, ReactConnectProxy}
-import japgolly.scalajs.react.extra.router.StaticDsl.{DynamicRouteB, Rule}
-import japgolly.scalajs.react.{ReactDOM, _}
+import diode.data.{Pot, Ready}
+import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.ReactTagOf
-import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom
-import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
-import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import spatutorial.client.components.{DeskRecsChart, GlobalStyles, Layout, MainMenu, QueueUserDeskRecsComponent, Staffing, TableTerminalDeskRecs, TerminalDepsPage, TerminalRecsPage}
+import spatutorial.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard.{DashboardModels, QueueCrunchResults}
+import spatutorial.client.modules.FlightsView
 import spatutorial.client.modules.FlightsView._
-import spatutorial.client.modules.{FlightsView, _}
+import spatutorial.client.actions.Actions._
+import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import spatutorial.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import spatutorial.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
-import spatutorial.client.services._
+import spatutorial.client.services.RootModel.QueueCrunchResults
+import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import spatutorial.shared._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
@@ -79,58 +75,10 @@ object TableViewUtils {
     }
   }
 
-  def terminalUserDeskRecsRows(
-                                timestamps: Seq[Long],
-                                paxload: Map[String, List[Double]],
-                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                                simulationResult: Map[QueueName, Pot[SimulationResult]],
-                                userDeskRec: QueueStaffDeployments
-                              ): List[TerminalUserDeskRecsRow] = {
-    log.info(s"call terminalUserDeskRecsRows")
-    val queueRows: List[List[((Long, QueueName), QueueDetailsRow)]] = queueNameMappingOrder.map(queueName => {
-      simulationResult.get(queueName) match {
-        case Some(Ready(sr)) =>
-          val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
-          log.info(s"before transpose it is ${result}")
-          log.info(s"before transpose it is ${result.map(_.length)}")
-          queueDetailsRowsFromNos(queueName, result)
-        case None =>
-          queueCrunchResultsForTerminal.get(queueName) match {
-            case Some(Ready(cr)) =>
-              queueDetailsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
-            case _ =>
-              List()
-          }
-      }
-    })
-
-    val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
-
-    queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDetailsRow)])) => {
-      val qr = queueRows._2.map(_._2)
-      TerminalUserDeskRecsRow(queueRows._1, qr)
-    }).toList.sortWith(_.time < _.time)
-  }
-
   def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRow)] = {
     queueNos.toList.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, qn) -> QueueDeploymentsRow(
-          timestamp = timestamp,
-          pax = pax.toDouble,
-          crunchDeskRec = crunchDeskRec.toInt,
-          userDeskRec = DeskRecTimeslot(timestamp, userDeskRec.toInt),
-          waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
-          waitTimeWithUserDeskRec = waitTimeUser.toInt,
-          qn
-        )
-    }
-  }
-
-  def queueDetailsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDetailsRow)] = {
-    queueNos.toList.transpose.zipWithIndex.map {
-      case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
-        (timestamp, qn) -> QueueDetailsRow(
           timestamp = timestamp,
           pax = pax.toDouble,
           crunchDeskRec = crunchDeskRec.toInt,
@@ -149,7 +97,7 @@ object TableViewUtils {
                                    userDeskRec: QueueStaffDeployments,
                                    simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
                                   ): Seq[List[Long]] = {
-    val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
+    val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
 
     log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
     log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
@@ -169,11 +117,11 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
-    val ts = DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList
+    val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
     Seq(
-      DeskRecsChart.takeEvery15th(timestamps).take(numberOf15MinuteSlots).toList,
+      takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       List.range(0, queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.length, 15).map(_.toLong),
       queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
@@ -192,7 +140,9 @@ object TableViewUtils {
     userDeskRecsSample
   }
 
-
+  def takeEveryNth[N](n: Int)(desks: Seq[N]) = desks.zipWithIndex.collect {
+    case (v, i) if (i % n == 0) => v
+  }
 }
 
 @JSExport("SPAMain")
@@ -244,7 +194,7 @@ object SPAMain extends js.JSApp {
       })
 
     val terminalDeps = dynamicRouteCT("#terminal-deps" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDepsPage(page.id, ctl))
+      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDeploymentsPage(page.id, ctl))
 
     val staffing = staticRoute("#staffing", StaffingLoc) ~>
       renderR(ctl => {

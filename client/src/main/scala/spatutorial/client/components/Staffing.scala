@@ -10,6 +10,7 @@ import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
 import spatutorial.client.services._
 import spatutorial.shared.{MilliDate, SDate, StaffMovement, WorkloadsHelpers}
+import spatutorial.client.actions.Actions.{SetShifts, SaveShifts, RemoveStaffMovement}
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date

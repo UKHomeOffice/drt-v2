@@ -4,7 +4,7 @@ import diode.data.Pot
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{ReactComponentB, _}
-import spatutorial.client.modules.FlightsView
+import spatutorial.client.modules.{FlightsView, PopoverWrapper}
 import spatutorial.shared.AirportInfo
 import spatutorial.shared.FlightsApi.Flights
 
