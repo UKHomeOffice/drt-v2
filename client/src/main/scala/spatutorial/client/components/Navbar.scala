@@ -14,12 +14,14 @@ object Navbar {
     <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
-          airportConfigPotMP().renderReady(airportConfig =>
-            <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"))
-          ,
-          <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
-            <.ul(^.className := "nav navbar-nav navbar-right",
-              <.li(StaffMovementsPopover("IS81", "IS81", SDate.now(), SDate.now().addHours(1), "bottom")()))))
+          airportConfigPotMP().renderReady(airportConfig => {
+            <.div(
+              <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"),
+              <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
+                <.ul(^.className := "nav navbar-nav navbar-right",
+                  <.li(StaffMovementsPopover(airportConfig.terminalNames, page, "IS81", "IS81", SDate.now(), SDate.now().addHours(1), "bottom")()))))
+
+          }))
       })
     )
   }

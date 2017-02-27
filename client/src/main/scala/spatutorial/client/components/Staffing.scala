@@ -166,7 +166,7 @@ object Staffing {
 
 object MovementDisplay {
   def toCsv(movement: StaffMovement) = {
-    s"${movement.reason},${displayDate(movement.time)},${displayTime(movement.time)},${movement.delta}"
+    s"${movement.terminalName}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
   }
 
   def displayTime(time: MilliDate): String = {

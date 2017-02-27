@@ -24,13 +24,13 @@ class StaffMovementsActorSpec extends Specification {
 
       private val uuid: UUID = UUID.randomUUID()
       staffMovementsApi.saveStaffMovements(Seq(
-        StaffMovement("is81", MilliDate(0L), -1, uuid)
+        StaffMovement("T1", "is81", MilliDate(0L), -1, uuid)
       ))
 
       awaitAssert({
         val resultFuture = staffMovementsApi.getStaffMovements()
         val result = Await.result(resultFuture, 1 seconds)
-        assert(Seq(StaffMovement("is81", MilliDate(0L), -1, uuid)) == result)
+        assert(Seq(StaffMovement("T1", "is81", MilliDate(0L), -1, uuid)) == result)
       }, 2 seconds)
     }
   }
