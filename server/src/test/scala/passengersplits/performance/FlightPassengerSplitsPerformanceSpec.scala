@@ -34,11 +34,12 @@ class FlightPassengerSplitsPerformanceSpec extends
   with SimpleProfiler {
 
   test =>
-  //  implicit lazy val system = ActorSystem("performanceTests", ConfigFactory.empty("test")) // may add arguments here
+
+  skipAll
+  sequential
 
   def actorRefFactory = system
 
-  sequential
 
   implicit val timeout = akka.util.Timeout(40, SECONDS)
 
@@ -117,16 +118,21 @@ class FlightPassengerSplitsPerformanceSpec extends
 
   "Given lots of flight events" >> {
     tag("performance")
+
+
     val totalEvents: Int = 100
-    val flightsToFind: List[VoyagePassengerInfo] = initialiseFlightsWithStream(aggregationRef, totalEvents)
 
     s"looking for the first event " in {
+      val flightsToFind: List[VoyagePassengerInfo] = initialiseFlightsWithStream(aggregationRef, totalEvents)
+
       val flightToFind = flightsToFind.take(1).toList.head
       log.info(s"Looking for ${flightToFind}")
       findFlightAndCheckResult(flightToFind)
       success("yay")
     }
-    s"looking for multiple events ${flightsToFind.length}" in {
+    s"looking for multiple events" in {
+      val flightsToFind: List[VoyagePassengerInfo] = initialiseFlightsWithStream(aggregationRef, totalEvents)
+
       val (results, time) = profile {
         flightsToFind foreach {
           flightToFind =>
@@ -149,7 +155,7 @@ class FlightPassengerSplitsPerformanceSpec extends
         nearlyIsoArrivalDt
 
         val askableRef: AskableActorRef = aggregationRef
-        val resultFuture = askableRef ? ReportVoyagePaxSplit(port, carrier+"ignore", voyageNumber, flightToFind.scheduleArrivalDateTime.get)
+        val resultFuture = askableRef ? ReportVoyagePaxSplit(port, carrier + "ignore", voyageNumber, flightToFind.scheduleArrivalDateTime.get)
         val result = Await.ready(resultFuture, 10 seconds)
         println(s"Result for $flightToFind $result")
       //        val routeToRequest: String = s"/flight-pax-splits/dest-${port}/terminal-N/${carrier}${voyageNumber}/scheduled-arrival-time-${nearlyIsoArrivalDt}"

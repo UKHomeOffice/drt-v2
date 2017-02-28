@@ -70,7 +70,9 @@ class PassengerSplitsInfoByPortRouter extends
       val child = childActorMap get (name)
       child match {
         case Some(c) => c.tell(report, sender)
-        case None => log.error("Child singleflight actor doesn't exist yet  ")
+        case None =>
+          log.error("Child singleflight actor doesn't exist yet  ")
+          sender ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
       }
     case report: ReportVoyagePaxSplitBetween =>
       log.info(s"top level router asked to ${report}")

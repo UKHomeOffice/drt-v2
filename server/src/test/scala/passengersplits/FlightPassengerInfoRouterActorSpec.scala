@@ -2,6 +2,7 @@ package passengersplits
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
+import com.typesafe.config.ConfigFactory
 import controllers.FilePolling
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
@@ -16,7 +17,7 @@ import spatutorial.shared.{PassengerQueueTypes, SDateLike}
 
 
 class FlightPassengerInfoRouterActorSpec extends
-  TestKit(ActorSystem()) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
+  TestKit(ActorSystem("FlightPassengerInfoRouterActorSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
   test =>
 
   isolated
