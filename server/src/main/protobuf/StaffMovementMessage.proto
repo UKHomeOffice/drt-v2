@@ -1,0 +1,10 @@
+package server.protobuf.messages;
+
+message StaffMovementMessage {
+    optional string terminalName = 1;
+    optional string reason = 2;
+    optional int64 time = 3;
+    optional int32 delta = 4;
+    optional string uUID = 5;
+    optional string queueName = 6;
+}
