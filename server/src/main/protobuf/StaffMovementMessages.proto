@@ -1,5 +1,9 @@
 package server.protobuf.messages;
 
+message StaffMovementsMessage {
+    repeated StaffMovementMessage staffMovements = 1;
+}
+
 message StaffMovementMessage {
     optional string terminalName = 1;
     optional string reason = 2;
