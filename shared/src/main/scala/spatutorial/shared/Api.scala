@@ -7,13 +7,26 @@ import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
 
 import scala.collection.immutable._
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 
 case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
   def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
 }
+object FlightParsing {
+  val iataRe = """(\w\w)(\d{1,4})(\w)?""".r
+  def parseIataToCarrierCodeVoyageNumber(iata: String): Option[(String, String)] = {
+    iata match {
+      case iataRe(carriercode, voyageNumber, suffix) => Option((carriercode, voyageNumber))
+      case what => None
+    }
+  }
+
+
+}
+
+case class ApiFlightWithSplits(apiFlight: ApiFlight, i: Int)//,
+//                               splits: Either[FlightNotFound, PaxTypeAndQueueCounts])
 
 case class ApiFlight(
                       Operator: String,
@@ -36,7 +49,12 @@ case class ApiFlight(
                       IATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long)
+                      PcpTime: Long)   {
+//  private val (cc, vn) = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
+//
+//  def carrierCode = cc
+//  def voyageNumber = vn
+}
 
 trait SDateLike {
 
@@ -79,6 +97,7 @@ case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Se
 object FlightsApi {
 
   case class Flights(flights: List[ApiFlight])
+  case class FlightsWithSplits(flights: List[ApiFlightWithSplits])
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
 
@@ -89,6 +108,8 @@ object FlightsApi {
 
 trait FlightsApi {
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights
+
+  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[FlightsWithSplits]
 }
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
@@ -205,6 +226,7 @@ object PassengerQueueTypes {
   def egatePercentage = 0.6d
 
   type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
+//  case class PaxTypeAndQueueCounts(splits: List[PaxTypeAndQueueCount], origin: Option[String])
 }
 
 object PassengerSplits {

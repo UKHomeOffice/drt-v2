@@ -1,6 +1,6 @@
 package services
 
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import spatutorial.shared.{MilliDate, SDateLike}
 
 object SDate {
@@ -33,6 +33,14 @@ object SDate {
     implicit def sdateToMilliDate(sdate: SDateLike): MilliDate = MilliDate(sdate.millisSinceEpoch)
 
     implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
+  }
+
+  def parseString(dateTime:String) = {
+      MilliDate(apply(dateTime).millisSinceEpoch)
+  }
+
+  def apply(dateTime: String): SDateLike = {
+    JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
   }
 
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm))

@@ -1,26 +1,44 @@
 package actors
 
 import akka.actor._
+import akka.event.LoggingReceive
+import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.FlightState
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import akka.persistence._
-import spatutorial.shared.ApiFlight
+import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
+import services.SDate
+import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import spatutorial.shared.{ApiFlight, ApiFlightWithSplits, FlightParsing, SDateLike}
+import services.SDate.implicits._
+
+import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 case object GetFlights
 
-class FlightsActor(crunchActor: ActorRef) extends PersistentActor with ActorLogging  with FlightState {
+case object GetFlightsWithSplits
+
+class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends PersistentActor with ActorLogging with FlightState {
   implicit val timeout = Timeout(5 seconds)
 
   override def persistenceId = "flights-store"
 
+  override protected def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
+    super.onRecoveryFailure(cause, event)
+    log.error(cause, "recovery failed in flightsActors")
+  }
+
+
   val receiveRecover: Receive = {
-    case Flights(recoveredFlights)  =>
+    case Flights(recoveredFlights) =>
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
       val lastMidnight = LocalDate.now().toString(formatter)
@@ -31,10 +49,46 @@ class FlightsActor(crunchActor: ActorRef) extends PersistentActor with ActorLogg
     case message => log.info(s"unhandled message - $message")
   }
 
-  val receiveCommand: Receive = {
+  val receiveCommand: Receive = LoggingReceive {
     case GetFlights =>
       log.info(s"Being asked for flights and I know about ${flights.size}")
       sender ! Flights(flights.values.toList)
+    case GetFlightsWithSplits =>
+      val startTime = org.joda.time.DateTime.now()
+      log.info(s"Being asked for flights with splits and I know about ${flights.size}")
+      val replyTo = sender()
+      val apiFlights = flights.values.toList
+      val allSplitRequests: Seq[Future[ApiFlightWithSplits]] = apiFlights map { flight =>
+        val scheduledDate = SDate(flight.SchDT)
+
+        FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
+          case Some((cc, voyageNumber)) =>
+
+            val future = splitsActor ? ReportVoyagePaxSplit(flight.AirportID,
+              flight.Operator, voyageNumber, scheduledDate)
+            future map {
+              case vps: VoyagePaxSplits =>
+                log.info(s"didgot splits ${vps} for ${flight}")
+                ApiFlightWithSplits(flight, 1) // Right(vps))
+              case notFound: FlightNotFound =>
+                log.info(s"notgot splits for ${flight}")
+
+                ApiFlightWithSplits(flight, 0) //Left(FlightNotFound(flight.carrierCode, flight.voyageNumber, scheduledDate)))
+            }
+          case None =>
+            log.info(s"couldnot parse IATA for ${flight}")
+            Future.successful(ApiFlightWithSplits(flight, -1))  //Left(FlightNotFound(flight.carrierCode, flight.voyageNumber, scheduledDate)))
+
+        }
+      }
+      val futureOfSeq: Future[Seq[ApiFlightWithSplits]] = Future.sequence(allSplitRequests)
+      futureOfSeq.onSuccess {
+        case s =>
+          val replyingAt = org.joda.time.DateTime.now()
+          val delta = replyingAt.getMillis - startTime.getMillis
+          log.info(s"Replying to GetFlightsWithSplits took ${delta}ms")
+          replyTo ! FlightsWithSplits(s.toList)
+      }
     case Flights(newFlights) =>
       log.info(s"Adding ${newFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")

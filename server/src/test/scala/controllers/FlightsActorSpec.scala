@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import actors.{FlightsActor, GetFlights}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import org.specs2.mutable.Specification
 import services.{SplitsProvider, WorkloadCalculatorTests}
@@ -23,7 +23,7 @@ class FlightsActorSpec extends Specification {
   sequential
 
   private def flightsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[FlightsActor], crunchActor(system)), "FlightsActor")
+    val actor = system.actorOf(Props(classOf[FlightsActor], crunchActor(system), Actor.noSender), "FlightsActor")
     actor
   }
 

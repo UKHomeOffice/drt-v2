@@ -350,12 +350,14 @@ case class RequestFlights(from: Long, to: Long) extends Action
 
 case class UpdateFlights(flights: Flights) extends Action
 
+case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
+
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"client requesting flights $from $to")
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(10L seconds)
-      val fe: EffectSingle[UpdateFlights] = Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights))
+      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
     case UpdateFlights(flights) =>
       log.info(s"client got ${flights.flights.length} flights")
@@ -365,15 +367,9 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
         val newFlightsSet = flights.flights.toSet
         if (oldFlightsSet != newFlightsSet) {
           val airportCodes = flights.flights.map(_.Origin).toSet
-          val flightSplitRequests = flights.flights.map(flight => {
-            log.info(s"flightSplits for ${flight}")
-            AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
-              .call().map(UpdateFlightPaxSplits)
-          })
-          val flightSplits = flightSplitRequests.map(f => Effect(f))
-          val flightSplitEffectSet = seqOfEffectsToEffectSeq(flightSplits)
+          //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
-          val allEffects = flightSplitEffectSet
+          val allEffects = airportInfos
           updated(Ready(flights), allEffects)
         } else {
           log.info("no changes to flights")
@@ -384,12 +380,50 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
         updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
       }
       result
+    case UpdateFlightsWithSplits(flightsWithSplits) =>
+      val flights = flightsWithSplits.flights.map(_.apiFlight)
+      val crappySplits: Seq[Int] = flightsWithSplits.flights.map(_.i)
+      val numberOfSplits: Double = crappySplits.toList.sum
+      val filter = flightsWithSplits.flights.filter(fws => fws.i != 0)
+
+      log.info(s"client got ${filter}")
+      log.info(s"client got ${flights.length} flights and ${numberOfSplits} splits ${numberOfSplits / flights.length}")
+      val result = if (value.isReady) {
+        val oldFlights = value.get
+        val oldFlightsSet = oldFlights.flights.toSet
+        val newFlightsSet = flights.toSet
+        if (oldFlightsSet != newFlightsSet) {
+          val airportCodes = flights.map(_.Origin).toSet
+          //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
+          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
+          val allEffects = airportInfos
+          updated(Ready(Flights(flights)), allEffects)
+        } else {
+          log.info("no changes to flights")
+          noChange
+        }
+      } else {
+        val airportCodes = flights.map(_.Origin).toSet
+        updated(Ready(Flights(flights)), Effect(Future(GetAirportInfos(airportCodes))))
+      }
+      result
     case UpdateFlightPaxSplits(Left(failure)) =>
       log.info(s"Did not find flightPaxSplits for ${failure}")
       noChange
     case UpdateFlightPaxSplits(Right(result)) =>
       log.info(s"Found flightPaxSplits ${result}")
       noChange
+  }
+
+  private def createFlightSplitRequests(newFlightsSet: Set[ApiFlight]) = {
+    val flightSplitRequests = newFlightsSet.map(flight => {
+      log.info(s"flightSplits for ${flight}")
+      AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
+        .call().map(UpdateFlightPaxSplits)
+    }).toList
+    val flightSplits = flightSplitRequests.map(f => Effect(f))
+    val flightSplitEffectSet = seqOfEffectsToEffectSeq(flightSplits)
+    flightSplitEffectSet
   }
 }
 

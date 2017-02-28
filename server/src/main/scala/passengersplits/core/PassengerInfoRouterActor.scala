@@ -20,6 +20,7 @@ object PassengerInfoRouterActor {
                                          scheduledArrivalDateTimeTo: SDateLike)
 
   case class VoyagesPaxSplits(voyageSplits: List[VoyagePaxSplits])
+
   case class InternalVoyagesPaxSplits(splits: VoyagesPaxSplits, replyTo: ActorRef)
 
   case class ReportFlightCode(flightCode: String)
@@ -30,6 +31,7 @@ object PassengerInfoRouterActor {
   case class FlightPaxSplitBatchComplete(completionMonitor: ActorRef)
 
   case object FlightPaxSplitBatchInit
+
   case object PassengerSplitsAck
 
 }
@@ -40,13 +42,13 @@ trait SimpleRouterActor[C <: Actor] {
 
   def childProps: Props
 
-  def getRCActor(id: String) = childActorMap get id getOrElse {
+  def getRCActor(id: String) = childActorMap getOrElse(id, {
     val c = context actorOf childProps
     childActorMap += id -> c
     context watch c
     log.info(s"created actor ${id}")
     c
-  }
+  })
 }
 
 class PassengerSplitsInfoByPortRouter extends
@@ -145,6 +147,8 @@ class SingleFlightActor
       log.info(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
       log.info(s"$self Acking to $sender")
       sender ! PassengerSplitsAck
+
+
     case ReportVoyagePaxSplit(port, carrierCode, voyageNumber, scheduledArrivalDateTime) =>
 
       log.info(s"I am ${latestMessage.map(_.summary)}: Report flight split for $port $carrierCode $voyageNumber $scheduledArrivalDateTime")
@@ -157,9 +161,9 @@ class SingleFlightActor
           matches(flight)
         }
       }
-      log.debug(s"Matching flight is ${matchingFlights}")
       matchingFlights match {
         case Some(flight) =>
+          log.info(s"Matching flight is ${flight.summary}")
           calculateAndSendPaxSplits(sender, port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
         case None =>
           sender ! FlightNotFound(carrierCode, voyageNumber, scheduledArrivalDateTime)
@@ -211,9 +215,16 @@ class SingleFlightActor
   }
 
   def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Boolean = {
-    flight.VoyageNumber == voyageNumber &&
-      //carrierCode == flight.CarrierCode &&
-      Some(scheduledArrivalDateTime) == flight.scheduleArrivalDateTime
+    log.info(s"match? $carrierCode-$voyageNumber@$scheduledArrivalDateTime vs ${flight.summary}")
+    val timeOpt = flight.scheduleArrivalDateTime
+    timeOpt match {
+      case Some(flightTime) =>
+        flight.VoyageNumber == voyageNumber &&
+          //carrierCode == flight.CarrierCode &&
+          scheduledArrivalDateTime.millisSinceEpoch == flightTime.millisSinceEpoch
+      case None =>
+        false
+    }
   }
 }
 

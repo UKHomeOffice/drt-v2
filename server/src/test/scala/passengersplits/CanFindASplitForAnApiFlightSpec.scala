@@ -5,13 +5,13 @@ import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
-import passengersplits.core.PassengerInfoRouterActor.{FlightNotFound, PassengerSplitsAck, ReportVoyagePaxSplit}
+import passengersplits.core.PassengerInfoRouterActor.{PassengerSplitsAck, ReportVoyagePaxSplit}
 import passengersplits.core.{Core, CoreActors}
 import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJson, VoyagePassengerInfo}
 import services.SDate
 import services.SDate.implicits._
-import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
-import spatutorial.shared.{PassengerQueueTypes, SDateLike}
+import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import spatutorial.shared.{ApiFlight, PassengerQueueTypes, SDateLike}
 
 class CanFindASplitForAnApiFlightSpec extends
   TestKit(ActorSystem("CanFindASplitForAnApiFlightSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
@@ -21,6 +21,43 @@ class CanFindASplitForAnApiFlightSpec extends
   ignoreMsg {
     case PassengerSplitsAck => true
   }
+
+
+  "Can parse an IATA to carrier code and voyage number" >> {
+    import spatutorial.shared.FlightParsing._
+    parseIataToCarrierCodeVoyageNumber("FR8364") === Some(("FR", "8364"))
+    parseIataToCarrierCodeVoyageNumber("RY836") === Some(("RY", "836"))
+    parseIataToCarrierCodeVoyageNumber("RY836F") === Some(("RY", "836"))
+  }
+//  "Can parse an IATA in an APIFlight" >> {
+//    import spatutorial.shared.FlightParsing._
+//    val flight = ApiFlight(
+//      Operator = "",
+//      Status = "",
+//      EstDT = "",
+//      ActDT = "",
+//      EstChoxDT = "",
+//      ActChoxDT = "",
+//      Gate = "",
+//      Stand = "",
+//      MaxPax = 0,
+//      ActPax = 0,
+//      TranPax = 0,
+//      RunwayID = "",
+//      BaggageReclaimId = "",
+//      FlightID = 1234,
+//      AirportID = "",
+//      Terminal = "",
+//      ICAO = "",
+//      IATA = "FR4567",
+//      Origin = "",
+//      PcpTime = 0,
+//      SchDT = ""
+//    )
+//
+//    flight.carrierCode === "FR"
+//    flight.voyageNumber === "4567"
+//  }
 
   "Should be able to find a flight" >> {
     "Given a single flight, with just one GBR passenger" in {

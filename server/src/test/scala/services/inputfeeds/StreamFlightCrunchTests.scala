@@ -1,7 +1,7 @@
 package services.inputfeeds
 
 import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.stream.testkit.TestSubscriber.Probe
@@ -258,7 +258,7 @@ class StreamFlightCrunchTests extends
 
     "we tell the crunch actor about flights when they change" in {
       import WorkloadCalculatorTests._
-      val flightsActor = system.actorOf(Props(classOf[FlightsActor], testActor), "flightsActor")
+      val flightsActor = system.actorOf(Props(classOf[FlightsActor], testActor, Actor.noSender), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights

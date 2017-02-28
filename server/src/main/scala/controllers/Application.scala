@@ -3,7 +3,7 @@ package controllers
 import java.net.URL
 import java.nio.ByteBuffer
 
-import actors.{CrunchActor, FlightsActor, GetFlights}
+import actors.{CrunchActor, FlightsActor, GetFlights, GetFlightsWithSplits}
 import akka.Done
 import akka.actor.Actor.Receive
 import akka.actor._
@@ -34,7 +34,7 @@ import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
@@ -88,10 +88,10 @@ trait SystemActors extends Core {
     splitProviders,
     () => DateTime.now()), "crunchActor")
 
-  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
+  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
 
   def splitProviders(): List[SplitsProvider]
 
@@ -370,6 +370,17 @@ class Application @Inject()(
       }
       fsFuture
     }
+
+    override def getFlightsWithSplits(start: Long, end: Long): Future[FlightsWithSplits] = {
+      val askable = ctrl.flightsActorAskable
+      log.info(s"asking $askable for flightsWithSplits")
+      implicit val timout = 100 seconds
+      val flights: Future[Any] = askable.ask(GetFlightsWithSplits)(timout)
+      val fsFuture = flights.collect {
+        case flightsWithSplits: FlightsWithSplits => flightsWithSplits
+      }
+      fsFuture
+    }
   }
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
@@ -393,7 +404,7 @@ class Application @Inject()(
   /// PassengerSplits reader
   val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
 
-  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170222"))
+  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170220"))
 
   //  val lhrfeed = LHRFlightFeed()
   //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))

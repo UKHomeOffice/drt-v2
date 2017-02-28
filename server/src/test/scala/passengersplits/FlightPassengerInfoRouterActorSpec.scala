@@ -5,12 +5,12 @@ import akka.testkit.{ImplicitSender, TestKit}
 import controllers.FilePolling
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
-import passengersplits.core.PassengerInfoRouterActor.{FlightNotFound, PassengerSplitsAck, ReportVoyagePaxSplit}
+import passengersplits.core.PassengerInfoRouterActor.{PassengerSplitsAck, ReportVoyagePaxSplit}
 import passengersplits.core.{Core, CoreActors}
 import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJson, VoyagePassengerInfo}
 import services.SDate
 import services.SDate.implicits._
-import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
+import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
 import spatutorial.shared.{PassengerQueueTypes, SDateLike}
 
 
