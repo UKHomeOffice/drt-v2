@@ -3,12 +3,12 @@ package passengersplits
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
-import controllers.FilePolling
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.core.PassengerInfoRouterActor.{PassengerSplitsAck, ReportVoyagePaxSplit}
 import passengersplits.core.{Core, CoreActors}
 import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJson, VoyagePassengerInfo}
+import passengersplits.polling.FilePolling
 import services.SDate
 import services.SDate.implicits._
 import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}

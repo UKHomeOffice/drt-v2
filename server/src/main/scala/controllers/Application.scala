@@ -10,7 +10,7 @@ import akka.actor._
 import akka.event._
 import akka.pattern._
 import akka.pattern.AskableActorRef
-import akka.stream.Materializer
+import akka.stream.{Graph, Materializer, SinkShape}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
@@ -30,6 +30,7 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.core.ZipUtils.UnzippedFileContent
+import passengersplits.polling.FilePolling
 import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -445,55 +446,6 @@ class Application @Inject()(
 }
 
 
-object FilePolling {
-  def beginPolling(log: LoggingAdapter, flightPassengerReporter: ActorRef, zipFilePath: String, initialFileFilter: Option[String])(implicit actorSystem: ActorSystem, mat: Materializer): Future[Done] = {
-    val statefulPoller = StatefulLocalFileSystemPoller(initialFileFilter, zipFilePath)
 
-    val promiseBatchDone = PromiseSignals.promisedDone
-    val eventualDone = promiseBatchDone.future
-
-    class CompletionMonitor(promise: Promise[Done]) extends Actor with ActorLogging {
-      def receive: Receive = {
-        case FlightPaxSplitBatchComplete(_) =>
-          log.info(s"$self FlightPaxSplitBatchComplete")
-          promise.complete(Try(Done))
-      }
-    }
-    val props = Props(classOf[CompletionMonitor], promiseBatchDone)
-    val completionMonitor = actorSystem.actorOf(props)
-
-
-    val completionMessage = FlightPaxSplitBatchComplete(completionMonitor)
-
-    val subscriberFlightActor = Sink.actorRefWithAck(flightPassengerReporter, FlightPaxSplitBatchInit, PassengerSplitsAck, completionMessage)
-
-    val unzipFlow = Flow[String].mapAsync(128)(statefulPoller.unzippedFileProvider.zipFilenameToEventualFileContent(_))
-      .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
-      .collect {
-        case Success(vpi) if vpi.ArrivalPortCode == "STN" => vpi
-      }.map(uzfc => {
-      log.info(s"VoyagePaxSplits ${uzfc.summary}")
-      uzfc
-    })
-
-    val unzippedSink = unzipFlow.to(subscriberFlightActor)
-    val i = 1
-
-    val runOnce = FileSystemAkkaStreamReading.runOnce(log)(statefulPoller.unzippedFileProvider) _
-
-    runOnce(i, (td) => {
-      log.info(s"Reading files finished")
-    }, statefulPoller.onNewFileSeen, unzippedSink)
-    eventualDone.onComplete {
-      case Success(complete) =>
-        log.info(s"FilePolling complete ${complete}")
-      case Failure(f) =>
-        log.error(f, s"FilePolling failed ${f}")
-
-    }
-    eventualDone
-    //    val resultOne = Await.result(promiseDone.future, 10 seconds)
-  }
-}
 
 

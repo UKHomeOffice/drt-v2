@@ -69,8 +69,13 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
       val inputStream: InputStream = zippedByteStream.runWith(
         StreamConverters.asInputStream(unzipTimeout)
       )(actorMaterializer)
-      val unzippedFileContent: List[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(new ZipInputStream(inputStream)).toList
-      unzippedFileContent.map(_.copy(zipFilename = Some(zipFileName)))
+      val unzippedStream = new ZipInputStream(inputStream)
+      try {
+        val unzippedFileContent: List[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(unzippedStream).toList
+        unzippedFileContent.map(_.copy(zipFilename = Some(zipFileName)))
+      } finally {
+        unzippedStream.close()
+      }
     } catch {
       case e: Throwable =>
         log.error(e, s"Error in S3Poller for ${zipFileName}: ")
@@ -178,38 +183,6 @@ object PromiseSignals {
 
 }
 
-trait PollingAtmosReader[-In, +Out] {
-  def log: LoggingAdapter
-
-  implicit val system: ActorSystem
-  implicit val mat: Materializer
-  implicit val executionContext: ExecutionContext
-
-  val statefulPoller = AtmosStatefulPoller()
-  val runOnce = FileSystemAkkaStreamReading.runOnce(log)(statefulPoller.unzippedFileProvider) _
-
-  val millisBetweenAttempts = 40000
-  val atMostForResponsesFromAtmos = 100000 seconds
-
-  import PromiseSignals._
-
-  def beginPolling[Mat2](sink: Graph[SinkShape[Any], Mat2]): Unit = {
-    for (i <- Range(0, Int.MaxValue)) {
-      log.info(s"Beginning run ${i}")
-      val unzipFlow = Flow[String].mapAsync(10)(statefulPoller.unzippedFileProvider.zipFilenameToEventualFileContent(_)).mapConcat(t => t)
-
-      val unzippedSink = unzipFlow.to(sink)
-      val myDonePromise = promisedDone
-      runOnce(i, (td) => myDonePromise.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
-      val resultOne = Await.result(myDonePromise.future, atMostForResponsesFromAtmos)
-      log.info(s"Got result ${i}")
-
-      //todo get rid of the sleep by inverting the flow such that this is triggered by a pulse, embrace the streams!
-      Thread.sleep(millisBetweenAttempts)
-    }
-  }
-}
-
 //case class S3PollingActor(bucket: String) extends Actor with S3Poller {
 //  val builder = S3StreamBuilder(new AmazonS3AsyncClient())
 //
@@ -301,7 +274,7 @@ object VoyagePassengerInfoParser {
   import PassengerInfoParser._
   import spray.json._
 
-  def parseVoyagePassengerInfo(content: String) = {
+  def parseVoyagePassengerInfo(content: String): Try[VoyagePassengerInfo] = {
     Try(content.parseJson.convertTo[VoyagePassengerInfo])
   }
 }

@@ -5,11 +5,11 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
-import controllers.FilePolling
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.core.PassengerInfoRouterActor.{PassengerSplitsAck, ReportVoyagePaxSplit}
 import passengersplits.core.{Core, CoreActors}
+import passengersplits.polling.FilePolling
 import services.SDate
 import spatutorial.shared.PassengerQueueTypes
 import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
