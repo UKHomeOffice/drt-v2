@@ -30,7 +30,7 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.polling.FilePolling
+import passengersplits.polling.{AtmosFilePolling, FilePolling}
 import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -121,6 +121,7 @@ case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
 
 case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
   flightFeed =>
+  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
   object EdiChroma {
     val ArrivalsHall1 = "A1"
@@ -143,7 +144,6 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
     }
   }
 
-  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
@@ -405,7 +405,8 @@ class Application @Inject()(
   /// PassengerSplits reader
   val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
 
-  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170220"))
+//  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170220"))
+  AtmosFilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, Some("drt_dq_170220"))
 
   //  val lhrfeed = LHRFlightFeed()
   //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))

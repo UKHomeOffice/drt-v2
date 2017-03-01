@@ -57,7 +57,7 @@ trait SimpleLocalFileSystemReader extends
 }
 
 
-object FileSystemAkkaStreamReading {
+object UnzipGraphStage {
   def testUnzipSink(log: LoggingAdapter)(runId: Int): Sink[String, Future[Done]] = Sink.foreach((fname: String) => {
     log.info(s"${runId} We'd unzip ${fname}")
     Thread.sleep(100)
@@ -66,12 +66,11 @@ object FileSystemAkkaStreamReading {
 
 
   // The caller will probably want to await a promise that is completed from signalDone
-  def runOnce[RD, RS](log: LoggingAdapter)(unzippedFileProvider: FilenameProvider)
+  def runOnce[RD, RS](log: LoggingAdapter)(firstPathsSource: Source[String, NotUsed])
                      (runId: Int,
                       signalDone: (Try[Done]) => Unit,
                       onNewFileSeen: (String) => Any,
                       unzipSink: Sink[String, RS])(implicit mat: Materializer): NotUsed = {
-    val firstPathsSource: Source[String, NotUsed] = unzippedFileProvider.latestFilePaths
 
     val updateLatestSeen: Sink[String, Future[Done]] = Sink.foreach(onNewFileSeen(_))
     val unzippyThings: Sink[String, RS] = unzipSink
@@ -132,10 +131,14 @@ case class StatefulLocalFileSystemPoller(initialLatestFile: Option[String] = Non
     override def zipFileNameFilter(filename: String) = statefulPoller.defaultFilenameFilter(filename)
   }
 
+  def zipFilenameToEventualFileContent(zipFilename: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] =  {
+    unzippedFileProvider.zipFilenameToEventualFileContent(zipFilename)(actorMaterializer, ec)
+  }
+
   val onNewFileSeen = outerNewFileSeen
 }
 
-case class AtmosStatefulPoller(initialLatestFile: Option[String] = None)(implicit outersystem: ActorSystem) {
+case class StatefulAtmosPoller(initialLatestFile: Option[String] = None)(implicit outersystem: ActorSystem) {
   val statefulPoller = new StatefulFilenameProvider(outersystem.log, initialLatestFile)
 
   val log = outersystem.log
@@ -148,5 +151,10 @@ case class AtmosStatefulPoller(initialLatestFile: Option[String] = None)(implici
 
     override def zipFileNameFilter(filename: String) = statefulPoller.defaultFilenameFilter(filename)
   }
+
+  def zipFilenameToEventualFileContent(zipFilename: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] =  {
+    unzippedFileProvider.zipFilenameToEventualFileContent(zipFilename)(actorMaterializer, ec)
+  }
+
   val onNewFileSeen: (String) => Unit = statefulPoller.outerNewFileSeen
 }
