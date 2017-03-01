@@ -5,7 +5,7 @@ import diode.RootModelRW
 import diode.data._
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.UserDeskRecFixtures._
-import spatutorial.client.services.{RootModel, UpdateDeskRecsTime, DeskRecTimeSlots, DeskRecTimeslot}
+import spatutorial.client.services.{RootModel, DeskRecTimeSlots, DeskRecTimeslot}
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._

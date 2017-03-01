@@ -41,12 +41,23 @@ object PortDeployment {
     Range(firstSec.toInt, firstSec.toInt + (60 * 60 * 24), 60)
   }
 
-  def portDeployments(portDeskRecs: List[(Long, List[(Int, TerminalName)])], staffAvailable: MilliDate => Int): List[(Long, List[(Int, TerminalName)])] = {
+  def terminalAutoDeployments(portDeskRecs: List[(Long, List[(Int, TerminalName)])], staffAvailable: MilliDate => Int): List[(Long, List[(Int, TerminalName)])] = {
     val roundToInt: (Double) => Int = _.toInt
     val deploymentsWithRounding = recsToDeployments(roundToInt) _
     portDeskRecs.map {
       case (millis, deskRecsWithTerminal) =>
         (millis, deploymentsWithRounding(deskRecsWithTerminal.map(_._1), staffAvailable(MilliDate(millis))).zip(deskRecsWithTerminal.map(_._2)).toList)
+    }
+  }
+
+  def terminalDeployments(portDeskRecs: List[(Long, List[(Int, TerminalName)])], staffAvailable: (TerminalName, MilliDate) => Int): List[(Long, List[(Int, TerminalName)])] = {
+    portDeskRecs.map {
+      case (millis, deskRecsWithTerminal) =>
+        val deploymentWithTerminal: List[(Int, TerminalName)] = deskRecsWithTerminal.map {
+          case (_, terminalName) => staffAvailable(terminalName, MilliDate(millis))
+        }.zip(deskRecsWithTerminal.map(_._2))
+
+        (millis, deploymentWithTerminal)
     }
   }
 

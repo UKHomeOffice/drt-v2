@@ -120,7 +120,10 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
-    for (tn <- airportConfig.terminalNames; qn <- airportConfig.queues) {
+    for {
+      tn <- airportConfig.terminalNames;
+      qn <- airportConfig.queues(tn)
+    } {
       val crunch: Future[CrunchResult] = performCrunch(tn, qn)
       crunch.onSuccess {
         case crunchResult =>

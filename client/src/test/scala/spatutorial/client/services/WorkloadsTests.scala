@@ -1,16 +1,13 @@
 package spatutorial.client.services
 
-import diode.data._
-import spatutorial.client.components.TableTerminalDeskRecs.{QueueDetailsRow, TerminalUserDeskRecsRow}
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared._
 import utest._
+
+import scala.collection.immutable.{IndexedSeq, Map}
 import scala.scalajs.js.Date
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 object WorkloadsTests extends TestSuite {
-
-  import spatutorial.client.TableViewUtils._
 
   def tests = TestSuite {
 

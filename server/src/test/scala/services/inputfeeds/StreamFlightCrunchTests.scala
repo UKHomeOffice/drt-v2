@@ -63,7 +63,7 @@ object CrunchTests {
         Map(
           PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
           PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60)),
-    queues = Seq("eeaDesk", "eGate"),
+    queues = Map("A1" -> Seq("eeaDesk", "eGate")),
     portCode = "EDI",
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5),
     terminalNames = Seq("A1")

@@ -8,6 +8,7 @@ import scala.util.{Failure, Success, Try}
 import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.shared.{MilliDate, SDateLike, StaffMovement}
+import spatutorial.shared.FlightsApi.TerminalName
 
 object JSDateConversions {
   implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
@@ -73,7 +74,7 @@ object JSDateConversions {
 
 }
 
-case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
+case class Shift(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
   def toCsv = {
     val startDate: SDateLike = SDate(startDt)
     val endDate: SDateLike = SDate(endDt)
@@ -81,7 +82,7 @@ case class Shift(name: String, startDt: MilliDate, endDt: MilliDate, numberOfSta
     val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
     val endTimeString = f"${endDate.getHours}%02d:${endDate.getMinutes}%02d"
 
-    s"$name,$startDateString,$startTimeString,$endTimeString,$numberOfStaff"
+    s"$name,$terminalName,$startDateString,$startTimeString,$endTimeString,$numberOfStaff"
   }
 }
 
@@ -89,7 +90,7 @@ object Shift {
 
   import JSDateConversions._
 
-  def apply(name: String, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[Shift] = {
+  def apply(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[Shift] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
@@ -105,7 +106,7 @@ object Shift {
       endDt <- endDtTry
       staffDelta: Int <- staffDeltaTry
     } yield {
-      Shift(name, startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta)
+      Shift(name, terminalName, startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta)
     }
   }
 
@@ -130,19 +131,24 @@ object Shift {
 
 case class ShiftParser(rawShifts: String) {
   val lines = rawShifts.split("\n")
-  val parsedShifts: Array[Try[Shift]] = lines.map(l => l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\""))
-    .filter(parts => parts.length == 4 || parts.length == 5)
+  val parsedShifts: Array[Try[Shift]] = lines.map(l => {
+    l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
+  })
+    .filter(parts => parts.length == 5 || parts.length == 6)
     .map {
-      case Array(description, startDay, startTime, endTime) =>
-        Shift(description, startDay, startTime, endTime)
-      case Array(description, startDay, startTime, endTime, staffNumberDelta) =>
-        Shift(description, startDay, startTime, endTime, staffNumberDelta)
+      case List(description, terminalName, startDay, startTime, endTime) =>
+        Shift(description, terminalName, startDay, startTime, endTime)
+      case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
+        Shift(description, terminalName, startDay, startTime, endTime, staffNumberDelta)
     }
 }
 
 case class ShiftService(shifts: Seq[Shift]) {
   def staffAt(date: MilliDate): Int = shifts.filter(shift =>
     (shift.startDt <= date && date <= shift.endDt)).map(_.numberOfStaff).sum
+  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = shifts.filter(shift => {
+    shift.startDt <= date && date <= shift.endDt && shift.terminalName == terminalName
+  }).map(_.numberOfStaff).sum
 }
 
 object ShiftService {
@@ -154,23 +160,14 @@ object ShiftService {
       Success(ShiftService(successfulShifts))
     }
   }
-
-  def groupPeopleByShiftTimes(shifts: Seq[Shift]) = {
-    shifts.groupBy(shift => (shift.startDt, shift.endDt, shift.name))
-      .map { case ((startDt, endDt, name), shifts) =>
-        Shift(name, startDt, endDt, shifts.map(_.numberOfStaff).sum)
-      }
-  }
 }
-
-
 
 object StaffMovements {
   def shiftsToMovements(shifts: Seq[Shift]) = {
     shifts.flatMap(shift => {
       val uuid: UUID = UUID.randomUUID()
-      StaffMovement(shift.name + " start", time = shift.startDt, shift.numberOfStaff, uuid) ::
-        StaffMovement(shift.name + " end", time = shift.endDt, -shift.numberOfStaff, uuid) :: Nil
+      StaffMovement(shift.terminalName, shift.name + " start", time = shift.startDt, shift.numberOfStaff, uuid) ::
+        StaffMovement(shift.terminalName, shift.name + " end", time = shift.endDt, -shift.numberOfStaff, uuid) :: Nil
     }).sortBy(_.time)
   }
 
@@ -179,5 +176,10 @@ object StaffMovements {
   def staffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(dateTime: MilliDate) = {
     val baseStaff = shiftService.staffAt(dateTime)
     baseStaff + adjustmentsAt(movements)(dateTime)
+  }
+
+  def terminalStaffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
+    val baseStaff = shiftService.terminalStaffAt(terminalName, dateTime)
+    baseStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
   }
 }

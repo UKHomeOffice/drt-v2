@@ -8,14 +8,13 @@ import japgolly.scalajs.react.vdom.svg.{all => s}
 import org.scalajs.dom.svg.{G, Text}
 import spatutorial.client.components.Heatmap.Series
 import spatutorial.client.logger._
-import spatutorial.client.modules.Dashboard
-import spatutorial.client.modules.Dashboard.QueueCrunchResults
 import spatutorial.client.services.HandyStuff.QueueStaffDeployments
+import spatutorial.client.services.RootModel.QueueCrunchResults
 import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
+import spatutorial.shared.FlightsApi._
 import spatutorial.shared._
 
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
 import scala.util.{Failure, Success, Try}
 
 
@@ -29,12 +28,7 @@ object TerminalHeatmaps {
           val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
           log.info(s"Got max workload of ${maxAcrossAllSeries}")
           <.div(
-            <.h4("heatmap of workloads"),
-            Heatmap.heatmap(Heatmap.Props(
-              series = heatMapSeries,
-              height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)
-            ))
+            Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
           )
         }))
     })
@@ -56,13 +50,11 @@ object TerminalHeatmaps {
       log.info(s"simulation result keys ${simulationResultMP().keys}")
       val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(terminalName, Map()), terminalName)
       <.div(
-        seriesPot.renderReady((queueSeries) => {
+        seriesPot.renderReady(queueSeries => {
           val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
           log.info(s"Got max waittime of ${maxAcrossAllSeries}")
           <.div(
-            <.h4("heatmap of wait times"),
-            Heatmap.heatmap(Heatmap.Props(series = queueSeries, height = 200,
-              scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+            Heatmap.heatmap(Heatmap.Props(series = queueSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
           )
         }))
     })
@@ -77,8 +69,7 @@ object TerminalHeatmaps {
     }.toList)
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
-        <.h4("heatmap of desk recommendations"),
-        Heatmap.heatmap(Heatmap.Props(series = serMP(), height = 200, scaleFunction = Heatmap.bucketScale(20)))
+        Heatmap.heatmap(Heatmap.Props(series = serMP(), scaleFunction = Heatmap.bucketScale(20)))
       )
     })
   }
@@ -101,10 +92,7 @@ object TerminalHeatmaps {
               seriesPot.renderReady(series => {
                 val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
                 <.div(
-                  <.h4("heatmap of ratio of desk rec to actual desks"),
-                  Heatmap.heatmap(Heatmap.Props(series = series, height = 200,
-                    scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries),
-                    valueDisplayFormatter = v => f"${v}%.1f")))
+                  Heatmap.heatmap(Heatmap.Props(series = series, scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries), valueDisplayFormatter = v => f"${v}%.1f")))
               }))
           })
         )
@@ -112,9 +100,19 @@ object TerminalHeatmaps {
     })
   }
 
+  def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
+    val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
+    val by15Minutes = queueWorkloadsByMinute.mapValues(
+      (v) => v.grouped(minutesPerGroup).map(_.sum).toList
+    )
+    by15Minutes
+  }
+
   def workloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
     log.info(s"!!!!looking up $terminalName in wls")
-    val queueWorkloads: Predef.Map[String, List[Double]] = Dashboard.chartDataFromWorkloads(terminalWorkloads, 60)
+    val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60)
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
     } yield {
@@ -174,12 +172,9 @@ object Heatmap {
 
   case class Series(name: String, data: IndexedSeq[Double])
 
-  case class Props(width: Int = 960, height: Int, numberOfBlocks: Int = 24,
-                   series: Seq[Series],
-                   scaleFunction: (Double) => Int,
-                   shouldShowRectValue: Boolean = true,
-                   valueDisplayFormatter: (Double) => String = _.toInt.toString
-                  )
+  case class Props(width: Int = 960, numberOfBlocks: Int = 24, series: Seq[Series], scaleFunction: (Double) => Int, shouldShowRectValue: Boolean = true, valueDisplayFormatter: (Double) => String = _.toInt.toString) {
+    def height = 50 * (series.length + 1)
+  }
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
     "#E0C54B", "#DD983A", "#DA6429", "#D72A18")
@@ -280,7 +275,7 @@ object Heatmap {
           s.svg(
             ^.key := "heatmap",
             s.height := props.height,
-            s.width := componentWidth, s.g(s.transform := "translate(200, 50)", rectsAndLabels.toList, hours.toList)))
+            s.width := componentWidth, s.g(s.transform := "translate(180, 50)", rectsAndLabels.toList, hours.toList)))
       } catch {
         case e: Exception =>
           log.error("Issue in heatmap", e)

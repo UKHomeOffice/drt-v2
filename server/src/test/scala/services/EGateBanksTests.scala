@@ -92,7 +92,7 @@ object EGateBanksTests extends TestSuite {
       val eGateBanks = List(1)
 
       val airportConfig = AirportConfig(
-        queues = Seq(),
+        queues = Map(),
         slaByQueue = Map("eeaDesk" -> 5),
         terminalNames = Seq(),
         defaultPaxSplits = SplitRatios(),
@@ -120,7 +120,7 @@ object EGateBanksTests extends TestSuite {
       val eGateBanks = List(1)
 
       val airportConfig = AirportConfig(
-        queues = Seq(),
+        queues = Map(),
         slaByQueue = Map("eGate" -> 5),
         terminalNames = Seq(),
         defaultPaxSplits = SplitRatios(),
