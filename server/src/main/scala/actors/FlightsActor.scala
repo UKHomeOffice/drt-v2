@@ -16,7 +16,7 @@ import akka.persistence._
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import services.SDate
 import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
-import spatutorial.shared.{ApiFlight, ApiFlightWithSplits, FlightParsing, SDateLike}
+import spatutorial.shared._
 import services.SDate.implicits._
 
 import scala.collection.immutable.Seq
@@ -62,22 +62,22 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
         val scheduledDate = SDate(flight.SchDT)
 
         FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
-          case Some((cc, voyageNumber)) =>
+          case Some((carrierCode, voyageNumber)) =>
 
             val future = splitsActor ? ReportVoyagePaxSplit(flight.AirportID,
               flight.Operator, voyageNumber, scheduledDate)
             future map {
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
-                ApiFlightWithSplits(flight, 1) // Right(vps))
+                val paxSplits = vps.paxSplits
+                ApiFlightWithSplits(flight, 1, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount))))
               case notFound: FlightNotFound =>
                 log.info(s"notgot splits for ${flight}")
-
-                ApiFlightWithSplits(flight, 0) //Left(FlightNotFound(flight.carrierCode, flight.voyageNumber, scheduledDate)))
+                ApiFlightWithSplits(flight, 0, ApiSplits(Nil))//Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
             }
           case None =>
             log.info(s"couldnot parse IATA for ${flight}")
-            Future.successful(ApiFlightWithSplits(flight, -1))  //Left(FlightNotFound(flight.carrierCode, flight.voyageNumber, scheduledDate)))
+            Future.successful(ApiFlightWithSplits(flight, -1, ApiSplits(Nil)))//Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
 
         }
       }

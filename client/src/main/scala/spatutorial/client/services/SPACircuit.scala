@@ -334,7 +334,9 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
       val crappySplits: Seq[Int] = flightsWithSplits.flights.map(_.i)
       val numberOfSplits: Double = crappySplits.toList.sum
       val filter = flightsWithSplits.flights.filter(fws => fws.i != 0)
-
+      if (flights.length > 0) {
+        flightsWithSplits.flights.foreach(f => log.info(s"splitsAre: ${f.apiFlight.IATA}-${f.apiFlight.SchDT}-${f.i} - ${f.splits}"))
+      }
       log.info(s"client got ${filter}")
       log.info(s"client got ${flights.length} flights and ${numberOfSplits} splits ${numberOfSplits / flights.length}")
       val result = if (value.isReady) {
