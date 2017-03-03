@@ -65,49 +65,49 @@ class ShiftsActorSpec extends Specification {
     "return the message it that was set if only one message is sent" in {
       val testKit2 = getTestKit
       val actor = testKit2.getActor
-      actor ! "first message"
-      
+      actor ! "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
+
       val result = testKit2.getStateAndShutdown(actor)
-      result == "first message"
+      result === "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
     }
 
     "return the most recent message if more than one message is sent" in {
       val testKit2 = getTestKit
       val actor = testKit2.getActor
-      actor ! "first message"
-      actor ! "second message"
+      actor ! "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
+      actor ! "another name, T1, 20/01/2017, 10:00, 20:00, 9"
       val result = testKit2.getStateAndShutdown(actor)
-      result == "second message"
+      result == "another name, T1, 20/01/2017, 10:00, 20:00, 9"
     }
 
     "restore the most recent message sent after a restart" in {
       val testKit1 = getTestKit
       val actor = testKit1.getActor
-      actor ! "first message"
-      actor ! "second message"
+      actor ! "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
+      actor ! "another name, T1, 20/01/2017, 10:00, 20:00, 9"
       testKit1.shutDownActorSystem
 
       val testKit2 = getTestKit
       val actor2 = testKit2.getActor
       val result = testKit2.getStateAndShutdown(actor2)
 
-      result == "second message"
+      result == "another name, T1, 20/01/2017, 10:00, 20:00, 9"
     }
 
     "return recent message if a message is sent after a restart" in {
 
       val testKit1 = getTestKit
       val actor = testKit1.getActor
-      actor ! "first message"
-      actor ! "second message"
+      actor ! "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
+      actor ! "another name, T1, 20/01/2017, 10:00, 20:00, 9"
       testKit1.shutDownActorSystem
 
       val testKit2 = getTestKit
       val actor2 = testKit2.getActor
-      actor2 ! "newest message"
+      actor2 ! "third name, T1, 20/01/2017, 10:00, 20:00, 9"
       val result = testKit2.getStateAndShutdown(actor2)
 
-      result == "newest message"
+      result == "third name, T1, 20/01/2017, 10:00, 20:00, 9"
     }
 
     "ShiftsPersistenceApi" should {
@@ -120,12 +120,12 @@ class ShiftsActorSpec extends Specification {
           val actorSystem = system
         }
 
-        shiftPersistenceApi.saveShifts("test shifts")
+        shiftPersistenceApi.saveShifts("shift name, T1, 20/01/2017, 10:00, 20:00, 9")
 
         awaitAssert({
           val resultFuture = shiftPersistenceApi.getShifts()
           val result = Await.result(resultFuture, 1 seconds)
-          assert("test shifts" == result)
+          assert("shift name, T1, 20/01/2017, 10:00, 20:00, 9" == result)
         }, 2 seconds)
       }
     }

@@ -2,7 +2,7 @@ package services
 
 import org.specs2.mutable.Specification
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
-
+import actors.ShiftsMessageParser._
 
 class ShiftsToProtoBufSpec extends Specification {
 
