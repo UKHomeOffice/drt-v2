@@ -7,8 +7,8 @@ import server.protobuf.messages.StaffMovementMessages.StaffMovementsMessage
 class FlightsProtoBufSerializer extends SerializerWithStringManifest {
   override def identifier: Int = 9002
 
-  override def manifest(o: AnyRef): String = {
-    o.getClass.getName
+  override def manifest(targetObject: AnyRef): String = {
+    targetObject.getClass.getName
   }
 
   final val manifestName = classOf[FlightsMessage].getName

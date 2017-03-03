@@ -7,8 +7,8 @@ class StaffMovementProtoBufSerializer extends SerializerWithStringManifest {
 
   override def identifier: Int = 9001
 
-  override def manifest(o: AnyRef): String = {
-    o.getClass.getName
+  override def manifest(targetObject: AnyRef): String = {
+    targetObject.getClass.getName
   }
 
   final val StaffMovementsManifest = classOf[StaffMovementsMessage].getName
