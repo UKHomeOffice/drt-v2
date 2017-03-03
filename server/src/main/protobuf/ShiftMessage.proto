@@ -1,0 +1,14 @@
+package server.protobuf.messages;
+
+message ShiftsMessage {
+    repeated ShiftMessage shifts = 1;
+}
+
+message ShiftMessage {
+    optional string name = 1;
+    optional string terminalName = 2;
+    optional string startDay = 3;
+    optional string startTime = 4;
+    optional string endTime = 5;
+    optional string numberOfStaff = 6;
+}
