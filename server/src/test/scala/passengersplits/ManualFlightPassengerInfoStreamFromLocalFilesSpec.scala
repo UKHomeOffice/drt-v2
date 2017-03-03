@@ -19,10 +19,10 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Success
 
-class FlightPassengerInfoStreamFromLocalFilesSpec extends
+class ManualFlightPassengerInfoStreamFromLocalFilesSpec extends
   TestKit(ActorSystem("localFileReadingTest", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
   test =>
-
+  skipAll
   isolated
   ignoreMsg {
     case PassengerSplitsAck => true
