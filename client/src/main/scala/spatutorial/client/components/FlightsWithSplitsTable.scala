@@ -1,26 +1,35 @@
 package spatutorial.client.components
 
+import diode.data.{Pot, Ready}
+import japgolly.scalajs.react.ReactComponentB
+import japgolly.scalajs.react.vdom.prefix_<^.{<, TagMod, ^}
+import spatutorial.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
+import spatutorial.shared.AirportInfo
+import spatutorial.shared.FlightsApi.FlightsWithSplits
+
 import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}
+import spatutorial.client.modules.{GriddleComponentWrapper, ViewTools}
 import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.{Flights}
 
-import scala.language.existentials
 import scala.scalajs.js
 
-object FlightsTable {
+object FlightsWithSplitsTable {
+  type Props = FlightsWithSplitsView.Props
+
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString())
     <.span(props.data.toString(), mod).render
   }
 
-  def reactTableFlightsAsJsonDynamic(flights: Flights): List[js.Dynamic] = {
-    flights.flights.map(f => {
+  def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
+    flights.flights.map(flightAndSplit => {
+      val f = flightAndSplit.apiFlight
       js.Dynamic.literal(
+        Splits = flightAndSplit.splits.toString,
         Operator = f.Operator,
         Status = f.Status,
         EstDT = makeDTReadable(f.EstDT),
@@ -44,7 +53,7 @@ object FlightsTable {
     })
   }
 
-  val component = ReactComponentB[FlightsView.Props]("FlightsTable")
+  val component = ReactComponentB[Props]("FlightsWithSplitsTable")
     .render_P(props => {
       val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
 
@@ -71,8 +80,5 @@ object FlightsTable {
       )
     }).build
 
-  def apply(props: FlightsView.Props) = component(props)
+  def apply(props: Props) = component(props)
 }
-
-
-

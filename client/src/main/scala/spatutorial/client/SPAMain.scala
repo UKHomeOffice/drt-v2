@@ -7,8 +7,7 @@ import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 import spatutorial.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
 import spatutorial.client.logger._
-import spatutorial.client.modules.FlightsView
-import spatutorial.client.modules.FlightsView._
+import spatutorial.client.modules.{FlightsView, FlightsWithSplitsView}
 import spatutorial.client.actions.Actions._
 import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
 import spatutorial.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
@@ -183,14 +182,14 @@ object SPAMain extends js.JSApp {
       renderR(ctl => {
         val airportWrapper = SPACircuit.connect(_.airportInfos)
         val flightsWrapper = SPACircuit.connect(m => m.flights)
-        airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
+        airportWrapper(airportInfoProxy => flightsWrapper(flightsProxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(flightsProxy.value, airportInfoProxy.value))))
       })
 
     val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
       renderR(ctl => {
         val airportWrapper = SPACircuit.connect(_.airportInfos)
         val flightsWrapper = SPACircuit.connect(m => m.flights)
-        airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsView(Props(proxy.value, airportInfoProxy.value))))
+        airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
       })
 
     val terminalDeps = dynamicRouteCT("#terminal-deps" / string("[a-zA-Z0-9]+")

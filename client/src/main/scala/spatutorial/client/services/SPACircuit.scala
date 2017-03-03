@@ -78,7 +78,7 @@ case class RootModel(
                       workload: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
-                      flights: Pot[Flights] = Empty,
+                      flights: Pot[FlightsWithSplits] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
@@ -301,34 +301,34 @@ case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
 
 case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
 
-class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingActionHandler(modelRW) {
+class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"client requesting flights $from $to")
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(10L seconds)
       val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
-    case UpdateFlights(flights) =>
-      log.info(s"client got ${flights.flights.length} flights")
-      val result = if (value.isReady) {
-        val oldFlights = value.get
-        val oldFlightsSet = oldFlights.flights.toSet
-        val newFlightsSet = flights.flights.toSet
-        if (oldFlightsSet != newFlightsSet) {
-          val airportCodes = flights.flights.map(_.Origin).toSet
-          //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
-          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
-          val allEffects = airportInfos
-          updated(Ready(flights), allEffects)
-        } else {
-          log.info("no changes to flights")
-          noChange
-        }
-      } else {
-        val airportCodes = flights.flights.map(_.Origin).toSet
-        updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
-      }
-      result
+//    case UpdateFlights(flights) =>
+//      log.info(s"client got ${flights.flights.length} flights")
+//      val result = if (value.isReady) {
+//        val oldFlights = value.get
+//        val oldFlightsSet = oldFlights.flights.toSet
+//        val newFlightsSet = flights.flights.toSet
+//        if (oldFlightsSet != newFlightsSet) {
+//          val airportCodes = flights.flights.map(_.Origin).toSet
+//          //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
+//          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
+//          val allEffects = airportInfos
+//          updated(Ready(flights), allEffects)
+//        } else {
+//          log.info("no changes to flights")
+//          noChange
+//        }
+//      } else {
+//        val airportCodes = flights.flights.map(_.Origin).toSet
+//        updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
+//      }
+//      result
     case UpdateFlightsWithSplits(flightsWithSplits) =>
       val flights = flightsWithSplits.flights.map(_.apiFlight)
       val crappySplits: Seq[Int] = flightsWithSplits.flights.map(_.i)
@@ -348,14 +348,14 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingAction
           //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
           val allEffects = airportInfos
-          updated(Ready(Flights(flights)), allEffects)
+          updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
           noChange
         }
       } else {
         val airportCodes = flights.map(_.Origin).toSet
-        updated(Ready(Flights(flights)), Effect(Future(GetAirportInfos(airportCodes))))
+        updated(Ready(flightsWithSplits), Effect(Future(GetAirportInfos(airportCodes))))
       }
       result
     case UpdateFlightPaxSplits(Left(failure)) =>

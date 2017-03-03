@@ -61,6 +61,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
       val allSplitRequests: Seq[Future[ApiFlightWithSplits]] = apiFlights map { flight =>
         val scheduledDate = SDate(flight.SchDT)
 
+        val AdvPaxInfo = "advPaxInfo"
         FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
           case Some((carrierCode, voyageNumber)) =>
 
@@ -70,14 +71,14 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
                 val paxSplits = vps.paxSplits
-                ApiFlightWithSplits(flight, 1, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount))))
+                ApiFlightWithSplits(flight, 1, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo))
               case notFound: FlightNotFound =>
                 log.info(s"notgot splits for ${flight}")
-                ApiFlightWithSplits(flight, 0, ApiSplits(Nil))//Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
+                ApiFlightWithSplits(flight, 0, ApiSplits(Nil, AdvPaxInfo))//Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
             }
           case None =>
             log.info(s"couldnot parse IATA for ${flight}")
-            Future.successful(ApiFlightWithSplits(flight, -1, ApiSplits(Nil)))//Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
+            Future.successful(ApiFlightWithSplits(flight, -1, ApiSplits(Nil, AdvPaxInfo)))//Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
 
         }
       }
