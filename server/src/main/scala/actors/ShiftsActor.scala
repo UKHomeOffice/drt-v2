@@ -2,8 +2,7 @@ package actors
 
 import akka.persistence._
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.MilliDate
+import org.slf4j.LoggerFactory
 
 case class ShiftsState(events: List[String] = Nil) {
   def updated(data: String): ShiftsState = copy(data :: events)
@@ -16,22 +15,28 @@ case class ShiftsState(events: List[String] = Nil) {
 case object GetState
 
 object ShiftsMessageParser {
-  def shiftStringToShiftMessage(shift: String): ShiftMessage = {
+  val log = LoggerFactory.getLogger(getClass)
+
+  def shiftStringToShiftMessage(shift: String): Option[ShiftMessage] = {
     shift.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim) match {
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
-        ShiftMessage(
+        Some(ShiftMessage(
           Some(description),
           Some(terminalName),
           Some(startDay),
           Some(startTime),
           Some(endTime),
           Some(staffNumberDelta)
-        )
+        ))
+      case _ =>
+        log.warn(s"Couldn't parse shifts line: '$shift'")
+        None
     }
   }
 
   def shiftsStringToShiftsMessage(shifts: String): ShiftsMessage = {
-    ShiftsMessage(shifts.split("\n").map(shiftStringToShiftMessage))
+    val shiftMessages = shifts.split("\n").map(shiftStringToShiftMessage).collect{ case Some(x) => x }
+    ShiftsMessage(shiftMessages)
   }
 
   def shiftsMessageToShiftsString(shiftsMessage: ShiftsMessage) = {

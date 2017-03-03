@@ -11,14 +11,13 @@ class ShiftsToProtoBufSpec extends Specification {
       val shiftString = "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
       val shiftMessage = shiftStringToShiftMessage(shiftString)
 
-      val expected = ShiftMessage(
+      val expected = Some(ShiftMessage(
         Some("shift name"),
         Some("T1"),
         Some("20/01/2017"),
         Some("10:00"),
         Some("20:00"),
-        Some("9")
-      )
+        Some("9")))
 
       shiftMessage === expected
     }
@@ -39,8 +38,7 @@ class ShiftsToProtoBufSpec extends Specification {
           Some("shift name"), Some("T1"), Some("20/01/2017"), Some("10:00"), Some("20:00"), Some("5")
         ), ShiftMessage(
           Some("shift name"), Some("T1"), Some("20/01/2017"), Some("10:00"), Some("20:00"), Some("9")
-        )
-      ))
+        )))
 
       shiftsMessage === expected
     }

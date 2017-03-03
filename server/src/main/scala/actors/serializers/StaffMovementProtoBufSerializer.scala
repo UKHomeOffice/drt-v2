@@ -13,8 +13,8 @@ class StaffMovementProtoBufSerializer extends SerializerWithStringManifest {
 
   final val StaffMovementsManifest = classOf[StaffMovementsMessage].getName
 
-  override def toBinary(o: AnyRef): Array[Byte] = {
-    o match {
+  override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
+    objectToSerialize match {
       case sms: StaffMovementsMessage => sms.toByteArray
     }
   }

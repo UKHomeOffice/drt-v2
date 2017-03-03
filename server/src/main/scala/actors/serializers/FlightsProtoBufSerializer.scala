@@ -13,8 +13,8 @@ class FlightsProtoBufSerializer extends SerializerWithStringManifest {
 
   final val manifestName = classOf[FlightsMessage].getName
 
-  override def toBinary(o: AnyRef): Array[Byte] = {
-    o match {
+  override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
+    objectToSerialize match {
       case sms: FlightsMessage => sms.toByteArray
     }
   }
