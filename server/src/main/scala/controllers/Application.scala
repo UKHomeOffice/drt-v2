@@ -403,10 +403,9 @@ class Application @Inject()(
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   /// PassengerSplits reader
-  val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
-
-//  FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170220"))
-  AtmosFilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, Some("drt_dq_170220"))
+  //    val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
+  //    FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170302"))
+  AtmosFilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, Some("drt_dq_17030"))
 
   //  val lhrfeed = LHRFlightFeed()
   //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))

@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.SpecificationLike
+import passengersplits.core.PassengerInfoRouterActor
 import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 
@@ -36,6 +37,17 @@ class PaxSplitsProviderTests extends SpecificationLike {
       PcpTime = 0,
       SchDT = schDT
     )
+
+  "Voyage Number should be padded to 4 digits" >> {
+    "3 digits should pad to 4" in {
+    PassengerInfoRouterActor.padTo4Digits("123") === "0123"}
+    "4 digitis should remain 4 " in {
+      PassengerInfoRouterActor.padTo4Digits("0123") === "0123"
+    }
+    "we think 5 is invalid, but we should return unharmed" in {
+      PassengerInfoRouterActor.padTo4Digits("45123") === "45123"
+    }
+  }
 
   "Splits from multiple providers" >> {
 

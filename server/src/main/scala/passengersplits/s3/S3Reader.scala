@@ -70,12 +70,12 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
         StreamConverters.asInputStream(unzipTimeout)
       )(actorMaterializer)
       val unzippedStream = new ZipInputStream(inputStream)
-      try {
+//      try {
         val unzippedFileContent: List[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(unzippedStream).toList
         unzippedFileContent.map(_.copy(zipFilename = Some(zipFileName)))
-      } finally {
-        unzippedStream.close()
-      }
+//      } finally {
+      //        unzippedStream.close()
+      //      }
     } catch {
       case e: Throwable =>
         log.error(e, s"Error in S3Poller for ${zipFileName}: ")

@@ -34,6 +34,17 @@ object PassengerInfoRouterActor {
 
   case object PassengerSplitsAck
 
+  def padTo4Digits(voyageNumber: String): String = {
+    val prefix = voyageNumber.length match {
+      case 4 => ""
+      case 3 => "0"
+      case 2 => "00"
+      case 1 => "000"
+      case _ => ""
+    }
+    prefix + voyageNumber
+  }
+
 }
 
 trait SimpleRouterActor[C <: Actor] {
@@ -122,7 +133,8 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
   }
 
   def childName(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDt: SDateLike) = {
-    s"flight-pax-calculator-$port-$voyageNumber-$scheduledArrivalDt"
+    val paddedVoyageNumber = padTo4Digits(voyageNumber)
+    s"flight-pax-calculator-$port-$paddedVoyageNumber-$scheduledArrivalDt"
   }
 }
 
@@ -151,12 +163,15 @@ class SingleFlightActor
       sender ! PassengerSplitsAck
 
 
-    case ReportVoyagePaxSplit(port, carrierCode, voyageNumber, scheduledArrivalDateTime) =>
+    case ReportVoyagePaxSplit(port, carrierCode, requestedVoyageNumber, scheduledArrivalDateTime) =>
+      val replyTo = sender()
+      val paddedVoyageNumber = padTo4Digits(requestedVoyageNumber)
 
-      log.info(s"I am ${latestMessage.map(_.summary)}: Report flight split for $port $carrierCode $voyageNumber $scheduledArrivalDateTime")
+
+      log.info(s"I am ${latestMessage.map(_.summary)}: ReportVoyagePaxSplit for $port $carrierCode $paddedVoyageNumber $scheduledArrivalDateTime")
       //      log.info(s"Current flights ${latestMessage}")
 
-      def matches: (VoyagePassengerInfo) => Boolean = (flight) => doesFlightMatch(carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
+      def matches: (VoyagePassengerInfo) => Boolean = (flight) => doesFlightMatch(carrierCode, paddedVoyageNumber, scheduledArrivalDateTime, flight)
 
       val matchingFlights: Option[VoyagePassengerInfo] = latestMessage.find {
         (flight) => {
@@ -166,9 +181,10 @@ class SingleFlightActor
       matchingFlights match {
         case Some(flight) =>
           log.info(s"Matching flight is ${flight.summary}")
-          calculateAndSendPaxSplits(sender, port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
+          log.info(s"matching and replyTo ${replyTo} sender ${sender}")
+          calculateAndSendPaxSplits(sender, port, carrierCode, requestedVoyageNumber, scheduledArrivalDateTime, flight)
         case None =>
-          sender ! FlightNotFound(carrierCode, voyageNumber, scheduledArrivalDateTime)
+          replyTo ! FlightNotFound(carrierCode, requestedVoyageNumber, scheduledArrivalDateTime)
       }
     case report: ReportVoyagePaxSplitBetween =>
       log.info(s"Looking for flights between $report")
@@ -180,7 +196,7 @@ class SingleFlightActor
       })
       matchingFlights match {
         case Some(f) =>
-          calculateAndSendPaxSplits(sender, f.ArrivalPortCode, f.CarrierCode, f.VoyageNumber,
+          calculateAndSendPaxSplits(sender, f.ArrivalPortCode, f.CarrierCode, padTo4Digits(f.VoyageNumber),
             f.scheduleArrivalDateTime.get, f)
         case None => sender ! FlightsNotFound
       }
@@ -198,12 +214,14 @@ class SingleFlightActor
   def calculateAndSendPaxSplits(replyTo: ActorRef,
                                 port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Unit = {
     val splits: VoyagePaxSplits = calculateFlightSplits(port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
+    log.info(s"$self ${flight.summary} calculated splits to $splits")
+
     replyTo ! splits
-    log.info(s"$self sent response")
+    log.info(s"$self sent response $splits")
   }
 
   def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo) = {
-    log.info(s"$self calculating splits")
+    log.info(s"$self calculating splits $port $carrierCode $voyageNumber ${scheduledArrivalDateTime.toString}")
     val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
       convertPassengerInfoToPaxQueueCounts(flight.PassengerList)
     VoyagePaxSplits(port,
@@ -217,11 +235,13 @@ class SingleFlightActor
   }
 
   def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Boolean = {
-    log.info(s"match? $carrierCode-$voyageNumber@$scheduledArrivalDateTime vs ${flight.summary}")
+    val paddedVoyageNumber = padTo4Digits(voyageNumber)
+    log.info(s"match? $carrierCode-$paddedVoyageNumber@$scheduledArrivalDateTime vs ${flight.summary}")
     val timeOpt = flight.scheduleArrivalDateTime
     timeOpt match {
       case Some(flightTime) =>
-        flight.VoyageNumber == voyageNumber &&
+        val paddedFlightVoyageNumber = padTo4Digits(flight.VoyageNumber)
+        paddedFlightVoyageNumber == paddedVoyageNumber &&
           //carrierCode == flight.CarrierCode &&
           scheduledArrivalDateTime.millisSinceEpoch == flightTime.millisSinceEpoch
       case None =>
