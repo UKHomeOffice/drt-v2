@@ -7,14 +7,14 @@ import sys.process._
 class LHRFeedSpec extends Specification {
   "Something" should {
     "do something" in {
-j      val username = ConfigFactory.load.getString("lhr_live_username")
+      val username = ConfigFactory.load.getString("lhr_live_username")
       val password = ConfigFactory.load.getString("lhr_live_password")
 
-      val curlCommand = Seq("ssh", "jva01.dev.drt", "lhr-login", "-u", username, "-p", password)
+      val curlCommand = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password)
 
-      val cookie = curlCommand.!!
+      val csvContents = curlCommand.!!
 
-      println(cookie)
+      println(csvContents)
 
       true
     }
