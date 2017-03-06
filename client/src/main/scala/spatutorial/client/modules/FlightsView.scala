@@ -145,11 +145,31 @@ object FlightsWithSplitsView {
                       "ActChoxDT",
                       "MaxPax",
                       "ActPax",
-                      "Terminal" ,
-                      "Splits"
-                    )
+                      "Splits advPaxInfo total",
 
-                  )
+                      "Terminal",
+                      "Splits desk eea-non-machine-readable",
+                      "Splits desk national-visa",
+                      "Splits desk national-non-visa",
+                      "Splits desk eea-machine-readable",
+                      "Splits nationalsDesk national-non-visa",
+                      "Splits egate eea-machine-readable"
+                      //                      "Splits.abc-123"
+                    ))
+
+  //
+  //  object Desks {
+  //    val eeaDesk = "desk"
+  //    val egate = "egate"
+  //    val nationalsDesk = "nationalsDesk"
+  //  }
+  //
+  //  object PaxTypes {
+  //    val EEANONMACHINEREADABLE = "eea-non-machine-readable"
+  //    val NATIONALVISA = "national-visa"
+  //    val EEAMACHINEREADABLE = "eea-machine-readable"
+  //    val NATIONALNONVISA = "national-non-visa"
+  //  }
 
   case class State(
                     flights: ReactConnectProxy[Pot[FlightsWithSplits]],
