@@ -19,6 +19,7 @@ import scala.scalajs.js
 import scala.scalajs.js.Object
 
 object FlightsWithSplitsTable {
+
   type Props = FlightsWithSplitsView.Props
 
 
@@ -47,33 +48,24 @@ object FlightsWithSplitsTable {
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
     flights.flights.map(flightAndSplit => {
-      //      logger.log.info(s"calcing split row")
       val f = flightAndSplit.apiFlight
       val literal = js.Dynamic.literal
       val splitsTuples: Map[String, Int] = flightAndSplit.splits
         .splits.groupBy(split => split.queueType + " " + split.passengerType).map(x => (x._1, x._2.map(_.paxCount).sum))
-      import scala.scalajs.js.JSConverters._
-      //      val splits = splitsTuples
-      //      logger.log.info(s"splitTuples ${splits}")
-      val deskEeaNonMachineReadable = "desk eea-non-machine-readable"
-      val deskNationalVisa = "desk national-visa"
-      val deskEea = "desk eea-machine-readable"
-      val deskNationalNonVisa = "desk national-non-visa"
-      val nationalsDesk = "nationalsDesk national-non-visa"
-      val egate = "egate eea-machine-readable"
+
+      import spatutorial.shared.DeskAndPaxTypeCombinations._
 
       val total = "advPaxInfo total"
+      val keys = splitsTuples.keys
 
       def splitsField(fieldName: String): (String, scalajs.js.Any) = {
-        //        logger.log.info(s"looking up ${fieldName}")
-        "Splits " + fieldName -> (splitsTuples.getOrElse(fieldName, 0)).toString
+        "Splits " + fieldName -> Int.box(splitsTuples.getOrElse(fieldName, 0))
       }
 
       literal(
         splitsField(deskEeaNonMachineReadable),
-        splitsField(deskNationalVisa),
-        splitsField(deskNationalNonVisa),
-        splitsField(nationalsDesk),
+        splitsField(nationalsDeskVisa),
+        splitsField(nationalsDeskNonVisa),
         splitsField(egate),
         splitsField(deskEea),
         "Splits " + total -> splitsTuples.values.sum,
@@ -117,7 +109,6 @@ object FlightsWithSplitsTable {
       }
 
       val columnMeta = Some(Seq(
-        new GriddleComponentWrapper.ColumnMeta("Splits", customComponent = splitComponent()),
         new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
       <.div(^.className := "table-responsive timeslot-flight-popover",
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),

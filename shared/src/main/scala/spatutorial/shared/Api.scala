@@ -10,6 +10,14 @@ import scala.collection.immutable._
 import scala.concurrent.Future
 
 
+object DeskAndPaxTypeCombinations {
+  val egate = "egate eea-machine-readable"
+  val deskEeaNonMachineReadable = "desk eea-non-machine-readable"
+  val deskEea = "desk eea-machine-readable"
+  val nationalsDeskVisa = "nationalsDesk national-visa"
+  val nationalsDeskNonVisa = "nationalsDesk national-non-visa"
+}
+
 case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
   def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
 }
