@@ -159,6 +159,31 @@ object AirportConfigs {
       "Evening shift, T1, {date}, 17:00, 23:59, 22"
     )
   )
+  val lhr = AirportConfig(
+    portCode = "LHR",
+    queues = Map(
+      "T2" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "T3" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "T4" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "T5" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
+    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 10, "nonEeaDesk" -> 45),
+    terminalNames = Seq("T2", "T3", "T4", "T5"),
+    defaultPaxSplits = defaultPaxSplits,
+    defaultProcessingTimes = Map(
+      "T2" -> defaultProcessingTimes,
+      "T3" -> defaultProcessingTimes,
+      "T4" -> defaultProcessingTimes,
+      "T5" -> defaultProcessingTimes
+    ),
+    shiftExamples = Seq(
+      "Midnight shift, T2, {date}, 00:00, 00:59, 25",
+      "Night shift, T2, {date}, 01:00, 06:59, 10",
+      "Morning shift, T2, {date}, 07:00, 13:59, 30",
+      "Afternoon shift, T2, {date}, 14:00, 16:59, 18",
+      "Evening shift, T2, {date}, 17:00, 23:59, 22"
+    )
+  )
   val ltn = AirportConfig(
     portCode = "LTN",
     queues = Map(
@@ -170,7 +195,7 @@ object AirportConfigs {
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
   )
 
-  val allPorts = edi :: stn :: man :: ltn :: Nil
+  val allPorts = edi :: stn :: man :: ltn :: lhr :: Nil
   val confByPort = allPorts.map(c => (c.portCode, c)).toMap
 }
 

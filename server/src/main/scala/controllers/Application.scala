@@ -1,6 +1,5 @@
 package controllers
 
-import java.net.URL
 import java.nio.ByteBuffer
 
 import actors.{CrunchActor, FlightsActor, GetFlights}
@@ -27,10 +26,9 @@ import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
-import views.html.defaultpages.notFound
-import sys.process._
+import spatutorial.shared.{Api, ApiFlight, CrunchResult, _}
 
+import sys.process._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
@@ -210,16 +208,27 @@ object LHRFlightFeed {
     pattern.parseDateTime(dateString)
   }
 
-  def apply(csvString: String): LHRFlightFeed = {
-
-    LHRFlightFeed(csvString.split("\n").toIterator)
-  }
-
-  def apply(): LHRFlightFeed = {
+  def apply(): Source[List[ApiFlight], Cancellable] = {
     val username = ConfigFactory.load.getString("lhr_live_username")
     val password = ConfigFactory.load.getString("lhr_live_password")
-    val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
-    LHRFlightFeed(csvContents)
+
+    println(s"preparing lhrfeed")
+
+    val pollFrequency = 1 minute
+    val initialDelayImmediately: FiniteDuration = 1 milliseconds
+    val tickingSource: Source[Source[List[ApiFlight], NotUsed], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+      .map((t) => {
+        println(s"about to request csv")
+        val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
+        println(s"Got csvContents: $csvContents")
+        val f = LHRFlightFeed(csvContents.split("\n").toIterator).copiedToApiFlights
+        println(s"copied to api flights")
+        f
+      })
+
+    val recoverableTicking: Source[List[ApiFlight], Cancellable] = tickingSource.flatMapConcat(s => s.map(x => x))
+
+    recoverableTicking
   }
 }
 
@@ -242,7 +251,7 @@ case class LHRFlightFeed(csvLines: Iterator[String]) {
         println(s"length ${splitRow.length} $l")
         val sq: (String) => String = (x) => x
         LHRLiveFlight(
-          term = sq(splitRow(0)),
+          term = s"T${sq(splitRow(0))}",
           flightCode = sq(splitRow(1)),
           operator = sq(splitRow(2)),
           from = sq(splitRow(3)),
@@ -382,18 +391,12 @@ class Application @Inject()(
     case "EDI" =>
       ChromaFlightFeed(log, fetcher).chromaEdiFlights().map(Flights(_))
     case "LHR" =>
-      LHRFlightFeed("").copiedToApiFlights.map(Flights(_))
+      LHRFlightFeed().map(Flights(_))
     case _ =>
       ChromaFlightFeed(log, fetcher).chromaVanillaFlights().map(Flights(_))
   }
 
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
-
-  //  val lhrfeed = LHRFlightFeed()
-  //  lhrfeed.copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
-
-  //  val copiedToApiFlights = apiFlightCopy(ediMapping).map(Flights(_))
-  //  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))
