@@ -108,10 +108,12 @@ lazy val server = (project in file("server"))
     publishArtifact in (Compile, packageDoc) := false,
     // Disable source jar for this project (useless)
     publishArtifact in (Compile, packageSrc) := false,
-    javaOptions += "-Xmx3G",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
-    LessKeys.compress in Assets := true
+    LessKeys.compress in Assets := true,
+    PB.targets in Compile := Seq(
+      scalapb.gen() -> (sourceManaged in Compile).value
+    )
   )
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
@@ -120,14 +122,15 @@ lazy val server = (project in file("server"))
 
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
-  state => "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
-    "client/clean" ::
-    "client/test" ::
-    "server/clean" ::
-    "server/test" ::
-    "server/dist" ::
-    "set elideOptions in client := Seq()" ::
-    state
+  state =>
+    "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
+      "client/clean" ::
+      "client/test" ::
+      "server/clean" ::
+      "server/test" ::
+      "server/dist" ::
+      "set elideOptions in client := Seq()" ::
+      state
 }
 
 fork in run := true

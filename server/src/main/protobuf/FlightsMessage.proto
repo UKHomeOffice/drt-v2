@@ -1,0 +1,29 @@
+package server.protobuf.messages;
+
+message FlightsMessage {
+    repeated FlightMessage flightMessages = 1;
+}
+
+message FlightMessage {
+    optional string Operator = 1;
+    optional string EstChoxDT = 2;
+    optional string Gate = 3;
+    optional string ActDT = 4;
+    optional string EstDT = 5;
+    optional string ActChoxDT = 6;
+    optional string Stand = 7;
+    optional string Status = 8;
+    optional int32 MaxPax = 9;
+    optional int32 ActPax = 10;
+    optional int32 TranPax = 11;
+    optional string RunwayID = 12;
+    optional string BaggageReclaimId = 13;
+    optional int32 FlightID = 14;
+    optional string AirportID = 15;
+    optional string Terminal = 16;
+    optional string ICAO = 17;
+    optional string IATA = 18;
+    optional string Origin = 19;
+    optional string SchDT = 20;
+    optional int64 PcpTime = 21;
+}

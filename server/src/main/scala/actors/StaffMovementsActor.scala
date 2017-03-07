@@ -1,7 +1,11 @@
 package actors
 
+import java.util.UUID
+
 import akka.persistence._
-import spatutorial.shared.StaffMovement
+import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage}
+import spatutorial.shared.{MilliDate, StaffMovement}
+
 import scala.collection.immutable.Seq
 
 case class StaffMovements(staffMovements: Seq[StaffMovement])
@@ -23,18 +27,36 @@ class StaffMovementsActor extends PersistentActor {
     }
 
     val receiveRecover: Receive = {
-      case data: StaffMovements  =>
-        updateState(data)
+      case smm: StaffMovementsMessage =>
+        updateState(StaffMovements(smm.staffMovements.map(sm => StaffMovement(
+          sm.terminalName.getOrElse(""),
+          sm.reason.getOrElse(""),
+          MilliDate(sm.time.getOrElse(0)),
+          sm.delta.getOrElse(0),
+          UUID.fromString(sm.uUID.getOrElse("")),
+          sm.queueName
+        )).toList))
       case SnapshotOffer(_, snapshot: StaffMovementsState) => state = snapshot
     }
 
     val receiveCommand: Receive = {
       case GetState =>
         sender() ! state.events.headOption.getOrElse("")
-      case data: StaffMovements =>
-        persist(data) { event =>
-          updateState(event)
-          context.system.eventStream.publish(event)
+      case staffMovements: StaffMovements =>
+        val staffMovementsMessage = StaffMovementsMessage(staffMovements.staffMovements.map(sm =>
+          StaffMovementMessage(
+            Some(sm.terminalName),
+            Some(sm.reason),
+            Some(sm.time.millisSinceEpoch),
+            Some(sm.delta),
+            Some(sm.uUID.toString),
+            sm.queue
+          )
+        ))
+        persist(staffMovementsMessage) { (staffMovementsMessage: StaffMovementsMessage) =>
+          context.system.eventStream.publish(staffMovementsMessage)
         }
+        updateState(staffMovements)
+
     }
   }
