@@ -4,6 +4,7 @@ import java.net.URL
 import java.nio.ByteBuffer
 
 import actors.{CrunchActor, FlightsActor, GetFlights}
+import akka.NotUsed
 import akka.actor._
 import akka.event._
 import akka.pattern._
@@ -28,6 +29,7 @@ import services._
 import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
+import sys.process._
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -200,13 +202,28 @@ case class LHRCsvException(originalLine: String, idx: Int, innerException: Throw
 }
 
 object LHRFlightFeed {
-  def parseDateTime(dateString: String) = pattern.parseDateTime(dateString)
-
   val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
+
+  def parseDateTime(dateString: String) = {
+
+    println(s"Trying to parse date '$dateString'")
+    pattern.parseDateTime(dateString)
+  }
+
+  def apply(csvString: String): LHRFlightFeed = {
+
+    LHRFlightFeed(csvString.split("\n").toIterator)
+  }
+
+  def apply(): LHRFlightFeed = {
+    val username = ConfigFactory.load.getString("lhr_live_username")
+    val password = ConfigFactory.load.getString("lhr_live_password")
+    val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
+    LHRFlightFeed(csvContents)
+  }
 }
 
-case class LHRFlightFeed() {
-  val csvFile = "/LHR_DMNDDET_20161022_0547.csv"
+case class LHRFlightFeed(csvLines: Iterator[String]) {
 
   def opt(s: String) = if (s.isEmpty) None else Option(s)
 
@@ -217,25 +234,34 @@ case class LHRFlightFeed() {
   def optInt(s: String) = if (s.isEmpty) None else Option(s.toInt)
 
   lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
-    val resource: URL = getClass.getResource(csvFile)
-    val bufferedSource = scala.io.Source.fromURL(resource)
-    bufferedSource.getLines().zipWithIndex.drop(1).map { case (l, idx) =>
+
+    csvLines.zipWithIndex.drop(1).map { case (l, idx) =>
 
       val t = Try {
-        val splitRow: Array[String] = l.split(",", -1)
+        val splitRow: Array[String] = l.substring(1, l.length - 1).split("\",\"")
         println(s"length ${splitRow.length} $l")
         val sq: (String) => String = (x) => x
-        LHRLiveFlight(sq(splitRow(0)), sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)),
-          sq(splitRow(4)), pd(splitRow(5)),
-          opt(splitRow(6)), opt(splitRow(7)), opt(splitRow(8)), opt(sq(splitRow(9))),
-          opt(splitRow(10)),
-          optInt(splitRow(11)),
-          optInt(splitRow(12)),
-          optInt(splitRow(13)))
+        LHRLiveFlight(
+          term = sq(splitRow(0)),
+          flightCode = sq(splitRow(1)),
+          operator = sq(splitRow(2)),
+          from = sq(splitRow(3)),
+          airportName = sq(splitRow(4)),
+          scheduled = pd(splitRow(5)),
+          estimated = opt(splitRow(6)),
+          touchdown = opt(splitRow(7)),
+          estChox = opt(splitRow(8)),
+          actChox = opt(sq(splitRow(9))),
+          stand = opt(splitRow(10)),
+          maxPax = optInt(splitRow(11)),
+          actPax = optInt(splitRow(12)),
+          connPax = optInt(splitRow(13)))
       }
       t match {
         case Success(s) => Success(s)
-        case Failure(t) => Failure(LHRCsvException(l, idx, t))
+        case Failure(t) =>
+          println(s"The failure is $t")
+          Failure(LHRCsvException(l, idx, t))
       }
     }
   }
@@ -243,9 +269,8 @@ case class LHRFlightFeed() {
 
   lazy val successfulFlights = lhrFlights.collect { case Success(s) => s }
 
-  lazy val copiedToApiFlights = Source(
+  lazy val copiedToApiFlights: Source[List[ApiFlight], NotUsed] = Source(
     List(
-      List[ApiFlight](),
       successfulFlights.map(flight => {
         val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
         val schDtIso = flight.scheduled.toDateTimeISO().toString()
@@ -272,7 +297,7 @@ case class LHRFlightFeed() {
           Origin = flight.airportName,
           SchDT = schDtIso,
           PcpTime = pcpTime)
-      }).toList)).map(x => FlightsApi.Flights(x))
+      }).toList))
 }
 
 trait AirportConfiguration {
@@ -356,6 +381,8 @@ class Application @Inject()(
   val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
     case "EDI" =>
       ChromaFlightFeed(log, fetcher).chromaEdiFlights().map(Flights(_))
+    case "LHR" =>
+      LHRFlightFeed("").copiedToApiFlights.map(Flights(_))
     case _ =>
       ChromaFlightFeed(log, fetcher).chromaVanillaFlights().map(Flights(_))
   }
