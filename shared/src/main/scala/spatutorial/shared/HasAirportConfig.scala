@@ -58,25 +58,38 @@ trait AirportConfigLike {
   def terminalNames: Seq[TerminalName]
 }
 
+object PaxTypesAndQueues {
+  val eeaMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk)
+  val eeaMachineReadableToEGate = PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate)
+  val eeaNonMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk)
+  val visaNationalToDesk = PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk)
+  val nonVisaNationalToDesk = PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk)
+  val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.fastTrack)
+  val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.fastTrack)
+}
+
 object AirportConfigs {
   val defaultSlas: Map[String, Int] = Map(
     "eeaDesk" -> 20,
     "eGate" -> 25,
     "nonEeaDesk" -> 45
   )
+
+  import PaxTypesAndQueues._
+
   val defaultPaxSplits = List(
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
-    SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
+    SplitRatio(eeaMachineReadableToDesk, 0.4875),
+    SplitRatio(eeaMachineReadableToEGate, 0.1625),
+    SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+    SplitRatio(visaNationalToDesk, 0.05),
+    SplitRatio(nonVisaNationalToDesk, 0.05)
   )
   val defaultProcessingTimes = Map(
-    PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
-    PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 35d / 60,
-    PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-    PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 90d / 60,
-    PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
+    eeaMachineReadableToDesk -> 20d / 60,
+    eeaMachineReadableToEGate -> 35d / 60,
+    eeaNonMachineReadableToDesk -> 50d / 60,
+    visaNationalToDesk -> 90d / 60,
+    nonVisaNationalToDesk -> 78d / 60
   )
 
   val edi = AirportConfig(
@@ -90,18 +103,18 @@ object AirportConfigs {
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map(
       "A1" -> Map(
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 16d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 75d / 60,
-        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 64d / 60
+        eeaMachineReadableToDesk -> 16d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 50d / 60,
+        visaNationalToDesk -> 75d / 60,
+        nonVisaNationalToDesk -> 64d / 60
       ),
       "A2" -> Map(
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 30d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60,
-        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 120d / 60,
-        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 120d / 60
+        eeaMachineReadableToDesk -> 30d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 50d / 60,
+        visaNationalToDesk -> 120d / 60,
+        nonVisaNationalToDesk -> 120d / 60
       )),
     shiftExamples = Seq(
       "Midnight shift, A1, {date}, 00:00, 00:59, 10",
@@ -116,21 +129,21 @@ object AirportConfigs {
     queues = Map(
       "T1" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
     ),
-    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5,"nonEeaDesk" -> 45),
+    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5, "nonEeaDesk" -> 45),
     terminalNames = Seq("T1"),
     defaultPaxSplits = List(
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.1625),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.1625),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.05),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.05)
+      SplitRatio(eeaMachineReadableToDesk, 0.4875),
+      SplitRatio(eeaMachineReadableToEGate, 0.1625),
+      SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+      SplitRatio(visaNationalToDesk, 0.05),
+      SplitRatio(nonVisaNationalToDesk, 0.05)
     ),
     defaultProcessingTimes = Map("T1" -> Map(
-      PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
-      PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 35d / 60,
-      PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) -> 50d / 60,
-      PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) -> 90d / 60,
-      PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) -> 78d / 60
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 35d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 90d / 60,
+      nonVisaNationalToDesk -> 78d / 60
     )),
     shiftExamples = Seq(
       "Alpha, T1, {date}, 07:00, 15:48, 0",
@@ -162,19 +175,51 @@ object AirportConfigs {
   val lhr = AirportConfig(
     portCode = "LHR",
     queues = Map(
-      "T2" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
-      "T3" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
-      "T4" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
-      "T5" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+      "T2" -> Seq("eeaDesk", "eGate", "nonEeaDesk", "fastTrack"),
+      "T3" -> Seq("eeaDesk", "eGate", "nonEeaDesk", "fastTrack"),
+      "T4" -> Seq("eeaDesk", "eGate", "nonEeaDesk", "fastTrack"),
+      "T5" -> Seq("eeaDesk", "eGate", "nonEeaDesk", "fastTrack")
     ),
-    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 10, "nonEeaDesk" -> 45),
+    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 15, "nonEeaDesk" -> 45, "fastTrack" -> 15),
     terminalNames = Seq("T2", "T3", "T4", "T5"),
-    defaultPaxSplits = defaultPaxSplits,
+    defaultPaxSplits = List(
+      SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.57),
+      SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.43),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.08 * 0.95),
+      SplitRatio(visaNationalToFastTrack, 0.08 * 0.05),
+      SplitRatio(nonVisaNationalToDesk, 0.28 * 0.95),
+      SplitRatio(nonVisaNationalToFastTrack, 0.28 * 0.05)
+    ),
     defaultProcessingTimes = Map(
-      "T2" -> defaultProcessingTimes,
-      "T3" -> defaultProcessingTimes,
-      "T4" -> defaultProcessingTimes,
-      "T5" -> defaultProcessingTimes
+      "T2" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 55d / 60,
+        visaNationalToDesk -> 96d / 60,
+        nonVisaNationalToDesk -> 78d / 60
+      ),
+      "T3" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 55d / 60,
+        visaNationalToDesk -> 96d / 60,
+        nonVisaNationalToDesk -> 78d / 60
+      ),
+      "T4" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 55d / 60,
+        visaNationalToDesk -> 96d / 60,
+        nonVisaNationalToDesk -> 78d / 60
+      ),
+      "T5" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 55d / 60,
+        visaNationalToDesk -> 96d / 60,
+        nonVisaNationalToDesk -> 78d / 60
+      )
     ),
     shiftExamples = Seq(
       "Midnight shift, T2, {date}, 00:00, 00:59, 25",
