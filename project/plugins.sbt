@@ -1,6 +1,13 @@
 // repository for Typesafe plugins
 resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
 
+// the protobuf sbt plugin must come before the scalajs plugin, see
+// https://github.com/scalapb/ScalaPB/issues/150
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.6")
+
+libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre1"
+
+
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.13")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-web" % "1.1.1")
