@@ -42,7 +42,10 @@ object FlightsWithSplitsTable {
       val keys = splitsTuples.keys
 
       def splitsField(fieldName: String): (String, scalajs.js.Any) = {
-        "Splits " + fieldName -> Int.box(splitsTuples.getOrElse(fieldName, null))
+        "Splits " + fieldName -> (splitsTuples.get(fieldName) match {
+          case Some(v: Int) => Int.box(v)
+          case None => ""
+        })
       }
 
       literal(
