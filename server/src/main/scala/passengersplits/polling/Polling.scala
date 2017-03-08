@@ -18,40 +18,6 @@ import passengersplits.s3._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
-//
-//
-//trait PollingAtmosReader[-In, +Out] {
-//  def log: LoggingAdapter
-//
-//  implicit val system: ActorSystem
-//  implicit val mat: Materializer
-//  implicit val executionContext: ExecutionContext
-//
-//  val statefulPoller = StatefulAtmosPoller()
-//  val runOnce = UnzipGraphStage.runOnce(log)(statefulPoller.unzippedFileProvider) _
-//
-//  val millisBetweenAttempts = 40000
-//  val atMostForResponsesFromAtmos = 100000 seconds
-//
-//  import PromiseSignals._
-//
-//  def beginPolling[Mat2](sink: Graph[SinkShape[Any], Mat2]): Unit = {
-//    for (i <- Range(0, Int.MaxValue)) {
-//      log.info(s"Beginning run ${i}")
-//      val unzipFlow = Flow[String].mapAsync(10)(statefulPoller.unzippedFileProvider.zipFilenameToEventualFileContent(_)).mapConcat(t => t)
-//
-//      val unzippedSink = unzipFlow.to(sink)
-//      val myDonePromise = promisedDone
-//      runOnce(i, (td) => myDonePromise.complete(td), statefulPoller.onNewFileSeen, unzippedSink)
-//      val resultOne = Await.result(myDonePromise.future, atMostForResponsesFromAtmos)
-//      log.info(s"Got result ${i}")
-//
-//      //todo get rid of the sleep by inverting the flow such that this is triggered by a pulse, embrace the streams!
-//      Thread.sleep(millisBetweenAttempts)
-//    }
-//  }
-//}
-
 
 object FilePolling {
   def beginPolling(log: LoggingAdapter,
