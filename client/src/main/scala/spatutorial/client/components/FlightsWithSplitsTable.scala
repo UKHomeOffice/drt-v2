@@ -28,23 +28,6 @@ object FlightsWithSplitsTable {
     <.span(props.data.toString(), mod).render
   }
 
-  @js.native
-  trait SplitColumnVals extends js.Object {
-    val label: String = js.native
-    val value: Int = js.native
-  }
-
-  def splitComponent(): js.Function = (props: js.Dynamic) => {
-    //    logger.log.info(s"rendering splitComponenta")
-    val data: js.Array[SplitColumnVals] = props.data.asInstanceOf[js.Array[SplitColumnVals]]
-    val sortedByLabel = data.sortBy(_.label)
-    //todo this zip alias is brittle, but should be temporary
-    val alias = "deea" :: "dnmr" :: "egmr" :: "ndnv" :: "visa" :: Nil
-    <.span(sortedByLabel.zip(alias).map { (vwithAlias) =>
-      val (v, alias) = vwithAlias
-      <.div(alias + ": " + v.value)
-    }).render
-  }
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
     flights.flights.map(flightAndSplit => {
@@ -59,7 +42,7 @@ object FlightsWithSplitsTable {
       val keys = splitsTuples.keys
 
       def splitsField(fieldName: String): (String, scalajs.js.Any) = {
-        "Splits " + fieldName -> Int.box(splitsTuples.getOrElse(fieldName, 0))
+        "Splits " + fieldName -> Int.box(splitsTuples.getOrElse(fieldName, null))
       }
 
       literal(
