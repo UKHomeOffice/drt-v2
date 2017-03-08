@@ -131,8 +131,8 @@ object DqSettings {
 }
 
 trait SimpleAtmosReader extends S3Reader with Core {
-  val bucket: String = "drtdqprod"
-  val skyscapeAtmosHost: String = "cas00003.skyscapecloud.com:8443"
+  def bucket: String // = "drtdqprod"
+  def skyscapeAtmosHost: String
 
 
   override def createBuilder: S3StreamBuilder = S3StreamBuilder(createS3client)

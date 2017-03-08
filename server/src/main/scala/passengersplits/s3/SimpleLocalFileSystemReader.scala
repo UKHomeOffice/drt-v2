@@ -26,6 +26,7 @@ trait SimpleLocalFileSystemReader extends
   implicit val ec = system.dispatcher
 
   def path: String
+
   private def file: File = new File(path)
 
   def allFilePaths: Iterator[String] = file.list(new FilenameFilter {
@@ -53,7 +54,7 @@ trait SimpleLocalFileSystemReader extends
     mapAsync(8) {
       //val streamAll: ActorRef = unzippedFilesAsSource.runWith(Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter)))
       zipFilenameToEventualFileContent
-    }.mapConcat(t=>t)
+    }.mapConcat(t => t)
 }
 
 
@@ -127,32 +128,40 @@ case class StatefulLocalFileSystemPoller(initialLatestFile: Option[String] = Non
 
   val unzippedFileProvider = new SimpleLocalFileSystemReader {
     implicit def system = outersystem
+
     override def path = zipFilePath
+
     override def zipFileNameFilter(filename: String) = statefulPoller.defaultFilenameFilter(filename)
   }
 
-  def zipFilenameToEventualFileContent(zipFilename: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] =  {
+  def zipFilenameToEventualFileContent(zipFilename: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = {
     unzippedFileProvider.zipFilenameToEventualFileContent(zipFilename)(actorMaterializer, ec)
   }
 
   val onNewFileSeen = outerNewFileSeen
 }
 
-case class StatefulAtmosPoller(initialLatestFile: Option[String] = None)(implicit outersystem: ActorSystem) {
+case class StatefulAtmosPoller(initialLatestFile: Option[String] = None, atmosS3Host: String,
+                               bucketName: String
+                              )(implicit outersystem: ActorSystem) {
   val statefulPoller = new StatefulFilenameProvider(outersystem.log, initialLatestFile)
 
   val log = outersystem.log
   val unzippedFileProvider = new SimpleAtmosReader {
     implicit def system = outersystem
-
     import DqSettings.fnameprefix
+
+    def bucket: String = bucketName
+
+    // = "drtdqprod"
+    def skyscapeAtmosHost: String =  atmosS3Host
 
     def log: LoggingAdapter = system.log
 
     override def zipFileNameFilter(filename: String) = statefulPoller.defaultFilenameFilter(filename)
   }
 
-  def zipFilenameToEventualFileContent(zipFilename: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] =  {
+  def zipFilenameToEventualFileContent(zipFilename: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = {
     unzippedFileProvider.zipFilenameToEventualFileContent(zipFilename)(actorMaterializer, ec)
   }
 

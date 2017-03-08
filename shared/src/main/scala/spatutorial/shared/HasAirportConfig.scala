@@ -105,6 +105,7 @@ object AirportConfigs {
     defaultProcessingTimes = Map(
       "A1" -> Map(
         eeaMachineReadableToDesk -> 16d / 60,
+
         eeaMachineReadableToEGate -> 25d / 60,
         eeaNonMachineReadableToDesk -> 50d / 60,
         visaNationalToDesk -> 75d / 60,
@@ -132,7 +133,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5, "nonEeaDesk" -> 45),
     terminalNames = Seq("T1"),
-    defaultPaxSplits = List(
+    defaultPaxSplits = SplitRatios(
       SplitRatio(eeaMachineReadableToDesk, 0.4875),
       SplitRatio(eeaMachineReadableToEGate, 0.1625),
       SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
@@ -183,7 +184,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 15, "nonEeaDesk" -> 45, "fastTrack" -> 15),
     terminalNames = Seq("T2", "T3", "T4", "T5"),
-    defaultPaxSplits = List(
+    defaultPaxSplits = SplitRatios(
       SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.57),
       SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.43),
       SplitRatio(eeaNonMachineReadableToDesk, 0),

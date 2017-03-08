@@ -3,6 +3,7 @@ package controllers
 import java.nio.ByteBuffer
 
 import actors.{CrunchActor, FlightsActor, GetFlights, GetFlightsWithSplits}
+import akka.NotUsed
 import akka.actor._
 import akka.event._
 import akka.pattern._
@@ -117,7 +118,7 @@ case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
   }
 }
 
-case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
+case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
   flightFeed =>
   val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
@@ -417,28 +418,38 @@ class Application @Inject()(
   }
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
+    portCode match {
+      case "LHR" =>
+        LHRFlightFeed().map(Flights(_))
+      case "EDI" =>
+        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights(_))
+      case _ =>
+        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights(_))
+    }
+  }
+
+  private def createChromaFlightFeed(prodMock: String) = {
     val fetcher = prodMock match {
       case "MOCK" => MockChroma(system)
       case "PROD" => ProdChroma(system)
     }
-    val chromaFlightFeed = ChromaFlightFeed(log, fetcher)
+    ChromaFlightFeed(log, fetcher)
 
-  val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
-    case "EDI" =>
-      ChromaFlightFeed(log, fetcher).chromaEdiFlights().map(Flights(_))
-    case "LHR" =>
-      LHRFlightFeed().map(Flights(_))
-    case _ =>
-      ChromaFlightFeed(log, fetcher).chromaVanillaFlights().map(Flights(_))
   }
 
-    copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+  val copiedToApiFlights = flightsSource(mockProd, portCode)
+  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
 
-    /// PassengerSplits reader
+  /// PassengerSplits reader
   //    val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
   //    FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170302"))
-  AtmosFilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, Some("drt_dq_17030"))
+  AtmosFilePolling.beginPolling(log,
+    ctrl.flightPassengerSplitReporter,
+    Some("drt_dq_17030"),
+    config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
+    config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  )
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

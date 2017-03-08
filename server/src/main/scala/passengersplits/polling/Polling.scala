@@ -115,8 +115,11 @@ object FilePolling {
 object AtmosFilePolling {
   def beginPolling(log: LoggingAdapter,
                    flightPassengerReporter: ActorRef,
-                   initialFileFilter: Option[String])(implicit actorSystem: ActorSystem, mat: Materializer) = {
-    val statefulPoller: StatefulAtmosPoller = StatefulAtmosPoller(initialFileFilter)
+                   initialFileFilter: Option[String],
+                   atmosHost: String,
+                   bucket: String
+                  )(implicit actorSystem: ActorSystem, mat: Materializer) = {
+    val statefulPoller: StatefulAtmosPoller = StatefulAtmosPoller(initialFileFilter, atmosHost, bucket)
     val unzippedFileProvider: SimpleAtmosReader = statefulPoller.unzippedFileProvider
     val onNewFileSeen: (String) => Unit = statefulPoller.onNewFileSeen
 
