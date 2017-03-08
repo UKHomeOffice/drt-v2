@@ -61,12 +61,7 @@ case class ApiFlight(
                       IATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long) {
-  //  private val (cc, vn) = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
-  //
-  //  def carrierCode = cc
-  //  def voyageNumber = vn
-}
+                      PcpTime: Long)
 
 trait SDateLike {
 

@@ -308,27 +308,6 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(10L seconds)
       val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
-//    case UpdateFlights(flights) =>
-//      log.info(s"client got ${flights.flights.length} flights")
-//      val result = if (value.isReady) {
-//        val oldFlights = value.get
-//        val oldFlightsSet = oldFlights.flights.toSet
-//        val newFlightsSet = flights.flights.toSet
-//        if (oldFlightsSet != newFlightsSet) {
-//          val airportCodes = flights.flights.map(_.Origin).toSet
-//          //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
-//          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
-//          val allEffects = airportInfos
-//          updated(Ready(flights), allEffects)
-//        } else {
-//          log.info("no changes to flights")
-//          noChange
-//        }
-//      } else {
-//        val airportCodes = flights.flights.map(_.Origin).toSet
-//        updated(Ready(flights), Effect(Future(GetAirportInfos(airportCodes))))
-//      }
-//      result
     case UpdateFlightsWithSplits(flightsWithSplits) =>
       val flights = flightsWithSplits.flights.map(_.apiFlight)
       val crappySplits: Seq[Int] = flightsWithSplits.flights.map(_.i)

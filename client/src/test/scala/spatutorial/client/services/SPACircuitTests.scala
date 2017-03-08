@@ -6,7 +6,7 @@ import diode.data._
 import spatutorial.client.UserDeskRecFixtures._
 import spatutorial.client.actions.Actions.{UpdateCrunchResult, UpdateDeskRecsTime, UpdateSimulationResult, UpdateWorkloads}
 import spatutorial.client.services.HandyStuff.PotCrunchResult
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import spatutorial.shared._
 import utest._
 
@@ -147,9 +147,9 @@ object SPACircuitTests extends TestSuite {
 
     'FlightsHandler - {
       "given no flights, when we start, then we request flights from the api" - {
-        val model: Pot[Flights] = Empty
+        val model: Pot[FlightsWithSplits] = Empty
 
-        def build = new FlightsHandler(new RootModelRW[Pot[Flights]](model))
+        def build = new FlightsHandler(new RootModelRW[Pot[FlightsWithSplits]](model))
       }
     }
 

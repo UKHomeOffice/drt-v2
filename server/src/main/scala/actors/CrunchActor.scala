@@ -152,7 +152,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     for (wl <- workloads) yield {
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
-//        log.info(s"the workloads $wl")
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
           case Some(twl: Map[QueueName, Seq[WL]]) =>

@@ -17,7 +17,6 @@ import spray.routing.Directives
 import scala.concurrent.{ExecutionContext, Future}
 import akka.util.Timeout
 import spray.http._
-import core.User
 import passengersplits.parsing.jsonparsing.DefaultJsonFormats
 import spatutorial.shared.PassengerSplits.PaxTypeAndQueueCount
 import spatutorial.shared.SDateLike

@@ -34,6 +34,8 @@ class FlightPassengerSplitsPerformanceSpec extends
   with SimpleProfiler {
 
   test =>
+  //these exist as a mechanism for manually exploring the performance profiles of different implementations of
+  //the splits calculator layout. we have them  skipAll so they don't run in the ci pipeline.
 
   skipAll
   sequential

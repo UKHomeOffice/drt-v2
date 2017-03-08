@@ -29,35 +29,6 @@ class CanFindASplitForAnApiFlightSpec extends
     parseIataToCarrierCodeVoyageNumber("RY836") === Some(("RY", "836"))
     parseIataToCarrierCodeVoyageNumber("RY836F") === Some(("RY", "836"))
   }
-//  "Can parse an IATA in an APIFlight" >> {
-//    import spatutorial.shared.FlightParsing._
-//    val flight = ApiFlight(
-//      Operator = "",
-//      Status = "",
-//      EstDT = "",
-//      ActDT = "",
-//      EstChoxDT = "",
-//      ActChoxDT = "",
-//      Gate = "",
-//      Stand = "",
-//      MaxPax = 0,
-//      ActPax = 0,
-//      TranPax = 0,
-//      RunwayID = "",
-//      BaggageReclaimId = "",
-//      FlightID = 1234,
-//      AirportID = "",
-//      Terminal = "",
-//      ICAO = "",
-//      IATA = "FR4567",
-//      Origin = "",
-//      PcpTime = 0,
-//      SchDT = ""
-//    )
-//
-//    flight.carrierCode === "FR"
-//    flight.voyageNumber === "4567"
-//  }
 
   "Should be able to find a flight" >> {
     "Given a single flight, with just one GBR passenger" in {

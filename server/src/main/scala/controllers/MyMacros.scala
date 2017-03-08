@@ -7,6 +7,7 @@ import scala.reflect.macros.Context
 
 object MyMacros {
 
+  //this exists so that we can debug the output of autowire if we need to. there's likely a better way to inspect macro output, but this works.
   def routeMacro[Trait, PickleType]
   (c: Context)
   (target: c.Expr[Trait])
