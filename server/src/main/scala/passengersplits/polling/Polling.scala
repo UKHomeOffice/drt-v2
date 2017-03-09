@@ -73,7 +73,6 @@ object FilePolling {
 
     }
     batchPollProcessingDone
-    //    val resultOne = Await.result(promiseDone.future, 10 seconds)
   }
 }
 

@@ -310,21 +310,13 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
       effectOnly(fe + flightsEffect)
     case UpdateFlightsWithSplits(flightsWithSplits) =>
       val flights = flightsWithSplits.flights.map(_.apiFlight)
-      val crappySplits: Seq[Int] = flightsWithSplits.flights.map(_.i)
-      val numberOfSplits: Double = crappySplits.toList.sum
-      val filter = flightsWithSplits.flights.filter(fws => fws.i != 0)
-      if (flights.length > 0) {
-        flightsWithSplits.flights.foreach(f => log.info(s"splitsAre: ${f.apiFlight.IATA}-${f.apiFlight.SchDT}-${f.i} - ${f.splits}"))
-      }
-      log.info(s"client got ${filter}")
-      log.info(s"client got ${flights.length} flights and ${numberOfSplits} splits ${numberOfSplits / flights.length}")
+
       val result = if (value.isReady) {
         val oldFlights = value.get
         val oldFlightsSet = oldFlights.flights.toSet
         val newFlightsSet = flights.toSet
         if (oldFlightsSet != newFlightsSet) {
           val airportCodes = flights.map(_.Origin).toSet
-          //          val flightSplitEffectSet: Effect = createFlightSplitRequests(newFlightsSet)
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
           val allEffects = airportInfos
           updated(Ready(flightsWithSplits), allEffects)
@@ -345,16 +337,6 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
       noChange
   }
 
-  private def createFlightSplitRequests(newFlightsSet: Set[ApiFlight]) = {
-    val flightSplitRequests = newFlightsSet.map(flight => {
-      log.info(s"flightSplits for ${flight}")
-      AjaxClient[Api].flightSplits(flight.AirportID, flight.ICAO, MilliDate(SDate.parse(flight.SchDT).millisSinceEpoch))
-        .call().map(UpdateFlightPaxSplits)
-    }).toList
-    val flightSplits = flightSplitRequests.map(f => Effect(f))
-    val flightSplitEffectSet = seqOfEffectsToEffectSeq(flightSplits)
-    flightSplitEffectSet
-  }
 }
 
 class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]])

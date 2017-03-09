@@ -44,7 +44,8 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import ExecutionContext.Implicits.global
-//import scala.collection.immutable.Seq
+import scala.Seq
+//import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import scala.reflect.macros.Context
 
 
@@ -442,8 +443,6 @@ class Application @Inject()(
 
 
   /// PassengerSplits reader
-  //    val zipFilePath = "/Users/lancep/clients/homeoffice/drt/spikes/advancedPassengerInfo/atmos/"
-  //    FilePolling.beginPolling(log, ctrl.flightPassengerSplitReporter, zipFilePath, Some("drt_dq_170302"))
   AtmosFilePolling.beginPolling(log,
     ctrl.flightPassengerSplitReporter,
     Some("drt_dq_17030"),

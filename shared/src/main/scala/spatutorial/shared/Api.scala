@@ -38,7 +38,7 @@ object FlightParsing {
 case class SplitR(name: String, size: Double)
 case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String)
 
-case class ApiFlightWithSplits(apiFlight: ApiFlight, i: Int, splits: ApiSplits)
+case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: ApiSplits)
 
 case class ApiFlight(
                       Operator: String,

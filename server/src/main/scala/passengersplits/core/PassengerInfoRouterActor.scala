@@ -167,9 +167,7 @@ class SingleFlightActor
       val replyTo = sender()
       val paddedVoyageNumber = padTo4Digits(requestedVoyageNumber)
 
-
-      log.info(s"I am ${latestMessage.map(_.summary)}: ReportVoyagePaxSplit for $port $carrierCode $paddedVoyageNumber $scheduledArrivalDateTime")
-      //      log.info(s"Current flights ${latestMessage}")
+      log.debug(s"I am ${latestMessage.map(_.summary)}: ReportVoyagePaxSplit for $port $carrierCode $paddedVoyageNumber $scheduledArrivalDateTime")
 
       def matches: (VoyagePassengerInfo) => Boolean = (flight) => doesFlightMatch(carrierCode, paddedVoyageNumber, scheduledArrivalDateTime, flight)
 
@@ -181,7 +179,6 @@ class SingleFlightActor
       matchingFlights match {
         case Some(flight) =>
           log.info(s"Matching flight is ${flight.summary}")
-          log.info(s"matching and replyTo ${replyTo} sender ${sender}")
           calculateAndSendPaxSplits(sender, port, carrierCode, requestedVoyageNumber, scheduledArrivalDateTime, flight)
         case None =>
           replyTo ! FlightNotFound(carrierCode, requestedVoyageNumber, scheduledArrivalDateTime)
@@ -236,13 +233,11 @@ class SingleFlightActor
 
   def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Boolean = {
     val paddedVoyageNumber = padTo4Digits(voyageNumber)
-    log.info(s"match? $carrierCode-$paddedVoyageNumber@$scheduledArrivalDateTime vs ${flight.summary}")
     val timeOpt = flight.scheduleArrivalDateTime
     timeOpt match {
       case Some(flightTime) =>
         val paddedFlightVoyageNumber = padTo4Digits(flight.VoyageNumber)
         paddedFlightVoyageNumber == paddedVoyageNumber &&
-          //carrierCode == flight.CarrierCode &&
           scheduledArrivalDateTime.millisSinceEpoch == flightTime.millisSinceEpoch
       case None =>
         false

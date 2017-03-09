@@ -40,11 +40,11 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
 
 
   val receiveRecover: Receive = {
-    case FlightsMessage(recoveredFlights)  =>
+    case FlightsMessage(recoveredFlights) =>
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
       val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(recoveredFlights.map( f => {
+      onFlightUpdates(recoveredFlights.map(f => {
         ApiFlight(
           f.operator.getOrElse(""),
           f.status.getOrElse(""),
@@ -97,14 +97,14 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
                 val paxSplits = vps.paxSplits
-                ApiFlightWithSplits(flight, 1, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo))
+                ApiFlightWithSplits(flight, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo))
               case notFound: FlightNotFound =>
                 log.info(s"notgot splits for ${flight}")
-                ApiFlightWithSplits(flight, 0, ApiSplits(Nil, AdvPaxInfo))//Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
+                ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo)) //Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
             }
           case None =>
             log.info(s"couldnot parse IATA for ${flight}")
-            Future.successful(ApiFlightWithSplits(flight, -1, ApiSplits(Nil, AdvPaxInfo)))//Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
+            Future.successful(ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo))) //Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
 
         }
       }
@@ -140,7 +140,8 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
           Some(f.Origin),
           Some(f.SchDT),
           Some(f.PcpTime)
-        )}))
+        )
+      }))
 
       log.info(s"Adding ${newFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
