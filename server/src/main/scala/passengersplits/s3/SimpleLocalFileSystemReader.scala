@@ -52,19 +52,12 @@ trait SimpleLocalFileSystemReader extends
 
   override def unzippedFilesAsSource = fileNameStream.
     mapAsync(8) {
-      //val streamAll: ActorRef = unzippedFilesAsSource.runWith(Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter)))
       zipFilenameToEventualFileContent
     }.mapConcat(t => t)
 }
 
 
 object UnzipGraphStage {
-  def testUnzipSink(log: LoggingAdapter)(runId: Int): Sink[String, Future[Done]] = Sink.foreach((fname: String) => {
-    log.info(s"${runId} We'd unzip ${fname}")
-    Thread.sleep(100)
-    log.info(s"${runId} pretend zipping done ${fname}")
-  })
-
 
   // The caller will probably want to await a promise that is completed from signalDone
   def runOnce[RD, RS](log: LoggingAdapter)(firstPathsSource: Source[String, NotUsed])
@@ -74,7 +67,7 @@ object UnzipGraphStage {
                       unzipSink: Sink[String, RS])(implicit mat: Materializer): NotUsed = {
 
     val updateLatestSeen: Sink[String, Future[Done]] = Sink.foreach(onNewFileSeen(_))
-    val unzippyThings: Sink[String, RS] = unzipSink
+    val unzippedStrings: Sink[String, RS] = unzipSink
 
     val onCompleteSink: Sink[String, NotUsed] = Sink.onComplete(signalDone)
     val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
@@ -85,8 +78,8 @@ object UnzipGraphStage {
         log.info(s"${runId} flow1")
         fname
       }) ~> updateLatestSeen
-      bcast.out(1) ~> unzippyThings
-      bcast.out(2) ~> onCompleteSink
+      bcast.out(1) ~> unzippedStrings
+      bcast.out(2) ~> onCompleteSink     //todo review if onCompleteSink is still used
       ClosedShape
     })
 
@@ -149,11 +142,8 @@ case class StatefulAtmosPoller(initialLatestFile: Option[String] = None, atmosS3
   val log = outersystem.log
   val unzippedFileProvider = new SimpleAtmosReader {
     implicit def system = outersystem
-    import DqSettings.fnameprefix
 
     def bucket: String = bucketName
-
-    // = "drtdqprod"
     def skyscapeAtmosHost: String =  atmosS3Host
 
     def log: LoggingAdapter = system.log

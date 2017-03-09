@@ -90,14 +90,6 @@ class FlightPassengerSplitsPerformanceSpec extends
   } yield FlightId(port, vn.toString, carrier, randomizedDateTime)
 
 
-  //  def flights(max: Int) = (1 to max).map {
-  //    (n) => {
-  //      val dateTime = DateTime(2016, 4, 1, 12, 23)
-  //      val v: IndexedSeq[VoyagePassengerInfo] = Arbitrary(flightGen(dateTime)).arbitrary.sample.get
-  //      v
-  //    }
-  //  }
-
   def flightStream(startDateTime: DateTime): Stream[VoyagePassengerInfo] = {
     Arbitrary(flightGen(startDateTime)).arbitrary.sample.get #::
       flightStream(startDateTime)
@@ -159,28 +151,7 @@ class FlightPassengerSplitsPerformanceSpec extends
         val askableRef: AskableActorRef = aggregationRef
         val resultFuture = askableRef ? ReportVoyagePaxSplit(port, carrier + "ignore", voyageNumber, flightToFind.scheduleArrivalDateTime.get)
         val result = Await.ready(resultFuture, 10 seconds)
-        println(s"Result for $flightToFind $result")
-      //        val routeToRequest: String = s"/flight-pax-splits/dest-${port}/terminal-N/${carrier}${voyageNumber}/scheduled-arrival-time-${nearlyIsoArrivalDt}"
-      //        log.info(s"About to request ${routeToRequest}")
-      //        Get(routeToRequest) ~>
-      //          serviceAgg.route ~> check {
-      //          log.info("response was: " + responseAs[String])
-      //          assert(response.status === StatusCodes.OK, s"Couldn't find ${port},${carrier}${voyageNumber}@${nearlyIsoArrivalDt}")
-      //          val json: JsValue = responseAs[String].parseJson
-      //          json match {
-      //            case JsArray(elements) =>
-      //              val head1 = elements.head.asJsObject
-      //              head1.getFields("destinationPort", "carrierCode", "voyageNumber", "scheduledArrivalDateTime") match {
-      //                case Seq(JsString(port), JsString(carrier), JsString(voyageNumber), JsString(isoArrivalDt)) =>
-      //                  success("we got what we came for")
-      //                case otherwise =>
-      //                  failure(otherwise.toString())
-      //              }
-      //
-      //              log.info(s"head is ${head1}")
-      //            case _ => failTest("response was not an array")
-      //          }
-      //        }
+
       case default =>
         log.error("Why are we here?")
         throw new Exception("fail")
@@ -220,21 +191,6 @@ class FlightPassengerSplitsPerformanceSpec extends
 
   }
 
-  //  def initialiseFlights(aggregationRef: ActorRef): IndexedSeq[VoyagePassengerInfo] = {
-  //    println("Initialise flights")
-  //    val (result, time) = profile {
-  //      val fs = flights(400000)
-  //      val batchActor = system.actorOf(Props(new PassengerInfoBatchActor(testActor, aggregationRef, fs.toList)))
-  //      log.info("Sending messages")
-  //      batchActor ! "Begin"
-  //      expectMsg(500 seconds, PassengerInfoBatchComplete)
-  //
-  //      log.info("Sent all messages and they're processed")
-  //      fs
-  //    }
-  //    log.info(s"Initialise took ${time / 1000000}")
-  //    result
-  //  }
 
   def afterAll() = system.terminate()
 }

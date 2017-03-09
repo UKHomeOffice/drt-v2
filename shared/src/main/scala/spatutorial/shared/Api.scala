@@ -234,7 +234,6 @@ object PassengerQueueTypes {
   def egatePercentage = 0.6d
 
   type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
-  //  case class PaxTypeAndQueueCounts(splits: List[PaxTypeAndQueueCount], origin: Option[String])
 }
 
 case class ApiPaxTypeAndQueueCount(passengerType: String, queueType: String, paxCount: Int)
@@ -270,8 +269,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
-
-  //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 

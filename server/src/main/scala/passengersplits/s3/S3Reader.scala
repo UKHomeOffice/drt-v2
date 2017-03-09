@@ -61,21 +61,14 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
   def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = Future {
     try {
       log.info(s"Will parse ${zipFileName}")
-      println(s"Will parse " +
-        s"${zipFileName}")
       val threadSpecificBuilder = createBuilder
       val zippedByteStream = threadSpecificBuilder.getFileAsStream(bucket, zipFileName)
-      //todo! here is a timeout! why? am I insane?
       val inputStream: InputStream = zippedByteStream.runWith(
         StreamConverters.asInputStream(unzipTimeout)
       )(actorMaterializer)
       val unzippedStream = new ZipInputStream(inputStream)
-//      try {
-        val unzippedFileContent: List[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(unzippedStream).toList
-        unzippedFileContent.map(_.copy(zipFilename = Some(zipFileName)))
-//      } finally {
-      //        unzippedStream.close()
-      //      }
+      val unzippedFileContent: List[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(unzippedStream).toList
+      unzippedFileContent.map(_.copy(zipFilename = Some(zipFileName)))
     } catch {
       case e: Throwable =>
         log.error(e, s"Error in S3Poller for ${zipFileName}: ")
@@ -131,7 +124,7 @@ object DqSettings {
 }
 
 trait SimpleAtmosReader extends S3Reader with Core {
-  def bucket: String // = "drtdqprod"
+  def bucket: String
   def skyscapeAtmosHost: String
 
 
@@ -143,7 +136,6 @@ trait SimpleAtmosReader extends S3Reader with Core {
     val key = ""
     val prefix = ""
     val configuration: ClientConfiguration = new ClientConfiguration()
-    //    configuration.setSignerOverride("NoOpSignerType")
     configuration.setSignerOverride("S3SignerType")
     val provider: ProfileCredentialsProvider = new ProfileCredentialsProvider("drt-atmos")
     log.info("Creating S3 client")
@@ -165,29 +157,13 @@ trait UnzippedFilePublisher {
   def flightPassengerReporter: ActorRef
 
   def streamAllThis: ActorRef = unzippedFilesAsSource
-    .map {
-      case x =>
-        log.debug(s"passing: $x")
-        x
-    }
     .runWith(Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter)))
-
-  def streamAllThisToPrintln: Future[Done] = unzippedFilesAsSource
-    .withAttributes(ActorAttributes.supervisionStrategy(Decider.decider))
-    .runWith(Sink.foreach(ln =>
-      println(ln.toString.take(200))))
 }
 
 object PromiseSignals {
   def promisedDone = Promise[Done]()
 
 }
-
-//case class S3PollingActor(bucket: String) extends Actor with S3Poller {
-//  val builder = S3StreamBuilder(new AmazonS3AsyncClient())
-//
-//  def receive = ???
-//}
 
 object WorkerPool {
 
