@@ -172,6 +172,15 @@ object AirportConfigs {
       "Evening shift, T1, {date}, 17:00, 23:59, 22"
     )
   )
+  private val lhrDefaultTerminalProcessingTimes = Map(
+    eeaMachineReadableToDesk -> 25d / 60,
+    eeaMachineReadableToEGate -> 25d / 60,
+    eeaNonMachineReadableToDesk -> 55d / 60,
+    visaNationalToDesk -> 96d / 60,
+    nonVisaNationalToDesk -> 78d / 60,
+    nonVisaNationalToFastTrack -> 78d / 60,
+    visaNationalToFastTrack -> 78d / 60
+  )
   val lhr = AirportConfig(
     portCode = "LHR",
     queues = Map(
@@ -192,34 +201,10 @@ object AirportConfigs {
       SplitRatio(nonVisaNationalToFastTrack, 0.28 * 0.05)
     ),
     defaultProcessingTimes = Map(
-      "T2" -> Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 55d / 60,
-        visaNationalToDesk -> 96d / 60,
-        nonVisaNationalToDesk -> 78d / 60
-      ),
-      "T3" -> Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 55d / 60,
-        visaNationalToDesk -> 96d / 60,
-        nonVisaNationalToDesk -> 78d / 60
-      ),
-      "T4" -> Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 55d / 60,
-        visaNationalToDesk -> 96d / 60,
-        nonVisaNationalToDesk -> 78d / 60
-      ),
-      "T5" -> Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 55d / 60,
-        visaNationalToDesk -> 96d / 60,
-        nonVisaNationalToDesk -> 78d / 60
-      )
+      "T2" -> lhrDefaultTerminalProcessingTimes,
+      "T3" -> lhrDefaultTerminalProcessingTimes,
+      "T4" -> lhrDefaultTerminalProcessingTimes,
+      "T5" -> lhrDefaultTerminalProcessingTimes
     ),
     shiftExamples = Seq(
       "Midnight shift, T2, {date}, 00:00, 00:59, 25",
