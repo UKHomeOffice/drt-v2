@@ -156,12 +156,11 @@ rect.bordered {
 @inline-code-color: @gray;
 @inline-code-bg: fade(@inline-code-color, 7%);
 
-// Type
-// ------------------------------
-
+//Terminal page queue column colours
 @eeaDeskUserDeskColor: #d5e8f3;
 @nonEeaDeskUserDeskColor: #cce0d6;
 @eGateUserDeskColor: #f7f0e2;
+@fastTrackUserDeskColor: #e7cee6;
 @totalDeployedColor: #eeeff0;
 @amberColor: #FFEEBB;
 @redColor: #FFCCCC;
@@ -211,6 +210,9 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
 .nonEeaDesk-user-desk-rec {
   background-color: @nonEeaDeskUserDeskColor;
 }
+.fastTrack-user-desk-rec {
+  background-color: @fastTrackUserDeskColor;
+}
 
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
   background-color: darken(@nonEeaDeskUserDeskColor, 8%);
@@ -223,6 +225,10 @@ tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
   background-color: lighten(@nonEeaDeskUserDeskColor, 6%);
 }
 
+.fastTrack-user-desk-rec.table-info {
+  background-color: lighten(@fastTrackUserDeskColor, 6%);
+}
+
 .eGate-user-desk-rec {
   background-color: @eGateUserDeskColor;
 }
@@ -232,6 +238,12 @@ tr:nth-child(odd) > td.eGate-user-desk-rec {
 }
 tr:nth-child(odd) > td.eGate-user-desk-rec.table-info {
   background-color: darken(@eGateUserDeskColor, 2%);
+}
+tr:nth-child(odd) > td.fastTrack-user-desk-rec {
+  background-color: darken(@fastTrackUserDeskColor, 8%);
+}
+tr:nth-child(odd) > td.fastTrack-user-desk-rec.table-info {
+  background-color: darken(@fastTrackUserDeskColor, 2%);
 }
 
 .eGate-user-desk-rec.table-info {
