@@ -3,6 +3,11 @@ import sbt.Project.projectToRef
 
 scalaVersion := Settings.versions.scala
 
+resolvers ++= Seq(
+  Resolver.bintrayRepo("mfglabs", "maven"),
+  Resolver.bintrayRepo("dwhjames", "maven")
+)
+
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
@@ -56,30 +61,31 @@ lazy val client: Project = (project in file("client"))
 // Client projects (just one in this case)
 lazy val clients = Seq(client)
 
-
 lazy val serverMacros = (project in file("server-macros"))
   .settings(
-      name := "drtmacros",
-      version := Settings.version,
-      scalaVersion := Settings.versions.scala,
-      scalacOptions ++= Settings.scalacOptions,
-      libraryDependencies ++= Settings.jvmDependencies.value,
-      commands += ReleaseCmd,
-      // connect to the client project
-      scalaJSProjects := clients,
-      pipelineStages := Seq(scalaJSProd, digest, gzip),
-      testFrameworks += new TestFramework("utest.runner.Framework"),
-      resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-      resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
-      resolvers += Resolver.defaultLocal,
-      publishArtifact in (Compile, packageBin) := false,
-      // Disable scaladoc generation for this project (useless)
-      publishArtifact in (Compile, packageDoc) := false,
-      // Disable source jar for this project (useless)
-      publishArtifact in (Compile, packageSrc) := false,
-      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-      // compress CSS
-      LessKeys.compress in Assets := true
+    name := "drtmacros",
+    version := Settings.version,
+    scalaVersion := Settings.versions.scala,
+    scalacOptions ++= Settings.scalacOptions,
+    libraryDependencies ++= Settings.jvmDependencies.value,
+    commands += ReleaseCmd,
+    // connect to the client project
+    scalaJSProjects := clients,
+    pipelineStages := Seq(scalaJSProd, digest, gzip),
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
+    resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
+    resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
+    resolvers += Resolver.defaultLocal,
+    publishArtifact in(Compile, packageBin) := false,
+    // Disable scaladoc generation for this project (useless)
+    publishArtifact in(Compile, packageDoc) := false,
+    // Disable source jar for this project (useless)
+    publishArtifact in(Compile, packageSrc) := false,
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+    // compress CSS
+    LessKeys.compress in Assets := true
   )
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
@@ -103,11 +109,11 @@ lazy val server = (project in file("server"))
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
     resolvers += Resolver.defaultLocal,
-    publishArtifact in (Compile, packageBin) := false,
+    publishArtifact in(Compile, packageBin) := false,
     // Disable scaladoc generation for this project (useless)
-    publishArtifact in (Compile, packageDoc) := false,
+    publishArtifact in(Compile, packageDoc) := false,
     // Disable source jar for this project (useless)
-    publishArtifact in (Compile, packageSrc) := false,
+    publishArtifact in(Compile, packageSrc) := false,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
     LessKeys.compress in Assets := true,

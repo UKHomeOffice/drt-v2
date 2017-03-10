@@ -8,7 +8,6 @@ enablePlugins(SbtWeb)
 
 enablePlugins(SbtJsEngine)
 
-resolvers += Resolver.bintrayRepo("mfglabs", "maven")
 
 
 import com.typesafe.sbt.jse.JsEngineImport.JsEngineKeys._
