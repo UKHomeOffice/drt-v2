@@ -77,7 +77,6 @@ object Settings {
     "org.renjin" % "renjin-script-engine" % "0.8.2195",
     "com.amazonaws" % "aws-java-sdk" % "1.11.89",
     "com.mfglabs" %% "commons-aws" % "0.10.0",
-    "com.mfglabs" %% "akka-stream-extensions" % "0.10.0",
     "joda-time" % "joda-time" % "2.9.4") :::
     List("io.spray" %% "spray-client" % versions.sprayVersion,
       "io.spray" %% "spray-routing" % versions.sprayVersion,
