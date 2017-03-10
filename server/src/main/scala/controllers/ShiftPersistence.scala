@@ -10,6 +10,7 @@ import ExecutionContext.Implicits.global
 import akka.pattern._
 
 import scala.concurrent.Future
+import scala.language.postfixOps
 
 trait ShiftPersistence {
   implicit val timeout: Timeout = Timeout(5 seconds)

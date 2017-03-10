@@ -10,7 +10,7 @@ import spatutorial.client.logger._
 import spatutorial.client.modules.PopoverWrapper
 import spatutorial.client.services._
 import spatutorial.shared.FlightsApi.TerminalName
-import spatutorial.shared.SDate
+import spatutorial.shared.SDateLike
 import spatutorial.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
 
 import scala.util.{Failure, Success}
@@ -39,7 +39,7 @@ object StaffMovementsPopover {
     case _ => terminalNames.head
   }
 
-  def apply(terminalNames: Seq[TerminalName], page: Loc, trigger: String, reason: String, startDate: SDate, endDate: SDate, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
+  def apply(terminalNames: Seq[TerminalName], page: Loc, trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
     .initialState_P((p) => {
       StaffMovementPopoverState(
         reason = reason,

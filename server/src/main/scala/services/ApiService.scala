@@ -1,26 +1,27 @@
 package services
 
-import java.util.{Date, UUID}
+import java.util.Date
 
 import actors.GetLatestCrunch
 import akka.actor.ActorRef
-import akka.event.{Logging, LoggingAdapter}
+import akka.event.LoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import org.slf4j.{Logger, LoggerFactory}
-import services.workloadcalculator.PassengerQueueTypes
-import spatutorial.shared._
+import passengersplits.query.FlightPassengerSplitsReportingService
 import spatutorial.shared.FlightsApi._
+import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import spatutorial.shared._
+import org.joda.time.DateTime
+import services.SDate.implicits._
 
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
-import scala.io.Codec
-import scala.util.{Success, Try}
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import spatutorial.shared.HasAirportConfig
-
+import scala.io.Codec
+import scala.language.postfixOps
+import scala.util.{Failure, Try}
 
 trait AirportToCountryLike {
   lazy val airportInfo: Map[String, AirportInfo] = {
@@ -102,6 +103,24 @@ abstract class ApiService(airportConfig: AirportConfig)
 
   val log = LoggerFactory.getLogger(this.getClass)
   log.info(s"ApiService.airportConfig = $airportConfig")
+
+  def flightPassengerReporter: ActorRef
+
+  val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
+
+  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]] = {
+    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, scheduledDateTime)
+    splits.map(v => v match {
+      case value: VoyagePaxSplits =>
+        log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
+        Right(value)
+      case fnf: FlightNotFound =>
+        Left(fnf)
+      case Failure(f) =>
+       throw f
+    }
+    )
+  }
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads] = {
     val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)

@@ -7,7 +7,7 @@ import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attr
 import japgolly.scalajs.react.vdom.prefix_<^._
 import spatutorial.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}
 import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.FlightsApi.{Flights}
 
 import scala.language.existentials
 import scala.scalajs.js
@@ -73,3 +73,6 @@ object FlightsTable {
 
   def apply(props: FlightsView.Props) = component(props)
 }
+
+
+

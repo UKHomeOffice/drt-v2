@@ -2,16 +2,19 @@ package controllers
 
 import java.nio.ByteBuffer
 
-import actors.{CrunchActor, FlightsActor, GetFlights}
+import actors.{CrunchActor, FlightsActor, GetFlights, GetFlightsWithSplits}
 import akka.NotUsed
 import akka.actor._
 import akka.event._
 import akka.pattern._
 import akka.pattern.AskableActorRef
-import akka.stream.Materializer
+import akka.stream.{Graph, Materializer, SinkShape}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import autowire.Core.Router
+import autowire.Macros
+import autowire.Macros.MacroHelp
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
@@ -22,22 +25,37 @@ import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import http.ProdSendAndReceive
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
+import passengersplits.core.PassengerSplitsInfoByPortRouter
+import passengersplits.core.ZipUtils.UnzippedFileContent
+import passengersplits.polling.{AtmosFilePolling, FilePolling}
+import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import spatutorial.shared.{Api, ApiFlight, CrunchResult, _}
+import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import spatutorial.shared.SplitRatiosNs.SplitRatios
+import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
+import views.html.defaultpages.notFound
 
 import sys.process._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import ExecutionContext.Implicits.global
+import scala.Seq
+//import scala.collection.immutable.Seq // do not import this here, it would break autowire.
+import scala.reflect.macros.Context
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
+
+  import scala.language.experimental.macros
+
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
+
+  def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
 
   override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
 }
@@ -57,7 +75,7 @@ class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
 }
 
 object SystemActors {
-  type SplitsProvider = (ApiFlight) => Option[List[SplitRatio]]
+  type SplitsProvider = (ApiFlight) => Option[SplitRatios]
 }
 
 
@@ -66,16 +84,18 @@ trait SystemActors extends Core {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  def splitProviders(): List[SplitsProvider]
-
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,
     splitProviders,
     () => DateTime.now()), "crunchActor")
 
-  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor), "flightsActor")
+  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
+
+  def splitProviders(): List[SplitsProvider]
+
 }
 
 trait ChromaFetcherLike {
@@ -99,8 +119,9 @@ case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
   }
 }
 
-case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) extends {
+case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
   flightFeed =>
+  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
   object EdiChroma {
     val ArrivalsHall1 = "A1"
@@ -123,7 +144,6 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
     }
   }
 
-  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
     ediMapping.map(flights =>
@@ -326,7 +346,7 @@ trait AirportConfProvider extends AirportConfiguration {
 }
 
 trait ProdPassengerSplitProviders {
-  self: AirportConfiguration =>
+  self: AirportConfiguration with SystemActors =>
   val splitProviders = List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
@@ -337,7 +357,10 @@ class Application @Inject()(
                              override val system: ActorSystem,
                              ec: ExecutionContext
                            )
-  extends Controller with Core with AirportConfProvider with ProdPassengerSplitProviders with SystemActors {
+  extends Controller with Core
+    with AirportConfProvider
+    with ProdPassengerSplitProviders
+    with SystemActors {
   ctrl =>
   val log = system.log
 
@@ -355,6 +378,8 @@ class Application @Inject()(
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
+
+    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
@@ -380,23 +405,50 @@ class Application @Inject()(
       }
       fsFuture
     }
+
+    override def getFlightsWithSplits(start: Long, end: Long): Future[FlightsWithSplits] = {
+      val askable = ctrl.flightsActorAskable
+      log.info(s"asking $askable for flightsWithSplits")
+      implicit val timout = 100 seconds
+      val flights: Future[Any] = askable.ask(GetFlightsWithSplits)(timout)
+      val fsFuture = flights.collect {
+        case flightsWithSplits: FlightsWithSplits => flightsWithSplits
+      }
+      fsFuture
+    }
   }
 
-  val fetcher = mockProd match {
-    case "MOCK" => MockChroma(system)
-    case "PROD" => ProdChroma(system)
+  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
+    portCode match {
+      case "LHR" =>
+        LHRFlightFeed().map(Flights(_))
+      case "EDI" =>
+        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights(_))
+      case _ =>
+        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights(_))
+    }
   }
 
-  val copiedToApiFlights: Source[Flights, Cancellable] = portCode match {
-    case "EDI" =>
-      ChromaFlightFeed(log, fetcher).chromaEdiFlights().map(Flights(_))
-    case "LHR" =>
-      LHRFlightFeed().map(Flights(_))
-    case _ =>
-      ChromaFlightFeed(log, fetcher).chromaVanillaFlights().map(Flights(_))
+  private def createChromaFlightFeed(prodMock: String) = {
+    val fetcher = prodMock match {
+      case "MOCK" => MockChroma(system)
+      case "PROD" => ProdChroma(system)
+    }
+    ChromaFlightFeed(log, fetcher)
+
   }
 
+  val copiedToApiFlights = flightsSource(mockProd, portCode)
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+
+
+  /// PassengerSplits reader
+  AtmosFilePolling.beginPolling(log,
+    ctrl.flightPassengerSplitReporter,
+    Some("drt_dq_17030"),
+    config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
+    config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  )
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))
@@ -410,7 +462,9 @@ class Application @Inject()(
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
-      Router.route[Api](createApiService)(
+      val router = Router.route[Api](createApiService)
+
+      router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
       ).map(buffer => {
         val data = Array.ofDim[Byte](buffer.remaining())
@@ -427,5 +481,8 @@ class Application @Inject()(
       Ok("")
   }
 }
+
+
+
 
 

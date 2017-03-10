@@ -6,6 +6,7 @@ import akka.pattern.AskableActorRef
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
 import spatutorial.shared.FlightsApi._
+import spatutorial.shared.SplitRatiosNs.SplitRatios
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq
@@ -16,10 +17,16 @@ import scala.concurrent.{Await, Future}
 
 trait FlightsService extends FlightsApi {
   def getFlights(st: Long, end: Long): Future[List[ApiFlight]]
+  def getFlightsWithSplits(st: Long, end: Long): Future[FlightsWithSplits]
 
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights = {
     val fsFuture = getFlights(startTimeEpoch, endTimeEpoch)
     Flights(Await.result(fsFuture, Duration.Inf))
+  }
+
+  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[FlightsWithSplits] = {
+    val fsFuture: Future[FlightsWithSplits] = getFlightsWithSplits(startTimeEpoch, endTimeEpoch)
+    fsFuture
   }
 }
 
@@ -34,7 +41,7 @@ trait WorkloadsCalculator {
   type TerminalQueueWorkLoads = Map[TerminalName, Map[QueueName, Seq[WL]]]
   type TerminalQueuePaxLoads = Map[TerminalName, Map[QueueName, Seq[Pax]]]
 
-  def splitRatioProvider: (ApiFlight) => Option[List[SplitRatio]]
+  def splitRatioProvider: (ApiFlight) => Option[SplitRatios]
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double
 

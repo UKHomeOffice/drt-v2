@@ -1,7 +1,7 @@
 package services.inputfeeds
 
 import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.stream.testkit.TestSubscriber.Probe
@@ -17,9 +17,10 @@ import services.FlightCrunchInteractionTests.TestCrunchActor
 import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
-import collection.JavaConversions._
 
+import collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.collection.immutable.Seq
 
@@ -54,9 +55,9 @@ object CrunchTests {
   }
 
   lazy val airportConfig = AirportConfig(
-    defaultPaxSplits = List(
+    defaultPaxSplits = SplitRatios(List(
       SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.5))),
     defaultProcessingTimes = Map(
       "A1" ->
         Map(
@@ -257,7 +258,7 @@ class StreamFlightCrunchTests extends
 
     "we tell the crunch actor about flights when they change" in {
       import WorkloadCalculatorTests._
-      val flightsActor = system.actorOf(Props(classOf[FlightsActor], testActor), "flightsActor")
+      val flightsActor = system.actorOf(Props(classOf[FlightsActor], testActor, Actor.noSender), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights

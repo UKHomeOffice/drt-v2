@@ -91,16 +91,18 @@ object TerminalDeploymentsTable {
 
   def terminalDeploymentsComponent(terminalName: TerminalName) = {
     log.info(s"userdeskrecs for $terminalName")
-    val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model =>
+    val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model => {
+      val flightsWithoutSplits = model.flights.map(f => Flights(f.flights.map(afws => afws.apiFlight)))
       PracticallyEverything(
         model.airportInfos,
-        model.flights,
+        flightsWithoutSplits,
         model.simulationResult,
         model.workload,
         model.queueCrunchResults,
         model.staffDeploymentsByTerminalAndQueue,
         model.shiftsRaw
-      ))
+      )
+    })
 
     val terminalUserDeskRecsRows: ReactConnectProxy[Option[Pot[List[TerminalDeploymentsRow]]]] = SPACircuit.connect(model => model.calculatedDeploymentRows.getOrElse(Map()).get(terminalName))
     val airportWrapper = SPACircuit.connect(_.airportInfos)

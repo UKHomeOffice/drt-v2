@@ -28,10 +28,12 @@ object Settings {
     val scalajsReactComponents = "0.5.0"
     val scalaCSS = "0.4.1"
     val log4js = "1.4.10"
-    val autowire = "0.2.5"
+    val autowire = "0.2.6"
     val booPickle = "1.2.4"
     val diode = "1.0.0"
     val uTest = "0.4.3"
+
+    val akkaVersion = "2.4.16"
 
     val react = "15.1.0"
     val jQuery = "1.11.1"
@@ -43,6 +45,8 @@ object Settings {
     val json4sVersion = "3.4.0"
   }
 
+  import versions._
+
   /**
     * These dependencies are shared between JS and JVM projects
     * the special %%% function selects the correct version for each project
@@ -53,26 +57,33 @@ object Settings {
   ))
 
   /** Dependencies only used by the JVM project */
-  val jvmDependencies = Def.setting((List(
+  val jvmDependencies = Def.setting(List(
     "io.spray" % "spray-caching_2.11" % "1.3.4",
     "org.specs2" %% "specs2-core" % "3.7" % Test,
-    "uk.gov.homeoffice.borderforce" %% "chroma-live" % "1.0",
+    "org.specs2" %% "specs2-junit" % "3.7" % Test,
+    "org.specs2" %% "specs2-scalacheck" % "3.8.4" % Test,
+  "uk.gov.homeoffice.borderforce" %% "chroma-live" % "1.0",
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
-    "com.typesafe.akka" %% "akka-testkit" % "2.4.9" % "test",
-    "com.typesafe.akka" %% "akka-stream-testkit" % "2.4.9" % "test",
-    "com.typesafe.akka" %% "akka-persistence" % "2.4.11",
+    "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
+    "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test",
+    "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
+    "com.typesafe.akka" %% "akka-stream-contrib" % "0.2",
+    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     "org.iq80.leveldb" % "leveldb" % "0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
     "org.renjin" % "renjin-script-engine" % "0.8.2195",
+    "com.amazonaws" % "aws-java-sdk" % "1.11.89",
+    "com.mfglabs" %% "commons-aws" % "0.10.0",
+    "com.mfglabs" %% "akka-stream-extensions" % "0.10.0",
     "joda-time" % "joda-time" % "2.9.4") :::
     List("io.spray" %% "spray-client" % versions.sprayVersion,
       "io.spray" %% "spray-routing" % versions.sprayVersion,
       "io.spray" %% "spray-json" % "1.3.2",
       "com.typesafe" % "config" % "1.3.0"
-    )))
+    ))
 
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

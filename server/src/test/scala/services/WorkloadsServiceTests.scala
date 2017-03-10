@@ -1,5 +1,6 @@
 package services
 
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike
@@ -44,7 +45,7 @@ class WorkloadsServiceTests extends SpecificationLike {
       "then we should see 1 minute with 200 workload" >> {
       val wc = new WorkloadsCalculator {
         override def splitRatioProvider = (apiFlight: ApiFlight) => {
-          Some(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)))
+          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)))
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 20d
@@ -67,7 +68,7 @@ class WorkloadsServiceTests extends SpecificationLike {
       "then we should see each terminal's processing times applied " >> {
       val wc = new WorkloadsCalculator {
         override def splitRatioProvider = (apiFlight: ApiFlight) => {
-          Some(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)))
+          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)))
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {

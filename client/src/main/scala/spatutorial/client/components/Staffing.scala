@@ -9,7 +9,7 @@ import org.scalajs.dom.html.Div
 import spatutorial.client.logger._
 import spatutorial.client.services.JSDateConversions._
 import spatutorial.client.services._
-import spatutorial.shared.{MilliDate, SDate, StaffMovement, WorkloadsHelpers}
+import spatutorial.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
 import spatutorial.client.actions.Actions.{SetShifts, SaveShifts, RemoveStaffMovement}
 
 import scala.collection.immutable.{NumericRange, Seq}
@@ -78,7 +78,7 @@ object Staffing {
 
   def shiftsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[html.Div] = {
 
-    val today: SDate = SDate.today
+    val today: SDateLike = SDate.today
     val todayString = today.ddMMyyString
 
     val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
@@ -110,7 +110,7 @@ object Staffing {
     )
   }
 
-  def daysWorthOf15Minutes(startOfDay: SDate): NumericRange[Long] = {
+  def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
     val timeMinPlusOneDay = startOfDay.addDays(1)
     val daysWorthOf15Minutes = startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (WorkloadsHelpers.oneMinute * 15)
     daysWorthOf15Minutes
@@ -170,12 +170,12 @@ object MovementDisplay {
   }
 
   def displayTime(time: MilliDate): String = {
-    val startDate: SDate = SDate(time)
+    val startDate: SDateLike = SDate(time)
     f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
   }
 
   def displayDate(time: MilliDate): String = {
-    val startDate: SDate = SDate(time)
+    val startDate: SDateLike = SDate(time)
     f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
   }
 }

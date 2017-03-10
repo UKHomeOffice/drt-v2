@@ -9,10 +9,14 @@ import diode.react.ReactConnector
 import spatutorial.client.{SPAMain, TableViewUtils}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
-import spatutorial.client.services.RootModel.{QueueCrunchResults, mergeTerminalQueues}
+import spatutorial.client.services.RootModel.{FlightCode, mergeTerminalQueues}
+import spatutorial.client.services.RootModel.{QueueCrunchResults}
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
+import spatutorial.client.services.JSDateConversions.SDate
+import spatutorial.client.services.JSDateConversions.SDate.JSSDate
+import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import spatutorial.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import spatutorial.client.actions.Actions._
 
@@ -74,13 +78,14 @@ case class RootModel(
                       workload: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
-                      flights: Pot[Flights] = Empty,
+                      flights: Pot[FlightsWithSplits] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
                       shiftsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
-                      slotsInADay: Int = 96
+                      slotsInADay: Int = 96,
+                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -89,7 +94,8 @@ case class RootModel(
       case _ => ""
     }
 
-    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList //todo we have essentially this code elsewhere, look for successfulShifts
+    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList
+    //todo we have essentially this code elsewhere, look for successfulShifts
     val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
       (t: TerminalName, m: MilliDate) => 0
@@ -137,11 +143,13 @@ case class RootModel(
        |simulationResult: $simulationResult
        |flights: $flights
        |airportInfos: $airportInfos
+       |flightPaxSplits: ${flightSplits}
        |)
      """.stripMargin
 }
 
 object RootModel {
+  type FlightCode = String
 
   type QueueCrunchResults = Map[QueueName, Pot[PotCrunchResult]]
 
@@ -289,35 +297,46 @@ case class RequestFlights(from: Long, to: Long) extends Action
 
 case class UpdateFlights(flights: Flights) extends Action
 
-class FlightsHandler[M](modelRW: ModelRW[M, Pot[Flights]]) extends LoggingActionHandler(modelRW) {
+case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
+
+case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
+
+class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"client requesting flights $from $to")
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(10L seconds)
-      val fe: EffectSingle[UpdateFlights] = Effect(AjaxClient[Api].flights(from, to).call().map(UpdateFlights))
+      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
-    case UpdateFlights(flights) =>
-      log.info(s"client got ${flights.flights.length} flights")
+    case UpdateFlightsWithSplits(flightsWithSplits) =>
+      val flights = flightsWithSplits.flights.map(_.apiFlight)
+
       val result = if (value.isReady) {
         val oldFlights = value.get
         val oldFlightsSet = oldFlights.flights.toSet
-        val newFlightsSet = flights.flights.toSet
+        val newFlightsSet = flights.toSet
         if (oldFlightsSet != newFlightsSet) {
-          val i: Flights = flights
-          val j: List[ApiFlight] = flights.flights
-          val codes = flights.flights.map(_.Origin).toSet
-          updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
+          val airportCodes = flights.map(_.Origin).toSet
+          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
+          val allEffects = airportInfos
+          updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
           noChange
         }
       } else {
-        val codes = flights.flights.map(_.Origin).toSet
-        updated(Ready(flights), Effect(Future(GetAirportInfos(codes))))
+        val airportCodes = flights.map(_.Origin).toSet
+        updated(Ready(flightsWithSplits), Effect(Future(GetAirportInfos(airportCodes))))
       }
-
       result
+    case UpdateFlightPaxSplits(Left(failure)) =>
+      log.info(s"Did not find flightPaxSplits for ${failure}")
+      noChange
+    case UpdateFlightPaxSplits(Right(result)) =>
+      log.info(s"Found flightPaxSplits ${result}")
+      noChange
   }
+
 }
 
 class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]])

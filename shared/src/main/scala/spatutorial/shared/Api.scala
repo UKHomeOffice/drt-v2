@@ -1,14 +1,44 @@
 package spatutorial.shared
 
 import java.util.Date
+
 import spatutorial.shared.FlightsApi._
+import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
+import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+
 import scala.collection.immutable._
 import scala.concurrent.Future
 
 
+object DeskAndPaxTypeCombinations {
+  val egate = "egate eea-machine-readable"
+  val deskEeaNonMachineReadable = "desk eea-non-machine-readable"
+  val deskEea = "desk eea-machine-readable"
+  val nationalsDeskVisa = "nationalsDesk national-visa"
+  val nationalsDeskNonVisa = "nationalsDesk national-non-visa"
+}
+
 case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
   def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
 }
+
+object FlightParsing {
+  val iataRe = """(\w\w)(\d{1,4})(\w)?""".r
+
+  def parseIataToCarrierCodeVoyageNumber(iata: String): Option[(String, String)] = {
+    iata match {
+      case iataRe(carriercode, voyageNumber, suffix) => Option((carriercode, voyageNumber))
+      case what => None
+    }
+  }
+
+
+}
+
+case class SplitR(name: String, size: Double)
+case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String)
+
+case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: ApiSplits)
 
 case class ApiFlight(
                       Operator: String,
@@ -33,7 +63,8 @@ case class ApiFlight(
                       SchDT: String,
                       PcpTime: Long)
 
-trait SDate {
+trait SDateLike {
+
   def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
 
   def getFullYear(): Int
@@ -48,9 +79,11 @@ trait SDate {
 
   def millisSinceEpoch: Long
 
-  def addDays(daysToAdd: Int): SDate
+  def addDays(daysToAdd: Int): SDateLike
 
-  def addHours(hoursToAdd: Int): SDate
+  def addHours(hoursToAdd: Int): SDateLike
+
+  override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }
 
 
@@ -72,6 +105,8 @@ object FlightsApi {
 
   case class Flights(flights: List[ApiFlight])
 
+  case class FlightsWithSplits(flights: List[ApiFlightWithSplits])
+
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
 
   type TerminalName = String
@@ -81,6 +116,8 @@ object FlightsApi {
 
 trait FlightsApi {
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights
+
+  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[FlightsWithSplits]
 }
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
@@ -179,6 +216,45 @@ case class DeskRec(time: Long, desks: Int)
 case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
 
 
+object PassengerQueueTypes {
+
+  object Desks {
+    val eeaDesk = "desk"
+    val egate = "egate"
+    val nationalsDesk = "nationalsDesk"
+  }
+
+  object PaxTypes {
+    val EEANONMACHINEREADABLE = "eea-non-machine-readable"
+    val NATIONALVISA = "national-visa"
+    val EEAMACHINEREADABLE = "eea-machine-readable"
+    val NATIONALNONVISA = "national-non-visa"
+  }
+
+  def egatePercentage = 0.6d
+
+  type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
+}
+
+case class ApiPaxTypeAndQueueCount(passengerType: String, queueType: String, paxCount: Int)
+
+object PassengerSplits {
+  type QueueType = String
+
+  case class PaxTypeAndQueueCount(passengerType: String, queueType: String, paxCount: Int)
+
+  case object FlightsNotFound
+
+  case class FlightNotFound(carrierCode: String, flightCode: String, scheduledArrivalDateTime: MilliDate)
+
+  case class VoyagePaxSplits(destinationPort: String, carrierCode: String,
+                             voyageNumber: String,
+                             totalPaxCount: Int,
+                             scheduledArrivalDateTime: MilliDate,
+                             paxSplits: List[PaxTypeAndQueueCount])
+
+}
+
 trait WorkloadsApi {
   def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]]
 }
@@ -188,11 +264,11 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def welcomeMsg(name: String): String
 
+  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]]
+
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
-
-  //  def crunch(terminalName: TerminalName, queueName: QueueName, workloads: List[Double]): Future[CrunchResult]
 
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 

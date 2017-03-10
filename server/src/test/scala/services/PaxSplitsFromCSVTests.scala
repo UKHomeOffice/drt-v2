@@ -4,6 +4,7 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, LocalDate}
 import org.specs2.mutable.SpecificationLike
 import spatutorial.shared.FlightsApi.TerminalName
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 
 import scala.concurrent.Await
@@ -53,7 +54,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
 
         val rows = flightPaxSplitsFromLines(splitsLines)
 
-        rows.toList == expected
+        rows.toList === expected
       }
     }
 
@@ -62,28 +63,28 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         "then I should get the correct split back" >> {
 
         val splitsProvider = CSVPassengerSplitsProvider(Seq(
-            "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
-          ))
+          "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
+        ))
 
         val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
 
-        val expected = Some(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
+        result === Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.0),
           SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
           SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02)))
-
-        result == expected
       }
 
       "When I query the pax splits for a non existent flight, " +
         "then I should get None" >> {
 
-        val splitsProvider = CSVPassengerSplitsProvider {Seq()}
+        val splitsProvider = CSVPassengerSplitsProvider {
+          Seq()
+        }
 
         val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
 
-        result == None
+        result === None
       }
     }
 
@@ -91,15 +92,13 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "When I ask for the SplitRatios then I should get a list of each split type for a flight" >> {
         val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
 
-        val expected = Some(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
+        val result = splitRatioFromFlightPaxSplit(row)
+
+        result === List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.291),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.6789999999999999),
           SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk), 0.0),
           SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.01),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02)))
-
-        val result = splitRatioFromFlightPaxSplit(row)
-
-        result == expected
+          SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.02))
       }
     }
   }
@@ -107,10 +106,11 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
   "Given a Flight Passenger Split" >> {
     "When we ask for workloads by terminal, then we should see the split applied" >> {
       val today = new DateTime()
-      val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA" ))
+      val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"))
 
-      val workloadsCalculator = new WorkloadsCalculator  {
+      val workloadsCalculator = new WorkloadsCalculator {
         def splitRatioProvider = csvSplitProvider.splitRatioProvider
+
         def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
       }
 

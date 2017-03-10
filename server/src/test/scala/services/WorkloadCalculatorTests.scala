@@ -4,6 +4,7 @@ import org.joda.time.DateTime
 import services.workloadcalculator.PassengerQueueTypes._
 import services.workloadcalculator._
 import spatutorial.shared.FlightsApi.QueueName
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 import utest.{TestSuite, _}
 
@@ -48,10 +49,10 @@ object WorkloadCalculatorTests extends TestSuite {
         def defaultProcTimesProvider(paxTypeAndQueue: PaxTypeAndQueue) = 1
 
         "with simple pax splits all at the same paxType" - {
-          def splitRatioProvider(flight: ApiFlight) = Some(List(
+          def splitRatioProvider(flight: ApiFlight) = Some(SplitRatios(List(
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
-          ))
+          )))
           val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
 
           val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
@@ -198,10 +199,10 @@ object WorkloadCalculatorTests extends TestSuite {
         }
 
         "with paxSplits of differing paxType to the same queue" - {
-          def splitRatioProvider(flight: ApiFlight) = Some(List(
+          def splitRatioProvider(flight: ApiFlight) = Some(SplitRatios(List(
             SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
             SplitRatio((PaxTypes.visaNational, Queues.eeaDesk), 0.5)
-          ))
+          )))
           val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
 
           val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _

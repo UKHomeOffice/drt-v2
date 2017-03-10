@@ -2,6 +2,7 @@ package spatutorial.client.services
 
 import diode.data._
 import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 import utest._
 
@@ -16,7 +17,7 @@ object TerminalDepolymentTests extends TestSuite {
     Map("T1" -> Seq("eeaDesk", "nonEeaDesk", "eGate")),
     Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20),
     Seq("T1"),
-    List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875)),
+    SplitRatios(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875))),
     Map("T1" -> Map(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60))
   )
 

@@ -9,7 +9,7 @@ import spatutorial.client.components.Bootstrap.Panel
 import spatutorial.client.components._
 import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
 import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.Flights
+import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits}
 
 import scala.language.existentials
 import scala.scalajs.js
@@ -114,6 +114,61 @@ object FlightsView {
         Panel(
           Panel.Props("Flights"),
           FlightsTable(props)
+        )
+      )
+    }).build
+
+  def apply(props: Props): ReactComponentU[Props, Unit, Unit, TopNode] = component(props)
+}
+
+
+object FlightsWithSplitsView {
+
+  import japgolly.scalajs.react._
+  import japgolly.scalajs.react.vdom.all.{onChange => _, _}
+
+  import scala.language.existentials
+
+  import spatutorial.shared.DeskAndPaxTypeCombinations._
+  case class Props(
+                    flightsModelProxy: Pot[FlightsWithSplits],
+                    airportInfoProxy: Map[String, Pot[AirportInfo]],
+                    activeCols: List[String] = List(
+                      "IATA",
+                      "Operator",
+                      "Origin",
+                      "Gate",
+                      "Stand",
+                      "Status",
+                      "SchDT",
+                      "EstDT",
+                      "ActDT",
+                      "ActChoxDT",
+                      "MaxPax",
+                      "ActPax",
+                      "Splits advPaxInfo total",
+
+                      "Terminal",
+
+                      "Splits " + egate,
+                      "Splits " + deskEeaNonMachineReadable,
+                      "Splits " + deskEea,
+                      "Splits " + nationalsDeskVisa,
+                      "Splits " + nationalsDeskNonVisa
+                    ))
+
+  case class State(
+                    flights: ReactConnectProxy[Pot[FlightsWithSplits]],
+                    airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
+                  )
+
+  val component = ReactComponentB[Props]("FlightsWithSplits")
+    .render_P((props) => {
+      <.div(
+        <.h2("Flights"),
+        Panel(
+          Panel.Props("Flights"),
+          FlightsWithSplitsTable(props)
         )
       )
     }).build

@@ -6,6 +6,7 @@ import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
 import org.joda.time.DateTime
 import spatutorial.shared.FlightsApi.TerminalName
+import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import spatutorial.shared._
 
 import scala.collection.immutable.Seq
@@ -39,8 +40,8 @@ object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
   class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now()) extends CrunchActor(hours, conf, timeProvider) {
-    override def splitRatioProvider: (ApiFlight => Option[List[SplitRatio]]) =
-      _ => Some(List(
+    override def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
+      _ => Some(SplitRatios(
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
         SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
         SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),

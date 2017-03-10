@@ -1,33 +1,10 @@
 package services
 
 import org.joda.time.DateTime
-import spatutorial.shared.SDate
+import spatutorial.shared.{MilliDate, SDateLike}
 import utest.{TestSuite, _}
 
-object SDate {
 
-  case class JodaSDate(dateTime: DateTime) extends SDate {
-    def getFullYear(): Int = dateTime.getYear
-
-    def getMonth(): Int = dateTime.getMonthOfYear
-
-    def getDate(): Int = dateTime.getDayOfMonth
-
-    def getHours(): Int = dateTime.getHourOfDay
-
-    def getMinutes(): Int = dateTime.getMinuteOfHour
-
-    def addDays(daysToAdd: Int): SDate = dateTime.plusDays(daysToAdd)
-
-    def addHours(hoursToAdd: Int): SDate = dateTime.plusHours(hoursToAdd)
-
-    def millisSinceEpoch: Long = dateTime.getMillis
-  }
-
-  implicit def jodaToSDate(dateTime: DateTime): SDate = JodaSDate(dateTime)
-
-  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDate = new DateTime(y, m, d, h, mm)
-}
 
 object ServerShiftDateTests extends TestSuite {
   def tests = TestSuite {
