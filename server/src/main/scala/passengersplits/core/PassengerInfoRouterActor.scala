@@ -82,7 +82,7 @@ class PassengerSplitsInfoByPortRouter extends
       child match {
         case Some(c) => c.tell(report, sender)
         case None =>
-          log.error("Child singleflight actor doesn't exist yet  ")
+          log.info(s"Child singleflight actor doesn't exist yet ${report.destinationPort}/${report.voyageNumber}@${report.scheduledArrivalDateTime.toString} ")
           sender ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
       }
     case report: ReportVoyagePaxSplitBetween =>
