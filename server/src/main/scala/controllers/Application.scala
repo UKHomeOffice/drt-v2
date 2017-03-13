@@ -447,7 +447,8 @@ class Application @Inject()(
     ctrl.flightPassengerSplitReporter,
     Some("drt_dq_17030"),
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
-    config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+    config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
+    portCode
   )
 
   def index = Action {

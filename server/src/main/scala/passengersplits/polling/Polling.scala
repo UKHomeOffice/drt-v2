@@ -20,10 +20,8 @@ import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 object FilePolling {
-  def beginPolling(log: LoggingAdapter,
-                   flightPassengerReporter: ActorRef,
-                   zipFilePath: String,
-                   initialFileFilter: Option[String])(implicit actorSystem: ActorSystem, mat: Materializer): Future[Done] = {
+  def beginPolling(log: LoggingAdapter, flightPassengerReporter: ActorRef, zipFilePath: String,
+                   initialFileFilter: Option[String], portCode: String)(implicit actorSystem: ActorSystem, mat: Materializer): Future[Done] = {
     val statefulPoller: StatefulLocalFileSystemPoller = StatefulLocalFileSystemPoller(initialFileFilter, zipFilePath)
     val unzippedFileProvider: SimpleLocalFileSystemReader = statefulPoller.unzippedFileProvider
     val onNewFileSeen = statefulPoller.onNewFileSeen
@@ -50,7 +48,7 @@ object FilePolling {
       .mapAsync(128)(unzippedFileProvider.zipFilenameToEventualFileContent(_))
       .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
       .collect {
-        case Success(vpi) if vpi.ArrivalPortCode == "STN" => vpi
+        case Success(vpi) if vpi.ArrivalPortCode == portCode => vpi
       }.map(uzfc => {
       log.info(s"VoyagePaxSplits ${uzfc.summary}")
       uzfc
@@ -82,8 +80,11 @@ object AtmosFilePolling {
                    flightPassengerReporter: ActorRef,
                    initialFileFilter: Option[String],
                    atmosHost: String,
-                   bucket: String
-                  )(implicit actorSystem: ActorSystem, mat: Materializer) = {
+                   bucket: String,
+                   portCode: String)(
+                    implicit actorSystem: ActorSystem
+                    , mat: Materializer
+                  ) = {
     val statefulPoller: StatefulAtmosPoller = StatefulAtmosPoller(initialFileFilter, atmosHost, bucket)
     val unzippedFileProvider: SimpleAtmosReader = statefulPoller.unzippedFileProvider
     val onNewFileSeen: (String) => Unit = statefulPoller.onNewFileSeen
@@ -95,7 +96,8 @@ object AtmosFilePolling {
     def singleBatch(batchId: Int) = {
       log.info(s"!!!!Running batch! ${batchId}")
       runSingleBatch(batchId,
-        promiseBatchDone, flightPassengerReporter, unzippedFileProvider, onNewFileSeen, log)
+        promiseBatchDone, flightPassengerReporter, unzippedFileProvider, onNewFileSeen, log,
+        portCode)
     }
 
     val source = Source.tick(0 seconds, 2 minutes, NotUsed)
@@ -111,7 +113,8 @@ object AtmosFilePolling {
                      flightPassengerReporter: ActorRef,
                      unzippedFileProvider: SimpleAtmosReader,
                      onNewFileSeen: (String) => Unit,
-                     log: LoggingAdapter
+                     log: LoggingAdapter,
+                     portCode: String
                     )(implicit actorSystem: ActorSystem, mat: Materializer) = {
     val batchPollProcessingDone = promiseBatchDone.future
 
@@ -134,7 +137,7 @@ object AtmosFilePolling {
       .mapAsync(128)(unzippedFileProvider.zipFilenameToEventualFileContent(_))
       .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
       .collect {
-        case Success(vpi) if vpi.ArrivalPortCode == "STN" => vpi
+        case Success(vpi) if vpi.ArrivalPortCode == portCode => vpi
       }.map(uzfc => {
       log.info(s"VoyagePaxSplits ${uzfc.summary}")
       uzfc
