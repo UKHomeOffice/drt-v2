@@ -11,8 +11,10 @@ import spatutorial.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import drt.server.feeds.lhr.LHRFlightFeed
+import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 
 import scala.collection.generic.SeqFactory
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.{Await, Future}
 import sys.process._
@@ -41,8 +43,8 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       import akka.pattern.pipe
 
       implicit val materializer = ActorMaterializer()
-
-      val lhrFeed = LHRFlightFeed(csvString.split("\n").toIterator)
+      val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
+      val lhrFeed = LHRFlightFeed(csvGetters)
 
       val probe = TestProbe()
 
@@ -70,7 +72,11 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       implicit val materializer = ActorMaterializer()
 
-      val lhrFeed = LHRFlightFeed(csvString.split("\n").toIterator)
+//      val lhrFeed = LHRFlightFeed(csvString.split("\n").toIterator)
+      val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
+      val csvGetters: Iterator[(Int) => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
+      val lhrFeed = LHRFlightFeed(csvGetters)
+
 
       val probe = TestProbe()
       val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
@@ -86,6 +92,8 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       }
     }
   }
+
+
 }
 
 
