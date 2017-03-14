@@ -264,7 +264,7 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
         case (terminalName, queueMapPot) => {
           queueMapPot.map {
             case (queueName, deployedDesks) =>
-              val queueWorkload: List[Double] = getTerminalQueueWorkload(terminalName, queueName)
+              val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
               val desks = deployedDesks.get.items.map(_.deskRec).toList
               Effect(Future(RunSimulation(terminalName, queueName, desks)))
           }
@@ -273,7 +273,7 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
       effectOnly(seqOfEffectsToEffectSeq(actions))
     case RunSimulation(terminalName, queueName, desks) =>
       log.info(s"Requesting simulation for $terminalName, {queueName}")
-      val queueWorkload: List[Double] = getTerminalQueueWorkload(terminalName, queueName)
+      val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
       val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
@@ -282,12 +282,21 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 
-  private def getTerminalQueueWorkload(terminalName: TerminalName, queueName: QueueName) = {
+  private def getTerminalQueueWorkload(terminalName: TerminalName, queueName: QueueName): List[Double] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-    val terminalWorkload = modelR.value.get.workloads(terminalName)
-    val queueWorkload: List[Double] = WorkloadsHelpers.workloadPeriodByQueue(terminalWorkload, minutesRangeInMillis)(queueName)
-    queueWorkload
+    val workloadPot = modelR.value
+    workloadPot match {
+      case Ready(workload) =>
+        workload.workloads.get(terminalName) match {
+          case Some(terminalWorkload) =>
+            val queueWorkload: List[Double] = WorkloadsHelpers.workloadPeriodByQueue(terminalWorkload, minutesRangeInMillis)(queueName)
+            queueWorkload
+          case None => Nil
+        }
+      case _ => Nil
+    }
+
   }
 }
 

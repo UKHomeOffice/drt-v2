@@ -24,12 +24,17 @@ object TerminalHeatmaps {
     workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
       <.div(
         workloadsMP().renderReady(wl => {
-          val heatMapSeries = workloads(wl.workloads(terminalName), terminalName)
-          val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
-          log.info(s"Got max workload of ${maxAcrossAllSeries}")
-          <.div(
-            Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-          )
+          wl.workloads.get(terminalName) match {
+            case Some(terminalWorkload) =>
+              val heatMapSeries = workloads(terminalWorkload, terminalName)
+              val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
+              log.info(s"Got max workload of ${maxAcrossAllSeries}")
+              <.div(
+                Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+              )
+            case None =>
+              <.div(s"No workloads for ${terminalName}")
+          }
         }))
     })
   }
