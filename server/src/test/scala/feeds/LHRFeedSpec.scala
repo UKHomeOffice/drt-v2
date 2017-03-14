@@ -72,7 +72,6 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       implicit val materializer = ActorMaterializer()
 
-//      val lhrFeed = LHRFlightFeed(csvString.split("\n").toIterator)
       val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
       val csvGetters: Iterator[(Int) => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
       val lhrFeed = LHRFlightFeed(csvGetters)
