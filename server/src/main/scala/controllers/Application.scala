@@ -1,6 +1,7 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
 import actors.{CrunchActor, FlightsActor, GetFlights, GetFlightsWithSplits}
 import akka.NotUsed
@@ -12,6 +13,7 @@ import akka.stream.{Graph, Materializer, SinkShape}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import scala.collection.JavaConversions._
 import autowire.Core.Router
 import autowire.Macros
 import autowire.Macros.MacroHelp
@@ -23,6 +25,7 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import http.ProdSendAndReceive
+import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
@@ -95,7 +98,6 @@ trait SystemActors extends Core {
   val flightsActorAskable: AskableActorRef = flightsActor
 
   def splitProviders(): List[SplitsProvider]
-
 }
 
 trait ChromaFetcherLike {
@@ -203,10 +205,10 @@ case class LHRLiveFlight(
                           from: String,
                           airportName: String,
                           scheduled: org.joda.time.DateTime,
-                          estimated: Option[String],
-                          touchdown: Option[String],
-                          estChox: Option[String],
-                          actChox: Option[String],
+                          estimated: Option[org.joda.time.DateTime],
+                          touchdown: Option[org.joda.time.DateTime],
+                          estChox: Option[org.joda.time.DateTime],
+                          actChox: Option[org.joda.time.DateTime],
                           stand: Option[String],
                           maxPax: Option[Int],
                           actPax: Option[Int],
@@ -222,11 +224,7 @@ case class LHRCsvException(originalLine: String, idx: Int, innerException: Throw
 object LHRFlightFeed {
   val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
 
-  def parseDateTime(dateString: String) = {
-
-    println(s"Trying to parse date '$dateString'")
-    pattern.parseDateTime(dateString)
-  }
+  def parseDateTime(dateString: String) = pattern.parseDateTime(dateString)
 
   def apply(): Source[List[ApiFlight], Cancellable] = {
     val username = ConfigFactory.load.getString("lhr_live_username")
@@ -254,11 +252,12 @@ object LHRFlightFeed {
 
 case class LHRFlightFeed(csvLines: Iterator[String]) {
 
+
   def opt(s: String) = if (s.isEmpty) None else Option(s)
 
   def pd(s: String) = LHRFlightFeed.parseDateTime(s)
 
-  def optDate(s: String) = if (s.isEmpty) None else Option(s)
+  def optDate(s: String) = if (s.isEmpty) None else Option(pd(s))
 
   def optInt(s: String) = if (s.isEmpty) None else Option(s.toInt)
 
@@ -266,30 +265,35 @@ case class LHRFlightFeed(csvLines: Iterator[String]) {
 
     csvLines.zipWithIndex.drop(1).map { case (l, idx) =>
 
-      val t = Try {
-        val splitRow: Array[String] = l.substring(1, l.length - 1).split("\",\"")
-        println(s"length ${splitRow.length} $l")
-        val sq: (String) => String = (x) => x
-        LHRLiveFlight(
-          term = s"T${sq(splitRow(0))}",
-          flightCode = sq(splitRow(1)),
-          operator = sq(splitRow(2)),
-          from = sq(splitRow(3)),
-          airportName = sq(splitRow(4)),
-          scheduled = pd(splitRow(5)),
-          estimated = opt(splitRow(6)),
-          touchdown = opt(splitRow(7)),
-          estChox = opt(splitRow(8)),
-          actChox = opt(sq(splitRow(9))),
-          stand = opt(splitRow(10)),
-          maxPax = optInt(splitRow(11)),
-          actPax = optInt(splitRow(12)),
-          connPax = optInt(splitRow(13)))
+      val t: Try[LHRLiveFlight] = Try {
+        val csv = CSVParser.parse(l, CSVFormat.DEFAULT)
+
+        val csvRecords = csv.iterator().toList
+        csvRecords match {
+          case csvRecord :: Nil =>
+            def splitRow(i: Int) =  csvRecord.get(i)
+            val sq: (String) => String = (x) => x
+            LHRLiveFlight(
+              term = s"T${sq(splitRow(0))}",
+              flightCode = sq(splitRow(1)),
+              operator = sq(splitRow(2)),
+              from = sq(splitRow(3)),
+              airportName = sq(splitRow(4)),
+              scheduled = pd(splitRow(5)),
+              estimated = optDate(splitRow(6)),
+              touchdown = optDate(splitRow(7)),
+              estChox = optDate(splitRow(8)),
+              actChox = optDate(sq(splitRow(9))),
+              stand = opt(splitRow(10)),
+              maxPax = optInt(splitRow(11)),
+              actPax = optInt(splitRow(12)),
+              connPax = optInt(splitRow(13)))
+          case Nil => throw new Exception(s"Invalid CSV row: $l")
+        }
       }
       t match {
         case Success(s) => Success(s)
         case Failure(t) =>
-          println(s"The failure is $t")
           Failure(LHRCsvException(l, idx, t))
       }
     }
@@ -297,6 +301,8 @@ case class LHRFlightFeed(csvLines: Iterator[String]) {
   val walkTimeMinutes = 4
 
   lazy val successfulFlights = lhrFlights.collect { case Success(s) => s }
+
+  def dateOptToStringOrEmptyString = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
 
   lazy val copiedToApiFlights: Source[List[ApiFlight], NotUsed] = Source(
     List(
@@ -307,10 +313,10 @@ case class LHRFlightFeed(csvLines: Iterator[String]) {
         ApiFlight(
           Operator = flight.operator,
           Status = "UNK",
-          EstDT = flight.estimated.getOrElse(""),
-          ActDT = flight.touchdown.getOrElse(""),
-          EstChoxDT = flight.estChox.getOrElse(""),
-          ActChoxDT = flight.actChox.getOrElse(""),
+          EstDT = dateOptToStringOrEmptyString(flight.estimated),
+          ActDT = dateOptToStringOrEmptyString(flight.touchdown),
+          EstChoxDT = dateOptToStringOrEmptyString(flight.estChox),
+          ActChoxDT = dateOptToStringOrEmptyString(flight.actChox),
           Gate = "",
           Stand = flight.stand.getOrElse(""),
           MaxPax = flight.maxPax.getOrElse(-1),
@@ -323,7 +329,7 @@ case class LHRFlightFeed(csvLines: Iterator[String]) {
           Terminal = flight.term,
           ICAO = flight.flightCode,
           IATA = flight.flightCode,
-          Origin = flight.airportName,
+          Origin = flight.from,
           SchDT = schDtIso,
           PcpTime = pcpTime)
       }).toList))

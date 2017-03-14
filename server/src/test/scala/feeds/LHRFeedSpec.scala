@@ -17,89 +17,75 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{Await, Future}
 import sys.process._
 import scala.concurrent.duration._
-//
-//class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
-//  val username = ConfigFactory.load.getString("lhr_live_username")
-//  val password = ConfigFactory.load.getString("lhr_live_password")
 
-//    "Executing the LHR feed script" should {
-//      "get us some content" in {
-//        val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
-//println(csvContents)
-//        csvContents.length > 0
-//      }
-//    }
+class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+  //  val username = ConfigFactory.load.getString("lhr_live_username")
+  //  val password = ConfigFactory.load.getString("lhr_live_password")
+  //
+  //    "Executing the LHR feed script" should {
+  //      "get us some content" in {
+  //        val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
+  //println(csvContents)
+  //        csvContents.length > 0
+  //      }
+  //    }
 
-//  "lhrCsvToApiFlights" should {
-//    "Produce an ApiFlight source with one flight based on a line from the LHR csv" in {
-//      //
-//      val csvString =
-//        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
-//           |"3","RJ111","Royal Jordanian","AMM","Amman","14:45 06/03/2017","14:46 06/03/2017","14:45 06/03/2017","14:50 06/03/2017","15:05 06/03/2017","303R","162","124","33""""
-//          .stripMargin
-//      import system.dispatcher
-//      import akka.pattern.pipe
-//
-//      implicit val materializer = ActorMaterializer()
-//
-//      val lhrFeed = LHRFlightFeed(csvString)
-//
-//      val probe = TestProbe()
-//
-//      val flightsSource: Source[Flights, NotUsed] = lhrFeed.copiedToApiFlights
-//
-//      val futureFlightsSeq: Future[Seq[Flights]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
-//
-//      val flights = Await.result(futureFlightsSeq, 3 seconds)
-//
-//      flights match {
-//        case Vector(
-//        Flights(
-//        List(
-//        ApiFlight("Royal Jordanian", "UNK", "14:46 06/03/2017", "14:45 06/03/2017", "14:50 06/03/2017", "15:05 06/03/2017",
-//        "", "303R", 162, 124, 33, "", "", _, "LHR", "3", "RJ111", "RJ111", "Amman", "2017-03-06T14:45:00.000Z", 1488811740000L)
-//        ))) =>
-//          true
-//        case _ => false
-//      }
-//    }
-//
-//    "Produce an ApiFlight source with two flights based on two lines from the LHR csv" in {
-//      //
-//      val csvString =
-//        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
-//           |"3","RJ111","Royal Jordanian","AMM","Amman","14:45 06/03/2017","14:46 06/03/2017","14:45 06/03/2017","14:50 06/03/2017","15:05 06/03/2017","303R","162","124","33"
-//           |"3","RJ111","Another Airline","AMM","Amman","14:45 06/03/2017","14:46 06/03/2017","14:45 06/03/2017","14:50 06/03/2017","15:05 06/03/2017","303R","162","124","33""""
-//          .stripMargin
-//      import system.dispatcher
-//      import akka.pattern.pipe
-//
-//      implicit val materializer = ActorMaterializer()
-//
-//      val lhrFeed = LHRFlightFeed(csvString)
-//
-//      val probe = TestProbe()
-//
-//      val flightsSource: Source[Flights, NotUsed] = lhrFeed.copiedToApiFlights
-//
-//      val futureFlightsSeq: Future[Seq[Flights]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
-//
-//      val flights = Await.result(futureFlightsSeq, 3 seconds)
-//
-//      flights match {
-//        case Vector(
-//        Flights(
-//        List(
-//        ApiFlight("Royal Jordanian", "UNK", "14:46 06/03/2017", "14:45 06/03/2017", "14:50 06/03/2017", "15:05 06/03/2017",
-//        "", "303R", 162, 124, 33, "", "", _, "LHR", "3", "RJ111", "RJ111", "Amman", "2017-03-06T14:45:00.000Z", 1488811740000L),
-//        ApiFlight("Another Airline", "UNK", "14:46 06/03/2017", "14:45 06/03/2017", "14:50 06/03/2017", "15:05 06/03/2017",
-//        "", "303R", 162, 124, 33, "", "", _, "LHR", "3", "RJ111", "RJ111", "Amman", "2017-03-06T14:45:00.000Z", 1488811740000L)
-//        ))) =>
-//          true
-//        case _ => false
-//      }
-//    }
-//  }
-//}
+  "lhrCsvToApiFlights" should {
+    "Produce an ApiFlight source with one flight based on a line from the LHR csv" in {
+      //
+      val csvString =
+        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
+           |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","795","142","1""""
+          .stripMargin
+      import system.dispatcher
+      import akka.pattern.pipe
+
+      implicit val materializer = ActorMaterializer()
+
+      val lhrFeed = LHRFlightFeed(csvString.split("\n").toIterator)
+
+      val probe = TestProbe()
+
+      val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
+
+      val futureFlightsSeq: Future[Seq[List[ApiFlight]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+
+      val flights = Await.result(futureFlightsSeq, 3 seconds)
+
+      flights match {
+        case Vector(ApiFlight("Qatar Airways", "UNK", "2017-03-09T21:32:00.000Z", "2017-03-09T21:33:00.000Z", "2017-03-09T21:43:00.000Z", "2017-03-09T21:45:00.000Z", "", "10", 795, 142, 1, "", "", _, "LHR", "T4", "QR005", "QR005", "DOH", "2017-03-09T22:00:00.000Z", 1489097040000L) :: tail) =>
+          true
+        case _ =>
+          false
+      }
+    }
+
+    "Produce an ApiFlight source with one flight based on a line with missing values from the LHR csv" in {
+      val csvString =
+        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
+           |"4","KL1033","KLM Royal Dutch Airlines","AMS","Amsterdam","20:50 09/03/2017","20:50 09/03/2017","","","","","","","""""
+          .stripMargin
+      import system.dispatcher
+      import akka.pattern.pipe
+
+      implicit val materializer = ActorMaterializer()
+
+      val lhrFeed = LHRFlightFeed(csvString.split("\n").toIterator)
+
+      val probe = TestProbe()
+      val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
+      val futureFlightsSeq: Future[Seq[List[ApiFlight]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+
+      val flights = Await.result(futureFlightsSeq, 3 seconds)
+
+      flights match {
+        case Vector(List(flight: ApiFlight)) =>
+          true
+        case _ =>
+          false
+      }
+    }
+  }
+}
 
 
