@@ -10,10 +10,11 @@ import spatutorial.client.{SPAMain, TableViewUtils}
 import spatutorial.client.logger._
 import spatutorial.client.services.HandyStuff._
 import spatutorial.client.services.RootModel.{FlightCode, mergeTerminalQueues}
-import spatutorial.client.services.RootModel.{QueueCrunchResults}
+import spatutorial.client.services.RootModel.QueueCrunchResults
 import spatutorial.shared.FlightsApi.{TerminalName, _}
 import spatutorial.shared._
 import boopickle.Default._
+import diode.ActionResult.NoChange
 import spatutorial.client.services.JSDateConversions.SDate
 import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
@@ -201,7 +202,13 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
     log.info(s"finding handler for ${action.toString.take(100)}")
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        log.error(s"Exception from ${getClass}  ${f.getMessage}")
+        log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action")
+        val cause = f.getCause()
+        cause match {
+          case null => log.error(s"no cause")
+          case c => log.error(s"Exception from ${getClass}  ${c.getMessage()}")
+        }
+
         throw f
       case Success(s) =>
         s
@@ -229,7 +236,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
       Effect(Future(GetLatestCrunch(tn, qn)))
     }
 
-    val effects = seqOfEffectsToEffectSeq(crunchRequests)
+    val effects = seqOfEffectsToEffectSeq(crunchRequests.toList)
     effects
   }
 }
@@ -249,8 +256,10 @@ object HandyStuff {
   type QueueStaffDeployments = Map[String, Pot[DeskRecTimeSlots]]
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-  def seqOfEffectsToEffectSeq(crunchRequests: Seq[Effect]) = {
-    crunchRequests.toList match {
+  def seqOfEffectsToEffectSeq(crunchRequests: List[Effect]): Effect = {
+    crunchRequests match {
+      case Nil =>
+        Effect(Future{NoAction})
       case h :: Nil =>
         h
       case h :: ts =>
@@ -265,19 +274,22 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunAllSimulations() =>
+      log.info(s"run simulation for ${staffDeployments.value}")
       val actions = staffDeployments.value.flatMap {
         case (terminalName, queueMapPot) => {
           queueMapPot.map {
             case (queueName, deployedDesks) =>
               val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
-              val desks = deployedDesks.get.items.map(_.deskRec).toList
-              Effect(Future(RunSimulation(terminalName, queueName, desks)))
+              val desks = deployedDesks.get.items.map(_.deskRec)
+              val desksList = desks.toList
+              Effect(Future(RunSimulation(terminalName, queueName, desksList)))
           }
         }
       }.toList
+      log.info(s"runAllSimulations effects ${actions}")
       effectOnly(seqOfEffectsToEffectSeq(actions))
     case RunSimulation(terminalName, queueName, desks) =>
-      log.info(s"Requesting simulation for $terminalName, {queueName}")
+      log.info(s"Requesting simulation for $terminalName, $queueName")
       val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
       val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
