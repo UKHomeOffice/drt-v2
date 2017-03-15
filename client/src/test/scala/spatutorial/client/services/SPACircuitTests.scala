@@ -164,7 +164,7 @@ object SPACircuitTests extends TestSuite {
               Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0)))))))
 
         val expected = RootModel().copy(
-          workload = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
+          workloadPot = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
         res match {
           case Some(ModelUpdate(newValue)) =>

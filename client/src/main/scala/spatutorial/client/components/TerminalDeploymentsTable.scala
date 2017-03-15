@@ -97,7 +97,7 @@ object TerminalDeploymentsTable {
         model.airportInfos,
         flightsWithoutSplits,
         model.simulationResult,
-        model.workload,
+        model.workloadPot,
         model.queueCrunchResults,
         model.staffDeploymentsByTerminalAndQueue,
         model.shiftsRaw

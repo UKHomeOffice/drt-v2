@@ -62,7 +62,7 @@ trait WorkloadsUtil {
 case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends WorkloadsUtil {
   lazy val labels = labelsFromAllQueues(startTime)
 
-  def timeStamps(terminalName: TerminalName): NumericRange[Long] = minuteNumericRange(startTime, 24)
+  def timeStamps(): NumericRange[Long] = minuteNumericRange(startTime, 24)
 
   def startTime: Long = {
     val now = new Date()
@@ -75,7 +75,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 
 case class RootModel(
                       motd: Pot[String] = Empty,
-                      workload: Pot[Workloads] = Empty,
+                      workloadPot: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
                       flights: Pot[FlightsWithSplits] = Empty,
@@ -123,21 +123,26 @@ case class RootModel(
     val srv = simulationResult.getOrElse(terminalName, Map())
     val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
     log.info(s"tud: ${terminalName}")
-    val x: Pot[List[TerminalDeploymentsRow]] = workload.map(workloads => {
-      val timestamps = workloads.timeStamps(terminalName)
-      val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-      val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-      val paxloads: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(workloads.workloads(terminalName), minutesRangeInMillis)
-      TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxloads, crv, srv, udr)
+    val terminalDeploymentRows: Pot[List[TerminalDeploymentsRow]] = workloadPot.map(workloads => {
+      workloads.workloads.get(terminalName) match {
+        case Some(terminalWorkloads) =>
+          val timestamps = workloads.timeStamps()
+          val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+          val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+          val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+          TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
+        case None =>
+          Nil
+      }
     })
-    terminalName -> x
+    terminalName -> terminalDeploymentRows
   }
 
   override def toString: String =
     s"""
        |RootModel(
        |motd: $motd
-       |paxload: $workload
+       |paxload: $workloadPot
        |queueCrunchResults: $queueCrunchResults
        |userDeskRec: $staffDeploymentsByTerminalAndQueue
        |simulationResult: $simulationResult
@@ -509,11 +514,11 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   override val actionHandler = {
     println("composing handlers")
     composeHandlers(
-      new WorkloadHandler(zoomRW(_.workload)((m, v) => {
-        m.copy(workload = v)
+      new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
+        m.copy(workloadPot = v)
       })),
       new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v))),
-      new SimulationHandler(zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workload), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
+      new SimulationHandler(zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),

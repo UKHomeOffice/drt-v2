@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
 
 object TerminalHeatmaps {
   def heatmapOfWorkloads(terminalName: TerminalName) = {
-    val workloadsRCP = SPACircuit.connect(_.workload)
+    val workloadsRCP = SPACircuit.connect(_.workloadPot)
     workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
       <.div(
         workloadsMP().renderReady(wl => {
