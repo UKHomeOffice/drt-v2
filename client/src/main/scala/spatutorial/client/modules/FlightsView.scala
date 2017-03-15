@@ -131,7 +131,7 @@ object FlightsWithSplitsView {
 
   import spatutorial.shared.DeskAndPaxTypeCombinations._
   case class Props(
-                    flightsModelProxy: Pot[FlightsWithSplits],
+                    flightsModelProxy: Pot[List[js.Dynamic]],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
                       "IATA",

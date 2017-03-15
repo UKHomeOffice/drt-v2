@@ -20,6 +20,7 @@ import spatutorial.client.services.JSDateConversions.SDate.JSSDate
 import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import spatutorial.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import spatutorial.client.actions.Actions._
+import spatutorial.client.components.FlightsWithSplitsTable
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -88,6 +89,12 @@ case class RootModel(
                       slotsInADay: Int = 96,
                       flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
                     ) {
+
+  lazy val flightsWithApiSplits: Pot[List[js.Dynamic]] = {
+    flights map { fs =>
+      FlightsWithSplitsTable.reactTableFlightsAsJsonDynamic(fs)
+    }
+  }
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
     val rawShiftsString = shiftsRaw match {
