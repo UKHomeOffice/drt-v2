@@ -4,6 +4,7 @@ import akka.actor._
 import controllers.FlightState
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import org.slf4j.LoggerFactory
 import services._
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{ApiFlight, _}
@@ -49,6 +50,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   with CrunchCalculator
   with FlightState {
 
+  val futLog = LoggerFactory.getLogger(classOf[CrunchActor])
   log.info(s"airportConfig is $airportConfig")
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
 
@@ -62,7 +64,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
 
       //todo un-future this mess
-      val expensiveCrunchResult = Await.result(crunch, 40 seconds)
+      val expensiveCrunchResult = Await.result(crunch, 1 minute)
       expensiveCrunchResult
     }
   }
@@ -143,8 +145,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     val tq: QueueName = terminalName + "/" + queueName
-
-    log.info(s"$tq Performing a crunch")
+    futLog.info(s"$tq Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
     val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
 
@@ -152,15 +153,15 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
     for (wl <- workloads) yield {
       val triedWl: Try[Map[String, List[Double]]] = Try {
-        log.info(s"$tq lookup wl ")
+        futLog.info(s"$tq lookup wl ")
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
           case Some(twl: Map[QueueName, Seq[WL]]) =>
-            log.info(s"$tq lastMidnight: $lastMidnight")
+            futLog.info(s"$tq lastMidnight: $lastMidnight")
             val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchStartTimeMillis, crunchPeriodHours)
-            log.info(s"$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
+            futLog.info(s"$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
             val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
-            log.info(s"$tq crunchStartTimeMillis: $crunchStartTimeMillis, crunchPeriod: $crunchPeriodHours")
+            futLog.info(s"$tq crunchStartTimeMillis: $crunchStartTimeMillis, crunchPeriod: $crunchPeriodHours")
             workloadsByQueue
           case None =>
             Map()
@@ -169,9 +170,9 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
       val r: Try[OptimizerCrunchResult] = triedWl.flatMap {
         (terminalWorkloads: Map[String, List[Double]]) =>
-          log.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
+          futLog.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
           val workloads: List[Double] = terminalWorkloads(queueName)
-          log.info(s"$tq Crunching on terminal workloads: ${workloads.take(50)}")
+          futLog.info(s"$tq Crunching on terminal workloads: ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
           val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla)
           if (queueName == "eGate")
@@ -183,12 +184,13 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       }
       val asFuture = r match {
         case Success(s) =>
-          log.info(s"$tq Successful crunch for starting at $crunchStartTimeMillis")
+          futLog.info(s"$tq Successful crunch for starting at $crunchStartTimeMillis")
           val res = CrunchResult(crunchStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
           log.info(s"$tq Crunch complete")
+          futLog.info(s"$tq Crunch completefl")
           res
         case Failure(f) =>
-          log.error(f, s"$tq Failed to crunch")
+          futLog.error(s"$tq Failed to crunch", f)
           throw f
       }
       asFuture
