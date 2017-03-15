@@ -30,6 +30,7 @@ object FlightsWithSplitsTable {
 
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
+
     flights.flights.map(flightAndSplit => {
       val f = flightAndSplit.apiFlight
       val literal = js.Dynamic.literal
@@ -39,7 +40,6 @@ object FlightsWithSplitsTable {
       import spatutorial.shared.DeskAndPaxTypeCombinations._
 
       val total = "advPaxInfo total"
-      val keys = splitsTuples.keys
 
       def splitsField(fieldName: String): (String, scalajs.js.Any) = {
         "Splits " + fieldName -> (splitsTuples.get(fieldName) match {
@@ -84,7 +84,7 @@ object FlightsWithSplitsTable {
 
       val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
 
-      def mappings(port: String) = {
+      def mappings(port: String): String = {
         val res: Option[Pot[String]] = portMapper.get(port).map { info =>
           info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
         }
@@ -100,7 +100,7 @@ object FlightsWithSplitsTable {
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
         props.flightsModelProxy.renderEmpty(ViewTools.spinner),
         props.flightsModelProxy.renderReady(flights => {
-          val rows = reactTableFlightsAsJsonDynamic(flights).toJsArray
+          val rows = flights.toJsArray
           GriddleComponentWrapper(results = rows,
             columnMeta = columnMeta,
             initialSort = "SchDT",

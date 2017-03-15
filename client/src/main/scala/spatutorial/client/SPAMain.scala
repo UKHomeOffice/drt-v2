@@ -178,19 +178,15 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-    val rootRoute = staticRoute(root, FlightsLoc) ~>
-      renderR(ctl => {
-        val airportWrapper = SPACircuit.connect(_.airportInfos)
-        val flightsWrapper = SPACircuit.connect(m => m.flights)
-        airportWrapper(airportInfoProxy => flightsWrapper(flightsProxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(flightsProxy.value, airportInfoProxy.value))))
-      })
+    val renderFlights = renderR(ctl => {
+      val airportWrapper = SPACircuit.connect(_.airportInfos)
+      val flightsWrapper = SPACircuit.connect(m => m.flightsWithApiSplits)
+      airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
+    })
 
-    val flightsRoute = staticRoute("#flights", FlightsLoc) ~>
-      renderR(ctl => {
-        val airportWrapper = SPACircuit.connect(_.airportInfos)
-        val flightsWrapper = SPACircuit.connect(m => m.flights)
-        airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
-      })
+    val rootRoute = staticRoute(root, FlightsLoc) ~> renderFlights
+
+    val flightsRoute = staticRoute("#flights", FlightsLoc) ~> renderFlights
 
     val terminalDeps = dynamicRouteCT("#terminal-deps" / string("[a-zA-Z0-9]+")
       .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDeploymentsPage(page.id, ctl))
