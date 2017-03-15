@@ -123,14 +123,14 @@ object Staffing {
         daysWorthOf15Minutes.grouped(16).flatMap {
           hoursWorthOf15Minutes =>
             Seq(
-              <.tr(^.key := s"hr-${hoursWorthOf15Minutes.head}", {
+              <.tr(^.key := s"hr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}", {
                 hoursWorthOf15Minutes.map((t: Long) => {
                   val d = new Date(t)
                   val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
                   <.th(^.key := t, display)
                 })
               }),
-              <.tr(^.key := s"vr-${hoursWorthOf15Minutes.head}",
+              <.tr(^.key := s"vr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}",
                 hoursWorthOf15Minutes.map(t => {
                   <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
                 })

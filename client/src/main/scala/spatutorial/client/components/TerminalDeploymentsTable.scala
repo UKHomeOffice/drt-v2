@@ -127,7 +127,7 @@ object TerminalDeploymentsTable {
 
   class Backend($: BackendScope[Props, Unit]) {
 
-    def render(p: Props) = {
+    def render(props: Props) = {
       log.info("%%%%%%%rendering table...")
 
       val style = bss.listGroup
@@ -138,17 +138,17 @@ object TerminalDeploymentsTable {
 
         val time = item.time
         val windowSize = 60000 * 15
-        val flights: Pot[Flights] = p.flights.map(flights =>
+        val flights: Pot[Flights] = props.flights.map(flights =>
           flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
         val date: Date = new Date(item.time)
         val formattedDate: String = jsDateFormat.formatDate(date)
-        val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = p.airportInfos
+        val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
         val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
         val queueRowCells = item.queueDetails.flatMap(
           (q: QueueDeploymentsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
-            val dangerWait = p.airportConfigPot match {
+            val dangerWait = props.airportConfigPot match {
               case Ready(airportConfig) =>
                 if (q.waitTimeWithUserDeskRec > airportConfig.slaByQueue(q.queueName)) "table-danger"
               case _ =>
@@ -178,34 +178,30 @@ object TerminalDeploymentsTable {
 
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-      val headings = p.airportConfigPot.get.queues(p.terminalName).map {
+      val headings = props.airportConfigPot.get.queues(props.terminalName).map {
         case (queueName) =>
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
       }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
-      val numQueues = p.items.head.queueDetails.length
+      val defaultNumberOfQueues = 3
+      val headOption = props.items.headOption
+      val numQueues = headOption match {
+        case Some(item) => item.queueDetails.length
+        case None =>
+          defaultNumberOfQueues
+      }
 
       <.div(
         <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
           <.thead(
             ^.display := "block",
             <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(p.airportConfigPot.get.queues(p.terminalName).toList): _*)),
+            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfigPot.get.queues(props.terminalName).toList): _*)),
           <.tbody(
             ^.display := "block",
             ^.overflow := "scroll",
             ^.height := "500px",
-            p.items.zipWithIndex map renderItem)))
-    }
-
-    private def subHeadingLevel1 = {
-      val subHeadingLevel1 = queueNameMappingOrder.flatMap(queueName => {
-        val qc = queueColour(queueName)
-        List(<.th("", ^.className := qc),
-          thHeaderGroupStart(deskUnitLabel(queueName), ^.className := qc, ^.colSpan := 1),
-          thHeaderGroupStart("Wait times", ^.className := qc, ^.colSpan := 1))
-      }) :+ <.th(^.className := "total-deployed", "Staff", ^.colSpan := 2)
-      subHeadingLevel1
+            props.items.zipWithIndex map renderItem)))
     }
 
     def queueColour(queueName: String): String = queueName + "-user-desk-rec"

@@ -34,9 +34,9 @@ object StaffMovementsPopover {
     (x.toDouble / nearest).round.toInt * nearest
   }
 
-  def defaultTerminal(terminalNames: Seq[TerminalName], page: Loc) = page match {
+  def defaultTerminal(terminalNames: Seq[TerminalName], page: Loc): TerminalName = page match {
     case p: TerminalDepsLoc => p.id
-    case _ => terminalNames.head
+    case _ => terminalNames.headOption.getOrElse("")
   }
 
   def apply(terminalNames: Seq[TerminalName], page: Loc, trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, bottom: String) = ReactComponentB[Unit]("staffMovementPopover")
