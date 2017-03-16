@@ -226,8 +226,18 @@ object AirportConfigs {
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
   )
+  val ema = AirportConfig(
+    portCode = "EMA",
+    queues = Map(
+      "T1" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
+    slaByQueue = defaultSlas,
+    terminalNames = Seq("T1"),
+    defaultPaxSplits = defaultPaxSplits,
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
+  )
 
-  val allPorts = edi :: stn :: man :: ltn :: lhr :: Nil
+  val allPorts = ema :: edi :: stn :: man :: ltn :: lhr :: Nil
   val confByPort = allPorts.map(c => (c.portCode, c)).toMap
 }
 
