@@ -7,7 +7,7 @@ import controllers.MockedChromaSendReceive
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
-import http.ProdSendAndReceive
+import drt.http.ProdSendAndReceive
 import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi.Flights
 
