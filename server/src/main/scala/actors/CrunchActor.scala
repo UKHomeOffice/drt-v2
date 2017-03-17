@@ -185,7 +185,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         case Success(s) =>
           log.info(s"$tq Successful crunch for starting at $crunchStartTimeMillis")
           val res = CrunchResult(crunchStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
-          log.info(s"$tq Crunch complete for ${res}")
+          log.info(s"$tq Crunch complete")
           res
         case Failure(f) =>
           log.error(f, s"$tq Failed to crunch")

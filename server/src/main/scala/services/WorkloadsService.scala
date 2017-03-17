@@ -55,7 +55,7 @@ trait WorkloadsCalculator {
 
     val workloadByTerminal = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
-        log.info(s"Got flights by terminal ${fbt}")
+        log.debug(s"Got flights by terminal ${fbt}")
         val terminalName = fbt._1
         val flights = fbt._2
         val plc = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, procTimesProvider(terminalName)) _
@@ -75,7 +75,7 @@ trait WorkloadsCalculator {
 
     val workloadByTerminal = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
-        log.info(s"Got flights by terminal ${fbt}")
+        log.debug(s"Got flights by terminal ${fbt}")
         val terminalName = fbt._1
         val flights = fbt._2
         val plc = PaxLoadCalculator.queueWorkLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, procTimesProvider(terminalName)) _
@@ -95,7 +95,7 @@ trait WorkloadsCalculator {
 
     val workloadByTerminal = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
-        log.info(s"Got flights by terminal ${fbt}")
+        log.debug(s"Got flights by terminal ${fbt}")
         val terminalName = fbt._1
         val flights = fbt._2
         val plc = PaxLoadCalculator.queuePaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, procTimesProvider(terminalName)) _
