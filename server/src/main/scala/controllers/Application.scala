@@ -250,7 +250,7 @@ class Application @Inject()(
   def logging = Action(parse.anyContent) {
     implicit request =>
       request.body.asJson.foreach { msg =>
-        println(s"CLIENT - $msg")
+        log.info(s"CLIENT - $msg")
       }
       Ok("")
   }

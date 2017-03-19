@@ -16,7 +16,6 @@ trait FlightState {
   var flights = Map[Int, ApiFlight]()
 
   def onFlightUpdates(fs: List[ApiFlight], since: String) = {
-    val currentFlights = flights
 
     val loggedFlights = logNewFlightInfo(flights, fs)
     val withNewFlights = addNewFlights(loggedFlights, fs)
