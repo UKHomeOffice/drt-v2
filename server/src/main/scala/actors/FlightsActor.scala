@@ -109,6 +109,11 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
         }
       }
       val futureOfSeq: Future[Seq[ApiFlightWithSplits]] = Future.sequence(allSplitRequests)
+      futureOfSeq.onFailure {
+        case t =>
+          log.error(t, s"Failed retrieving all splits for ${allSplitRequests.length} flights")
+          //todo should we return a failure, or a partial list, here
+      }
       futureOfSeq.onSuccess {
         case s =>
           val replyingAt = org.joda.time.DateTime.now()
