@@ -4,7 +4,7 @@ import java.util.Date
 
 import actors.GetLatestCrunch
 import akka.actor.ActorRef
-import akka.event.LoggingAdapter
+import akka.event.{DiagnosticLoggingAdapter, LoggingAdapter}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
@@ -15,7 +15,7 @@ import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import spatutorial.shared._
 import org.joda.time.DateTime
 import services.SDate.implicits._
-
+import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -117,7 +117,7 @@ abstract class ApiService(airportConfig: AirportConfig)
       case fnf: FlightNotFound =>
         Left(fnf)
       case Failure(f) =>
-       throw f
+        throw f
     }
     )
   }
@@ -148,16 +148,24 @@ abstract class ApiService(airportConfig: AirportConfig)
 
 trait CrunchCalculator {
   //  self: HasAirportConfig =>
-  def log: LoggingAdapter
+  def log: DiagnosticLoggingAdapter
 
   def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int): Try[OptimizerCrunchResult] = {
     log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
-    val repeat = List.fill[Int](workloads.length) _
-    val optimizerConfig = OptimizerConfig(sla)
-    //todo take the maximum desks from some durable store
-    val minimumDesks: List[Int] = repeat(2)
-    val maximumDesks: List[Int] = repeat(25)
-    TryRenjin.crunch(workloads, minimumDesks, maximumDesks, optimizerConfig)
+    val mdc = log.getMDC
+    val newMdc = Map("terminalQueue" -> s"$terminalName/$queueName")
+    log.setMDC(newMdc)
+    try {
+      val repeat = List.fill[Int](workloads.length) _
+      val optimizerConfig = OptimizerConfig(sla)
+      //todo take the maximum desks from some durable store
+      val minimumDesks: List[Int] = repeat(2)
+      val maximumDesks: List[Int] = repeat(25)
+      TryRenjin.crunch(workloads, minimumDesks, maximumDesks, optimizerConfig)
+
+    } finally {
+      log.setMDC(mdc)
+    }
   }
 }
 
