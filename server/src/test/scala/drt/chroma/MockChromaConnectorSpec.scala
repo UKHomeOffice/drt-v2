@@ -9,9 +9,7 @@ import spray.http._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-/**
-  * Created by rich on 06/09/16.
-  */
+
 class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   test =>
   val log = system.log
