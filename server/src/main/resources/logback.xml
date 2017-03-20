@@ -7,26 +7,6 @@
         </encoder>
     </appender>
 
-    <!--<appender name="FILE-INBOUND" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
-
-        <!--<file>${LOGDIR}drt-chroma-edi-live-messages.log</file>-->
-        <!--<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">-->
-            <!--<fileNamePattern>${LOGDIR}drt-chroma-edi-live-messages.%i.log.zip</fileNamePattern>-->
-            <!--<minIndex>1</minIndex>-->
-            <!--<maxIndex>7</maxIndex>-->
-        <!--</rollingPolicy>-->
-
-        <!--<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">-->
-            <!--<maxFileSize>400MB</maxFileSize>-->
-        <!--</triggeringPolicy>-->
-        <!--<encoder>-->
-            <!--<pattern>%date{ISO8601} %-4relative [%thread] %-5level %logger{35} - %msg%n</pattern>-->
-        <!--</encoder>-->
-    <!--</appender>-->
-
-    <!--<logger name="drt.chroma.chromafetcher" level="debug" additivity="false">-->
-        <!--<appender-ref ref="FILE-INBOUND"/>-->
-    <!--</logger>-->
     <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>
