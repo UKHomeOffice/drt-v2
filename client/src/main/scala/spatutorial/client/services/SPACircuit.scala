@@ -206,7 +206,7 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeploy
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
-    log.info(s"finding handler for ${action.toString.take(100)}")
+//    log.info(s"finding handler for ${action.toString.take(100)}")
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
         log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action")
@@ -532,7 +532,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   // combine all handlers into one
   override val actionHandler = {
     println("composing handlers")
-    composeHandlers(
+    val composedhandlers: HandlerFunction = composeHandlers(
       new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
       })),
@@ -544,6 +544,14 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v)))
     )
+
+    val loggedhandlers: HandlerFunction = (m, t) => {
+      log.debug(s"functional handler for ${m.toString.take(100)}")
+      composedhandlers(m, t)
+    }
+
+    loggedhandlers
+
   }
 }
 

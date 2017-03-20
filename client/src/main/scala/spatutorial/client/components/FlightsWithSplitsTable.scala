@@ -80,7 +80,7 @@ object FlightsWithSplitsTable {
 
   val component = ReactComponentB[Props]("FlightsWithSplitsTable")
     .render_P(props => {
-      logger.log.info(s"rendering flightstable")
+      logger.log.debug(s"rendering flightstable")
 
       val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
 

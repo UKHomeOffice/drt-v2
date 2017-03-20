@@ -24,7 +24,7 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
-import http.ProdSendAndReceive
+import drt.http.ProdSendAndReceive
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
@@ -250,7 +250,7 @@ class Application @Inject()(
   def logging = Action(parse.anyContent) {
     implicit request =>
       request.body.asJson.foreach { msg =>
-        println(s"CLIENT - $msg")
+        log.info(s"CLIENT - $msg")
       }
       Ok("")
   }

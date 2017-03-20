@@ -15,11 +15,10 @@ trait FlightState {
 
   var flights = Map[Int, ApiFlight]()
 
-  def onFlightUpdates(fs: List[ApiFlight], since: String) = {
-    val currentFlights = flights
+  def onFlightUpdates(newFlights: List[ApiFlight], since: String) = {
 
-    val loggedFlights = logNewFlightInfo(flights, fs)
-    val withNewFlights = addNewFlights(loggedFlights, fs)
+    val loggedFlights = logNewFlightInfo(flights, newFlights)
+    val withNewFlights = addNewFlights(loggedFlights, newFlights)
     val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
     flights = withoutOldFlights
   }
@@ -37,16 +36,17 @@ trait FlightState {
     flightsWithOldDropped
   }
 
-  def logNewFlightInfo(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
-    val inboundFlightIds: Set[Int] = fs.map(_.FlightID).toSet
+  def logNewFlightInfo(flights: Map[Int, ApiFlight], newFlights: List[ApiFlight]) = {
+    val inboundFlightIds: Set[Int] = newFlights.map(_.FlightID).toSet
     val existingFlightIds: Set[Int] = flights.keys.toSet
 
     val updatingFlightIds = existingFlightIds intersect inboundFlightIds
     val newFlightIds = existingFlightIds diff inboundFlightIds
-
-    log.info(s"New flights ${fs.filter(newFlightIds contains _.FlightID)}")
-    log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
-    log.info(s"Updating fl ${fs.filter(updatingFlightIds contains _.FlightID)}")
+    if (newFlights.nonEmpty) {
+      log.info(s"New flights ${newFlights.filter(newFlightIds contains _.FlightID)}")
+      log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
+      log.info(s"Updating fl ${newFlights.filter(updatingFlightIds contains _.FlightID)}")
+    }
     flights
   }
 }

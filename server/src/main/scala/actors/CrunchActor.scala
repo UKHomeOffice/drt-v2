@@ -4,6 +4,7 @@ import akka.actor._
 import controllers.FlightState
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import org.slf4j.LoggerFactory
 import services._
 import spatutorial.shared.FlightsApi._
 import spatutorial.shared.{ApiFlight, _}
@@ -44,7 +45,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
                            airportConfig: AirportConfig,
                            timeProvider: () => DateTime
                           ) extends Actor
-  with ActorLogging
+  with DiagnosticActorLogging
   with WorkloadsCalculator
   with CrunchCalculator
   with FlightState {
@@ -62,7 +63,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
 
       //todo un-future this mess
-      val expensiveCrunchResult = Await.result(crunch, 40 seconds)
+      val expensiveCrunchResult = Await.result(crunch, 1 minute)
       expensiveCrunchResult
     }
   }
@@ -143,7 +144,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     val tq: QueueName = terminalName + "/" + queueName
-
     log.info(s"$tq Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
     val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
