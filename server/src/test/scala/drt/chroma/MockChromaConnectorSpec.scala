@@ -1,11 +1,12 @@
 package drt.chroma
 
+import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaSingleFlight, ChromaToken}
 import drt.http.WithSendAndReceive
 import spray.client.pipelining._
 import spray.http._
-
+import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -14,12 +15,26 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   test =>
   val log = system.log
 
+  val mockConfig = ConfigFactory.parseMap(
+    Map(
+      "chroma.url.live" -> "http://someserver/somepath",
+      "chroma.url.token" -> "http://someserve/someotherpath",
+      "chroma.username" -> "magicuser",
+      "chroma.password" -> "pass"
+
+
+    )
+  )
+
   import system.dispatcher
 
   "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
     val sut = new ChromaFetcher with WithSendAndReceive {
+      override lazy val config: Config = mockConfig
       implicit val system = test.system
       private val pipeline = tokenPipeline
+
+
 
       def sendAndReceive = (req: HttpRequest) => Future {
         HttpResponse().withEntity(
@@ -42,6 +57,8 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   "When we request current flights we parse them successfully" >> {
     val sut = new ChromaFetcher with WithSendAndReceive {
       implicit val system = test.system
+      override lazy val config: Config = mockConfig
+
 
       override val tokenUrl: String = "https://edibf.edinburghairport.com/edi/chroma/token"
       override val url: String = "https://edibf.edinburghairport.com/edi/chroma/live/edi"
