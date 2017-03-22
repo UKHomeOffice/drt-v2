@@ -10,8 +10,9 @@ import spatutorial.shared.ApiFlight
 import spatutorial.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
-import drt.server.feeds.lhr.LHRFlightFeed
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import spray.http.DateTime
 
 import scala.collection.generic.SeqFactory
 import scala.collection.JavaConverters._
@@ -89,6 +90,20 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
         case _ =>
           false
       }
+    }
+
+    "should consistently return the same flightid for the same flight" in {
+      val flightv1 = LHRLiveFlight("T1", "SA123", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
+      val flightv2 = LHRLiveFlight("T1", "SA123", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
+
+      flightv1.flightId() === flightv2.flightId()
+    }
+
+    "should not return the same flightid for different flights" in {
+      val flightv1 = LHRLiveFlight("T1", "SA324", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
+      val flightv2 = LHRLiveFlight("T1", "SA123", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
+
+      flightv1.flightId() !== flightv2.flightId()
     }
   }
 
