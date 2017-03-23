@@ -338,7 +338,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"client requesting flights $from $to")
-      val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(10L seconds)
+      val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(60L seconds)
       val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
     case UpdateFlightsWithSplits(flightsWithSplits) =>
