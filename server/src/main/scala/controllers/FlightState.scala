@@ -36,17 +36,17 @@ trait FlightState {
     flightsWithOldDropped
   }
 
-  def logNewFlightInfo(flights: Map[Int, ApiFlight], newFlights: List[ApiFlight]) = {
-    val inboundFlightIds: Set[Int] = newFlights.map(_.FlightID).toSet
-    val existingFlightIds: Set[Int] = flights.keys.toSet
+  def logNewFlightInfo(currentFlights: Map[Int, ApiFlight], newOrUpdatingFlights: List[ApiFlight]) = {
+    val inboundFlightIds: Set[Int] = newOrUpdatingFlights.map(_.FlightID).toSet
+    val existingFlightIds: Set[Int] = currentFlights.keys.toSet
 
     val updatingFlightIds = existingFlightIds intersect inboundFlightIds
     val newFlightIds = existingFlightIds diff inboundFlightIds
-    if (newFlights.nonEmpty) {
-      log.info(s"New flights ${newFlights.filter(newFlightIds contains _.FlightID)}")
-      log.info(s"Old      fl ${flights.filterKeys(updatingFlightIds).values}")
-      log.info(s"Updating fl ${newFlights.filter(updatingFlightIds contains _.FlightID)}")
+    if (newOrUpdatingFlights.nonEmpty) {
+      log.debug(s"New flights ${newOrUpdatingFlights.filter(newFlightIds contains _.FlightID)}")
+      log.debug(s"Old      fl ${currentFlights.filterKeys(updatingFlightIds).values}")
+      log.debug(s"Updating fl ${newOrUpdatingFlights.filter(updatingFlightIds contains _.FlightID)}")
     }
-    flights
+    currentFlights
   }
 }
