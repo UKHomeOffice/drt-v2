@@ -217,7 +217,7 @@ class SingleFlightActor
     log.info(s"$self sent response $splits")
   }
 
-  def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo) = {
+  def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): VoyagePaxSplits = {
     log.info(s"$self calculating splits $port $carrierCode $voyageNumber ${scheduledArrivalDateTime.toString}")
     val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
       convertPassengerInfoToPaxQueueCounts(flight.PassengerList)

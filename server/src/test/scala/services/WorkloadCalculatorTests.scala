@@ -50,8 +50,8 @@ object WorkloadCalculatorTests extends TestSuite {
 
         "with simple pax splits all at the same paxType" - {
           def splitRatioProvider(flight: ApiFlight) = Some(SplitRatios(List(
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eGate), 0.5)
+            SplitRatio((PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5),
+            SplitRatio((PaxTypes.EeaMachineReadable, Queues.EGate), 0.5)
           )))
           val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
 
@@ -65,8 +65,8 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
-                Queues.eGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
-                Queues.eeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0))).toSet
+                Queues.EGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
+                Queues.EeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0))).toSet
               assert(workloads == expected)
             }
 
@@ -77,8 +77,8 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
-                Queues.eGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 10.0)),
-                Queues.eeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 10.0))).toSet
+                Queues.EGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 10.0)),
+                Queues.EeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 10.0))).toSet
               assert(workloads == expected)
             }
 
@@ -91,10 +91,10 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
-                Queues.eGate -> List(
+                Queues.EGate -> List(
                   WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 10.0),
                   WL(asMillis("2020-01-01T01:10:00Z"), 10.0), WL(asMillis("2020-01-01T01:11:00Z"), 10.0)),
-                Queues.eeaDesk -> List(
+                Queues.EeaDesk -> List(
                   WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 10.0),
                   WL(asMillis("2020-01-01T01:10:00Z"), 10.0), WL(asMillis("2020-01-01T01:11:00Z"), 10.0))).toSet
               assert(workloads == expected)
@@ -109,9 +109,9 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
-                Queues.eGate -> List(
+                Queues.EGate -> List(
                   WL(asMillis("2020-01-01T00:00:00Z"), 20.0), WL(asMillis("2020-01-01T00:01:00Z"), 20.0)),
-                Queues.eeaDesk -> List(
+                Queues.EeaDesk -> List(
                   WL(asMillis("2020-01-01T00:00:00Z"), 20.0), WL(asMillis("2020-01-01T00:01:00Z"), 20.0))).toSet
 
               assert(workloads == expected)
@@ -126,11 +126,11 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
-                Queues.eGate -> ((
+                Queues.EGate -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 10.0))
                   )),
-                Queues.eeaDesk -> ((
+                Queues.EeaDesk -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 10.0))
                   ))).toSet
@@ -144,11 +144,11 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
-                Queues.eGate -> ((
+                Queues.EGate -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 5.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 10.0), Pax(asMillis("2020-01-01T00:01:00Z"), 5.0))
                   )),
-                Queues.eeaDesk -> ((
+                Queues.EeaDesk -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T00:01:00Z"), 5.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 10.0), Pax(asMillis("2020-01-01T00:01:00Z"), 5.0))
                   ))).toSet
@@ -164,11 +164,11 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
-                Queues.eGate -> ((
+                Queues.EGate -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T01:10:00Z"), 10.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 10.0), Pax(asMillis("2020-01-01T01:10:00Z"), 10.0))
                   )),
-                Queues.eeaDesk -> ((
+                Queues.EeaDesk -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0), WL(asMillis("2020-01-01T01:10:00Z"), 10.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 10.0), Pax(asMillis("2020-01-01T01:10:00Z"), 10.0))
                   ))).toSet
@@ -184,11 +184,11 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
-                Queues.eGate -> ((
+                Queues.EGate -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 20.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 20.0))
                   )),
-                Queues.eeaDesk -> ((
+                Queues.EeaDesk -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 20.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 20.0))
                   ))).toSet
@@ -200,8 +200,8 @@ object WorkloadCalculatorTests extends TestSuite {
 
         "with paxSplits of differing paxType to the same queue" - {
           def splitRatioProvider(flight: ApiFlight) = Some(SplitRatios(List(
-            SplitRatio((PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-            SplitRatio((PaxTypes.visaNational, Queues.eeaDesk), 0.5)
+            SplitRatio((PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5),
+            SplitRatio((PaxTypes.VisaNational, Queues.EeaDesk), 0.5)
           )))
           val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider)_
 
@@ -214,7 +214,7 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
-                Queues.eeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 20.0), WL(asMillis("2020-01-01T00:01:00Z"), 20.0))).toSet
+                Queues.EeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 20.0), WL(asMillis("2020-01-01T00:01:00Z"), 20.0))).toSet
               assert(workloads == expected)
             }
           }
@@ -226,7 +226,7 @@ object WorkloadCalculatorTests extends TestSuite {
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
-                Queues.eeaDesk -> ((
+                Queues.EeaDesk -> ((
                   List(WL(asMillis("2020-01-01T00:00:00Z"), 20.0), WL(asMillis("2020-01-01T00:01:00Z"), 20.0)),
                   List(Pax(asMillis("2020-01-01T00:00:00Z"), 20.0), Pax(asMillis("2020-01-01T00:01:00Z"), 20.0))))).toSet
               assert(queueWorkloads == expected)

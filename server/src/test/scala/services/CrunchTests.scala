@@ -42,19 +42,19 @@ object FlightCrunchInteractionTests extends TestSuite {
   class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now()) extends CrunchActor(hours, conf, timeProvider) {
     override def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
       _ => Some(SplitRatios(
-        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.585),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.315),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk), 0.07),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk), 0.03)
+        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.315),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk), 0.07),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.03)
       ))
 
     def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double =
       paxTypeAndQueue match {
-        case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) => 16d / 60d
-        case PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) => 25d / 60d
-        case PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk) => 50d / 60d
-        case PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk) => 64d / 60d
-        case PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk) => 75d / 60d
+        case PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) => 16d / 60d
+        case PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate) => 25d / 60d
+        case PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk) => 50d / 60d
+        case PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) => 64d / 60d
+        case PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) => 75d / 60d
       }
 
     override def lastMidnightString: String = "2000-01-01"

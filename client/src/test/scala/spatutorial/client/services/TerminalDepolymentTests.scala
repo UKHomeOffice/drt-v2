@@ -17,8 +17,8 @@ object TerminalDepolymentTests extends TestSuite {
     Map("T1" -> Seq("eeaDesk", "nonEeaDesk", "eGate")),
     Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20),
     Seq("T1"),
-    SplitRatios(List(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.4875))),
-    Map("T1" -> Map(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60))
+    SplitRatios(List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
+    Map("T1" -> Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 20d / 60))
   )
 
   def tests = TestSuite {

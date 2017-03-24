@@ -41,19 +41,19 @@ object CsvPassengerSplitsReader {
   def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): List[SplitRatio] = {
     List(
       SplitRatio(
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk),
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk),
         calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadableToDesk)),
       SplitRatio(
-        PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate),
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate),
         calcQueueRatio(row.eeaMachineReadable, row.eeaMachineReadableToEgate)),
       SplitRatio(
-        PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, Queues.eeaDesk),
+        PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk),
         calcQueueRatio(row.eeaNonMachineReadable, row.eeaNonMachineReadableToDesk)),
       SplitRatio(
-        PaxTypeAndQueue(PaxTypes.visaNational, Queues.nonEeaDesk),
+        PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk),
         calcQueueRatio(row.visaNationals, row.visaToNonEEA)),
       SplitRatio(
-        PaxTypeAndQueue(PaxTypes.nonVisaNational, Queues.nonEeaDesk),
+        PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk),
         calcQueueRatio(row.nonVisaNationals, row.nonVisaToNonEEA))
     )
   }
