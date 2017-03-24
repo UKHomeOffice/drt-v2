@@ -45,6 +45,9 @@ object AdvPaxSplitsProvider {
 
 }
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 object SplitsMocks {
 
   class MockSplitsActor extends Actor {
