@@ -3,9 +3,9 @@ package services
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, LocalDate}
 import org.specs2.mutable.SpecificationLike
-import spatutorial.shared.FlightsApi.TerminalName
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
+import drt.shared.FlightsApi.TerminalName
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

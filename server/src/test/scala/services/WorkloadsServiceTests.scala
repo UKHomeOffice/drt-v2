@@ -1,8 +1,8 @@
 package services
 
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike
 
 import scala.collection.Set

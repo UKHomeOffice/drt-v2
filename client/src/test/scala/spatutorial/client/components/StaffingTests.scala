@@ -1,19 +1,19 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data._
-import spatutorial.client.UserDeskRecFixtures._
-import spatutorial.client.components.Heatmap.Series
-import spatutorial.client.services.{DeskRecTimeSlots, Shift, ShiftService}
-import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.shared.FlightsApi.QueueName
-import spatutorial.shared._
+import drt.client.UserDeskRecFixtures._
+import drt.client.components.Heatmap.Series
+import drt.client.services.{DeskRecTimeSlots, Shift, ShiftService}
+import drt.client.services.JSDateConversions.SDate
+import drt.shared.FlightsApi.QueueName
+import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 object StaffingTests extends TestSuite {
 
-  import spatutorial.client.services.JSDateConversions._
+  import drt.client.services.JSDateConversions._
 
   def tests = TestSuite {
     'Staffing - {

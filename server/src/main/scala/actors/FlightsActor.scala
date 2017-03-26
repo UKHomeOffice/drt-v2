@@ -7,7 +7,7 @@ import akka.util.Timeout
 import controllers.FlightState
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
-import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -15,14 +15,14 @@ import scala.language.postfixOps
 import akka.persistence._
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import services.SDate
-import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
-import spatutorial.shared._
+import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import drt.shared._
 import services.SDate.implicits._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsMessage}
-import spatutorial.shared.ApiFlight
+import drt.shared.ApiFlight
 
 case object GetFlights
 

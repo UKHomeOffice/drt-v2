@@ -1,8 +1,8 @@
-package spatutorial.shared
+package drt.shared
 
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
-import spatutorial.shared.PaxTypes.{eeaMachineReadable, eeaNonMachineReadable, nonVisaNational, visaNational}
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.PaxTypes.{eeaMachineReadable, eeaNonMachineReadable, nonVisaNational, visaNational}
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 
 import scala.collection.immutable.Seq
 

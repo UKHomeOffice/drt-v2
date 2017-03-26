@@ -1,16 +1,16 @@
-package spatutorial.client.services
+package drt.client.services
 
 import diode.data._
-import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
+import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
 object TerminalDepolymentTests extends TestSuite {
 
-  import spatutorial.client.TableViewUtils._
+  import drt.client.TableViewUtils._
   
   val airportConfig = AirportConfig(
     "STN",

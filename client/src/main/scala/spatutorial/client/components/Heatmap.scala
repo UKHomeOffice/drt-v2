@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.{Pending, Pot, Ready}
 import diode.react._
@@ -6,13 +6,13 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.vdom.svg.{all => s}
 import org.scalajs.dom.svg.{G, Text}
-import spatutorial.client.components.Heatmap.Series
-import spatutorial.client.logger._
-import spatutorial.client.services.HandyStuff.QueueStaffDeployments
-import spatutorial.client.services.RootModel.QueueCrunchResults
-import spatutorial.client.services._
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared._
+import drt.client.components.Heatmap.Series
+import drt.client.logger._
+import drt.client.services.HandyStuff.QueueStaffDeployments
+import drt.client.services.RootModel.QueueCrunchResults
+import drt.client.services._
+import drt.shared.FlightsApi._
+import drt.shared._
 
 import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
 import scala.util.{Failure, Success, Try}

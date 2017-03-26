@@ -9,7 +9,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.LoggerFactory
-import spatutorial.shared.ApiFlight
+import drt.shared.ApiFlight
 
 import scala.concurrent.duration._
 import scala.sys.process._

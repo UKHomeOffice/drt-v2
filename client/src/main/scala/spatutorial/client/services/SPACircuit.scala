@@ -1,4 +1,4 @@
-package spatutorial.client.services
+package drt.client.services
 
 
 import autowire._
@@ -6,21 +6,21 @@ import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import spatutorial.client.{SPAMain, TableViewUtils}
-import spatutorial.client.logger._
-import spatutorial.client.services.HandyStuff._
-import spatutorial.client.services.RootModel.{FlightCode, mergeTerminalQueues}
-import spatutorial.client.services.RootModel.QueueCrunchResults
-import spatutorial.shared.FlightsApi.{TerminalName, _}
-import spatutorial.shared._
+import drt.client.{SPAMain, TableViewUtils}
+import drt.client.logger._
+import drt.client.services.HandyStuff._
+import drt.client.services.RootModel.{FlightCode, mergeTerminalQueues}
+import drt.client.services.RootModel.QueueCrunchResults
+import drt.shared.FlightsApi.{TerminalName, _}
+import drt.shared._
 import boopickle.Default._
 import diode.ActionResult.NoChange
-import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
-import spatutorial.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
-import spatutorial.client.actions.Actions._
-import spatutorial.client.components.FlightsWithSplitsTable
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import drt.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
+import drt.client.actions.Actions._
+import drt.client.components.FlightsWithSplitsTable
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future

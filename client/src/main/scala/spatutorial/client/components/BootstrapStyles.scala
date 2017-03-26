@@ -1,8 +1,8 @@
-package spatutorial.client.components
+package drt.client.components
 
 import scalacss.Defaults._
 import scalacss.mutable
-import spatutorial.client.components.Bootstrap.CommonStyle._
+import drt.client.components.Bootstrap.CommonStyle._
 
 class BootstrapStyles(implicit r: mutable.Register) extends StyleSheet.Inline()(r) {
 

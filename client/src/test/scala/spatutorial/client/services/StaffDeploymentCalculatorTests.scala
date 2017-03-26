@@ -1,10 +1,10 @@
-package spatutorial.client.services
+package drt.client.services
 
 import diode.data.Ready
-import spatutorial.client.services.HandyStuff.QueueStaffDeployments
-import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.{CrunchResult, MilliDate}
+import drt.client.services.HandyStuff.QueueStaffDeployments
+import drt.client.services.JSDateConversions.SDate
+import drt.shared.FlightsApi._
+import drt.shared.{CrunchResult, MilliDate}
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}

@@ -1,11 +1,11 @@
-package spatutorial.client.components
+package drt.client.components
 
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
-import spatutorial.client.SPAMain.Loc
-import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.client.services.SPACircuit
+import drt.client.SPAMain.Loc
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.SPACircuit
 
 object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc): ReactTagOf[html.Element] = {

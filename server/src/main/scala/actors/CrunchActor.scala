@@ -6,8 +6,8 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
 import services._
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.{ApiFlight, _}
+import drt.shared.FlightsApi._
+import drt.shared.{ApiFlight, _}
 import spray.caching.{Cache, LruCache}
 
 import scala.collection.immutable.{NumericRange, Seq}

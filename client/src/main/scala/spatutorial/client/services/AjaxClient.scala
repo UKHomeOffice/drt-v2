@@ -1,11 +1,11 @@
-package spatutorial.client.services
+package drt.client.services
 
 import java.nio.ByteBuffer
 
 import boopickle.Default._
 import org.scalajs.dom
 import org.scalajs.dom.ext.Ajax.InputData
-import spatutorial.client.SPAMain
+import drt.client.SPAMain
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -1,4 +1,4 @@
-package spatutorial.client.services
+package drt.client.services
 
 import utest._
 

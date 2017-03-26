@@ -5,9 +5,9 @@ import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
 import org.joda.time.DateTime
-import spatutorial.shared.FlightsApi.TerminalName
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
+import drt.shared.FlightsApi.TerminalName
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
 
 import scala.collection.immutable.Seq
 import utest._

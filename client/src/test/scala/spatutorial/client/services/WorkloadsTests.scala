@@ -1,7 +1,7 @@
-package spatutorial.client.services
+package drt.client.services
 
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared._
+import drt.shared.FlightsApi._
+import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map}

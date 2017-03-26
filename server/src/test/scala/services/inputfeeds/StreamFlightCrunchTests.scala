@@ -16,9 +16,9 @@ import org.specs2.specification.AfterAll
 import services.FlightCrunchInteractionTests.TestCrunchActor
 import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
-import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
+import drt.shared.FlightsApi.Flights
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
 
 import collection.JavaConversions._
 import scala.concurrent.duration._

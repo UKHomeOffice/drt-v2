@@ -1,4 +1,4 @@
-package spatutorial.client.modules
+package drt.client.modules
 
 import japgolly.scalajs.react.{React, ReactComponentU_, ReactNode}
 

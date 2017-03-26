@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import japgolly.scalajs.react.ReactNode
 import japgolly.scalajs.react.vdom.prefix_<^._

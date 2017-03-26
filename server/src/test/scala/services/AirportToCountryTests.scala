@@ -1,9 +1,9 @@
 package services
 
-import spatutorial.shared.AirportInfo
+import drt.shared.AirportInfo
 import utest._
 
-import spatutorial.shared._
+import drt.shared._
 import utest._
 
 import akka.actor.ActorSystem

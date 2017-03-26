@@ -1,10 +1,10 @@
-package spatutorial.client.services
+package drt.client.services
 
 import diode.data.Pot
-import spatutorial.client.services.HandyStuff._
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.{CrunchResult, MilliDate}
-import spatutorial.client.logger._
+import drt.client.services.HandyStuff._
+import drt.shared.FlightsApi._
+import drt.shared.{CrunchResult, MilliDate}
+import drt.client.logger._
 
 import scala.collection.immutable.{IndexedSeq, Iterable, Map, Seq}
 

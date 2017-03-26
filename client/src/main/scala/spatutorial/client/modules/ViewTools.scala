@@ -1,4 +1,4 @@
-package spatutorial.client.modules
+package drt.client.modules
 
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html

@@ -2,8 +2,8 @@ package services
 
 import com.typesafe.config.{Config, ConfigFactory}
 import controllers.AirportConfProvider
-import spatutorial.shared.SplitRatiosNs.SplitRatios
-import spatutorial.shared.{AirportConfig, ApiFlight}
+import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared.{AirportConfig, ApiFlight}
 
 object SplitsProvider {
   type SplitProvider = (ApiFlight) => Option[SplitRatios]

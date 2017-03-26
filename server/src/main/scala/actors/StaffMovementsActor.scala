@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.persistence._
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage}
-import spatutorial.shared.{MilliDate, StaffMovement}
+import drt.shared.{MilliDate, StaffMovement}
 
 import scala.collection.immutable.Seq
 

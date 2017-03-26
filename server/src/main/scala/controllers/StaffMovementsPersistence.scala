@@ -4,7 +4,7 @@ import actors.{GetState, StaffMovements, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
-import spatutorial.shared.StaffMovement
+import drt.shared.StaffMovement
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}

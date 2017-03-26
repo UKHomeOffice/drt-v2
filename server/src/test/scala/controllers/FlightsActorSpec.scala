@@ -7,8 +7,8 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import org.specs2.mutable.Specification
 import services.{SplitsProvider, WorkloadCalculatorTests}
-import spatutorial.shared.FlightsApi.Flights
-import spatutorial.shared.{AirportConfig, ApiFlight, MilliDate, StaffMovement}
+import drt.shared.FlightsApi.Flights
+import drt.shared.{AirportConfig, ApiFlight, MilliDate, StaffMovement}
 import akka.pattern._
 import org.joda.time.DateTime
 import services.inputfeeds.CrunchTests

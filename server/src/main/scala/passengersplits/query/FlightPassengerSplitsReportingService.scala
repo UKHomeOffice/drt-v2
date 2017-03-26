@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import passengersplits.core
 import passengersplits.core.PassengerInfoRouterActor._
 import services.SDate.implicits._
-import spatutorial.shared.SDateLike
+import drt.shared.SDateLike
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex.Match

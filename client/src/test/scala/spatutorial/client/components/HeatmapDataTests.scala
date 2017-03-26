@@ -1,13 +1,13 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
-import spatutorial.client.components.Heatmap.Series
-import spatutorial.client.UserDeskRecFixtures._
-import spatutorial.client.services.{RootModel, DeskRecTimeSlots, DeskRecTimeslot}
-import spatutorial.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import spatutorial.shared._
+import drt.client.components.Heatmap.Series
+import drt.client.UserDeskRecFixtures._
+import drt.client.services.{RootModel, DeskRecTimeSlots, DeskRecTimeslot}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}

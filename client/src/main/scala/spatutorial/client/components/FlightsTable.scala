@@ -1,13 +1,13 @@
-package spatutorial.client.components
+package drt.client.components
 
 import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}
-import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.{Flights}
+import drt.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}
+import drt.shared.AirportInfo
+import drt.shared.FlightsApi.{Flights}
 
 import scala.language.existentials
 import scala.scalajs.js

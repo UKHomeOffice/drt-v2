@@ -5,10 +5,10 @@ import akka.event.LoggingReceive
 import passengersplits.core
 import core.PassengerInfoRouterActor._
 import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
-import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import spatutorial.shared.SDateLike
+import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
+import drt.shared.SDateLike
 import services.SDate.implicits._
-import spatutorial.shared.PassengerSplits.{FlightNotFound, FlightsNotFound, VoyagePaxSplits}
+import drt.shared.PassengerSplits.{FlightNotFound, FlightsNotFound, VoyagePaxSplits}
 
 object PassengerInfoRouterActor {
 

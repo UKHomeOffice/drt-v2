@@ -1,4 +1,4 @@
-package spatutorial.shared
+package drt.shared
 
 //import scala.scalajs.js
 //import scala.scalajs.js.annotation.JSExport

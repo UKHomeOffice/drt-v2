@@ -3,9 +3,9 @@ package services
 import org.joda.time.DateTime
 import services.workloadcalculator.PassengerQueueTypes._
 import services.workloadcalculator._
-import spatutorial.shared.FlightsApi.QueueName
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
+import drt.shared.FlightsApi.QueueName
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
 import utest.{TestSuite, _}
 
 import scala.collection.immutable.Seq

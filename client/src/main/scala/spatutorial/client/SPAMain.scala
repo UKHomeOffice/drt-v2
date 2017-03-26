@@ -1,20 +1,20 @@
-package spatutorial.client
+package drt.client
 
 import chandu0101.scalajs.react.components.ReactTable
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import spatutorial.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
-import spatutorial.client.logger._
-import spatutorial.client.modules.{FlightsView, FlightsWithSplitsView}
-import spatutorial.client.actions.Actions._
-import spatutorial.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import spatutorial.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
-import spatutorial.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
-import spatutorial.client.services.RootModel.QueueCrunchResults
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
-import spatutorial.shared._
+import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
+import drt.client.logger._
+import drt.client.modules.{FlightsView, FlightsWithSplitsView}
+import drt.client.actions.Actions._
+import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
+import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
+import drt.client.services.RootModel.QueueCrunchResults
+import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js

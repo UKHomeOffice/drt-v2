@@ -11,8 +11,8 @@ import passengersplits.core.PassengerInfoRouterActor.{PassengerSplitsAck, Report
 import passengersplits.core.{Core, CoreActors}
 import passengersplits.polling.FilePolling
 import services.SDate
-import spatutorial.shared.PassengerQueueTypes
-import spatutorial.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PassengerQueueTypes
+import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}

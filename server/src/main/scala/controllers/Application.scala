@@ -36,9 +36,9 @@ import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
-import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
-import spatutorial.shared.SplitRatiosNs.SplitRatios
-import spatutorial.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
 import drt.server.feeds.lhr.LHRFlightFeed
 

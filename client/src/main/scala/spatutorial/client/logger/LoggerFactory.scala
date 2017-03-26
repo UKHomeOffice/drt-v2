@@ -1,4 +1,4 @@
-package spatutorial.client.logger
+package drt.client.logger
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
