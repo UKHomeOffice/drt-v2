@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
