@@ -5,21 +5,45 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import drt.services.workload.SplitsMocks.MockSplitsActor
+import drt.services.workload.SplitsMocks.{MockSplitsActor, NotFoundSplitsActor}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import services.SDate.implicits._
 import services.workloadcalculator.PaxLoadCalculator
 import services.{SDate, WorkloadCalculatorTests}
-import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
-
+import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import drt.shared.Queues._
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
+
+object AdvPaxSplitsProvider {
+  def splitRatioProvider(passengerInfoRouterActor: AskableActorRef)
+                        (flight: ApiFlight)
+                        (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
+    FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
+      case Some((cc, number)) =>
+        val futResp = passengerInfoRouterActor ? ReportVoyagePaxSplit(flight.Origin, cc, number, SDate.parseString(flight.SchDT))
+        val splitsFut = futResp.map {
+          case voyagePaxSplits: VoyagePaxSplits =>
+            Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplits))
+          case fnf: FlightNotFound =>
+            None
+        }
+        Await.result(splitsFut, 1 second)
+    }
+  }
+
+  def convertVoyagePaxSplitPeopleCountsToSplitRatios(splits: VoyagePaxSplits) = {
+    SplitRatios(splits.paxSplits
+      .map(split => SplitRatio(
+        PaxTypeAndQueue(split), split.paxCount.toDouble / splits.totalPaxCount)))
+  }
+
+}
 
 object SplitsMocks {
 
@@ -31,6 +55,13 @@ object SplitsMocks {
           PaxTypeAndQueueCount(EeaMachineReadable, EGate, 10)
         ))
         sender ! splits
+    }
+  }
+
+  class NotFoundSplitsActor extends Actor {
+    def receive: Receive = {
+      case ReportVoyagePaxSplit(dp, carrierCode, voyageNumber, scheduledArrivalDateTime) =>
+        sender ! FlightNotFound(carrierCode, voyageNumber, scheduledArrivalDateTime)
     }
   }
 
@@ -50,12 +81,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def convertVoyagePaxSplitPeopleCountsToSplitRatios(splits: VoyagePaxSplits) = {
-    SplitRatios(splits.paxSplits
-      .map(split => SplitRatio(
-        PaxTypeAndQueue(split), split.paxCount.toDouble / splits.totalPaxCount)))
-  }
-
+  import AdvPaxSplitsProvider._
 
   "voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount " >> {
     "VoyagePaxSplits can  be converted to a SplitRatios as used by the extant PaxLoadCalculator" >> {
@@ -98,42 +124,45 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
       implicit def tupleToPaxTypeAndQueueCounty(t: (PaxType, String)): PaxTypeAndQueue = PaxTypeAndQueue(t._1, t._2)
 
       "queueWorkloadCalculator" in {
-        def defaultProcTimesProvider(paxTypeAndQueue: PaxTypeAndQueue) = 1
+        "given the flight can be found " >> {
+          def defaultProcTimesProvider(paxTypeAndQueue: PaxTypeAndQueue) = 1
 
-        "with simple pax splits all at the same paxType" in {
-          val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
+          "with simple pax splits all at the same paxType" in {
+            val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
 
-          def splitRatioProvider(flight: ApiFlight): Option[SplitRatios] = {
-            FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
-              case Some((cc, number)) =>
-                val futResp = passengerInfoRouterActor ? ReportVoyagePaxSplit(flight.Origin, cc, number, SDate.parseString(flight.SchDT))
-                val splitsFut = futResp.map {
-                  case voyagePaxSplits: VoyagePaxSplits =>
-                    Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplits))
-                }
-                Await.result(splitsFut, 1 second)
-            }
-          }
+            val provider = splitRatioProvider(passengerInfoRouterActor) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider) _
 
-          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider) _
+            val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
-          val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
+            "Workload calculator should" in {
 
-          "Examining workloads specifically" in {
+              "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" in {
+                val startTime: String = "2020-01-01T00:00:00Z"
+                val flights = List(apiFlight("BA0001", "LHR", 20, startTime))
 
-            "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" in {
-              val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 20, startTime))
+                val workloads = extractWorkloads(sut(flights)).toSet
+                val expected = Map(
+                  Queues.EGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
+                  Queues.EeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0))).toSet
+                workloads === expected
+              }
 
-              val workloads = extractWorkloads(sut(flights)).toSet
-              val expected = Map(
-                Queues.EGate -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0)),
-                Queues.EeaDesk -> List(WL(asMillis("2020-01-01T00:00:00Z"), 10.0))).toSet
-              workloads === expected
+
             }
           }
         }
 
+        "given the flight cannot be found" >> {
+          "with simple pax splits all at the same paxType" in {
+            val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[NotFoundSplitsActor]))
+            "If the flight isn't found in the AdvPaxInfo actor splitRatioProvider should return None" in {
+              val startTime: String = "2020-01-01T00:00:00Z"
+
+              splitRatioProvider(passengerInfoRouterActor)(apiFlight("ZZ9999", "LHR", 20, startTime)) === None
+            }
+          }
+        }
       }
     }
   }
