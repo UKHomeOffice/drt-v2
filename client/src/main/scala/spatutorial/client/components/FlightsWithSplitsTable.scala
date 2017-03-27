@@ -1,19 +1,19 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.vdom.prefix_<^.{<, TagMod, ^}
-import spatutorial.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
-import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.FlightsWithSplits
+import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
+import drt.shared.AirportInfo
+import drt.shared.FlightsApi.FlightsWithSplits
 import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.logger
-import spatutorial.client.modules.{GriddleComponentWrapper, ViewTools}
-import spatutorial.shared.AirportInfo
+import drt.client.logger
+import drt.client.modules.{GriddleComponentWrapper, ViewTools}
+import drt.shared.AirportInfo
 
 import scala.scalajs.js
 import scala.scalajs.js.Object
@@ -37,7 +37,7 @@ object FlightsWithSplitsTable {
       val splitsTuples: Map[String, Int] = flightAndSplit.splits
         .splits.groupBy(split => split.queueType + " " + split.passengerType).map(x => (x._1, x._2.map(_.paxCount).sum))
 
-      import spatutorial.shared.DeskAndPaxTypeCombinations._
+      import drt.shared.DeskAndPaxTypeCombinations._
 
       val total = "advPaxInfo total"
 

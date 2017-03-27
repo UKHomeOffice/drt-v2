@@ -1,15 +1,15 @@
-package spatutorial.client.modules
+package drt.client.modules
 
 import diode.data.Pot
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.components.Bootstrap.Panel
-import spatutorial.client.components._
-import spatutorial.client.modules.GriddleComponentWrapper.ColumnMeta
-import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.client.components.Bootstrap.Panel
+import drt.client.components._
+import drt.client.modules.GriddleComponentWrapper.ColumnMeta
+import drt.shared.AirportInfo
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 
 import scala.language.existentials
 import scala.scalajs.js
@@ -129,7 +129,7 @@ object FlightsWithSplitsView {
 
   import scala.language.existentials
 
-  import spatutorial.shared.DeskAndPaxTypeCombinations._
+  import drt.shared.DeskAndPaxTypeCombinations._
   case class Props(
                     flightsModelProxy: Pot[List[js.Dynamic]],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],

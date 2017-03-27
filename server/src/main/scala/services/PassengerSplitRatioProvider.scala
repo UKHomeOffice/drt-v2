@@ -1,7 +1,7 @@
 package services
 
-import spatutorial.shared.ApiFlight
-import spatutorial.shared.SplitRatiosNs.SplitRatios
+import drt.shared.ApiFlight
+import drt.shared.SplitRatiosNs.SplitRatios
 
 trait PassengerSplitRatioProvider {
   def splitRatioProvider: (ApiFlight) => Option[SplitRatios]

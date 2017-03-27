@@ -1,12 +1,12 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.Pot
 import diode.react.ReactConnectProxy
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{ReactComponentB, _}
-import spatutorial.client.modules.{FlightsView, PopoverWrapper}
-import spatutorial.shared.AirportInfo
-import spatutorial.shared.FlightsApi.Flights
+import drt.client.modules.{FlightsView, PopoverWrapper}
+import drt.shared.AirportInfo
+import drt.shared.FlightsApi.Flights
 
 import scala.collection.immutable.Map
 

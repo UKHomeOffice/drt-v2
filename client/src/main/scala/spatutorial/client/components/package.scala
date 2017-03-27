@@ -1,4 +1,4 @@
-package spatutorial.client
+package drt.client
 
 import diode.data.Pot
 

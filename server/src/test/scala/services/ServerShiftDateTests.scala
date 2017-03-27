@@ -1,10 +1,8 @@
 package services
 
 import org.joda.time.DateTime
-import spatutorial.shared.{MilliDate, SDateLike}
+import drt.shared.{MilliDate, SDateLike}
 import utest.{TestSuite, _}
-
-
 
 object ServerShiftDateTests extends TestSuite {
   def tests = TestSuite {

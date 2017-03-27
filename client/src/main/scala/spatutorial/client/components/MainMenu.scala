@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import java.io.Serializable
 
@@ -8,12 +8,12 @@ import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.SPAMain._
-import spatutorial.client.components.Bootstrap.CommonStyle
-import spatutorial.client.components.Icon._
-import spatutorial.client.services.SPACircuit
-import spatutorial.shared.{HasAirportConfig, AirportConfig}
-import spatutorial.client.logger._
+import drt.client.SPAMain._
+import drt.client.components.Bootstrap.CommonStyle
+import drt.client.components.Icon._
+import drt.client.services.SPACircuit
+import drt.shared.{HasAirportConfig, AirportConfig}
+import drt.client.logger._
 
 import scalacss.ScalaCssReact._
 

@@ -1,4 +1,4 @@
-package spatutorial.shared
+package drt.shared
 
 object SplitRatiosNs {
 //  type SplitRatios = List[SplitRatio]

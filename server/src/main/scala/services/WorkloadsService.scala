@@ -5,9 +5,9 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.AskableActorRef
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.SplitRatiosNs.SplitRatios
-import spatutorial.shared._
+import drt.shared.FlightsApi._
+import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global

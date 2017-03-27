@@ -10,9 +10,9 @@ import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
-import spatutorial.shared._
+import drt.shared.FlightsApi._
+import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import drt.shared._
 import org.joda.time.DateTime
 import services.SDate.implicits._
 import scala.collection.JavaConversions._

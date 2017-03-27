@@ -1,7 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
-import spatutorial.shared.{AirportConfigs}
+import drt.shared.{AirportConfigs}
 
 class AirportConfigSpec extends Specification{
   "Airport Config" >> {

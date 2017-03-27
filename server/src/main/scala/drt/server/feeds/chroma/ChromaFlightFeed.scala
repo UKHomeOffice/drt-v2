@@ -8,8 +8,8 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.http.ProdSendAndReceive
-import spatutorial.shared.ApiFlight
-import spatutorial.shared.FlightsApi.Flights
+import drt.shared.ApiFlight
+import drt.shared.FlightsApi.Flights
 
 import scala.concurrent.duration._
 

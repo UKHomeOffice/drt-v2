@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.Pot
 import diode.react.ModelProxy
@@ -6,11 +6,11 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.{BackendScope, ReactComponentB, ReactElement}
-import spatutorial.client.SPAMain.Loc
-import spatutorial.client.components.Heatmap.Series
-import spatutorial.client.logger._
-import spatutorial.client.services.{SPACircuit, Workloads}
-import spatutorial.shared.FlightsApi.TerminalName
+import drt.client.SPAMain.Loc
+import drt.client.components.Heatmap.Series
+import drt.client.logger._
+import drt.client.services.{SPACircuit, Workloads}
+import drt.shared.FlightsApi.TerminalName
 
 object TerminalDeploymentsPage {
 

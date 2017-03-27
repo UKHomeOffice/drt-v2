@@ -19,8 +19,8 @@ import passengersplits._
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
 import passengersplits.parsing.PassengerInfoParser
-import spatutorial.shared.PassengerSplits.VoyagePaxSplits
-import spatutorial.shared.SDateLike
+import drt.shared.PassengerSplits.VoyagePaxSplits
+import drt.shared.SDateLike
 
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}

@@ -1,6 +1,6 @@
-package spatutorial.client.services
+package drt.client.services
 
-import spatutorial.client.services.JSDateConversions.SDate
+import drt.client.services.JSDateConversions.SDate
 import utest.TestSuite
 import utest._
 
@@ -9,7 +9,7 @@ object ShiftDateTests extends TestSuite {
   def tests = TestSuite {
     'DateStuff - {
       "You can add days to an SDate" - {
-        import spatutorial.client.services.JSDateConversions._
+        import drt.client.services.JSDateConversions._
 
         val february = 2
         val baseDate = SDate(2016, february, 1, 10, 23)

@@ -1,6 +1,6 @@
 package passengersplits.parsing
 
-import spatutorial.shared.SDateLike
+import drt.shared.SDateLike
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import org.joda.time.DateTime
 import services.SDate.JodaSDate

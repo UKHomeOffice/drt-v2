@@ -1,4 +1,4 @@
-package spatutorial.client
+package drt.client
 
 package object logger {
   private val defaultLogger = LoggerFactory.getLogger("Log")

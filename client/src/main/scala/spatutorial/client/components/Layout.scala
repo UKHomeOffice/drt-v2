@@ -1,9 +1,9 @@
-package spatutorial.client.components
+package drt.client.components
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import spatutorial.client.SPAMain._
+import drt.client.SPAMain._
 
 
 object Layout {

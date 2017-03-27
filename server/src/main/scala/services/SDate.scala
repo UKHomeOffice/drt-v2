@@ -1,7 +1,7 @@
 package services
 
 import org.joda.time.{DateTime, DateTimeZone}
-import spatutorial.shared.{MilliDate, SDateLike}
+import drt.shared.{MilliDate, SDateLike}
 
 object SDate {
 

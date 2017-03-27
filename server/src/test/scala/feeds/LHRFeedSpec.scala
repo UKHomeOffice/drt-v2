@@ -6,8 +6,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.{Specification, SpecificationLike}
-import spatutorial.shared.ApiFlight
-import spatutorial.shared.FlightsApi.Flights
+import drt.shared.ApiFlight
+import drt.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}

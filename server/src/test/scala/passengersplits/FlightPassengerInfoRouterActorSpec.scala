@@ -11,10 +11,8 @@ import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJso
 import passengersplits.polling.FilePolling
 import services.SDate
 import services.SDate.implicits._
-import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
-import spatutorial.shared.{PassengerQueueTypes, SDateLike}
-
-
+import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.{PassengerQueueTypes, SDateLike}
 
 class FlightPassengerInfoRouterActorSpec extends
   TestKit(ActorSystem("FlightPassengerInfoRouterActorSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {

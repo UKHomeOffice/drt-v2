@@ -1,14 +1,13 @@
 package services
 
 import actors.EGateBankCrunchTransformations
-import spatutorial.shared.SplitRatiosNs.SplitRatios
-import spatutorial.shared._
+import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Seq}
 
 object EGateBanksTests extends TestSuite {
-
 
   def tests = TestSuite {
     def intoBanksOf5WithSlaOf10 = EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, 10) _

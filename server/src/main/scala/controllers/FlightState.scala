@@ -4,7 +4,7 @@ package controllers
 import akka.event.LoggingAdapter
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
-import spatutorial.shared.ApiFlight
+import drt.shared.ApiFlight
 
 import scala.language.postfixOps
 import scala.collection.mutable

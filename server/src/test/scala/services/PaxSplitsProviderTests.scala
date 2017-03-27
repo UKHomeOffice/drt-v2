@@ -2,8 +2,8 @@ package services
 
 import org.specs2.mutable.SpecificationLike
 import passengersplits.core.PassengerInfoRouterActor
-import spatutorial.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import spatutorial.shared._
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

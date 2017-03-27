@@ -1,8 +1,8 @@
-package spatutorial.client
+package drt.client
 
 import diode.data.Ready
-import spatutorial.client.services.{DeskRecTimeSlots, DeskRecTimeslot}
-import spatutorial.shared.FlightsApi.QueueName
+import drt.client.services.{DeskRecTimeSlots, DeskRecTimeslot}
+import drt.shared.FlightsApi.QueueName
 
 import scala.collection.immutable.Map
 

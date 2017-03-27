@@ -1,4 +1,4 @@
-package spatutorial.client.logger
+package drt.client.logger
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSName

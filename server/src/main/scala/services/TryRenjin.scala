@@ -5,7 +5,7 @@ import javax.script.{ScriptEngine, ScriptEngineManager}
 
 import org.renjin.sexp.{IntVector, DoubleVector}
 import org.slf4j.LoggerFactory
-import spatutorial.shared._
+import drt.shared._
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq

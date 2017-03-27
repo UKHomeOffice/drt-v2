@@ -1,21 +1,19 @@
-package spatutorial.client.services
+package drt.client.services
 
 import diode.ActionResult._
 import diode.{ActionResult, ModelR, RootModelRW}
 import diode.data._
-import spatutorial.client.UserDeskRecFixtures._
-import spatutorial.client.actions.Actions.{UpdateCrunchResult, UpdateDeskRecsTime, UpdateSimulationResult, UpdateWorkloads}
-import spatutorial.client.services.HandyStuff.PotCrunchResult
-import spatutorial.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
-import spatutorial.shared._
+import drt.client.UserDeskRecFixtures._
+import drt.client.actions.Actions.{UpdateCrunchResult, UpdateDeskRecsTime, UpdateSimulationResult, UpdateWorkloads}
+import drt.client.services.HandyStuff.PotCrunchResult
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
-
 object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
-
 
     'DeskRecHandler - {
 

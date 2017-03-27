@@ -1,10 +1,10 @@
-package spatutorial.shared
+package drt.shared
 
 import java.util.Date
 
-import spatutorial.shared.FlightsApi._
-import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.FlightsApi._
+import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
+import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
 
 import scala.collection.immutable._
 import scala.concurrent.Future

@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import org.scalajs.dom._
 

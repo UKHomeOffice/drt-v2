@@ -3,9 +3,9 @@ package services.workloadcalculator
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import services.SDate
-import spatutorial.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads}
-import spatutorial.shared.SplitRatiosNs.SplitRatios
-import spatutorial.shared._
+import drt.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads}
+import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared._
 
 import scala.List
 import scala.collection.immutable._

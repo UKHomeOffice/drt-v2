@@ -10,7 +10,6 @@ import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-
 class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   test =>
   val log = system.log
@@ -21,8 +20,6 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
       "chroma.url.token" -> "http://someserve/someotherpath",
       "chroma.username" -> "magicuser",
       "chroma.password" -> "pass"
-
-
     )
   )
 
@@ -34,8 +31,6 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
       implicit val system = test.system
       private val pipeline = tokenPipeline
 
-
-
       def sendAndReceive = (req: HttpRequest) => Future {
         HttpResponse().withEntity(
           HttpEntity(ContentTypes.`application/json`,
@@ -46,7 +41,6 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
       val response: Future[ChromaToken] = {
         pipeline(Post(tokenUrl, chromaTokenRequestCredentials))
       }
-
 
       def await = Await.result(response, 10 seconds) must equalTo(ChromaToken(
         "LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
@@ -138,6 +132,4 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
     }
     sut.await
   }
-
-
 }

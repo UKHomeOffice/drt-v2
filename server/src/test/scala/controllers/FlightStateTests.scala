@@ -1,6 +1,6 @@
 package controllers
 
-import spatutorial.shared._
+import drt.shared._
 import utest._
 
 object FlightStateTests extends TestSuite {

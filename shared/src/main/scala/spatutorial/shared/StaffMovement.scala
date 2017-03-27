@@ -1,8 +1,8 @@
-package spatutorial.shared
+package drt.shared
 
 import java.util.UUID
 
-import spatutorial.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 
 case class StaffMovement(
                           terminalName: TerminalName = "",

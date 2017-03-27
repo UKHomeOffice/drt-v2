@@ -1,15 +1,15 @@
 package passengersplits.core
 import passengersplits.parsing.PassengerInfoParser.PassengerInfoJson
-import spatutorial.shared.PassengerQueueTypes
-import spatutorial.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import spatutorial.shared.PassengerSplits.PaxTypeAndQueueCount
+import drt.shared.PassengerQueueTypes
+import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
+import drt.shared.PassengerSplits.PaxTypeAndQueueCount
 
 import scala.collection.immutable.Iterable
 import scala.collection.immutable.Seq
 
 trait PassengerQueueCalculator {
-  import spatutorial.shared.PassengerQueueTypes.Desks._
-  import spatutorial.shared.PassengerQueueTypes.PaxTypes._
+  import drt.shared.PassengerQueueTypes.Desks._
+  import drt.shared.PassengerQueueTypes.PaxTypes._
 
   def calculateQueuePaxCounts(paxTypeCounts: Map[PassengerType, Int]): PaxTypeAndQueueCounts = {
     val queues: Iterable[PaxTypeAndQueueCount] = paxTypeCounts flatMap calculateQueuesFromPaxTypes

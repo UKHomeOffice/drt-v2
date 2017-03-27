@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import japgolly.scalajs.react.ReactComponentB.BuildResult.Aux
 import japgolly.scalajs.react.ReactComponentC.ReqProps

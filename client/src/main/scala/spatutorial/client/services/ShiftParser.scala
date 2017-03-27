@@ -1,14 +1,14 @@
-package spatutorial.client.services
+package drt.client.services
 
 import java.util.UUID
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
-import spatutorial.client.services.JSDateConversions.SDate
-import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.{MilliDate, SDateLike, StaffMovement}
-import spatutorial.shared.FlightsApi.TerminalName
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.shared.{MilliDate, SDateLike, StaffMovement}
+import drt.shared.FlightsApi.TerminalName
 
 object JSDateConversions {
   implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong

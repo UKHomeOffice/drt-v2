@@ -10,8 +10,8 @@ import passengersplits.core.{Core, CoreActors}
 import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJson, VoyagePassengerInfo}
 import services.SDate
 import services.SDate.implicits._
-import spatutorial.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
-import spatutorial.shared.{ApiFlight, PassengerQueueTypes, SDateLike}
+import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.{ApiFlight, PassengerQueueTypes, SDateLike}
 
 class CanFindASplitForAnApiFlightSpec extends
   TestKit(ActorSystem("CanFindASplitForAnApiFlightSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
@@ -24,7 +24,7 @@ class CanFindASplitForAnApiFlightSpec extends
 
 
   "Can parse an IATA to carrier code and voyage number" >> {
-    import spatutorial.shared.FlightParsing._
+    import drt.shared.FlightParsing._
     parseIataToCarrierCodeVoyageNumber("FR8364") === Some(("FR", "8364"))
     parseIataToCarrierCodeVoyageNumber("RY836") === Some(("RY", "836"))
     parseIataToCarrierCodeVoyageNumber("RY836F") === Some(("RY", "836"))

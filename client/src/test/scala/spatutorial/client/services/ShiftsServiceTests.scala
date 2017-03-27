@@ -1,9 +1,9 @@
-package spatutorial.client.services
+package drt.client.services
 
 import java.util.UUID
 
-import spatutorial.client.services.JSDateConversions.SDate.JSSDate
-import spatutorial.shared.{SDateLike, StaffMovement}
+import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.shared.{SDateLike, StaffMovement}
 import utest._
 
 import scala.scalajs.js.Date
@@ -11,7 +11,7 @@ import scala.util.{Failure, Success, Try}
 
 object ShiftsServiceTests extends TestSuite {
 
-  import spatutorial.client.services.JSDateConversions._
+  import drt.client.services.JSDateConversions._
 
   def tests = TestSuite {
     'StaffShifts - {

@@ -1,17 +1,17 @@
-package spatutorial.client.components
+package drt.client.components
 
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.ReactTagOf
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
-import spatutorial.client.SPAMain.{Loc, TerminalDepsLoc}
-import spatutorial.client.logger._
-import spatutorial.client.modules.PopoverWrapper
-import spatutorial.client.services._
-import spatutorial.shared.FlightsApi.TerminalName
-import spatutorial.shared.SDateLike
-import spatutorial.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
+import drt.client.SPAMain.{Loc, TerminalDepsLoc}
+import drt.client.logger._
+import drt.client.modules.PopoverWrapper
+import drt.client.services._
+import drt.shared.FlightsApi.TerminalName
+import drt.shared.SDateLike
+import drt.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
 
 import scala.util.{Failure, Success}
 import scala.collection.immutable.Seq

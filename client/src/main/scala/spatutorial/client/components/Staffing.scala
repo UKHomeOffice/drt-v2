@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.{Empty, Pot, Ready}
 import diode.react.ModelProxy
@@ -6,11 +6,11 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
-import spatutorial.client.logger._
-import spatutorial.client.services.JSDateConversions._
-import spatutorial.client.services._
-import spatutorial.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
-import spatutorial.client.actions.Actions.{SetShifts, SaveShifts, RemoveStaffMovement}
+import drt.client.logger._
+import drt.client.services.JSDateConversions._
+import drt.client.services._
+import drt.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
+import drt.client.actions.Actions.{SetShifts, SaveShifts, RemoveStaffMovement}
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date

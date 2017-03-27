@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.util.Timeout
 import org.specs2.mutable.Specification
-import spatutorial.shared.{MilliDate, StaffMovement}
+import drt.shared.{MilliDate, StaffMovement}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await

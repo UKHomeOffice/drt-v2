@@ -1,11 +1,11 @@
-package spatutorial.client.actions
+package drt.client.actions
 
 import java.util.UUID
 
 import diode.Action
-import spatutorial.client.services.{DeskRecTimeslot, Shift}
-import spatutorial.shared.{AirportConfig, CrunchResult, SimulationResult, StaffMovement}
-import spatutorial.shared.FlightsApi._
+import drt.client.services.{DeskRecTimeslot, Shift}
+import drt.shared.{AirportConfig, CrunchResult, SimulationResult, StaffMovement}
+import drt.shared.FlightsApi._
 
 import scala.collection.immutable.{Map, Seq}
 
