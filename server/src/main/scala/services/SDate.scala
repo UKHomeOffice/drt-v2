@@ -1,5 +1,7 @@
 package services
 
+import java.time.chrono.Chronology
+
 import org.joda.time.{DateTime, DateTimeZone}
 import drt.shared.{MilliDate, SDateLike}
 
@@ -43,5 +45,5 @@ object SDate {
     JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
   }
 
-  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm))
+  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 }
