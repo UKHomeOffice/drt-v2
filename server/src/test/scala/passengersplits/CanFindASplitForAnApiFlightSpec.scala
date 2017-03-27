@@ -49,12 +49,31 @@ class CanFindASplitForAnApiFlightSpec extends
 
     "Given a single flight STN EZ789 flight, with just one GBR and one nationals passenger" in {
       "When we ask for a report of voyage pax splits" in {
-        flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-06-01", "13:55:00",
+        flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-02-01", "13:55:00",
           PassengerInfoJson(Some("P"), "GBR", "EEA", None) ::
             PassengerInfoJson(Some("P"), "NZL", "", None) ::
             Nil)
 
-        val scheduleArrivalTime = SDate(2015, 6, 1, 13, 55)
+        val scheduleArrivalTime = SDate(2015, 2, 1, 13, 55)
+        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
+
+        val expectedPaxSplits = List(
+          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.eeaDesk, 1),
+          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.egate, 0),
+          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.NATIONALNONVISA, PassengerQueueTypes.Desks.nationalsDesk, 1)
+        )
+        expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
+        success
+      }
+    }
+    "Given a single flight STN EZ789 flight where the scheduled date is in British Summer Time (BST) with just one GBR and one nationals passenger" in {
+      "When we ask for a report of voyage pax splits" in {
+        flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2017-03-27", "12:10:00",
+          PassengerInfoJson(Some("P"), "GBR", "EEA", None) ::
+            PassengerInfoJson(Some("P"), "NZL", "", None) ::
+            Nil)
+
+        val scheduleArrivalTime = SDate(2017, 3,27, 12, 10)
         flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
 
         val expectedPaxSplits = List(
