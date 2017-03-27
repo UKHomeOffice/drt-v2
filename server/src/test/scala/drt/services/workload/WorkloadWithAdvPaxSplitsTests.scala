@@ -12,6 +12,7 @@ import services.SDate.implicits._
 import services.workloadcalculator.PaxLoadCalculator
 import services.{SDate, WorkloadCalculatorTests}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
+
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
@@ -25,19 +26,16 @@ object SplitsMocks {
   class MockSplitsActor extends Actor {
     def receive: Receive = {
       case ReportVoyagePaxSplit(dp, carrierCode, voyageNumber, scheduledArrivalDateTime) =>
-        val splits: VoyagePaxSplits = testVoyagePaxSplits(scheduledArrivalDateTime)
-
-
+        val splits: VoyagePaxSplits = testVoyagePaxSplits(scheduledArrivalDateTime, List(
+          PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 10),
+          PaxTypeAndQueueCount(EeaMachineReadable, EGate, 10)
+        ))
         sender ! splits
     }
   }
 
-  def testVoyagePaxSplits(scheduledArrivalDateTime: SDateLike) = {
-    val expectedPaxSplits = List(
-      PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 10),
-      PaxTypeAndQueueCount(EeaMachineReadable, EGate, 10)
-    )
-    val splits = VoyagePaxSplits("LGW", "BA", "0001", expectedPaxSplits.map(_.paxCount).sum, scheduledArrivalDateTime, expectedPaxSplits)
+  def testVoyagePaxSplits(scheduledArrivalDateTime: SDateLike, passengerNumbers: List[PaxTypeAndQueueCount]) = {
+    val splits = VoyagePaxSplits("LGW", "BA", "0001", passengerNumbers.map(_.paxCount).sum, scheduledArrivalDateTime, passengerNumbers)
     splits
   }
 }
@@ -52,23 +50,44 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount(splits: VoyagePaxSplits) = {
-    Some(
-      SplitRatios(
-        SplitRatio(
-          PaxTypeAndQueue(EeaMachineReadable, EeaDesk), 0.5),
-        SplitRatio(
-          PaxTypeAndQueue(EeaMachineReadable, EGate), 0.5)))
+  def convertVoyagePaxSplitPeopleCountsToSplitRatios(splits: VoyagePaxSplits) = {
+    SplitRatios(splits.paxSplits
+      .map(split => SplitRatio(
+        PaxTypeAndQueue(split), split.paxCount.toDouble / splits.totalPaxCount)))
   }
 
-  "VoyagePaxSplits can  be converted to a SplitRatios as used by the extant PaxLoadCalculator" >> {
-    val splits = SplitsMocks.testVoyagePaxSplits(SDate(2017, 1, 1, 12, 20))
-    voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount(splits) === Some(
-      SplitRatios(
-        SplitRatio(
-          PaxTypeAndQueue(EeaMachineReadable, EeaDesk), 0.5),
-        SplitRatio(
-          PaxTypeAndQueue(EeaMachineReadable, EGate), 0.5)))
+
+  "voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount " >> {
+    "VoyagePaxSplits can  be converted to a SplitRatios as used by the extant PaxLoadCalculator" >> {
+      val splits = SplitsMocks.testVoyagePaxSplits(SDate(2017, 1, 1, 12, 20), List(
+        PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 10),
+        PaxTypeAndQueueCount(EeaMachineReadable, EGate, 10)
+      ))
+      convertVoyagePaxSplitPeopleCountsToSplitRatios(splits) ===
+        SplitRatios(
+          SplitRatio(
+            PaxTypeAndQueue(EeaMachineReadable, EeaDesk), 0.5),
+          SplitRatio(
+            PaxTypeAndQueue(EeaMachineReadable, EGate), 0.5))
+    }
+
+
+    "VoyagePaxSplits can  be converted to a SplitRatios as used by the extant PaxLoadCalculator 2/8 => 0.2:0.8" >> {
+      val splits = SplitsMocks.testVoyagePaxSplits(SDate(2017, 1, 1, 12, 20), List(
+        PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 2),
+        PaxTypeAndQueueCount(EeaMachineReadable, EGate, 8)
+      ))
+      convertVoyagePaxSplitPeopleCountsToSplitRatios(splits) ===
+        SplitRatios(
+          SplitRatio(
+            PaxTypeAndQueue(EeaMachineReadable, EeaDesk), 0.2),
+          SplitRatio(
+            PaxTypeAndQueue(EeaMachineReadable, EGate), 0.8))
+    }
+    "VoyagePaxSplits can  be converted to a SplitRatios as used by the extant PaxLoadCalculator" >> {
+      val splits = SplitsMocks.testVoyagePaxSplits(SDate(2017, 1, 1, 12, 20), Nil)
+      convertVoyagePaxSplitPeopleCountsToSplitRatios(splits) === SplitRatios()
+    }
   }
 
 
@@ -90,7 +109,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
                 val futResp = passengerInfoRouterActor ? ReportVoyagePaxSplit(flight.Origin, cc, number, SDate.parseString(flight.SchDT))
                 val splitsFut = futResp.map {
                   case voyagePaxSplits: VoyagePaxSplits =>
-                    voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount(voyagePaxSplits)
+                    Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplits))
                 }
                 Await.result(splitsFut, 1 second)
             }

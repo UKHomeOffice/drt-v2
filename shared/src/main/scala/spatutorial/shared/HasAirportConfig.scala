@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 
@@ -31,6 +32,10 @@ object PaxTypes {
 }
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
+object PaxTypeAndQueue {
+  def apply(split: PaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
+
+}
 
 
 case class AirportConfig(
