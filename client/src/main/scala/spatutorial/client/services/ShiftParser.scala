@@ -50,6 +50,7 @@ object JSDateConversions {
 
       def millisSinceEpoch: Long = date.getTime().toLong
 
+
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
