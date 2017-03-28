@@ -53,7 +53,7 @@ object JSDateConversions {
 
     def getUTCDateFromDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
 
-    def apply(milliDate: MilliDate): SDateLike = getUTCDateFromDate(new Date(milliDate.millisSinceEpoch))
+    def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = getUTCDateFromDate(new Date(y, m - 1, d, h, mm))
 
@@ -69,7 +69,7 @@ object JSDateConversions {
 
     def now(): SDateLike = {
       val d = new Date()
-      JSSDate(getUTCDateFromDate(d))
+      JSSDate(d)
     }
   }
 
