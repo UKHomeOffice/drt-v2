@@ -17,9 +17,9 @@ object SDateTests extends TestSuite {
 
         val february = 2
         val baseDate = SDate(2016, february, 1, 10, 23)
-        val wtf = baseDate.addDays(39)
+        val d = baseDate.addDays(39)
 
-        val ymdhm: (Int, Int, Int, Int, Int) = (wtf.getFullYear(), wtf.getMonth(), wtf.getDate(), wtf.getHours(), wtf.getMinutes())
+        val ymdhm: (Int, Int, Int, Int, Int) = (d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes())
 
         val march = 3
         val expected = (2016, march, 11, 10, 23)
