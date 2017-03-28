@@ -55,30 +55,6 @@ import scala.concurrent.Await
 >>>>>>> DRT-4528 lift code we've grown in test into it's own object AdvPaxSplitsProvider
 import scala.concurrent.duration._
 
-object AdvPaxSplitsProvider {
-  def splitRatioProvider(passengerInfoRouterActor: AskableActorRef)
-                        (flight: ApiFlight)
-                        (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
-    FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
-      case Some((cc, number)) =>
-        val futResp = passengerInfoRouterActor ? ReportVoyagePaxSplit(flight.Origin, cc, number, SDate.parseString(flight.SchDT))
-        val splitsFut = futResp.map {
-          case voyagePaxSplits: VoyagePaxSplits =>
-            Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplits))
-          case fnf: FlightNotFound =>
-            None
-        }
-        Await.result(splitsFut, 1 second)
-    }
-  }
-
-  def convertVoyagePaxSplitPeopleCountsToSplitRatios(splits: VoyagePaxSplits) = {
-    SplitRatios(splits.paxSplits
-      .map(split => SplitRatio(
-        PaxTypeAndQueue(split), split.paxCount.toDouble / splits.totalPaxCount)))
-  }
-
-}
 
 object SplitsMocks {
 

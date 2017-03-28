@@ -120,8 +120,16 @@ trait AirportConfProvider extends AirportConfiguration {
 
 trait ProdPassengerSplitProviders {
   self: AirportConfiguration with SystemActors =>
-  val splitProviders = List(SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
+  private implicit val timeout = Timeout(5 seconds)
+  import scala.concurrent.ExecutionContext.global
+  val apiSplitsProvider = (flight: ApiFlight) => AdvPaxSplitsProvider.splitRatioProvider(airportConfig.portCode)(flightPassengerSplitReporter)(flight)(timeout, global)
+  val splitProviders = List(apiSplitsProvider, SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
 }
+
+trait ImplicitTimeoutProvider {
+  implicit val timeout = Timeout(5 seconds)
+}
+
 
 class Application @Inject()(
                              implicit val config: Configuration,
@@ -133,11 +141,9 @@ class Application @Inject()(
   extends Controller with Core
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with SystemActors {
+    with SystemActors with ImplicitTimeoutProvider {
   ctrl =>
   val log = system.log
-
-  implicit val timeout = Timeout(5 seconds)
 
 
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
@@ -218,7 +224,7 @@ class Application @Inject()(
   /// PassengerSplits reader
   AtmosFilePolling.beginPolling(log,
     ctrl.flightPassengerSplitReporter,
-    Some("drt_dq_17030"),
+    Some("drt_dq_170328"),
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
     config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
     portCode
