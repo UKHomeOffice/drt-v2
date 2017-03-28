@@ -3,6 +3,7 @@ package drt.client.services
 import java.util.UUID
 
 import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.client.services.SDateTests.assert
 import drt.shared.{SDateLike, StaffMovement}
 import utest._
 
@@ -19,22 +20,6 @@ object ShiftsServiceTests extends TestSuite {
         "I want to be able tell DRT about staff available by shift for a given period" +
         "So that I can easily get an initial state for the system" - {
 
-        "some implicits make things nicer whether we're server side or client side " - {
-          val startDt = SDate(2016, 12, 10, 10, 0)
-          val endDate = SDate(2016, 12, 19, 12, 0)
-          val shifts = Shift("alpha", "any", startDt, endDate, 10)
-
-          assert(shifts == Shift("alpha", "any", 1481364000000L, 1482148800000L, 10))
-        }
-        "round trip the above magic numbers 1481364000000d is 2016/12/10 10:00" - {
-          val sdate: SDateLike = SDate.JSSDate(new Date(1481364000000d))
-          assert((2016, 12, 10, 10, 0) == (sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
-        }
-
-        "round trip the above magic numbers 1482148800000L is 2016/12/19 12:00" - {
-          val sdate: SDateLike = SDate.JSSDate(new Date(1482148800000d))
-          assert((2016, 12, 19, 12, 0) == (sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
-        }
 
         "Given a shift of 10 people, if we ask how many staff are available" - {
           val shifts = Shift("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10)
@@ -49,6 +34,14 @@ object ShiftsServiceTests extends TestSuite {
             assert(SDate(2015, 10, 10, 10, 10) < SDate(2016, 12, 12, 12, 12))
             assert(SDate(2015, 10, 10, 10, 10) <= SDate(2016, 12, 12, 12, 12))
           }
+        }
+
+        "some implicits make things nicer whether we're server side or client side " - {
+          val startDt = SDate(2016, 12, 10, 10, 0)
+          val endDate = SDate(2016, 12, 19, 12, 0)
+          val shifts = Shift("alpha", "any", startDt, endDate, 10)
+
+          assert(shifts == Shift("alpha", "any", 1481364000000L, 1482148800000L, 10))
         }
 
         "Given two overlapping shifts" - {

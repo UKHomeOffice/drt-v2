@@ -13,6 +13,7 @@ import drt.client.services._
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 
 import scala.collection.immutable.{Map, Seq}
@@ -140,8 +141,8 @@ object TerminalDeploymentsTable {
         val windowSize = 60000 * 15
         val flights: Pot[Flights] = props.flights.map(flights =>
           flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
-        val date: Date = new Date(item.time)
-        val formattedDate: String = jsDateFormat.formatDate(date)
+
+        val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
         val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 

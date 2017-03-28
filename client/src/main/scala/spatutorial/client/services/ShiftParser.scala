@@ -22,7 +22,6 @@ object JSDateConversions {
   implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(date)
 
   object SDate {
-
     case class JSSDate(date: Date) extends SDateLike {
 
       def getFullYear(): Int = date.getFullYear()
@@ -52,9 +51,11 @@ object JSDateConversions {
 
     }
 
+    def asUTCDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
+
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = asUTCDate(new Date(y, m - 1, d, h, mm))
 
     def parse(dateString: String): SDateLike = new Date(dateString)
 
@@ -63,7 +64,7 @@ object JSDateConversions {
       d.setHours(0)
       d.setMinutes(0)
       d.setMilliseconds(0)
-      JSSDate(d)
+      JSSDate(asUTCDate(d))
     }
 
     def now(): SDateLike = {
