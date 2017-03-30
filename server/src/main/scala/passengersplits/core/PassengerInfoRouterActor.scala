@@ -87,11 +87,10 @@ class PassengerSplitsInfoByPortRouter extends
       val child = childActorMap get (name)
       child match {
         case Some(c) =>
-          log.info(s"Child singleflight actor found child $name $handyName ")
-
+          log.debug(s"Child singleflight actor found child $name $handyName ")
           c.tell(report, replyTo)
         case None =>
-          log.info(s"Child singleflight actor doesn't exist yet $name $handyName ")
+          log.debug(s"Child singleflight actor doesn't exist yet $name $handyName ")
           replyTo ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
       }
     case report: ReportVoyagePaxSplitBetween =>
@@ -165,10 +164,10 @@ class SingleFlightActor
 
   def receive = LoggingReceive {
     case info: VoyagePassengerInfo =>
-      log.info(s"${self} SingleFlightActor received ${info.summary}")
+      log.debug(s"${self} SingleFlightActor received ${info.summary}")
       latestMessage = Option(info)
-      log.info(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
-      log.info(s"$self Acking to $sender")
+      log.debug(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
+      log.debug(s"$self Acking to $sender")
       sender ! PassengerSplitsAck
 
 
@@ -177,7 +176,7 @@ class SingleFlightActor
       val paddedVoyageNumber = padTo4Digits(requestedVoyageNumber)
 
       val reportName = s"ReportVoyagePaxSplit($port, $carrierCode, $paddedVoyageNumber, $scheduledArrivalDateTime)"
-      log.info(s"$replyTo is asking for I am ${latestMessage.map(_.summary)}: $reportName")
+      log.debug(s"$replyTo is asking for I am ${latestMessage.map(_.summary)}: $reportName")
 
       def matches: (VoyagePassengerInfo) => Boolean = (flight) => doesFlightMatch(carrierCode, paddedVoyageNumber, scheduledArrivalDateTime, flight)
 
@@ -188,10 +187,10 @@ class SingleFlightActor
       }
       matchingFlights match {
         case Some(flight) =>
-          log.info(s"$replyTo Matching flight is ${flight.summary}")
+          log.debug(s"$replyTo Matching flight is ${flight.summary}")
           calculateAndSendPaxSplits(sender, port, carrierCode, requestedVoyageNumber, scheduledArrivalDateTime, flight)
         case None =>
-          log.info(s"$replyTo did not match ${reportName}")
+          log.debug(s"$replyTo did not match ${reportName}")
           replyTo ! FlightNotFound(carrierCode, requestedVoyageNumber, scheduledArrivalDateTime)
       }
     case report: ReportVoyagePaxSplitBetween =>
@@ -237,25 +236,19 @@ class SingleFlightActor
       paxTypeAndQueueCount)
   }
 
-  def doesFlightMatch(info: VoyagePassengerInfo, existingMessage: VoyagePassengerInfo): Boolean = {
-    log.info(s"doesflightmatch ${existingMessage.CarrierCode}${existingMessage.VoyageNumber} ${existingMessage.flightCode} ${info} == $existingMessage")
-    doesFlightMatch(info.CarrierCode,
-      info.VoyageNumber, info.scheduleArrivalDateTime.get, existingMessage)
-  }
-
   def doesFlightMatch(carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyagePassengerInfo): Boolean = {
-    log.info(s"doesflightmatch ${carrierCode}${voyageNumber} ${flight.summary} ${scheduledArrivalDateTime} $scheduledArrivalDateTime")
+    log.debug(s"doesflightmatch ${carrierCode}${voyageNumber} ${flight.summary} ${scheduledArrivalDateTime} $scheduledArrivalDateTime")
 
     val paddedVoyageNumber = padTo4Digits(voyageNumber)
     val timeOpt = flight.scheduleArrivalDateTime
     timeOpt match {
       case Some(flightTime) =>
-        log.info(s"doesflightmatch ${carrierCode}${voyageNumber} ${flight.summary} ${scheduledArrivalDateTime} ${scheduledArrivalDateTime.millisSinceEpoch} == ${flightTime.millisSinceEpoch}")
+        log.debug(s"doesflightmatch ${carrierCode}${voyageNumber} ${flight.summary} ${scheduledArrivalDateTime} ${scheduledArrivalDateTime.millisSinceEpoch} == ${flightTime.millisSinceEpoch}")
         val paddedFlightVoyageNumber = padTo4Digits(flight.VoyageNumber)
         paddedFlightVoyageNumber == paddedVoyageNumber &&
           scheduledArrivalDateTime.millisSinceEpoch == flightTime.millisSinceEpoch
       case None =>
-        log.info(s"doesflightmatch ${carrierCode}${voyageNumber} ${flight.summary} false")
+        log.debug(s"doesflightmatch ${carrierCode}${voyageNumber} ${flight.summary} false")
         false
     }
   }
@@ -291,8 +284,8 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
       responseCount += 1
       responses = vpi :: responses
       checkIfDoneAndDie()
-    case fnf: FlightNotFound =>
-      log.info(s"Got a not found")
+    case _: FlightNotFound =>
+      log.debug(s"Got a not found")
       responseCount += 1
       checkIfDoneAndDie()
     case default =>
