@@ -80,9 +80,9 @@ class CanFindASplitForAnApiFlightSpec extends
         flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
 
         val expectedPaxSplits = List(
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.eeaDesk, 1),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.egate, 0),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.NATIONALNONVISA, PassengerQueueTypes.Desks.nationalsDesk, 1)
+          PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
+          PaxTypeAndQueueCount(EeaMachineReadable, EGate, 0),
+          PaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
         )
         expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
         success

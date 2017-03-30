@@ -12,47 +12,12 @@ import services.SDate.implicits._
 import services.workloadcalculator.PaxLoadCalculator
 import services.{SDate, WorkloadCalculatorTests}
 import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
-<<<<<<< 55afa96384e3bc744ccd37ddf75ebe53443c3b15
-
-=======
->>>>>>> DRT-4528 lift code we've grown in test into it's own object AdvPaxSplitsProvider
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import drt.shared.Queues._
 
 import scala.concurrent.{Await, ExecutionContext}
-<<<<<<< 55afa96384e3bc744ccd37ddf75ebe53443c3b15
-import scala.concurrent.duration._
-
-object AdvPaxSplitsProvider {
-  def splitRatioProvider(passengerInfoRouterActor: AskableActorRef)
-                        (flight: ApiFlight)
-                        (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
-    FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
-      case Some((cc, number)) =>
-        val futResp = passengerInfoRouterActor ? ReportVoyagePaxSplit(flight.Origin, cc, number, SDate.parseString(flight.SchDT))
-        val splitsFut = futResp.map {
-          case voyagePaxSplits: VoyagePaxSplits =>
-            Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplits))
-          case fnf: FlightNotFound =>
-            None
-        }
-        Await.result(splitsFut, 1 second)
-    }
-  }
-
-  def convertVoyagePaxSplitPeopleCountsToSplitRatios(splits: VoyagePaxSplits) = {
-    SplitRatios(splits.paxSplits
-      .map(split => SplitRatio(
-        PaxTypeAndQueue(split), split.paxCount.toDouble / splits.totalPaxCount)))
-  }
-
-}
-
-import scala.concurrent.Await
-=======
->>>>>>> DRT-4528 lift code we've grown in test into it's own object AdvPaxSplitsProvider
 import scala.concurrent.duration._
 
 
@@ -92,7 +57,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  import AdvPaxSplitsProvider._
+  import services.AdvPaxSplitsProvider._
 
   "voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount " >> {
     "VoyagePaxSplits can  be converted to a SplitRatios as used by the extant PaxLoadCalculator" >> {
@@ -141,7 +106,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
           "with simple pax splits all at the same paxType" in {
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
 
-            val provider = splitRatioProvider(passengerInfoRouterActor) _
+            val provider = splitRatioProvider("LHR")(passengerInfoRouterActor) _
             val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
@@ -170,7 +135,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             "If the flight isn't found in the AdvPaxInfo actor splitRatioProvider should return None" in {
               val startTime: String = "2020-01-01T00:00:00Z"
 
-              splitRatioProvider(passengerInfoRouterActor)(apiFlight("ZZ9999", "LHR", 20, startTime)) === None
+              splitRatioProvider("LHR")(passengerInfoRouterActor)(apiFlight("ZZ9999", "LHR", 20, startTime)) === None
             }
           }
         }
