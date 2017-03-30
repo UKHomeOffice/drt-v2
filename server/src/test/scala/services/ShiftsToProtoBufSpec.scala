@@ -12,12 +12,15 @@ class ShiftsToProtoBufSpec extends Specification {
       val shiftMessage = shiftStringToShiftMessage(shiftString)
 
       val expected = Some(ShiftMessage(
-        Some("shift name"),
-        Some("T1"),
-        Some("20/01/2017"),
-        Some("10:00"),
-        Some("20:00"),
-        Some("9")))
+        name = Some("shift name"),
+        terminalName = Some("T1"),
+        startDayOLD = None,
+        startTimeOLD = None,
+        endTimeOLD = None,
+        startTimestamp = Some(1484906400000L),
+        endTimestamp = Some(1484942400000L),
+        numberOfStaff = Some("9")
+      ))
 
       shiftMessage === expected
     }
@@ -35,9 +38,17 @@ class ShiftsToProtoBufSpec extends Specification {
 
       val expected = ShiftsMessage(List(
         ShiftMessage(
-          Some("shift name"), Some("T1"), Some("20/01/2017"), Some("10:00"), Some("20:00"), Some("5")
+          name = Some("shift name"),
+          terminalName = Some("T1"),
+          startTimestamp = Some(1484906400000L),
+          endTimestamp = Some(1484942400000L),
+          numberOfStaff = Some("5")
         ), ShiftMessage(
-          Some("shift name"), Some("T1"), Some("20/01/2017"), Some("10:00"), Some("20:00"), Some("9")
+          name = Some("shift name"),
+          terminalName = Some("T1"),
+          startTimestamp = Some(1484906400000L),
+          endTimestamp = Some(1484942400000L),
+          numberOfStaff = Some("9")
         )))
 
       shiftsMessage === expected
@@ -45,19 +56,36 @@ class ShiftsToProtoBufSpec extends Specification {
   }
 
   "shiftsMessageToShiftsString" should {
-    "take a ShiftsMessage and return the multiline string representation" in {
+    "take a v1 ShiftsMessage and return the multiline string representation" in {
       val shiftsMessage = ShiftsMessage(List(ShiftMessage(
-        Some("shift name"), Some("T1"), Some("20/01/2017"), Some("10:00"), Some("20:00"), Some("5")
+        Some("shift name"), Some("T1"), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("5")
       ), ShiftMessage(
-        Some("shift name"), Some("T1"), Some("20/01/2017"), Some("10:00"), Some("20:00"), Some("9")
+        Some("shift name"), Some("T1"), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("9")
       )))
 
       val shiftsString = shiftsMessageToShiftsString(shiftsMessage)
 
       val expected =
         """
-          |shift name, T1, 20/01/2017, 10:00, 20:00, 5
-          |shift name, T1, 20/01/2017, 10:00, 20:00, 9
+          |shift name, T1, 20/01/17, 10:00, 20:00, 5
+          |shift name, T1, 20/01/17, 10:00, 20:00, 9
+        """.stripMargin.trim
+
+      shiftsString === expected
+    }
+    "take a v2 ShiftsMessage and return the multiline string representation" in {
+      val shiftsMessage = ShiftsMessage(List(ShiftMessage(
+        Some("shift name"), Some("T1"), None, None, None, Some("5"), Some(1484906400000L), Some(1484942400000L)
+      ), ShiftMessage(
+        Some("shift name"), Some("T1"), None, None, None, Some("9"), Some(1484906400000L), Some(1484942400000L)
+      )))
+
+      val shiftsString = shiftsMessageToShiftsString(shiftsMessage)
+
+      val expected =
+        """
+          |shift name, T1, 20/01/17, 10:00, 20:00, 5
+          |shift name, T1, 20/01/17, 10:00, 20:00, 9
         """.stripMargin.trim
 
       shiftsString === expected

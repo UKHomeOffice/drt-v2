@@ -65,7 +65,7 @@ case class ApiFlight(
 
 trait SDateLike {
 
-  def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
+  def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
 
   def getFullYear(): Int
 
