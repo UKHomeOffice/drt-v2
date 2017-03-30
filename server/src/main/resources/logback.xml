@@ -8,7 +8,7 @@
     </appender>
 
 
-    <logger name="services.AdvPaxSplitsProvider" level="DEBUG" />
+    <!--<logger name="services.AdvPaxSplitsProvider" level="DEBUG" />-->
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
