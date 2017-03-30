@@ -5,6 +5,7 @@ import java.util.Date
 import drt.shared.FlightsApi._
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.Queues.QueueType
 
 import scala.collection.immutable._
 import scala.concurrent.Future
@@ -140,15 +141,15 @@ trait WorkloadsHelpers {
     }
   }
 
-  def workloadPeriodByQueue(workloads: Map[String, (Seq[WL], Seq[Pax])], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def workloadPeriodByQueue(workloads: Map[QueueType, (Seq[WL], Seq[Pax])], periodMinutes: NumericRange[Long]): Map[QueueType, List[Double]] = {
     loadPeriodByQueue(workloads, periodMinutes, workloadByMillis)
   }
 
-  def paxloadPeriodByQueue(workloads: Map[String, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def paxloadPeriodByQueue(workloads: Map[QueueType, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[QueueType, List[Double]] = {
     loadPeriodByQueue(workloads, periodMinutes, paxloadByMillis)
   }
 
-  def loadPeriodByQueue(workloads: Map[String, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long], loadByMillis: QueuePaxAndWorkLoads => Map[Long, Double]): Map[String, List[Double]] = {
+  def loadPeriodByQueue(workloads: Map[QueueType, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long], loadByMillis: QueuePaxAndWorkLoads => Map[Long, Double]): Map[QueueType, List[Double]] = {
     workloads.mapValues(qwl => {
       val allPaxloadByMinuteForThisQueue: Map[Long, Double] = loadByMillis(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, allPaxloadByMinuteForThisQueue)
@@ -219,29 +220,16 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 
 object PassengerQueueTypes {
-//
-//  object Queues {
-//    val eeaDesk = "desk"
-//    val egate = "egate"
-//    val nationalsDesk = "nationalsDesk"
-//  }
-
-//  object PaxTypes {
-//    val EeaNonMachineReadable = "eea-non-machine-readable"
-//    val NationalVisa = "national-visa"
-//    val EeaMachineReadable = "eea-machine-readable"
-//    val NonNationalVisa = "national-non-visa"
-//  }
-
   def egatePercentage = 0.6d
 
   type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Int)
+//this is floating free because of a weird issue we didn't fully solve with AutoWire and the PassengerSplits.PaxTypeAndQueueCount
+/// autowire did NOT like the type being inside the object.
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
 
 object PassengerSplits {
-  type QueueType = String
 
   case class PaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
 
@@ -258,7 +246,7 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]]
+  def getWorkloads(): Future[Map[TerminalName, Map[QueueType, QueuePaxAndWorkLoads]]]
 }
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
@@ -272,9 +260,9 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
+  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueType): Future[Either[NoCrunchAvailable, CrunchResult]]
 
-  def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
+  def processWork(terminalName: TerminalName, queueName: QueueType, workloads: List[Double], desks: List[Int]): SimulationResult
 
   def airportConfiguration(): AirportConfig
 

@@ -12,6 +12,7 @@ import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.FlightsApi._
+import drt.shared.Queues.QueueType
 import drt.shared._
 
 import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
@@ -105,7 +106,7 @@ object TerminalHeatmaps {
     })
   }
 
-  def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
+  def chartDataFromWorkloads(workloads: Map[QueueType, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[QueueType, List[Double]] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
     val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
@@ -115,9 +116,9 @@ object TerminalHeatmaps {
     by15Minutes
   }
 
-  def workloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
+  def workloads(terminalWorkloads: Map[QueueType, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
     log.info(s"!!!!looking up $terminalName in wls")
-    val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60)
+    val queueWorkloads: Map[QueueType, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60)
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
     } yield {
@@ -126,7 +127,7 @@ object TerminalHeatmaps {
     result.toList
   }
 
-  def waitTimes(simulationResult: Map[QueueName, Pot[SimulationResult]], terminalName: String): Pot[List[Series]] = {
+  def waitTimes(simulationResult: Map[QueueType, Pot[SimulationResult]], terminalName: String): Pot[List[Series]] = {
     val result: Iterable[Series] = for {
       queueName <- simulationResult.keys
       simResult <- simulationResult(queueName)
@@ -144,7 +145,7 @@ object TerminalHeatmaps {
   def deskRecsVsActualDesks(queueCrunchResults: QueueCrunchResults, userDeskRecs: QueueStaffDeployments, terminalName: TerminalName): Pot[List[Series]] = {
     log.info(s"deskRecsVsActualDesks")
     val result: Iterable[Series] = for {
-      queueName: QueueName <- queueCrunchResults.keys
+      queueName: QueueType <- queueCrunchResults.keys
       queueCrunchPot: Pot[Pot[CrunchResult]] <- queueCrunchResults.get(queueName)
       queueCrunch: Pot[CrunchResult] <- queueCrunchPot.toOption
       userDesksPot: Pot[DeskRecTimeSlots] <- userDeskRecs.get(queueName)

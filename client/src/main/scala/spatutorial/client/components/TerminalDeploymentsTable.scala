@@ -15,6 +15,7 @@ import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
+import drt.shared.Queues.QueueType
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
@@ -30,7 +31,7 @@ object TerminalDeploymentsTable {
                               userDeskRec: DeskRecTimeslot,
                               waitTimeWithCrunchDeskRec: Int,
                               waitTimeWithUserDeskRec: Int,
-                              queueName: QueueName
+                              queueName: QueueType
                             )
 
   case class TerminalDeploymentsRow(time: Long, queueDetails: Seq[QueueDeploymentsRow])
@@ -75,7 +76,7 @@ object TerminalDeploymentsTable {
         peMP().flights,
         airportConfigPotMP(),
         airportWrapper,
-        (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) =>
+        (queueName: QueueType, deskRecTimeslot: DeskRecTimeslot) =>
           peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
       ))
   }
@@ -83,7 +84,7 @@ object TerminalDeploymentsTable {
   case class PracticallyEverything(
                                     airportInfos: Map[String, Pot[AirportInfo]],
                                     flights: Pot[Flights],
-                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
+                                    simulationResult: Map[TerminalName, Map[QueueType, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
                                     userDeskRec: Map[TerminalName, QueueStaffDeployments],
@@ -205,11 +206,11 @@ object TerminalDeploymentsTable {
             props.items.zipWithIndex map renderItem)))
     }
 
-    def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+    def queueColour(queueName: QueueType): String = queueName.getClass.getSimpleName + "-user-desk-rec"
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2(queueNames: List[QueueName]) = {
+    private def subHeadingLevel2(queueNames: List[QueueType]) = {
       val subHeadingLevel2 = queueNames.flatMap(queueName => {
         val depls: List[ReactTagOf[TableHeaderCell]] = List(
           <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
@@ -235,6 +236,6 @@ object TerminalDeploymentsTable {
   def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[Flights],
             airportConfigPot: Pot[AirportConfig],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            stateChange: (QueueName, DeskRecTimeslot) => Callback) =
+            stateChange: (QueueType, DeskRecTimeslot) => Callback) =
     component(Props(terminalName, items, flights, airportConfigPot, airportInfos, stateChange))
 }

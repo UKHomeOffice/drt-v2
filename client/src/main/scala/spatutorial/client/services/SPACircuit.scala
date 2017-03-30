@@ -21,6 +21,7 @@ import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import drt.client.actions.Actions._
 import drt.client.components.FlightsWithSplitsTable
+import drt.shared.Queues.QueueType
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -44,11 +45,11 @@ trait WorkloadsUtil {
     })
   }
 
-  def firstFlightTimeQueue(workloads: Map[String, (Seq[WL], Seq[Pax])]): Long = {
+  def firstFlightTimeQueue(workloads: Map[QueueType, (Seq[WL], Seq[Pax])]): Long = {
     workloads.values.flatMap(_._1.map(_.time)).min
   }
 
-  def timeStampsFromAllQueues(workloads: Map[String, QueuePaxAndWorkLoads]) = {
+  def timeStampsFromAllQueues(workloads: Map[QueueType, QueuePaxAndWorkLoads]) = {
     val timesMin: Long = firstFlightTimeQueue(workloads)
     minuteNumericRange(timesMin, 24)
   }
@@ -61,7 +62,7 @@ trait WorkloadsUtil {
 }
 
 // The base model of our application
-case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends WorkloadsUtil {
+case class Workloads(workloads: Map[TerminalName, Map[QueueType, QueuePaxAndWorkLoads]]) extends WorkloadsUtil {
   lazy val labels = labelsFromAllQueues(startTime)
 
   def timeStamps(): NumericRange[Long] = minuteNumericRange(startTime, 24)
@@ -78,8 +79,8 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 case class RootModel(
                       motd: Pot[String] = Empty,
                       workloadPot: Pot[Workloads] = Empty,
-                      queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
-                      simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
+                      queueCrunchResults: Map[TerminalName, Map[QueueType, Pot[PotCrunchResult]]] = Map(),
+                      simulationResult: Map[TerminalName, Map[QueueType, Pot[SimulationResult]]] = Map(),
                       flights: Pot[FlightsWithSplits] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
@@ -137,7 +138,7 @@ case class RootModel(
           val timestamps = workloads.timeStamps()
           val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
           val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-          val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+          val paxLoad: Map[QueueType, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
           TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
         case None =>
           Nil
@@ -164,9 +165,10 @@ case class RootModel(
 object RootModel {
   type FlightCode = String
 
-  type QueueCrunchResults = Map[QueueName, Pot[PotCrunchResult]]
+  type QueueCrunchResults = Map[QueueType, Pot[PotCrunchResult]]
 
-  def mergeTerminalQueues[A](m1: Map[QueueName, Map[QueueName, A]], m2: Map[QueueName, Map[QueueName, A]]): Map[String, Map[String, A]] = {
+  // todo - this is what Cats is good at. https://www.scala-exercises.org/cats/semigroup
+  def mergeTerminalQueues[TT, QT, A](m1: Map[TT, Map[QT, A]], m2: Map[TT, Map[QT, A]]): Map[TT, Map[QT, A]] = {
     val merged = m1.toSeq ++ m2.toSeq
     val grouped = merged.groupBy(_._1)
     val cleaned = grouped.mapValues(_.flatMap(_._2).toMap)
@@ -260,7 +262,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
 
 object HandyStuff {
   type PotCrunchResult = Pot[CrunchResult]
-  type QueueStaffDeployments = Map[String, Pot[DeskRecTimeSlots]]
+  type QueueStaffDeployments = Map[QueueType, Pot[DeskRecTimeSlots]]
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
   def seqOfEffectsToEffectSeq(crunchRequests: List[Effect]): Effect = {
@@ -277,7 +279,7 @@ object HandyStuff {
 
 class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
                            modelR: ModelR[M, Pot[Workloads]],
-                           modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]])
+                           modelRW: ModelRW[M, Map[TerminalName, Map[QueueType, Pot[SimulationResult]]]])
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunAllSimulations() =>
@@ -306,7 +308,7 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 
-  private def getTerminalQueueWorkload(terminalName: TerminalName, queueName: QueueName): List[Double] = {
+  private def getTerminalQueueWorkload(terminalName: TerminalName, queueName: QueueType): List[Double] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
     val workloadPot = modelR.value
@@ -324,7 +326,7 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
   }
 }
 
-case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName) extends Action
+case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueType) extends Action
 
 case class RequestFlights(from: Long, to: Long) extends Action
 
@@ -372,7 +374,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]])
+class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueType, Pot[PotCrunchResult]]]])
   extends LoggingActionHandler(modelRW) {
 
   def modelQueueCrunchResults = value
@@ -410,7 +412,7 @@ object StaffDeploymentCalculator {
 
       val drts: DeskRecTimeSlots = calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval)
 
-      val newSuggestedStaffDeployments: Map[TerminalName, Map[QueueName, Ready[DeskRecTimeSlots]]] = terminalQueueCrunchResults.map((terminalQueueCrunchResult: (TerminalName, QueueCrunchResults)) => {
+      val newSuggestedStaffDeployments: Map[TerminalName, Map[QueueType, Ready[DeskRecTimeSlots]]] = terminalQueueCrunchResults.map((terminalQueueCrunchResult: (TerminalName, QueueCrunchResults)) => {
         val terminalName: TerminalName = terminalQueueCrunchResult._1
         val terminalStaffAvailable = staffAvailable(terminalName)
         val queueCrunchResult = terminalQueueCrunchResult._2

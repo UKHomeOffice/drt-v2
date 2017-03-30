@@ -14,6 +14,7 @@ import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.QueueType
 import drt.shared._
 
 import scala.collection.immutable.{Map, Seq}
@@ -39,25 +40,25 @@ object TableViewUtils {
                                terminalName: TerminalName,
                                airportConfigPot: Pot[AirportConfig],
                                timestamps: Seq[Long],
-                               paxload: Map[String, List[Double]],
-                               queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                               simulationResult: Map[QueueName, Pot[SimulationResult]],
+                               paxload: Map[QueueType, List[Double]],
+                               queueCrunchResultsForTerminal: Map[QueueType, Pot[PotCrunchResult]],
+                               simulationResult: Map[QueueType, Pot[SimulationResult]],
                                userDeskRec: QueueStaffDeployments
                              ): List[TerminalDeploymentsRow] = {
     airportConfigPot match {
       case Ready(airportConfig) =>
         log.info(s"call terminalUserDeskRecsRows")
-        val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map(queueName => {
-          simulationResult.get(queueName) match {
+        val queueRows: List[List[((Long, QueueType), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map((queueType: QueueType) => {
+          simulationResult.get(queueType) match {
             case Some(Ready(sr)) =>
-              val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
+              val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueType)
               log.info(s"before transpose it is ${result}")
               log.info(s"before transpose it is ${result.map(_.length)}")
-              queueDeploymentsRowsFromNos(queueName, result)
+              queueDeploymentsRowsFromNos(queueType, result)
             case None =>
-              queueCrunchResultsForTerminal.get(queueName) match {
+              queueCrunchResultsForTerminal.get(queueType) match {
                 case Some(Ready(cr)) =>
-                  queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
+                  queueDeploymentsRowsFromNos(queueType, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueType))
                 case _ =>
                   List()
               }
@@ -66,7 +67,7 @@ object TableViewUtils {
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
 
-        queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDeploymentsRow)])) => {
+        queueRowsByTime.map((queueRows: (Long, List[((Long, QueueType), QueueDeploymentsRow)])) => {
           val qr = queueRows._2.map(_._2)
           TerminalDeploymentsRow(queueRows._1, qr)
         }).toList.sortWith(_.time < _.time)
@@ -74,7 +75,7 @@ object TableViewUtils {
     }
   }
 
-  def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRow)] = {
+  def queueDeploymentsRowsFromNos(qn: QueueType, queueNos: Seq[List[Long]]): List[((Long, QueueType), QueueDeploymentsRow)] = {
     queueNos.toList.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, qn) -> QueueDeploymentsRow(
@@ -91,10 +92,10 @@ object TableViewUtils {
 
   private val numberOf15MinuteSlots = 96
 
-  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
+  def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[QueueType, List[Double]],
                                    queueCrunchResultsForTerminal: QueueCrunchResults,
                                    userDeskRec: QueueStaffDeployments,
-                                   simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
+                                   simulationResult: Map[QueueType, Pot[SimulationResult]], queue: QueueType
                                   ): Seq[List[Long]] = {
     val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
 
@@ -102,36 +103,36 @@ object TableViewUtils {
     log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
     Seq(
       ts,
-      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
-      queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
-      getSafeUserDeskRecs(userDeskRec, qn, ts),
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-      simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+      paxload(queue).grouped(15).map(paxes => paxes.sum.toLong).toList,
+      simulationResult(queue).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
+      queueCrunchResultsForTerminal(queue).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      getSafeUserDeskRecs(userDeskRec, queue, ts),
+      queueCrunchResultsForTerminal(queue).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      simulationResult(queue).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     )
   }
 
 
-  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
+  def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[QueueType, List[Double]],
                                queueCrunchResultsForTerminal: QueueCrunchResults,
-                               userDeskRec: QueueStaffDeployments, qn: QueueName
+                               userDeskRec: QueueStaffDeployments, queue: QueueType
                               ): Seq[List[Long]] = {
     val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
-    val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
+    val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, queue, ts)
 
     Seq(
       takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList,
-      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      List.range(0, queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.length, 15).map(_.toLong),
-      queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      paxload(queue).grouped(15).map(paxes => paxes.sum.toLong).toList,
+      List.range(0, queueCrunchResultsForTerminal(queue).get.get.recommendedDesks.length, 15).map(_.toLong),
+      queueCrunchResultsForTerminal(queue).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
       userDeskRecsSample,
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+      queueCrunchResultsForTerminal(queue).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchResultsForTerminal(queue).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     )
   }
 
-  def getSafeUserDeskRecs(userDeskRec: QueueStaffDeployments, qn: QueueName, ts: List[Long]) = {
-    val queueUserDeskRecs = userDeskRec.get(qn)
+  def getSafeUserDeskRecs(userDeskRec: QueueStaffDeployments, queue: QueueType, ts: List[Long]) = {
+    val queueUserDeskRecs = userDeskRec.get(queue)
     val userDeskRecsSample = queueUserDeskRecs match {
       case Some(Ready(udr)) => udr.items.map(_.deskRec.toLong).toList
       case _ => List.fill(ts.length)(0L)
