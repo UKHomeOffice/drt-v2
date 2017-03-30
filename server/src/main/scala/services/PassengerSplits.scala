@@ -3,15 +3,14 @@ package services
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
-import controllers.AirportConfProvider
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{AirportConfig, ApiFlight, FlightParsing, PaxTypeAndQueue}
 import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import services.SDate.implicits._
-import scala.concurrent.{Await, ExecutionContext}
+
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 object AdvPaxSplitsProvider {
   val log = LoggerFactory.getLogger(getClass)
@@ -20,19 +19,19 @@ object AdvPaxSplitsProvider {
                         (passengerInfoRouterActor: AskableActorRef)
                         (flight: ApiFlight)
                         (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
-    log.debug(s"splitRatioProvider for ${flight}")
-    log.info(s"splitRatioProvider for ${flight.IATA} ${flight}")
+    log.debug(s"${flight.IATA} splitRatioProvider")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
       case Some((cc, number)) =>
-        val split = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT))
-        log.info(s"splitRatioProvider asks ${split}")
-        val futResp = passengerInfoRouterActor ? split
+        val splitRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT))
+        def logSr(mm: => String) = log.info(s"$splitRequest $mm")
+        logSr("sending request")
+        val futResp = passengerInfoRouterActor ? splitRequest
         val splitsFut = futResp.map {
           case voyagePaxSplits: VoyagePaxSplits =>
-            log.info(s"splitRatioProvider didgotsplitcrunch for ${flight} ${voyagePaxSplits}")
+            log.info(s"${flight.IATA} didgotsplitcrunch")
             Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplits))
-          case fnf: FlightNotFound =>
-            log.info(s"splitRatioProvider notgotsplitcrunch for $cc/${number} ${flight}")
+          case _: FlightNotFound =>
+            log.debug(s"${flight.IATA} notgotsplitcrunch")
             None
         }
         splitsFut.onFailure {
