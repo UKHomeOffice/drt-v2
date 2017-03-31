@@ -7,8 +7,10 @@ message ShiftsMessage {
 message ShiftMessage {
     optional string name = 1;
     optional string terminalName = 2;
-    optional string startDay = 3;
-    optional string startTime = 4;
-    optional string endTime = 5;
+    optional string startDay_OLD = 3;
+    optional string startTime_OLD = 4;
+    optional string endTime_OLD = 5;
     optional string numberOfStaff = 6;
+    optional int64 startTimestamp = 7;
+    optional int64 endTimestamp = 8;
 }

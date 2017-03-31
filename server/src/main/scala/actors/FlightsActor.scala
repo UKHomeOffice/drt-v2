@@ -150,6 +150,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
 
       log.info(s"Adding ${newFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+
       val lastMidnight = LocalDate.now().toString(formatter)
       onFlightUpdates(newFlights, lastMidnight)
       persist(flightsMessage) { (event: FlightsMessage) =>
