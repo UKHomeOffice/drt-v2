@@ -128,7 +128,7 @@ case class AirportInfo(airportName: String, city: String, country: String, code:
 trait WorkloadsHelpers {
   val oneMinute = 60000L
 
-  def queueWorkloadsForPeriod(workloads: Map[String, Seq[WL]], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def queueWorkloadsForPeriod(workloads: Map[QueueType, Seq[WL]], periodMinutes: NumericRange[Long]): Map[QueueType, List[Double]] = {
     workloads.mapValues((qwl: Seq[WL]) => {
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, workloadToWorkLoadByTime(qwl))
       queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)

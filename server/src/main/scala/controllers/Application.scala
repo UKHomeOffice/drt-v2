@@ -41,6 +41,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
 import drt.server.feeds.lhr.LHRFlightFeed
+import drt.shared.Queues.QueueType
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -171,8 +172,8 @@ class Application @Inject()(
     implicit val timeout: Timeout = Timeout(5 seconds)
     val crunchActor: AskableActorRef = ctrl.crunchActor
 
-    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
-      tryCrunch(terminalName, queueName)
+    def getLatestCrunchResult(terminalName: TerminalName, queue: QueueType): Future[Either[NoCrunchAvailable, CrunchResult]] = {
+      tryCrunch(terminalName, queue)
     }
   }
 

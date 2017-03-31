@@ -13,8 +13,8 @@ import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, Term
 import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import drt.client.services.RootModel.QueueCrunchResults
-import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.Queues.QueueType
+import drt.shared.FlightsApi.TerminalName
+import drt.shared.Queues._
 import drt.shared._
 
 import scala.collection.immutable.{Map, Seq}
@@ -23,18 +23,13 @@ import scala.scalajs.js.annotation.JSExport
 import scalacss.Defaults._
 
 object TableViewUtils {
-
-  val eeadesk: QueueName = "eeaDesk"
-  val noneeadesk: QueueName = "nonEeaDesk"
-  val fasttrack: QueueName = "fastTrack"
-  val egate: QueueName = "eGate"
-
   /**
     * Fixme: remove this line once we've removed the old terminal page
     */
-  def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
+  def queueNameMappingOrder = EeaDesk :: NonEeaDesk :: EGate :: Nil
 
-  def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
+  def queueDisplayName: Map[QueueType, TerminalName] = Map(EeaDesk -> "EEA",
+    NonEeaDesk -> "Non-EEA", EGate -> "e-Gates", FastTrack -> "Fast Track")
 
   def terminalDeploymentsRows(
                                terminalName: TerminalName,

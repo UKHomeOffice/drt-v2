@@ -6,6 +6,7 @@ import akka.pattern.AskableActorRef
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator
 import drt.shared.FlightsApi._
+import drt.shared.Queues.QueueType
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared._
 
@@ -37,9 +38,9 @@ trait WorkloadsService extends WorkloadsApi with WorkloadsCalculator {
 trait WorkloadsCalculator {
   private val log = LoggerFactory.getLogger(getClass)
 
-  type TerminalQueuePaxAndWorkLoads = Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]
-  type TerminalQueueWorkLoads = Map[TerminalName, Map[QueueName, Seq[WL]]]
-  type TerminalQueuePaxLoads = Map[TerminalName, Map[QueueName, Seq[Pax]]]
+  type TerminalQueuePaxAndWorkLoads = Map[TerminalName, Map[QueueType, (Seq[WL], Seq[Pax])]]
+  type TerminalQueueWorkLoads = Map[TerminalName, Map[QueueType, Seq[WL]]]
+  type TerminalQueuePaxLoads = Map[TerminalName, Map[QueueType, Seq[Pax]]]
 
   def splitRatioProvider: (ApiFlight) => Option[SplitRatios]
 

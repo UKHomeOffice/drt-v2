@@ -4,6 +4,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import services.SDate
 import drt.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads}
+import drt.shared.Queues.QueueType
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared._
 
@@ -33,26 +34,26 @@ object PaxLoadCalculator {
 
   def queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
                           calcAndSumLoads: List[PaxTypeAndQueueCount] => Load)
-                         (flights: List[ApiFlight]): Map[QueueName, List[(MillisSinceEpoch, Load)]] = {
+                         (flights: List[ApiFlight]): Map[QueueType, List[(MillisSinceEpoch, Load)]] = {
     val flightsPaxSplits = flights.flatMap(calcPaxTypeAndQueueCountForAFlightOverTime)
     val flightsPaxSplitsByQueueAndMinute = flightsPaxSplits.groupBy(t => (t._2.paxAndQueueType.queueType, t._1))
 
-    val loadsByQueueAndMinute: Map[(QueueName, MillisSinceEpoch), Load] = flightsPaxSplitsByQueueAndMinute
+    val loadsByQueueAndMinute: Map[(QueueType, MillisSinceEpoch), Load] = flightsPaxSplitsByQueueAndMinute
       .mapValues { tmPtQcs => calcAndSumLoads(tmPtQcs.map(_._2)) }
 
-    val workLoadsByQueue: List[(QueueName, (MillisSinceEpoch, Load))] = loadsByQueueAndMinute.toList.map {
+    val workLoadsByQueue: List[(QueueType, (MillisSinceEpoch, Load))] = loadsByQueueAndMinute.toList.map {
       case ((queueName, time), workSum) => (queueName, (time, workSum))
     }
 
     workLoadsByQueue.groupBy(_._1).mapValues(extractMillisAndLoadSortedByMillis(_))
   }
 
-  def extractMillisAndLoadSortedByMillis(queueNameMillisLoad: List[(QueueName, (MillisSinceEpoch, Load))]): List[(MillisSinceEpoch, Load)] = {
+  def extractMillisAndLoadSortedByMillis(queueNameMillisLoad: List[(QueueType, (MillisSinceEpoch, Load))]): List[(MillisSinceEpoch, Load)] = {
     queueNameMillisLoad.map(_._2).sortBy(_._1)
   }
 
   def queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)]
-                                    , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueName, QueuePaxAndWorkLoads] = {
+                                    , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueType, QueuePaxAndWorkLoads] = {
     val queuePaxLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumPaxLoads)(flights)
     val queueWorkLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumWorkLoads(procTimeProvider))(flights)
 
@@ -63,7 +64,7 @@ object PaxLoadCalculator {
   }
 
   def queueWorkLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)]
-                              , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueName, Seq[WL]] = {
+                              , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueType, Seq[WL]] = {
     queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumWorkLoads(procTimeProvider))(flights)
       .mapValues(millisAndLoadsToWorkLoads(ml => WL(ml._1, ml._2)))
   }
@@ -73,7 +74,7 @@ object PaxLoadCalculator {
   }
 
   def queuePaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)]
-                             , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueName, Seq[Pax]] = {
+                             , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[ApiFlight]): Map[QueueType, Seq[Pax]] = {
     queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumPaxLoads)(flights)
       .mapValues(millisAndLoadsToWorkLoads(ml => Pax(ml._1, ml._2)))
   }

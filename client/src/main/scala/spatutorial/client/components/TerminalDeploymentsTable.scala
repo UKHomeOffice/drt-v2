@@ -15,7 +15,7 @@ import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
-import drt.shared.Queues.QueueType
+import drt.shared.Queues.{EGate, QueueType}
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
@@ -42,7 +42,7 @@ object TerminalDeploymentsTable {
                     flights: Pot[Flights],
                     airportConfigPot: Pot[AirportConfig],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    stateChange: (QueueName, DeskRecTimeslot) => Callback
+                    stateChange: (QueueType, DeskRecTimeslot) => Callback
                   )
 
   object jsDateFormat {
@@ -60,9 +60,9 @@ object TerminalDeploymentsTable {
     }
   }
 
-  def deskUnitLabel(queueName: QueueName): String = {
+  def deskUnitLabel(queueName: QueueType): String = {
     queueName match {
-      case "eGate" => "Banks"
+      case EGate => "Banks"
       case _ => "Desks"
     }
   }
@@ -181,8 +181,8 @@ object TerminalDeploymentsTable {
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
       val headings = props.airportConfigPot.get.queues(props.terminalName).map {
-        case (queueName) =>
-          qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+        case (queueType) =>
+          qth(queueType.toString, <.h3(queueDisplayName(queueType)), ^.colSpan := 3)
       }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
       val defaultNumberOfQueues = 3
