@@ -41,3 +41,4 @@ The simulation/optimization algorithm is R, taken directly from Home Office Scie
 Physical Deployment
 Each port has their own instance. The feeds are chose at application start based on envvars
 
+!(System Flow)[doc/architecture/diagrams/systemflow.svg]
