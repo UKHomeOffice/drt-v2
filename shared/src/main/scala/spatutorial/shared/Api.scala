@@ -85,6 +85,8 @@ trait SDateLike {
 
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
+  def toApiFlightString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d:${getMinutes()}%02d"
+
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }
 

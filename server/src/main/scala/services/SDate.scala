@@ -45,5 +45,9 @@ object SDate {
     JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
   }
 
+  def apply(millis: Long): SDateLike = {
+    JodaSDate(new DateTime(millis, DateTimeZone.UTC))
+  }
+
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 }
