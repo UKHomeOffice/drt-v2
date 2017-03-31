@@ -1,7 +1,6 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.ShiftsServiceTests.assert
 import drt.shared.{MilliDate, SDateLike}
 import utest.TestSuite
 import utest._

@@ -1,7 +1,5 @@
 package services
 
-import org.joda.time.DateTime
-import drt.shared.{MilliDate, SDateLike}
 import utest.{TestSuite, _}
 
 object ServerShiftDateTests extends TestSuite {
