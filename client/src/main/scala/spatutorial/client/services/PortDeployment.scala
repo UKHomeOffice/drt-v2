@@ -5,13 +5,14 @@ import drt.client.services.HandyStuff._
 import drt.shared.FlightsApi._
 import drt.shared.{CrunchResult, MilliDate}
 import drt.client.logger._
+import drt.shared.Queues.QueueType
 
 import scala.collection.immutable.{IndexedSeq, Iterable, Map, Seq}
 
 object PortDeployment {
-  def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]): List[(Long, List[(Int, TerminalName)])] = {
+  def portDeskRecs(portRecs: Map[TerminalName, Map[QueueType, Pot[PotCrunchResult]]]): List[(Long, List[(Int, TerminalName)])] = {
     val portRecsByTerminal: List[List[(Int, TerminalName)]] = portRecs.map {
-      case (terminalName, queueRecs: Map[TerminalName, Seq[Int]]) =>
+      case (terminalName, queueRecs: Map[QueueType, Seq[Int]]) =>
         val deskRecsByMinute: Iterable[IndexedSeq[Int]] = queueRecs.values.transpose((deskRecs: Pot[Pot[CrunchResult]]) => {
           for {
             crunchResultPot: Pot[CrunchResult] <- deskRecs
@@ -29,9 +30,9 @@ object PortDeployment {
     portRecsByTimeInMillis
   }
 
-  def secondsRangeFromPortCrunchResult(terminalRecs: List[Map[QueueName, Pot[PotCrunchResult]]]): Range = {
+  def secondsRangeFromPortCrunchResult(terminalRecs: List[Map[QueueType, Pot[PotCrunchResult]]]): Range = {
     val startMillis = for {
-      queueRecs: Map[QueueName, Pot[PotCrunchResult]] <- terminalRecs
+      queueRecs: Map[QueueType, Pot[PotCrunchResult]] <- terminalRecs
       firstQueueRecs = queueRecs.values
       crunchResultPotPot: Pot[PotCrunchResult] <- firstQueueRecs
       crunchResultPot: PotCrunchResult <- crunchResultPotPot

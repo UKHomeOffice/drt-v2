@@ -6,6 +6,7 @@ import diode.Action
 import drt.client.services.{DeskRecTimeslot, Shift}
 import drt.shared.{AirportConfig, CrunchResult, SimulationResult, StaffMovement}
 import drt.shared.FlightsApi._
+import drt.shared.Queues.QueueType
 
 import scala.collection.immutable.{Map, Seq}
 
@@ -13,13 +14,13 @@ object Actions {
 
   case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
 
-  case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
+  case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueType, item: DeskRecTimeslot) extends Action
 
-  case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResultWithTimeAndInterval: CrunchResult) extends Action
+  case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueType, crunchResultWithTimeAndInterval: CrunchResult) extends Action
 
-  case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
+  case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueType, simulationResult: SimulationResult) extends Action
 
-  case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
+  case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueType, QueuePaxAndWorkLoads]]) extends Action
 
   case class GetWorkloads(begin: String, end: String) extends Action
 
@@ -29,7 +30,7 @@ object Actions {
 
   case class RunAllSimulations() extends Action
 
-  case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
+  case class RunSimulation(terminalName: TerminalName, queueName: QueueType, desks: List[Int]) extends Action
 
   case class SetShifts(shifts: String) extends Action
 

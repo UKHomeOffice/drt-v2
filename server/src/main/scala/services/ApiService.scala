@@ -12,9 +12,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import drt.shared.Queues.{EGate, QueueType}
 import drt.shared._
 import org.joda.time.DateTime
 import services.SDate.implicits._
+
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -65,10 +67,10 @@ object AirportToCountry extends AirportToCountryLike {
 }
 
 object WorkloadSimulation {
-  def processWork(airportConfig: AirportConfig)(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
+  def processWork(airportConfig: AirportConfig)(terminalName: TerminalName, queueName: QueueType, workloads: List[Double], desks: List[Int]): SimulationResult = {
     val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
 
-    if (queueName == "eGate")
+    if (queueName == EGate)
       eGateSimulationResultForBanksAndWorkload(optimizerConfig, workloads, desks)
     else
       simulationResultForDesksAndWorkload(optimizerConfig, workloads, desks)
@@ -139,8 +141,8 @@ abstract class ApiService(airportConfig: AirportConfig)
     s"Welcome to SPA, $name! Time is now ${new Date}"
   }
 
-  override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads, desks)
+  override def processWork(terminalName: TerminalName, queue: QueueType, workloads: List[Double], desks: List[Int]): SimulationResult = {
+    WorkloadSimulation.processWork(airportConfig)(terminalName, queue, workloads, desks)
   }
 
   override def airportConfiguration() = airportConfig
@@ -150,7 +152,7 @@ trait CrunchCalculator {
   //  self: HasAirportConfig =>
   def log: DiagnosticLoggingAdapter
 
-  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int): Try[OptimizerCrunchResult] = {
+  def tryCrunch(terminalName: TerminalName, queueName: QueueType, workloads: List[Double], sla: Int): Try[OptimizerCrunchResult] = {
     log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
     val mdc = log.getMDC
     val newMdc = Map("terminalQueue" -> s"$terminalName/$queueName")
@@ -170,7 +172,7 @@ trait CrunchCalculator {
 }
 
 trait CrunchResultProvider {
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
+  def tryCrunch(terminalName: TerminalName, queueName: QueueType): Future[Either[NoCrunchAvailable, CrunchResult]]
 }
 
 trait ActorBackedCrunchService {
@@ -179,7 +181,7 @@ trait ActorBackedCrunchService {
   implicit val timeout: akka.util.Timeout
   val crunchActor: AskableActorRef
 
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
+  def tryCrunch(terminalName: TerminalName, queueName: QueueType): Future[Either[NoCrunchAvailable, CrunchResult]] = {
     log.info("Starting crunch latest request")
     val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
     result.recover {

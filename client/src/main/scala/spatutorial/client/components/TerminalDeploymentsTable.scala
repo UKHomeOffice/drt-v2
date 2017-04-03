@@ -15,6 +15,7 @@ import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
+import drt.shared.Queues.{EGate, QueueType}
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
@@ -30,7 +31,7 @@ object TerminalDeploymentsTable {
                               userDeskRec: DeskRecTimeslot,
                               waitTimeWithCrunchDeskRec: Int,
                               waitTimeWithUserDeskRec: Int,
-                              queueName: QueueName
+                              queueName: QueueType
                             )
 
   case class TerminalDeploymentsRow(time: Long, queueDetails: Seq[QueueDeploymentsRow])
@@ -41,7 +42,7 @@ object TerminalDeploymentsTable {
                     flights: Pot[Flights],
                     airportConfigPot: Pot[AirportConfig],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                    stateChange: (QueueName, DeskRecTimeslot) => Callback
+                    stateChange: (QueueType, DeskRecTimeslot) => Callback
                   )
 
   object jsDateFormat {
@@ -59,9 +60,9 @@ object TerminalDeploymentsTable {
     }
   }
 
-  def deskUnitLabel(queueName: QueueName): String = {
+  def deskUnitLabel(queueName: QueueType): String = {
     queueName match {
-      case "eGate" => "Banks"
+      case EGate => "Banks"
       case _ => "Desks"
     }
   }
@@ -75,7 +76,7 @@ object TerminalDeploymentsTable {
         peMP().flights,
         airportConfigPotMP(),
         airportWrapper,
-        (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) =>
+        (queueName: QueueType, deskRecTimeslot: DeskRecTimeslot) =>
           peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
       ))
   }
@@ -83,7 +84,7 @@ object TerminalDeploymentsTable {
   case class PracticallyEverything(
                                     airportInfos: Map[String, Pot[AirportInfo]],
                                     flights: Pot[Flights],
-                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
+                                    simulationResult: Map[TerminalName, Map[QueueType, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
                                     userDeskRec: Map[TerminalName, QueueStaffDeployments],
@@ -180,8 +181,8 @@ object TerminalDeploymentsTable {
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
       val headings = props.airportConfigPot.get.queues(props.terminalName).map {
-        case (queueName) =>
-          qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+        case (queueType) =>
+          qth(queueType.toString, <.h3(queueDisplayName(queueType)), ^.colSpan := 3)
       }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
       val defaultNumberOfQueues = 3
@@ -205,11 +206,11 @@ object TerminalDeploymentsTable {
             props.items.zipWithIndex map renderItem)))
     }
 
-    def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+    def queueColour(queueName: QueueType): String = queueName.getClass.getSimpleName + "-user-desk-rec"
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2(queueNames: List[QueueName]) = {
+    private def subHeadingLevel2(queueNames: List[QueueType]) = {
       val subHeadingLevel2 = queueNames.flatMap(queueName => {
         val depls: List[ReactTagOf[TableHeaderCell]] = List(
           <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
@@ -235,6 +236,6 @@ object TerminalDeploymentsTable {
   def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[Flights],
             airportConfigPot: Pot[AirportConfig],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-            stateChange: (QueueName, DeskRecTimeslot) => Callback) =
+            stateChange: (QueueType, DeskRecTimeslot) => Callback) =
     component(Props(terminalName, items, flights, airportConfigPot, airportInfos, stateChange))
 }

@@ -4,16 +4,18 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.Queues.QueueType
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 
 import scala.collection.immutable.Seq
 
 
 object Queues {
-  val EeaDesk = "eeaDesk"
-  val EGate = "eGate"
-  val NonEeaDesk = "nonEeaDesk"
-  val FastTrack = "fastTrack"
+  sealed trait QueueType
+  case object EeaDesk extends QueueType
+  case object EGate extends QueueType
+  case object NonEeaDesk extends QueueType
+  case object FastTrack extends QueueType
 }
 
 sealed trait PaxType {
@@ -32,17 +34,16 @@ object PaxTypes {
 
 }
 
-case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
+case class PaxTypeAndQueue(passengerType: PaxType, queueType: QueueType)
 object PaxTypeAndQueue {
   def apply(split: PaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
-
 }
 
 
 case class AirportConfig(
                           portCode: String = "n/a",
-                          queues: Map[TerminalName, Seq[QueueName]],
-                          slaByQueue: Map[String, Int],
+                          queues: Map[TerminalName, Seq[QueueType]],
+                          slaByQueue: Map[QueueType, Int],
                           terminalNames: Seq[TerminalName],
                           defaultPaxSplits: SplitRatios,
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
@@ -58,9 +59,9 @@ trait HasAirportConfig {
 trait AirportConfigLike {
   def portCode: String
 
-  def queues: Map[TerminalName, Seq[QueueName]]
+  def queues: Map[TerminalName, Seq[QueueType]]
 
-  def slaByQueue: Map[String, Int]
+  def slaByQueue: Map[QueueType, Int]
 
   def terminalNames: Seq[TerminalName]
 }
@@ -77,7 +78,7 @@ object PaxTypesAndQueues {
 
 object AirportConfigs {
   import Queues._
-  val defaultSlas: Map[String, Int] = Map(
+  val defaultSlas: Map[QueueType, Int] = Map(
     EeaDesk -> 20,
     EGate -> 25,
     NonEeaDesk -> 45
