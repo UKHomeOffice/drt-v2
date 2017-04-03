@@ -1,35 +1,44 @@
-# Scala.js SPA-tutorial
+# DRT Dynamic Response Tool
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ochrons/scalajs-spa-tutorial?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![Scala.js](https://www.scala-js.org/assets/badges/scalajs-0.6.8.svg)](https://www.scala-js.org)
 
-Tutorial for creating a simple (but potentially complex!) Single Page Application with
-[Scala.js](http://www.scala-js.org/) and [Play](https://www.playframework.com/).
+This project is a tool used by UK Borderforce to help ensure sufficient resources are available at the border to deal 
+with anticipated demand. 
+It is the latest (as of Mar 2017) iteration of a tool to tackle this lofty goal. This repo replaces an earlier, PHP, database
+and Scala set of projects. 
+We began from the ground up here, consolidating back into a monolith per port. We'll cover the decisions in more detail in 
+[Architectural Decision Records](doc/architecture/decisions/0001-record-architecture-decisions.md)
 
-## Purpose
+Drt v2 is a replacement for an earlier system built primarily with PHP. 
 
-This project demonstrates typical design patterns and practices for developing SPAs with Scala.js with special focus on
-building a complete application. It started as a way to learn more about Scala.js and related libraries, but then I
-decided to make it more tutorial-like for the greater good :)
+It is a tool which aims to provide Borderforce officers in airports with information that helps them 
+A) respond to live changes to circumstances - flights coming in early or late, lower than expected resourcing due to people calling in sick, 
+B) planning for future resourcing
 
-The code covers typical aspects of building a SPA using Scala.js but it doesn't try to be an all-encompassing example
-for all the things possible with Scala.js. Before going through this tutorial, it would be helpful if you already know
-the basics of Scala.js and have read through the official [Scala.js tutorial](http://www.scala-js.org/doc/tutorial.html)
-and the great e-book [Hands-on Scala.js](http://lihaoyi.github.io/hands-on-scala-js/#Hands-onScala.js) by 
-[Li Haoyi (@lihaoyi)](https://github.com/lihaoyi).
+As of 2017-03-39 it primarily focuses on the 'live' aspect. 
 
-# Documentation
+Approach
+The core of both drt v1 and v2 is an algorithm by Home Office Science. It's an optimization function which searches a space for the lowest cost based on: queue length (time), number of desks staffed, cost of changing staff and so on. 
+The underlying algorithm is based on NM1Q simulation. 
 
-Tutorial [documentation](https://ochrons.github.io/scalajs-spa-tutorial) is now presented as a GitBook.
+Recognized flaws
+NM1 is based on the assumption that the processing times are normally distributed. In practice, we do not have a normal distribution. We've got a multi-modal distribution with a very long tail. 
+That is, we have a mean processing time of something like 40s, but we know different countries have different averages. Also, if there is a problem with someone's status, then that can take many minutes of an officers time, and may close a desk for 10-20 minutes, depending on the port. 
 
-あなたは日本語を話せますか？Scala.js is Big in Japan, so I'm looking for help to translate the tutorial documentation into Japanese.
-Contact me on twitter (@ochrons) or via email (otto@chrons.me) if you're interested!
+An assumption/desire to operate with high utilization. Littles law shows us this is problematic.
 
-# Scala IDE users
+Feeds
 
-If you are using Scala IDE, you need to set additional settings to get your Eclipse project exported from SBT.
+Airports/Flights
+We take feeds from the Airports about flight statuses. Most ports use a Json based web service called Chroma, there's a couple of different flavours of that. LHR has their own proprietary feed based on CSV files on a web server. Gatwick use a push service in Microsoft's Azure cloud - we've not wired this one into the new system yet.
 
-```
-set EclipseKeys.skipParents in ThisBuild := false
-eclipse
-```
+API (Advance Passenger Info)
+This provides us data about the nationality breakdown on incoming flights. 
+
+Technical Stack
+Scala server. Scalajs reactjs client. Communication between client server is primarily via lihaoyi's autowire. Server is hosted in play, uses Akka streams to read the feeds, state is store in Akka actors. Some of the actors use akka persistence. 
+The simulation/optimization algorithm is R, taken directly from Home Office Science. 
+
+Physical Deployment
+Each port has their own instance. The feeds are chose at application start based on envvars
+
+!(System Flow)[doc/architecture/diagrams/systemflow.svg]

@@ -1,0 +1,16 @@
+graph TD;
+ Chroma --> Parse_to_Api_Flights;
+ Parse_to_Api_Flights --> FlightsActor;
+ FlightsActor --> CrunchActor;
+ Client --- httpApi;
+ httpApi --> FlightsActor;
+ httpApi --> CrunchActor;
+ Atmos --> AtmosPoller;
+ AtmosPoller --> unzip[API Unzipper];
+ unzip[API Unzipper] --> VoyagePassengerInfo;
+ VoyagePassengerInfo --> ApiSplitsCalculator;
+ ApiSplitsCalculator --> SplitsProvider;
+ CsvSplits --> SplitsProvider;
+ SplitsProvider --> CrunchActor
+ FlightsActor --> ApiSplitsCalculator;
+ AirportConfigSplits --> SplitsProvider
