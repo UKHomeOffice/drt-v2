@@ -4,8 +4,10 @@ import java.time.chrono.Chronology
 
 import org.joda.time.{DateTime, DateTimeZone}
 import drt.shared.{MilliDate, SDateLike}
+import org.slf4j.LoggerFactory
 
 object SDate {
+  val log = LoggerFactory.getLogger(getClass)
 
   case class JodaSDate(dateTime: DateTime) extends SDateLike {
     import implicits._
@@ -42,6 +44,7 @@ object SDate {
   }
 
   def apply(dateTime: String): SDateLike = {
+    log.info(s"parsing ${dateTime}")
     JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
   }
 

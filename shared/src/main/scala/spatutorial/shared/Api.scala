@@ -13,7 +13,7 @@ import scala.concurrent.Future
 object DeskAndPaxTypeCombinations {
   val egate = "egate eea-machine-readable"
   val deskEeaNonMachineReadable = "desk eea-non-machine-readable"
-  val deskEea = "desk eea-machine-readable"
+  val deskEea = "eeaDesk eea-machine-readable"
   val nationalsDeskVisa = "nationalsDesk national-visa"
   val nationalsDeskNonVisa = "nationalsDesk national-non-visa"
 }
@@ -221,31 +221,31 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 
 object PassengerQueueTypes {
+//
+//  object Queues {
+//    val eeaDesk = "desk"
+//    val egate = "egate"
+//    val nationalsDesk = "nationalsDesk"
+//  }
 
-  object Desks {
-    val eeaDesk = "desk"
-    val egate = "egate"
-    val nationalsDesk = "nationalsDesk"
-  }
-
-  object PaxTypes {
-    val EEANONMACHINEREADABLE = "eea-non-machine-readable"
-    val NATIONALVISA = "national-visa"
-    val EEAMACHINEREADABLE = "eea-machine-readable"
-    val NATIONALNONVISA = "national-non-visa"
-  }
+//  object PaxTypes {
+//    val EeaNonMachineReadable = "eea-non-machine-readable"
+//    val NationalVisa = "national-visa"
+//    val EeaMachineReadable = "eea-machine-readable"
+//    val NonNationalVisa = "national-non-visa"
+//  }
 
   def egatePercentage = 0.6d
 
   type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: String, queueType: String, paxCount: Int)
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Int)
 
 object PassengerSplits {
   type QueueType = String
 
-  case class PaxTypeAndQueueCount(passengerType: String, queueType: String, paxCount: Int)
+  case class PaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
 
   case object FlightsNotFound
 

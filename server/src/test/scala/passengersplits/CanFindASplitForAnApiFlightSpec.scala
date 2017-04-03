@@ -11,7 +11,10 @@ import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJso
 import services.SDate
 import services.SDate.implicits._
 import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PaxTypes._
+import drt.shared.Queues._
 import drt.shared.{ApiFlight, PassengerQueueTypes, SDateLike}
+
 
 class CanFindASplitForAnApiFlightSpec extends
   TestKit(ActorSystem("CanFindASplitForAnApiFlightSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
@@ -39,8 +42,8 @@ class CanFindASplitForAnApiFlightSpec extends
         val flightScheduledDateTime = SDate(2017, 4, 2, 15, 33)
         flightPassengerReporter ! ReportVoyagePaxSplit("LGW", "EZ", "12345", flightScheduledDateTime)
         val expectedPaxSplits = List(
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.eeaDesk, 1),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.egate, 0)
+          PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
+          PaxTypeAndQueueCount(EeaMachineReadable, EGate, 0)
         )
         expectMsg(VoyagePaxSplits("LGW", "EZ", "12345", 1, flightScheduledDateTime, expectedPaxSplits))
         success
@@ -58,9 +61,9 @@ class CanFindASplitForAnApiFlightSpec extends
         flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
 
         val expectedPaxSplits = List(
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.eeaDesk, 1),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.egate, 0),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.NATIONALNONVISA, PassengerQueueTypes.Desks.nationalsDesk, 1)
+          PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
+          PaxTypeAndQueueCount(EeaMachineReadable, EGate, 0),
+          PaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
         )
         expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
         success
@@ -77,9 +80,9 @@ class CanFindASplitForAnApiFlightSpec extends
         flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
 
         val expectedPaxSplits = List(
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.eeaDesk, 1),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.egate, 0),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.NATIONALNONVISA, PassengerQueueTypes.Desks.nationalsDesk, 1)
+          PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
+          PaxTypeAndQueueCount(EeaMachineReadable, EGate, 0),
+          PaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
         )
         expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
         success
@@ -94,9 +97,9 @@ class CanFindASplitForAnApiFlightSpec extends
         val scheduleArrivalSDate: SDateLike = SDate(2015, 7, 12, 10, 22)
         flightPassengerReporter ! ReportVoyagePaxSplit("STN", "BA", "978", scheduleArrivalSDate)
         expectMsg(VoyagePaxSplits("STN", "BA", "978", 100, scheduleArrivalSDate, List(
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.eeaDesk, 32),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.EEAMACHINEREADABLE, PassengerQueueTypes.Desks.egate, 48),
-          PaxTypeAndQueueCount(PassengerQueueTypes.PaxTypes.NATIONALNONVISA, PassengerQueueTypes.Desks.nationalsDesk, 20)
+          PaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 32),
+          PaxTypeAndQueueCount(EeaMachineReadable, EGate, 48),
+          PaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
         )))
         success
       }

@@ -93,11 +93,11 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
     "Given a stateful, non-idempotent provider, we get the different result each time" >> {
       val ratios1 = SplitRatios(
-        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 23),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 10))
+        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "eea"), 23),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "visa"), 10))
       val ratios2 = SplitRatios(
-        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "eea"), 4),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.eeaNonMachineReadable, "visa"), 3))
+        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "eea"), 4),
+        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "visa"), 3))
 
       val ratios = mutable.Queue(ratios1, ratios2)
 

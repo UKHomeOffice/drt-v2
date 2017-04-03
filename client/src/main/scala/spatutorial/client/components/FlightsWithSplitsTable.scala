@@ -4,16 +4,18 @@ import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.vdom.prefix_<^.{<, TagMod, ^}
 import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
-import drt.shared.AirportInfo
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
+import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
+import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
 import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
+import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
-import drt.shared.AirportInfo
+import drt.shared.FlightsApi.FlightsWithSplits
 
 import scala.scalajs.js
 import scala.scalajs.js.Object
@@ -34,26 +36,30 @@ object FlightsWithSplitsTable {
     flights.flights.map(flightAndSplit => {
       val f = flightAndSplit.apiFlight
       val literal = js.Dynamic.literal
-      val splitsTuples: Map[String, Int] = flightAndSplit.splits
-        .splits.groupBy(split => split.queueType + " " + split.passengerType).map(x => (x._1, x._2.map(_.paxCount).sum))
+      val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
+        .splits.groupBy(split => {
+        PaxTypeAndQueue(split.passengerType, split.queueType)
+      }
+      ).map(x => (x._1, x._2.map(_.paxCount).sum))
+      logger.log.debug("flightAndSplit:" + splitsTuples)
 
       import drt.shared.DeskAndPaxTypeCombinations._
 
       val total = "advPaxInfo total"
 
-      def splitsField(fieldName: String): (String, scalajs.js.Any) = {
-        "Splits " + fieldName -> (splitsTuples.get(fieldName) match {
+      def splitsField(fieldName: String, ptQ: PaxTypeAndQueue): (String, scalajs.js.Any) = {
+        "Splits " + fieldName -> (splitsTuples.get(ptQ) match {
           case Some(v: Int) => Int.box(v)
           case None => ""
         })
       }
 
       literal(
-        splitsField(deskEeaNonMachineReadable),
-        splitsField(nationalsDeskVisa),
-        splitsField(nationalsDeskNonVisa),
-        splitsField(egate),
-        splitsField(deskEea),
+        splitsField(deskEeaNonMachineReadable, PaxTypesAndQueues.eeaNonMachineReadableToDesk),
+        splitsField(nationalsDeskVisa, PaxTypesAndQueues.visaNationalToDesk),
+        splitsField(nationalsDeskNonVisa, PaxTypesAndQueues.nonVisaNationalToDesk),
+        splitsField(egate, PaxTypesAndQueues.eeaMachineReadableToEGate),
+        splitsField(deskEea, PaxTypesAndQueues.eeaMachineReadableToDesk),
         "Splits " + total -> splitsTuples.values.sum,
         "Operator" -> f.Operator,
         "Status" -> f.Status,

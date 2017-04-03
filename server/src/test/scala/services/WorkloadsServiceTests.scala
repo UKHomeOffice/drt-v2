@@ -45,7 +45,7 @@ class WorkloadsServiceTests extends SpecificationLike {
       "then we should see 1 minute with 200 workload" >> {
       val wc = new WorkloadsCalculator {
         override def splitRatioProvider = (apiFlight: ApiFlight) => {
-          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)))
+          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 20d
@@ -68,7 +68,7 @@ class WorkloadsServiceTests extends SpecificationLike {
       "then we should see each terminal's processing times applied " >> {
       val wc = new WorkloadsCalculator {
         override def splitRatioProvider = (apiFlight: ApiFlight) => {
-          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 1)))
+          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {

@@ -7,7 +7,10 @@
         </encoder>
     </appender>
 
-    <root level="info">
+
+    <!--<logger name="services.AdvPaxSplitsProvider" level="DEBUG" />-->
+
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

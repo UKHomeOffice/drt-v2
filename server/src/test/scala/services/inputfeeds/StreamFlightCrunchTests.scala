@@ -56,13 +56,13 @@ object CrunchTests {
 
   lazy val airportConfig = AirportConfig(
     defaultPaxSplits = SplitRatios(List(
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk), 0.5),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate), 0.5))),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5),
+      SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.5))),
     defaultProcessingTimes = Map(
       "A1" ->
         Map(
-          PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eeaDesk) -> 20d / 60,
-          PaxTypeAndQueue(PaxTypes.eeaMachineReadable, Queues.eGate) -> 25d / 60)),
+          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 20d / 60,
+          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate) -> 25d / 60)),
     queues = Map("A1" -> Seq("eeaDesk", "eGate")),
     portCode = "EDI",
     slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5),
