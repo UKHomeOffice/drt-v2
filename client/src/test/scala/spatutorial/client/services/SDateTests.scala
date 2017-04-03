@@ -1,7 +1,6 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.ShiftsServiceTests.assert
 import drt.shared.{MilliDate, SDateLike}
 import utest.TestSuite
 import utest._
@@ -29,7 +28,8 @@ object SDateTests extends TestSuite {
       "SDates can provide a human oriented dmy formatted string" - {
         val d = SDate(2016, 1, 10, 11, 23)
         val actual = d.ddMMyyString
-        assert(actual == "10/1/16")
+        val expected = "10/01/16"
+        assert(actual == expected)
       }
 
       "round trip the above magic numbers 1481364000000d is 2016/12/10 10:00" - {

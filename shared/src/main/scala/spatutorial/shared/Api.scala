@@ -65,7 +65,7 @@ case class ApiFlight(
 
 trait SDateLike {
 
-  def ddMMyyString: String = s"${getDate}/${getMonth}/${getFullYear - 2000}"
+  def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
 
   def getFullYear(): Int
 
@@ -84,6 +84,8 @@ trait SDateLike {
   def addHours(hoursToAdd: Int): SDateLike
 
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
+
+  def toApiFlightString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d:${getMinutes()}%02d"
 
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }

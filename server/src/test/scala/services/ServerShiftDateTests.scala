@@ -1,7 +1,5 @@
 package services
 
-import org.joda.time.DateTime
-import drt.shared.{MilliDate, SDateLike}
 import utest.{TestSuite, _}
 
 object ServerShiftDateTests extends TestSuite {
@@ -35,7 +33,7 @@ object ServerShiftDateTests extends TestSuite {
       "SDates can provide a human oriented dmy formatted string" - {
         val d = SDate(2016, 1, 10, 11, 23)
         val actual = d.ddMMyyString
-        assert(actual == "10/1/16")
+        assert(actual == "10/01/16")
       }
     }
   }

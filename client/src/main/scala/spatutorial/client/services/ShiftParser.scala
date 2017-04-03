@@ -48,7 +48,6 @@ object JSDateConversions {
       }
 
       def millisSinceEpoch: Long = date.getTime().toLong
-
     }
 
     def asUTCDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
@@ -146,7 +145,7 @@ case class ShiftParser(rawShifts: String) {
 
 case class ShiftService(shifts: Seq[Shift]) {
   def staffAt(date: MilliDate): Int = shifts.filter(shift =>
-    (shift.startDt <= date && date <= shift.endDt)).map(_.numberOfStaff).sum
+    shift.startDt <= date && date <= shift.endDt).map(_.numberOfStaff).sum
   def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = shifts.filter(shift => {
     shift.startDt <= date && date <= shift.endDt && shift.terminalName == terminalName
   }).map(_.numberOfStaff).sum

@@ -5,12 +5,14 @@ message FlightsMessage {
 }
 
 message FlightMessage {
+    optional string SchDT_OLD = 20;
+    optional string EstDT_OLD = 5;
+    optional string ActDT_OLD = 4;
+    optional string EstChoxDT_OLD = 2;
+    optional string ActChoxDT_OLD = 6;
+
     optional string Operator = 1;
-    optional string EstChoxDT = 2;
     optional string Gate = 3;
-    optional string ActDT = 4;
-    optional string EstDT = 5;
-    optional string ActChoxDT = 6;
     optional string Stand = 7;
     optional string Status = 8;
     optional int32 MaxPax = 9;
@@ -24,6 +26,10 @@ message FlightMessage {
     optional string ICAO = 17;
     optional string IATA = 18;
     optional string Origin = 19;
-    optional string SchDT = 20;
     optional int64 PcpTime = 21;
+    optional int64 Scheduled = 22;
+    optional int64 Estimated = 23;
+    optional int64 Touchdown = 24;
+    optional int64 EstimatedChox = 25;
+    optional int64 ActualChox = 26;
 }
