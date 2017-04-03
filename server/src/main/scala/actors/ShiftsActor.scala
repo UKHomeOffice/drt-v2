@@ -82,12 +82,14 @@ object ShiftsMessageParser {
     ShiftsMessage(shiftMessages)
   }
 
-  def shiftsMessageToShiftsString(shiftsMessage: ShiftsMessage) = {
+  def shiftsMessageToShiftsString(shiftsMessage: ShiftsMessage): String = {
     shiftsMessage.shifts.map {
         case ShiftMessage(Some(name), Some(terminalName), Some(startDay), Some(startTime), Some(endTime), Some(numberOfStaff), None, None) =>
           s"$name, $terminalName, $startDay, $startTime, $endTime, $numberOfStaff"
         case ShiftMessage(Some(name), Some(terminalName), None, None, None, Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp)) =>
           s"$name, $terminalName, ${ShiftsMessageParser.dateString(startTimestamp)}, ${ShiftsMessageParser.timeString(startTimestamp)}, ${ShiftsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
+        case _ =>
+          s""
     }.mkString("\n")
   }
 }

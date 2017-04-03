@@ -40,22 +40,20 @@ class FlightsActorSpec extends Specification {
       implicit val timeout: Timeout = Timeout(5 seconds)
       val actor: ActorRef = flightsActor(system)
 
-      actor ! Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-08-02 20:00")))
+      actor ! Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
 
       val result = Await.result(futureResult, 1 second)
 
-      assert(Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-08-02 20:00"))) == result)
+      assert(Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-08-02T20:00"))) == result)
     }
 
     "Store a flight and retrieve it after a shutdown" in {
-      setFlightsAndShutdownActorSystem(Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-10-02 20:00"))))
+      setFlightsAndShutdownActorSystem(Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-10-02T20:00"))))
       val result = startNewActorSystemAndRetrieveFlights
 
-      println(s"The result = $result")
-
-      Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-10-02 20:00"))) == result
+      Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-10-02T20:00"))) === result
     }
   }
 
