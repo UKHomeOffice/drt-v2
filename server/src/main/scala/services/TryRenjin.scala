@@ -22,10 +22,8 @@ object TryRenjin {
   lazy val manager = new ScriptEngineManager()
 
   def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
-//    println(s"Workloads length crunching are: $workloads")
-//    println(s"Workloads before crunching are: $workloads")
-    val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
+    val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
   }
 
   def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
@@ -57,7 +55,6 @@ object TryRenjin {
     }
 
     def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
-      //      println(s"${workloads.length}, ${desks.length}")
       loadOptimiserScript
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)

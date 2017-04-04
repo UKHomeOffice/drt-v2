@@ -147,7 +147,6 @@ abstract class ApiService(airportConfig: AirportConfig)
 }
 
 trait LoggingCrunchCalculator extends CrunchCalculator{
-  //  self: HasAirportConfig =>
   def log: DiagnosticLoggingAdapter
 
   def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {

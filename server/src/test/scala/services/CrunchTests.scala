@@ -81,8 +81,6 @@ object CrunchTests extends TestSuite {
       val maxDesks = recs.map(_ (2).toInt)
       val recDesks = recs.map(_ (3).toInt)
 
-      println(workloads)
-
       val tryCrunchRes = TryRenjin.crunch(workloads, minDesks, maxDesks, OptimizerConfig(25))
       tryCrunchRes map {
         cr =>
