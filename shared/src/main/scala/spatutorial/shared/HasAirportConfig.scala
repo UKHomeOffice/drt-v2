@@ -105,7 +105,7 @@ object AirportConfigs {
     portCode = "EDI",
     queues = Map(
       "A1" -> Seq(EeaDesk, EGate, NonEeaDesk),
-      "A2" -> Seq(EeaDesk, EGate, NonEeaDesk)
+      "A2" -> Seq(EeaDesk, NonEeaDesk)
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("A1", "A2"),
@@ -113,7 +113,6 @@ object AirportConfigs {
     defaultProcessingTimes = Map(
       "A1" -> Map(
         eeaMachineReadableToDesk -> 16d / 60,
-
         eeaMachineReadableToEGate -> 25d / 60,
         eeaNonMachineReadableToDesk -> 50d / 60,
         visaNationalToDesk -> 75d / 60,
@@ -121,21 +120,19 @@ object AirportConfigs {
       ),
       "A2" -> Map(
         eeaMachineReadableToDesk -> 30d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
         eeaNonMachineReadableToDesk -> 50d / 60,
         visaNationalToDesk -> 120d / 60,
         nonVisaNationalToDesk -> 120d / 60
       )),
-    Map(
+    minMaxDesksByTerminalQueue = Map(
       "A1" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
-        "nonEeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
-        "eGate" -> (List.fill[Int](24)(2), List.fill[Int](24)(25))
+        "eGate" -> (List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), List(5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5)),
+        "eeaDesk" -> (List(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1), List(9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9)),
+        "nonEeaDesk" -> (List(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1), List(2,2,2,2,2,2,6,6,3,3,3,3,4,3,3,3,3,3,3,3,3,3,3,3))
       ),
       "A2" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
-        "nonEeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
-        "eGate" -> (List.fill[Int](24)(2), List.fill[Int](24)(25))
+        "eeaDesk" -> (List(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1), List(6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6)),
+        "nonEeaDesk" -> (List(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1), List(3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3))
       )
     ),
     shiftExamples = Seq(
@@ -167,11 +164,11 @@ object AirportConfigs {
       visaNationalToDesk -> 90d / 60,
       nonVisaNationalToDesk -> 78d / 60
     )),
-    Map(
+    minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(10, 10, 0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10), List(30, 30, 0, 0, 0, 0, 0, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
+        "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
     ),
     shiftExamples = Seq(
@@ -193,21 +190,21 @@ object AirportConfigs {
     terminalNames = Seq("T1", "T2", "T3"),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
-    Map(
+    minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 5, 6, 6, 6, 6, 6, 5, 5, 5, 6, 5, 5, 5, 5))
       ),
       "T2" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(5, 5, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(5, 5, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 5, 5, 5, 5, 5, 5, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(3, 3, 3, 3, 3, 8, 8, 8, 8, 8, 8, 3, 3, 3, 3, 3, 6, 6, 6, 6, 3, 3, 3, 3))
       ),
       "T3" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(5, 5, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(5, 5, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
+        "eeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3))
       )
     ),
     shiftExamples = Seq(
@@ -254,28 +251,28 @@ object AirportConfigs {
     ),
     Map(
       "T2" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(0, 0, 0, 0, 0, 10, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15)),
+        "eeaDesk" -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9)),
+        "fastTrack" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 0)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
       ),
       "T3" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(0, 0, 0, 0, 0, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15)),
+        "eeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16)),
+        "fastTrack" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23))
       ),
       "T4" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)),
+        "eeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)),
+        "fastTrack" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27))
       ),
       "T5" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25)),
+        "eeaDesk" -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+        "fastTrack" -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0), List(0, 0, 0, 0, 0, 2, 4, 4, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 0)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
       )
     ),
     shiftExamples = Seq(
@@ -295,11 +292,11 @@ object AirportConfigs {
     terminalNames = Seq("T1"),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
-    Map(
+    minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10), List(15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(6, 9, 9, 9, 9, 9, 9, 8, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 6, 6, 7, 8, 6, 6)),
+        "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 1, 1, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 4, 4))
       )
     )
   )
@@ -312,11 +309,11 @@ object AirportConfigs {
     terminalNames = Seq("T1"),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
-    Map(
+    minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
-        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        "eGate" -> (List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
       )
     )
   )
