@@ -23,7 +23,7 @@ class FlightsActorSpec extends Specification {
   sequential
 
   private def flightsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[FlightsActor], crunchActor(system), Actor.noSender), "FlightsActor")
+      val actor = system.actorOf(Props(classOf[FlightsActor], crunchActor(system), Actor.noSender), "FlightsActor")
     actor
   }
 

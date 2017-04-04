@@ -146,28 +146,30 @@ abstract class ApiService(airportConfig: AirportConfig)
   override def airportConfiguration() = airportConfig
 }
 
-trait CrunchCalculator {
+trait LoggingCrunchCalculator extends CrunchCalculator{
   //  self: HasAirportConfig =>
   def log: DiagnosticLoggingAdapter
 
-  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int): Try[OptimizerCrunchResult] = {
+  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
     log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
     val mdc = log.getMDC
     val newMdc = Map("terminalQueue" -> s"$terminalName/$queueName")
     log.setMDC(newMdc)
     try {
-      val repeat = List.fill[Int](workloads.length) _
-      val optimizerConfig = OptimizerConfig(sla)
-      //todo take the maximum desks from some durable store
-      val minimumDesks: List[Int] = repeat(2)
-      val maximumDesks: List[Int] = repeat(25)
-      TryRenjin.crunch(workloads, minimumDesks, maximumDesks, optimizerConfig)
-
+      crunch(terminalName, queueName, workloads, sla, minDesks, maxDesks)
     } finally {
       log.setMDC(mdc)
     }
   }
 }
+
+trait CrunchCalculator {
+  def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
+      val optimizerConfig = OptimizerConfig(sla)
+      TryRenjin.crunch(workloads, minDesks, maxDesks, optimizerConfig)
+  }
+}
+
 
 trait CrunchResultProvider {
   def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]

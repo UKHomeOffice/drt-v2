@@ -95,7 +95,8 @@ object EGateBanksTests extends TestSuite {
         slaByQueue = Map("eeaDesk" -> 5),
         terminalNames = Seq(),
         defaultPaxSplits = SplitRatios(),
-        defaultProcessingTimes = Map()
+        defaultProcessingTimes = Map(),
+        minMaxDesksByTerminalQueue = Map()
       )
 
       val result = WorkloadSimulation.processWork(airportConfig)("T1", "eeaDesk", workload, eGateBanks)
@@ -123,7 +124,8 @@ object EGateBanksTests extends TestSuite {
         slaByQueue = Map("eGate" -> 5),
         terminalNames = Seq(),
         defaultPaxSplits = SplitRatios(),
-        defaultProcessingTimes = Map()
+        defaultProcessingTimes = Map(),
+        minMaxDesksByTerminalQueue = Map()
       )
 
       val result = WorkloadSimulation.processWork(airportConfig)("T1", "eGate", workload, eGateBanks)
