@@ -216,10 +216,6 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
 
   import CrunchTests._
 
-  import drt.shared.PaxTypesAndQueues._
-
-
-
   "given a crunch actor" >> {
     "and we've not sent it flights" in {
       "when we ask for the latest crunch, we get a NoCrunchAvailable" in {
@@ -327,6 +323,4 @@ class StreamFlightCrunchTests extends
       }
     }
   }
-
 }
-
