@@ -46,6 +46,7 @@ case class AirportConfig(
                           terminalNames: Seq[TerminalName],
                           defaultPaxSplits: SplitRatios,
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
+                          minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                           shiftExamples: Seq[String] = Seq()
                         ) extends AirportConfigLike {
 
@@ -125,6 +126,18 @@ object AirportConfigs {
         visaNationalToDesk -> 120d / 60,
         nonVisaNationalToDesk -> 120d / 60
       )),
+    Map(
+      "A1" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
+        "nonEeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
+        "eGate" -> (List.fill[Int](24)(2), List.fill[Int](24)(25))
+      ),
+      "A2" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
+        "nonEeaDesk" -> (List.fill[Int](24)(2), List.fill[Int](24)(25)),
+        "eGate" -> (List.fill[Int](24)(2), List.fill[Int](24)(25))
+      )
+    ),
     shiftExamples = Seq(
       "Midnight shift, A1, {date}, 00:00, 00:59, 10",
       "Night shift, A1, {date}, 01:00, 06:59, 4",
@@ -154,6 +167,13 @@ object AirportConfigs {
       visaNationalToDesk -> 90d / 60,
       nonVisaNationalToDesk -> 78d / 60
     )),
+    Map(
+      "T1" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      )
+    ),
     shiftExamples = Seq(
       "Alpha, T1, {date}, 07:00, 15:48, 0",
       "Bravo, T1, {date}, 07:45, 16:33, 0",
@@ -173,6 +193,23 @@ object AirportConfigs {
     terminalNames = Seq("T1", "T2", "T3"),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
+    Map(
+      "T1" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      ),
+      "T2" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      ),
+      "T3" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      )
+    ),
     shiftExamples = Seq(
       "Midnight shift, T1, {date}, 00:00, 00:59, 25",
       "Night shift, T1, {date}, 01:00, 06:59, 10",
@@ -215,6 +252,32 @@ object AirportConfigs {
       "T4" -> lhrDefaultTerminalProcessingTimes,
       "T5" -> lhrDefaultTerminalProcessingTimes
     ),
+    Map(
+      "T2" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      ),
+      "T3" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      ),
+      "T4" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      ),
+      "T5" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "fastTrack" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      )
+    ),
     shiftExamples = Seq(
       "Midnight shift, T2, {date}, 00:00, 00:59, 25",
       "Night shift, T2, {date}, 01:00, 06:59, 10",
@@ -231,7 +294,14 @@ object AirportConfigs {
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1"),
     defaultPaxSplits = defaultPaxSplits,
-    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
+    Map(
+      "T1" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      )
+    )
   )
   val ema = AirportConfig(
     portCode = "EMA",
@@ -241,7 +311,14 @@ object AirportConfigs {
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1"),
     defaultPaxSplits = defaultPaxSplits,
-    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes)
+    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
+    Map(
+      "T1" -> Map(
+        "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+        "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      )
+    )
   )
 
   val allPorts = ema :: edi :: stn :: man :: ltn :: lhr :: Nil

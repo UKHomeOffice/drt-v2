@@ -17,6 +17,7 @@ import services.FlightCrunchInteractionTests.TestCrunchActor
 import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 import drt.shared.FlightsApi.Flights
+import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 
@@ -26,6 +27,60 @@ import scala.collection.immutable.Seq
 
 object CrunchTests {
 
+  val airportConfig = AirportConfig(
+    portCode = "EDI",
+    queues = Map(
+      "A1" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+      "A2" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+    ),
+    slaByQueue = Map(
+      "eeaDesk" -> 20,
+      "eGate" -> 25,
+      "nonEeaDesk" -> 45
+    ),
+    terminalNames = Seq("A1", "A2"),
+    defaultPaxSplits = SplitRatios(
+      SplitRatio(eeaMachineReadableToDesk, 0.4875),
+      SplitRatio(eeaMachineReadableToEGate, 0.1625),
+      SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+      SplitRatio(visaNationalToDesk, 0.05),
+      SplitRatio(nonVisaNationalToDesk, 0.05)
+    ),
+    defaultProcessingTimes = Map(
+      "A1" -> Map(
+        eeaMachineReadableToDesk -> 16d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 50d / 60,
+        visaNationalToDesk -> 75d / 60,
+        nonVisaNationalToDesk -> 64d / 60
+      ),
+      "A2" -> Map(
+        eeaMachineReadableToDesk -> 30d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 50d / 60,
+        visaNationalToDesk -> 120d / 60,
+        nonVisaNationalToDesk -> 120d / 60
+      )),
+    Map(
+      "A1" -> Map(
+        "eeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
+        "nonEeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
+        "eGate" -> (List.fill[Int](1)(2), List.fill[Int](1)(25))
+      ),
+      "A2" -> Map(
+        "eeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
+        "nonEeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
+        "eGate" -> (List.fill[Int](1)(2), List.fill[Int](1)(25))
+      )
+    ),
+    shiftExamples = Seq(
+      "Midnight shift, A1, {date}, 00:00, 00:59, 10",
+      "Night shift, A1, {date}, 01:00, 06:59, 4",
+      "Morning shift, A1, {date}, 07:00, 13:59, 15",
+      "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
+      "Evening shift, A1, {date}, 17:00, 23:59,17"
+    )
+  )
 
   val levelDbTestActorSystem = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
     "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
@@ -53,21 +108,6 @@ object CrunchTests {
     TestKit.shutdownActorSystem(context.system)
     res
   }
-
-  lazy val airportConfig = AirportConfig(
-    defaultPaxSplits = SplitRatios(List(
-      SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5),
-      SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.5))),
-    defaultProcessingTimes = Map(
-      "A1" ->
-        Map(
-          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 20d / 60,
-          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate) -> 25d / 60)),
-    queues = Map("A1" -> Seq("eeaDesk", "eGate")),
-    portCode = "EDI",
-    slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 5),
-    terminalNames = Seq("A1")
-  )
 
   def withContext[T](timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
     val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider)
@@ -103,7 +143,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
               timeProvider().getMillis,
               60000,
               Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-              Vector(1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+              Vector(1, 2, 2, 3, 4, 4, 5, 5, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12, 12, 13, 14, 14, 15, 15, 16, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
           context.expectMsg(15 seconds, exp)
           true
@@ -190,10 +230,9 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
     "given a crunch actor with airport config for terminals A1 and A2" >> {
       "when we send it a flight for A3" >> {
         "then the crunch should log an error (untested) and ??ignore the flight??, and crunch successfully" in {
-          val edi: AirportConfig = AirportConfigs.edi
-          val splitsProviders = List(SplitsProvider.defaultProvider(edi))
+          val splitsProviders = List(SplitsProvider.defaultProvider(airportConfig))
           val timeProvider = () => DateTime.parse("2016-09-01")
-          val testActorProps = Props(classOf[ProdCrunchActor], 1, edi, splitsProviders, timeProvider)
+          val testActorProps = Props(classOf[ProdCrunchActor], 1, airportConfig, splitsProviders, timeProvider)
           withContextCustomActor(testActorProps) {
             context =>
               println("here we are, born to be kings")
@@ -235,7 +274,7 @@ class StreamFlightCrunchTests extends
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
-  def createCrunchActor(hours: Int = 24, airportConfig: AirportConfig = AirportConfigs.edi, timeProvider: () => DateTime = () => DateTime.now()): ActorRef = {
+  def createCrunchActor(hours: Int = 24, airportConfig: AirportConfig = CrunchTests.airportConfig , timeProvider: () => DateTime = () => DateTime.now()): ActorRef = {
     system.actorOf(Props(classOf[TestCrunchActor], hours, airportConfig, timeProvider), "CrunchActor")
   }
 
@@ -282,27 +321,6 @@ class StreamFlightCrunchTests extends
             Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
         true
       }
-      //        "and we have sent it flights for different terminal  - A1" in {
-      //          val crunchActor = createCrunchActor
-      //          val flights = Flights(
-      //            List(
-      //              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31"),
-      //              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30")))
-      //          crunchActor ! PerformCrunchOnFlights(flights.flights)
-      //
-      //          "when we ask for the latest crunch for a terminal, we get a crunch result only including flights at that terminal" in {
-      //            crunchActor ! GetLatestCrunch("A1", "eeaDesk")
-      //            val exp = CrunchResult(Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), Vector(1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-      //
-      //            expectMsg(10 seconds,
-      //              CrunchResult(
-      //                recommendedDesks = Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-      //                waitTimes = Vector(1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
-      //            true
-      //          }
-      //        }
     }
   }
-
 }
-

@@ -10,6 +10,7 @@ import drt.shared.FlightsApi._
 import drt.shared.{ApiFlight, _}
 import spray.caching.{Cache, LruCache}
 
+import scala.collection.GenTraversableOnce
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -47,7 +48,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
                           ) extends Actor
   with DiagnosticActorLogging
   with WorkloadsCalculator
-  with CrunchCalculator
+  with LoggingCrunchCalculator
   with FlightState {
 
   log.info(s"airportConfig is $airportConfig")
@@ -173,7 +174,12 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           val workloads: List[Double] = terminalWorkloads(queueName)
           log.info(s"$tq Crunching on terminal workloads: ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
-          val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla)
+
+          val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
+          val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
+          val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
+
+          val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, minDesksByMinute, maxDesksByMinute)
           if (queueName == "eGate")
             crunchRes.map(crunchResSuccess => {
               EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)

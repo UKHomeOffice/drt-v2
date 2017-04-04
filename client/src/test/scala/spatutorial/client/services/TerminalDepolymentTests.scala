@@ -11,14 +11,19 @@ import scala.collection.immutable.{IndexedSeq, Map, Seq}
 object TerminalDepolymentTests extends TestSuite {
 
   import drt.client.TableViewUtils._
-  
+
   val airportConfig = AirportConfig(
     "STN",
     Map("T1" -> Seq("eeaDesk", "nonEeaDesk", "eGate")),
     Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20),
     Seq("T1"),
     SplitRatios(List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
-    Map("T1" -> Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 20d / 60))
+    Map(),
+    Map("T1" -> Map(
+      "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+      "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+      "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+    ))
   )
 
   def tests = TestSuite {
