@@ -19,6 +19,8 @@ object JSDateConversions {
 
   implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
 
+  implicit def milliDateToSDate(milliDate: MilliDate): SDateLike = SDate(milliDate)
+
   implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(date)
 
   object SDate {
@@ -51,6 +53,7 @@ object JSDateConversions {
     }
 
     def asUTCDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
+
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
