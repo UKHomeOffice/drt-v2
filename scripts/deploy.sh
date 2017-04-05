@@ -35,10 +35,13 @@ do
     curl ${ARTIFACT_REPO_URL}/${ARTIFACT_PATH} > $LOCAL_NAME_ZIP
 
     scp $LOCAL_NAME_ZIP ci-build@${JVA_HOST}:/home/ci-build/
-    ssh ci-build@${JVA_HOST} "sudo unzip -o /home/ci-build/${LOCAL_NAME_ZIP} -d /usr/share/drt-v2/${PORT_CODE}/"
-    ssh ci-build@${JVA_HOST} "sudo rm -f /usr/share/drt-v2/${PORT_CODE}/current && sudo ln -s /usr/share/drt-v2/${PORT_CODE}/${TARGET_NAME} /usr/share/drt-v2/${PORT_CODE}/current"
+    ssh ci-build@${JVA_HOST} "sudo -u jboss-as unzip -o /home/ci-build/${LOCAL_NAME_ZIP} -d /usr/share/drt-v2/${PORT_CODE}/"
+    ssh ci-build@${JVA_HOST} "sudo -u jboss-as rm -f /usr/share/drt-v2/${PORT_CODE}/current && sudo -u jboss-as ln -s /usr/share/drt-v2/${PORT_CODE}/${TARGET_NAME} /usr/share/drt-v2/${PORT_CODE}/current"
     ssh ci-build@${JVA_HOST} "sudo service drt-v2-${PORT_CODE} restart"
 
     #clean up
-    ssh ci-build@${JVA_HOST} "sudo rm /home/ci-build/${LOCAL_NAME_ZIP}"
+    ssh ci-build@${JVA_HOST} "rm /home/ci-build/${LOCAL_NAME_ZIP}"
+
+    # remove all but latest 5 builds (+6 below achieves this)
+    ssh ci-build@${JVA_HOST} "cd /usr/share/drt-v2/${PORT_CODE} && ls -tp | grep '/$' | tail -n +6 | sudo -u jboss-as xargs -I {} rm -rf -- {}"
 done
