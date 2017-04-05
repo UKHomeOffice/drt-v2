@@ -39,6 +39,9 @@ object AdvPaxSplitsProvider {
             log.error(s"Failure to get splits in crunch for $flight ", t)
         }
         Await.result(splitsFut, 10 second)
+      case _ =>
+        log.error(s"Flight does not have IATA code $flight")
+        None
     }
   }
 
