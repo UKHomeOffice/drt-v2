@@ -46,8 +46,8 @@ object FlightMessageConversion {
       flightID = Some(apiFlight.FlightID),
       airportID = Some(apiFlight.AirportID),
       terminal = Some(apiFlight.Terminal),
-      iCAO = Some(apiFlight.ICAO),
-      iATA = Some(apiFlight.IATA),
+      iCAO = Some(apiFlight.rawICAO),
+      iATA = Some(apiFlight.rawIATA),
       origin = Some(apiFlight.Origin),
       pcpTime = Some(apiFlight.PcpTime),
 
