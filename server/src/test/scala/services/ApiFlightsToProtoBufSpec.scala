@@ -27,8 +27,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         FlightID = 1000,
         AirportID = "LHR",
         Terminal = "T2",
-        ICAO = "BA0001",
-        IATA = "BAA0001",
+        rawICAO = "BA0001",
+        rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
@@ -106,8 +106,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         FlightID = 1000,
         AirportID = "LHR",
         Terminal = "T2",
-        ICAO = "BA0001",
-        IATA = "BAA0001",
+        rawICAO = "BA0001",
+        rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
@@ -160,8 +160,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         FlightID = 1000,
         AirportID = "LHR",
         Terminal = "T2",
-        ICAO = "BA0001",
-        IATA = "BAA0001",
+        rawICAO = "BA0001",
+        rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
@@ -214,8 +214,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         FlightID = 1000,
         AirportID = "LHR",
         Terminal = "T2",
-        ICAO = "BA0001",
-        IATA = "BAA0001",
+        rawICAO = "BA0001",
+        rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
@@ -268,8 +268,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         FlightID = 1000,
         AirportID = "LHR",
         Terminal = "T2",
-        ICAO = "BA0001",
-        IATA = "BAA0001",
+        rawICAO = "BA0001",
+        rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )

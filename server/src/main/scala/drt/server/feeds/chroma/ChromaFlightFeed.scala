@@ -82,8 +82,8 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
           FlightID = flight.FlightID,
           AirportID = flight.AirportID,
           Terminal = flight.Terminal,
-          ICAO = flight.ICAO,
-          IATA = flight.IATA,
+          rawICAO = flight.ICAO,
+          rawIATA = flight.IATA,
           Origin = flight.Origin,
           SchDT = flight.SchDT,
           PcpTime = pcpTime

@@ -30,8 +30,8 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       FlightID = 2,
       AirportID = "STN",
       Terminal = "1",
-      ICAO = "",
-      IATA = iataFlightCode,
+      rawICAO = "",
+      rawIATA = iataFlightCode,
       Origin = "",
       PcpTime = 0,
       SchDT = schDT

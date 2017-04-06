@@ -22,8 +22,8 @@ object FlightStateTests extends TestSuite {
       FlightID = flightId,
       AirportID = "",
       Terminal = "",
-      ICAO = "",
-      IATA = "",
+      rawICAO = "",
+      rawIATA = "",
       Origin = "",
       PcpTime = 0,
       SchDT = schDt

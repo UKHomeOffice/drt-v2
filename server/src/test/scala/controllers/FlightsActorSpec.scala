@@ -52,7 +52,7 @@ class FlightsActorSpec extends Specification {
       setFlightsAndShutdownActorSystem(Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-10-02T20:00"))))
       val result = startNewActorSystemAndRetrieveFlights
 
-      Flights(List(WorkloadCalculatorTests.apiFlight("SA123", "STN", 1, "2017-10-02T20:00"))) === result
+      Flights(List(WorkloadCalculatorTests.apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
     }
   }
 
