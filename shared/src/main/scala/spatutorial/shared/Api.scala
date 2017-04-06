@@ -63,8 +63,11 @@ case class ApiFlight(
                       Origin: String,
                       SchDT: String,
                       PcpTime: Long) {
-  lazy val ICAO = standardiseFlightCode(rawICAO)
-  lazy val IATA = standardiseFlightCode(rawIATA)
+  lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
+  lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
+}
+
+object ApiFlight {
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
@@ -75,6 +78,7 @@ case class ApiFlight(
       case _ => flightCode
     }
   }
+
 }
 
 trait SDateLike {

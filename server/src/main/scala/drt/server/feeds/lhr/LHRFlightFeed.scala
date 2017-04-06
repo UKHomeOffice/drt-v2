@@ -16,8 +16,6 @@ import scala.sys.process._
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
-import server.feeds.FlightFeeds._
-
 case class LHRLiveFlight(
                           term: String,
                           flightCode: String,
