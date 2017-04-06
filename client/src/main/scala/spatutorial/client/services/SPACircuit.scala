@@ -210,7 +210,6 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeploy
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
-    //    log.info(s"finding handler for ${action.toString.take(100)}")
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
         log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action")
