@@ -54,7 +54,6 @@ object JSDateConversions {
 
     def asUTCDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
 
-
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = asUTCDate(new Date(y, m - 1, d, h, mm))

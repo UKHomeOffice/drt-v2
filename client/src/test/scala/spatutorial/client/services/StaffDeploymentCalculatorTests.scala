@@ -101,10 +101,10 @@ object StaffDeploymentCalculatorTests extends TestSuite {
         "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
       )
       val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(60)(0), List.fill(60)(100))))
-
-
       val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+
       val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
+
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(
           List(

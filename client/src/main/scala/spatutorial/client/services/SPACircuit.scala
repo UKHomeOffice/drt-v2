@@ -484,7 +484,6 @@ object StaffDeploymentCalculator {
     queueRecs.foldLeft(List[Int]()) {
       case (agg, (deskRec, queue)) if agg.length < queueRecs.length - 1 =>
         val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
-
         agg :+ deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - agg.sum)
       case (agg, (deskRec, queue)) =>
         val ideal = staffAvailable - agg.sum
