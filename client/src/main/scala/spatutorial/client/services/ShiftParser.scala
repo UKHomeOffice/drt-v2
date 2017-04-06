@@ -19,6 +19,8 @@ object JSDateConversions {
 
   implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
 
+  implicit def milliDateToSDate(milliDate: MilliDate): SDateLike = SDate(milliDate)
+
   implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(date)
 
   object SDate {

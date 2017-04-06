@@ -220,7 +220,7 @@ object TerminalDeploymentsTable {
       })
       subHeadingLevel2 :+
         <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks") :+
-        <.th(^.className := "total-deployed", "Avail", ^.title := "Total staff available based on shifts entered")
+        <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on shifts entered")
     }
 
     private def thHeaderGroupStart(title: String, xs: TagMod*): ReactTagOf[TableHeaderCell] = {

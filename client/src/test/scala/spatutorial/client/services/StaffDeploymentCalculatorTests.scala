@@ -3,6 +3,7 @@ package drt.client.services
 import diode.data.Ready
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.FlightsApi._
 import drt.shared.{CrunchResult, MilliDate}
 import utest._
@@ -99,9 +100,11 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val terminalQueueCrunchResults = Map(
         "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
       )
-
+      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(60)(0), List.fill(60)(100))))
       val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
-      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults)
+
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
+
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(
           List(
@@ -121,21 +124,28 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val eeaDeskRecs = List.fill(60)(4).toIndexedSeq
       val nonEeaDeskRecs = List.fill(60)(2).toIndexedSeq
       val waitTimes = List.fill(60)(10)
+      val minMaxDesks = Map("T1" ->
+        Map(
+          "eeaDesk" -> (List.fill(60)(0), List.fill(60)(100)),
+          "nonEea" -> (List.fill(60)(0), List.fill(60)(100))
+        )
+      )
+
       val terminalQueueCrunchResults = Map(
-        "T1" -> Map(
-          "eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes))),
-          "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
+      "T1" -> Map(
+      "eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes))),
+      "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
       )
 
       val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
-      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults)
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
       val expected = Success(Map("T1" -> Map(
-        "eeaDesk" -> Ready(DeskRecTimeSlots(List(
+      "eeaDesk" -> Ready(DeskRecTimeSlots(List(
           DeskRecTimeslot(1480550400000L, 4),
           DeskRecTimeslot(1480551300000L, 4),
           DeskRecTimeslot(1480552200000L, 4),
           DeskRecTimeslot(1480553100000L, 4)))),
-        "nonEea" -> Ready(DeskRecTimeSlots(List(
+      "nonEea" -> Ready(DeskRecTimeSlots(List(
           DeskRecTimeslot(1480550400000L, 2),
           DeskRecTimeslot(1480551300000L, 2),
           DeskRecTimeslot(1480552200000L, 2),
@@ -143,6 +153,181 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       )))
       println(s"suggested deployments::: $result")
       assert(result == expected)
+    }
+
+    "Given max desks for a queue then the terminal deployments should never be higher than the max desks when there are staff" - {
+      val startTime = SDate(2016, 12, 1).millisSinceEpoch
+      val oneHour = 60000
+      val deskRecs = List.fill(60)(0).toIndexedSeq
+      val waitTimes = List.fill(60)(0)
+      val terminalQueueCrunchResults = Map(
+        "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
+      )
+      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(24)(0), List.fill(24)(2))))
+
+      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
+      val expected = Success(Map("T1" -> Map(
+        "eeaDesk" -> Ready(DeskRecTimeSlots(
+          List(
+            DeskRecTimeslot(1480550400000L, 2),
+            DeskRecTimeslot(1480551300000L, 2),
+            DeskRecTimeslot(1480552200000L, 2),
+            DeskRecTimeslot(1480553100000L, 2))
+        ))
+      )))
+
+      assert(result == expected)
+    }
+
+    "Given staff available less than recs when max is higher than staff available then we should get staff available" - {
+      val startTime = SDate(2016, 12, 1).millisSinceEpoch
+      val oneHour = 60000
+      val deskRecs = List.fill(60)(5).toIndexedSeq
+      val waitTimes = List.fill(60)(0)
+      val terminalQueueCrunchResults = Map(
+        "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
+      )
+      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(24)(0), List.fill(24)(2))))
+
+      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 1
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
+      val expected = Success(Map("T1" -> Map(
+        "eeaDesk" -> Ready(DeskRecTimeSlots(
+          List(
+            DeskRecTimeslot(1480550400000L, 1),
+            DeskRecTimeslot(1480551300000L, 1),
+            DeskRecTimeslot(1480552200000L, 1),
+            DeskRecTimeslot(1480553100000L, 1))
+        ))
+      )))
+
+      assert(result == expected)
+    }
+
+    "Given terminal queue crunch results for two queues when recs exceed max then we should get the max" - {
+      val startTime = SDate(2016, 12, 1).millisSinceEpoch
+      val oneHour = 60000
+      val eeaDeskRecs = List.fill(60)(4).toIndexedSeq
+      val nonEeaDeskRecs = List.fill(60)(5).toIndexedSeq
+      val waitTimes = List.fill(60)(10)
+      val minMaxDesks = Map("T1" ->
+        Map(
+          "eeaDesk" -> (List.fill(60)(0), List.fill(60)(3)),
+          "nonEea" -> (List.fill(60)(0), List.fill(60)(3))
+        )
+      )
+
+      val terminalQueueCrunchResults = Map(
+        "T1" -> Map(
+          "eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes))),
+          "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
+      )
+
+      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 100
+      val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
+      val expected = Success(Map("T1" -> Map(
+        "eeaDesk" -> Ready(DeskRecTimeSlots(List(
+          DeskRecTimeslot(1480550400000L, 3),
+          DeskRecTimeslot(1480551300000L, 3),
+          DeskRecTimeslot(1480552200000L, 3),
+          DeskRecTimeslot(1480553100000L, 3)))),
+        "nonEea" -> Ready(DeskRecTimeSlots(List(
+          DeskRecTimeslot(1480550400000L, 3),
+          DeskRecTimeslot(1480551300000L, 3),
+          DeskRecTimeslot(1480552200000L, 3),
+          DeskRecTimeslot(1480553100000L, 3))))
+      )))
+      println(s"suggested deployments::: $result")
+      assert(result == expected)
+    }
+
+    "Given min max desks then we should get a map of min and max desks for a queue at a timeslot" - {
+      val minDesks =  0 to 23 toList
+      val maxDesks =  0 to 23 toList
+      val minMaxDesks = Map("eeaDesk" -> (minDesks, maxDesks))
+      val time = 1491405172000L //3pm UTC
+
+      val actual = StaffDeploymentCalculator.minMaxDesksForTime(minMaxDesks, time)
+      val expected = Map("eeaDesk" -> (16, 16))
+
+      assert(actual == expected)
+    }
+
+
+    "Given min, max, ideal desks and staff available" - {
+      import StaffDeploymentCalculator._
+      "When ideal is within the bounds and we have staff available then we should get the ideal" - {
+        val min = 2
+        val max = 100
+        val ideal = 5
+        val staffAvailable = 100
+
+        val expected = ideal
+        val actual = deploymentWithinBounds(min, max, ideal, staffAvailable)
+
+        assert(expected == actual)
+      }
+
+      "When ideal is within the bounds and we don't have staff available then we should get the staff available" - {
+        val min = 2
+        val max = 100
+        val ideal = 5
+        val staffAvailable = 4
+
+        val expected = staffAvailable
+        val actual = deploymentWithinBounds(min, max, ideal, staffAvailable)
+
+        assert(expected == actual)
+      }
+
+      "When ideal is less than min and staff available is greater than min we should get the min" - {
+        val min = 2
+        val max = 100
+        val ideal = 1
+        val staffAvailable = 3
+
+        val expected = min
+        val actual = deploymentWithinBounds(min, max, ideal, staffAvailable)
+
+        assert(expected == actual)
+      }
+
+      "When ideal is less than min and staff available is less than min we should get the staff available" - {
+        val min = 5
+        val max = 100
+        val ideal = 4
+        val staffAvailable = 3
+
+        val expected = staffAvailable
+        val actual = deploymentWithinBounds(min, max, ideal, staffAvailable)
+
+        assert(expected == actual)
+      }
+
+      "When ideal is greater than max and there are staff available then we should get the max" - {
+        val min = 0
+        val max = 4
+        val ideal = 10
+        val staffAvailable = 100
+
+        val expected = max
+        val actual = deploymentWithinBounds(min, max, ideal, staffAvailable)
+
+        assert(expected == actual)
+      }
+
+      "When ideal is greater than max and there fewer staff available then we should get staff available" - {
+        val min = 0
+        val max = 4
+        val ideal = 10
+        val staffAvailable = 2
+
+        val expected = staffAvailable
+        val actual = deploymentWithinBounds(min, max, ideal, staffAvailable)
+
+        assert(expected == actual)
+      }
     }
   }
 }

@@ -121,3 +121,4 @@ class ShiftsActor extends PersistentActor {
       }
   }
 }
+

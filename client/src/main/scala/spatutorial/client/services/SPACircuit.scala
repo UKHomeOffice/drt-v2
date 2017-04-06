@@ -117,7 +117,11 @@ case class RootModel(
     val pd = PortDeployment.terminalDeployments(pdr, staffFromShiftsAndMovementsAt)
     val tsa = PortDeployment.terminalStaffAvailable(pd) _
 
-    StaffDeploymentCalculator(tsa, queueCrunchResults).getOrElse(Map())
+    airportConfig match {
+      case Ready(config) =>
+        StaffDeploymentCalculator(tsa, queueCrunchResults, config.minMaxDesksByTerminalQueue).getOrElse(Map())
+      case _ => Map()
+    }
   }
 
   lazy val calculatedDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
@@ -206,7 +210,6 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeploy
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
-//    log.info(s"finding handler for ${action.toString.take(100)}")
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
         log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action")
@@ -266,7 +269,9 @@ object HandyStuff {
   def seqOfEffectsToEffectSeq(crunchRequests: List[Effect]): Effect = {
     crunchRequests match {
       case Nil =>
-        Effect(Future{NoAction})
+        Effect(Future {
+          NoAction
+        })
       case h :: Nil =>
         h
       case h :: ts =>
@@ -399,7 +404,11 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
 object StaffDeploymentCalculator {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
 
-  def apply[M](staffAvailable: (TerminalName) => (MilliDate) => Int, terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults]):
+  def apply[M](
+                staffAvailable: (TerminalName) => (MilliDate) => Int,
+                terminalQueueCrunchResultsModel: Map[TerminalName, QueueCrunchResults],
+                queueMinAndMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]
+              ):
   Try[TerminalQueueStaffDeployments] = {
 
     val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
@@ -423,7 +432,11 @@ object StaffDeploymentCalculator {
         }
         val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
           val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))
-          queueRecsToDeployments(_.toInt)(deskRecTimeSlots.map(_.deskRec).toList, terminalStaffAvailable(timeInMillis))
+          val queueNames = terminalQueueCrunchResults(terminalName).keys
+          val deskRecs: Iterable[(Int, QueueName)] = deskRecTimeSlots.map(_.deskRec).zip(queueNames)
+          val deps = queueRecsToDeployments(_.toInt)(deskRecs.toList, terminalStaffAvailable(timeInMillis), minMaxDesksForTime(queueMinAndMaxDesks(terminalName), timeInMillis.millisSinceEpoch))
+          println(s"Deps: $deps")
+          deps
         }
         val deployments = queueDeskRecsOverTime.map(timeslotsToInts).transpose
         val times: Seq[Long] = drts.items.map(_.timeInMillis)
@@ -435,7 +448,21 @@ object StaffDeploymentCalculator {
 
       newSuggestedStaffDeployments
     })
+  }
 
+  def minMaxDesksForTime(minMaxDesks: Map[QueueName, (List[Int], List[Int])], timestamp: Long): Map[QueueName, (Int, Int)] = {
+    import JSDateConversions._
+    val hour = MilliDate(timestamp).getHours()
+    minMaxDesks.mapValues(minMaxForQueue => (minMaxForQueue._1(hour), minMaxForQueue._2(hour)))
+  }
+
+  def deploymentWithinBounds(min: Int, max: Int, ideal: Int, staffAvailable: Int) = {
+    val best = if (ideal < min) min
+    else if (ideal > max) max
+    else ideal
+
+    if (best > staffAvailable) staffAvailable
+    else best
   }
 
   def calculateDeskRecTimeSlots(crunchResultWithTimeAndInterval: CrunchResult) = {
@@ -451,13 +478,16 @@ object StaffDeploymentCalculator {
     updatedDeskRecTimeSlots
   }
 
-  def queueRecsToDeployments(round: Double => Int)(queueRecs: Seq[Int], staffAvailable: Int): Seq[Int] = {
-    val totalStaffRec = queueRecs.sum
+  def queueRecsToDeployments(round: Double => Int)(queueRecs: List[(Int, String)], staffAvailable: Int, minMaxDesks: Map[QueueName, (Int, Int)]): Seq[Int] = {
+    val totalStaffRec = queueRecs.map(_._1).sum
+
     queueRecs.foldLeft(List[Int]()) {
-      case (agg, queueRec) if (agg.length < queueRecs.length - 1) =>
-        agg :+ round(staffAvailable * (queueRec.toDouble / totalStaffRec))
-      case (agg, _) =>
-        agg :+ staffAvailable - agg.sum
+      case (agg, (deskRec, queue)) if agg.length < queueRecs.length - 1 =>
+        val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
+        agg :+ deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - agg.sum)
+      case (agg, (deskRec, queue)) =>
+        val ideal = staffAvailable - agg.sum
+        agg :+ deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - agg.sum)
     }
   }
 }
