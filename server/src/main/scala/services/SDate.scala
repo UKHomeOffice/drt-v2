@@ -10,6 +10,7 @@ object SDate {
   val log = LoggerFactory.getLogger(getClass)
 
   case class JodaSDate(dateTime: DateTime) extends SDateLike {
+
     import implicits._
 
     def getFullYear(): Int = dateTime.getYear
@@ -32,19 +33,18 @@ object SDate {
   object implicits {
     implicit def jodaToSDate(dateTime: DateTime): SDateLike = JodaSDate(dateTime)
 
-//    implicit def sprayToSDate(dateTime: spray.http.DateTime): SDate = JodaSDate(dateTime.year, dateTime.
+    //    implicit def sprayToSDate(dateTime: spray.http.DateTime): SDate = JodaSDate(dateTime.year, dateTime.
 
     implicit def sdateToMilliDate(sdate: SDateLike): MilliDate = MilliDate(sdate.millisSinceEpoch)
 
     implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
   }
 
-  def parseString(dateTime:String) = {
-      MilliDate(apply(dateTime).millisSinceEpoch)
+  def parseString(dateTime: String) = {
+    MilliDate(apply(dateTime).millisSinceEpoch)
   }
 
   def apply(dateTime: String): SDateLike = {
-    log.info(s"parsing ${dateTime}")
     JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
   }
 

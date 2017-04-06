@@ -34,8 +34,8 @@ object WorkloadCalculatorTests extends TestSuite {
       FlightID = flightId,
       AirportID = airportCode,
       Terminal = terminal,
-      ICAO = "",
-      IATA = iataFlightCode,
+      rawICAO = "",
+      rawIATA = iataFlightCode,
       Origin = "",
       PcpTime = 0,
       SchDT = scheduledDatetime

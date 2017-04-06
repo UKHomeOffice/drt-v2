@@ -36,6 +36,7 @@ object FlightParsing {
 }
 
 case class SplitR(name: String, size: Double)
+
 case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String)
 
 case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: ApiSplits)
@@ -57,11 +58,28 @@ case class ApiFlight(
                       FlightID: Int,
                       AirportID: String,
                       Terminal: String,
-                      ICAO: String,
-                      IATA: String,
+                      rawICAO: String,
+                      rawIATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long)
+                      PcpTime: Long) {
+  lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
+  lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
+}
+
+object ApiFlight {
+
+  def standardiseFlightCode(flightCode: String): String = {
+    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+
+    flightCode match {
+      case flightCodeRegex(operator, flightNumber, suffix) =>
+        f"${operator}${flightNumber.toInt}%04d${suffix}"
+      case _ => flightCode
+    }
+  }
+
+}
 
 trait SDateLike {
 
@@ -221,19 +239,19 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 
 object PassengerQueueTypes {
-//
-//  object Queues {
-//    val eeaDesk = "desk"
-//    val egate = "egate"
-//    val nationalsDesk = "nationalsDesk"
-//  }
+  //
+  //  object Queues {
+  //    val eeaDesk = "desk"
+  //    val egate = "egate"
+  //    val nationalsDesk = "nationalsDesk"
+  //  }
 
-//  object PaxTypes {
-//    val EeaNonMachineReadable = "eea-non-machine-readable"
-//    val NationalVisa = "national-visa"
-//    val EeaMachineReadable = "eea-machine-readable"
-//    val NonNationalVisa = "national-non-visa"
-//  }
+  //  object PaxTypes {
+  //    val EeaNonMachineReadable = "eea-non-machine-readable"
+  //    val NationalVisa = "national-visa"
+  //    val EeaMachineReadable = "eea-machine-readable"
+  //    val NonNationalVisa = "national-non-visa"
+  //  }
 
   def egatePercentage = 0.6d
 

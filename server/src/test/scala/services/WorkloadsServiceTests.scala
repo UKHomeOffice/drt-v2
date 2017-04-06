@@ -32,8 +32,8 @@ class WorkloadsServiceTests extends SpecificationLike {
       FlightID = 1,
       AirportID = "EDI",
       Terminal = terminal,
-      ICAO = "",
-      IATA = iataFlightCode,
+      rawICAO = "",
+      rawIATA = iataFlightCode,
       Origin = "",
       PcpTime = 0,
       SchDT = scheduledDatetime

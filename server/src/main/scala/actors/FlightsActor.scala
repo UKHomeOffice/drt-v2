@@ -46,8 +46,8 @@ object FlightMessageConversion {
       flightID = Some(apiFlight.FlightID),
       airportID = Some(apiFlight.AirportID),
       terminal = Some(apiFlight.Terminal),
-      iCAO = Some(apiFlight.ICAO),
-      iATA = Some(apiFlight.IATA),
+      iCAO = Some(apiFlight.rawICAO),
+      iATA = Some(apiFlight.rawIATA),
       origin = Some(apiFlight.Origin),
       pcpTime = Some(apiFlight.PcpTime),
 
@@ -90,8 +90,8 @@ object FlightMessageConversion {
           FlightID = flightMessage.flightID.getOrElse(0),
           AirportID = flightMessage.airportID.getOrElse(""),
           Terminal = flightMessage.terminal.getOrElse(""),
-          ICAO = flightMessage.iCAO.getOrElse(""),
-          IATA = flightMessage.iATA.getOrElse(""),
+          rawICAO = flightMessage.iCAO.getOrElse(""),
+          rawIATA = flightMessage.iATA.getOrElse(""),
           Origin = flightMessage.origin.getOrElse(""),
           SchDT = flightMessage.schDTOLD.getOrElse(""),
           PcpTime = flightMessage.pcpTime.getOrElse(0)
@@ -114,8 +114,8 @@ object FlightMessageConversion {
           FlightID = flightMessage.flightID.getOrElse(0),
           AirportID = flightMessage.airportID.getOrElse(""),
           Terminal = flightMessage.terminal.getOrElse(""),
-          ICAO = flightMessage.iCAO.getOrElse(""),
-          IATA = flightMessage.iATA.getOrElse(""),
+          rawICAO = flightMessage.iCAO.getOrElse(""),
+          rawIATA = flightMessage.iATA.getOrElse(""),
           Origin = flightMessage.origin.getOrElse(""),
           SchDT = apiFlightDateTime(flightMessage.scheduled),
           PcpTime = flightMessage.pcpTime.getOrElse(0)

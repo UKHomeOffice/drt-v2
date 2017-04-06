@@ -44,7 +44,6 @@ case class LHRCsvException(originalLine: String, idx: Int, innerException: Throw
   override def toString = s"$originalLine : $idx $innerException"
 }
 
-
 case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
   def opt(s: String) = emptyStringToOption(s, x => x)
@@ -56,18 +55,17 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
   lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
     csvRecords.zipWithIndex.map { case (splitRow, lineNo) =>
       val t = Try {
-        val sq: (String) => String = (x) => x
         LHRLiveFlight(
-          term = s"T${sq(splitRow(0))}",
-          flightCode = sq(splitRow(1)),
-          operator = sq(splitRow(2)),
-          from = sq(splitRow(3)),
-          airportName = sq(splitRow(4)),
+          term = s"T${splitRow(0)}",
+          flightCode = splitRow(1),
+          operator = splitRow(2),
+          from = splitRow(3),
+          airportName = splitRow(4),
           scheduled = parseDateTime(splitRow(5)),
           estimated = optDate(splitRow(6)),
           touchdown = optDate(splitRow(7)),
           estChox = optDate(splitRow(8)),
-          actChox = optDate(sq(splitRow(9))),
+          actChox = optDate(splitRow(9)),
           stand = opt(splitRow(10)),
           maxPax = optInt(splitRow(11)),
           actPax = optInt(splitRow(12)),
@@ -113,8 +111,8 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
           FlightID = flight.flightId(),
           AirportID = "LHR",
           Terminal = flight.term,
-          ICAO = flight.flightCode,
-          IATA = flight.flightCode,
+          rawICAO = flight.flightCode,
+          rawIATA = flight.flightCode,
           Origin = flight.from,
           SchDT = schDtIso,
           PcpTime = pcpTime)
