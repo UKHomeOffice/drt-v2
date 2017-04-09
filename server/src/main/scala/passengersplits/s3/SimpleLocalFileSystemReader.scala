@@ -51,7 +51,7 @@ trait SimpleLocalFileSystemReader extends
 
 
   override def unzippedFilesAsSource = fileNameStream.
-    mapAsync(8) {
+    mapAsync(1) {
       zipFilenameToEventualFileContent
     }.mapConcat(t => t)
 }

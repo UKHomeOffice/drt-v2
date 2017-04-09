@@ -45,7 +45,7 @@ object FilePolling {
     val subscriberFlightActor = Sink.actorRefWithAck(flightPassengerReporter, FlightPaxSplitBatchInit, PassengerSplitsAck, completionMessage)
 
     val unzipFlow = Flow[String]
-      .mapAsync(128)(unzippedFileProvider.zipFilenameToEventualFileContent(_))
+      .mapAsync(1)(unzippedFileProvider.zipFilenameToEventualFileContent(_))
       .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
       .collect {
         case Success(vpi) if vpi.ArrivalPortCode == portCode => vpi
@@ -134,7 +134,7 @@ object AtmosFilePolling {
     val subscriberFlightActor = Sink.actorRefWithAck(flightPassengerReporter, FlightPaxSplitBatchInit, PassengerSplitsAck, completionMessage)
 
     val unzipFlow = Flow[String]
-      .mapAsync(4)(unzippedFileProvider.zipFilenameToEventualFileContent(_))
+      .mapAsync(1)(unzippedFileProvider.zipFilenameToEventualFileContent(_))
       .mapConcat(unzippedFileContents => unzippedFileContents.map(uzfc => VoyagePassengerInfoParser.parseVoyagePassengerInfo(uzfc.content)))
       .collect {
         case Success(vpi) if vpi.ArrivalPortCode == portCode => vpi
