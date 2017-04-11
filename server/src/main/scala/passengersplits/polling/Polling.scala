@@ -1,7 +1,12 @@
 package passengersplits.polling
 
+import java.util.Date
+
 import akka.NotUsed
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import com.mfglabs.stream.SinkExt
+import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -76,34 +81,71 @@ object FilePolling {
 
 
 object AtmosFilePolling {
+
+
+  def filesFromFile(listOfFiles: Seq[String], s: String) = {
+    val regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
+    val filterFrom = s match {
+      case regex(dateTime, _) => dateTime
+      case _ => s
+    }
+    println(s"filterFrom: $filterFrom, s: $s")
+    listOfFiles.filter(_ >= filterFrom)
+  }
+
   def beginPolling(log: LoggingAdapter,
                    flightPassengerReporter: ActorRef,
-                   initialFileFilter: Option[String],
+                   initialFileFilter: String,
                    atmosHost: String,
                    bucket: String,
                    portCode: String)(
                     implicit actorSystem: ActorSystem
                     , mat: Materializer
                   ) = {
-    val statefulPoller: StatefulAtmosPoller = StatefulAtmosPoller(initialFileFilter, atmosHost, bucket)
+    val statefulPoller: StatefulAtmosPoller = StatefulAtmosPoller(Some(initialFileFilter), atmosHost, bucket)
     val unzippedFileProvider: SimpleAtmosReader = statefulPoller.unzippedFileProvider
-    val onNewFileSeen: (String) => Unit = statefulPoller.onNewFileSeen
+    //    val onNewFileSeen: (String) => Unit = statefulPoller.onNewFileSeen
 
-    val promiseBatchDone: Promise[Done] = PromiseSignals.promisedDone
+    //    val promiseBatchDone: Promise[Done] = PromiseSignals.promisedDone
 
+
+    //    def singleBatch(batchId: Int) = {
+    //      log.info(s"!!!!Running batch! ${batchId}")
+    //      runSingleBatch(batchId,
+    //        promiseBatchDone, flightPassengerReporter, unzippedFileProvider, onNewFileSeen, log,
+    //        portCode)
+    //    }
+
+    var latestFile = initialFileFilter
     var batchId = 0
 
-    def singleBatch(batchId: Int) = {
-      log.info(s"!!!!Running batch! ${batchId}")
-      runSingleBatch(batchId,
-        promiseBatchDone, flightPassengerReporter, unzippedFileProvider, onNewFileSeen, log,
-        portCode)
-    }
-
     val source = Source.tick(0 seconds, 2 minutes, NotUsed)
+    implicit val materializer = ActorMaterializer()
     source.runForeach { (td) =>
       batchId = batchId + 1
-      singleBatch(batchId)
+      val futurefiles: Future[IndexedSeq[(String, Date)]] = unzippedFileProvider.createBuilder.listFilesAsStream(bucket).runWith(SinkExt.collect)
+      futurefiles.map {
+        (fileNamesAndDate: IndexedSeq[(String, Date)]) =>
+          val filesToProcess: Seq[String] = filesFromFile(fileNamesAndDate.map(_._1), latestFile)
+          filesToProcess.map(fileName => {
+            val filesFuture = unzippedFileProvider.zipFilenameToEventualFileContent(fileName)(materializer, scala.concurrent.ExecutionContext.global)
+            filesFuture.map(files => {
+              val voyagePassengerInfos = files.map((flightManifest) => {
+                val tvpi: Try[VoyagePassengerInfo] = VoyagePassengerInfoParser.parseVoyagePassengerInfo(flightManifest.content)
+                tvpi match {
+                  case Success(vpi) =>
+                    flightPassengerReporter ! vpi
+                  case Failure(f) =>
+                    log.warning(s"Failed to parse voyage passenger info: From ${flightManifest.filename} in ${flightManifest.zipFilename}, error: $f")
+                }
+              })
+            })
+            latestFile = fileName
+          })
+      }
+
+
+      //      singleBatch(batchId)
     }
     //    val resultOne = Await.result(promiseDone.future, 10 seconds)
   }

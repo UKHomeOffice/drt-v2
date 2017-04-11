@@ -224,7 +224,7 @@ class Application @Inject()(
   /// PassengerSplits reader
   AtmosFilePolling.beginPolling(log,
     ctrl.flightPassengerSplitReporter,
-    Some("drt_dq_170409"),
+    "drt_dq_170411",
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
     config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
     portCode
