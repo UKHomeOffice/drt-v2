@@ -105,9 +105,39 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       flightv1.flightId() !== flightv2.flightId()
     }
+
+//  TODO: We need to figure out how to make this test reliably pass.
+    // "Produce an ApiFlight with scheduled datetime in UTC when given a flight with a date falling inside BST" in {
+//      //
+//      val csvString =
+//        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
+//           |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/04/2017","21:32 09/04/2017","21:33 09/04/2017","21:43 09/04/2017","21:45 09/04/2017","10","795","142","1""""
+//          .stripMargin
+//      import system.dispatcher
+//      import akka.pattern.pipe
+//
+//      implicit val materializer = ActorMaterializer()
+//      val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
+//      val lhrFeed = LHRFlightFeed(csvGetters)
+//
+//      val probe = TestProbe()
+//
+//      val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
+//
+//      val futureFlightsSeq: Future[Seq[List[ApiFlight]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+//
+//      val flights: Seq[List[ApiFlight]] = Await.result(futureFlightsSeq, 3 seconds)
+//
+//      flights match {
+//        case Vector(ApiFlight(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, "2017-04-09T22:00:00.000Z", _) :: tail) =>
+//          true
+//        case Vector(ApiFlight(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, scheduled, _) :: tail) =>
+//          println(s"CHECK JVM TIMEZONE SETTING!! SchDT: $scheduled != '2017-04-09T22:00:00.000Z'")
+//          false
+//        case _ => false
+//      }
+//    }
   }
-
-
 }
 
 
