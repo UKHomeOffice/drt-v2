@@ -52,7 +52,7 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
 
   def createS3client: AmazonS3AsyncClient
 
-  def numberOfCores = 1
+  def numberOfCores = 8
 
   def unzipTimeout = FiniteDuration(400, TimeUnit.SECONDS)
 
