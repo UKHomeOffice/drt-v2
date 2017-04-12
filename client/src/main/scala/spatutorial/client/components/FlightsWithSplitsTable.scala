@@ -1,30 +1,20 @@
 package drt.client.components
 
-import diode.data.{Pot, Ready}
-import japgolly.scalajs.react.ReactComponentB
-import japgolly.scalajs.react.vdom.prefix_<^.{<, TagMod, ^}
-import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
+import drt.client.modules.FlightsWithSplitsView
 import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
-import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
-import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
-import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
-
 import scala.scalajs.js
-import scala.scalajs.js.Object
 
 object FlightsWithSplitsTable {
 
   type Props = FlightsWithSplitsView.Props
-
 
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString())
