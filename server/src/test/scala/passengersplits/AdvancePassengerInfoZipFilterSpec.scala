@@ -1,32 +1,13 @@
 package passengersplits
 
-import java.util.Date
-
-import akka.NotUsed
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
 import akka.testkit.TestKit
-import akka.util.{ByteString, Timeout}
-import com.amazonaws.services.s3.model.Bucket
-import com.mfglabs.stream.SinkExt
 import com.typesafe.config.ConfigFactory
-import drt.shared.MilliDate
 import org.specs2.mutable.SpecificationLike
-import org.specs2.mutable.Specification
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.{PassengerSplitsInfoByPortRouter, ZipUtils}
-import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
-import passengersplits.s3.{SimpleAtmosReader, VoyagePassengerInfoParser}
-import akka.pattern._
-import services.SDate
+import passengersplits.s3.SimpleAtmosReader
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success, Try}
-
-class AtmosClientSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
   implicit val materializer = ActorMaterializer()
   val outerSystem = system
   val reader = new SimpleAtmosReader {
@@ -43,75 +24,9 @@ class AtmosClientSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificatio
   }
 
 
-  "The SimpleAtmosReader" should {
+  "Given we are polling for a new batch of zip files" >> {
 
-
-    //    "list all the files in the bucket as a stream" in {
-    //      import akka.{NotUsed, Done}
-    //
-    //
-    //      val builder = reader.createBuilder
-    //
-    //      val source: Source[(String, Date), NotUsed] = builder.listFilesAsStream(reader.bucket)
-    //
-    //      source.runForeach{
-    //        case (filename, _) =>
-    //          println(s"filename: $filename")
-    //        case error => println(s"error: $error")
-    //      }(materializer)
-    //
-    //
-    //      Thread.sleep(1000000)
-    //
-    //      true
-    //    }
-
-    //    "list all the files in the bucket" in {
-    //      import akka.{NotUsed, Done}
-    //
-    //
-    //      val futurefiles: Future[IndexedSeq[(String, Date)]] = reader.createBuilder.listFilesAsStream(reader.bucket).runWith(SinkExt.collect)
-    //
-    //      val files: IndexedSeq[(String, Date)] = Await.result(futurefiles, 120000 seconds)
-    //
-    //      files.sortBy(_._1).map({
-    //        case (filename, _) => println(filename)
-    //        case error => println(s"error: $error")
-    //      })
-    //
-    //      true
-    //    }
-
-    "download all a named zip file from the bucket" >> {
-      implicit val timeout = Timeout(5 seconds)
-
-      val fileFuture: Future[List[UnzippedFileContent]] = reader.zipFilenameToEventualFileContent("drt_dq_170411_112023_1877.zip")(materializer, scala.concurrent.ExecutionContext.global)
-
-      val file: Seq[ZipUtils.UnzippedFileContent] = Await.result(fileFuture, 120000 seconds)
-      val voyagePassengerInfos = file.map((flightManifest) => {
-        VoyagePassengerInfoParser.parseVoyagePassengerInfo(flightManifest.content)
-      })
-
-      val passengerSplitsInfoByPortRouterActor = system.actorOf(Props[PassengerSplitsInfoByPortRouter], "passengersplits")
-
-      voyagePassengerInfos.foreach {
-        case Success(vpi) =>
-          passengerSplitsInfoByPortRouterActor ! vpi
-        case Failure(f) =>
-          system.log.warning(s"Failed to parse split: $f")
-      }
-      import services.SDate.implicits._
-
-      Thread.sleep(3000)
-      val paxSplits = passengerSplitsInfoByPortRouterActor ? ReportVoyagePaxSplit("LGW", "BA", "2607", SDate.parseString("2017-04-11T12:05:00.000Z"))
-
-      println(Await.result(paxSplits, 30 seconds))
-      true
-    }
-
-
-
-    "New files finder should find new files " >> {
+    "Then new files finder should find new files " >> {
       import passengersplits.polling.AtmosFilePolling._
       "when given part of a filename including the date portion" >> {
         val listOfFiles = Seq(
