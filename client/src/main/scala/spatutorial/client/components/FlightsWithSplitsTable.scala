@@ -1,35 +1,58 @@
 package drt.client.components
 
-import diode.data.{Pot, Ready}
-import japgolly.scalajs.react.ReactComponentB
-import japgolly.scalajs.react.vdom.prefix_<^.{<, TagMod, ^}
-import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
+import drt.client.modules.FlightsWithSplitsView
 import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
-import drt.client.modules.{FlightsWithSplitsView, GriddleComponentWrapper, ViewTools}
-import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
-import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.prefix_<^._
-import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
-
 import scala.scalajs.js
-import scala.scalajs.js.Object
 
 object FlightsWithSplitsTable {
 
   type Props = FlightsWithSplitsView.Props
-
 
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString())
     <.span(props.data.toString(), mod).render
   }
 
+  def dateTimeComponent(): js.Function = (props: js.Dynamic) => {
+    val dt = props.data.toString()
+    if (dt != "") {
+      val sdate = SDate.parse(dt)
+      val formatted = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
+      val mod: TagMod = ^.title := sdate.toLocalDateTimeString()
+      <.span(formatted, mod).render
+    } else {
+      <.div.render
+    }
+  }
+
+  def paxComponent(): js.Function = (props: js.Dynamic) => {
+    val paxRegex = "([0-9]+)(.)".r
+    val paxAndType: (String, String) = props.data.toString() match {
+      case paxRegex(p, t) =>
+        val style = if (t == "A") "api"
+        else if (t == "B") "port"
+        else "unknown"
+        (p, style)
+      case _ => ("n/a", "unknown")
+    }
+    val className: TagMod = ^.className := s"pax-${paxAndType._2}"
+    val title: TagMod = ^.title := s"from ${paxAndType._2}"
+    <.div(paxAndType._1, className, title).render
+  }
+
+  def paxDisplay(max: Int, act: Int, api: Int): String = {
+    if (api > 0) s"${api}A"
+    else if (act > 0) s"${act}B"
+    else s"${max}C"
+  }
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
 
@@ -45,10 +68,10 @@ object FlightsWithSplitsTable {
 
       import drt.shared.DeskAndPaxTypeCombinations._
 
-      val total = "advPaxInfo total"
+      val total = "API total"
 
       def splitsField(fieldName: String, ptQ: PaxTypeAndQueue): (String, scalajs.js.Any) = {
-        "Splits " + fieldName -> (splitsTuples.get(ptQ) match {
+        fieldName -> (splitsTuples.get(ptQ) match {
           case Some(v: Int) => Int.box(v)
           case None => ""
         })
@@ -60,29 +83,31 @@ object FlightsWithSplitsTable {
         splitsField(nationalsDeskNonVisa, PaxTypesAndQueues.nonVisaNationalToDesk),
         splitsField(egate, PaxTypesAndQueues.eeaMachineReadableToEGate),
         splitsField(deskEea, PaxTypesAndQueues.eeaMachineReadableToDesk),
-        "Splits " + total -> splitsTuples.values.sum,
-        "Operator" -> f.Operator,
+//        total -> splitsTuples.values.sum,
+        //        "Operator" -> f.Operator,
         "Status" -> f.Status,
-        "EstDT" -> makeDTReadable(f.EstDT),
-        "ActDT" -> makeDTReadable(f.ActDT),
-        "EstChoxDT" -> f.EstChoxDT,
-        "ActChoxDT" -> makeDTReadable(f.ActChoxDT),
+        "Sch" -> makeDTReadable(f.SchDT),
+        "Est" -> makeDTReadable(f.EstDT),
+        "Act" -> makeDTReadable(f.ActDT),
+        "Est chox" -> makeDTReadable(f.EstChoxDT),
+        "Act chox" -> makeDTReadable(f.ActChoxDT),
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
-        "MaxPax" -> f.MaxPax,
-        "ActPax" -> f.ActPax,
+        "Pax" -> paxDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
+//        "MaxPax" -> f.MaxPax,
+//        "ActPax" -> f.ActPax,
         "TranPax" -> f.TranPax,
-        "RunwayID" -> f.RunwayID,
-        "BaggageReclaimId" -> f.BaggageReclaimId,
-        "FlightID" -> f.FlightID,
-        "AirportID" -> f.AirportID,
+//        "RunwayID" -> f.RunwayID,
+//        "BaggageReclaimId" -> f.BaggageReclaimId,
+//        "FlightID" -> f.FlightID,
+//        "AirportID" -> f.AirportID,
         "Terminal" -> f.Terminal,
         "ICAO" -> f.ICAO,
-        "IATA" -> f.IATA,
-        "Origin" -> f.Origin,
-        "SchDT" -> makeDTReadable(f.SchDT))
+        "Flight" -> f.IATA,
+        "Origin" -> f.Origin)
     })
   }
+
 
   val component = ReactComponentB[Props]("FlightsWithSplitsTable")
     .render_P(props => {
@@ -101,7 +126,13 @@ object FlightsWithSplitsTable {
       }
 
       val columnMeta = Some(Seq(
-        new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
+        new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings)),
+        new GriddleComponentWrapper.ColumnMeta("Sch", customComponent = dateTimeComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Est", customComponent = dateTimeComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Act", customComponent = dateTimeComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Act chox", customComponent = dateTimeComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Pax", customComponent = paxComponent())
+      ))
       <.div(^.className := "table-responsive timeslot-flight-popover",
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
         props.flightsModelProxy.renderEmpty(ViewTools.spinner),
@@ -109,7 +140,7 @@ object FlightsWithSplitsTable {
           val rows = flights.toJsArray
           GriddleComponentWrapper(results = rows,
             columnMeta = columnMeta,
-            initialSort = "SchDT",
+            initialSort = "Sch",
             columns = props.activeCols)()
         })
       )

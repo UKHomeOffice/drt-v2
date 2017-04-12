@@ -92,10 +92,10 @@ object FlightsView {
                       "Gate",
                       "Stand",
                       "Status",
-                      "SchDT",
-                      "EstDT",
-                      "ActDT",
-                      "ActChoxDT",
+                      "Sch",
+                      "Est",
+                      "Act",
+                      "Act chox",
                       "MaxPax",
                       "ActPax",
                       "Terminal"
@@ -134,27 +134,24 @@ object FlightsWithSplitsView {
                     flightsModelProxy: Pot[List[js.Dynamic]],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
-                      "IATA",
-                      "Operator",
+                      "Flight",
                       "Origin",
                       "Gate",
                       "Stand",
                       "Status",
-                      "SchDT",
-                      "EstDT",
-                      "ActDT",
-                      "ActChoxDT",
-                      "MaxPax",
-                      "ActPax",
-                      "Splits advPaxInfo total",
+                      "Sch",
+                      "Est",
+                      "Act",
+                      "Act chox",
+                      "Pax",
 
                       "Terminal",
 
-                      "Splits " + egate,
-                      "Splits " + deskEeaNonMachineReadable,
-                      "Splits " + deskEea,
-                      "Splits " + nationalsDeskVisa,
-                      "Splits " + nationalsDeskNonVisa
+                      egate,
+                      deskEeaNonMachineReadable,
+                      deskEea,
+                      nationalsDeskVisa,
+                      nationalsDeskNonVisa
                     ))
 
   case class State(

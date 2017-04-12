@@ -180,7 +180,7 @@ object SPAMain extends js.JSApp {
 
     val renderFlights = renderR(ctl => {
       val airportWrapper = SPACircuit.connect(_.airportInfos)
-      val flightsWrapper = SPACircuit.connect(m => m.flightsWithApiSplits)
+      val flightsWrapper = SPACircuit.connect(_.flightsWithApiSplits)
       airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
     })
 
