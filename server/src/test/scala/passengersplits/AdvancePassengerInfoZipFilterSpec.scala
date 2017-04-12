@@ -8,8 +8,11 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.s3.SimpleAtmosReader
 
 class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+
   implicit val materializer = ActorMaterializer()
+
   val outerSystem = system
+
   val reader = new SimpleAtmosReader {
 
     override def skyscapeAtmosHost = "cas00003.skyscapecloud.com:8443"
@@ -23,11 +26,12 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
     override implicit def system = outerSystem
   }
 
-
   "Given we are polling for a new batch of zip files" >> {
 
     "Then new files finder should find new files " >> {
+
       import passengersplits.polling.AtmosFilePolling._
+
       "when given part of a filename including the date portion" >> {
         val listOfFiles = Seq(
           "drt_dq_170410_102318_9111.zip",
@@ -73,6 +77,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
         after === expected
       }
+
       "when given a full filename" >> {
         val listOfFiles = Seq(
           "drt_dq_170410_102318_9111.zip",
@@ -103,7 +108,5 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
         after === expected
       }
     }
-
-
   }
 }

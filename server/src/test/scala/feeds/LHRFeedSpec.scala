@@ -138,8 +138,6 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 //      }
 //    }
   }
-
-
 }
 
 
