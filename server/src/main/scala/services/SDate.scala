@@ -52,5 +52,9 @@ object SDate {
     JodaSDate(new DateTime(millis, DateTimeZone.UTC))
   }
 
+  def now() = {
+    JodaSDate(new DateTime(DateTimeZone.UTC))
+  }
+
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 }

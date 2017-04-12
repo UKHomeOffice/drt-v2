@@ -41,6 +41,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{Api, ApiFlight, CrunchResult, FlightsApi, _}
 import views.html.defaultpages.notFound
 import drt.server.feeds.lhr.LHRFlightFeed
+import services.SDate.JodaSDate
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -222,9 +223,10 @@ class Application @Inject()(
 
 
   /// PassengerSplits reader
+  import SDate.implicits._
   AtmosFilePolling.beginPolling(log,
     ctrl.flightPassengerSplitReporter,
-    "drt_dq_170411",
+    AtmosFilePolling.fileNameStartForDate(SDate.now),
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
     config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
     portCode

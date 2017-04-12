@@ -13,8 +13,10 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.event.LoggingAdapter
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink}
+import drt.shared.MilliDate
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.s3._
+import services.SDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Promise}
@@ -85,6 +87,14 @@ object AtmosFilePolling {
     }
     println(s"filterFrom: $filterFrom, s: $s")
     listOfFiles.filter(_ >= filterFrom)
+  }
+
+  def fileNameStartForDate(date: MilliDate) = {
+    val oneDayInMillis = 60 * 60 * 24 * 1000L
+    val previousDay = SDate(date.millisSinceEpoch - oneDayInMillis)
+
+    val year = previousDay.getFullYear().toInt - 2000
+    f"drt_dq_$year${previousDay.getMonth()}%02d${previousDay.getDate()}%02d"
   }
 
   def beginPolling(log: LoggingAdapter,

@@ -31,8 +31,6 @@ object FlightParsing {
       case what => None
     }
   }
-
-
 }
 
 case class SplitR(name: String, size: Double)
