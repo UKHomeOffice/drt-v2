@@ -11,11 +11,11 @@ import scala.concurrent.Future
 
 
 object DeskAndPaxTypeCombinations {
-  val egate = "egate eea-machine-readable"
-  val deskEeaNonMachineReadable = "desk eea-non-machine-readable"
-  val deskEea = "eeaDesk eea-machine-readable"
-  val nationalsDeskVisa = "nationalsDesk national-visa"
-  val nationalsDeskNonVisa = "nationalsDesk national-non-visa"
+  val egate = "eGate"
+  val deskEeaNonMachineReadable = "EEA"
+  val deskEea = "EEA NMR"
+  val nationalsDeskVisa = "VISA"
+  val nationalsDeskNonVisa = "Non-VISA"
 }
 
 case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {

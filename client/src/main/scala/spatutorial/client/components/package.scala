@@ -14,6 +14,9 @@ package object components {
 
   implicit def potReactForwarder[A](a: Pot[A]): potWithReact[A] = ReactPot.potWithReact(a)
   def makeDTReadable(dt: String): String = {
-    if(dt != "") SDate.parse(dt).toLocalDateTimeString() else ""
+    if(dt != "") {
+      val sdate = SDate.parse(dt)
+      sdate.toLocalDateTimeString()
+    } else ""
   }
 }
