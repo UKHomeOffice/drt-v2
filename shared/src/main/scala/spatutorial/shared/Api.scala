@@ -12,8 +12,8 @@ import scala.concurrent.Future
 
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"
-  val deskEeaNonMachineReadable = "EEA"
-  val deskEea = "EEA NMR"
+  val deskEeaNonMachineReadable = "EEA NMR"
+  val deskEea = "EEA"
   val nationalsDeskVisa = "VISA"
   val nationalsDeskNonVisa = "Non-VISA"
 }
