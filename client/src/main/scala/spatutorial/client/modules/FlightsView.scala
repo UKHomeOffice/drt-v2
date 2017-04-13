@@ -9,7 +9,7 @@ import drt.client.components.Bootstrap.Panel
 import drt.client.components._
 import drt.client.modules.GriddleComponentWrapper.ColumnMeta
 import drt.shared.AirportInfo
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, TerminalName}
 
 import scala.language.existentials
 import scala.scalajs.js
@@ -144,9 +144,6 @@ object FlightsWithSplitsView {
                       "Act",
                       "Act chox",
                       "Pax",
-
-                      "Terminal",
-
                       egate,
                       deskEea,
                       deskEeaNonMachineReadable,
@@ -162,11 +159,7 @@ object FlightsWithSplitsView {
   val component = ReactComponentB[Props]("FlightsWithSplits")
     .render_P((props) => {
       <.div(
-        <.h2("Flights"),
-        Panel(
-          Panel.Props("Flights"),
-          FlightsWithSplitsTable(props)
-        )
+        Panel(Panel.Props(""), FlightsWithSplitsTable(props))
       )
     }).build
 

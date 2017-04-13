@@ -1,19 +1,16 @@
 package drt.client.components
 
-import java.io.Serializable
-
-import diode.data.{Pot, PotState}
+import diode.data.Pot
 import diode.data.PotState.PotReady
 import diode.react.ModelProxy
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.prefix_<^._
 import drt.client.SPAMain._
 import drt.client.components.Bootstrap.CommonStyle
 import drt.client.components.Icon._
 import drt.client.services.SPACircuit
-import drt.shared.{HasAirportConfig, AirportConfig}
-import drt.client.logger._
+import drt.shared.AirportConfig
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.prefix_<^._
 
 import scalacss.ScalaCssReact._
 
@@ -34,8 +31,7 @@ object MainMenu {
   }
 
   val staticMenuItems = List(
-    MenuItem(1, _ => "Flights", Icon.plane, FlightsLoc),
-    MenuItem(2, _ => "Staffing", Icon.dashboard, StaffingLoc)
+    MenuItem(0, _ => "Staffing", Icon.dashboard, StaffingLoc)
   )
 
   def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
@@ -43,7 +39,7 @@ object MainMenu {
       case PotReady =>
         airportConfigPotMP().get.terminalNames.zipWithIndex.map {
           case (tn, idx) =>
-            MenuItem(idx + staticMenuItems.length + 1, _ => tn, Icon.calculator, TerminalDepsLoc(tn))
+            MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalDepsLoc(tn))
         }.toList
       case _ =>
         List()
@@ -69,7 +65,6 @@ object MainMenu {
 
   private val component = ReactComponentB[Props]("MainMenu")
     .renderBackend[Backend]
-    //    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Loc): ReactElement =

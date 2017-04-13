@@ -9,10 +9,11 @@ import japgolly.scalajs.react.{BackendScope, ReactComponentB, ReactElement}
 import drt.client.SPAMain.Loc
 import drt.client.components.Heatmap.Series
 import drt.client.logger._
+import drt.client.modules.FlightsWithSplitsView
 import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.TerminalName
 
-object TerminalDeploymentsPage {
+object TerminalPage {
 
   case class Props(terminalName: TerminalName, ctl: RouterCtl[Loc])
 
@@ -42,9 +43,22 @@ object TerminalDeploymentsPage {
             <.div(^.id := "waits", ^.className := "tab-pane fade",
               heatmapOfWaittimes(props.terminalName))
           ),
-          <.div(
-            ^.className := "terminal-desk-recs-container",
-            TerminalDeploymentsTable.terminalDeploymentsComponent(props.terminalName)
+          <.ul(^.className := "nav nav-tabs",
+            <.li(^.className := "active", <.a("data-toggle".reactAttr := "tab", ^.href := "#arrivals", "Arrivals")),
+            <.li(<.a("data-toggle".reactAttr := "tab", ^.href := "#queues", "Desks & Queues"))
+          ),
+          <.div(^.className := "tab-content",
+            <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
+              val airportWrapper = SPACircuit.connect(_.airportInfos)
+              val flightsWrapper = SPACircuit.connect(_.flightsWithApiSplits(props.terminalName))
+              airportWrapper(airportInfoProxy =>
+                flightsWrapper(proxy =>
+                  FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
+            }
+            ),
+            <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+              TerminalDeploymentsTable.terminalDeploymentsComponent(props.terminalName)
+            )
           )
         )
       })
