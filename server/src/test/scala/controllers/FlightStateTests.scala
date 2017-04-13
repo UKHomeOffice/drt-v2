@@ -132,7 +132,6 @@ object FlightStateTests extends TestSuite {
       "then the state should only contain the international flight" - {
       val startThreshold = "1970-01-01T00:00"
 
-
       val newDomesticFlight = apiFlight(flightId = 1, schDt = "2016-01-01T12:30", origin = "DUB")
       val newInternationalFlight = apiFlight(flightId = 2, schDt = "2016-01-01T12:30", origin = "JFK")
       val newFlights = List(newDomesticFlight, newInternationalFlight)
