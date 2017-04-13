@@ -14,7 +14,6 @@ object Navbar {
     <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
-          airportConfigPotMP().renderPending(_ => <.div("waiting for config")),
           airportConfigPotMP().renderReady(airportConfig => {
             <.div(
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"),
