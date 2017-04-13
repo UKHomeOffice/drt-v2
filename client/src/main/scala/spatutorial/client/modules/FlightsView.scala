@@ -148,8 +148,8 @@ object FlightsWithSplitsView {
                       "Terminal",
 
                       egate,
-                      deskEeaNonMachineReadable,
                       deskEea,
+                      deskEeaNonMachineReadable,
                       nationalsDeskVisa,
                       nationalsDeskNonVisa
                     ))
