@@ -49,7 +49,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   with DiagnosticActorLogging
   with WorkloadsCalculator
   with LoggingCrunchCalculator
-  with FlightState {
+  with FlightState
+  with DomesticPortList {
 
   log.info(s"airportConfig is $airportConfig")
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
@@ -73,7 +74,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case PerformCrunchOnFlights(newFlights) =>
-      onFlightUpdates(newFlights.toList, lastMidnightString)
+      onFlightUpdates(newFlights.toList, lastMidnightString, domesticPorts)
 
       newFlights match {
         case Nil =>
