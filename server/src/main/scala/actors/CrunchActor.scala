@@ -2,15 +2,13 @@ package actors
 
 import akka.actor._
 import controllers.FlightState
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import org.slf4j.LoggerFactory
-import services._
 import drt.shared.FlightsApi._
 import drt.shared.{ApiFlight, _}
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import services._
 import spray.caching.{Cache, LruCache}
 
-import scala.collection.GenTraversableOnce
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -62,7 +60,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     log.info(s"getting crunch for $key")
     crunchCache(key) {
       val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
-      crunch.onFailure { case failure => log.error(failure, s"Failure in calculating crunch for $key") }
+      crunch.onFailure { case failure => log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage}") }
 
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 1 minute)
@@ -195,7 +193,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           log.info(s"$tq Crunch complete")
           res
         case Failure(f) =>
-          log.error(f, s"$tq Failed to crunch")
+          log.warning(s"$tq Failed to crunch. ${f.getMessage}")
           throw f
       }
       asFuture
