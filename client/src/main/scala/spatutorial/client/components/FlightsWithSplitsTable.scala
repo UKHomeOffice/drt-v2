@@ -64,7 +64,6 @@ object FlightsWithSplitsTable {
         PaxTypeAndQueue(split.passengerType, split.queueType)
       }
       ).map(x => (x._1, x._2.map(_.paxCount).sum))
-      logger.log.debug("flightAndSplit:" + splitsTuples)
 
       import drt.shared.DeskAndPaxTypeCombinations._
 
@@ -83,7 +82,6 @@ object FlightsWithSplitsTable {
         splitsField(nationalsDeskNonVisa, PaxTypesAndQueues.nonVisaNationalToDesk),
         splitsField(egate, PaxTypesAndQueues.eeaMachineReadableToEGate),
         splitsField(deskEea, PaxTypesAndQueues.eeaMachineReadableToDesk),
-//        total -> splitsTuples.values.sum,
         //        "Operator" -> f.Operator,
         "Status" -> f.Status,
         "Sch" -> makeDTReadable(f.SchDT),
@@ -94,14 +92,7 @@ object FlightsWithSplitsTable {
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
         "Pax" -> paxDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
-//        "MaxPax" -> f.MaxPax,
-//        "ActPax" -> f.ActPax,
         "TranPax" -> f.TranPax,
-//        "RunwayID" -> f.RunwayID,
-//        "BaggageReclaimId" -> f.BaggageReclaimId,
-//        "FlightID" -> f.FlightID,
-//        "AirportID" -> f.AirportID,
-        "Terminal" -> f.Terminal,
         "ICAO" -> f.ICAO,
         "Flight" -> f.IATA,
         "Origin" -> f.Origin)

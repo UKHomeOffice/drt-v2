@@ -2,19 +2,18 @@ package drt.client
 
 import chandu0101.scalajs.react.components.ReactTable
 import diode.data.{Pot, Ready}
+import drt.client.actions.Actions._
+import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage}
+import drt.client.logger._
+import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
+import drt.client.services.RootModel.QueueCrunchResults
+import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared._
 import japgolly.scalajs.react.ReactDOM
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalDeploymentsPage}
-import drt.client.logger._
-import drt.client.modules.{FlightsView, FlightsWithSplitsView}
-import drt.client.actions.Actions._
-import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
-import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
-import drt.client.services.RootModel.QueueCrunchResults
-import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js
@@ -165,8 +164,8 @@ object SPAMain extends js.JSApp {
   case object StaffingLoc extends Loc
 
   val initActions = Seq(
-    GetWorkloads("", ""),
     GetAirportConfig(),
+    GetWorkloads("", ""),
     RequestFlights(0, 0),
     GetShifts(),
     GetStaffMovements()
@@ -178,26 +177,14 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-    val renderFlights = renderR(ctl => {
-      val airportWrapper = SPACircuit.connect(_.airportInfos)
-      val flightsWrapper = SPACircuit.connect(_.flightsWithApiSplits)
-      airportWrapper(airportInfoProxy => flightsWrapper(proxy => FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
-    })
+    val renderStaffing = renderR(_ => Staffing())
+    val home = staticRoute(root, StaffingLoc) ~> renderStaffing
+    val staffing = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
+    val terminal = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
+      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalPage(page.id, ctl))
 
-    val rootRoute = staticRoute(root, FlightsLoc) ~> renderFlights
-
-    val flightsRoute = staticRoute("#flights", FlightsLoc) ~> renderFlights
-
-    val terminalDeps = dynamicRouteCT("#terminal-deps" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalDeploymentsPage(page.id, ctl))
-
-    val staffing = staticRoute("#staffing", StaffingLoc) ~>
-      renderR(ctl => {
-        Staffing()
-      })
-
-    val rule = rootRoute | flightsRoute | terminalDeps | staffing
-    rule.notFound(redirectToPage(DashboardLoc)(Redirect.Replace))
+    val rule = home | terminal | staffing
+    rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   // base layout for all pages

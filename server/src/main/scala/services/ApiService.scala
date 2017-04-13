@@ -4,17 +4,17 @@ import java.util.Date
 
 import actors.GetLatestCrunch
 import akka.actor.ActorRef
-import akka.event.{DiagnosticLoggingAdapter, LoggingAdapter}
+import akka.event.DiagnosticLoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
-import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.query.FlightPassengerSplitsReportingService
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared._
-import org.joda.time.DateTime
+import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.query.FlightPassengerSplitsReportingService
 import services.SDate.implicits._
+
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -102,7 +102,6 @@ abstract class ApiService(airportConfig: AirportConfig)
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
   val log = LoggerFactory.getLogger(this.getClass)
-  log.info(s"ApiService.airportConfig = $airportConfig")
 
   def flightPassengerReporter: ActorRef
 
@@ -125,7 +124,6 @@ abstract class ApiService(airportConfig: AirportConfig)
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads] = {
     val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
     val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
-      log.info(s"AirportConfig: $airportConfig")
       val names: Set[TerminalName] = airportConfig.terminalNames.toSet
       allFlights.filter(flight => {
         names.contains(flight.Terminal)
@@ -146,7 +144,7 @@ abstract class ApiService(airportConfig: AirportConfig)
   override def airportConfiguration() = airportConfig
 }
 
-trait LoggingCrunchCalculator extends CrunchCalculator{
+trait LoggingCrunchCalculator extends CrunchCalculator {
   def log: DiagnosticLoggingAdapter
 
   def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
@@ -164,8 +162,8 @@ trait LoggingCrunchCalculator extends CrunchCalculator{
 
 trait CrunchCalculator {
   def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
-      val optimizerConfig = OptimizerConfig(sla)
-      TryRenjin.crunch(workloads, minDesks, maxDesks, optimizerConfig)
+    val optimizerConfig = OptimizerConfig(sla)
+    TryRenjin.crunch(workloads, minDesks, maxDesks, optimizerConfig)
   }
 }
 

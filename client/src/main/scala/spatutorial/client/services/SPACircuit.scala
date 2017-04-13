@@ -53,7 +53,7 @@ trait WorkloadsUtil {
     minuteNumericRange(timesMin, 24)
   }
 
-  def minuteNumericRange(start: Long, numberOfHours: Int = 24): NumericRange[Long] = {
+  def minuteNumericRange(start: Long, numberOfHours: Int): NumericRange[Long] = {
     val oneMinute: Long = 60000
     val allMins = start until (start + 60000 * 60 * numberOfHours) by oneMinute
     allMins
@@ -72,7 +72,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
     thisMorning.getTime().toLong
   }
 
-  def firstFlightTimeAcrossTerminals: Long = workloads.values.map(firstFlightTimeQueue(_)).min
+  def firstFlightTimeAcrossTerminals: Long = workloads.values.map(firstFlightTimeQueue).min
 }
 
 case class RootModel(
@@ -80,7 +80,7 @@ case class RootModel(
                       workloadPot: Pot[Workloads] = Empty,
                       queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
                       simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
-                      flights: Pot[FlightsWithSplits] = Empty,
+                      flightsWithSplitsPot: Pot[FlightsWithSplits] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
@@ -90,9 +90,11 @@ case class RootModel(
                       flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
                     ) {
 
-  lazy val flightsWithApiSplits: Pot[List[js.Dynamic]] = {
-    flights map { fs =>
-      FlightsWithSplitsTable.reactTableFlightsAsJsonDynamic(fs)
+  def flightsWithApiSplits(terminalName: TerminalName): Pot[List[js.Dynamic]] = {
+    flightsWithSplitsPot map { (flightsWithSplits: FlightsWithSplits) =>
+      val terminalFlights = flightsWithSplits.flights.filter(_.apiFlight.Terminal == terminalName)
+      FlightsWithSplitsTable.reactTableFlightsAsJsonDynamic(
+        FlightsWithSplits(terminalFlights))
     }
   }
 
@@ -158,7 +160,7 @@ case class RootModel(
        |queueCrunchResults: $queueCrunchResults
        |userDeskRec: $staffDeploymentsByTerminalAndQueue
        |simulationResult: $simulationResult
-       |flights: $flights
+       |flights: $flightsWithSplitsPot
        |airportInfos: $airportInfos
        |flightPaxSplits: ${flightSplits}
        |)
@@ -229,10 +231,10 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case action: GetAirportConfig =>
-      log.info("requesting workloadsWrapper from server")
+      log.info("Requesting AirportConfig from server")
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
-      log.info(s"Received airportConfig $configHolder")
+      log.info(s"Received AirportConfig $configHolder")
       log.info("Subscribing to crunches for terminal/queues")
       val effects: Effect = createCrunchRequestEffects(configHolder)
       updated(Ready(configHolder), effects)
@@ -512,8 +514,8 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
           noChange
       }
     case UpdateAirportInfo(code, Some(airportInfo)) =>
-      val newValue = value + ((code -> Ready(airportInfo)))
-      log.info(s"got a new value for ${code} ${airportInfo}")
+      val newValue = value + (code -> Ready(airportInfo))
+      log.info(s"got a new value for $code $airportInfo")
       updated(newValue)
   }
 }
@@ -568,7 +570,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v))),
       new SimulationHandler(zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
-      new FlightsHandler(zoomRW(_.flights)((m, v) => m.copy(flights = v))),
+      new FlightsHandler(zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),

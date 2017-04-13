@@ -93,7 +93,7 @@ object TerminalDeploymentsTable {
   def terminalDeploymentsComponent(terminalName: TerminalName) = {
     log.info(s"userdeskrecs for $terminalName")
     val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model => {
-      val flightsWithoutSplits = model.flights.map(f => Flights(f.flights.map(afws => afws.apiFlight)))
+      val flightsWithoutSplits = model.flightsWithSplitsPot.map(f => Flights(f.flights.map(afws => afws.apiFlight)))
       PracticallyEverything(
         model.airportInfos,
         flightsWithoutSplits,
