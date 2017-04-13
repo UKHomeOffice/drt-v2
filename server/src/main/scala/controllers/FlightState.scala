@@ -15,17 +15,18 @@ trait FlightState {
 
   var flights = Map[Int, ApiFlight]()
 
-  def onFlightUpdates(newFlights: List[ApiFlight], since: String) = {
+  def onFlightUpdates(newFlights: List[ApiFlight], since: String, domesticPorts: Seq[String]) = {
+    logNewFlightInfo(flights, newFlights)
 
-    val loggedFlights = logNewFlightInfo(flights, newFlights)
-    val withNewFlights = addNewFlights(loggedFlights, newFlights)
+    val withNewFlights = addNewFlights(flights, newFlights)
     val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
-    flights = withoutOldFlights
+    val withoutDomesticFlights = filterOutDomesticFlights(withoutOldFlights, domesticPorts)
+
+    flights = withoutDomesticFlights
   }
 
-  def addNewFlights(flights: Map[Int, ApiFlight], fs: List[ApiFlight]) = {
-    val newFlights: List[(Int, ApiFlight)] = fs.map(f => (f.FlightID, f))
-    flights ++ newFlights
+  def addNewFlights(existingFlights: Map[Int, ApiFlight], newFlights: List[ApiFlight]) = {
+    existingFlights ++ newFlights.map(newFlight => (newFlight.FlightID, newFlight))
   }
 
   def filterOutFlightsBeforeThreshold(flights: Map[Int, ApiFlight], since: String): Map[Int, ApiFlight] = {
@@ -34,6 +35,10 @@ trait FlightState {
     val totalFlightsAfterFilter = flights.size
     log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $since")
     flightsWithOldDropped
+  }
+
+  def filterOutDomesticFlights(flights: Map[Int, ApiFlight], domesticPorts: Seq[String]) = {
+    flights.filter(flight => !domesticPorts.contains(flight._2.Origin))
   }
 
   def logNewFlightInfo(currentFlights: Map[Int, ApiFlight], newOrUpdatingFlights: List[ApiFlight]) = {

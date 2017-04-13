@@ -129,7 +129,11 @@ object FlightMessageConversion {
   }
 }
 
-class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends PersistentActor with ActorLogging with FlightState {
+class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
+  extends PersistentActor
+    with ActorLogging
+    with FlightState
+    with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
   override def persistenceId = "flights-store"
@@ -144,7 +148,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
       val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(recoveredFlights.map(flightMessageToApiFlight).toList, lastMidnight)
+      onFlightUpdates(recoveredFlights.map(flightMessageToApiFlight).toList, lastMidnight, domesticPorts)
     case SnapshotOffer(_, snapshot: Map[Int, ApiFlight]) =>
       log.info(s"Restoring from snapshot")
       flights = snapshot
@@ -204,7 +208,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef) extends 
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
       val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(newFlights, lastMidnight)
+      onFlightUpdates(newFlights, lastMidnight, domesticPorts)
       persist(flightsMessage) { (event: FlightsMessage) =>
         log.info(s"Storing ${event.flightMessages.length} flights")
         context.system.eventStream.publish(event)
