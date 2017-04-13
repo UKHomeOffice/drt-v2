@@ -95,7 +95,7 @@ object FlightsView {
                       "Sch",
                       "Est",
                       "Act",
-                      "Act chox",
+                      "Chox",
                       "MaxPax",
                       "ActPax",
                       "Terminal"
@@ -141,13 +141,10 @@ object FlightsWithSplitsView {
                       "Sch",
                       "Est",
                       "Act",
-                      "Act chox",
+                      "Est Chox",
+                      "Act Chox",
                       "Pax",
-                      egate,
-                      deskEea,
-                      deskEeaNonMachineReadable,
-                      nationalsDeskVisa,
-                      nationalsDeskNonVisa
+                      "Splits"
                     ))
 
   case class State(

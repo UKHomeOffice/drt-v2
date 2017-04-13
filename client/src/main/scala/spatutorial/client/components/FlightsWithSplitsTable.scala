@@ -48,6 +48,23 @@ object FlightsWithSplitsTable {
     <.div(paxAndType._1, className, title).render
   }
 
+  def splitsComponent(): js.Function = (props: js.Dynamic) => {
+    def heightStyle(height: String) = js.Dictionary("height" -> height).asInstanceOf[js.Object]
+    val splitLabels = Array("eGate", "EEA", "EEA NMR", "Visa", "Non-visa")
+    val splits = props.data.toString.split("\\|").map(_.toInt)
+    val desc = 0 to 4 map (idx => s"${splitLabels(idx)}: ${splits(idx)}")
+    val sum = splits.sum
+    val pc = splits.map(s => s"${(100 * s.toDouble / sum).round}%")
+    <.div(^.className := "splits", ^.title := desc.mkString("\n"),
+      <.div(^.className := "graph",
+        <.div(^.className := "bar", ^.style := heightStyle(pc(0))),
+        <.div(^.className := "bar", ^.style := heightStyle(pc(1))),
+        <.div(^.className := "bar", ^.style := heightStyle(pc(2))),
+        <.div(^.className := "bar", ^.style := heightStyle(pc(3))),
+        <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
+      )).render
+  }
+
   def paxDisplay(max: Int, act: Int, api: Int): String = {
     if (api > 0) s"${api}A"
     else if (act > 0) s"${act}B"
@@ -60,9 +77,7 @@ object FlightsWithSplitsTable {
       val f = flightAndSplit.apiFlight
       val literal = js.Dynamic.literal
       val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
-        .splits.groupBy(split => {
-        PaxTypeAndQueue(split.passengerType, split.queueType)
-      }
+        .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
       ).map(x => (x._1, x._2.map(_.paxCount).sum))
 
       import drt.shared.DeskAndPaxTypeCombinations._
@@ -76,23 +91,30 @@ object FlightsWithSplitsTable {
         })
       }
 
+      def splitsValues = {
+        Seq(
+          splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToEGate, 0),
+          splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToDesk, 0),
+          splitsTuples.getOrElse(PaxTypesAndQueues.eeaNonMachineReadableToDesk, 0),
+          splitsTuples.getOrElse(PaxTypesAndQueues.visaNationalToDesk, 0),
+          splitsTuples.getOrElse(PaxTypesAndQueues.nonVisaNationalToDesk, 0)
+        )
+      }
+
       literal(
-        splitsField(deskEeaNonMachineReadable, PaxTypesAndQueues.eeaNonMachineReadableToDesk),
-        splitsField(nationalsDeskVisa, PaxTypesAndQueues.visaNationalToDesk),
-        splitsField(nationalsDeskNonVisa, PaxTypesAndQueues.nonVisaNationalToDesk),
-        splitsField(egate, PaxTypesAndQueues.eeaMachineReadableToEGate),
-        splitsField(deskEea, PaxTypesAndQueues.eeaMachineReadableToDesk),
         //        "Operator" -> f.Operator,
         "Status" -> f.Status,
         "Sch" -> makeDTReadable(f.SchDT),
         "Est" -> makeDTReadable(f.EstDT),
         "Act" -> makeDTReadable(f.ActDT),
-        "Est chox" -> makeDTReadable(f.EstChoxDT),
-        "Act chox" -> makeDTReadable(f.ActChoxDT),
+        "Est Chox" -> makeDTReadable(f.EstChoxDT),
+        "Act Chox" -> makeDTReadable(f.ActChoxDT),
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
         "Pax" -> paxDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
+        "Splits" -> splitsValues.mkString("|"),
         "TranPax" -> f.TranPax,
+        "Terminal" -> f.Terminal,
         "ICAO" -> f.ICAO,
         "Flight" -> f.IATA,
         "Origin" -> f.Origin)
@@ -121,8 +143,10 @@ object FlightsWithSplitsTable {
         new GriddleComponentWrapper.ColumnMeta("Sch", customComponent = dateTimeComponent()),
         new GriddleComponentWrapper.ColumnMeta("Est", customComponent = dateTimeComponent()),
         new GriddleComponentWrapper.ColumnMeta("Act", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Act chox", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Pax", customComponent = paxComponent())
+        new GriddleComponentWrapper.ColumnMeta("Est Chox", customComponent = dateTimeComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Act Chox", customComponent = dateTimeComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Pax", customComponent = paxComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Splits", customComponent = splitsComponent())
       ))
       <.div(^.className := "table-responsive timeslot-flight-popover",
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
