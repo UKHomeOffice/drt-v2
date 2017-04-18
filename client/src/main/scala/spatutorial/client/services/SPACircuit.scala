@@ -577,9 +577,9 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v)))
     )
 
-    val loggedhandlers: HandlerFunction = (m, t) => {
-      log.debug(s"functional handler for ${m.toString.take(100)}")
-      composedhandlers(m, t)
+    val loggedhandlers: HandlerFunction = (model, update) => {
+      log.debug(s"functional handler for ${update.toString.take(100)}")
+      composedhandlers(model, update)
     }
 
     loggedhandlers

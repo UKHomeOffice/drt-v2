@@ -10,7 +10,9 @@ import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
+
 import scala.scalajs.js
+import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
 
 object FlightsWithSplitsTable {
 
@@ -34,18 +36,22 @@ object FlightsWithSplitsTable {
   }
 
   def paxComponent(): js.Function = (props: js.Dynamic) => {
+    def widthStyle(width: Int) = js.Dictionary("width" -> s"$width%").asInstanceOf[js.Object]
+
     val paxRegex = "([0-9]+)(.)".r
-    val paxAndType: (String, String) = props.data.toString() match {
-      case paxRegex(p, t) =>
-        val style = if (t == "A") "api"
-        else if (t == "B") "port"
-        else "unknown"
-        (p, style)
-      case _ => ("n/a", "unknown")
+    val paxAndOrigin = props.data match {
+      case po: PaxAndOrigin =>
+        val className: TagMod = ^.className := s"pax-${po.origin}"
+        val title: TagMod = ^.title := s"from ${po.origin}"
+        val relativePax = Math.floor(100 * (po.pax.toDouble / 853)).toInt
+        val style = widthStyle(relativePax)
+        logger.log.info(s"got paxandorigin")
+        <.div(po.pax, className, title, ^.style := style)
+      case e =>
+        logger.log.warn(s"Expected a PaxAndOrigin but got $e")
+        <.div("unknown")
     }
-    val className: TagMod = ^.className := s"pax-${paxAndType._2}"
-    val title: TagMod = ^.title := s"from ${paxAndType._2}"
-    <.div(paxAndType._1, className, title).render
+    paxAndOrigin.render
   }
 
   def splitsComponent(): js.Function = (props: js.Dynamic) => {
@@ -63,6 +69,21 @@ object FlightsWithSplitsTable {
         <.div(^.className := "bar", ^.style := heightStyle(pc(3))),
         <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
       )).render
+  }
+
+  @ScalaJSDefined
+  class PaxAndOrigin(val pax: Int, val origin: String) extends js.Object
+
+  object PaxAndOrigin {
+    def apply(paxNos: Int, origin: String) = {
+      new PaxAndOrigin(paxNos, origin)
+    }
+  }
+
+  def paxOriginDisplay(max: Int, act: Int, api: Int): PaxAndOrigin = {
+    if (api > 0) PaxAndOrigin(api, "api")
+    else if (act > 0) PaxAndOrigin(act, "port")
+    else PaxAndOrigin(max, "capacity")
   }
 
   def paxDisplay(max: Int, act: Int, api: Int): String = {
@@ -111,7 +132,7 @@ object FlightsWithSplitsTable {
         "Act Chox" -> makeDTReadable(f.ActChoxDT),
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
-        "Pax" -> paxDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
+        "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
         "Splits" -> splitsValues.mkString("|"),
         "TranPax" -> f.TranPax,
         "Terminal" -> f.Terminal,
