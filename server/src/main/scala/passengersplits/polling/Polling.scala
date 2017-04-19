@@ -1,5 +1,7 @@
 package passengersplits.polling
 
+import java.util.Date
+
 import akka.NotUsed
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
@@ -79,7 +81,7 @@ object FilePolling {
 
 
 object AtmosFilePolling {
-  def filesFromFile(listOfFiles: Seq[String], s: String) = {
+  def filterToFilesNewerThan(listOfFiles: Seq[String], s: String) = {
     val regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
     val filterFrom = s match {
       case regex(dateTime, _) => dateTime
@@ -115,20 +117,20 @@ object AtmosFilePolling {
     implicit val materializer = ActorMaterializer()
 
     source.runForeach { _ =>
-      val futureZipFiles = unzippedFileProvider.createBuilder.listFilesAsStream(bucket).runWith(SinkExt.collect)
-      futureZipFiles.foreach(
-        fileNamesAndDates =>
-          filesFromFile(fileNamesAndDates.map(_._1), latestFile)
-            .foreach(zipFileName => {
-              log.info(s"AdvPaxInfo: extracting manifests from zip $zipFileName")
+      val futureZipFiles: Future[IndexedSeq[(String, Date)]] = unzippedFileProvider.createBuilder.listFilesAsStream(bucket).runWith(SinkExt.collect)
+      for (fileNamesAndDates <- futureZipFiles) {
+        val fileNames = fileNamesAndDates.map(_._1)
+        filterToFilesNewerThan(fileNames, latestFile)
+          .foreach(zipFileName => {
+            log.info(s"AdvPaxInfo: extracting manifests from zip $zipFileName")
 
-              manifestsFromZip(unzippedFileProvider, materializer, zipFileName)
-                .map(manifests => manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests))
+            manifestsFromZip(unzippedFileProvider, materializer, zipFileName)
+              .map(manifests => manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests))
 
-              log.info(s"AdvPaxInfo: finished processing zip $zipFileName")
-              latestFile = zipFileName
-            })
-      )
+            log.info(s"AdvPaxInfo: finished processing zip $zipFileName")
+            latestFile = zipFileName
+          })
+      }
     }
   }
 
@@ -139,6 +141,10 @@ object AtmosFilePolling {
   private def manifestsToAdvPaxReporter(log: LoggingAdapter, advPaxReporter: ActorRef, manifests: List[ZipUtils.UnzippedFileContent]) = {
     log.info(s"AdvPaxInfo: parsing ${manifests.length} manifests")
     manifests.foreach((flightManifest) => {
+      import java.io._
+      val pw = new PrintWriter(new File(s"/tmp/splits-${flightManifest.filename}"))
+      pw.write(flightManifest.content)
+      pw.close
       log.info(s"AdvPaxInfo: manifest ${flightManifest.filename} from ${flightManifest.zipFilename}")
       VoyagePassengerInfoParser.parseVoyagePassengerInfo(flightManifest.content) match {
         case Success(vpi) =>
