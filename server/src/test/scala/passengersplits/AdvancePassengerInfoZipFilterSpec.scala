@@ -8,6 +8,7 @@ import drt.shared.MilliDate
 import org.specs2.mutable.SpecificationLike
 import passengersplits.s3.SimpleAtmosReader
 import services.SDate
+import scala.collection.immutable.Seq
 
 class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
 
@@ -51,7 +52,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
         "drt_dq_170412_134623_1858.zip"
         )
 
-        val after = filesFromFile(listOfFiles, "drt_dq_170412")
+        val after = filterToFilesNewerThan(listOfFiles, "drt_dq_170412")
 
         val expected = Seq("drt_dq_170412_132903_1048.zip", "drt_dq_170412_134623_1858.zip")
 
@@ -74,7 +75,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
         "drt_dq_170412_134623_1858.zip"
         )
 
-        val after = filesFromFile(listOfFiles, "drt_dq_170411_125440_4723.zip")
+        val after = filterToFilesNewerThan(listOfFiles, "drt_dq_170411_125440_4723.zip")
 
         val expected = Seq("drt_dq_170411_125440_4723.zip", "drt_dq_170411_131151_9959.zip", "drt_dq_170412_132903_1048.zip", "drt_dq_170412_134623_1858.zip")
 
@@ -98,7 +99,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
         "drt_dq_170412_134623_1858.zip"
         )
 
-        val after = filesFromFile(listOfFiles, "drt_dq_170411_125440_4700.zip")
+        val after = filterToFilesNewerThan(listOfFiles, "drt_dq_170411_125440_4700.zip")
 
         val expected = Seq(
         "drt_dq_170411_125440_4723.zip",
