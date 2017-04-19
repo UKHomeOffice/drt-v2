@@ -16,10 +16,14 @@ import akka.event.LoggingAdapter
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink}
 import drt.shared.MilliDate
+import org.joda.time.DateTime
+import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
+import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.s3._
 import services.SDate
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
@@ -81,7 +85,9 @@ object FilePolling {
 
 
 object AtmosFilePolling {
+  val log = LoggerFactory.getLogger(getClass)
   def filterToFilesNewerThan(listOfFiles: Seq[String], s: String) = {
+    log.info(s"filtering ${listOfFiles.length} with $s")
     val regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
     val filterFrom = s match {
       case regex(dateTime, _) => dateTime
@@ -108,29 +114,48 @@ object AtmosFilePolling {
                     implicit actorSystem: ActorSystem
                     , mat: Materializer
                   ) = {
-    val unzippedFileProvider = StatefulAtmosPoller(Some(initialFileFilter), atmosHost, bucket).unzippedFileProvider
+    val statefulPoller = StatefulAtmosPoller(Some(initialFileFilter), atmosHost, bucket)
+    val unzippedFileProvider = statefulPoller.unzippedFileProvider
 
     var latestFile = initialFileFilter
 
-    val source = Source.tick(0 seconds, 5 minutes, NotUsed)
+    val source = Source.tick(1 seconds, 2 minutes, NotUsed).map((notUsed) => DateTime.now())
 
     implicit val materializer = ActorMaterializer()
 
-    source.runForeach { _ =>
-      val futureZipFiles: Future[IndexedSeq[(String, Date)]] = unzippedFileProvider.createBuilder.listFilesAsStream(bucket).runWith(SinkExt.collect)
+    def runSingleBatch(tickId: DateTime) = {
+      log.info(s"tickId: $tickId")
+      val futureZipFiles: Future[Seq[(String, Date)]] = unzippedFileProvider.createBuilder.listFilesAsStream(bucket).runWith(Sink.seq)
       for (fileNamesAndDates <- futureZipFiles) {
         val fileNames = fileNamesAndDates.map(_._1)
-        filterToFilesNewerThan(fileNames, latestFile)
+
+        val zipFilesToProcess = filterToFilesNewerThan(fileNames, latestFile).sorted.toList
+        log.info(s"tickId: ${tickId} zipFilesToProcess: ${zipFilesToProcess} since $latestFile, allFiles: ${fileNames.length} vs ${zipFilesToProcess.length}")
+        zipFilesToProcess
           .foreach(zipFileName => {
-            log.info(s"AdvPaxInfo: extracting manifests from zip $zipFileName")
+            log.info(s"tickId: $tickId: latestFile: $latestFile")
+            log.info(s"tickId: $tickId: AdvPaxInfo: extracting manifests from zip $zipFileName")
 
-            manifestsFromZip(unzippedFileProvider, materializer, zipFileName)
-              .map(manifests => manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests))
+            val zip: Future[List[UnzippedFileContent]] = manifestsFromZip(unzippedFileProvider, materializer, zipFileName)
+            val sentMessage: Future[Unit] = zip
+              .map(manifests => {
+                log.info(s"$tickId processing manifests: ${manifests.length}  ${manifests.headOption.map(_.filename)}")
+                manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests)
+                log.info(s"tickId: $tickId processed manifests: ${manifests.length}  ${manifests.headOption.map(_.filename)}")
+                //              statefulPoller.onNewFileSeen(zipFileName)
 
-            log.info(s"AdvPaxInfo: finished processing zip $zipFileName")
+              })
+
+            log.info(s"AdvPaxInfo: tickId: ${tickId} updating latestFile: ${latestFile} to ${zipFileName}")
             latestFile = zipFileName
+
+            log.info(s"AdvPaxInfo: tickId: ${tickId} finished processing zip $zipFileName $latestFile")
           })
       }
+    }
+
+    source.runForeach { tickId =>
+      runSingleBatch(tickId)
     }
   }
 
