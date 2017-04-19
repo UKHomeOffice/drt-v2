@@ -8,6 +8,7 @@ import drt.shared.MilliDate
 import org.specs2.mutable.SpecificationLike
 import passengersplits.s3.SimpleAtmosReader
 import services.SDate
+import scala.collection.immutable.Seq
 
 class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
 
