@@ -166,10 +166,6 @@ object AtmosFilePolling {
   private def manifestsToAdvPaxReporter(log: LoggingAdapter, advPaxReporter: ActorRef, manifests: List[ZipUtils.UnzippedFileContent]) = {
     log.info(s"AdvPaxInfo: parsing ${manifests.length} manifests")
     manifests.foreach((flightManifest) => {
-      import java.io._
-      val pw = new PrintWriter(new File(s"/tmp/splits-${flightManifest.filename}"))
-      pw.write(flightManifest.content)
-      pw.close
       log.info(s"AdvPaxInfo: manifest ${flightManifest.filename} from ${flightManifest.zipFilename}")
       VoyagePassengerInfoParser.parseVoyagePassengerInfo(flightManifest.content) match {
         case Success(vpi) =>
