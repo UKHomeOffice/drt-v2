@@ -133,6 +133,7 @@ object FlightsWithSplitsView {
                     flightsModelProxy: Pot[List[js.Dynamic]],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
+                      "Timeline",
                       "Flight",
                       "Origin",
                       "Gate",

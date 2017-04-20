@@ -11,8 +11,11 @@ import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
 
+import scala.collection.mutable
 import scala.scalajs.js
+import scala.scalajs.js.Dictionary
 import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
+import scala.util.{Success, Try}
 
 object FlightsWithSplitsTable {
 
@@ -32,6 +35,31 @@ object FlightsWithSplitsTable {
       <.span(formatted, mod).render
     } else {
       <.div.render
+    }
+  }
+
+  def timelineComponent(): js.Function = (props: js.Dynamic) => {
+    logger.log.info(s"rendering timeline ${props}")
+    Try {
+      val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[js.Dictionary[Any]]
+      //      logger.log.info(s"rendering timeline ${rowData}")
+      val sch = rowData("Sch")
+      val est = rowData("Est")
+      val act = rowData("Act")
+      val estChox = rowData("Est Chox")
+      val actChox = rowData("Act Chox")
+      val times = s"sch: ${sch}, est ${est}, act ${act}, estChox $estChox, actChox ${actChox} "
+      logger.log.info(s"making i tag $times")
+      val i = <.i(^.`class` := "dot latest-event-dot",
+        ^.style := "left: 896px;visibility: visible;opacity: 1;display: inline;transform: translateX(0px) translateZ(0px);")
+      <.div(i, ^.width := "300px").render
+    } match {
+      case Success(s) =>
+        val element: mutable.Map[String, Any] =  s.asInstanceOf[js.Dictionary[Any]]
+        logger.log.info(s"got success with ${element}")
+        s
+      case f =>
+        <.span(f.toString).render
     }
   }
 
@@ -56,6 +84,7 @@ object FlightsWithSplitsTable {
 
   def splitsComponent(): js.Function = (props: js.Dynamic) => {
     def heightStyle(height: String) = js.Dictionary("height" -> height).asInstanceOf[js.Object]
+
     val splitLabels = Array("eGate", "EEA", "EEA NMR", "Visa", "Non-visa")
     val splits = props.data.toString.split("\\|").map(_.toInt)
     val desc = 0 to 4 map (idx => s"${splitLabels(idx)}: ${splits(idx)}")
@@ -124,6 +153,7 @@ object FlightsWithSplitsTable {
 
       literal(
         //        "Operator" -> f.Operator,
+        "Timeline" -> "0",
         "Status" -> f.Status,
         "Sch" -> makeDTReadable(f.SchDT),
         "Est" -> makeDTReadable(f.EstDT),
@@ -160,6 +190,7 @@ object FlightsWithSplitsTable {
       }
 
       val columnMeta = Some(Seq(
+        new GriddleComponentWrapper.ColumnMeta("Timeline", customComponent = timelineComponent()),
         new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings)),
         new GriddleComponentWrapper.ColumnMeta("Sch", customComponent = dateTimeComponent()),
         new GriddleComponentWrapper.ColumnMeta("Est", customComponent = dateTimeComponent()),
