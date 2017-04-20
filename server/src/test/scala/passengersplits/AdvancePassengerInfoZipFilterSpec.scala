@@ -38,18 +38,18 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
       "when given part of a filename including the date portion" >> {
         val listOfFiles = Seq(
-        "drt_dq_170410_102318_9111.zip",
-        "drt_dq_170411_103932_1507.zip",
-        "drt_dq_170411_104441_4850.zip",
-        "drt_dq_170411_112023_1877.zip",
-        "drt_dq_170411_112629_9236.zip",
-        "drt_dq_170411_115446_3007.zip",
-        "drt_dq_170411_121640_4588.zip",
-        "drt_dq_170411_123752_1652.zip",
-        "drt_dq_170411_125440_4723.zip",
-        "drt_dq_170411_131151_9959.zip",
-        "drt_dq_170412_132903_1048.zip",
-        "drt_dq_170412_134623_1858.zip"
+          "drt_dq_170410_102318_9111.zip",
+          "drt_dq_170411_103932_1507.zip",
+          "drt_dq_170411_104441_4850.zip",
+          "drt_dq_170411_112023_1877.zip",
+          "drt_dq_170411_112629_9236.zip",
+          "drt_dq_170411_115446_3007.zip",
+          "drt_dq_170411_121640_4588.zip",
+          "drt_dq_170411_123752_1652.zip",
+          "drt_dq_170411_125440_4723.zip",
+          "drt_dq_170411_131151_9959.zip",
+          "drt_dq_170412_132903_1048.zip",
+          "drt_dq_170412_134623_1858.zip"
         )
 
         val after = filterToFilesNewerThan(listOfFiles, "drt_dq_170412")
@@ -61,55 +61,92 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
       "when given a full filename" >> {
         val listOfFiles = Seq(
-        "drt_dq_170410_102318_9111.zip",
-        "drt_dq_170411_103932_1507.zip",
-        "drt_dq_170411_104441_4850.zip",
-        "drt_dq_170411_112023_1877.zip",
-        "drt_dq_170411_112629_9236.zip",
-        "drt_dq_170411_115446_3007.zip",
-        "drt_dq_170411_121640_4588.zip",
-        "drt_dq_170411_123752_1652.zip",
-        "drt_dq_170411_125440_4723.zip",
-        "drt_dq_170411_131151_9959.zip",
-        "drt_dq_170412_132903_1048.zip",
-        "drt_dq_170412_134623_1858.zip"
+          "drt_dq_170410_102318_9111.zip",
+          "drt_dq_170411_103932_1507.zip",
+          "drt_dq_170411_104441_4850.zip",
+          "drt_dq_170411_112023_1877.zip",
+          "drt_dq_170411_112629_9236.zip",
+          "drt_dq_170411_115446_3007.zip",
+          "drt_dq_170411_121640_4588.zip",
+          "drt_dq_170411_123752_1652.zip",
+          "drt_dq_170411_125440_4723.zip",
+          "drt_dq_170411_131151_9959.zip",
+          "drt_dq_170412_132903_1048.zip",
+          "drt_dq_170412_134623_1858.zip"
         )
 
         val after = filterToFilesNewerThan(listOfFiles, "drt_dq_170411_125440_4723.zip")
 
-        val expected = Seq("drt_dq_170411_125440_4723.zip", "drt_dq_170411_131151_9959.zip", "drt_dq_170412_132903_1048.zip", "drt_dq_170412_134623_1858.zip")
+        val expected = Seq( "drt_dq_170411_131151_9959.zip", "drt_dq_170412_132903_1048.zip", "drt_dq_170412_134623_1858.zip")
 
         after === expected
       }
 
       "when given a full filename" >> {
         val listOfFiles = Seq(
-        "drt_dq_170410_102318_9111.zip",
-        "drt_dq_170411_103932_1507.zip",
-        "drt_dq_170411_104441_4850.zip",
-        "drt_dq_170411_112023_1877.zip",
-        "drt_dq_170411_112629_9236.zip",
-        "drt_dq_170411_115446_3007.zip",
-        "drt_dq_170411_121640_4588.zip",
-        "drt_dq_170411_123752_1652.zip",
-        "drt_dq_170411_125440_4723.zip",
-        "drt_dq_170411_125440_4700.zip",
-        "drt_dq_170411_131151_9959.zip",
-        "drt_dq_170412_132903_1048.zip",
-        "drt_dq_170412_134623_1858.zip"
+          "drt_dq_170410_102318_9111.zip",
+          "drt_dq_170411_103932_1507.zip",
+          "drt_dq_170411_104441_4850.zip",
+          "drt_dq_170411_112023_1877.zip",
+          "drt_dq_170411_112629_9236.zip",
+          "drt_dq_170411_115446_3007.zip",
+          "drt_dq_170411_121640_4588.zip",
+          "drt_dq_170411_123752_1652.zip",
+          "drt_dq_170411_125440_4723.zip",
+          "drt_dq_170411_125440_4700.zip",
+          "drt_dq_170411_131151_9959.zip",
+          "drt_dq_170412_132903_1048.zip",
+          "drt_dq_170412_134623_1858.zip"
         )
 
         val after = filterToFilesNewerThan(listOfFiles, "drt_dq_170411_125440_4700.zip")
 
         val expected = Seq(
-        "drt_dq_170411_125440_4723.zip",
-        "drt_dq_170411_125440_4700.zip",
-        "drt_dq_170411_131151_9959.zip",
-        "drt_dq_170412_132903_1048.zip",
-        "drt_dq_170412_134623_1858.zip"
+          "drt_dq_170411_125440_4723.zip",
+          "drt_dq_170411_131151_9959.zip",
+          "drt_dq_170412_132903_1048.zip",
+          "drt_dq_170412_134623_1858.zip"
         )
 
         after === expected
+      }
+
+      "when given a full filename " >> {
+        "and there are two files with the same date, but different random suffix" >> {
+          "then we should process the random suffix that we  haven't just processed" >> {
+            val listOfFiles = Seq(
+              "drt_dq_170410_102318_9111.zip",
+              "drt_dq_170410_102318_1031.zip"
+            )
+
+            filterToFilesNewerThan(listOfFiles, "drt_dq_170410_102318_9111.zip") === Seq("drt_dq_170410_102318_1031.zip")
+          }
+          "then we should process the random suffix that we  haven't just processed" >> {
+            val listOfFiles = Seq(
+              "drt_dq_170410_102318_9111.zip",
+              "drt_dq_170410_102318_1031.zip"
+            )
+
+            filterToFilesNewerThan(listOfFiles, "drt_dq_170410_102318_1031.zip") === Seq("drt_dq_170410_102318_9111.zip")
+          }
+        }
+        "and there is just one file with the suffix" >> {
+          "then we should not reprocess that file" >> {
+            val listOfFiles = Seq(
+              "drt_dq_170410_102318_9111.zip"
+            )
+
+            filterToFilesNewerThan(listOfFiles, "drt_dq_170410_102318_9111.zip") === Seq()
+          }
+          "then we should process the random suffix that we  haven't just processed" >> {
+            val listOfFiles = Seq(
+              "drt_dq_170410_102318_9111.zip",
+              "drt_dq_170410_102319_1031.zip"
+            )
+
+            filterToFilesNewerThan(listOfFiles, "drt_dq_170410_102318_9111.zip") === Seq("drt_dq_170410_102319_1031.zip")
+          }
+        }
       }
     }
 
@@ -119,7 +156,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
       val expected = "drt_dq_170411"
 
-      val result = fileNameStartForDate(date)
+      val result = previousDayDqFilename(date)
 
       result === expected
     }
@@ -130,7 +167,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
       val expected = "drt_dq_170409"
 
-      val result = fileNameStartForDate(date)
+      val result = previousDayDqFilename(date)
 
       result === expected
     }

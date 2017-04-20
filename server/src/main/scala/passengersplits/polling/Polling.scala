@@ -15,7 +15,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.event.LoggingAdapter
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink}
-import drt.shared.MilliDate
+import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
@@ -86,21 +86,28 @@ object FilePolling {
 
 object AtmosFilePolling {
   val log = LoggerFactory.getLogger(getClass)
-  def filterToFilesNewerThan(listOfFiles: Seq[String], s: String) = {
-    log.info(s"filtering ${listOfFiles.length} with $s")
+  def filterToFilesNewerThan(listOfFiles: Seq[String], latestFile: String) = {
+    log.info(s"filtering ${listOfFiles.length} with $latestFile")
     val regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
-    val filterFrom = s match {
+    val filterFrom = latestFile match {
       case regex(dateTime, _) => dateTime
-      case _ => s
+      case _ => latestFile
     }
-    println(s"filterFrom: $filterFrom, s: $s")
-    listOfFiles.filter(_ >= filterFrom)
+    println(s"filterFrom: $filterFrom, latestFile: $latestFile")
+    listOfFiles.filter(fn => fn >= filterFrom && fn != latestFile)
   }
 
-  def fileNameStartForDate(date: MilliDate) = {
+  def previousDayDqFilename(date: MilliDate) = {
+    dqFilename(previousDay(date))
+  }
+
+  def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     val previousDay = SDate(date.millisSinceEpoch - oneDayInMillis)
+    previousDay
+  }
 
+  def dqFilename(previousDay: SDateLike) = {
     val year = previousDay.getFullYear().toInt - 2000
     f"drt_dq_$year${previousDay.getMonth()}%02d${previousDay.getDate()}%02d"
   }

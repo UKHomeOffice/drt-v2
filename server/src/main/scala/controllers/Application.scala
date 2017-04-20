@@ -102,7 +102,6 @@ trait SystemActors extends Core {
 }
 
 
-
 trait AirportConfiguration {
   def airportConfig: AirportConfig
 }
@@ -122,7 +121,9 @@ trait AirportConfProvider extends AirportConfiguration {
 trait ProdPassengerSplitProviders {
   self: AirportConfiguration with SystemActors =>
   private implicit val timeout = Timeout(5 seconds)
+
   import scala.concurrent.ExecutionContext.global
+
   val apiSplitsProvider = (flight: ApiFlight) => AdvPaxSplitsProvider.splitRatioProvider(airportConfig.portCode)(flightPassengerSplitReporter)(flight)(timeout, global)
   val splitProviders = List(apiSplitsProvider, SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
 }
@@ -221,12 +222,14 @@ class Application @Inject()(
   val copiedToApiFlights = flightsSource(mockProd, portCode)
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
+  import passengersplits.polling.{AtmosFilePolling => afp}
 
   /// PassengerSplits reader
   import SDate.implicits._
-  AtmosFilePolling.beginPolling(log,
+
+  afp.beginPolling(log,
     ctrl.flightPassengerSplitReporter,
-    AtmosFilePolling.fileNameStartForDate(SDate.now),
+    afp.previousDayDqFilename(SDate.now()),
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
     config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
     portCode
@@ -257,8 +260,9 @@ class Application @Inject()(
 
   def logging = Action(parse.anyContent) {
     implicit request =>
-      request.body.asJson.foreach { msg =>
-        log.info(s"CLIENT - $msg")
+      request.body.asJson.foreach {
+        msg =>
+          log.info(s"CLIENT - $msg")
       }
       Ok("")
   }
