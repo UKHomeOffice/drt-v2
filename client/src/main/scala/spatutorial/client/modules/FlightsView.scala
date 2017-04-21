@@ -19,7 +19,10 @@ import scala.scalajs.js.{JSON, Object}
 object GriddleComponentWrapper {
 
   @ScalaJSDefined
-  class ColumnMeta(val columnName: String, val order: js.UndefOr[Int] = js.undefined, val customComponent: Any = null) extends js.Object
+  class ColumnMeta(val columnName: String,
+                   val order: js.UndefOr[Int] = js.undefined,
+                   val cssClassName: js.UndefOr[String] = js.undefined,
+                   val customComponent: Any = null) extends js.Object
 
 }
 
@@ -43,7 +46,7 @@ case class GriddleComponentWrapper(
       showFilter = showFilter,
       initialSort = initialSort,
       rowMetadata = rowMetaData,
-      useFixedHeader = true,
+      useFixedHeader = false,
       showPager = true,
       resultsPerPage = 200)
     (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
@@ -133,6 +136,7 @@ object FlightsWithSplitsView {
                     flightsModelProxy: Pot[List[js.Dynamic]],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
+                      "Timeline",
                       "Flight",
                       "Origin",
                       "Gate",

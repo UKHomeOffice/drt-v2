@@ -11,8 +11,11 @@ import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
 
+import scala.collection.mutable
 import scala.scalajs.js
+import scala.scalajs.js.Dictionary
 import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
+import scala.util.{Success, Try}
 
 object FlightsWithSplitsTable {
 
@@ -35,6 +38,99 @@ object FlightsWithSplitsTable {
     }
   }
 
+  def millisDelta(time1: String, time2: String) = {
+    SDate.parse(time1).millisSinceEpoch - SDate.parse(time2).millisSinceEpoch
+  }
+
+
+  def asOffset(delta: Long, range: Double) = {
+    val aggression = 1.0019
+    val deltaTranslate = 1700
+    val scaledDelta = 1.0 * delta / 1000
+    val isLate = delta < 0
+    if (isLate) {
+      (range / (1 + Math.pow(aggression, (scaledDelta + deltaTranslate))))
+    }
+    else {
+      -(range / (1 + Math.pow(aggression, -1.0 * (scaledDelta - deltaTranslate))))
+    }
+  }
+
+  def dateStringAsLocalDisplay(dt: String) = dt match {
+    case "" => ""
+    case some => SDate.parse(dt).toLocalDateTimeString()
+  }
+
+  def timelineComponent(): js.Function = (props: js.Dynamic) => {
+    val schPct = 150 - 24
+
+    val re: ReactElement = Try {
+      val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[Dictionary[Any]]
+      val sch: String = props.rowData.Sch.toString
+      val est = rowData("Est")
+      val act: String = rowData("Act").toString
+      val estChox = rowData("Est Chox").toString
+      val actChox = rowData("Act Chox").toString
+
+      val (actDeltaTooltip: String, actPct: Double, actClass: String) = pctAndClass(sch, act, schPct)
+      val (actChoxToolTip: String, actChoxPct: Double, actChoxClass: String) = pctAndClass(sch, actChox, schPct)
+
+
+      val longToolTip =
+        s"""Sch: ${dateStringAsLocalDisplay(sch)}
+           |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+           |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+        """.stripMargin
+
+      val actChoxDot = if (!actChox.isEmpty)
+        <.i(^.className := "dot act-chox-dot " + actChoxClass,
+          ^.title := s"ActChox: $actChox $actChoxToolTip",
+          ^.left := s"${actChoxPct}px")
+      else <.span()
+
+
+      val actWidth = (actChoxPct + 24) - actPct
+
+      val schDot = <.i(^.className := "dot sch-dot",
+        ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
+      val actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot " + actClass,
+        ^.title := s"Actual: ${dateStringAsLocalDisplay(act)}",
+        ^.width := s"${actWidth}px",
+        ^.left := s"${actPct}px")
+      else <.span()
+
+      val dots = schDot :: actDot :: actChoxDot :: Nil
+
+      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip )
+    } match {
+      case Success(s) =>
+       s.render
+      case f =>
+        <.span(f.toString).render
+    }
+    re
+  }
+
+  private def pctAndClass(sch: String, act: String, schPct: Int) = {
+    val actDelta = millisDelta(sch, act)
+    val actDeltaTooltip = {
+      val dm = (actDelta / 60000)
+      Math.abs(dm) + s"mins ${deltaMessage(actDelta)}"
+    }
+    val actPct = schPct + asOffset(actDelta, 150.0)
+    val actClass: String = deltaMessage(actDelta)
+    (actDeltaTooltip, actPct, actClass)
+  }
+
+  def deltaMessage(actDelta: Long) = {
+    val actClass = actDelta match {
+      case d if d < 0 => "late"
+      case d if d == 0 => "on-time"
+      case d if d > 0 => "early"
+    }
+    actClass
+  }
+
   def paxComponent(): js.Function = (props: js.Dynamic) => {
     def widthStyle(width: Int) = js.Dictionary("width" -> s"$width%").asInstanceOf[js.Object]
 
@@ -45,7 +141,7 @@ object FlightsWithSplitsTable {
         val title: TagMod = ^.title := s"from ${po.origin}"
         val relativePax = Math.floor(100 * (po.pax.toDouble / 853)).toInt
         val style = widthStyle(relativePax)
-        logger.log.info(s"got paxandorigin")
+        //        logger.log.info(s"got paxandorigin")
         <.div(po.pax, className, title, ^.style := style)
       case e =>
         logger.log.warn(s"Expected a PaxAndOrigin but got $e")
@@ -56,6 +152,7 @@ object FlightsWithSplitsTable {
 
   def splitsComponent(): js.Function = (props: js.Dynamic) => {
     def heightStyle(height: String) = js.Dictionary("height" -> height).asInstanceOf[js.Object]
+
     val splitLabels = Array("eGate", "EEA", "EEA NMR", "Visa", "Non-visa")
     val splits = props.data.toString.split("\\|").map(_.toInt)
     val desc = 0 to 4 map (idx => s"${splitLabels(idx)}: ${splits(idx)}")
@@ -70,6 +167,7 @@ object FlightsWithSplitsTable {
         <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
       )).render
   }
+
 
   @ScalaJSDefined
   class PaxAndOrigin(val pax: Int, val origin: String) extends js.Object
@@ -124,12 +222,13 @@ object FlightsWithSplitsTable {
 
       literal(
         //        "Operator" -> f.Operator,
+        "Timeline" -> "0",
         "Status" -> f.Status,
-        "Sch" -> makeDTReadable(f.SchDT),
-        "Est" -> makeDTReadable(f.EstDT),
-        "Act" -> makeDTReadable(f.ActDT),
-        "Est Chox" -> makeDTReadable(f.EstChoxDT),
-        "Act Chox" -> makeDTReadable(f.ActChoxDT),
+        "Sch" -> f.SchDT,
+        "Est" -> f.EstDT,
+        "Act" -> f.ActDT,
+        "Est Chox" -> f.EstChoxDT,
+        "Act Chox" -> f.ActChoxDT,
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
         "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
@@ -160,6 +259,9 @@ object FlightsWithSplitsTable {
       }
 
       val columnMeta = Some(Seq(
+        new GriddleComponentWrapper.ColumnMeta("Timeline",
+          cssClassName = "timeline-column",
+          customComponent = timelineComponent()),
         new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings)),
         new GriddleComponentWrapper.ColumnMeta("Sch", customComponent = dateTimeComponent()),
         new GriddleComponentWrapper.ColumnMeta("Est", customComponent = dateTimeComponent()),
