@@ -62,7 +62,7 @@ object FlightsWithSplitsTable {
   }
 
   def timelineComponent(): js.Function = (props: js.Dynamic) => {
-    val schPct = 50
+    val schPct = 150 - 24
 
     val re: ReactElement = Try {
       val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[Dictionary[Any]]
@@ -85,15 +85,18 @@ object FlightsWithSplitsTable {
       val actChoxDot = if (!actChox.isEmpty)
         <.i(^.className := "dot act-chox-dot " + actChoxClass,
           ^.title := s"ActChox: $actChox $actChoxToolTip",
-          ^.left := s"${actChoxPct}%")
+          ^.left := s"${actChoxPct}")
       else <.span()
 
 
+      val actWidth = (actChoxPct + 24) - actPct
+
       val schDot = <.i(^.className := "dot sch-dot",
-        ^.title := s"Scheduled\n$longToolTip", ^.left := s"$schPct%")
+        ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
       val actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot " + actClass,
         ^.title := s"Actual: ${dateStringAsLocalDisplay(act)}",
-        ^.left := s"${actPct}%")
+        ^.width := s"${actWidth}px",
+        ^.left := s"${actPct}px")
       else <.span()
 
       val dots = schDot :: actDot :: actChoxDot :: Nil
@@ -114,7 +117,7 @@ object FlightsWithSplitsTable {
       val dm = (actDelta / 60000)
       Math.abs(dm) + s"mins ${deltaMessage(actDelta)}"
     }
-    val actPct = schPct + asOffset(actDelta, 33.0)
+    val actPct = schPct + asOffset(actDelta, 150.0)
     val actClass: String = deltaMessage(actDelta)
     (actDeltaTooltip, actPct, actClass)
   }

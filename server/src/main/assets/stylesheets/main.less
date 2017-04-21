@@ -29,7 +29,7 @@
   width: 300px;
   height: @dotDiameter;
   position: relative;
-  background-color: black;
+  background-color: darkgray;
   border-bottom-left-radius: @dotDiameter/2;
   border-top-left-radius: @dotDiameter/2;
   border-bottom-right-radius: @dotDiameter/2;
@@ -44,7 +44,7 @@
   height: @dotDiameter;
   width: @dotDiameter;
   border-radius: @dotDiameter/2;
-  background-color: grey;
+  background-color: #5c5c5c;
   position: absolute;
   display: inline;
   opacity: 0.9;
@@ -54,7 +54,7 @@
   opacity: 1;
 }
 
-@actDotColor: #274fe4;
+@actDotColor: #2854f2;
 
 .act-dot.early {
   background-color: @actDotColor;
@@ -69,7 +69,7 @@
 }
 
 .act-chox-dot {
-  background-color: #37af0d;
+  background-color: lighten(@actDotColor, 10%);
 }
 
 .desk-rec-input {
