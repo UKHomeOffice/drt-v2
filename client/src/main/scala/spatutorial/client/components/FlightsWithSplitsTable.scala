@@ -85,7 +85,7 @@ object FlightsWithSplitsTable {
       val actChoxDot = if (!actChox.isEmpty)
         <.i(^.className := "dot act-chox-dot " + actChoxClass,
           ^.title := s"ActChox: $actChox $actChoxToolTip",
-          ^.left := s"${actChoxPct}")
+          ^.left := s"${actChoxPct}px")
       else <.span()
 
 
