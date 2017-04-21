@@ -18,6 +18,60 @@
   }
 }
 
+@dotDiameter: 24px;
+
+.timeline-column {
+  width: 300px;
+  height: @dotDiameter;
+}
+
+.timeline-container {
+  width: 300px;
+  height: @dotDiameter;
+  position: relative;
+  background-color: black;
+  border-bottom-left-radius: @dotDiameter/2;
+  border-top-left-radius: @dotDiameter/2;
+  border-bottom-right-radius: @dotDiameter/2;
+  border-top-right-radius: @dotDiameter/2;
+}
+
+.timeline-container:hover {
+  opacity: 0.8;
+}
+
+.dot {
+  height: @dotDiameter;
+  width: @dotDiameter;
+  border-radius: @dotDiameter/2;
+  background-color: grey;
+  position: absolute;
+  display: inline;
+  opacity: 0.9;
+}
+
+.dot:hover {
+  opacity: 1;
+}
+
+@actDotColor: #274fe4;
+
+.act-dot.early {
+  background-color: @actDotColor;
+}
+
+.act-dot.late {
+  background-color: @actDotColor;
+}
+
+.est-dot {
+  background-color: #647a87;
+}
+
+.act-chox-dot {
+  background-color: #37af0d;
+}
+
 .desk-rec-input {
   width: 4em;
 }
@@ -168,6 +222,7 @@ rect.bordered {
 th.total-deployed {
   background-color: @totalDeployedColor;
 }
+
 .total-deployed {
   background-color: @totalDeployedColor;
 }
@@ -199,6 +254,7 @@ tr:nth-child(odd) > td.total-deployed {
 tr:nth-child(odd) > td.eeaDesk-user-desk-rec {
   background-color: darken(@eeaDeskUserDeskColor, 8%);
 }
+
 tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
   background-color: darken(@eeaDeskUserDeskColor, 2%);
 }
@@ -210,6 +266,7 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
 .nonEeaDesk-user-desk-rec {
   background-color: @nonEeaDeskUserDeskColor;
 }
+
 .fastTrack-user-desk-rec {
   background-color: @fastTrackUserDeskColor;
 }
@@ -217,6 +274,7 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
   background-color: darken(@nonEeaDeskUserDeskColor, 8%);
 }
+
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
   background-color: darken(@nonEeaDeskUserDeskColor, 2%);
 }
@@ -236,12 +294,15 @@ tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
 tr:nth-child(odd) > td.eGate-user-desk-rec {
   background-color: darken(@eGateUserDeskColor, 8%);
 }
+
 tr:nth-child(odd) > td.eGate-user-desk-rec.table-info {
   background-color: darken(@eGateUserDeskColor, 2%);
 }
+
 tr:nth-child(odd) > td.fastTrack-user-desk-rec {
   background-color: darken(@fastTrackUserDeskColor, 8%);
 }
+
 tr:nth-child(odd) > td.fastTrack-user-desk-rec.table-info {
   background-color: darken(@fastTrackUserDeskColor, 2%);
 }
@@ -313,12 +374,11 @@ p {
   overflow: scroll;
 }
 
-
 table.user-desk-recs tbody tr td.table-danger {
   background-color: @alert-danger-bg;
 }
 
-table.user-desk-recs tbody tr:nth-child(odd) > td.table-danger{
+table.user-desk-recs tbody tr:nth-child(odd) > td.table-danger {
   background-color: darken(@alert-danger-bg, 1%);
 }
 
@@ -360,6 +420,7 @@ th h2 {
   bottom: -5px;
   left: 0;
 }
+
 .splits .graph .bar {
   width: 15px;
   margin: 1px;
@@ -372,6 +433,7 @@ th h2 {
 #arrivals tbody:nth-child(odd) {
   background-color: #00bcd4;
 }
+
 #arrivals tbody:nth-child(odd) tr {
   background-color: #00bcd4;
 }

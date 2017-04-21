@@ -38,29 +38,94 @@ object FlightsWithSplitsTable {
     }
   }
 
+  def millisDelta(time1: String, time2: String) = {
+    SDate.parse(time1).millisSinceEpoch - SDate.parse(time2).millisSinceEpoch
+  }
+
+
+  def asOffset(delta: Long, range: Double) = {
+    val aggression = 1.0019
+    val deltaTranslate = 1700
+    val scaledDelta = 1.0 * delta / 1000
+    val isLate = delta < 0
+    if (isLate) {
+      (range / (1 + Math.pow(aggression, (scaledDelta + deltaTranslate))))
+    }
+    else {
+      -(range / (1 + Math.pow(aggression, -1.0 * (scaledDelta - deltaTranslate))))
+    }
+  }
+
+  def dateStringAsLocalDisplay(dt: String) = dt match {
+    case "" => ""
+    case some => SDate.parse(dt).toLocalDateTimeString()
+  }
+
   def timelineComponent(): js.Function = (props: js.Dynamic) => {
-    logger.log.info(s"rendering timeline ${props}")
-    Try {
-      val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[js.Dictionary[Any]]
-      //      logger.log.info(s"rendering timeline ${rowData}")
-      val sch = rowData("Sch")
+    val schPct = 50
+
+    val re: ReactElement = Try {
+      val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[Dictionary[Any]]
+      val sch: String = props.rowData.Sch.toString
       val est = rowData("Est")
-      val act = rowData("Act")
-      val estChox = rowData("Est Chox")
-      val actChox = rowData("Act Chox")
-      val times = s"sch: ${sch}, est ${est}, act ${act}, estChox $estChox, actChox ${actChox} "
-      logger.log.info(s"making i tag $times")
-      val i = <.i(^.`class` := "dot latest-event-dot",
-        ^.style := "left: 896px;visibility: visible;opacity: 1;display: inline;transform: translateX(0px) translateZ(0px);")
-      <.div(i, ^.width := "300px").render
+      val act: String = rowData("Act").toString
+      val estChox = rowData("Est Chox").toString
+      val actChox = rowData("Act Chox").toString
+
+      val (actDeltaTooltip: String, actPct: Double, actClass: String) = pctAndClass(sch, act, schPct)
+      val (actChoxToolTip: String, actChoxPct: Double, actChoxClass: String) = pctAndClass(sch, actChox, schPct)
+
+
+      val longToolTip =
+        s"""Sch: ${dateStringAsLocalDisplay(sch)}
+           |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+           |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+        """.stripMargin
+
+      val actChoxDot = if (!actChox.isEmpty)
+        <.i(^.className := "dot act-chox-dot " + actChoxClass,
+          ^.title := s"ActChox: $actChox $actChoxToolTip",
+          ^.left := s"${actChoxPct}%")
+      else <.span()
+
+
+      val schDot = <.i(^.className := "dot sch-dot",
+        ^.title := s"Scheduled\n$longToolTip", ^.left := s"$schPct%")
+      val actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot " + actClass,
+        ^.title := s"Actual: ${dateStringAsLocalDisplay(act)}",
+        ^.left := s"${actPct}%")
+      else <.span()
+
+      val dots = schDot :: actDot :: actChoxDot :: Nil
+
+      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip )
     } match {
       case Success(s) =>
-        val element: mutable.Map[String, Any] =  s.asInstanceOf[js.Dictionary[Any]]
-        logger.log.info(s"got success with ${element}")
-        s
+       s.render
       case f =>
         <.span(f.toString).render
     }
+    re
+  }
+
+  private def pctAndClass(sch: String, act: String, schPct: Int) = {
+    val actDelta = millisDelta(sch, act)
+    val actDeltaTooltip = {
+      val dm = (actDelta / 60000)
+      Math.abs(dm) + s"mins ${deltaMessage(actDelta)}"
+    }
+    val actPct = schPct + asOffset(actDelta, 33.0)
+    val actClass: String = deltaMessage(actDelta)
+    (actDeltaTooltip, actPct, actClass)
+  }
+
+  def deltaMessage(actDelta: Long) = {
+    val actClass = actDelta match {
+      case d if d < 0 => "late"
+      case d if d == 0 => "on-time"
+      case d if d > 0 => "early"
+    }
+    actClass
   }
 
   def paxComponent(): js.Function = (props: js.Dynamic) => {
@@ -73,7 +138,7 @@ object FlightsWithSplitsTable {
         val title: TagMod = ^.title := s"from ${po.origin}"
         val relativePax = Math.floor(100 * (po.pax.toDouble / 853)).toInt
         val style = widthStyle(relativePax)
-        logger.log.info(s"got paxandorigin")
+        //        logger.log.info(s"got paxandorigin")
         <.div(po.pax, className, title, ^.style := style)
       case e =>
         logger.log.warn(s"Expected a PaxAndOrigin but got $e")
@@ -99,6 +164,7 @@ object FlightsWithSplitsTable {
         <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
       )).render
   }
+
 
   @ScalaJSDefined
   class PaxAndOrigin(val pax: Int, val origin: String) extends js.Object
@@ -155,11 +221,11 @@ object FlightsWithSplitsTable {
         //        "Operator" -> f.Operator,
         "Timeline" -> "0",
         "Status" -> f.Status,
-        "Sch" -> makeDTReadable(f.SchDT),
-        "Est" -> makeDTReadable(f.EstDT),
-        "Act" -> makeDTReadable(f.ActDT),
-        "Est Chox" -> makeDTReadable(f.EstChoxDT),
-        "Act Chox" -> makeDTReadable(f.ActChoxDT),
+        "Sch" -> f.SchDT,
+        "Est" -> f.EstDT,
+        "Act" -> f.ActDT,
+        "Est Chox" -> f.EstChoxDT,
+        "Act Chox" -> f.ActChoxDT,
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
         "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
@@ -190,7 +256,9 @@ object FlightsWithSplitsTable {
       }
 
       val columnMeta = Some(Seq(
-        new GriddleComponentWrapper.ColumnMeta("Timeline", customComponent = timelineComponent()),
+        new GriddleComponentWrapper.ColumnMeta("Timeline",
+          cssClassName = "timeline-column",
+          customComponent = timelineComponent()),
         new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings)),
         new GriddleComponentWrapper.ColumnMeta("Sch", customComponent = dateTimeComponent()),
         new GriddleComponentWrapper.ColumnMeta("Est", customComponent = dateTimeComponent()),
