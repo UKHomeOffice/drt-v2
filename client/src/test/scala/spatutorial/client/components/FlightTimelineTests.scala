@@ -40,9 +40,9 @@ object FlightTimelineTests extends TestSuite {
         }
 
 
-        "convert a ms difference to a percentage location" - {
-          assert(FlightsWithSplitsTable.asOffset(5, 33.0) == 5000)
-        }
+//        "convert a ms difference to a percentage location" - {
+//          assert(FlightsWithSplitsTable.asOffset(5, 33.0) == 5000)
+//        }
         "what's the ranges look like" - {
           val minutes = (-60L to 60L by 1).map(_ * 60000)
           println(minutes)
