@@ -131,7 +131,7 @@ object AtmosFilePolling {
     implicit val materializer = ActorMaterializer()
 
     def runSingleBatch(tickId: DateTime) = {
-      log.info(s"tickId: $tickId")
+      log.info(s"tickId: $tickId Starting batch")
       val futureZipFiles: Future[Seq[(String, Date)]] = unzippedFileProvider.createBuilder.listFilesAsStream(bucket).runWith(Sink.seq)
       for (fileNamesAndDates <- futureZipFiles) {
         val fileNames = fileNamesAndDates.map(_._1)
@@ -146,9 +146,9 @@ object AtmosFilePolling {
             val zip: Future[List[UnzippedFileContent]] = manifestsFromZip(unzippedFileProvider, materializer, zipFileName)
             val sentMessage: Future[Unit] = zip
               .map(manifests => {
-                log.info(s"$tickId processing manifests: ${manifests.length}  ${manifests.headOption.map(_.filename)}")
+                log.info(s"tickId: $tickId processing manifests from zip '$zipFileName'. Length: ${manifests.length}, Content: ${manifests.map(_.filename)}")
                 manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests)
-                log.info(s"tickId: $tickId processed manifests: ${manifests.length}  ${manifests.headOption.map(_.filename)}")
+                log.info(s"tickId: $tickId processed manifests from zip '$zipFileName': Length ${manifests.length}  ${manifests.headOption.map(_.filename)}")
                 //              statefulPoller.onNewFileSeen(zipFileName)
 
               })

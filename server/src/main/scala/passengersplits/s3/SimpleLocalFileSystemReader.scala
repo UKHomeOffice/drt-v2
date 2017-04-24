@@ -88,7 +88,9 @@ object UnzipGraphStage {
   }
 }
 
-class StatefulFilenameProvider(log: LoggingAdapter, var latestFileSeen: Option[String] = None) {
+class StatefulFilenameProvider(
+                                log: LoggingAdapter,
+                                var latestFileSeen: Option[String] = None) {
   val outerNewFileSeen = (newFilename: String) => {
     val newLatestFilename = latestFileSeen match {
       case None =>
