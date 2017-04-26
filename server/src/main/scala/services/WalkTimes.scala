@@ -18,6 +18,8 @@ object WalkTimes {
     case _ => None
   }
 
+  type WalkTimeSecondsProvider = (String, String) => Option[Int]
+
   def walkTimeSecondsProvider(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Int] = {
     val walkTimesMap = walkTimes.map(wt => ((wt.from, wt.to), wt.walkTimeSeconds)).toMap
 

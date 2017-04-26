@@ -1,6 +1,7 @@
 package services
 
 import com.typesafe.config.ConfigFactory
+import drt.shared.{ApiFlight, MilliDate}
 import org.specs2.mutable.SpecificationLike
 
 class WalkTimesSpec extends SpecificationLike {
@@ -88,6 +89,27 @@ class WalkTimesSpec extends SpecificationLike {
       val expected = Some(20)
 
       result === expected
+    }
+  }
+  "pcpFrom" >> {
+    "Given an ApiFlight with a known gate and actual chox, " +
+    "when we ask for the pcpFrom time, " +
+    "then we should get actual chox + first pax off time + walk time" >> {
+      def pcpFrom(firstPaxOff: (ApiFlight) => Long)(walkTimesProvider: WalkTimeSecondsProvider)(flight: ApiFlight): MilliDate = {
+        val timeToChoxMillis = 120000L
+        val defaultWalkTimeSeconds = 300
+        val bestChoxTimeMillis = if (flight.ActChoxDT != "") SDate.parseString(flight.ActChoxDT).millisSinceEpoch
+        else if (flight.EstChoxDT != "") SDate.parseString(flight.EstChoxDT).millisSinceEpoch
+        else if (flight.ActDT != "") SDate.parseString(flight.ActDT).millisSinceEpoch + timeToChoxMillis
+        else if (flight.EstDT != "") SDate.parseString(flight.EstDT).millisSinceEpoch + timeToChoxMillis
+        else SDate.parseString(flight.SchDT).millisSinceEpoch + timeToChoxMillis
+
+        val walkTimeMillis = walkTimesProvider(flight.Stand, flight.Terminal).getOrElse(defaultWalkTimeSeconds) * 1000L
+
+        MilliDate(bestChoxTimeMillis + walkTimeMillis)
+      }
+
+      1 === 2
     }
   }
 }
