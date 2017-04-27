@@ -227,13 +227,11 @@ class Application @Inject()(
   /// PassengerSplits reader
   import SDate.implicits._
 
-  afp.beginPolling(log,
-    ctrl.flightPassengerSplitReporter,
+  afp.beginPolling(log, ctrl.flightPassengerSplitReporter,
     afp.previousDayDqFilename(SDate.now()),
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
     config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
-    portCode
-  )
+    portCode, afp.tickingSource(1 seconds, 2 minutes))
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

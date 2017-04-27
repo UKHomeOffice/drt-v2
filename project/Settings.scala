@@ -35,6 +35,7 @@ object Settings {
 
     val akkaVersion = "2.4.16"
 
+    val specs2Version = "3.7"
     val react = "15.1.0"
     val jQuery = "1.11.1"
     val bootstrap = "3.3.6"
@@ -56,11 +57,13 @@ object Settings {
     "me.chrons" %%% "boopickle" % versions.booPickle
   ))
 
+
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "io.spray" % "spray-caching_2.11" % "1.3.4",
-    "org.specs2" %% "specs2-core" % "3.7" % Test,
-    "org.specs2" %% "specs2-junit" % "3.7" % Test,
+    "org.specs2" %% "specs2-core" % specs2Version % Test,
+    "org.specs2" %% "specs2-junit" % specs2Version % Test,
+    "org.specs2" %% "specs2-mock" % specs2Version % Test,
     "org.specs2" %% "specs2-scalacheck" % "3.8.4" % Test,
     "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
