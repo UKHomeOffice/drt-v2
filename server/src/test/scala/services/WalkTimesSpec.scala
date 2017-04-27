@@ -26,7 +26,7 @@ class WalkTimesSpec extends SpecificationLike {
       val validCsvLine = "101,T1,475"
 
       val result = walkTimeFromString(validCsvLine)
-      val expected = Some(WalkTime("101", "T1", 475))
+      val expected = Some(WalkTime("101", "T1", 475000L))
 
       result === expected
     }
@@ -42,74 +42,133 @@ class WalkTimesSpec extends SpecificationLike {
     }
   }
 
-  "walkTimeSecondsProvider" >> {
+  "walkTimeMillisProvider" >> {
     "Given no WalkTimes, " +
-      "when we ask for the walk time seconds for a WalkTime, " +
+      "when we ask for the walk time millis for a WalkTime, " +
       "then we should get None" >> {
       val walkTimes = Seq()
 
-      val result = walkTimeSecondsProvider(walkTimes)("2", "T1")
+      val result = walkTimeMillisProvider(walkTimes)("2", "T1")
       val expected = None
 
       result === expected
     }
 
     "Given a WalkTime, " +
-      "when we ask for the walk time seconds for that WalkTime, " +
-      "then we should get the seconds from it" >> {
-      val walkTimes = Seq(WalkTime("1", "T1", 10))
+      "when we ask for the walk time millis for that WalkTime, " +
+      "then we should get the millis from it" >> {
+      val walkTimes = Seq(WalkTime("1", "T1", 10000))
 
-      val result = walkTimeSecondsProvider(walkTimes)("1", "T1")
-      val expected = Some(10)
+      val result = walkTimeMillisProvider(walkTimes)("1", "T1")
+      val expected = Some(10000)
 
       result === expected
     }
 
     "Given a WalkTime, " +
-      "when we ask for the walk time seconds for a different WalkTime, " +
+      "when we ask for the walk time millis for a different WalkTime, " +
       "then we should get None" >> {
-      val walkTimes = Seq(WalkTime("1", "T1", 10))
+      val walkTimes = Seq(WalkTime("1", "T1", 10000))
 
-      val result = walkTimeSecondsProvider(walkTimes)("2", "T1")
+      val result = walkTimeMillisProvider(walkTimes)("2", "T1")
       val expected = None
 
       result === expected
     }
 
     "Given some WalkTimes, " +
-      "when we ask for the walk time seconds for one of them, " +
-      "then we should get the seconds for the matching WalkTime" >> {
+      "when we ask for the walk time millis for one of them, " +
+      "then we should get the millis for the matching WalkTime" >> {
       val walkTimes = Seq(
-        WalkTime("1", "T1", 10),
-        WalkTime("2", "T1", 20),
-        WalkTime("3", "T1", 30)
+        WalkTime("1", "T1", 10000),
+        WalkTime("2", "T1", 20000),
+        WalkTime("3", "T1", 30000)
       )
 
-      val result = walkTimeSecondsProvider(walkTimes)("2", "T1")
-      val expected = Some(20)
+      val result = walkTimeMillisProvider(walkTimes)("2", "T1")
+      val expected = Some(20000)
 
       result === expected
     }
   }
+
+  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, defaultWalkTimeMillis: Long)
+             (gateWalkTimesProvider: WalkTimeMillisProvider)
+             (flight: ApiFlight): MilliDate = {
+    val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
+
+    val walkTimeMillis = gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis)
+
+    println(s"walkTimeMillis: $walkTimeMillis + bestChoxTimeMillis: $bestChoxTimeMillis")
+
+    MilliDate(bestChoxTimeMillis + walkTimeMillis)
+  }
+
+  def bestChoxTime(timeToChoxMillis: Long, flight: ApiFlight) = {
+    val bestChoxTimeMillis = if (flight.ActChoxDT != "") SDate.parseString(flight.ActChoxDT).millisSinceEpoch
+    else if (flight.EstChoxDT != "") SDate.parseString(flight.EstChoxDT).millisSinceEpoch
+    else if (flight.ActDT != "") SDate.parseString(flight.ActDT).millisSinceEpoch + timeToChoxMillis
+    else if (flight.EstDT != "") SDate.parseString(flight.EstDT).millisSinceEpoch + timeToChoxMillis
+    else SDate.parseString(flight.SchDT).millisSinceEpoch + timeToChoxMillis
+    bestChoxTimeMillis
+  }
+
+  "bestChoxTime" >> {
+    "Given an ApiFlight with only a scheduled time, " +
+    "when we ask for the best chox time, " +
+    "then we should get the actual chox time in millis" >> {
+      
+    }
+  }
+
   "pcpFrom" >> {
     "Given an ApiFlight with a known gate and actual chox, " +
     "when we ask for the pcpFrom time, " +
     "then we should get actual chox + first pax off time + walk time" >> {
-      def pcpFrom(firstPaxOff: (ApiFlight) => Long)(walkTimesProvider: WalkTimeSecondsProvider)(flight: ApiFlight): MilliDate = {
-        val timeToChoxMillis = 120000L
-        val defaultWalkTimeSeconds = 300
-        val bestChoxTimeMillis = if (flight.ActChoxDT != "") SDate.parseString(flight.ActChoxDT).millisSinceEpoch
-        else if (flight.EstChoxDT != "") SDate.parseString(flight.EstChoxDT).millisSinceEpoch
-        else if (flight.ActDT != "") SDate.parseString(flight.ActDT).millisSinceEpoch + timeToChoxMillis
-        else if (flight.EstDT != "") SDate.parseString(flight.EstDT).millisSinceEpoch + timeToChoxMillis
-        else SDate.parseString(flight.SchDT).millisSinceEpoch + timeToChoxMillis
 
-        val walkTimeMillis = walkTimesProvider(flight.Stand, flight.Terminal).getOrElse(defaultWalkTimeSeconds) * 1000L
+      val flight = apiFlight(
+        actChox = "2017-01-01T00:20.00Z",
+        terminal = "T1",
+        gate = "2"
+      )
 
-        MilliDate(bestChoxTimeMillis + walkTimeMillis)
-      }
+      val walkTimes = Seq(
+        WalkTime("1", "T1", 10000),
+        WalkTime("2", "T1", 20000)
+      )
 
-      1 === 2
+      val wtp = walkTimeMillisProvider(walkTimes) _
+
+      val result = pcpFrom(0, 0, 0)(wtp)(flight)
+      val expected = MilliDate(1483230020000L) // 2017-01-01T00:20:20.00Z
+
+      result === expected
     }
   }
+
+  def apiFlight(sch: String = "", est: String = "", act: String = "", estChox: String = "", actChox: String = "",
+                terminal: String = "", gate: String = "", stand: String = ""): ApiFlight =
+    ApiFlight(
+      Operator = "",
+      Status = "",
+      SchDT = sch,
+      EstDT = est,
+      ActDT = act,
+      EstChoxDT = estChox,
+      ActChoxDT = actChox,
+      Gate = gate,
+      Stand = "",
+      MaxPax = 1,
+      ActPax = 0,
+      TranPax = 0,
+      RunwayID = "",
+      BaggageReclaimId = "",
+      FlightID = 1,
+      AirportID = "",
+      Terminal = terminal,
+      rawICAO = "",
+      rawIATA = "",
+      Origin = "",
+      PcpTime = 0
+    )
 }
