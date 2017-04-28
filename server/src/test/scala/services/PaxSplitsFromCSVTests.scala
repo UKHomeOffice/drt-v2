@@ -6,7 +6,7 @@ import org.specs2.mutable.SpecificationLike
 import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
-import services.workloadcalculator.PaxLoadCalculator
+import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -109,7 +109,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       val today = new DateTime()
       val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"))
 
-      val workloadsCalculator = new WorkloadsCalculator {
+      val workloadsCalculator = new WorkloadCalculator {
         def splitRatioProvider = csvSplitProvider.splitRatioProvider
 
         def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d

@@ -7,7 +7,7 @@ import drt.shared.{ApiFlight, _}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import services._
-import services.workloadcalculator.PaxLoadCalculator
+import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 import spray.caching.{Cache, LruCache}
 
 import scala.collection.immutable.{NumericRange, Seq}
@@ -46,7 +46,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
                            timeProvider: () => DateTime
                           ) extends Actor
   with DiagnosticActorLogging
-  with WorkloadsCalculator
+  with WorkloadCalculator
   with LoggingCrunchCalculator
   with FlightState
   with DomesticPortList {

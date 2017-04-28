@@ -14,7 +14,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
 import services.SDate.implicits._
-import services.workloadcalculator.PaxLoadCalculator
+import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -92,7 +92,7 @@ object WorkloadSimulation {
 
 abstract class ApiService(airportConfig: AirportConfig)
   extends Api
-    with WorkloadsCalculator
+    with WorkloadCalculator
     with FlightsService
     with AirportToCountryLike
     with ActorBackedCrunchService

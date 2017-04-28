@@ -4,7 +4,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike
-import services.workloadcalculator.PaxLoadCalculator
+import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
 import scala.collection.Set
 import scala.collection.immutable.Iterable
@@ -44,7 +44,7 @@ class WorkloadsServiceTests extends SpecificationLike {
     "Given a flight with 10 pax with processing time of 20 seconds, " +
       "when we ask for the terminal workloads, " +
       "then we should see 1 minute with 200 workload" >> {
-      val wc = new WorkloadsCalculator {
+      val wc = new WorkloadCalculator {
         override def splitRatioProvider = (apiFlight: ApiFlight) => {
           Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
         }
@@ -67,7 +67,7 @@ class WorkloadsServiceTests extends SpecificationLike {
     "Given 2 flights arriving at T1 & T2, " +
       "when we ask for the terminal workloads, " +
       "then we should see each terminal's processing times applied " >> {
-      val wc = new WorkloadsCalculator {
+      val wc = new WorkloadCalculator {
         override def splitRatioProvider = (apiFlight: ApiFlight) => {
           Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
         }
