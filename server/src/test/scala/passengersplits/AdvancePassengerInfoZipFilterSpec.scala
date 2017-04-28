@@ -16,19 +16,6 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
   val outerSystem = system
 
-  val reader = new SimpleAtmosReader {
-
-    override def skyscapeAtmosHost = "cas00003.skyscapecloud.com:8443"
-
-    override def bucket = "drtdqprod"
-
-    override def log = outerSystem.log
-
-    override def zipFileNameFilter(filename: String) = ???
-
-    override implicit def system = outerSystem
-  }
-
 
   "Given we are polling for a new batch of zip files" >> {
 
