@@ -1,35 +1,44 @@
 package services
 
 import drt.shared.{ApiFlight, MilliDate}
+import org.slf4j.LoggerFactory
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 object PcpArrival {
+
+  val log = LoggerFactory.getLogger(getClass)
 
   case class WalkTime(from: String, to: String, walkTimeMillis: Long)
 
   def walkTimesLinesFromFileUrl(walkTimesFileUrl: String): Seq[String] = {
-    val file: Try[Seq[String]] = Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq)
-    file match {
+    Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq) match {
       case Success(walkTimes) => walkTimes
       case _ => Seq()
     }
   }
 
   def walkTimeFromString(walkTimeCsvLine: String): Option[WalkTime] = walkTimeCsvLine.split(",") match {
-    case Array(from, terminal, walkTime) =>
+    case Array(from, walkTime, terminal) =>
       Try(walkTime.toInt) match {
         case Success(s) => Some(WalkTime(from, terminal, s * 1000L))
-        case _ => None
+        case f => {
+          log.info(s"walkTimeFromString failure ($from, $terminal, $walkTime) $f")
+          None
+        }
       }
-    case _ => None
+    case f =>
+      log.info(s"walkTimeFromString didn't match array: $f")
+      None
   }
 
   def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String) = {
     val walkTimes = walkTimesLinesFromFileUrl(walkTimesCsvFileUrl)
       .map(walkTimeFromString)
       .collect {
-        case Some(wt) => wt
+        case Some(wt) =>
+          log.info(s"Loaded WalkTime $wt")
+          wt
       }
     walkTimeMillisProvider(walkTimes) _
   }
@@ -38,7 +47,7 @@ object PcpArrival {
 
   def walkTimeMillisProvider(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Long] = {
     walkTimes.find {
-      case WalkTime(f, t, _) if f == from && t == terminal => true
+      case WalkTime(f, t, wtm) if f == from && t == terminal => true
       case _ => false
     }.map(_.walkTimeMillis)
   }
@@ -49,6 +58,13 @@ object PcpArrival {
     val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
     val walkTimeMillis = standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
       gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
+
+    standWalkTimesProvider(flight.Stand, flight.Terminal) match {
+      case Some(wt) =>
+        log.info(s"Walk time found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal} (${wt / 1000})")
+      case _ =>
+        log.info(s"Walk time not found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal}")
+    }
 
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }

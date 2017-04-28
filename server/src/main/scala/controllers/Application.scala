@@ -77,12 +77,6 @@ class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
   def splitRatioProvider = SplitsProvider.splitsForFlight(splitsProviders)
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
-
-  val gateWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standsWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-
-  override def pcpArrivalTimeProvider = pcpFrom(airportConfig.timeToChoxMillis,
-    airportConfig.firstPaxOffMillis, airportConfig.defaultWalkTimeMillis)(gateWalkTimesProvider, standsWalkTimesProvider)
 }
 
 object SystemActors {
@@ -175,6 +169,7 @@ class Application @Inject()(
 
     val gateWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
     val standsWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
     override def pcpArrivalTimeProvider = pcpFrom(airportConfig.timeToChoxMillis,
       airportConfig.firstPaxOffMillis, airportConfig.defaultWalkTimeMillis)(gateWalkTimesProvider, standsWalkTimesProvider)
   }
@@ -231,6 +226,13 @@ class Application @Inject()(
   }
 
   val copiedToApiFlights = flightsSource(mockProd, portCode)
+//    .map(flights => {
+//    Flights(flights.flights.map(flight => {
+//      val pcpTime = pcpArrivalTimeProvider(flight)
+//      log.info(s"${flight.IATA} ${flight.SchDT}, ${flight.EstDT}, ${flight.ActDT}, ${flight.EstChoxDT}, ${flight.ActChoxDT}, pcpTime: ${pcpTime}")
+//      flight.copy(PcpTime = pcpTime.millisSinceEpoch)
+//    }))
+//  })
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   import passengersplits.polling.{AtmosFilePolling => afp}

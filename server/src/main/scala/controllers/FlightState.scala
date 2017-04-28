@@ -2,9 +2,11 @@ package controllers
 
 
 import akka.event.LoggingAdapter
+import com.typesafe.config.ConfigFactory
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
 import drt.shared.ApiFlight
+import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
 
 import scala.language.postfixOps
 import scala.collection.mutable
@@ -25,8 +27,17 @@ trait FlightState {
     flights = withoutDomesticFlights
   }
 
+  log.info(s"Loading walk times from '${ConfigFactory.load.getString("walk_times.stands_csv_url")}")
+  val gateWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standsWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
+  def pcpArrivalTimeProvider = pcpFrom(120000L, 120000L, 300000L)(gateWalkTimesProvider, standsWalkTimesProvider) _
+
   def addNewFlights(existingFlights: Map[Int, ApiFlight], newFlights: List[ApiFlight]) = {
-    existingFlights ++ newFlights.map(newFlight => (newFlight.FlightID, newFlight))
+    existingFlights ++ newFlights.map(newFlight => {
+      val flightWithPcp = newFlight.copy(PcpTime = pcpArrivalTimeProvider(newFlight).millisSinceEpoch)
+      (newFlight.FlightID, flightWithPcp)
+    })
   }
 
   def filterOutFlightsBeforeThreshold(flights: Map[Int, ApiFlight], since: String): Map[Int, ApiFlight] = {

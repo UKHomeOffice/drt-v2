@@ -29,8 +29,7 @@ trait WorkloadCalculator {
       flightsByTerminal
     })
 
-//    val flightPaxTypeAndQueueCountsFlow = voyagePaxSplitsFlowOverTime(splitRatioProvider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)) _
-        val flightPaxTypeAndQueueCountsFlow = voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider) _
+    val flightPaxTypeAndQueueCountsFlow = voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider) _
 
     val workloadByTerminal: Future[Map[TerminalName, Map[QueueName, L]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
@@ -92,7 +91,8 @@ object PaxLoadCalculator {
     val queuePaxLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumPaxLoads)(flights)
     val queueWorkLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumWorkLoads(procTimeProvider))(flights)
 
-    queuePaxLoads.keys.map(queueName => {(queueName, (
+    queuePaxLoads.keys.map(queueName => {
+      (queueName, (
         queueWorkLoads(queueName).map(tuple => WL(tuple._1, tuple._2)),
         queuePaxLoads(queueName).map(tuple => Pax(tuple._1, tuple._2))))
     }).toMap

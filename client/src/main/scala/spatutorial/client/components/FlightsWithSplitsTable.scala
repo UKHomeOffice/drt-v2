@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.modules.FlightsWithSplitsView
-import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
+import drt.shared.{AirportInfo, MilliDate, PaxTypeAndQueue, PaxTypesAndQueues}
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
@@ -229,6 +229,10 @@ object FlightsWithSplitsTable {
         "Act" -> f.ActDT,
         "Est Chox" -> f.EstChoxDT,
         "Act Chox" -> f.ActChoxDT,
+        "PCP" -> {
+          val d = SDate(MilliDate(f.PcpTime))
+          f"${d.getHours}%02d:${d.getMinutes}%02d"
+        },
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
         "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),

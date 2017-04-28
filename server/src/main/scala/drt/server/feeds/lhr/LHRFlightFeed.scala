@@ -10,6 +10,8 @@ import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.LoggerFactory
 import drt.shared.ApiFlight
+import services.workloadcalculator._
+
 
 import scala.concurrent.duration._
 import scala.sys.process._
@@ -91,7 +93,7 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
   lazy val copiedToApiFlights: Source[List[ApiFlight], NotUsed] = Source(
     List(
       successfulFlights.map(flight => {
-        val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
+        val pcpTime: Long =  flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
         val schDtIso = flight.scheduled.toDateTimeISO().toString()
         val defaultPaxPerFlight = 200
         ApiFlight(
