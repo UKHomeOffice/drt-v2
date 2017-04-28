@@ -57,6 +57,8 @@ object FlightCrunchInteractionTests extends TestSuite {
         case PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) => 75d / 60d
       }
 
+    override def pcpArrivalTimeProvider: (ApiFlight) => MilliDate = (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+
     override def lastMidnightString: String = "2000-01-01"
   }
 

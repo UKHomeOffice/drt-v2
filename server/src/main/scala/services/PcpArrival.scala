@@ -5,10 +5,15 @@ import drt.shared.{ApiFlight, MilliDate}
 import scala.util.{Success, Try}
 
 object PcpArrival {
+
   case class WalkTime(from: String, to: String, walkTimeMillis: Long)
 
   def walkTimesLinesFromFileUrl(walkTimesFileUrl: String): Seq[String] = {
-    scala.io.Source.fromURL(walkTimesFileUrl).getLines().drop(1).toSeq
+    val file: Try[Seq[String]] = Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq)
+    file match {
+      case Success(walkTimes) => walkTimes
+      case _ => Seq()
+    }
   }
 
   def walkTimeFromString(walkTimeCsvLine: String): Option[WalkTime] = walkTimeCsvLine.split(",") match {
@@ -18,6 +23,15 @@ object PcpArrival {
         case _ => None
       }
     case _ => None
+  }
+
+  def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String) = {
+    val walkTimes = walkTimesLinesFromFileUrl(walkTimesCsvFileUrl)
+      .map(walkTimeFromString)
+      .collect {
+        case Some(wt) => wt
+      }
+    walkTimeMillisProvider(walkTimes) _
   }
 
   type WalkTimeMillisProvider = (String, String) => Option[Long]
@@ -34,7 +48,7 @@ object PcpArrival {
              (flight: ApiFlight): MilliDate = {
     val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
     val walkTimeMillis = standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
-        gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
+      gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
 
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }

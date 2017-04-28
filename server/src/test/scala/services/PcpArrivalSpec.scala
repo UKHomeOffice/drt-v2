@@ -8,18 +8,6 @@ class PcpArrivalSpec extends SpecificationLike {
 
   import PcpArrival._
 
-  "walkTimesLinesFromConfig" >> {
-    "Given a valid path to a walk times CSV file, " +
-      "then we should get back the lines from that file in a Seq" >> {
-      val walkTimesFileUrl = ConfigFactory.load.getString("walk_times.gates_csv_url")
-
-      val result = walkTimesLinesFromFileUrl(walkTimesFileUrl).take(1)
-      val expected = Seq("101,475,T1")
-
-      result === expected
-    }
-  }
-
   "parseWalkTime" >> {
     "Given a valid walk time csv line string " +
       "then we should get back a WalkTime representing it" >> {

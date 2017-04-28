@@ -2,7 +2,7 @@ package services.workloadcalculator
 
 import drt.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared._
+import drt.shared.{ApiFlight, _}
 import org.slf4j.LoggerFactory
 import services.SDate
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount, ProcTime, voyagePaxSplitsFlowOverTime}
@@ -19,21 +19,26 @@ trait WorkloadCalculator {
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double
 
-  def queueLoadsByTerminal[L](flights: Future[List[ApiFlight]], queueLoadCalculator: ((ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)], (PaxTypeAndQueue) => ProcTime) => (List[ApiFlight]) => Map[QueueName, L]): Future[TerminalQueuePaxAndWorkLoads[L]] = {
+  def pcpArrivalTimeProvider: (ApiFlight) => MilliDate
+
+  type FlightsToQueueLoads[L] = ((ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)], (PaxTypeAndQueue) => ProcTime) => (List[ApiFlight]) => Map[QueueName, L]
+
+  def queueLoadsByTerminal[L](flights: Future[List[ApiFlight]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[TerminalQueuePaxAndWorkLoads[L]] = {
     val flightsByTerminalFut: Future[Map[TerminalName, List[ApiFlight]]] = flights.map(fs => {
       val flightsByTerminal = fs.filterNot(freightOrEngineering).groupBy(_.Terminal)
       flightsByTerminal
     })
 
-    val calcPaxTypeAndQueueCountForAFlightOverTime = voyagePaxSplitsFlowOverTime(splitRatioProvider, (flight: ApiFlight) => SDate.parseString(flight.SchDT).millisSinceEpoch)_
+//    val flightPaxTypeAndQueueCountsFlow = voyagePaxSplitsFlowOverTime(splitRatioProvider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)) _
+        val flightPaxTypeAndQueueCountsFlow = voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider) _
 
     val workloadByTerminal: Future[Map[TerminalName, Map[QueueName, L]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
         log.debug(s"Got flights by terminal ${fbt}")
         val terminalName = fbt._1
         val flights = fbt._2
-        val plc = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, procTimesProvider(terminalName))
-        (terminalName -> plc(flights))
+        val queueLoadsForFlights = flightsToQueueLoads(flightPaxTypeAndQueueCountsFlow, procTimesProvider(terminalName))
+        terminalName -> queueLoadsForFlights(flights)
       }))
 
     workloadByTerminal
@@ -117,8 +122,8 @@ object PaxLoadCalculator {
     paxTypeAndQueueCounts.map(ptQc => procTimeProvider(ptQc.paxAndQueueType) * ptQc.paxSum).sum
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios], pcpArrivalForFlight: (ApiFlight) => MillisSinceEpoch)(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val pcpArrivalMillis = pcpArrivalForFlight(flight)
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios], pcpArrivalForFlight: (ApiFlight) => MilliDate)(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    val pcpArrivalMillis = pcpArrivalForFlight(flight).millisSinceEpoch
     val splits = splitsRatioProvider(flight).get.splits
     val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpArrivalMillis, 1)
       .zip(paxDeparturesPerMinutes(if (flight.ActPax > 0) flight.ActPax else flight.MaxPax, paxOffFlowRate))

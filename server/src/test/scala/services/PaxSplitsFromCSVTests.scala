@@ -110,9 +110,11 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"))
 
       val workloadsCalculator = new WorkloadCalculator {
-        def splitRatioProvider = csvSplitProvider.splitRatioProvider
+        override def splitRatioProvider = csvSplitProvider.splitRatioProvider
 
-        def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
+        override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
+
+        override def pcpArrivalTimeProvider: (ApiFlight) => MilliDate = (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global

@@ -39,6 +39,9 @@ object CrunchTests {
       "nonEeaDesk" -> 45
     ),
     terminalNames = Seq("A1", "A2"),
+    timeToChoxMillis = 0L,
+    firstPaxOffMillis = 0L,
+    defaultWalkTimeMillis = 0L,
     defaultPaxSplits = SplitRatios(
       SplitRatio(eeaMachineReadableToDesk, 0.4875),
       SplitRatio(eeaMachineReadableToEGate, 0.1625),

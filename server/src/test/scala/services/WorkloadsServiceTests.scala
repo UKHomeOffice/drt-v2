@@ -50,6 +50,8 @@ class WorkloadsServiceTests extends SpecificationLike {
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 20d
+
+        override def pcpArrivalTimeProvider: (ApiFlight) => MilliDate = (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
       }
 
       val flightsFuture = Future.successful(List(apiFlight(iataFlightCode = "BA0001", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A1")))
@@ -75,6 +77,8 @@ class WorkloadsServiceTests extends SpecificationLike {
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
           Map("A1" -> 20d, "A2" -> 40d)(terminalName)
         }
+
+        override def pcpArrivalTimeProvider: (ApiFlight) => MilliDate = (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
       }
 
       val flightsFuture = Future.successful(List(

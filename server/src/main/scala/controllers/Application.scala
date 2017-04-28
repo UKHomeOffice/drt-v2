@@ -51,6 +51,7 @@ import ExecutionContext.Implicits.global
 import scala.Seq
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import scala.reflect.macros.Context
+import PcpArrival.{walkTimeMillisProviderFromCsv, pcpFrom}
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -76,6 +77,12 @@ class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
   def splitRatioProvider = SplitsProvider.splitsForFlight(splitsProviders)
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+
+  val gateWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standsWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
+  override def pcpArrivalTimeProvider = pcpFrom(airportConfig.timeToChoxMillis,
+    airportConfig.firstPaxOffMillis, airportConfig.defaultWalkTimeMillis)(gateWalkTimesProvider, standsWalkTimesProvider)
 }
 
 object SystemActors {
@@ -165,8 +172,12 @@ class Application @Inject()(
     override def splitRatioProvider = SplitsProvider.splitsForFlight(splitProviders)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
-  }
 
+    val gateWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+    val standsWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+    override def pcpArrivalTimeProvider = pcpFrom(airportConfig.timeToChoxMillis,
+      airportConfig.firstPaxOffMillis, airportConfig.defaultWalkTimeMillis)(gateWalkTimesProvider, standsWalkTimesProvider)
+  }
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>
