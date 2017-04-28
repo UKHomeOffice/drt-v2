@@ -295,13 +295,9 @@ object AtmosFilePolling {
         }
         messagesToSendFuture map { messages =>
 
-          log.info(s"tickId: $tickId got messages to send ${messages}")
+          log.info(s"tickId: $tickId got messages to send ${messages.length}")
           val messageSource: Source[VoyagePassengerInfo, NotUsed] = Source(messages)
-          val zipSendingGraph: RunnableGraph[NotUsed] = messageSource.map {
-            x =>
-              log.info(s"argx $x")
-              x
-          }.to(subscriberFlightActor)
+          val zipSendingGraph: RunnableGraph[NotUsed] = messageSource.to(subscriberFlightActor)
           zipSendingGraph.run()
 
           eventualZipCompletion.onFailure { case oc => log.error(s"tickId: $tickId processingZip had error ${oc}") }
