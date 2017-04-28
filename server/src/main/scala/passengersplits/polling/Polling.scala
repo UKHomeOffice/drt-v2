@@ -101,7 +101,9 @@ object FilePolling {
 
 object FutureUtils {
   private def lift[T](futures: Seq[Future[T]]) =
-    futures.map(_.map { Success(_) }.recover { case t => Failure(t) })
+    futures.map(_.map {
+      Success(_)
+    }.recover { case t => Failure(t) })
 
   def waitAll[T](futures: Seq[Future[T]]) =
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
@@ -109,6 +111,7 @@ object FutureUtils {
 
 object AtmosFilePolling {
   val log = LoggerFactory.getLogger(getClass)
+
   import FutureUtils._
 
   type TickId = DateTime
@@ -145,17 +148,19 @@ object AtmosFilePolling {
                    atmosHost: String,
                    bucket: String, portCode: String,
                    tickingSource: Source[DateTime, Any],
-                   batchAtMost: FiniteDuration = 90 seconds)(implicit actorSystem: ActorSystem, mat: Materializer) = {
+                   batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, mat: Materializer) = {
     val statefulPoller = StatefulAtmosPoller(Some(initialFileFilter), atmosHost, bucket)
     val unzippedFileProvider = statefulPoller.unzippedFileProvider
 
 
     def createFilenameSource() = {
+      log.info(s"creating stream of zip files")
       unzippedFileProvider.createBuilder.listFilesAsStream(bucket).map(_._1)
     }
 
 
     def getUzfc(zipFileName: String): Future[List[UnzippedFileContent]] = {
+      log.info(s"should be unzipping '$zipFileName'")
       manifestsFromZip(unzippedFileProvider, mat, zipFileName)
     }
 
@@ -214,7 +219,9 @@ object AtmosFilePolling {
     log.info(s"tickId: $tickId Starting batch")
     val futureZipFiles: Future[Seq[String]] = zipFilenamesSource.runWith(Sink.seq)
     val internalMaterializer = materializer //..ActorMaterializer()
-
+    futureZipFiles.onComplete {
+      case oc => log.info(s"tickId: $tickId zip file list retrieval completes with $oc")
+    }
     val futureOfFutureProcessedZipFiles: Future[Seq[Future[String]]] = for (fileNames <- futureZipFiles) yield {
       processSingleZipFile(tickId, unzipFileContent, flightPassengerReporter, batchFileState, fileNames)
     }
@@ -223,8 +230,9 @@ object AtmosFilePolling {
 
     val futureOfProcessedZipFiles: Future[Seq[Try[String]]] = futureOfFutureProcessedZipFiles.flatMap { (batchSuccess: Seq[Future[String]]) =>
       val allZipFilesInBatch: Future[Seq[Try[String]]] = waitAll(batchSuccess)
-      allZipFilesInBatch.onComplete{
-        (oc) => log.info(s"tickId: $tickId batchComplete")
+      allZipFilesInBatch.onComplete {
+        (oc) =>
+          log.info(s"tickId: $tickId batchComplete")
           batchFileState.onBatchComplete(tickId)
       }
       allZipFilesInBatch
@@ -248,25 +256,23 @@ object AtmosFilePolling {
     log.info(s"tickId: ${tickId} batch begins zipFilesToProcess: ${zipFilesToProcess} since $latestFile, allFiles: ${fileNames.length} vs ${zipFilesToProcess.length}")
     zipFilesToProcess
       .map(zipFileName => {
-        log.info(s"tickId: $tickId: latestFile: $latestFile")
-        log.info(s"tickId: $tickId: AdvPaxInfo: extracting manifests from zip $zipFileName")
+        log.info(s"tickId: $tickId: latestFile: $latestFile AdvPaxInfo: extracting manifests from zip $zipFileName")
 
         val zipFuture: Future[List[UnzippedFileContent]] = unzipFileContent(zipFileName)
         val messagesToSendFuture: Future[Seq[VoyagePassengerInfo]] = zipFuture
           .map(manifests => {
-            log.info(s"tickId: $tickId processing manifests from zip '$zipFileName'. Length: ${manifests.length}, Content: ${manifests.map(_.filename)}")
+            val jsonFilenames = manifests.map(_.filename)
+            log.info(s"tickId: $tickId processing manifests from zip '$zipFileName'. Length: ${manifests.length}, Content: ${jsonFilenames}")
             val voyagePassengerInfos = manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests)
             log.info(s"got voyagePassengerifnso ${voyagePassengerInfos}")
             val (vpis, errors) = voyagePassengerInfos partition {
               case (_, _, Success(s)) => true
               case _ => false
             }
-            log.info(s"vpis $vpis")
-            log.info(s"errors $errors")
-            errors.foreach {
-              case (zipfile, jsonfile, Failure(f)) => log.warn(s"Failed to parse voyage passenger info: '${jsonfile}' in ${zipfile}, error: $f")
-            }
 
+            errors.foreach {
+              case (zipfile, jsonfile, Failure(f)) => log.warn(s"tickId: $tickId Failed to parse voyage passenger info: '${jsonfile}' in ${zipfile}, error: $f")
+            }
 
             log.info(s"tickId: $tickId processed manifests from zip '$zipFileName': Length ${manifests.length}  ${manifests.headOption.map(_.filename)}")
             vpis.map { case (zipfile, jsonfile, Success(vpi)) => vpi }
@@ -275,7 +281,7 @@ object AtmosFilePolling {
 
         val promiseZipDone = Promise[String]()
         val monitor = Polling.completionMonitor(actorSystem, Polling.props(promiseZipDone))
-        log.info(s"completionMonitor is $monitor")
+        log.info(s"tickId: $tickId completionMonitor is $monitor")
         val subscriberFlightActor = Polling.subscriberFlightActor(flightPassengerReporter,
           Polling.completionMessage(zipFileName, monitor))
 
@@ -289,7 +295,7 @@ object AtmosFilePolling {
         }
         messagesToSendFuture map { messages =>
 
-          log.info(s"got messages to send ${messages}")
+          log.info(s"tickId: $tickId got messages to send ${messages}")
           val messageSource: Source[VoyagePassengerInfo, NotUsed] = Source(messages)
           val zipSendingGraph: RunnableGraph[NotUsed] = messageSource.map {
             x =>
@@ -298,7 +304,7 @@ object AtmosFilePolling {
           }.to(subscriberFlightActor)
           zipSendingGraph.run()
 
-          eventualZipCompletion.onFailure{ case oc => log.error(s"tickId: $tickId processingZip had error ${oc}")}
+          eventualZipCompletion.onFailure { case oc => log.error(s"tickId: $tickId processingZip had error ${oc}") }
           eventualZipCompletion.onSuccess {
             case zipFilename =>
               log.info(s"AdvPaxInfo: tickId: $tickId updating latestFile: $latestFile to $zipFileName complete $zipFilename")
