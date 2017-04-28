@@ -161,7 +161,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillisProvider(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -180,7 +180,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillisProvider(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
 
       val actChoxMillis = 1483230000000L
       val expected = MilliDate(actChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -202,11 +202,91 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillisProvider(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp)(flight)
-      pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
 
       val actChoxMillis = 1483230000000L
       val expected = MilliDate(actChoxMillis + firstPaxOffMillis + walkTimeMillis)
+
+      result === expected
+    }
+
+    "Given an ApiFlight with a scheduled time, a gate and stand, but no walk times, " +
+      "when we ask for the pcpFrom time, " +
+      "then we should get scheduled + time to chox + first pax off time + default walk time" >> {
+      val flight = apiFlight(sch = "2017-01-01T00:20.00Z", terminal = "T1", gate = "2", stand = "2L")
+      val walkTimes = Seq()
+      val timeToChoxMillis = 120000L // 2 minutes
+      val firstPaxOffMillis = 180000L // 3 minutes
+      val defaultWalkTimeMillis = 300000L // 5 minutes
+
+      val wtp = walkTimeMillisProvider(walkTimes) _
+
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
+
+      val schMillis = 1483230000000L
+      val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
+
+      result === expected
+    }
+
+    "Given an ApiFlight with a scheduled time, a gate and stand, and only a matching gate walk time, " +
+      "when we ask for the pcpFrom time, " +
+      "then we should get scheduled + time to chox + first pax off time + gate walk time" >> {
+      val flight = apiFlight(sch = "2017-01-01T00:20.00Z", terminal = "T1", gate = "2", stand = "2L")
+      val gateWalkTimeMillis = 600000L
+      val timeToChoxMillis = 120000L // 2 minutes
+      val firstPaxOffMillis = 180000L // 3 minutes
+      val defaultWalkTimeMillis = 300000L // 5 minutes
+
+      val gWtp = walkTimeMillisProvider(Seq(WalkTime("2", "T1", gateWalkTimeMillis))) _
+      val sWtp = walkTimeMillisProvider(Seq()) _
+
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(gWtp, sWtp)(flight)
+
+      val schMillis = 1483230000000L
+      val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + gateWalkTimeMillis)
+
+      result === expected
+    }
+
+    "Given an ApiFlight with a scheduled time, a gate and stand, and only a matching stand walk time, " +
+      "when we ask for the pcpFrom time, " +
+      "then we should get scheduled + time to chox + first pax off time + stand walk time" >> {
+      val flight = apiFlight(sch = "2017-01-01T00:20.00Z", terminal = "T1", gate = "2", stand = "2L")
+      val standWalkTimeMillis = 600000L
+      val timeToChoxMillis = 120000L // 2 minutes
+      val firstPaxOffMillis = 180000L // 3 minutes
+      val defaultWalkTimeMillis = 300000L // 5 minutes
+
+      val gWtp = walkTimeMillisProvider(Seq()) _
+      val sWtp = walkTimeMillisProvider(Seq(WalkTime("2L", "T1", standWalkTimeMillis))) _
+
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(gWtp, sWtp)(flight)
+
+      val schMillis = 1483230000000L
+      val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
+
+      result === expected
+    }
+
+    "Given an ApiFlight with a scheduled time, a gate and stand, and both matching stand and gate walk times, " +
+      "when we ask for the pcpFrom time, " +
+      "then we should get scheduled + time to chox + first pax off time + stand walk time" >> {
+      val flight = apiFlight(sch = "2017-01-01T00:20.00Z", terminal = "T1", gate = "2", stand = "2L")
+      val timeToChoxMillis = 120000L // 2 minutes
+      val firstPaxOffMillis = 180000L // 3 minutes
+      val defaultWalkTimeMillis = 300000L // 5 minutes
+
+      val gateWalkTimeMillis = 540000L
+      val gWtp = walkTimeMillisProvider(Seq(WalkTime("2", "T1", gateWalkTimeMillis))) _
+
+      val standWalkTimeMillis = 600000L
+      val sWtp = walkTimeMillisProvider(Seq(WalkTime("2L", "T1", standWalkTimeMillis))) _
+
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(gWtp, sWtp)(flight)
+
+      val schMillis = 1483230000000L
+      val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
 
       result === expected
     }
@@ -223,7 +303,7 @@ class PcpArrivalSpec extends SpecificationLike {
       EstChoxDT = estChox,
       ActChoxDT = actChox,
       Gate = gate,
-      Stand = "",
+      Stand = stand,
       MaxPax = 1,
       ActPax = 0,
       TranPax = 0,

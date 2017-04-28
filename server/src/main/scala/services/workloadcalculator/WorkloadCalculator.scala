@@ -1,11 +1,9 @@
 package services.workloadcalculator
 
-import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
-import services.SDate
 import drt.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared._
+import org.slf4j.LoggerFactory
 
 import scala.List
 import scala.collection.immutable._
@@ -86,10 +84,10 @@ object PaxLoadCalculator {
     paxTypeAndQueueCounts.map(ptQc => procTimeProvider(ptQc.paxAndQueueType) * ptQc.paxSum).sum
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios])(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val timesMin = SDate.parseString(flight.SchDT).millisSinceEpoch
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios], pcpArrivalForFlight: (ApiFlight) => MillisSinceEpoch)(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    val pcpArrivalMillis = pcpArrivalForFlight(flight)
     val splits = splitsRatioProvider(flight).get.splits
-    val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(timesMin, 1)
+    val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpArrivalMillis, 1)
       .zip(paxDeparturesPerMinutes(if (flight.ActPax > 0) flight.ActPax else flight.MaxPax, paxOffFlowRate))
       .flatMap {
         case (m, paxInMinute) =>

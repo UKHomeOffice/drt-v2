@@ -4,6 +4,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike
+import services.workloadcalculator.PaxLoadCalculator
 
 import scala.collection.Set
 import scala.collection.immutable.Iterable
@@ -53,7 +54,7 @@ class WorkloadsServiceTests extends SpecificationLike {
 
       val flightsFuture = Future.successful(List(apiFlight(iataFlightCode = "BA0001", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A1")))
 
-      val resultFuture = wc.workAndPaxLoadsByTerminal(flightsFuture)
+      val resultFuture = wc.queueLoadsByTerminal(flightsFuture, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
 
       val terminalWorkload = extractTerminalWorkload(Await.result(resultFuture, 15 seconds))
 
@@ -81,7 +82,7 @@ class WorkloadsServiceTests extends SpecificationLike {
         apiFlight(iataFlightCode = "BA0002", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A2")
       ))
 
-      val resultFuture = wc.workAndPaxLoadsByTerminal(flightsFuture)
+      val resultFuture = wc.queueLoadsByTerminal(flightsFuture, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
 
       val terminalWorkload = extractTerminalWorkload(Await.result(resultFuture, 15 seconds))
 

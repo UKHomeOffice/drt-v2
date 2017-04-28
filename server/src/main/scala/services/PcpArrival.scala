@@ -30,10 +30,11 @@ object PcpArrival {
   }
 
   def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, defaultWalkTimeMillis: Long)
-             (gateWalkTimesProvider: WalkTimeMillisProvider)
+             (gateWalkTimesProvider: WalkTimeMillisProvider, standWalkTimesProvider: WalkTimeMillisProvider)
              (flight: ApiFlight): MilliDate = {
     val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
-    val walkTimeMillis = gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis)
+    val walkTimeMillis = standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
+        gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
 
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }

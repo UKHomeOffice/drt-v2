@@ -14,6 +14,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
 import services.SDate.implicits._
+import services.workloadcalculator.PaxLoadCalculator
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -121,7 +122,7 @@ abstract class ApiService(airportConfig: AirportConfig)
     )
   }
 
-  override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads] = {
+  override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
     val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
     val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
       val names: Set[TerminalName] = airportConfig.terminalNames.toSet
@@ -129,7 +130,7 @@ abstract class ApiService(airportConfig: AirportConfig)
         names.contains(flight.Terminal)
       })
     }
-    workAndPaxLoadsByTerminal(flightsForTerminalsWeCareAbout)
+    queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
   }
 
   override def welcomeMsg(name: String): String = {

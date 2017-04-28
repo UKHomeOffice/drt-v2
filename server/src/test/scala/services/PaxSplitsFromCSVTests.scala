@@ -3,9 +3,10 @@ package services
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, LocalDate}
 import org.specs2.mutable.SpecificationLike
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import services.workloadcalculator.PaxLoadCalculator
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -122,9 +123,9 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         List(apiFlight("BA1234", LocalDate.now().toString(formatter)))
       }
 
-      val result: Future[workloadsCalculator.TerminalQueuePaxAndWorkLoads] = workloadsCalculator.workAndPaxLoadsByTerminal(flights)
+      val result: Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = workloadsCalculator.queueLoadsByTerminal(flights, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
 
-      val act: workloadsCalculator.TerminalQueuePaxAndWorkLoads = Await.result(result, 10 seconds)
+      val act: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads] = Await.result(result, 10 seconds)
 
       act("1").toList match {
         case List(("eeaDesk", (_, List(Pax(_, 0.3)))), ("eGate", (_, List(Pax(_, 0.7)))), ("nonEeaDesk", (_, List(Pax(_, 0.0))))) => true

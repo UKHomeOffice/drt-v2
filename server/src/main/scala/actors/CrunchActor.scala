@@ -7,6 +7,7 @@ import drt.shared.{ApiFlight, _}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import services._
+import services.workloadcalculator.PaxLoadCalculator
 import spray.caching.{Cache, LruCache}
 
 import scala.collection.immutable.{NumericRange, Seq}
@@ -146,7 +147,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     val tq: QueueName = terminalName + "/" + queueName
     log.info(s"$tq Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
-    val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
+    val workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]] = queueLoadsByTerminal[Seq[WL]](Future(flightsForAirportConfigTerminals), PaxLoadCalculator.queueWorkLoadCalculator)
 
     val crunchStartTimeMillis = lastMidnight.getMillis
 
