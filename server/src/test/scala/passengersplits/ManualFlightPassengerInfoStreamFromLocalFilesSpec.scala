@@ -38,7 +38,7 @@ class ManualFlightPassengerInfoStreamFromLocalFilesSpec extends
   "If we stream the DQ zip files to the flightPassengerReporter" >> {
     "then we should be able to query it" in {
       "When we ask for a report of voyage pax splits then we should see pax splits of the 1 passenger in eeaDesk queue" in {
-        val streamDone: Future[Done] = FilePolling.beginPolling(system.log, flightPassengerReporter, zipFilePath, Some("drt_dq_17022"), "STN")(system, mat)
+        val streamDone: Future[String] = FilePolling.beginPolling(system.log, flightPassengerReporter, zipFilePath, Some("drt_dq_17022"), "STN")(system, mat)
         val futureAssertion = streamDone.map {
           case _ => {
 

@@ -31,7 +31,7 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.polling.{AtmosFilePolling, FilePolling}
+import passengersplits.polling.{AtmosFilePolling}
 import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}

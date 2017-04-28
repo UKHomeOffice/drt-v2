@@ -28,7 +28,8 @@ object PassengerInfoRouterActor {
 
   case object LogStatus
 
-  case class FlightPaxSplitBatchComplete(completionMonitor: ActorRef)
+  case class FlightPaxSplitBatchComplete(zipfilename: String, completionMonitor: ActorRef)
+  case class FlightPaxSplitBatchCompleteAck(zipfilename: String)
 
   case object FlightPaxSplitBatchInit
 
@@ -73,6 +74,7 @@ class PassengerSplitsInfoByPortRouter extends
 
   def receive: PartialFunction[Any, Unit] = LoggingReceive {
     case FlightPaxSplitBatchInit =>
+      log.info(s"PassengerSplitsInfoByPortRouter received FlightPaxSplitBatchInit")
       sender ! PassengerSplitsAck
     case info: VoyagePassengerInfo =>
       log.info(s"telling children about ${info.summary}")
@@ -97,9 +99,9 @@ class PassengerSplitsInfoByPortRouter extends
       log.info(s"top level router asked to ${report}")
       val child = getRCActor(childName(report.destinationPort))
       child.tell(report, sender)
-    case FlightPaxSplitBatchComplete(completionMonitor) =>
+    case FlightPaxSplitBatchComplete(zipfilename, completionMonitor) =>
       log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
-      completionMonitor ! FlightPaxSplitBatchComplete(Actor.noSender)
+      completionMonitor ! FlightPaxSplitBatchCompleteAck(zipfilename)
     case report: ReportFlightCode =>
       childActorMap.values.foreach(_.tell(report, sender))
     case LogStatus =>
