@@ -6,7 +6,6 @@ import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.shared.MilliDate
 import org.specs2.mutable.SpecificationLike
-import passengersplits.s3.SimpleAtmosReader
 import services.SDate
 import scala.collection.immutable.Seq
 

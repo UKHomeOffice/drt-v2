@@ -27,11 +27,6 @@ import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-
-trait UnzippedFilesProvider {
-  def unzippedFilesAsSource: Source[UnzippedFileContent, NotUsed]
-}
-
 trait FilenameProvider {
 
   def fileNameStream: Source[String, NotUsed]
@@ -41,8 +36,14 @@ trait FilenameProvider {
   def latestFilePaths = fileNameStream.filter(zipFileNameFilter)
 }
 
+trait FileProvider {
+  def createFilenameSource(): Source[String, NotUsed]
 
-trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvider {
+  def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]]
+}
+
+
+trait S3Reader extends CoreLogging with FileProvider {
 
   def builder: S3StreamBuilder
 
@@ -56,9 +57,12 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
 
   def unzipTimeout = FiniteDuration(400, TimeUnit.SECONDS)
 
-  override def fileNameStream: Source[String, NotUsed] = builder.listFilesAsStream(bucket).map(_._1)
+  override def createFilenameSource(): Source[String, NotUsed] = {
+    log.info(s"creating stream of zip files")
+    createBuilder.listFilesAsStream(bucket).map(_._1)
+  }
 
-  def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = Future {
+  override def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = Future {
     try {
       log.info(s"Will parse ${zipFileName}")
       val threadSpecificBuilder = createBuilder
@@ -80,40 +84,8 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
     }
   }
 
-
-  def intermediate(paths: Source[String, NotUsed])
-                  (implicit actorMaterializer: Materializer, ec: ExecutionContext): Source[List[UnzippedFileContent], NotUsed] = {
-    paths
-      .mapAsync(numberOfCores) {
-        zipFilenameToEventualFileContent
-      }
-  }
-
-  def unzippedFilesSource(implicit actorMaterializer: Materializer, ec: ExecutionContext): Source[UnzippedFileContent, NotUsed] = {
-    intermediate(latestFilePaths).mapConcat {
-      t => t
-    }
-  }
-
 }
 
-trait SimpleS3Reader extends S3Reader with Core {
-  this: CoreActors =>
-  val bucket: String = "drt-deveu-west-1"
-
-  def createBuilder = S3StreamBuilder(new AmazonS3AsyncClient())
-
-  val builder = createBuilder
-
-  implicit val ec: ExecutionContext = system.dispatcher
-  implicit val flowMaterializer = ActorMaterializer()
-
-
-  lazy val unzippedFilesAsSource: Source[UnzippedFileContent, NotUsed] = unzippedFilesSource
-
-
-  def streamAllThisToPrintln: Future[Done] = unzippedFilesAsSource.runWith(Sink.foreach(println))
-}
 
 object Decider {
   val decider: Supervision.Decider = {
@@ -127,10 +99,9 @@ object DqSettings {
 
 }
 
-trait SimpleAtmosReader extends S3Reader with Core {
-  def bucket: String
-  def skyscapeAtmosHost: String
-
+case class SimpleAtmosReader(override val bucket: String,
+                             skyscapeAtmosHost: String,
+                             log: LoggingAdapter) extends S3Reader {
 
   override def createBuilder: S3StreamBuilder = S3StreamBuilder(createS3client)
 
@@ -149,24 +120,6 @@ trait SimpleAtmosReader extends S3Reader with Core {
     client.client.setEndpoint(skyscapeAtmosHost)
     client
   }
-
-  implicit val flowMaterializer = ActorMaterializer()
-  implicit val ec = system.dispatcher
-
-  override lazy val unzippedFilesAsSource: Source[UnzippedFileContent, NotUsed] = unzippedFilesSource
-}
-
-trait UnzippedFilePublisher {
-  self: SimpleAtmosReader =>
-  def flightPassengerReporter: ActorRef
-
-  def streamAllThis: ActorRef = unzippedFilesAsSource
-    .runWith(Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter)))
-}
-
-object PromiseSignals {
-  def promisedDone = Promise[Done]()
-
 }
 
 object WorkerPool {

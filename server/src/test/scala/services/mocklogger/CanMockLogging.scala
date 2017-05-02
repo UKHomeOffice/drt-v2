@@ -34,6 +34,7 @@ trait MockLoggingLike {
 object MockLogging extends MockLoggingLike
 
 class CanMockLogging extends Specification with MockLoggingLike {
+  sequential
   "can mock logging" >> {
     withMockAppender { mockAppender =>
       val root: ch.qos.logback.classic.Logger = LoggerFactory.getLogger("").asInstanceOf[ch.qos.logback.classic.Logger]
