@@ -15,13 +15,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait WorkloadCalculator {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def splitRatioProvider: (ApiFlight) => Option[SplitRatios]
-
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double
 
-  def pcpArrivalTimeProvider: (ApiFlight) => MilliDate
+  def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)]
 
-  type FlightsToQueueLoads[L] = ((ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)], (PaxTypeAndQueue) => ProcTime) => (List[ApiFlight]) => Map[QueueName, L]
+  type FlightsToQueueLoads[L] = (
+    (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
+      (PaxTypeAndQueue) => ProcTime
+    ) => (List[ApiFlight]) => Map[QueueName, L]
 
   def queueLoadsByTerminal[L](flights: Future[List[ApiFlight]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[TerminalQueuePaxAndWorkLoads[L]] = {
     val flightsByTerminalFut: Future[Map[TerminalName, List[ApiFlight]]] = flights.map(fs => {
@@ -29,7 +30,6 @@ trait WorkloadCalculator {
       flightsByTerminal
     })
 
-    val flightPaxTypeAndQueueCountsFlow = voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider) _
 
     val workloadByTerminal: Future[Map[TerminalName, Map[QueueName, L]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[ApiFlight]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[ApiFlight])) => {
@@ -122,10 +122,16 @@ object PaxLoadCalculator {
     paxTypeAndQueueCounts.map(ptQc => procTimeProvider(ptQc.paxAndQueueType) * ptQc.paxSum).sum
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios], pcpArrivalForFlight: (ApiFlight) => MilliDate)(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val pcpArrivalMillis = pcpArrivalForFlight(flight).millisSinceEpoch
+  def flightPaxFlowProvider(splitRatioProvider: (ApiFlight) => Option[SplitRatios],
+                            pcpArrivalTimeProvider: (ApiFlight) => MilliDate): (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider)
+  }
+
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios],
+                                  pcpStartTimeForFlight: (ApiFlight) => MilliDate)(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    val pcpStartTimeMillis = pcpStartTimeForFlight(flight).millisSinceEpoch
     val splits = splitsRatioProvider(flight).get.splits
-    val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpArrivalMillis, 1)
+    val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpStartTimeMillis, 1)
       .zip(paxDeparturesPerMinutes(if (flight.ActPax > 0) flight.ActPax else flight.MaxPax, paxOffFlowRate))
       .flatMap {
         case (m, paxInMinute) =>

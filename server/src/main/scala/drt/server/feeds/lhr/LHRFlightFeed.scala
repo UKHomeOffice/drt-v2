@@ -5,18 +5,16 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
+import drt.shared.ApiFlight
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.LoggerFactory
-import drt.shared.ApiFlight
-import services.workloadcalculator._
 
-
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.sys.process._
 import scala.util.{Failure, Success, Try}
-import scala.collection.JavaConverters._
 
 case class LHRLiveFlight(
                           term: String,
@@ -93,7 +91,7 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
   lazy val copiedToApiFlights: Source[List[ApiFlight], NotUsed] = Source(
     List(
       successfulFlights.map(flight => {
-        val pcpTime: Long =  flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
+        val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
         val schDtIso = flight.scheduled.toDateTimeISO().toString()
         val defaultPaxPerFlight = 200
         ApiFlight(

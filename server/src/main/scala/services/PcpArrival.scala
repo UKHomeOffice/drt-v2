@@ -14,7 +14,9 @@ object PcpArrival {
   def walkTimesLinesFromFileUrl(walkTimesFileUrl: String): Seq[String] = {
     Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq) match {
       case Success(walkTimes) => walkTimes
-      case _ => Seq()
+      case f =>
+        log.warn(s"Failed to extract lines from walk times file '${walkTimesFileUrl}': $f")
+        Seq()
     }
   }
 
@@ -23,12 +25,12 @@ object PcpArrival {
       Try(walkTime.toInt) match {
         case Success(s) => Some(WalkTime(from, terminal, s * 1000L))
         case f => {
-          log.info(s"walkTimeFromString failure ($from, $terminal, $walkTime) $f")
+          log.info(s"Failed to parse walk time ($from, $terminal, $walkTime): $f")
           None
         }
       }
     case f =>
-      log.info(s"walkTimeFromString didn't match array: $f")
+      log.info(s"Failed to parse walk time line '$walkTimeCsvLine': $f")
       None
   }
 
@@ -40,12 +42,12 @@ object PcpArrival {
           log.info(s"Loaded WalkTime $wt")
           wt
       }
-    walkTimeMillisProvider(walkTimes) _
+    walkTimeMillis(walkTimes) _
   }
 
   type WalkTimeMillisProvider = (String, String) => Option[Long]
 
-  def walkTimeMillisProvider(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Long] = {
+  def walkTimeMillis(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Long] = {
     walkTimes.find {
       case WalkTime(f, t, wtm) if f == from && t == terminal => true
       case _ => false
@@ -61,7 +63,7 @@ object PcpArrival {
 
     standWalkTimesProvider(flight.Stand, flight.Terminal) match {
       case Some(wt) =>
-        log.info(s"Walk time found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal} (${wt / 1000})")
+        log.info(s"Walk time found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal} (${wt / 1000}s)")
       case _ =>
         log.info(s"Walk time not found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal}")
     }

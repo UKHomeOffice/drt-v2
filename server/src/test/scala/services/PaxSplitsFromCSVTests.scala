@@ -6,8 +6,10 @@ import org.specs2.mutable.SpecificationLike
 import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
+import scala.collection.immutable.IndexedSeq
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -110,11 +112,14 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"))
 
       val workloadsCalculator = new WorkloadCalculator {
-        override def splitRatioProvider = csvSplitProvider.splitRatioProvider
+        def splitRatioProvider = csvSplitProvider.splitRatioProvider
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
 
-        override def pcpArrivalTimeProvider: (ApiFlight) => MilliDate = (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+        def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+
+        def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global

@@ -14,7 +14,8 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
 import services.SDate.implicits._
-import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
+import services.workloadcalculator.PaxLoadCalculator.queueWorkAndPaxLoadCalculator
+import services.workloadcalculator.WorkloadCalculator
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -130,7 +131,7 @@ abstract class ApiService(airportConfig: AirportConfig)
         names.contains(flight.Terminal)
       })
     }
-    queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
+    queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
   }
 
   override def welcomeMsg(name: String): String = {

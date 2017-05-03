@@ -229,10 +229,6 @@ object FlightsWithSplitsTable {
         "Act" -> f.ActDT,
         "Est Chox" -> f.EstChoxDT,
         "Act Chox" -> f.ActChoxDT,
-        "PCP" -> {
-          val d = SDate(MilliDate(f.PcpTime))
-          f"${d.getHours}%02d:${d.getMinutes}%02d"
-        },
         "Gate" -> f.Gate,
         "Stand" -> f.Stand,
         "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),

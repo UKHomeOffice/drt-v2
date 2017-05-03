@@ -8,8 +8,10 @@ import org.joda.time.DateTime
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import services.workloadcalculator.PaxLoadCalculator
+import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{IndexedSeq, Seq}
 import utest._
 
 object CrunchStructureTests extends TestSuite {
@@ -22,11 +24,11 @@ object CrunchStructureTests extends TestSuite {
     }
 
     "Given a sequence of workloads we should return the midnight on the day of the earliest workload" - {
-      val queueWorkloads = Seq((Seq(WL(getMilisFromDate(2016, 11, 1, 13, 0),1.0), WL(getMilisFromDate(2016, 11, 1, 14, 30),1.0), WL(getMilisFromDate(2016, 11, 1, 14, 45), 1.0)), Seq[Pax]()))
+      val queueWorkloads = Seq((Seq(WL(getMilisFromDate(2016, 11, 1, 13, 0), 1.0), WL(getMilisFromDate(2016, 11, 1, 14, 30), 1.0), WL(getMilisFromDate(2016, 11, 1, 14, 45), 1.0)), Seq[Pax]()))
 
       val expected = getMilisFromDate(2016, 11, 1, 0, 0);
 
-      val result = new WorkloadsHelpers{}.midnightBeforeEarliestWorkload(queueWorkloads)
+      val result = new WorkloadsHelpers {}.midnightBeforeEarliestWorkload(queueWorkloads)
       assert(expected == result)
     }
   }
@@ -40,7 +42,7 @@ object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
   class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now()) extends CrunchActor(hours, conf, timeProvider) {
-    override def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
+    def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
       _ => Some(SplitRatios(
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.315),
@@ -57,7 +59,9 @@ object FlightCrunchInteractionTests extends TestSuite {
         case PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) => 75d / 60d
       }
 
-    override def pcpArrivalTimeProvider: (ApiFlight) => MilliDate = (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+    def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+    def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
 
     override def lastMidnightString: String = "2000-01-01"
   }

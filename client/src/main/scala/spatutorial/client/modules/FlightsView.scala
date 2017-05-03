@@ -147,7 +147,6 @@ object FlightsWithSplitsView {
                       "Act",
                       "Est Chox",
                       "Act Chox",
-                      "PCP",
                       "Pax",
                       "Splits"
                     ))
