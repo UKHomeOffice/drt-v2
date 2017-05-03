@@ -7,7 +7,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.core.PassengerInfoRouterActor.{PassengerSplitsAck, ReportVoyagePaxSplit}
 import passengersplits.core.{Core, CoreActors}
-import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJson, VoyagePassengerInfo}
+import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfoJson, VoyageManifest}
 import services.SDate
 import services.SDate.implicits._
 import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
@@ -35,7 +35,7 @@ class CanFindASplitForAnApiFlightSpec extends
 
   "Should be able to find a flight" >> {
     "Given a single flight, with just one GBR passenger" in {
-      flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "LGW", "BRG", "12345", "EZ", "2017-04-02", "15:33:00",
+      flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "LGW", "BRG", "12345", "EZ", "2017-04-02", "15:33:00",
         PassengerInfoJson(Some("P"), "GBR", "EEA", None) :: Nil)
 
       "When we ask for a report of voyage pax splits then we should see pax splits of the 1 passenger in eeaDesk queue" in {
@@ -52,7 +52,7 @@ class CanFindASplitForAnApiFlightSpec extends
 
     "Given a single flight STN EZ789 flight, with just one GBR and one nationals passenger" in {
       "When we ask for a report of voyage pax splits" in {
-        flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-02-01", "13:55:00",
+        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-02-01", "13:55:00",
           PassengerInfoJson(Some("P"), "GBR", "EEA", None) ::
             PassengerInfoJson(Some("P"), "NZL", "", None) ::
             Nil)
@@ -71,7 +71,7 @@ class CanFindASplitForAnApiFlightSpec extends
     }
     "Given a single flight STN EZ789 flight where the scheduled date is in British Summer Time (BST) with just one GBR and one nationals passenger" in {
       "When we ask for a report of voyage pax splits" in {
-        flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2017-03-27", "12:10:00",
+        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2017-03-27", "12:10:00",
           PassengerInfoJson(Some("P"), "GBR", "EEA", None) ::
             PassengerInfoJson(Some("P"), "NZL", "", None) ::
             Nil)
@@ -90,7 +90,7 @@ class CanFindASplitForAnApiFlightSpec extends
     }
     "Given a single flight STN BA978 flight, with 100 passengers, and a default egate usage of 60%" in {
       "When we ask for a report of voyage pax splits" in {
-        flightPassengerReporter ! VoyagePassengerInfo(EventCodes.DoorsClosed, "STN", "BCN", "978", "BA", "2015-07-12", "10:22:00",
+        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BCN", "978", "BA", "2015-07-12", "10:22:00",
           List.tabulate(80)(passengerNumber => PassengerInfoJson(Some("P"), "GBR", "EEA", Some((passengerNumber % 60 + 16).toString))) :::
             List.tabulate(20)(_ => PassengerInfoJson(Some("P"), "NZL", "", None)))
 

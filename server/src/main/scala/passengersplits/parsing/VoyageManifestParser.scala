@@ -7,7 +7,7 @@ import services.SDate.JodaSDate
 
 import scala.util.Try
 
-object PassengerInfoParser {
+object VoyageManifestParser {
 
   case class PassengerInfo(DocumentType: Option[String],
                            DocumentIssuingCountryCode: String, Age: Option[Int] = None)
@@ -27,14 +27,14 @@ object PassengerInfoParser {
     val CheckIn = "CI"
   }
 
-  case class VoyagePassengerInfo(EventCode: String,
-                                 ArrivalPortCode: String,
-                                 DeparturePortCode: String,
-                                 VoyageNumber: String,
-                                 CarrierCode: String,
-                                 ScheduledDateOfArrival: String,
-                                 ScheduledTimeOfArrival: String,
-                                 PassengerList: List[PassengerInfoJson]) {
+  case class VoyageManifest(EventCode: String,
+                            ArrivalPortCode: String,
+                            DeparturePortCode: String,
+                            VoyageNumber: String,
+                            CarrierCode: String,
+                            ScheduledDateOfArrival: String,
+                            ScheduledTimeOfArrival: String,
+                            PassengerList: List[PassengerInfoJson]) {
     def flightCode: String = CarrierCode + VoyageNumber
 
     def scheduleArrivalDateTime: Option[SDateLike] = {
@@ -51,7 +51,7 @@ object PassengerInfoParser {
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {
     implicit val passengerInfoConverter = jsonFormat(PassengerInfoJson, "DocumentType",
       "DocumentIssuingCountryCode", "NationalityCountryEEAFlag", "Age")
-    implicit val passengerInfoResponseConverter: RootJsonFormat[VoyagePassengerInfo] = jsonFormat8(VoyagePassengerInfo)
+    implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)
   }
 
 }

@@ -1,5 +1,5 @@
 package passengersplits.core
-import passengersplits.parsing.PassengerInfoParser.PassengerInfoJson
+import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import drt.shared.{PassengerQueueTypes, PaxType}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.PaxTypeAndQueueCount
