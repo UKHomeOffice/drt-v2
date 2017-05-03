@@ -18,7 +18,7 @@ import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import passengersplits._
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
-import passengersplits.parsing.PassengerInfoParser
+import passengersplits.parsing.VoyageManifestParser
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.SDateLike
 
@@ -26,11 +26,6 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-
-
-trait UnzippedFilesProvider {
-  def unzippedFilesAsSource: Source[UnzippedFileContent, NotUsed]
-}
 
 trait FilenameProvider {
 
@@ -41,8 +36,14 @@ trait FilenameProvider {
   def latestFilePaths = fileNameStream.filter(zipFileNameFilter)
 }
 
+trait FileProvider {
+  def createFilenameSource(): Source[String, NotUsed]
 
-trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvider {
+  def zipFilenameToEventualFileContent(zipFileName: String): Future[List[UnzippedFileContent]]
+}
+
+
+trait S3Reader extends CoreLogging with FileProvider {
 
   def builder: S3StreamBuilder
 
@@ -56,9 +57,16 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
 
   def unzipTimeout = FiniteDuration(400, TimeUnit.SECONDS)
 
-  override def fileNameStream: Source[String, NotUsed] = builder.listFilesAsStream(bucket).map(_._1)
+  implicit def actorMaterializer: Materializer
 
-  def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = Future {
+  implicit def ec: ExecutionContext
+
+  override def createFilenameSource(): Source[String, NotUsed] = {
+    log.info(s"creating stream of zip files")
+    createBuilder.listFilesAsStream(bucket).map(_._1)
+  }
+
+  override def zipFilenameToEventualFileContent(zipFileName: String): Future[List[UnzippedFileContent]] = Future {
     try {
       log.info(s"Will parse ${zipFileName}")
       val threadSpecificBuilder = createBuilder
@@ -80,40 +88,8 @@ trait S3Reader extends CoreLogging with UnzippedFilesProvider with FilenameProvi
     }
   }
 
-
-  def intermediate(paths: Source[String, NotUsed])
-                  (implicit actorMaterializer: Materializer, ec: ExecutionContext): Source[List[UnzippedFileContent], NotUsed] = {
-    paths
-      .mapAsync(numberOfCores) {
-        zipFilenameToEventualFileContent
-      }
-  }
-
-  def unzippedFilesSource(implicit actorMaterializer: Materializer, ec: ExecutionContext): Source[UnzippedFileContent, NotUsed] = {
-    intermediate(latestFilePaths).mapConcat {
-      t => t
-    }
-  }
-
 }
 
-trait SimpleS3Reader extends S3Reader with Core {
-  this: CoreActors =>
-  val bucket: String = "drt-deveu-west-1"
-
-  def createBuilder = S3StreamBuilder(new AmazonS3AsyncClient())
-
-  val builder = createBuilder
-
-  implicit val ec: ExecutionContext = system.dispatcher
-  implicit val flowMaterializer = ActorMaterializer()
-
-
-  lazy val unzippedFilesAsSource: Source[UnzippedFileContent, NotUsed] = unzippedFilesSource
-
-
-  def streamAllThisToPrintln: Future[Done] = unzippedFilesAsSource.runWith(Sink.foreach(println))
-}
 
 object Decider {
   val decider: Supervision.Decider = {
@@ -127,10 +103,12 @@ object DqSettings {
 
 }
 
-trait SimpleAtmosReader extends S3Reader with Core {
-  def bucket: String
-  def skyscapeAtmosHost: String
-
+case class SimpleAtmosReader(override val bucket: String,
+                             skyscapeAtmosHost: String,
+                             log: LoggingAdapter)(
+                              implicit val actorMaterializer: Materializer,
+                              val ec: ExecutionContext
+                            ) extends FileProvider with S3Reader {
 
   override def createBuilder: S3StreamBuilder = S3StreamBuilder(createS3client)
 
@@ -150,22 +128,6 @@ trait SimpleAtmosReader extends S3Reader with Core {
     client
   }
 
-  implicit val flowMaterializer = ActorMaterializer()
-  implicit val ec = system.dispatcher
-
-  override lazy val unzippedFilesAsSource: Source[UnzippedFileContent, NotUsed] = unzippedFilesSource
-}
-
-trait UnzippedFilePublisher {
-  self: SimpleAtmosReader =>
-  def flightPassengerReporter: ActorRef
-
-  def streamAllThis: ActorRef = unzippedFilesAsSource
-    .runWith(Sink.actorSubscriber(WorkerPool.props(flightPassengerReporter)))
-}
-
-object PromiseSignals {
-  def promisedDone = Promise[Done]()
 
 }
 
@@ -185,7 +147,7 @@ object WorkerPool {
 class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber with ActorLogging {
 
   import ActorSubscriberMessage._
-  import PassengerInfoParser._
+  import VoyageManifestParser._
 
   val MaxQueueSize = 10
   var queue = Map.empty[Int, ActorRef]
@@ -207,7 +169,7 @@ class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber wi
         case Failure(f) =>
           log.error(f, s"Could not parse $content")
       }
-    case OnNext(voyagePassengerInfo: VoyagePassengerInfo) =>
+    case OnNext(voyagePassengerInfo: VoyageManifest) =>
       flightPassengerInfoRouter ! voyagePassengerInfo
     case OnComplete =>
       log.info(s"WorkerPool OnComplete")
@@ -223,7 +185,7 @@ case class FlightId(flightNumber: String, carrier: String, schDateTime: SDateLik
 class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 
   import ActorSubscriberMessage._
-  import PassengerInfoParser._
+  import VoyageManifestParser._
 
   val MaxQueueSize = 10
   var queue = Map.empty[Int, ActorRef]
@@ -236,7 +198,7 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
   var flightSplits: Map[FlightId, VoyagePaxSplits] = Map()
 
   def receive = {
-    case OnNext(voyagePassengerInfo: VoyagePassengerInfo) =>
+    case OnNext(voyagePassengerInfo: VoyageManifest) =>
       val flightId = FlightId(voyagePassengerInfo.VoyageNumber, voyagePassengerInfo.CarrierCode, voyagePassengerInfo.scheduleArrivalDateTime.get)
     case OnComplete =>
       log.info(s"WorkerPool OnComplete")
@@ -249,13 +211,13 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 
 object VoyagePassengerInfoParser {
 
-  import PassengerInfoParser._
+  import VoyageManifestParser._
   import FlightPassengerInfoProtocol._
-  import PassengerInfoParser._
+  import VoyageManifestParser._
   import spray.json._
 
-  def parseVoyagePassengerInfo(content: String): Try[VoyagePassengerInfo] = {
-    Try(content.parseJson.convertTo[VoyagePassengerInfo])
+  def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
+    Try(content.parseJson.convertTo[VoyageManifest])
   }
 }
 

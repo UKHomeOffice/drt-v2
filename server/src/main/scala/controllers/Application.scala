@@ -28,10 +28,10 @@ import drt.http.ProdSendAndReceive
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
+import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, ManifestZipFileInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.polling.{AtmosFilePolling, FilePolling}
+import passengersplits.polling.{AtmosManifestFilePolling}
 import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -222,18 +222,18 @@ class Application @Inject()(
   val copiedToApiFlights = flightsSource(mockProd, portCode)
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
-  import passengersplits.polling.{AtmosFilePolling => afp}
+  import passengersplits.polling.{AtmosManifestFilePolling => afp}
 
   /// PassengerSplits reader
   import SDate.implicits._
 
-  afp.beginPolling(log,
-    ctrl.flightPassengerSplitReporter,
+  afp.beginPolling(log, ctrl.flightPassengerSplitReporter,
     afp.previousDayDqFilename(SDate.now()),
     config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
     config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
-    portCode
-  )
+    portCode,
+    afp.tickingSource(1 seconds, 1 minutes),
+    batchAtMost = 400 seconds)
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

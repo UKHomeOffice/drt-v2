@@ -237,20 +237,6 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 
 
 object PassengerQueueTypes {
-  //
-  //  object Queues {
-  //    val eeaDesk = "desk"
-  //    val egate = "egate"
-  //    val nationalsDesk = "nationalsDesk"
-  //  }
-
-  //  object PaxTypes {
-  //    val EeaNonMachineReadable = "eea-non-machine-readable"
-  //    val NationalVisa = "national-visa"
-  //    val EeaMachineReadable = "eea-machine-readable"
-  //    val NonNationalVisa = "national-non-visa"
-  //  }
-
   def egatePercentage = 0.6d
 
   type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
