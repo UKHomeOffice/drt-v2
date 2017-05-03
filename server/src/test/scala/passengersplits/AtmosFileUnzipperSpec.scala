@@ -199,7 +199,7 @@ class WhenUnzippingIfJsonIsBadSpec extends
 
         val loggingCalls: List[ILoggingEvent] = argumentCaptor.getAllValues().asScala.toList
 
-        val expectedMessage = "Failed to parse voyage passenger info: 'drt_150302_060000_BA1234_DC_7890.json'"
+        val expectedMessage = """Failed to parse voyage passenger info: "drt_150302_060000_BA1234_DC_7890.json""""
         loggingCalls.exists(le => le.getLevel() == Level.WARN && le.getFormattedMessage().contains(expectedMessage))
       }
     }
@@ -292,7 +292,7 @@ class WhenUnzippingIfEntireZipfileIsBad extends
 
           val loggingCalls: List[ILoggingEvent] = argumentCaptor.getAllValues().asScala.toList
 
-          val expectedMessage = "tickId: 2017-01-01T12:33:20.000Z error in batch, on zip: 'drt_dq_170411_104441_4850.zip'"
+          val expectedMessage = """tickId: 2017-01-01T12:33:20.000Z, zip: "drt_dq_170411_104441_4850.zip" error in batch"""
           loggingCalls.exists(le => le.getLevel() == Level.WARN && le.getFormattedMessage().contains(expectedMessage))
         }
       }
