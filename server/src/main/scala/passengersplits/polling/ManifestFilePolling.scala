@@ -113,7 +113,6 @@ object AtmosManifestFilePolling {
                    tickingSource: Source[DateTime, Any],
                    batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, mat: Materializer) = {
 
-    val log = actorSystem.log
     val statefulPoller = SimpleAtmosReader(bucket, atmosHost, log)
 
     val batchFileState = new LoggingBatchFileState {
