@@ -226,27 +226,32 @@ object AtmosManifestFilePolling {
         logInfo(s"latestFile: $latestFile AdvPaxInfo: extracting manifests from zip")
         //todo we should probably keep this a stream, earlier on, it could simplify some of the Future shenanigans later
         val zipFuture: Future[List[UnzippedFileContent]] = unzipFileContent(zipFileName)
-        val unzippingFileFuture: Future[Seq[VoyageManifest]] = zipFuture
+        type ZipFileName = String
+        type JsonFileName = String
+        type FileSourceAndOptManifest = (Option[ZipFileName], JsonFileName, Try[VoyageManifest])
+        val manifestFuture: Future[Seq[FileSourceAndOptManifest]] = zipFuture
           .map(manifests => {
             val jsonFilenames = manifests.map(_.filename)
             logInfo(s"processing manifests from zip. Length: ${manifests.length}, Content: ${jsonFilenames}")
-            val voyagePassengerInfos = manifestsToAdvPaxReporter(logInfo, flightPassengerReporter, manifests)
-            val (vpis, errors) = voyagePassengerInfos partition {
-              case (_, _, Success(_)) => true
-              case _ => false
-            }
-            
-            //todo eww, side effects in a map, let's let these bubble up
-            errors.foreach {
-              case (_, jsonFile, Failure(f)) => logWarn(s"""Failed to parse voyage passenger info: "$jsonFile", error: $f""")
-            }
-
-            logInfo(s"processed manifests: Length ${manifests.length}  ${manifests.headOption.map(_.filename)}")
-            vpis.map { case (_, _, Success(vpi)) => vpi }
-
+            manifestsToAdvPaxReporter(logInfo, flightPassengerReporter, manifests)
           })
 
-        val promiseZipDone = Promise[String]()
+        val successfulJsonManifests = manifestFuture.map { manifestOpts =>
+          val (manifests, errors) = manifestOpts partition {
+            case (_, _, Success(_)) => true
+            case _ => false
+          }
+          
+          errors.foreach {
+            case (_, jsonFile, Failure(f)) => logWarn(s"""Failed to parse voyage passenger info: "$jsonFile", error: $f""")
+          }
+
+          logInfo(s"processed manifests: Length ${manifestOpts.length}  ${manifestOpts.headOption.map(_._2)}")
+          manifests.map { case (_, _, Success(vpi)) => vpi }
+        }
+
+
+        val promiseZipDone = Promise[ZipFileName]()
         val monitor = ManifestFilePolling.zipCompletionMonitor(actorSystem, ManifestFilePolling.props(promiseZipDone))
         log.debug(s"tickId: $tickId zipCompletionMonitor is $monitor")
         val subscriberFlightActor = ManifestFilePolling.subscriberFlightActor(flightPassengerReporter,
@@ -254,16 +259,17 @@ object AtmosManifestFilePolling {
 
         val eventualZipCompletion = promiseZipDone.future
 
-        unzippingFileFuture.onFailure {
+        manifestFuture.onFailure {
           case failure: Throwable =>
             logWarn(s"error in batch $failure")
             promiseZipDone.failure(failure)
             batchFileState.onZipFileProcessed(zipFileName)
         }
-        unzippingFileFuture map { messages =>
-          logInfo(s"got ${messages.length} manifest messages to send")
-          val messageSource: Source[VoyageManifest, NotUsed] = Source(messages)
-          val zipSendingGraph: RunnableGraph[NotUsed] = messageSource.to(subscriberFlightActor)
+        successfulJsonManifests map { manifestMessages =>
+          logInfo(s"got ${manifestMessages.length} manifest messages to send")
+
+          val manifestSource: Source[VoyageManifest, NotUsed] = Source(manifestMessages)
+          val zipSendingGraph: RunnableGraph[NotUsed] = manifestSource.to(subscriberFlightActor)
           zipSendingGraph.run()
 
           eventualZipCompletion.onFailure { case oc => log.error(logMsg(s"processingZip had error ${oc}")) }
@@ -283,10 +289,9 @@ object AtmosManifestFilePolling {
   private def manifestsToAdvPaxReporter(logInfo: (String) => Unit, advPaxReporter: ActorRef, manifests: List[ZipUtils.UnzippedFileContent]): Seq[(Option[String], String, Try[VoyageManifest])]
   = {
     logInfo(s"AdvPaxInfo: parsing ${manifests.length} manifests")
-    val manifestsToSend = manifests.map((flightManifest) => {
+    manifests.map((flightManifest) => {
       logInfo(s"AdvPaxInfo: parsing manifest ${flightManifest.filename} from ${flightManifest.zipFilename}")
       (flightManifest.zipFilename, flightManifest.filename, VoyagePassengerInfoParser.parseVoyagePassengerInfo(flightManifest.content))
     })
-    manifestsToSend
   }
 }
