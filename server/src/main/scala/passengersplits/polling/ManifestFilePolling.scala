@@ -17,7 +17,7 @@ import akka.stream.Materializer
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck, FlightPaxSplitBatchInit, PassengerSplitsAck}
+import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck, ManifestZipFileInit, PassengerSplitsAck}
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import passengersplits.s3._
@@ -50,7 +50,7 @@ object ManifestFilePolling {
     VoyageManifestZipFileComplete(zipfileName, batchCompletionMonitor)
 
   def subscriberFlightActor(flightPassengerReporter: ActorRef, completionMessage: VoyageManifestZipFileComplete) =
-    Sink.actorRefWithAck(flightPassengerReporter, FlightPaxSplitBatchInit, PassengerSplitsAck, completionMessage)
+    Sink.actorRefWithAck(flightPassengerReporter, ManifestZipFileInit, PassengerSplitsAck, completionMessage)
 
 }
 

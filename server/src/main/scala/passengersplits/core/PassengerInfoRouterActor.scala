@@ -31,7 +31,7 @@ object PassengerInfoRouterActor {
   case class VoyageManifestZipFileComplete(zipfilename: String, completionMonitor: ActorRef)
   case class VoyageManifestZipFileCompleteAck(zipfilename: String)
 
-  case object FlightPaxSplitBatchInit
+  case object ManifestZipFileInit
 
   case object PassengerSplitsAck
 
@@ -73,7 +73,7 @@ class PassengerSplitsInfoByPortRouter extends
   def childProps = Props[PassengerInfoRouterActor]
 
   def receive: PartialFunction[Any, Unit] = LoggingReceive {
-    case FlightPaxSplitBatchInit =>
+    case ManifestZipFileInit =>
       log.info(s"PassengerSplitsInfoByPortRouter received FlightPaxSplitBatchInit")
       sender ! PassengerSplitsAck
     case info: VoyageManifest =>

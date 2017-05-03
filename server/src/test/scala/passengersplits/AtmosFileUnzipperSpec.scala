@@ -24,7 +24,7 @@ import org.mockito.Matchers.argThat
 import org.mockito.Mockito.{mock, verify, when}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck, FlightPaxSplitBatchInit, PassengerSplitsAck}
+import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck, ManifestZipFileInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.FileProvider
 
@@ -40,7 +40,7 @@ import scala.language.reflectiveCalls  // used for the FileProvider.callsToUnzip
 
 class SimpleTestRouter(queue: mutable.Queue[VoyageManifest]) extends Actor {
   def receive: Receive = {
-    case FlightPaxSplitBatchInit =>
+    case ManifestZipFileInit =>
       sender ! PassengerSplitsAck
     case vpi: VoyageManifest =>
       queue += vpi
@@ -58,7 +58,7 @@ object SimpleTestRouter {
   val log = LoggerFactory.getLogger(getClass())
 
   def defaultReceive(sender: ActorRef): PartialFunction[Any, Any] = {
-    case FlightPaxSplitBatchInit =>
+    case ManifestZipFileInit =>
       sender ! PassengerSplitsAck
     case vpi: VoyageManifest =>
       sender ! PassengerSplitsAck
@@ -531,7 +531,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
           |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
         """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil), testActor, batchFileState, 90 seconds)
 
-      expectMsg(FlightPaxSplitBatchInit)
+      expectMsg(ManifestZipFileInit)
       expectMsgAnyClassOf(classOf[VoyageManifest])
 
       success
@@ -575,7 +575,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil)
       }, testActor, batchFileState, 4 seconds)
 
-      expectMsg(FlightPaxSplitBatchInit)
+      expectMsg(ManifestZipFileInit)
       expectMsgAnyClassOf(classOf[VoyageManifest])
       expectMsgAnyClassOf(classOf[VoyageManifestZipFileComplete])
 
@@ -599,7 +599,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil)
       }, testActor, batchFileState, 4 seconds)
 
-      expectMsg(FlightPaxSplitBatchInit)
+      expectMsg(ManifestZipFileInit)
       expectMsgAnyClassOf(classOf[VoyageManifest])
       expectMsgAnyClassOf(classOf[VoyageManifestZipFileComplete])
 
