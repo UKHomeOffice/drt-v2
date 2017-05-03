@@ -24,7 +24,7 @@ import org.mockito.Matchers.argThat
 import org.mockito.Mockito.{mock, verify, when}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchCompleteAck, FlightPaxSplitBatchInit, PassengerSplitsAck}
+import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.FileProvider
 
@@ -45,8 +45,8 @@ class SimpleTestRouter(queue: mutable.Queue[VoyageManifest]) extends Actor {
     case vpi: VoyageManifest =>
       queue += vpi
       sender ! PassengerSplitsAck
-    case FlightPaxSplitBatchComplete(zipfilename, completionMonitor) =>
-      completionMonitor ! FlightPaxSplitBatchCompleteAck(zipfilename)
+    case VoyageManifestZipFileComplete(zipfilename, completionMonitor) =>
+      completionMonitor ! VoyageManifestZipFileCompleteAck(zipfilename)
   }
 }
 
@@ -62,9 +62,9 @@ object SimpleTestRouter {
       sender ! PassengerSplitsAck
     case vpi: VoyageManifest =>
       sender ! PassengerSplitsAck
-    case FlightPaxSplitBatchComplete(zipfilename, completionMonitor) =>
+    case VoyageManifestZipFileComplete(zipfilename, completionMonitor) =>
       log.info(s"SimpleTestRouter autopilot got FlightPaxSplitBatchComplete $completionMonitor")
-      completionMonitor ! FlightPaxSplitBatchCompleteAck(zipfilename)
+      completionMonitor ! VoyageManifestZipFileCompleteAck(zipfilename)
   }
 
 }
@@ -577,7 +577,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       expectMsg(FlightPaxSplitBatchInit)
       expectMsgAnyClassOf(classOf[VoyageManifest])
-      expectMsgAnyClassOf(classOf[FlightPaxSplitBatchComplete])
+      expectMsgAnyClassOf(classOf[VoyageManifestZipFileComplete])
 
       val expectedLatestFile = "drt_dq_170411_104441_4850.zip"
       batchFileState.latestFile === expectedLatestFile && requestsForUnzippedContent === mutable.MutableList("drt_dq_170411_104441_4850.zip")
@@ -601,7 +601,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       expectMsg(FlightPaxSplitBatchInit)
       expectMsgAnyClassOf(classOf[VoyageManifest])
-      expectMsgAnyClassOf(classOf[FlightPaxSplitBatchComplete])
+      expectMsgAnyClassOf(classOf[VoyageManifestZipFileComplete])
 
       val expectedLatestFile = "drt_dq_170411_104441_4850.zip"
       batchFileState.latestFile === expectedLatestFile && requestsForUnzippedContent === mutable.MutableList("drt_dq_170411_104441_4850.zip")
