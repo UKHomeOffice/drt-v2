@@ -4,7 +4,7 @@ import akka.{Done, NotUsed}
 import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.{ActorMaterializer, Materializer}
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestActor.{AutoPilot, SetAutoPilot}
 import akka.testkit.TestKit
 import akka.util.Timeout
@@ -14,7 +14,7 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import passengersplits.polling.{AtmosManifestFilePolling, FutureUtils}
-import passengersplits.polling.AtmosManifestFilePolling.{LoggingBatchFileState, TickId}
+import passengersplits.polling.AtmosManifestFilePolling.{BatchFileState, LoggingBatchFileState, TickId}
 import services.mocklogger.MockLoggingLike
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -24,7 +24,7 @@ import org.mockito.Matchers.argThat
 import org.mockito.Mockito.{mock, verify, when}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck, ManifestZipFileInit, PassengerSplitsAck}
+import passengersplits.core.PassengerInfoRouterActor.{ManifestZipFileInit, PassengerSplitsAck, VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.FileProvider
 
@@ -35,8 +35,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent._
 import scala.util.{Failure, Success, Try}
-
-import scala.language.reflectiveCalls  // used for the FileProvider.callsToUnzippedFunc below, perhaps we should just use mockito?
+import scala.language.reflectiveCalls
+// used for the FileProvider.callsToUnzippedFunc below, perhaps we should just use mockito?
 
 class SimpleTestRouter(queue: mutable.Queue[VoyageManifest]) extends Actor {
   def receive: Receive = {
@@ -484,7 +484,7 @@ class AtmosFileUnzipperSingleZipSpec extends TestKit(ActorSystem("AkkaStreamTest
       val batchFileState = SignallingBatchFileState("", listOfZips)
 
 
-      AtmosManifestFilePolling.processSingleZipFile(DateTime.now(),
+      AtmosManifestFilePolling.processAllZipFiles(DateTime.now(),
         (fn) => Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
           """
             |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
@@ -493,6 +493,125 @@ class AtmosFileUnzipperSingleZipSpec extends TestKit(ActorSystem("AkkaStreamTest
       )
       Thread.sleep(1000)
       true
+    }
+
+  }
+}
+
+
+class TestSourceConcat extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+  implicit val mat = ActorMaterializer()
+  "test we can bookend a stream" >> {
+    val zips = Source(List("file1", "file2"))
+    val unzipped: Map[String, Source[String, NotUsed]] = Map("file1" ->
+      Source(List("abc", "def")),
+      "file2" ->
+        Source(List("123", "456"))
+    )
+
+    val g: Source[String, NotUsed] = zips.flatMapConcat(fn =>
+      Source(List(s"end: ${fn}")).prepend(unzipped(fn).prepend(Source(List(s"begin: ${fn}"))))
+    )
+
+    val result: Future[Seq[String]] = g.runWith(Sink.seq)
+
+    Await.result(result, 10 seconds) === Seq(
+      "begin: file1",
+      "abc",
+      "def",
+      "end: file1",
+      "begin: file2",
+      "123",
+      "456",
+      "end: file2"
+    )
+  }
+//  "test we can bookend a stream" >> {
+//    val zips = Source(List("file1", "file2"))
+//    val unzippedAndSentToActor: Map[String, Future[List[String]]] = Map("file1" ->
+//      Future(List("abc", "def")),
+//      "file2" ->
+//        Future(List("123", "456"))
+//    )
+//
+//    val g: Source[String, NotUsed] = zips.flatMapConcat(fn => {
+//      val unzipped1 = Await.result(unzippedAndSentToActor(fn), 3 seconds)
+//      Source(List(s"end: ${fn}")).prepend(unzipped1).prepend(Source(List(s"begin: ${fn}")))
+//    })
+//    )
+//
+//    val result: Future[Seq[String]] = g.runWith(Sink.seq)
+//
+//    Await.result(result, 10 seconds) === Seq(
+//      "begin: file1",
+//      "abc",
+//      "def",
+//      "end: file1",
+//      "begin: file2",
+//      "123",
+//      "456",
+//      "end: file2"
+//    )
+//  }
+}
+
+class AtmosFileUnzipperMultipleZipSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+
+  isolated
+  sequential
+  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+
+  implicit val materializer = ActorMaterializer()
+
+  val outerSystem = system
+
+
+  "Processing two zip files " >> {
+    "the first should be processed to completion before the second is started" >> {
+
+      val zipFile1 = "drt_dq_170411_104441_4850.zip"
+      val zipFile2 = "drt_dq_170411_125551_5687.zip"
+      val listOfZips = List(zipFile1, zipFile2)
+
+      val batchFileState = new BatchFileState {
+        var messages: mutable.MutableList[String] = mutable.MutableList[String]()
+
+        def latestFile: String = ""
+
+
+        def onZipFileBegins(filename: String): Unit =
+          messages += s"begin: $filename"
+
+        def onZipFileProcessed(filename: String): Unit =
+          messages += s"done: $filename"
+
+        def onBatchComplete(tickId: TickId): Unit = ???
+      }
+
+      val unzippedContents = Map(
+        zipFile1 -> Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+          """
+            |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
+          """.stripMargin, Option(zipFile1)) :: Nil),
+        zipFile2 -> Future(UnzippedFileContent("drt_150302_060000_BA1234_DC_4089.json",
+          """
+            |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_BA1234_DC_4089"}
+          """.stripMargin, Option(zipFile2)) :: Nil)
+      )
+
+      val allZips = AtmosManifestFilePolling.processAllZipFiles(new DateTime(2017, 1, 1, 12, 23),
+        (zipfilename) => unzippedContents(zipfilename),
+        flightPassengerSplitReporter, batchFileState, listOfZips
+      )
+      val allDone = Future.sequence(allZips)
+      Await.ready(allDone, 3 seconds)
+
+      batchFileState.messages.toList === List(
+        "begin: " + zipFile1,
+        "done: " + zipFile1,
+        "begin: " + zipFile2,
+        "done: " + zipFile2
+      )
     }
 
   }
