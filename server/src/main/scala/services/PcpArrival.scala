@@ -54,21 +54,18 @@ object PcpArrival {
     }.map(_.walkTimeMillis)
   }
 
-  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, defaultWalkTimeMillis: Long)
-             (gateWalkTimesProvider: WalkTimeMillisProvider, standWalkTimesProvider: WalkTimeMillisProvider)
-             (flight: ApiFlight): MilliDate = {
-    val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
-    val walkTimeMillis = standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
-      gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
+  type WalkTimeForFlight = (ApiFlight) => Long
 
-    standWalkTimesProvider(flight.Stand, flight.Terminal) match {
-      case Some(wt) =>
-        log.info(s"Walk time found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal} (${wt / 1000}s)")
-      case _ =>
-        log.info(s"Walk time not found for ${flight.IATA}, ${flight.Stand}, ${flight.Terminal}")
-    }
+  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: WalkTimeForFlight)(flight: ApiFlight): MilliDate = {
+    val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
+    val walkTimeMillis = walkTimeForFlight(flight)
 
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
+  }
+
+  def walkTimeForFlightProvider(defaultWalkTimeMillis: Long, gateWalkTimesProvider: WalkTimeMillisProvider, standWalkTimesProvider: WalkTimeMillisProvider)(flight: ApiFlight) = {
+    standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
+      gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
   }
 
   def bestChoxTime(timeToChoxMillis: Long, flight: ApiFlight) = {

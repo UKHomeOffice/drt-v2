@@ -1,10 +1,13 @@
 package services.workloadcalculator
 
+import com.typesafe.config.{Config, ConfigFactory}
+import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{ApiFlight, _}
 import org.slf4j.LoggerFactory
-import services.SDate
+import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
+import services.{SDate, SplitsProvider}
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount, ProcTime, voyagePaxSplitsFlowOverTime}
 
 import scala.collection.immutable.{List, _}
@@ -127,8 +130,8 @@ object PaxLoadCalculator {
     voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider)
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios],
-                                  pcpStartTimeForFlight: (ApiFlight) => MilliDate)(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios], pcpStartTimeForFlight: (ApiFlight) => MilliDate)
+                                 (flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val pcpStartTimeMillis = pcpStartTimeForFlight(flight).millisSinceEpoch
     val splits = splitsRatioProvider(flight).get.splits
     val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpStartTimeMillis, 1)

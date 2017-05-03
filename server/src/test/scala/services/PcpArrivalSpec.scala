@@ -149,7 +149,8 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -168,7 +169,8 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val actChoxMillis = 1483230000000L
       val expected = MilliDate(actChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -190,7 +192,8 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val actChoxMillis = 1483230000000L
       val expected = MilliDate(actChoxMillis + firstPaxOffMillis + gateWalkTimeMillis)
@@ -209,7 +212,8 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -229,7 +233,8 @@ class PcpArrivalSpec extends SpecificationLike {
       val gWtp = walkTimeMillis(Seq(WalkTime("2", "T1", gateWalkTimeMillis))) _
       val sWtp = walkTimeMillis(Seq()) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(gWtp, sWtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, gWtp, sWtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + gateWalkTimeMillis)
@@ -249,7 +254,8 @@ class PcpArrivalSpec extends SpecificationLike {
       val gWtp = walkTimeMillis(Seq()) _
       val sWtp = walkTimeMillis(Seq(WalkTime("2L", "T1", standWalkTimeMillis))) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(gWtp, sWtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, gWtp, sWtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
@@ -271,7 +277,8 @@ class PcpArrivalSpec extends SpecificationLike {
       val standWalkTimeMillis = 600000L
       val sWtp = walkTimeMillis(Seq(WalkTime("2L", "T1", standWalkTimeMillis))) _
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, defaultWalkTimeMillis)(gWtp, sWtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, gWtp, sWtp)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)

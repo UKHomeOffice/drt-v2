@@ -43,12 +43,12 @@ object FlightTimelineTests extends TestSuite {
 //          assert(FlightsWithSplitsTable.asOffset(5, 33.0) == 5000)
 //        }
 
-        "what's the ranges look like" - {
-          val minutes = (-60L to 60L by 1).map(_ * 60000)
-          println(minutes)
-          val results = minutes.map(m => (m, FlightsWithSplitsTable.asOffset(m, 33.0)))
-          println(results.mkString("\n"))
-        }
+//        "what's the ranges look like" - {
+//          val minutes = (-60L to 60L by 1).map(_ * 60000)
+//          println(minutes)
+//          val results = minutes.map(m => (m, FlightsWithSplitsTable.asOffset(m, 33.0)))
+//          println(results.mkString("\n"))
+//        }
 
       }
     }
