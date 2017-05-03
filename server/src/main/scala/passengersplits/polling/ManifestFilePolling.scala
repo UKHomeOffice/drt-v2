@@ -73,16 +73,6 @@ object FutureUtils {
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
 }
 
-object FilePollerFactory {
-  def atmosPoller(initialLatestFile: Option[String] = None, atmosS3Host: String,
-                  bucketName: String
-                 )(implicit outersystem: ActorSystem, mat: Materializer): FileProvider = {
-    val log = outersystem.log
-    SimpleAtmosReader(bucketName, atmosS3Host, log)
-
-  }
-}
-
 object AtmosManifestFilePolling {
   val log = LoggerFactory.getLogger(getClass)
 
@@ -122,7 +112,9 @@ object AtmosManifestFilePolling {
                    bucket: String, portCode: String,
                    tickingSource: Source[DateTime, Any],
                    batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, mat: Materializer) = {
-    val statefulPoller = FilePollerFactory.atmosPoller(Some(initialFileFilter), atmosHost, bucket)
+
+    val log = actorSystem.log
+    val statefulPoller = SimpleAtmosReader(bucket, atmosHost, log)
 
     val batchFileState = new LoggingBatchFileState {
       override var latestFileName: String = initialFileFilter
