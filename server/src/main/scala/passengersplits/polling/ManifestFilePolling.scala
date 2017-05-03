@@ -132,8 +132,8 @@ object AtmosManifestFilePolling {
                        batchFileState: LoggingBatchFileState,
                        batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, mat: Materializer): Future[Done] = {
     tickingSource.runForeach { tickId =>
-      val zipfilenamesSource: Source[String, NotUsed] = fileProvider.createFilenameSource()
-      runSingleBatch(tickId, zipfilenamesSource, fileProvider.zipFilenameToEventualFileContent, flightPassengerReporter, batchFileState, batchAtMost)
+      val zipFilenamesSource: Source[String, NotUsed] = fileProvider.createFilenameSource()
+      runSingleBatch(tickId, zipFilenamesSource, fileProvider.zipFilenameToEventualFileContent, flightPassengerReporter, batchFileState, batchAtMost)
     }
   }
 
@@ -142,7 +142,7 @@ object AtmosManifestFilePolling {
   }
 
 
-  type UnzipFileContentFunc[ZippedFileName] = (ZippedFileName) => Future[List[UnzippedFileContent]]
+  type UnzipFileContentFunc[ZippedFilename] = (ZippedFilename) => Future[List[UnzippedFileContent]]
 
   trait BatchFileState {
     def latestFile: String
@@ -208,18 +208,18 @@ object AtmosManifestFilePolling {
     val zipFilesToProcess: Seq[String] = filterToFilesNewerThan(fileNames, latestFile).sorted.toList
     log.info(s"tickId: ${tickId} batch begins zipFilesToProcess: ${zipFilesToProcess} since $latestFile, allFiles: ${fileNames.length} vs ${zipFilesToProcess.length}")
     zipFilesToProcess
-      .map(zipFileName => {
-        def logMsg(s: String) = {s"""tickId: $tickId, zip: "$zipFileName" $s"""}
+      .map(zipFilename => {
+        def logMsg(s: String) = {s"""tickId: $tickId, zip: "$zipFilename" $s"""}
 
         def logInfo(s: String) = log.info(logMsg(s))
         def logWarn(s: String) = log.warn(logMsg(s))
 
         logInfo(s"latestFile: $latestFile AdvPaxInfo: extracting manifests from zip")
         //todo we should probably keep this a stream, earlier on, it could simplify some of the Future shenanigans later
-        val zipFuture: Future[List[UnzippedFileContent]] = unzipFileContent(zipFileName)
-        type ZipFileName = String
-        type JsonFileName = String
-        type FileSourceAndOptManifest = (Option[ZipFileName], JsonFileName, Try[VoyageManifest])
+        val zipFuture: Future[List[UnzippedFileContent]] = unzipFileContent(zipFilename)
+        type ZipFilename = String
+        type JsonFilename = String
+        type FileSourceAndOptManifest = (Option[ZipFilename], JsonFilename, Try[VoyageManifest])
         val manifestFuture: Future[Seq[FileSourceAndOptManifest]] = zipFuture
           .map(manifests => {
             val jsonFilenames = manifests.map(_.filename)
@@ -242,11 +242,11 @@ object AtmosManifestFilePolling {
         }
 
 
-        val promiseZipDone = Promise[ZipFileName]()
+        val promiseZipDone = Promise[ZipFilename]()
         val monitor = ManifestFilePolling.zipCompletionMonitor(actorSystem, ManifestFilePolling.props(promiseZipDone))
         log.debug(s"tickId: $tickId zipCompletionMonitor is $monitor")
         val subscriberFlightActor = ManifestFilePolling.subscriberFlightActor(flightPassengerReporter,
-          VoyageManifestZipFileComplete(zipFileName, monitor))
+          VoyageManifestZipFileComplete(zipFilename, monitor))
 
         val eventualZipCompletion = promiseZipDone.future
 
@@ -254,7 +254,7 @@ object AtmosManifestFilePolling {
           case failure: Throwable =>
             logWarn(s"error in batch $failure")
             promiseZipDone.failure(failure)
-            batchFileState.onZipFileProcessed(zipFileName)
+            batchFileState.onZipFileProcessed(zipFilename)
         }
         successfulJsonManifests map { manifestMessages =>
           logInfo(s"got ${manifestMessages.length} manifest messages to send")
@@ -267,7 +267,7 @@ object AtmosManifestFilePolling {
           eventualZipCompletion.onSuccess {
             case zipFilename =>
               logInfo(s"updating latestFile: from $latestFile to $zipFilename")
-              batchFileState.onZipFileProcessed(zipFileName)
+              batchFileState.onZipFileProcessed(zipFilename)
               logInfo(s"finished processing. latestFile now: ${batchFileState.latestFile}")
           }
         }
