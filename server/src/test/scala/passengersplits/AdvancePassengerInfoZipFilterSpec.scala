@@ -18,7 +18,7 @@ class AdvancePassengerInfoZipFilterSpec extends TestKit(ActorSystem("AkkaStreamT
 
   "Given we are polling for a new batch of zip files" >> {
 
-    import passengersplits.polling.AtmosFilePolling._
+    import passengersplits.polling.AtmosManifestFilePolling._
 
     "Then new files finder should find new files " >> {
 

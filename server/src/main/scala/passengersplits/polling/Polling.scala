@@ -19,7 +19,7 @@ import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchCompleteAck, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import passengersplits.s3._
 import services.SDate
 
@@ -76,14 +76,14 @@ object FutureUtils {
 object FilePollerFactory {
   def atmosPoller(initialLatestFile: Option[String] = None, atmosS3Host: String,
                   bucketName: String
-                 )(implicit outersystem: ActorSystem): FileProvider = {
+                 )(implicit outersystem: ActorSystem, mat: Materializer): FileProvider = {
     val log = outersystem.log
     SimpleAtmosReader(bucketName, atmosS3Host, log)
 
   }
 }
 
-object AtmosFilePolling {
+object AtmosManifestFilePolling {
   val log = LoggerFactory.getLogger(getClass)
 
   import FutureUtils._
@@ -123,28 +123,26 @@ object AtmosFilePolling {
                    tickingSource: Source[DateTime, Any],
                    batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, mat: Materializer) = {
     val statefulPoller = FilePollerFactory.atmosPoller(Some(initialFileFilter), atmosHost, bucket)
-    
-    val batchFileState = new LogginBatchFileState {
+
+    val batchFileState = new LoggingBatchFileState {
       override var latestFileName: String = initialFileFilter
     }
 
     beginPollingImpl(flightPassengerReporter,
       tickingSource,
-      statefulPoller.createFilenameSource,
-      statefulPoller.zipFilenameToEventualFileContent, batchFileState, batchAtMost)
+      statefulPoller,
+      batchFileState, batchAtMost)
   }
 
 
   def beginPollingImpl(flightPassengerReporter: ActorRef,
                        tickingSource: Source[DateTime, Any],
-
-                       createFilenameSource: () => Source[String, NotUsed],
-                       unzippedFilenameContent: UnzipFileContentFunc[String],
-                       batchFileState: LogginBatchFileState,
+                       fileProvider: FileProvider,
+                       batchFileState: LoggingBatchFileState,
                        batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, mat: Materializer): Future[Done] = {
     tickingSource.runForeach { tickId =>
-      val zipfilenamesSource: Source[String, NotUsed] = createFilenameSource()
-      runSingleBatch(tickId, zipfilenamesSource, unzippedFilenameContent, flightPassengerReporter, batchFileState, batchAtMost)
+      val zipfilenamesSource: Source[String, NotUsed] = fileProvider.createFilenameSource()
+      runSingleBatch(tickId, zipfilenamesSource, fileProvider.zipFilenameToEventualFileContent, flightPassengerReporter, batchFileState, batchAtMost)
     }
   }
 
@@ -163,7 +161,7 @@ object AtmosFilePolling {
     def onBatchComplete(tickId: TickId): Unit
   }
 
-  trait LogginBatchFileState extends BatchFileState {
+  trait LoggingBatchFileState extends BatchFileState {
     var latestFileName: String
 
     def onZipFileProcessed(filename: String) = {
@@ -182,11 +180,11 @@ object AtmosFilePolling {
                      batchAtMost: FiniteDuration)(implicit actorSystem: ActorSystem, materializer: Materializer): Unit = {
     log.info(s"tickId: $tickId Starting batch")
     val futureZipFiles: Future[Seq[String]] = zipFilenamesSource.runWith(Sink.seq)
-    
+
     futureZipFiles.onComplete {
-      case oc => log.info(s"tickId: $tickId zip file list retrieval completes with $oc")
+      case oc => log.debug(s"tickId: $tickId zip file list retrieval completes with $oc")
     }
-    
+
     val futureOfFutureProcessedZipFiles: Future[Seq[Future[String]]] = for (fileNames <- futureZipFiles) yield {
       processSingleZipFile(tickId, unzipFileContent, flightPassengerReporter, batchFileState, fileNames)
     }
@@ -197,7 +195,6 @@ object AtmosFilePolling {
       val allZipFilesInBatch: Future[Seq[Try[String]]] = waitAll(batchSuccess)
       allZipFilesInBatch.onComplete {
         (oc) =>
-          log.info(s"tickId: $tickId batchComplete")
           batchFileState.onBatchComplete(tickId)
       }
       allZipFilesInBatch
@@ -224,12 +221,11 @@ object AtmosFilePolling {
         log.info(s"tickId: $tickId: latestFile: $latestFile AdvPaxInfo: extracting manifests from zip $zipFileName")
 
         val zipFuture: Future[List[UnzippedFileContent]] = unzipFileContent(zipFileName)
-        val unzippingFileFuture: Future[Seq[VoyagePassengerInfo]] = zipFuture
+        val unzippingFileFuture: Future[Seq[VoyageManifest]] = zipFuture
           .map(manifests => {
             val jsonFilenames = manifests.map(_.filename)
             log.info(s"tickId: $tickId processing manifests from zip '$zipFileName'. Length: ${manifests.length}, Content: ${jsonFilenames}")
             val voyagePassengerInfos = manifestsToAdvPaxReporter(log, flightPassengerReporter, manifests)
-            log.info(s"got voyagePassengerifnso ${voyagePassengerInfos}")
             val (vpis, errors) = voyagePassengerInfos partition {
               case (_, _, Success(s)) => true
               case _ => false
@@ -240,7 +236,7 @@ object AtmosFilePolling {
             }
 
             log.info(s"tickId: $tickId processed manifests from zip '$zipFileName': Length ${manifests.length}  ${manifests.headOption.map(_.filename)}")
-            vpis.map { case (zipfile, jsonfile, Success(vpi)) => vpi }
+            vpis.map { case (_, _, Success(vpi)) => vpi }
 
           })
 
@@ -261,7 +257,7 @@ object AtmosFilePolling {
         unzippingFileFuture map { messages =>
 
           log.info(s"tickId: $tickId got messages to send ${messages.length}")
-          val messageSource: Source[VoyagePassengerInfo, NotUsed] = Source(messages)
+          val messageSource: Source[VoyageManifest, NotUsed] = Source(messages)
           val zipSendingGraph: RunnableGraph[NotUsed] = messageSource.to(subscriberFlightActor)
           zipSendingGraph.run()
 
@@ -270,14 +266,16 @@ object AtmosFilePolling {
             case zipFilename =>
               log.info(s"AdvPaxInfo: tickId: $tickId updating latestFile: $latestFile to $zipFileName complete $zipFilename")
               batchFileState.onZipFileProcessed(zipFileName)
-              log.info(s"AdvPaxInfo: tickId: $tickId finished processing zip $zipFileName $latestFile")
+              log.info(s"AdvPaxInfo: tickId: $tickId finished processing zip '$zipFileName' latestFile now: ${batchFileState.latestFile}")
           }
         }
         eventualZipCompletion
       })
   }
 
-  private def manifestsToAdvPaxReporter(log: Logger, advPaxReporter: ActorRef, manifests: List[ZipUtils.UnzippedFileContent]): Seq[(Option[String], String, Try[VoyagePassengerInfo])]
+  // todo rather than this List[ZipUtils.UnzippedFileContent] we should be trying to deal in Sources, if we do
+  // that should enable us to reduce some of the Future state management
+  private def manifestsToAdvPaxReporter(log: Logger, advPaxReporter: ActorRef, manifests: List[ZipUtils.UnzippedFileContent]): Seq[(Option[String], String, Try[VoyageManifest])]
   = {
     log.info(s"AdvPaxInfo: parsing ${manifests.length} manifests")
     val manifestsToSend = manifests.map((flightManifest) => {

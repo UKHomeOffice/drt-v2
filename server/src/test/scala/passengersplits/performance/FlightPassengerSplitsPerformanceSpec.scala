@@ -11,7 +11,7 @@ import org.specs2.specification.AfterAll
 import passengersplits.PassengerInfoBatchActor
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import passengersplits.core.{PassengerSplitsInfoByPortRouter, PassengerTypeCalculator}
-import passengersplits.parsing.PassengerInfoParser.{PassengerInfoJson, VoyagePassengerInfo}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import spray.http.DateTime
 import spray.routing.Directives
 
@@ -63,7 +63,7 @@ class FlightPassengerSplitsPerformanceSpec extends
   } yield PassengerInfoJson(Some(dt), dicc, eeaFlag, Some(age.toString))
 
   // todo figure out scala check Gen.parameters
-  def flightGen(dateTime: DateTime): Gen[VoyagePassengerInfo] = for {
+  def flightGen(dateTime: DateTime): Gen[VoyageManifest] = for {
     et <- eventType
     port <- airportGen
     departurePort <- airportGen
@@ -74,7 +74,7 @@ class FlightPassengerSplitsPerformanceSpec extends
     randomizedDateTime = dateTime.copy(hour = hour, minute = minute)
     dateStr = randomizedDateTime.toIsoLikeDateTimeString.split(" ")
     passengers <- Gen.listOf(passengerInfoGen)
-  } yield VoyagePassengerInfo(et, port, departurePort, vn.toString, carrier,
+  } yield VoyageManifest(et, port, departurePort, vn.toString, carrier,
     dateStr(0),
     dateStr(1), passengers)
 
@@ -90,16 +90,16 @@ class FlightPassengerSplitsPerformanceSpec extends
   } yield FlightId(port, vn.toString, carrier, randomizedDateTime)
 
 
-  def flightStream(startDateTime: DateTime): Stream[VoyagePassengerInfo] = {
+  def flightStream(startDateTime: DateTime): Stream[VoyageManifest] = {
     Arbitrary(flightGen(startDateTime)).arbitrary.sample.get #::
       flightStream(startDateTime)
   }
 
-  def flightList(startDateTime: DateTime, numFlights: Int): Seq[VoyagePassengerInfo] = {
+  def flightList(startDateTime: DateTime, numFlights: Int): Seq[VoyageManifest] = {
     (0 to numFlights).flatMap(n => eventsFromFlight(Arbitrary(flightGen(startDateTime)).arbitrary.sample.get).reverse)
   }
 
-  def eventsFromFlight(vpi: VoyagePassengerInfo): List[VoyagePassengerInfo] = {
+  def eventsFromFlight(vpi: VoyageManifest): List[VoyageManifest] = {
     vpi match {
       case v if v.PassengerList == Nil => Nil
       case v =>
@@ -117,7 +117,7 @@ class FlightPassengerSplitsPerformanceSpec extends
     val totalEvents: Int = 100
 
     s"looking for the first event " in {
-      val flightsToFind: List[VoyagePassengerInfo] = initialiseFlightsWithStream(aggregationRef, totalEvents)
+      val flightsToFind: List[VoyageManifest] = initialiseFlightsWithStream(aggregationRef, totalEvents)
 
       val flightToFind = flightsToFind.take(1).toList.head
       log.info(s"Looking for ${flightToFind}")
@@ -125,7 +125,7 @@ class FlightPassengerSplitsPerformanceSpec extends
       success("yay")
     }
     s"looking for multiple events" in {
-      val flightsToFind: List[VoyagePassengerInfo] = initialiseFlightsWithStream(aggregationRef, totalEvents)
+      val flightsToFind: List[VoyageManifest] = initialiseFlightsWithStream(aggregationRef, totalEvents)
 
       val (results, time) = profile {
         flightsToFind foreach {
@@ -142,9 +142,9 @@ class FlightPassengerSplitsPerformanceSpec extends
     }
   }
 
-  def findFlightAndCheckResult(flightToFind: VoyagePassengerInfo): Unit = {
+  def findFlightAndCheckResult(flightToFind: VoyageManifest): Unit = {
     flightToFind match {
-      case VoyagePassengerInfo(_, port, originPort, voyageNumber, carrier, scheduleDate, scheduledTime, passengers) =>
+      case VoyageManifest(_, port, originPort, voyageNumber, carrier, scheduleDate, scheduledTime, passengers) =>
         val nearlyIsoArrivalDt = s"${scheduleDate.replace("-", "")}T${scheduledTime.replace(":", "").take(4)}"
         nearlyIsoArrivalDt
 
@@ -163,20 +163,20 @@ class FlightPassengerSplitsPerformanceSpec extends
 
   def dateStream(sd: DateTime): Stream[DateTime] = sd #:: dateStream(sd + millisPerDay)
 
-  def initialiseFlightsWithStream(aggRef: ActorRef, totalEvents: Int): List[VoyagePassengerInfo] = {
+  def initialiseFlightsWithStream(aggRef: ActorRef, totalEvents: Int): List[VoyageManifest] = {
     println("Initialise flights")
     val (result, time) = profile {
       val dts = dateStream(DateTime(2016, 4, 1))
       val flightsPerDay: Int = 1400
       val numberOfDays: Int = 3
 
-      val fs: Stream[(DateTime, Seq[VoyagePassengerInfo])] = dts.take(numberOfDays)
+      val fs: Stream[(DateTime, Seq[VoyageManifest])] = dts.take(numberOfDays)
         .map((currentDay) => (currentDay, flightList(currentDay, flightsPerDay)))
       //        .take(totalEvents)
       fs.par.map {
         (args) =>
-          val (currentDay, dayOfEvents: Seq[VoyagePassengerInfo]) = args
-          val groupList: List[VoyagePassengerInfo] = dayOfEvents.toList
+          val (currentDay, dayOfEvents: Seq[VoyageManifest]) = args
+          val groupList: List[VoyageManifest] = dayOfEvents.toList
           val batchActor = system.actorOf(Props(new PassengerInfoBatchActor(testActor, aggregationRef, groupList, currentDay.toString())))
           log.info(s"Sending messages for ${currentDay}")
           batchActor ! "Begin"

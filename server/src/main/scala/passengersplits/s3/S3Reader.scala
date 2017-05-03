@@ -18,7 +18,7 @@ import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import passengersplits._
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
-import passengersplits.parsing.PassengerInfoParser
+import passengersplits.parsing.VoyageManifestParser
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.SDateLike
 
@@ -39,7 +39,7 @@ trait FilenameProvider {
 trait FileProvider {
   def createFilenameSource(): Source[String, NotUsed]
 
-  def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]]
+  def zipFilenameToEventualFileContent(zipFileName: String): Future[List[UnzippedFileContent]]
 }
 
 
@@ -57,12 +57,16 @@ trait S3Reader extends CoreLogging with FileProvider {
 
   def unzipTimeout = FiniteDuration(400, TimeUnit.SECONDS)
 
+  implicit def actorMaterializer: Materializer
+
+  implicit def ec: ExecutionContext
+
   override def createFilenameSource(): Source[String, NotUsed] = {
     log.info(s"creating stream of zip files")
     createBuilder.listFilesAsStream(bucket).map(_._1)
   }
 
-  override def zipFilenameToEventualFileContent(zipFileName: String)(implicit actorMaterializer: Materializer, ec: ExecutionContext): Future[List[UnzippedFileContent]] = Future {
+  override def zipFilenameToEventualFileContent(zipFileName: String): Future[List[UnzippedFileContent]] = Future {
     try {
       log.info(s"Will parse ${zipFileName}")
       val threadSpecificBuilder = createBuilder
@@ -101,7 +105,10 @@ object DqSettings {
 
 case class SimpleAtmosReader(override val bucket: String,
                              skyscapeAtmosHost: String,
-                             log: LoggingAdapter) extends S3Reader {
+                             log: LoggingAdapter)(
+                              implicit val actorMaterializer: Materializer,
+                              val ec: ExecutionContext
+                            ) extends FileProvider with S3Reader {
 
   override def createBuilder: S3StreamBuilder = S3StreamBuilder(createS3client)
 
@@ -120,6 +127,8 @@ case class SimpleAtmosReader(override val bucket: String,
     client.client.setEndpoint(skyscapeAtmosHost)
     client
   }
+
+
 }
 
 object WorkerPool {
@@ -138,7 +147,7 @@ object WorkerPool {
 class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber with ActorLogging {
 
   import ActorSubscriberMessage._
-  import PassengerInfoParser._
+  import VoyageManifestParser._
 
   val MaxQueueSize = 10
   var queue = Map.empty[Int, ActorRef]
@@ -160,7 +169,7 @@ class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber wi
         case Failure(f) =>
           log.error(f, s"Could not parse $content")
       }
-    case OnNext(voyagePassengerInfo: VoyagePassengerInfo) =>
+    case OnNext(voyagePassengerInfo: VoyageManifest) =>
       flightPassengerInfoRouter ! voyagePassengerInfo
     case OnComplete =>
       log.info(s"WorkerPool OnComplete")
@@ -176,7 +185,7 @@ case class FlightId(flightNumber: String, carrier: String, schDateTime: SDateLik
 class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 
   import ActorSubscriberMessage._
-  import PassengerInfoParser._
+  import VoyageManifestParser._
 
   val MaxQueueSize = 10
   var queue = Map.empty[Int, ActorRef]
@@ -189,7 +198,7 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
   var flightSplits: Map[FlightId, VoyagePaxSplits] = Map()
 
   def receive = {
-    case OnNext(voyagePassengerInfo: VoyagePassengerInfo) =>
+    case OnNext(voyagePassengerInfo: VoyageManifest) =>
       val flightId = FlightId(voyagePassengerInfo.VoyageNumber, voyagePassengerInfo.CarrierCode, voyagePassengerInfo.scheduleArrivalDateTime.get)
     case OnComplete =>
       log.info(s"WorkerPool OnComplete")
@@ -202,13 +211,13 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 
 object VoyagePassengerInfoParser {
 
-  import PassengerInfoParser._
+  import VoyageManifestParser._
   import FlightPassengerInfoProtocol._
-  import PassengerInfoParser._
+  import VoyageManifestParser._
   import spray.json._
 
-  def parseVoyagePassengerInfo(content: String): Try[VoyagePassengerInfo] = {
-    Try(content.parseJson.convertTo[VoyagePassengerInfo])
+  def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
+    Try(content.parseJson.convertTo[VoyageManifest])
   }
 }
 

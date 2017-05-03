@@ -2,7 +2,7 @@ package passengersplits
 
 import akka.actor._
 import passengersplits.core.PassengerInfoRouterActor.PassengerSplitsAck
-import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import passengersplits.performance.PassengerInfoBatchComplete
 
 import scala.collection.immutable.Seq
@@ -10,14 +10,14 @@ import scala.collection.immutable.Seq
 object PassengerInfoBatchActor {
   def props(replyActor: ActorRef,
             passengerInfoRoutingRef: ActorRef,
-            flights: Seq[VoyagePassengerInfo],
+            flights: Seq[VoyageManifest],
             description: String
            ) = Props(classOf[PassengerInfoBatchActor], replyActor, passengerInfoRoutingRef, flights, description)
 }
 
 case class PassengerInfoBatchActor(replyActor: ActorRef,
                                    passengerInfoRoutingRef: ActorRef,
-                                   flights: Seq[VoyagePassengerInfo],
+                                   flights: Seq[VoyageManifest],
                                    description: String) extends Actor with ActorLogging {
   var received = 0
 

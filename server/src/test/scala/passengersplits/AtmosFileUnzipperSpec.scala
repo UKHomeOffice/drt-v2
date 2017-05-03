@@ -3,7 +3,7 @@ package passengersplits
 import akka.{Done, NotUsed}
 import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestActor.{AutoPilot, SetAutoPilot}
 import akka.testkit.TestKit
@@ -12,9 +12,9 @@ import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.parsing.PassengerInfoParser.VoyagePassengerInfo
-import passengersplits.polling.{AtmosFilePolling, FutureUtils}
-import passengersplits.polling.AtmosFilePolling.{LogginBatchFileState, TickId}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.polling.{AtmosManifestFilePolling, FutureUtils}
+import passengersplits.polling.AtmosManifestFilePolling.{LoggingBatchFileState, TickId}
 import services.mocklogger.MockLoggingLike
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -26,20 +26,23 @@ import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchCompleteAck, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
+import passengersplits.s3.FileProvider
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future, Promise, TimeoutException}
+import scala.concurrent._
 import scala.util.{Failure, Success, Try}
 
-class SimpleTestRouter(queue: mutable.Queue[VoyagePassengerInfo]) extends Actor {
+import scala.language.reflectiveCalls  // used for the FileProvider.callsToUnzippedFunc below, perhaps we should just use mockito?
+
+class SimpleTestRouter(queue: mutable.Queue[VoyageManifest]) extends Actor {
   def receive: Receive = {
     case FlightPaxSplitBatchInit =>
       sender ! PassengerSplitsAck
-    case vpi: VoyagePassengerInfo =>
+    case vpi: VoyageManifest =>
       queue += vpi
       sender ! PassengerSplitsAck
     case FlightPaxSplitBatchComplete(zipfilename, completionMonitor) =>
@@ -57,7 +60,7 @@ object SimpleTestRouter {
   def defaultReceive(sender: ActorRef): PartialFunction[Any, Any] = {
     case FlightPaxSplitBatchInit =>
       sender ! PassengerSplitsAck
-    case vpi: VoyagePassengerInfo =>
+    case vpi: VoyageManifest =>
       sender ! PassengerSplitsAck
     case FlightPaxSplitBatchComplete(zipfilename, completionMonitor) =>
       log.info(s"SimpleTestRouter autopilot got FlightPaxSplitBatchComplete $completionMonitor")
@@ -76,25 +79,26 @@ class WhenUnzippingOrderMattersSpec extends TestKit(ActorSystem("AkkaStreamTestK
     "the latest filename should not be updated until the actor has received (acked) all the VoyagePaxInfo messages from the zipfile" >> {
       println("order of messages")
       val twoTicks = Source(List(new DateTime(2017, 1, 1, 12, 33, 20)))
+      val fileProvider = new FileProvider {
+        def createFilenameSource(): Source[String, NotUsed] = Source(List("drt_dq_170411_104441_4850.zip"))
 
-      def shouldOnlyBeCalledOnce_ListOfFilenames() = Source(List("drt_dq_170411_104441_4850.zip"))
+        var callsToUnzippedContent = 0
 
-      var callsToUnzippedContent = 0
+        def zipFilenameToEventualFileContent(zipFileName: String) = {
+          callsToUnzippedContent += 1
 
-      def unzippedContentFunc(fn: String) = {
-        callsToUnzippedContent += 1
-
-        Future {
-          Thread.sleep(1000) /// take longer than we need, but not too long
-          UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
-            """
+          Future {
+            Thread.sleep(1000) /// take longer than we need, but not too long
+            UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+              """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil
+          }
         }
+
       }
 
-
-      val testQueue = mutable.Queue[VoyagePassengerInfo]()
+      val testQueue = mutable.Queue[VoyageManifest]()
 
       val flightPassengerSplitReporter = system.actorOf(Props(classOf[SimpleTestRouter], testQueue), name = "flight-pax-reporter")
 
@@ -108,10 +112,9 @@ class WhenUnzippingOrderMattersSpec extends TestKit(ActorSystem("AkkaStreamTestK
         }
       }
 
-      val pollingFuture = AtmosFilePolling.beginPollingImpl(flightPassengerSplitReporter,
+      val pollingFuture = AtmosManifestFilePolling.beginPollingImpl(flightPassengerSplitReporter,
         twoTicks,
-        shouldOnlyBeCalledOnce_ListOfFilenames,
-        unzippedContentFunc,
+        fileProvider,
         batchFileState,
         batchAtMost
       )
@@ -127,7 +130,7 @@ class WhenUnzippingOrderMattersSpec extends TestKit(ActorSystem("AkkaStreamTestK
       }
       val futureOfAllBatches = Future.sequence(List(batchFileState.onZipFileProcessCalled("drt_dq_170411_104441_4850.zip"), pollingFuture))
 
-      (Await.result(futureOfAllBatches, 40 seconds), callsToUnzippedContent) === (List(expectedZipFile, Done), expectedNumberOfCalls)
+      (Await.result(futureOfAllBatches, 40 seconds), fileProvider.callsToUnzippedContent) === (List(expectedZipFile, Done), expectedNumberOfCalls)
     }
   }
 
@@ -147,33 +150,34 @@ class WhenUnzippingIfJsonIsBadSpec extends
       system.log.info("unzipping is bad")
       val batchTick = Source(List(new DateTime(2017, 1, 1, 12, 33, 20)))
 
-      def shouldOnlyBeCalledOnce_ListOfFilenames() = Source(List(
-        "drt_dq_170411_104441_4850.zip"
-      ))
+      val fileProvider = new FileProvider {
+        def createFilenameSource(): Source[String, NotUsed] = Source(List(
+          "drt_dq_170411_104441_4850.zip"
+        ))
 
-      var callsToUnzippedContent = 0
+        var callsToUnzippedContent = 0
 
-      def unzippedContentFunc(fn: String) = {
-        callsToUnzippedContent += 1
+        def zipFilenameToEventualFileContent(zipFileName: String) = {
+          callsToUnzippedContent += 1
 
-        Future {
-          Thread.sleep(1000) /// take longer than we need, but not too long
-          UnzippedFileContent("drt_150302_060000_BA1234_DC_7890.json",
-            """ this is not a valid json!!!""", Option("drt_dq_170411_104441_4850.zip")) ::
-            UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
-              """
+          Future {
+            Thread.sleep(1000) /// take longer than we need, but not too long
+            UnzippedFileContent("drt_150302_060000_BA1234_DC_7890.json",
+              """ this is not a valid json!!!""", Option("drt_dq_170411_104441_4850.zip")) ::
+              UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+                """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil
+          }
         }
-      }
 
+      }
       val batchFileState = SignallingBatchFileState("", "drt_dq_170411_104441_4850.zip" :: Nil)
 
       withMockAppender { mockAppender =>
-        val pollingFuture = AtmosFilePolling.beginPollingImpl(flightPassengerSplitReporter,
+        val pollingFuture = AtmosManifestFilePolling.beginPollingImpl(flightPassengerSplitReporter,
           batchTick,
-          shouldOnlyBeCalledOnce_ListOfFilenames,
-          unzippedContentFunc,
+          fileProvider,
           batchFileState,
           batchAtMost
         )
@@ -189,7 +193,7 @@ class WhenUnzippingIfJsonIsBadSpec extends
         }
         val futureOfAllBatches = Future.sequence(List(batchFileState.onZipFileProcessCalled("drt_dq_170411_104441_4850.zip"), pollingFuture))
 
-        (Await.result(futureOfAllBatches, 10 seconds), callsToUnzippedContent) === (List(expectedZipFile, Done), exp)
+        (Await.result(futureOfAllBatches, 10 seconds), fileProvider.callsToUnzippedContent) === (List(expectedZipFile, Done), exp)
         val argumentCaptor = ArgumentCaptor.forClass(classOf[ILoggingEvent])
         verify(mockAppender, Mockito.atLeastOnce()).doAppend(argumentCaptor.capture())
 
@@ -219,26 +223,31 @@ class WhenUnzippingIfEntireZipfileIsBad extends
         val tickId = new DateTime(2017, 1, 1, 12, 33, 20)
         val batchTick = Source(List(tickId))
 
-        def shouldOnlyBeCalledOnce_ListOfFilenames() = Source(List(
-          "drt_dq_170411_104441_4850.zip",
-          "drt_dq_180411_123821_9999.zip"
-        ))
+        val fileProvider = new FileProvider {
+          def createFilenameSource(): Source[String, NotUsed] = Source(List(
+            "drt_dq_170411_104441_4850.zip",
+            "drt_dq_180411_123821_9999.zip"
+          ))
 
-        var callsToUnzippedContent = 0
 
-        def unzippedContentFunc(fn: String) = {
-          callsToUnzippedContent += 1
-          system.log.info(s"unzippedContentFunc $fn $callsToUnzippedContent")
-          callsToUnzippedContent match {
-            case 1 =>
-              Future.failed(new Exception(s"Some exception while unzipping $fn"))
-            case 2 => Future.successful(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
-              """
+          def zipFilenameToEventualFileContent(zipFileName: String) = {
+            callsToUnzippedContent += 1
+            system.log.info(s"unzippedContentFunc $zipFileName $callsToUnzippedContent")
+            callsToUnzippedContent match {
+              case 1 =>
+                Future.failed(new Exception(s"Some exception while unzipping $zipFileName"))
+              case 2 => Future.successful(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+                """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil)
 
+            }
           }
+
+          var callsToUnzippedContent = 0
+
         }
+
 
         val batchFileState = new SignallingBatchFileState("", List(
           "drt_dq_170411_104441_4850.zip",
@@ -255,10 +264,9 @@ class WhenUnzippingIfEntireZipfileIsBad extends
 
         withMockAppender { mockAppender =>
           //system under test - AtmosFilePolling.beginPollingImpl
-          val pollingFuture = AtmosFilePolling.beginPollingImpl(flightPassengerSplitReporter,
+          val pollingFuture = AtmosManifestFilePolling.beginPollingImpl(flightPassengerSplitReporter,
             batchTick,
-            shouldOnlyBeCalledOnce_ListOfFilenames,
-            unzippedContentFunc,
+            fileProvider,
             batchFileState,
             batchAtMost
           )
@@ -278,7 +286,7 @@ class WhenUnzippingIfEntireZipfileIsBad extends
 
           val futureOfAllBatches = FutureUtils.waitAll(List(batchFileState.onBatchCompleteWasCalled, pollingFuture))
 
-          (Await.result(futureOfAllBatches, 12 seconds), callsToUnzippedContent) === (List(Success(tickId), Success(Done)), expectedNumberOfCallsToUnzipContent)
+          (Await.result(futureOfAllBatches, 12 seconds), fileProvider.callsToUnzippedContent) === (List(Success(tickId), Success(Done)), expectedNumberOfCallsToUnzipContent)
           val argumentCaptor = ArgumentCaptor.forClass(classOf[ILoggingEvent])
           verify(mockAppender, Mockito.atLeastOnce()).doAppend(argumentCaptor.capture())
 
@@ -292,7 +300,7 @@ class WhenUnzippingIfEntireZipfileIsBad extends
   }
 }
 
-case class SignallingBatchFileState(initialFilename: String, expectedZipFiles: Seq[String]) extends LogginBatchFileState {
+case class SignallingBatchFileState(initialFilename: String, expectedZipFiles: Seq[String]) extends LoggingBatchFileState {
   private val promiseZipDone: Map[String, Promise[String]] = expectedZipFiles.map(fn => (fn, Promise[String]())).toMap
 
   def onZipFileProcessCalled(fn: String): Future[String] = promiseZipDone(fn).future
@@ -331,22 +339,23 @@ class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecif
 
       val twoTicks = Source(tickIds)
 
-      def shouldOnlyBeCalledOnce_ListOfFilenames() = Source(List("drt_dq_170411_104441_4850.zip"))
+      val fileProvider = new FileProvider {
+        def createFilenameSource(): Source[String, NotUsed] = Source(List("drt_dq_170411_104441_4850.zip"))
 
-      var callsToUnzippedContent = 0
+        def zipFilenameToEventualFileContent(zipFileName: String) = {
+          callsToUnzippedContent += 1
 
-      def unzippedContentFunc(fn: String) = {
-        callsToUnzippedContent += 1
-
-        Future {
-          Thread.sleep(1000) /// take longer than we need, but not too long
-          UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
-            """
+          Future {
+            Thread.sleep(1000) /// take longer than we need, but not too long
+            UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+              """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil
+          }
         }
-      }
 
+        var callsToUnzippedContent = 0
+      }
       val batchFileState = new SignallingBatchFileState("", "drt_dq_170411_104441_4850.zip" :: Nil) {
         private val promiseBatchDone = tickIds.map(tid => (tid, Promise[TickId]())).toMap
 
@@ -358,10 +367,9 @@ class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecif
         }
       }
 
-      AtmosFilePolling.beginPollingImpl(flightPassengerSplitReporter,
+      AtmosManifestFilePolling.beginPollingImpl(flightPassengerSplitReporter,
         twoTicks,
-        shouldOnlyBeCalledOnce_ListOfFilenames,
-        unzippedContentFunc,
+        fileProvider,
         batchFileState,
         batchAtMost
       )
@@ -369,7 +377,7 @@ class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecif
       val expectedZipFile = "drt_dq_170411_104441_4850.zip"
       val expectedNumberOfCalls = 1
 
-      (Await.result(batchFileState.onZipFileProcessCalled("drt_dq_170411_104441_4850.zip"), 2 second), callsToUnzippedContent) === (expectedZipFile, expectedNumberOfCalls)
+      (Await.result(batchFileState.onZipFileProcessCalled("drt_dq_170411_104441_4850.zip"), 2 second), fileProvider.callsToUnzippedContent) === (expectedZipFile, expectedNumberOfCalls)
     }
   }
 }
@@ -396,42 +404,44 @@ class WhenABatchTimesOut extends TestKit(ActorSystem("AkkaStreamTestKitSpecifica
     println("first batch times out, second works")
     val twoTicks = Source.tick(1 milli, 2000 milli, NotUsed).map(x => DateTime.now()).take(2)
 
-    val mutableQueueOfFilenames = mutable.Queue(
-      Source(List("drt_dq_170411_104441_4850.zip")),
-      Source(List("drt_dq_170411_113331_4567.zip"))
-    )
+    val fileProvider = new FileProvider {
+      val mutableQueueOfFilenames = mutable.Queue(
+        Source(List("drt_dq_170411_104441_4850.zip")),
+        Source(List("drt_dq_170411_113331_4567.zip"))
+      )
 
-    def listOfZipFilenames() = mutableQueueOfFilenames.dequeue()
 
-    val contents = UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
-      """
+      def createFilenameSource(): Source[String, NotUsed] = mutableQueueOfFilenames.dequeue()
+
+      val contents = UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+        """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
           """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil
 
-    var callsToUnzippedContent = 0
+      var callsToUnzippedContent = 0
 
-    def unzippedContentFunc(fn: String) = {
-      callsToUnzippedContent += 1
-      system.log.info(s"unzipping $fn $callsToUnzippedContent")
-      callsToUnzippedContent match {
-        case 1 =>
-          Future.failed(new TimeoutException("fail with timeout"))
-        case 2 =>
-          Future {
-            Thread.sleep(100) /// faster this time
-            contents
-          }
+
+      def zipFilenameToEventualFileContent(zipFileName: String): Future[List[UnzippedFileContent]] = {
+        callsToUnzippedContent += 1
+        system.log.info(s"unzipping $zipFileName $callsToUnzippedContent")
+        callsToUnzippedContent match {
+          case 1 =>
+            Future.failed(new TimeoutException("fail with timeout"))
+          case 2 =>
+            Future {
+              Thread.sleep(100) /// faster this time
+              contents
+            }
+        }
       }
-    }
 
+    }
     val batchFileState = SignallingBatchFileState("", "drt_dq_170411_104441_4850.zip" :: "drt_dq_170411_113331_4567.zip" :: Nil)
 
     val batchAtMost = 200 millis
 
-    AtmosFilePolling.beginPollingImpl(flightPassengerSplitReporter,
-      twoTicks,
-      listOfZipFilenames,
-      unzippedContentFunc,
+    AtmosManifestFilePolling.beginPollingImpl(flightPassengerSplitReporter,
+      twoTicks, fileProvider,
       batchFileState,
       batchAtMost
     )
@@ -441,7 +451,7 @@ class WhenABatchTimesOut extends TestKit(ActorSystem("AkkaStreamTestKitSpecifica
     val result = (
       Try(Await.result(batchFileState.onZipFileProcessCalled(FirstZip), 500 milli)),
       Try(Await.result(batchFileState.onZipFileProcessCalled("drt_dq_170411_113331_4567.zip"), 10000 milli)),
-      callsToUnzippedContent, batchFileState.latestFileName)
+      fileProvider.callsToUnzippedContent, batchFileState.latestFileName)
     system.log.info(s"what we got $result")
     result match {
       case (Success(FirstZip), Success(SecondZip), expectedNumberOfCalls, SecondZip) => true
@@ -474,7 +484,7 @@ class AtmosFileUnzipperSingleZipSpec extends TestKit(ActorSystem("AkkaStreamTest
       val batchFileState = SignallingBatchFileState("", listOfZips)
 
 
-      AtmosFilePolling.processSingleZipFile(DateTime.now(),
+      AtmosManifestFilePolling.processSingleZipFile(DateTime.now(),
         (fn) => Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
           """
             |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
@@ -516,20 +526,20 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       val batchFileState = SignallingBatchFileState("", listOfZips)
 
-      AtmosFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+      AtmosManifestFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
         """
           |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
         """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil), testActor, batchFileState, 90 seconds)
 
       expectMsg(FlightPaxSplitBatchInit)
-      expectMsgAnyClassOf(classOf[VoyagePassengerInfo])
+      expectMsgAnyClassOf(classOf[VoyageManifest])
 
       success
     }
     "updates the latest file" >> {
       val batchFileState = SignallingBatchFileState("", listOfZips)
 
-      AtmosFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
+      AtmosManifestFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
         """
           |{"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
         """.stripMargin, Option("drt_dq_170411_104441_4850.zip")) :: Nil), testActor, batchFileState, 90 seconds)
@@ -542,7 +552,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
     "given the latest filename is the file in the listOfZips then latest file remains latest file AND no messages are sent to the actor" >> {
       val batchFileState = SignallingBatchFileState("drt_dq_170411_104441_4850.zip", listOfZips)
 
-      AtmosFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => Future(Nil), testActor, batchFileState, 90 seconds)
+      AtmosManifestFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => Future(Nil), testActor, batchFileState, 90 seconds)
 
       val expected = "drt_dq_170411_104441_4850.zip"
       expectNoMsg()
@@ -557,7 +567,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       val requestsForUnzippedContent = mutable.MutableList[String]()
 
-      AtmosFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => {
+      AtmosManifestFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => {
         requestsForUnzippedContent += fn
         Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
           """
@@ -566,7 +576,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
       }, testActor, batchFileState, 4 seconds)
 
       expectMsg(FlightPaxSplitBatchInit)
-      expectMsgAnyClassOf(classOf[VoyagePassengerInfo])
+      expectMsgAnyClassOf(classOf[VoyageManifest])
       expectMsgAnyClassOf(classOf[FlightPaxSplitBatchComplete])
 
       val expectedLatestFile = "drt_dq_170411_104441_4850.zip"
@@ -581,7 +591,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       val requestsForUnzippedContent = mutable.MutableList[String]()
 
-      AtmosFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => {
+      AtmosManifestFilePolling.runSingleBatch(DateTime.now(), sourceOfZips, (fn) => {
         requestsForUnzippedContent += fn
         Future(UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
           """
@@ -590,7 +600,7 @@ class AtmosFileUnzipperSingleBatchSpec extends TestKit(ActorSystem("AkkaStreamTe
       }, testActor, batchFileState, 4 seconds)
 
       expectMsg(FlightPaxSplitBatchInit)
-      expectMsgAnyClassOf(classOf[VoyagePassengerInfo])
+      expectMsgAnyClassOf(classOf[VoyageManifest])
       expectMsgAnyClassOf(classOf[FlightPaxSplitBatchComplete])
 
       val expectedLatestFile = "drt_dq_170411_104441_4850.zip"

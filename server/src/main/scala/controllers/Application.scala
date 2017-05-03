@@ -31,7 +31,7 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import passengersplits.core.PassengerInfoRouterActor.{FlightPaxSplitBatchComplete, FlightPaxSplitBatchInit, PassengerSplitsAck}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.polling.{AtmosFilePolling}
+import passengersplits.polling.{AtmosManifestFilePolling}
 import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -222,7 +222,7 @@ class Application @Inject()(
   val copiedToApiFlights = flightsSource(mockProd, portCode)
   copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
-  import passengersplits.polling.{AtmosFilePolling => afp}
+  import passengersplits.polling.{AtmosManifestFilePolling => afp}
 
   /// PassengerSplits reader
   import SDate.implicits._

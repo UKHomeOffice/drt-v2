@@ -7,17 +7,17 @@ import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
 import passengersplits.core.ZipUtils
 import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.parsing.PassengerInfoParser.{EventCodes, PassengerInfoJson, VoyagePassengerInfo}
+import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfoJson, VoyageManifest}
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 
 import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
-import passengersplits.parsing.PassengerInfoParser
+import passengersplits.parsing.VoyageManifestParser
 
 class ZipSpec extends Specification with Matchers {
 
-  import PassengerInfoParser._
+  import VoyageManifestParser._
   import FlightPassengerInfoProtocol._
   import spray.json._
   "Can extract file content from a zip" >> {
@@ -35,12 +35,12 @@ class ZipSpec extends Specification with Matchers {
         zip =>
           val unzippedStream: Stream[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zip)
           unzippedStream.take(1).map {
-            fc => (fc.filename, fc.content.parseJson.convertTo[VoyagePassengerInfo])
+            fc => (fc.filename, fc.content.parseJson.convertTo[VoyageManifest])
           }
       }
       results.toList match {
         case ("drt_160302_165000_SU2584_CI_0915.json",
-        VoyagePassengerInfo(EventCodes.CheckIn, "LHR", departurePort, "2584", "SU", "2016-03-02", "21:05:00", _)) :: Nil => true
+        VoyageManifest(EventCodes.CheckIn, "LHR", departurePort, "2584", "SU", "2016-03-02", "21:05:00", _)) :: Nil => true
         case default =>
           assert(false, "Didn't match expectation, got: " + default)
           false
@@ -51,12 +51,12 @@ class ZipSpec extends Specification with Matchers {
         zip =>
           val unzippedStream: Stream[UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zip)
           unzippedStream.take(1).map {
-            fc => (fc.filename, fc.content.parseJson.convertTo[VoyagePassengerInfo])
+            fc => (fc.filename, fc.content.parseJson.convertTo[VoyageManifest])
           }
       }
       results.toList match {
         case ("drt_160302_165000_SU2584_CI_0915.json",
-        VoyagePassengerInfo(EventCodes.CheckIn, "LHR", departurePort,  "2584", "SU", "2016-03-02", "21:05:00",
+        VoyageManifest(EventCodes.CheckIn, "LHR", departurePort,  "2584", "SU", "2016-03-02", "21:05:00",
         PassengerInfoJson(Some("V"), "GTM", "", Some("67")) :: passengerInfoTail)) :: Nil => true
         case default =>
           assert(false, "Didn't match expectation, got: " + default)
