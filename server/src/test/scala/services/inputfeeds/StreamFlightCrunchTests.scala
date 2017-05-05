@@ -1,5 +1,7 @@
 package services.inputfeeds
 
+import java.io.File
+
 import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
@@ -23,6 +25,7 @@ import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculato
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+import scala.reflect.io.Directory
 
 object CrunchTests {
 
@@ -81,17 +84,18 @@ object CrunchTests {
     )
   )
 
-  val levelDbJournalDir = "target/test/journal"
+   def levelDbJournalDir(tn: String) = s"target/test/journal/$tn"
 
-  def levelDbTestActorSystem = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+  def levelDbTestActorSystem(tn:String) = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
     "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
     "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
-    "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir,
+    "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir(tn),
     "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
   )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString)))
 
   case class TestContext(override val system: ActorSystem, props: Props) extends
     TestKit(system) with ImplicitSender {
+
     def sendToCrunch[T](o: T) = crunchActor ! o
 
     lazy val crunchActor = createCrunchActor
@@ -103,18 +107,23 @@ object CrunchTests {
     def getCrunchActor = system.actorSelection("CrunchActor")
   }
 
-  def withContextCustomActor[T](props: Props)(f: (TestContext) => T): T = {
-    val context = TestContext(levelDbTestActorSystem, props: Props)
+  def withContextCustomActor[T](props: Props, tn: String= "")(f: (TestContext) => T): T = {
+    val context = TestContext(levelDbTestActorSystem(tn), props: Props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
     res
   }
 
-  def withContext[T](timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
+  def withContext[T](tn: String= "", timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
+    val journalDirName = CrunchTests.levelDbJournalDir(tn)
+
+    val journalDir = new File(journalDirName)
+    journalDir.mkdirs()
     val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider)
-    val context = TestContext(levelDbTestActorSystem, props)
+    val context = TestContext(levelDbTestActorSystem(tn), props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
+    PersistenceCleanup.deleteJournal(journalDirName)
     res
   }
 }
@@ -200,7 +209,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
   "given a crunch actor" >> {
     "and we've not sent it flights" in {
       "when we ask for the latest crunch, we get a NoCrunchAvailable" in {
-        withContext(() => DateTime.parse("2016-09-01T11:00")) {
+        withContext("nocrunch", () => DateTime.parse("2016-09-01T11:00")) {
           context =>
             context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
             context.expectMsg(NoCrunchAvailable())
@@ -250,7 +259,7 @@ class StreamFlightCrunchTests
   
   "Streamed Flight tests" >> {
     "can split a stream into two materializers" in {
-      CrunchTests.withContext() { context =>
+      CrunchTests.withContext("canSplit") { context =>
         implicit val sys = context.system
 
         implicit val mat = ActorMaterializer()
@@ -272,7 +281,7 @@ class StreamFlightCrunchTests
     }
 
     "we tell the crunch actor about flights when they change" in {
-      CrunchTests.withContext() { context =>
+      CrunchTests.withContext("tellCrunch") { context =>
         import WorkloadCalculatorTests._
         val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender), "flightsActor")
         val flights = Flights(
@@ -284,7 +293,7 @@ class StreamFlightCrunchTests
     }
     "and we have sent it a flight in A1" in {
       "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
-        CrunchTests.withContext() { context =>
+        CrunchTests.withContext("canAskCrunch") { context =>
           val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], 1, CrunchTests.airportConfig, () => DateTime.parse("2016-09-01")), "CrunchActor")
 
           val flights = Flights(

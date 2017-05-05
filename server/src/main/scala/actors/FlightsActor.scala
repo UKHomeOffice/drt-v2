@@ -154,7 +154,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
       log.info(s"Restoring from snapshot")
       flights = snapshot
     case RecoveryCompleted =>
-      crunchActor ! PerformCrunchOnFlights(state.values.toList)
+      requestCrunch(state.values.toList)
       log.info("Flights recovery completed, triggering crunch")
     case message => log.error(s"unhandled message - $message")
   }
@@ -196,7 +196,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
       futureOfSeq.onFailure {
         case t =>
           log.error(t, s"Failed retrieving all splits for ${allSplitRequests.length} flights")
-          //todo should we return a failure, or a partial list, here
+        //todo should we return a failure, or a partial list, here
       }
       futureOfSeq.onSuccess {
         case s =>
@@ -221,8 +221,14 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
           saveSnapshot(state)
         }
       }
-      crunchActor ! PerformCrunchOnFlights(newFlights)
+      requestCrunch(newFlights)
+
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
+  }
+
+  private def requestCrunch(newFlights: List[ApiFlight]) = {
+    if (newFlights.nonEmpty)
+      crunchActor ! PerformCrunchOnFlights(newFlights)
   }
 }
