@@ -17,6 +17,14 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Try
 
+object PersistenceCleanup {
+  def deleteJournal(dbLocation: String) = {
+    val directory = new File(dbLocation)
+    Option(directory.listFiles())
+      .map(files => files.map(_.delete()))
+  }
+}
+
 abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
@@ -28,7 +36,7 @@ abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(Acto
 
   def after = {
     shutDownActorSystem
-    new File(dbLocation).listFiles().map(_.delete())
+    PersistenceCleanup.deleteJournal(dbLocation)
   }
 
   def shutDownActorSystem = {
@@ -53,9 +61,11 @@ class ShiftsActorSpec extends Specification {
   def getTestKit = {
     new AkkaTestkitSpecs2Support("target/test") {
       def getActor = shiftsActor(system)
+
       def getState(actor: ActorRef) = {
         Await.result(actor ? GetState, 1 second)
       }
+
       def getStateAndShutdown(actor: ActorRef) = {
         val s = getState(actor)
         shutDownActorSystem
