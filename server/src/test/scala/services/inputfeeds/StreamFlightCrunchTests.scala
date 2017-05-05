@@ -9,21 +9,20 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import controllers._
-import org.joda.time.DateTime
-import org.specs2.execute.Result
-import org.specs2.mutable.{After, Specification, SpecificationLike}
-import org.specs2.specification.AfterAll
-import services.FlightCrunchInteractionTests.TestCrunchActor
-import services.WorkloadCalculatorTests._
-import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import org.joda.time.DateTime
+import org.specs2.execute.Result
+import org.specs2.mutable.{Specification, SpecificationLike}
+import services.FlightCrunchInteractionTests.TestCrunchActor
+import services.WorkloadCalculatorTests._
+import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
 
-import collection.JavaConversions._
-import scala.concurrent.duration._
+import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 object CrunchTests {
 
@@ -188,26 +187,6 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
           true
         }
       }
-      //      "when we ask for the latest crunch for  terminal A2, we get a crunch result only including flights at that terminal, and the wait times will be lower" in {
-      //        val edi: AirportConfig = AirportConfigs.edi
-      //        val splitsProviders = List(SplitsProvider.defaultProvider(edi))
-      //        val timeProvider = () => DateTime.parse("2016-09-01")
-      //        val testActorProps = Props(classOf[ProdCrunchActor], 1, edi, splitsProviders, timeProvider)
-      //        withContextCustomActor(testActorProps) { context =>
-      //          val flights = Flights(
-      //            List(
-      //              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31"),
-      //              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30")))
-      //          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-      //          context.sendToCrunch(GetLatestCrunch("A2", "eeaDesk"))
-      //
-      //          val expectedLowerWaitTimes = CrunchResult(
-      //            Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-      //            Vector(1, 1, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-      //          context.expectMsg(10 seconds, expectedLowerWaitTimes)
-      //          true
-      //        }
-      //      }
     }
   }
 }
@@ -268,12 +247,7 @@ class StreamFlightCrunchTests
   sequential
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
-
-
-  //  def afterAll() = TestKit.shutdownActorSystem(system)
-
-
-
+  
   "Streamed Flight tests" >> {
     "can split a stream into two materializers" in {
       CrunchTests.withContext() { context =>
