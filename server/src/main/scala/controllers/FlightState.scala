@@ -22,6 +22,12 @@ trait FlightState {
     val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
     val withoutDomesticFlights = filterOutDomesticFlights(withoutOldFlights, domesticPorts)
 
+    setFlights(withoutDomesticFlights)
+  }
+
+  def state = flights
+
+  def setFlights(withoutDomesticFlights: Map[Int, ApiFlight]) = {
     flights = withoutDomesticFlights
   }
 

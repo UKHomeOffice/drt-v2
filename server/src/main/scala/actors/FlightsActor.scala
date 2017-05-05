@@ -136,9 +136,12 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
+  val snapshotInterval = 20
+
   override def persistenceId = "flights-store"
 
   override protected def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
+    Recovery
     super.onRecoveryFailure(cause, event)
     log.error(cause, "recovery failed in flightsActors")
   }
@@ -146,13 +149,12 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights) =>
       log.info(s"Recovering ${recoveredFlights.length} new flights")
-      val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-      val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(recoveredFlights.map(flightMessageToApiFlight).toList, lastMidnight, domesticPorts)
+      setFlights(recoveredFlights.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap)
     case SnapshotOffer(_, snapshot: Map[Int, ApiFlight]) =>
       log.info(s"Restoring from snapshot")
       flights = snapshot
-    case message => log.info(s"unhandled message - $message")
+    case RecoveryCompleted => log.info("Flights recovery completed")
+    case message => log.error(s"unhandled message - $message")
   }
 
   val receiveCommand: Receive = LoggingReceive {
@@ -212,8 +214,13 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
       persist(flightsMessage) { (event: FlightsMessage) =>
         log.info(s"Storing ${event.flightMessages.length} flights")
         context.system.eventStream.publish(event)
+        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+          log.info("saving flights snapshot")
+          saveSnapshot(state)
+        }
       }
       crunchActor ! PerformCrunchOnFlights(newFlights)
+    case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }
 }
