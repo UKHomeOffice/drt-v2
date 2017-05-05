@@ -153,7 +153,9 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
     case SnapshotOffer(_, snapshot: Map[Int, ApiFlight]) =>
       log.info(s"Restoring from snapshot")
       flights = snapshot
-    case RecoveryCompleted => log.info("Flights recovery completed")
+    case RecoveryCompleted =>
+      crunchActor ! PerformCrunchOnFlights(state.values.toList)
+      log.info("Flights recovery completed, triggering crunch")
     case message => log.error(s"unhandled message - $message")
   }
 
