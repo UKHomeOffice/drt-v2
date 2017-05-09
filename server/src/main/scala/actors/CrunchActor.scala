@@ -61,7 +61,9 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     log.info(s"getting crunch for $key")
     crunchCache(key) {
       val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
-      crunch.onFailure { case failure => log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage}") }
+      crunch.onFailure { case failure =>
+        log.error(failure, "Failure calculating crunch for $key")
+        log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}") }
 
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 1 minute)

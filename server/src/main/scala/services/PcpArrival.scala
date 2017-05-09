@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.FlightsApi.TerminalName
 import drt.shared.{ApiFlight, MilliDate}
 import org.slf4j.LoggerFactory
 
@@ -34,7 +35,7 @@ object PcpArrival {
       None
   }
 
-  def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String) = {
+  def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String): GateOrStandWalkTime = {
     val walkTimes = walkTimesLinesFromFileUrl(walkTimesCsvFileUrl)
       .map(walkTimeFromString)
       .collect {
@@ -45,25 +46,30 @@ object PcpArrival {
     walkTimeMillis(walkTimes) _
   }
 
-  type WalkTimeMillisProvider = (String, String) => Option[Long]
+  type GateOrStand = String
+  type Millis = Long
+  type GateOrStandWalkTime = (GateOrStand, TerminalName) => Option[Millis]
+  type FlightPcpArrivalTimeCalculator = (ApiFlight) => MilliDate
 
-  def walkTimeMillis(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Long] = {
+  def walkTimeMillis(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Millis] = {
     walkTimes.find {
       case WalkTime(f, t, wtm) if f == from && t == terminal => true
       case _ => false
     }.map(_.walkTimeMillis)
   }
 
-  type WalkTimeForFlight = (ApiFlight) => Long
+  type FlightWalkTime = (ApiFlight) => Long
 
-  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: WalkTimeForFlight)(flight: ApiFlight): MilliDate = {
+  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)(flight: ApiFlight): MilliDate = {
     val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
     val walkTimeMillis = walkTimeForFlight(flight)
 
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }
 
-  def walkTimeForFlightProvider(defaultWalkTimeMillis: Long, gateWalkTimesProvider: WalkTimeMillisProvider, standWalkTimesProvider: WalkTimeMillisProvider)(flight: ApiFlight) = {
+  def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
+                                    standWalkTimesProvider: GateOrStandWalkTime,
+                                    defaultWalkTimeMillis: Millis)(flight: ApiFlight): Millis = {
     standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
       gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
   }

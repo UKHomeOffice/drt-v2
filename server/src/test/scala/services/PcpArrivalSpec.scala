@@ -149,7 +149,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
@@ -169,7 +169,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val actChoxMillis = 1483230000000L
@@ -192,7 +192,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val actChoxMillis = 1483230000000L
@@ -212,7 +212,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, wtp, wtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
@@ -233,7 +233,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val gWtp = walkTimeMillis(Seq(WalkTime("2", "T1", gateWalkTimeMillis))) _
       val sWtp = walkTimeMillis(Seq()) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, gWtp, sWtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
@@ -254,7 +254,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val gWtp = walkTimeMillis(Seq()) _
       val sWtp = walkTimeMillis(Seq(WalkTime("2L", "T1", standWalkTimeMillis))) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, gWtp, sWtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L
@@ -277,7 +277,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val standWalkTimeMillis = 600000L
       val sWtp = walkTimeMillis(Seq(WalkTime("2L", "T1", standWalkTimeMillis))) _
 
-      def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(defaultWalkTimeMillis, gWtp, sWtp)(flight)
+      def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis)(flight)
       val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
 
       val schMillis = 1483230000000L

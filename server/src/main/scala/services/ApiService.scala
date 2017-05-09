@@ -91,7 +91,7 @@ object WorkloadSimulation {
   }
 }
 
-abstract class ApiService(airportConfig: AirportConfig)
+abstract class ApiService(val airportConfig: AirportConfig)
   extends Api
     with WorkloadCalculator
     with FlightsService

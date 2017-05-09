@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.http.ProdSendAndReceive
@@ -19,17 +19,13 @@ import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{Api, ApiFlight, CrunchResult, _}
+import drt.shared.{AirportConfig, Api, ApiFlight, CrunchResult, _}
 import org.joda.time.DateTime
 import passengersplits.core.PassengerSplitsInfoByPortRouter
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import passengersplits.core.PassengerInfoRouterActor.{VoyageManifestZipFileComplete, ManifestZipFileInit, PassengerSplitsAck}
-import passengersplits.core.PassengerSplitsInfoByPortRouter
-import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.polling.{AtmosManifestFilePolling}
-import passengersplits.s3._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
+import services.PcpArrival.{FlightPcpArrivalTimeCalculator, FlightWalkTime, GateOrStandWalkTime}
+import services.SplitsProvider.SplitProvider
 import services._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
@@ -40,7 +36,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
-import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv, walkTimeForFlightProvider}
+import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
 
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -58,26 +54,74 @@ trait Core {
   def system: ActorSystem
 }
 
+
+trait WalkTimesProviderLike {
+  def airportConfig: AirportConfig
+
+  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
+  def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
+
+  def pcpArrivalTimeForFlight: (ApiFlight) => MilliDate = (flight) => pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeForFlight)(flight)
+}
+
+
+object WalkTimesProviderFactory {
+  def apply(airportConfig: AirportConfig,
+            gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url")),
+            standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+           ): FlightPcpArrivalTimeCalculator = {
+    val walkTimeForFlight = (flight: ApiFlight) => gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
+    (flight) => pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeForFlight)(flight)
+  }
+}
+
 trait ProdWorkloadCalculator {
-  val ac: AirportConfig
-  val sp: List[SplitsProvider]
-  def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue) = ac.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+  def airportConfig: AirportConfig
 
-  val gateWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+  def splitsProvider: List[SplitsProvider]
 
-  def splitRatioForFlight(flight: ApiFlight) = SplitsProvider.splitsForFlight(sp)(flight)
-  def walkTimeForFlight(flight: ApiFlight): Long = walkTimeForFlightProvider(ac.defaultWalkTimeMillis, gateWalkTimesProvider, standWalkTimesProvider)(flight)
-  def pcpArrivalTimeForFlight(flight: ApiFlight): MilliDate = pcpFrom(ac.timeToChoxMillis, ac.firstPaxOffMillis, walkTimeForFlight)(flight)
+  def splitRatioForFlight(flight: ApiFlight): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProvider)(flight)
+
+  def pcpArrivalTimeForFlight(flight: ApiFlight): MilliDate
+
   def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight)(flight)
 }
 
-class ProdCrunchActor(hours: Int, airportConfig: AirportConfig,
-                      splitsProviders: List[SplitsProvider],
+
+object ProdWorkloadCalculatorFactory {
+  def make(
+             splitRatioForFlight: (ApiFlight) => Option[SplitRatios],
+             pcpArrivalTimeForFlight: (ApiFlight) => MilliDate
+           ): (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    (flight) => PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight)(flight)
+  }
+
+  def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: ApiFlight): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
+
+  def walkTimeForFlight(gateWalkTimesProvider: GateOrStandWalkTime)
+                       (standWalkTimesProvider: GateOrStandWalkTime)
+                       (defaultWalkTimeMillis: Long)
+                       (flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimeMillis)(flight)
+
+  def pcpArrivalTimeForFlight(airportConfig: AirportConfig)
+                             (walkTimeProvider: FlightWalkTime)
+                             (flight: ApiFlight): MilliDate = pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeProvider)(flight)
+
+}
+
+class ProdCrunchActor(hours: Int,
+                      val airportConfig: AirportConfig,
+                      val _flightPaxTypeAndQueueCountsFlow: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
                       timeProvider: () => DateTime
-                     ) extends CrunchActor(hours, airportConfig, timeProvider) with ProdWorkloadCalculator {
-  val ac = airportConfig
-  val sp = splitsProviders
+                     ) extends CrunchActor(hours, airportConfig, timeProvider) {
+  override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+
+  override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    log.info(s"wtfwtf: ${flight}, ${_flightPaxTypeAndQueueCountsFlow}")
+    _flightPaxTypeAndQueueCountsFlow(flight)
+  }
 }
 
 object SystemActors {
@@ -90,9 +134,15 @@ trait SystemActors extends Core {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
+  val paxFlowCalculator = (flight: ApiFlight) => {
+    ProdWorkloadCalculatorFactory.make(
+      ProdWorkloadCalculatorFactory.splitRatioForFlight(splitsProviders),
+      ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+  }
+
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,
-    splitsProviders,
+    paxFlowCalculator,
     () => DateTime.now()), "crunchActor")
 
   val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
@@ -127,13 +177,19 @@ trait ProdPassengerSplitProviders {
   import scala.concurrent.ExecutionContext.global
 
   val apiSplitsProvider = (flight: ApiFlight) => AdvPaxSplitsProvider.splitRatioProvider(airportConfig.portCode)(flightPassengerSplitReporter)(flight)(timeout, global)
-  val splitsProviders = List(apiSplitsProvider, SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
+  override val splitsProviders = List(apiSplitsProvider, SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
 trait ImplicitTimeoutProvider {
   implicit val timeout = Timeout(5 seconds)
 }
 
+
+object WalkTimes {
+  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+  def flightWalkTime(defaultWalkTimes: Long): (ApiFlight) => MillisSinceEpoch = ProdWorkloadCalculatorFactory.walkTimeForFlight(gateWalkTimesProvider)(standWalkTimesProvider)(defaultWalkTimes)
+}
 
 class Application @Inject()(
                              implicit val config: Configuration,
@@ -156,7 +212,15 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache with ProdWorkloadCalculator {
+
+  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
+    override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+      ProdWorkloadCalculatorFactory.make(
+        ProdWorkloadCalculatorFactory.splitRatioForFlight(ctrl.splitsProviders),
+        ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+    }
+
+    override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -164,8 +228,6 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
-    val ac = airportConfig
-    val sp = splitsProviders
   }
 
   trait CrunchFromCache {

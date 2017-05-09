@@ -20,10 +20,12 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import services.PcpArrival.FlightPcpArrivalTimeCalculator
+import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 
 import collection.JavaConversions._
 import scala.concurrent.duration._
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{IndexedSeq, Seq}
 
 object CrunchTests {
 
@@ -132,7 +134,14 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
       "when we ask for the latest crunch for eeaDesk at terminal A1, we get a crunch result only including flights at that terminal" in {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
         val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider)
+
+
+        val paxFlowCalculator = (flight: ApiFlight) => {
+          ProdWorkloadCalculatorFactory.make(
+            ProdWorkloadCalculatorFactory.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+            ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+        }
+        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
 
         withContextCustomActor(props) { context =>
           val flights = Flights(
@@ -156,12 +165,17 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
       "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
         val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider)
+        val paxFlowCalculator = (flight: ApiFlight) => {
+          ProdWorkloadCalculatorFactory.make(
+            ProdWorkloadCalculatorFactory.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+            ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+        }
+        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
 
         withContextCustomActor(props) { context =>
           val flights = Flights(
             List(
-              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T01:00", flightId = 1)/*,
+              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T01:00", flightId = 1) /*,
               apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-01-01T10:00", flightId = 2)*/))
           context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
           context.sendToCrunch(GetLatestCrunch("A1", "eGate"))
@@ -235,7 +249,12 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
         "then the crunch should log an error (untested) and ??ignore the flight??, and crunch successfully" in {
           val splitsProviders = List(SplitsProvider.defaultProvider(airportConfig))
           val timeProvider = () => DateTime.parse("2016-09-01")
-          val testActorProps = Props(classOf[ProdCrunchActor], 1, airportConfig, splitsProviders, timeProvider)
+          val testActorProps = Props(classOf[ProdCrunchActor], 1,
+            airportConfig,
+            (flight: ApiFlight) => ProdWorkloadCalculatorFactory.make(
+              ProdWorkloadCalculatorFactory.splitRatioForFlight(splitsProviders),
+              ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)((flight: ApiFlight) => 0L))(flight),
+            timeProvider)
           withContextCustomActor(testActorProps) {
             context =>
               println("here we are, born to be kings")
@@ -277,7 +296,7 @@ class StreamFlightCrunchTests extends
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
-  def createCrunchActor(hours: Int = 24, airportConfig: AirportConfig = CrunchTests.airportConfig , timeProvider: () => DateTime = () => DateTime.now()): ActorRef = {
+  def createCrunchActor(hours: Int = 24, airportConfig: AirportConfig = CrunchTests.airportConfig, timeProvider: () => DateTime = () => DateTime.now()): ActorRef = {
     system.actorOf(Props(classOf[TestCrunchActor], hours, airportConfig, timeProvider), "CrunchActor")
   }
 
