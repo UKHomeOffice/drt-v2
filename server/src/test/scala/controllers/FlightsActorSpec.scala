@@ -6,7 +6,8 @@ import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import org.specs2.mutable.Specification
-import services.{SplitsProvider, WorkloadCalculatorTests}
+import services.WorkloadCalculatorTests.apiFlight
+import services.SplitsProvider
 import drt.shared.FlightsApi.Flights
 import drt.shared.{AirportConfig, ApiFlight, MilliDate, StaffMovement}
 import akka.pattern._
@@ -39,20 +40,23 @@ class FlightsActorSpec extends Specification {
       implicit val timeout: Timeout = Timeout(5 seconds)
       val actor: ActorRef = flightsActor(system)
 
-      actor ! Flights(List(WorkloadCalculatorTests.apiFlight("SA0123", "STN", 1, "2017-08-02T20:00")))
+      actor ! Flights(List(apiFlight(flightId = 1, iataFlightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
+      val futureFlights: Future[List[ApiFlight]] = futureResult.collect{
+        case Success(Flights(fs)) => fs
+      }
 
       val result = Await.result(futureResult, 1 second)
 
-      assert(Flights(List(WorkloadCalculatorTests.apiFlight("SA0123", "STN", 1, "2017-08-02T20:00"))) == result)
+      assert(Flights(List(apiFlight("SA0123", "STN", 1, "2017-08-02T20:00"))) == result)
     }
 
     "Store a flight and retrieve it after a shutdown" in {
-      setFlightsAndShutdownActorSystem(Flights(List(WorkloadCalculatorTests.apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))))
+      setFlightsAndShutdownActorSystem(Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))))
       val result = startNewActorSystemAndRetrieveFlights
 
-      Flights(List(WorkloadCalculatorTests.apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
+      Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
     }
   }
 

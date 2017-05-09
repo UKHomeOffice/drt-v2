@@ -2,11 +2,15 @@ package services
 
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, LocalDate}
-import org.specs2.mutable.SpecificationLike
-import drt.shared.FlightsApi.TerminalName
+import org.specs2.mutable.{Specification, SpecificationLike}
+import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import org.slf4j.LoggerFactory
+import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
+import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
+import scala.collection.immutable.IndexedSeq
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -102,16 +106,30 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       }
     }
   }
+}
+
+class WTFPaxSplitsFromCSVTests extends Specification {
+
 
   "Given a Flight Passenger Split" >> {
     "When we ask for workloads by terminal, then we should see the split applied" >> {
       val today = new DateTime()
       val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"))
+      val log = LoggerFactory.getLogger(getClass)
 
-      val workloadsCalculator = new WorkloadsCalculator {
+      def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = {
+        log.error("don't call me!!!")
+        MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+      }
+
+      val workloadsCalculator = new WorkloadCalculator {
         def splitRatioProvider = csvSplitProvider.splitRatioProvider
 
-        def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
+        override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
+
+
+        def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -122,13 +140,41 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         List(apiFlight("BA1234", LocalDate.now().toString(formatter)))
       }
 
-      val result: Future[workloadsCalculator.TerminalQueuePaxAndWorkLoads] = workloadsCalculator.workAndPaxLoadsByTerminal(flights)
+      val result: Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = workloadsCalculator.queueLoadsByTerminal(flights, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
 
-      val act: workloadsCalculator.TerminalQueuePaxAndWorkLoads = Await.result(result, 10 seconds)
+      val act: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads] = Await.result(result, 10 seconds)
 
       act("1").toList match {
         case List(("eeaDesk", (_, List(Pax(_, 0.3)))), ("eGate", (_, List(Pax(_, 0.7)))), ("nonEeaDesk", (_, List(Pax(_, 0.0))))) => true
       }
     }
   }
+
+
+  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
+    ApiFlight(
+      Operator = "",
+      Status = "",
+      EstDT = "",
+      ActDT = "",
+      EstChoxDT = "",
+      ActChoxDT = "",
+      Gate = "",
+      Stand = "",
+      MaxPax = 1,
+      ActPax = 0,
+      TranPax = 0,
+      RunwayID = "",
+      BaggageReclaimId = "",
+      FlightID = 2,
+      AirportID = "STN",
+      Terminal = "1",
+      rawICAO = "",
+      rawIATA = iataFlightCode,
+      Origin = "",
+      PcpTime = 0,
+      SchDT = schDT
+    )
+
+
 }

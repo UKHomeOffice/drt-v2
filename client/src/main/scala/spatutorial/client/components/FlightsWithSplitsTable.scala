@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.modules.FlightsWithSplitsView
-import drt.shared.{AirportInfo, PaxTypeAndQueue, PaxTypesAndQueues}
+import drt.shared.{AirportInfo, MilliDate, PaxTypeAndQueue, PaxTypesAndQueues}
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}

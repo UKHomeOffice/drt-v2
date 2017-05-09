@@ -44,6 +44,9 @@ case class AirportConfig(
                           queues: Map[TerminalName, Seq[QueueName]],
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
+                          timeToChoxMillis: Long = 120000L,
+                          firstPaxOffMillis: Long = 120000L,
+                          defaultWalkTimeMillis: Long = 300000L,
                           defaultPaxSplits: SplitRatios,
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
                           minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
@@ -249,7 +252,7 @@ object AirportConfigs {
       "T4" -> lhrDefaultTerminalProcessingTimes,
       "T5" -> lhrDefaultTerminalProcessingTimes
     ),
-    Map(
+    minMaxDesksByTerminalQueue = Map(
       "T2" -> Map(
         "eGate" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(0, 0, 0, 0, 0, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
         "eeaDesk" -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9)),

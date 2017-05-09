@@ -4,7 +4,7 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{DeskRecTimeslot, Shift}
-import drt.shared.{AirportConfig, CrunchResult, SimulationResult, StaffMovement}
+import drt.shared._
 import drt.shared.FlightsApi._
 
 import scala.collection.immutable.{Map, Seq}
@@ -19,7 +19,7 @@ object Actions {
 
   case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
 
-  case class UpdateWorkloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]) extends Action
+  case class UpdateWorkloads(workloads: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]) extends Action
 
   case class GetWorkloads(begin: String, end: String) extends Action
 

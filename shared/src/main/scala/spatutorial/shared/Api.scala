@@ -129,6 +129,8 @@ object FlightsApi {
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
 
+  type TerminalQueuePaxAndWorkLoads[L] = Map[TerminalName, Map[QueueName, L]]
+
   type TerminalName = String
 
   type QueueName = String
@@ -158,7 +160,7 @@ trait WorkloadsHelpers {
     }
   }
 
-  def workloadPeriodByQueue(workloads: Map[String, (Seq[WL], Seq[Pax])], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def workloadPeriodByQueue(workloads: Map[String, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
     loadPeriodByQueue(workloads, periodMinutes, workloadByMillis)
   }
 
@@ -262,7 +264,7 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[Map[TerminalName, Map[QueueName, QueuePaxAndWorkLoads]]]
+  def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]
 }
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?

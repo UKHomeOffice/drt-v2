@@ -7,6 +7,7 @@ import drt.shared.{ApiFlight, _}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import services._
+import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 import spray.caching.{Cache, LruCache}
 
 import scala.collection.immutable.{NumericRange, Seq}
@@ -45,7 +46,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
                            timeProvider: () => DateTime
                           ) extends Actor
   with DiagnosticActorLogging
-  with WorkloadsCalculator
+  with WorkloadCalculator
   with LoggingCrunchCalculator
   with FlightState
   with DomesticPortList {
@@ -60,7 +61,9 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     log.info(s"getting crunch for $key")
     crunchCache(key) {
       val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
-      crunch.onFailure { case failure => log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage}") }
+      crunch.onFailure { case failure =>
+        log.error(failure, "Failure calculating crunch for $key")
+        log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}") }
 
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 1 minute)
@@ -146,7 +149,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     val tq: QueueName = terminalName + "/" + queueName
     log.info(s"$tq Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
-    val workloads: Future[TerminalQueueWorkLoads] = workLoadsByTerminal(Future(flightsForAirportConfigTerminals))
+    val workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]] = queueLoadsByTerminal[Seq[WL]](Future(flightsForAirportConfigTerminals), PaxLoadCalculator.queueWorkLoadCalculator)
 
     val crunchStartTimeMillis = lastMidnight.getMillis
 

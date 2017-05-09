@@ -14,6 +14,8 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
 import services.SDate.implicits._
+import services.workloadcalculator.PaxLoadCalculator.queueWorkAndPaxLoadCalculator
+import services.workloadcalculator.WorkloadCalculator
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -89,9 +91,9 @@ object WorkloadSimulation {
   }
 }
 
-abstract class ApiService(airportConfig: AirportConfig)
+abstract class ApiService(val airportConfig: AirportConfig)
   extends Api
-    with WorkloadsCalculator
+    with WorkloadCalculator
     with FlightsService
     with AirportToCountryLike
     with ActorBackedCrunchService
@@ -121,7 +123,7 @@ abstract class ApiService(airportConfig: AirportConfig)
     )
   }
 
-  override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads] = {
+  override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
     val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
     val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
       val names: Set[TerminalName] = airportConfig.terminalNames.toSet
@@ -129,7 +131,7 @@ abstract class ApiService(airportConfig: AirportConfig)
         names.contains(flight.Terminal)
       })
     }
-    workAndPaxLoadsByTerminal(flightsForTerminalsWeCareAbout)
+    queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
   }
 
   override def welcomeMsg(name: String): String = {
