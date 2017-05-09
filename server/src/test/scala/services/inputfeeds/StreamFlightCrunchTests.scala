@@ -93,9 +93,9 @@ object CrunchTests {
     )
   )
 
-   def levelDbJournalDir(tn: String) = s"target/test/journal/$tn"
+  def levelDbJournalDir(tn: String) = s"target/test/journal/$tn"
 
-  def levelDbTestActorSystem(tn:String) = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+  def levelDbTestActorSystem(tn: String) = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
     "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
     "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
     "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir(tn),
@@ -116,14 +116,14 @@ object CrunchTests {
     def getCrunchActor = system.actorSelection("CrunchActor")
   }
 
-  def withContextCustomActor[T](props: Props, tn: String= "")(f: (TestContext) => T): T = {
+  def withContextCustomActor[T](props: Props, tn: String = "")(f: (TestContext) => T): T = {
     val context = TestContext(levelDbTestActorSystem(tn), props: Props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
     res
   }
 
-  def withContext[T](tn: String= "", timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
+  def withContext[T](tn: String = "", timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
     val journalDirName = CrunchTests.levelDbJournalDir(tn)
 
     val journalDir = new File(journalDirName)
@@ -282,37 +282,36 @@ class StreamFlightCrunchTests
   sequential
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
-  
-    "we tell the crunch actor about flights when they change" in {
-      CrunchTests.withContext("tellCrunch") { context =>
-        import WorkloadCalculatorTests._
-        val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender), "flightsActor")
-        val flights = Flights(
-          List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
-        flightsActor ! flights
-        context.expectMsg(PerformCrunchOnFlights(flights.flights))
-        true
-      }
+
+  "we tell the crunch actor about flights when they change" in {
+    CrunchTests.withContext("tellCrunch") { context =>
+      import WorkloadCalculatorTests._
+      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender), "flightsActor")
+      val flights = Flights(
+        List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
+      flightsActor ! flights
+      context.expectMsg(PerformCrunchOnFlights(flights.flights))
+      true
     }
-    "and we have sent it a flight in A1" in {
-      "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
-        CrunchTests.withContext("canAskCrunch") { context =>
-          val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], 1, CrunchTests.airportConfig, () => DateTime.parse("2016-09-01")), "CrunchActor")
+  }
+  "and we have sent it a flight in A1" in {
+    "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
+      CrunchTests.withContext("canAskCrunch") { context =>
+        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], 1, CrunchTests.airportConfig, () => DateTime.parse("2016-09-01")), "CrunchActor")
 
-          val flights = Flights(
-            List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
+        val flights = Flights(
+          List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
 
-          crunchActor ! PerformCrunchOnFlights(flights.flights)
-          crunchActor.tell(GetLatestCrunch("A1", "eeaDesk"), context.testActor)
+        crunchActor ! PerformCrunchOnFlights(flights.flights)
+        crunchActor.tell(GetLatestCrunch("A1", "eeaDesk"), context.testActor)
 
-          context.expectMsg(10 seconds,
-            CrunchResult(
-              DateTime.parse("2016-09-01").getMillis,
-              60000,
-              Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-              Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
-          true
-        }
+        context.expectMsg(10 seconds,
+          CrunchResult(
+            DateTime.parse("2016-09-01").getMillis,
+            60000,
+            Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+            Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+        true
       }
     }
   }
