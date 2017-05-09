@@ -42,7 +42,7 @@ object PcpArrival {
         case Some(wt) =>
           log.info(s"Loaded WalkTime $wt")
           wt
-      }
+      }.map(x => ((x.from, x.to), x.walkTimeMillis)).toMap
     walkTimeMillis(walkTimes) _
   }
 
@@ -51,11 +51,8 @@ object PcpArrival {
   type GateOrStandWalkTime = (GateOrStand, TerminalName) => Option[Millis]
   type FlightPcpArrivalTimeCalculator = (ApiFlight) => MilliDate
 
-  def walkTimeMillis(walkTimes: Seq[WalkTime])(from: String, terminal: String): Option[Millis] = {
-    walkTimes.find {
-      case WalkTime(f, t, wtm) if f == from && t == terminal => true
-      case _ => false
-    }.map(_.walkTimeMillis)
+  def walkTimeMillis(walkTimes: Map[(String, String), Long])(from: String, terminal: String): Option[Millis] = {
+    walkTimes.get((from, terminal))
   }
 
   type FlightWalkTime = (ApiFlight) => Long

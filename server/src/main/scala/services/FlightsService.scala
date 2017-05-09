@@ -18,8 +18,7 @@ trait FlightsService extends FlightsApi {
   }
 
   def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[FlightsWithSplits] = {
-    val fsFuture: Future[FlightsWithSplits] = getFlightsWithSplits(startTimeEpoch, endTimeEpoch)
-    fsFuture
+    getFlightsWithSplits(startTimeEpoch, endTimeEpoch)
   }
 }
 
