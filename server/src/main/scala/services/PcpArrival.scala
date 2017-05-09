@@ -58,7 +58,10 @@ object PcpArrival {
   type FlightWalkTime = (ApiFlight) => Long
 
   def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)(flight: ApiFlight): MilliDate = {
-    val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight)
+    val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight).getOrElse({
+      log.error(s"could not get best choxTime for ${flight}")
+      0L
+    })
     val walkTimeMillis = walkTimeForFlight(flight)
 
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
@@ -74,6 +77,7 @@ object PcpArrival {
 
   def bestChoxTime(timeToChoxMillis: Long, flight: ApiFlight): Option[Millis] = {
     def parseMillis(s: => String) = if (s != "") Option(SDate.parseString(s).millisSinceEpoch) else None
+
     def addTimeToChox(s: String) = parseMillis(s).map(_ + timeToChoxMillis)
 
     parseMillis(flight.ActChoxDT)

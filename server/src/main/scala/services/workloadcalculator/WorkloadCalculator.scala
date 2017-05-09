@@ -130,7 +130,8 @@ object PaxLoadCalculator {
     voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider)
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios], pcpStartTimeForFlight: (ApiFlight) => MilliDate)
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (ApiFlight) => Option[SplitRatios],
+                                  pcpStartTimeForFlight: (ApiFlight) => MilliDate)
                                  (flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val pcpStartTimeMillis = pcpStartTimeForFlight(flight).millisSinceEpoch
     val splits = splitsRatioProvider(flight).get.splits
