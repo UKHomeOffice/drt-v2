@@ -76,6 +76,8 @@ object FutureUtils {
 object AtmosManifestFilePolling {
   val log = LoggerFactory.getLogger(getClass)
 
+  val zipFileTimeout = FiniteDuration(12, SECONDS)
+
   import FutureUtils._
 
   type TickId = DateTime
@@ -147,6 +149,8 @@ object AtmosManifestFilePolling {
   trait BatchFileState {
     def latestFile: String
 
+    def onZipFileBegins(filename: String): Unit
+
     def onZipFileProcessed(filename: String): Unit
 
     def onBatchComplete(tickId: TickId): Unit
@@ -154,6 +158,9 @@ object AtmosManifestFilePolling {
 
   trait LoggingBatchFileState extends BatchFileState {
     var latestFileName: String
+
+    def onZipFileBegins(filename: String): Unit =
+      log.info(s"beginning processing $filename")
 
     def onZipFileProcessed(filename: String) = {
       log.info(s"setting latest filename ${filename}")
@@ -172,12 +179,13 @@ object AtmosManifestFilePolling {
     log.info(s"tickId: $tickId Starting batch")
     val futureZipFiles: Future[Seq[String]] = zipFilenamesSource.runWith(Sink.seq)
 
+
     futureZipFiles.onComplete {
       case oc => log.debug(s"tickId: $tickId zip file list retrieval completes with $oc")
     }
 
     val futureOfFutureProcessedZipFiles: Future[Seq[Future[String]]] = for (fileNames <- futureZipFiles) yield {
-      processSingleZipFile(tickId, unzipFileContent, flightPassengerReporter, batchFileState, fileNames)
+      processAllZipFiles(tickId, unzipFileContent, flightPassengerReporter, batchFileState, fileNames)
     }
 
     case class ZipFailure(filename: String, t: Throwable)
@@ -202,8 +210,12 @@ object AtmosManifestFilePolling {
     log.info(s"tickId: $tickId, zip file batch completed")
   }
 
-  def processSingleZipFile(tickId: DateTime, unzipFileContent: UnzipFileContentFunc[String], flightPassengerReporter: ActorRef, batchFileState: BatchFileState, fileNames: Seq[String])
-                          (implicit actorSystem: ActorSystem, materializer: Materializer): Seq[Future[String]] = {
+  def processAllZipFiles(tickId: DateTime,
+                         unzipFileContent: UnzipFileContentFunc[String],
+                         flightPassengerReporter: ActorRef,
+                         batchFileState: BatchFileState,
+                         fileNames: Seq[String])
+                        (implicit actorSystem: ActorSystem, materializer: Materializer): Seq[Future[String]] = {
     val latestFile = batchFileState.latestFile
     val zipFilesToProcess: Seq[String] = filterToFilesNewerThan(fileNames, latestFile).sorted.toList
     log.info(s"tickId: ${tickId} batch begins zipFilesToProcess: ${zipFilesToProcess} since $latestFile, allFiles: ${fileNames.length} vs ${zipFilesToProcess.length}")
@@ -216,6 +228,7 @@ object AtmosManifestFilePolling {
         def logWarn(s: String) = log.warn(logMsg(s))
 
         logInfo(s"latestFile: $latestFile AdvPaxInfo: extracting manifests from zip")
+        batchFileState.onZipFileBegins(zipFilename)
         //todo we should probably keep this a stream, earlier on, it could simplify some of the Future shenanigans later
         val zipFuture: Future[List[UnzippedFileContent]] = unzipFileContent(zipFilename)
         type ZipFilename = String
@@ -264,6 +277,8 @@ object AtmosManifestFilePolling {
               logInfo(s"finished processing. latestFile now: ${batchFileState.latestFile}")
           }
         }
+        Await.ready(eventualZipCompletion, zipFileTimeout)
+
         eventualZipCompletion
       })
   }
