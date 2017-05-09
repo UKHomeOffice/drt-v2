@@ -69,13 +69,17 @@ object PcpArrival {
                                     defaultWalkTimeMillis: Millis)(flight: ApiFlight): Millis = {
     standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
       gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
+
   }
 
-  def bestChoxTime(timeToChoxMillis: Long, flight: ApiFlight) = {
-    if (flight.ActChoxDT != "") SDate.parseString(flight.ActChoxDT).millisSinceEpoch
-    else if (flight.EstChoxDT != "") SDate.parseString(flight.EstChoxDT).millisSinceEpoch
-    else if (flight.ActDT != "") SDate.parseString(flight.ActDT).millisSinceEpoch + timeToChoxMillis
-    else if (flight.EstDT != "") SDate.parseString(flight.EstDT).millisSinceEpoch + timeToChoxMillis
-    else SDate.parseString(flight.SchDT).millisSinceEpoch + timeToChoxMillis
+  def bestChoxTime(timeToChoxMillis: Long, flight: ApiFlight): Option[Millis] = {
+    def parseMillis(s: => String) = if (s != "") Option(SDate.parseString(s).millisSinceEpoch) else None
+    def addTimeToChox(s: String) = parseMillis(s).map(_ + timeToChoxMillis)
+
+    parseMillis(flight.ActChoxDT)
+      .orElse(parseMillis(flight.EstChoxDT)
+        .orElse(addTimeToChox(flight.ActDT)
+          .orElse(addTimeToChox(flight.EstDT)
+            .orElse(addTimeToChox(flight.SchDT)))))
   }
 }

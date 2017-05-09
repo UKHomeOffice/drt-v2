@@ -24,7 +24,7 @@ import org.joda.time.DateTime
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import services.PcpArrival.{FlightPcpArrivalTimeCalculator, FlightWalkTime, GateOrStandWalkTime}
+import services.PcpArrival.{FlightPcpArrivalTimeCalculator, FlightWalkTime, GateOrStandWalkTime, Millis}
 import services.SplitsProvider.SplitProvider
 import services._
 import services.workloadcalculator.PaxLoadCalculator
@@ -147,7 +147,7 @@ object WalkTimes {
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
-  def flightWalkTime(defaultWalkTimes: Long): (ApiFlight) => MillisSinceEpoch = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimes)
+  def flightWalkTime(defaultWalkTimes: Long): (ApiFlight) => Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimes)
 
 }
 
