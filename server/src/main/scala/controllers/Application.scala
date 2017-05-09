@@ -55,29 +55,6 @@ trait Core {
 }
 
 
-trait WalkTimesProviderLike {
-  def airportConfig: AirportConfig
-
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-
-  def walkTimeForFlight(flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
-
-  def pcpArrivalTimeForFlight: (ApiFlight) => MilliDate = (flight) => pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeForFlight)(flight)
-}
-
-
-object WalkTimesProviderFactory {
-  def apply(airportConfig: AirportConfig,
-            gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url")),
-            standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-           ): FlightPcpArrivalTimeCalculator = {
-    val walkTimeForFlight = (flight: ApiFlight) => gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
-    (flight) => pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeForFlight)(flight)
-  }
-}
-
-
 object PaxFlow {
   def makeFlightPaxFlowCalculator(
                                    splitRatioForFlight: (ApiFlight) => Option[SplitRatios],
@@ -87,11 +64,6 @@ object PaxFlow {
   }
 
   def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: ApiFlight): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
-
-  def walkTimeForFlight(gateWalkTimesProvider: GateOrStandWalkTime)
-                       (standWalkTimesProvider: GateOrStandWalkTime)
-                       (defaultWalkTimeMillis: Long)
-                       (flight: ApiFlight): Long = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimeMillis)(flight)
 
   def pcpArrivalTimeForFlight(airportConfig: AirportConfig)
                              (walkTimeProvider: FlightWalkTime)
@@ -175,7 +147,8 @@ object WalkTimes {
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
-  def flightWalkTime(defaultWalkTimes: Long): (ApiFlight) => MillisSinceEpoch = PaxFlow.walkTimeForFlight(gateWalkTimesProvider)(standWalkTimesProvider)(defaultWalkTimes)
+  def flightWalkTime(defaultWalkTimes: Long): (ApiFlight) => MillisSinceEpoch = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimes)
+
 }
 
 class Application @Inject()(
@@ -199,13 +172,12 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
+  val flightPaxFlowCalculator = PaxFlow.makeFlightPaxFlowCalculator(
+    PaxFlow.splitRatioForFlight(splitsProviders),
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
-    override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-      PaxFlow.makeFlightPaxFlowCalculator(
-        PaxFlow.splitRatioForFlight(ctrl.splitsProviders),
-        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
-    }
+    override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = flightPaxFlowCalculator(flight)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 
