@@ -137,9 +137,9 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
 
 
         val paxFlowCalculator = (flight: ApiFlight) => {
-          ProdWorkloadCalculatorFactory.make(
-            ProdWorkloadCalculatorFactory.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-            ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+          PaxFlow.makeFlightPaxFlowCalculator(
+            PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
         }
         val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
 
@@ -166,9 +166,9 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
         val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
         val paxFlowCalculator = (flight: ApiFlight) => {
-          ProdWorkloadCalculatorFactory.make(
-            ProdWorkloadCalculatorFactory.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-            ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+          PaxFlow.makeFlightPaxFlowCalculator(
+            PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
         }
         val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
 
@@ -251,9 +251,9 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
           val timeProvider = () => DateTime.parse("2016-09-01")
           val testActorProps = Props(classOf[ProdCrunchActor], 1,
             airportConfig,
-            (flight: ApiFlight) => ProdWorkloadCalculatorFactory.make(
-              ProdWorkloadCalculatorFactory.splitRatioForFlight(splitsProviders),
-              ProdWorkloadCalculatorFactory.pcpArrivalTimeForFlight(airportConfig)((flight: ApiFlight) => 0L))(flight),
+            (flight: ApiFlight) => PaxFlow.makeFlightPaxFlowCalculator(
+              PaxFlow.splitRatioForFlight(splitsProviders),
+              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((flight: ApiFlight) => 0L))(flight),
             timeProvider)
           withContextCustomActor(testActorProps) {
             context =>
