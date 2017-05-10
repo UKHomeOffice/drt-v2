@@ -24,7 +24,7 @@ import org.joda.time.DateTime
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import services.PcpArrival.{FlightPcpArrivalTimeCalculator, FlightWalkTime, GateOrStandWalkTime, Millis}
+import services.PcpArrival._
 import services.SplitsProvider.SplitProvider
 import services._
 import services.workloadcalculator.PaxLoadCalculator
@@ -96,7 +96,7 @@ trait SystemActors extends Core {
 
   val paxFlowCalculator = PaxFlow.makeFlightPaxFlowCalculator(
     PaxFlow.splitRatioForFlight(splitsProviders),
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
 
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,
@@ -109,6 +109,7 @@ trait SystemActors extends Core {
   val flightsActorAskable: AskableActorRef = flightsActor
 
   def splitsProviders(): List[SplitsProvider]
+  def flightWalkTimeProvider(flight: ApiFlight): Millis
 }
 
 
@@ -142,15 +143,6 @@ trait ImplicitTimeoutProvider {
   implicit val timeout = Timeout(5 seconds)
 }
 
-
-object WalkTimes {
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-
-  def flightWalkTime(defaultWalkTimes: Long): (ApiFlight) => Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimes)
-
-}
-
 class Application @Inject()(
                              implicit val config: Configuration,
                              implicit val mat: Materializer,
@@ -165,6 +157,10 @@ class Application @Inject()(
   ctrl =>
   val log = system.log
 
+  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
+  override def flightWalkTimeProvider(flight: ApiFlight): Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
 
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
@@ -174,7 +170,7 @@ class Application @Inject()(
 
   val flightPaxFlowCalculator = PaxFlow.makeFlightPaxFlowCalculator(
     PaxFlow.splitRatioForFlight(splitsProviders),
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
     override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = flightPaxFlowCalculator(flight)

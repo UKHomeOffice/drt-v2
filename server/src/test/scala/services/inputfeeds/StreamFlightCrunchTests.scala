@@ -4,14 +4,11 @@ import java.io.File
 
 import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
 import akka.stream.testkit.TestSubscriber.Probe
-import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import controllers._
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
@@ -19,18 +16,13 @@ import org.joda.time.DateTime
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
 import services.FlightCrunchInteractionTests.TestCrunchActor
+import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator}
 import services.WorkloadCalculatorTests._
 import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
-import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import drt.shared._
-import services.PcpArrival.FlightPcpArrivalTimeCalculator
-import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 
-import collection.JavaConversions._
+import scala.collection.JavaConversions._
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.collection.immutable.{IndexedSeq, Seq}
 
 
 object CrunchTests {
@@ -149,11 +141,12 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
         val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
 
+        val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
 
         val paxFlowCalculator = (flight: ApiFlight) => {
           PaxFlow.makeFlightPaxFlowCalculator(
             PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
         }
         val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
 
@@ -179,10 +172,13 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
       "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
         val airportConfig: AirportConfig = CrunchTests.airportConfig
         val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
+
+        val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
+
         val paxFlowCalculator = (flight: ApiFlight) => {
           PaxFlow.makeFlightPaxFlowCalculator(
             PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(WalkTimes.flightWalkTime(airportConfig.defaultWalkTimeMillis)))(flight)
+            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
         }
         val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
 
