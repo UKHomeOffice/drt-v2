@@ -22,6 +22,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, ApiFlight, CrunchResult, _}
 import org.joda.time.DateTime
 import passengersplits.core.PassengerSplitsInfoByPortRouter
+import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.PcpArrival._
@@ -244,10 +245,12 @@ class Application @Inject()(
   /// PassengerSplits reader
   import SDate.implicits._
 
-  afp.beginPolling(log, ctrl.flightPassengerSplitReporter,
+  val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  afp.beginPolling(
+    SimpleAtmosReader(bucket, atmosHost, log),
+    ctrl.flightPassengerSplitReporter,
     afp.previousDayDqFilename(SDate.now()),
-    config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL")),
-    config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo")),
     portCode,
     afp.tickingSource(1 seconds, 1 minutes),
     batchAtMost = 400 seconds)
