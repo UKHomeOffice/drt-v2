@@ -41,6 +41,12 @@ object EGateBankCrunchTransformations {
   def roundUpToNearestMultipleOf(multiple: Int)(number: Int) = math.ceil(number.toDouble / multiple).toInt * multiple
 }
 
+object TimeZone {
+  def lastLocalMidnightOn(now: DateTime) = now.toLocalDate.toDateTimeAtStartOfDay(localTimeZone)
+
+  def localTimeZone = DateTimeZone.forID("Europe/London")
+}
+
 abstract class CrunchActor(crunchPeriodHours: Int,
                            airportConfig: AirportConfig,
                            timeProvider: () => DateTime
@@ -63,7 +69,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
       crunch.onFailure { case failure =>
         log.error(failure, s"Failure calculating crunch for $key")
-        log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}") }
+        log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}")
+      }
 
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 1 minute)
@@ -120,11 +127,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   }
 
   def lastLocalMidnight: DateTime = {
-    timeProvider().toLocalDate.toDateTimeAtStartOfDay(localTimeZone)
-  }
-
-  private def localTimeZone = {
-    DateTimeZone.forID("Europe/London")
+    val now = timeProvider()
+    TimeZone.lastLocalMidnightOn(now)
   }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {

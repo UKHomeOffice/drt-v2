@@ -2,13 +2,13 @@ package services.inputfeeds
 
 import java.io.File
 
-import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights}
+import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights, TimeZone}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.testkit.TestSubscriber.Probe
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import controllers._
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
@@ -232,80 +232,78 @@ class TimezoneFlightCrunchTests extends SpecificationLike {
   import CrunchTests._
 
   "Flight Crunch needs to be aware of local times" >> {
+    val dt20160101_1011 = new DateTime(2016, 1, 1, 10, 11)
+    val dt20160701_0555 = new DateTime(2016, 7, 1, 5, 55)
+
+    "2016-01-01 02:00 millis since epoch is 1451606400000L" >> {
+      TimeZone.lastLocalMidnightOn(dt20160101_1011).getMillis === 1451606400000L
+    }
+
+    "2016-07-01 02:00 millis since epoch is 1467327600000L" >> {
+      TimeZone.lastLocalMidnightOn(dt20160701_0555).getMillis === 1467327600000L
+    }
+
     "Flight Crunch Tests With BST" >> {
       "Given we have sent flights in GMT and now() is in GMT" in {
         "When we ask for the latest crunch the workload appears at the correct offset" in {
           val hoursToCrunch = 4
-          val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-          val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-          log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
-          val systemTimezone = System.getProperty("user.timezone")
-          log.info(s"System.getProperty(user.timezone): ${systemTimezone}")
+          val terminalToCrunch = "A1"
+          val flights = List(
+            apiFlight("BA123", terminal = terminalToCrunch, totalPax = 200, scheduledDatetime = "2016-01-01T02:00", flightId = 1))
 
-          val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
-
-          val paxFlowCalculator = (flight: ApiFlight) => {
-            PaxFlow.makeFlightPaxFlowCalculator(
-              PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-              PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
-          }
-          val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
-
-          withContextCustomActor(props) { context =>
-            val flights = Flights(
-              List(
-                apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T02:00", flightId = 1)))
-            context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-            context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
-
-            val result = context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
-              case cr: CrunchResult => true
-            }
-            val midnightLocalTimeInMillisSinceEpoch = 1451606400000L
-            result match {
-              case cr@CrunchResult(`midnightLocalTimeInMillisSinceEpoch`, _, _, waitTimes) =>
-                val twoHoursInMinutes = 60 * 2
-                log.info(s"CrunchResult $cr")
-                waitTimes.indexWhere(_ != 0) === twoHoursInMinutes
-            }
-          }
+          val result = crunchFlights(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160101_1011)
+          val expectedMidnightLocalTime = 1451606400000L
+          assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(2))
         }
       }
+
       "Given we have sent flights in BST and now() is in GMT" in {
         "When we ask for the latest crunch the workload appears at the correct offset" in {
           val hoursToCrunch = 4
-          val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-          val timeProvider = () => new DateTime(2016, 7, 1, 0, 0)
+          val terminalToCrunch = "A1"
+          val flights = List(
+            apiFlight("FR991", terminal = terminalToCrunch, totalPax = 200, scheduledDatetime = "2016-07-01T02:00Z", flightId = 1))
 
-          val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
-
-          val paxFlowCalculator = (flight: ApiFlight) => {
-            PaxFlow.makeFlightPaxFlowCalculator(
-              PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-              PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
-          }
-          val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
-
-          withContextCustomActor(props) { context =>
-            val flights = Flights(
-              List(
-                apiFlight("FR991", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-07-01T02:00Z", flightId = 1)))
-            context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-            context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
-
-            val result = context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
-              case cr: CrunchResult => true
-            }
-            val midnightLocalTimeInMillisSinceEpoch = 1467327600000L
-            result match {
-              case cr@CrunchResult(`midnightLocalTimeInMillisSinceEpoch`, _, _, waitTimes) =>
-                val threeHoursInMinutes = 60 * 3
-                log.info(s"CrunchResult $cr")
-                waitTimes.indexWhere(_ != 0) === threeHoursInMinutes
-            }
-          }
+          val result = crunchFlights(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160701_0555)
+          val expectedMidnightLocalTime = 1467327600000L
+          assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(3))
         }
       }
+    }
+  }
+
+  private def hoursInMinutes(hours: Int) = 60 * hours
+
+  private def crunchFlights(flights: Seq[ApiFlight], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
+    val props: Props = crunchActorProps(hoursToCrunch, () => now)
+
+    val result = withContextCustomActor(props) { context =>
+      context.sendToCrunch(PerformCrunchOnFlights(flights))
+      context.sendToCrunch(GetLatestCrunch(crunchTerminal, deskToInspect))
+      context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
+        case cr: CrunchResult => true
+      }
+    }
+    result
+  }
+
+  private def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
+    val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
+    val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
+    val paxFlowCalculator = (flight: ApiFlight) => {
+      PaxFlow.makeFlightPaxFlowCalculator(
+        PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
+    }
+    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
+    props
+  }
+
+  private def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
+    result match {
+      case cr@CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
+        waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
+      case _ => false
     }
   }
 }

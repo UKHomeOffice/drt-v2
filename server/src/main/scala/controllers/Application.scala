@@ -160,7 +160,9 @@ class Application @Inject()(
   val log = system.log
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
-  log.info(s"System.getProperty(user.timezone): ${System.getProperty("user.timezone")}")
+  private val systemTimeZone = System.getProperty("user.timezone")
+  log.info(s"System.getProperty(user.timezone): ${systemTimeZone}")
+  assert(systemTimeZone == "UTC")
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
