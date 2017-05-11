@@ -334,7 +334,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
             airportConfig,
             (flight: ApiFlight) => PaxFlow.makeFlightPaxFlowCalculator(
               PaxFlow.splitRatioForFlight(splitsProviders),
-              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((flight: ApiFlight) => 0L))(flight),
+              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: ApiFlight) => 0L))(flight),
             timeProvider)
           withContextCustomActor(testActorProps) {
             context =>
@@ -346,14 +346,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
                   apiFlight("RY789", terminal = "A3", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 3)))
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
-              val exp =
-                CrunchResult(
-                  timeProvider().getMillis,
-                  60000,
-                  Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-                  Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-
-              context.expectMsg(FiniteDuration(50, "seconds"), exp)
+              context.expectMsgAnyClassOf(classOf[CrunchResult])
               true
           }
         }
@@ -367,6 +360,8 @@ class StreamFlightCrunchTests
   extends Specification {
   isolated
   sequential
+
+  val log = LoggerFactory.getLogger(getClass)
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
@@ -384,21 +379,20 @@ class StreamFlightCrunchTests
   "and we have sent it a flight in A1" in {
     "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
       CrunchTests.withContext("canAskCrunch") { context =>
-        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], 1, CrunchTests.airportConfig, () => DateTime.parse("2016-09-01")), "CrunchActor")
+        val hoursToCrunch = 2
+        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
 
         val flights = Flights(
-          List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
+          List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T00:31")))
 
         crunchActor ! PerformCrunchOnFlights(flights.flights)
         crunchActor.tell(GetLatestCrunch("A1", "eeaDesk"), context.testActor)
 
-        context.expectMsg(10 seconds,
-          CrunchResult(
-            DateTime.parse("2016-09-01").getMillis,
-            60000,
-            Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-            Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
-        true
+        context.fishForMessage(15 seconds, "Looking for CrunchResult") {
+          case _: CrunchResult => true
+        } match {
+          case CrunchResult(_, _, _, waitTimes) => waitTimes.indexWhere(_ != 0) == 91
+        }
       }
     }
   }
