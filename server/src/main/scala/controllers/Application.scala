@@ -20,7 +20,8 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, ApiFlight, CrunchResult, _}
-import org.joda.time.DateTime
+import org.joda.time.chrono.ISOChronology
+import org.joda.time.{DateTime, DateTimeZone}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
@@ -157,6 +158,11 @@ class Application @Inject()(
     with SystemActors with ImplicitTimeoutProvider {
   ctrl =>
   val log = system.log
+
+  log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
+  private val systemTimeZone = System.getProperty("user.timezone")
+  log.info(s"System.getProperty(user.timezone): ${systemTimeZone}")
+  assert(systemTimeZone == "UTC")
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))

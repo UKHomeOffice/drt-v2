@@ -100,6 +100,8 @@ lazy val server = (project in file("server"))
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
+    javaOptions in Test += "-Duser.timezone=UTC",
+    javaOptions in Runtime += "-Duser.timezone=UTC",
     libraryDependencies ++= Settings.jvmDependencies.value,
     commands += ReleaseCmd,
     // connect to the client project
