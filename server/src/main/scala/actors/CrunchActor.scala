@@ -4,7 +4,7 @@ import akka.actor._
 import controllers.FlightState
 import drt.shared.FlightsApi._
 import drt.shared.{ApiFlight, _}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import services._
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
@@ -62,7 +62,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     crunchCache(key) {
       val crunch: Future[CrunchResult] = performCrunch(terminal, queue)
       crunch.onFailure { case failure =>
-        log.error(failure, "Failure calculating crunch for $key")
+        log.error(failure, s"Failure calculating crunch for $key")
         log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}") }
 
       //todo un-future this mess
@@ -75,7 +75,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def receive = {
     case PerformCrunchOnFlights(newFlights) =>
-      onFlightUpdates(newFlights.toList, lastMidnightString, domesticPorts)
+      onFlightUpdates(newFlights.toList, lastLocalMidnightString, domesticPorts)
 
       newFlights match {
         case Nil =>
@@ -113,14 +113,18 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       log.error(s"crunchActor received unhandled ${message}")
   }
 
-  def lastMidnightString: String = {
+  def lastLocalMidnightString: String = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-    timeProvider().toString(formatter)
+    // todo this function needs more work to make it a sensible cut off time
+    lastLocalMidnight.toString(formatter)
   }
 
-  def lastMidnight: DateTime = {
-    val t = timeProvider()
-    t.withTimeAtStartOfDay()
+  def lastLocalMidnight: DateTime = {
+    timeProvider().toLocalDate.toDateTimeAtStartOfDay(localTimeZone)
+  }
+
+  private def localTimeZone = {
+    DateTimeZone.forID("Europe/London")
   }
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
@@ -151,7 +155,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
     val workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]] = queueLoadsByTerminal[Seq[WL]](Future(flightsForAirportConfigTerminals), PaxLoadCalculator.queueWorkLoadCalculator)
 
-    val crunchStartTimeMillis = lastMidnight.getMillis
+    val crunchWindowStartTimeMillis = lastLocalMidnight.getMillis
+    log.info(s"$tq lastMidnight: $lastLocalMidnight")
 
     for (wl <- workloads) yield {
       val triedWl: Try[Map[String, List[Double]]] = Try {
@@ -159,11 +164,10 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         val terminalWorkloads = wl.get(terminalName)
         terminalWorkloads match {
           case Some(twl: Map[QueueName, Seq[WL]]) =>
-            log.info(s"$tq lastMidnight: $lastMidnight")
-            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchStartTimeMillis, crunchPeriodHours)
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchWindowStartTimeMillis, crunchPeriodHours)
             log.info(s"$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
             val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
-            log.info(s"$tq crunchStartTimeMillis: $crunchStartTimeMillis, crunchPeriod: $crunchPeriodHours")
+            log.info(s"$tq crunchWindowStartTimeMillis: $crunchWindowStartTimeMillis, crunchPeriod: $crunchPeriodHours")
             workloadsByQueue
           case None =>
             Map()
@@ -191,8 +195,8 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       }
       val asFuture = r match {
         case Success(s) =>
-          log.info(s"$tq Successful crunch for starting at $crunchStartTimeMillis")
-          val res = CrunchResult(crunchStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
+          log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
+          val res = CrunchResult(crunchWindowStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
           log.info(s"$tq Crunch complete")
           res
         case Failure(f) =>

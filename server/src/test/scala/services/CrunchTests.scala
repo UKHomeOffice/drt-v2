@@ -4,7 +4,7 @@ import actors.CrunchActor
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
@@ -63,7 +63,7 @@ object FlightCrunchInteractionTests extends TestSuite {
     def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
       PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
 
-    override def lastMidnightString: String = "2000-01-01"
+    override def lastLocalMidnightString: String = "2000-01-01"
   }
 
   def tests = TestSuite {

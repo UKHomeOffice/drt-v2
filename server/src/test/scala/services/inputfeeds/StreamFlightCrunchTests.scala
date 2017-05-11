@@ -12,7 +12,9 @@ import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
-import org.joda.time.DateTime
+import org.joda.time.chrono.ISOChronology
+import org.joda.time.{DateTime, DateTimeZone}
+import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
 import services.FlightCrunchInteractionTests.TestCrunchActor
@@ -26,64 +28,68 @@ import scala.concurrent.duration._
 
 
 object CrunchTests {
+  val airportConfig = airportConfigForHours(1)
 
-  val airportConfig = AirportConfig(
-    portCode = "EDI",
-    queues = Map(
-      "A1" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
-      "A2" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
-    ),
-    slaByQueue = Map(
-      "eeaDesk" -> 20,
-      "eGate" -> 25,
-      "nonEeaDesk" -> 45
-    ),
-    terminalNames = Seq("A1", "A2"),
-    timeToChoxMillis = 0L,
-    firstPaxOffMillis = 0L,
-    defaultWalkTimeMillis = 0L,
-    defaultPaxSplits = SplitRatios(
-      SplitRatio(eeaMachineReadableToDesk, 0.4875),
-      SplitRatio(eeaMachineReadableToEGate, 0.1625),
-      SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
-      SplitRatio(visaNationalToDesk, 0.05),
-      SplitRatio(nonVisaNationalToDesk, 0.05)
-    ),
-    defaultProcessingTimes = Map(
-      "A1" -> Map(
-        eeaMachineReadableToDesk -> 16d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 50d / 60,
-        visaNationalToDesk -> 75d / 60,
-        nonVisaNationalToDesk -> 64d / 60
+  def airportConfigForHours(hours: Int) = {
+    val seqOfHoursInts = List.fill[Int](hours) _
+    AirportConfig(
+      portCode = "EDI",
+      queues = Map(
+        "A1" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
+        "A2" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
       ),
-      "A2" -> Map(
-        eeaMachineReadableToDesk -> 30d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 50d / 60,
-        visaNationalToDesk -> 120d / 60,
-        nonVisaNationalToDesk -> 120d / 60
-      )),
-    Map(
-      "A1" -> Map(
-        "eeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
-        "nonEeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
-        "eGate" -> (List.fill[Int](1)(2), List.fill[Int](1)(25))
+      slaByQueue = Map(
+        "eeaDesk" -> 20,
+        "eGate" -> 25,
+        "nonEeaDesk" -> 45
       ),
-      "A2" -> Map(
-        "eeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
-        "nonEeaDesk" -> (List.fill[Int](1)(2), List.fill[Int](1)(25)),
-        "eGate" -> (List.fill[Int](1)(2), List.fill[Int](1)(25))
+      terminalNames = Seq("A1", "A2"),
+      timeToChoxMillis = 0L,
+      firstPaxOffMillis = 0L,
+      defaultWalkTimeMillis = 0L,
+      defaultPaxSplits = SplitRatios(
+        SplitRatio(eeaMachineReadableToDesk, 0.4875),
+        SplitRatio(eeaMachineReadableToEGate, 0.1625),
+        SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+        SplitRatio(visaNationalToDesk, 0.05),
+        SplitRatio(nonVisaNationalToDesk, 0.05)
+      ),
+      defaultProcessingTimes = Map(
+        "A1" -> Map(
+          eeaMachineReadableToDesk -> 16d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 50d / 60,
+          visaNationalToDesk -> 75d / 60,
+          nonVisaNationalToDesk -> 64d / 60
+        ),
+        "A2" -> Map(
+          eeaMachineReadableToDesk -> 30d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 50d / 60,
+          visaNationalToDesk -> 120d / 60,
+          nonVisaNationalToDesk -> 120d / 60
+        )),
+      minMaxDesksByTerminalQueue = Map(
+        "A1" -> Map(
+          "eeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
+          "nonEeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
+          "eGate" -> (seqOfHoursInts(2), seqOfHoursInts(25))
+        ),
+        "A2" -> Map(
+          "eeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
+          "nonEeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
+          "eGate" -> (seqOfHoursInts(2), seqOfHoursInts(25))
+        )
+      ),
+      shiftExamples = Seq(
+        "Midnight shift, A1, {date}, 00:00, 00:59, 10",
+        "Night shift, A1, {date}, 01:00, 06:59, 4",
+        "Morning shift, A1, {date}, 07:00, 13:59, 15",
+        "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
+        "Evening shift, A1, {date}, 17:00, 23:59,17"
       )
-    ),
-    shiftExamples = Seq(
-      "Midnight shift, A1, {date}, 00:00, 00:59, 10",
-      "Night shift, A1, {date}, 01:00, 06:59, 4",
-      "Morning shift, A1, {date}, 07:00, 13:59, 15",
-      "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
-      "Evening shift, A1, {date}, 17:00, 23:59,17"
     )
-  )
+  }
 
   def levelDbJournalDir(tn: String) = s"target/test/journal/$tn"
 
@@ -211,6 +217,93 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
 
           context.expectMsg(15 seconds, exp)
           true
+        }
+      }
+    }
+  }
+}
+
+class TimezoneFlightCrunchTests extends SpecificationLike {
+  isolated
+  sequential
+
+  val log = LoggerFactory.getLogger(getClass)
+
+  import CrunchTests._
+
+  "Flight Crunch needs to be aware of local times" >> {
+    "Flight Crunch Tests With BST" >> {
+      "Given we have sent flights in GMT and now() is in GMT" in {
+        "When we ask for the latest crunch the workload appears at the correct offset" in {
+          val hoursToCrunch = 4
+          val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
+          val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
+          log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
+          val systemTimezone = System.getProperty("user.timezone")
+          log.info(s"System.getProperty(user.timezone): ${systemTimezone}")
+
+          val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
+
+          val paxFlowCalculator = (flight: ApiFlight) => {
+            PaxFlow.makeFlightPaxFlowCalculator(
+              PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+              PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
+          }
+          val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
+
+          withContextCustomActor(props) { context =>
+            val flights = Flights(
+              List(
+                apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T02:00", flightId = 1)))
+            context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
+            context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
+
+            val result = context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
+              case cr: CrunchResult => true
+            }
+            val midnightLocalTimeInMillisSinceEpoch = 1451606400000L
+            result match {
+              case cr@CrunchResult(`midnightLocalTimeInMillisSinceEpoch`, _, _, waitTimes) =>
+                val twoHoursInMinutes = 60 * 2
+                log.info(s"CrunchResult $cr")
+                waitTimes.indexWhere(_ != 0) === twoHoursInMinutes
+            }
+          }
+        }
+      }
+      "Given we have sent flights in BST and now() is in GMT" in {
+        "When we ask for the latest crunch the workload appears at the correct offset" in {
+          val hoursToCrunch = 4
+          val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
+          val timeProvider = () => new DateTime(2016, 7, 1, 0, 0)
+
+          val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
+
+          val paxFlowCalculator = (flight: ApiFlight) => {
+            PaxFlow.makeFlightPaxFlowCalculator(
+              PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+              PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
+          }
+          val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
+
+          withContextCustomActor(props) { context =>
+            val flights = Flights(
+              List(
+                apiFlight("FR991", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-07-01T02:00Z", flightId = 1)))
+            context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
+            context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
+
+            val result = context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
+              case cr: CrunchResult => true
+            }
+            val midnightLocalTimeInMillisSinceEpoch = 1467327600000L
+            result match {
+              case cr@CrunchResult(`midnightLocalTimeInMillisSinceEpoch`, _, _, waitTimes) =>
+                val threeHoursInMinutes = 60 * 3
+                log.info(s"CrunchResult $cr")
+                waitTimes.indexWhere(_ != 0) === threeHoursInMinutes
+            }
+          }
         }
       }
     }
