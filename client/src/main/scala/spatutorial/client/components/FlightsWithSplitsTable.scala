@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.modules.FlightsWithSplitsView
-import drt.shared.{AirportInfo, MilliDate, PaxTypeAndQueue, PaxTypesAndQueues}
+import drt.shared._
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
@@ -192,53 +192,56 @@ object FlightsWithSplitsTable {
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
 
-    flights.flights.map(flightAndSplit => {
-      val f = flightAndSplit.apiFlight
-      val literal = js.Dynamic.literal
-      val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
-        .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
-      ).map(x => (x._1, x._2.map(_.paxCount).sum))
+    CodeShares.uniqueArrivalsWithSplitsWithCodeshares(flights.flights).map {
+      case (flightAndSplit, codeShares) =>
+        val f = flightAndSplit.apiFlight
+        val literal = js.Dynamic.literal
+        val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
+          .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
+        ).map(x => (x._1, x._2.map(_.paxCount).sum))
 
-      import drt.shared.DeskAndPaxTypeCombinations._
+        import drt.shared.DeskAndPaxTypeCombinations._
 
-      val total = "API total"
+        val total = "API total"
 
-      def splitsField(fieldName: String, ptQ: PaxTypeAndQueue): (String, scalajs.js.Any) = {
-        fieldName -> (splitsTuples.get(ptQ) match {
-          case Some(v: Int) => Int.box(v)
-          case None => ""
-        })
-      }
+        def splitsField(fieldName: String, ptQ: PaxTypeAndQueue): (String, scalajs.js.Any) = {
+          fieldName -> (splitsTuples.get(ptQ) match {
+            case Some(v: Int) => Int.box(v)
+            case None => ""
+          })
+        }
 
-      def splitsValues = {
-        Seq(
-          splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToEGate, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToDesk, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.eeaNonMachineReadableToDesk, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.visaNationalToDesk, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.nonVisaNationalToDesk, 0)
-        )
-      }
+        def splitsValues = {
+          Seq(
+            splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToEGate, 0),
+            splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToDesk, 0),
+            splitsTuples.getOrElse(PaxTypesAndQueues.eeaNonMachineReadableToDesk, 0),
+            splitsTuples.getOrElse(PaxTypesAndQueues.visaNationalToDesk, 0),
+            splitsTuples.getOrElse(PaxTypesAndQueues.nonVisaNationalToDesk, 0)
+          )
+        }
 
-      literal(
-        //        "Operator" -> f.Operator,
-        "Timeline" -> "0",
-        "Status" -> f.Status,
-        "Sch" -> f.SchDT,
-        "Est" -> f.EstDT,
-        "Act" -> f.ActDT,
-        "Est Chox" -> f.EstChoxDT,
-        "Act Chox" -> f.ActChoxDT,
-        "Gate" -> f.Gate,
-        "Stand" -> f.Stand,
-        "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
-        "Splits" -> splitsValues.mkString("|"),
-        "TranPax" -> f.TranPax,
-        "Terminal" -> f.Terminal,
-        "ICAO" -> f.ICAO,
-        "Flight" -> f.IATA,
-        "Origin" -> f.Origin)
-    })
+        val allCodes = f.IATA :: codeShares.map(_.IATA).toList
+        literal(
+          //        "Operator" -> f.Operator,
+          "Timeline" -> "0",
+          "Status" -> f.Status,
+          "Sch" -> f.SchDT,
+          "Est" -> f.EstDT,
+          "Act" -> f.ActDT,
+          "Est Chox" -> f.EstChoxDT,
+          "Act Chox" -> f.ActChoxDT,
+          "Gate" -> f.Gate,
+          "Stand" -> f.Stand,
+          "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
+          "Splits" -> splitsValues.mkString("|"),
+          "TranPax" -> f.TranPax,
+          "Terminal" -> f.Terminal,
+          "ICAO" -> f.ICAO,
+          "Flight" -> allCodes.mkString(" / "),
+          "Origin" -> f.Origin)
+
+    }
   }
 
 
