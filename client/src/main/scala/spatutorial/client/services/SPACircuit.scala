@@ -9,8 +9,7 @@ import diode.react.ReactConnector
 import drt.client.{SPAMain, TableViewUtils}
 import drt.client.logger._
 import drt.client.services.HandyStuff._
-import drt.client.services.RootModel.{FlightCode, mergeTerminalQueues}
-import drt.client.services.RootModel.QueueCrunchResults
+import drt.client.services.RootModel.{FlightCode, QueueCrunchResults, mergeTerminalQueues}
 import drt.shared.FlightsApi.{TerminalName, _}
 import drt.shared._
 import boopickle.Default._
@@ -78,8 +77,8 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 case class RootModel(
                       motd: Pot[String] = Empty,
                       workloadPot: Pot[Workloads] = Empty,
-                      queueCrunchResults: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]] = Map(),
-                      simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]] = Map(),
+                      queueCrunchResults: RootModel.TerminalQueueCrunchResults = Map(),
+                      simulationResult: RootModel.TerminalQueueSimulationResults = Map(),
                       flightsWithSplitsPot: Pot[FlightsWithSplits] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
@@ -168,6 +167,10 @@ case class RootModel(
 }
 
 object RootModel {
+
+  type TerminalQueueSimulationResults = Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]
+  type TerminalQueueCrunchResults = Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]
+
   type FlightCode = String
 
   type QueueCrunchResults = Map[QueueName, Pot[PotCrunchResult]]
@@ -305,16 +308,21 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
     case RunSimulation(terminalName, queueName, desks) =>
       log.info(s"Requesting simulation for $terminalName, $queueName")
       val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
+      val firstNonZeroIndex = queueWorkload.indexWhere(_ != 0)
+      log.info(s"run sim first != 0 workload $firstNonZeroIndex")
       val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )
     case UpdateSimulationResult(terminalName, queueName, simResult) =>
+      val firstNonZeroIndex = simResult.waitTimes.indexWhere(_ != 0)
+      log.info(s"$terminalName/$queueName updateSimResult ${firstNonZeroIndex}")
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 
   private def getTerminalQueueWorkload(terminalName: TerminalName, queueName: QueueName): List[Double] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+    log.info(s"startFromMilli: $startFromMilli")
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
     val workloadPot = modelR.value
     workloadPot match {
@@ -397,6 +405,8 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
       effectOnly(Effect(fe) + crunchEffect)
     case UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval) =>
       log.info(s"UpdateCrunchResult $queueName. firstTimeMillis: ${crunchResultWithTimeAndInterval.firstTimeMillis}")
+      val firstNonZeroIndex = crunchResultWithTimeAndInterval.waitTimes.indexWhere(_ != 0)
+      log.info(s"$terminalName/$queueName crunchResult: $firstNonZeroIndex")
       val crunchResultsByQueue = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(Ready(crunchResultWithTimeAndInterval)))))
       if (modelQueueCrunchResults != crunchResultsByQueue) updated(crunchResultsByQueue)
       else noChange

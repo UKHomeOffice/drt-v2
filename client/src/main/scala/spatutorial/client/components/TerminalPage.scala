@@ -3,15 +3,17 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.prefix_<^._
-import japgolly.scalajs.react.vdom._
-import japgolly.scalajs.react.{BackendScope, ReactComponentB, ReactElement}
+import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.BackendScope
 import drt.client.SPAMain.Loc
 import drt.client.components.Heatmap.Series
 import drt.client.logger._
 import drt.client.modules.FlightsWithSplitsView
+import drt.client.services.RootModel.TerminalQueueSimulationResults
 import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.TerminalName
+import drt.shared.SimulationResult
 
 object TerminalPage {
 
@@ -25,14 +27,14 @@ object TerminalPage {
 
 
       val simulationResultRCP = SPACircuit.connect(_.simulationResult)
-      simulationResultRCP(simulationResultMP => {
+      simulationResultRCP((simulationResultMP )=> {
         val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(props.terminalName, Map()), props.terminalName)
         <.div(
           <.ul(^.className := "nav nav-tabs",
-            <.li(^.className := "active", <.a("data-toggle".reactAttr := "tab", ^.href := "#deskrecs", "Desk recommendations")),
-            <.li(<.a("data-toggle".reactAttr := "tab", ^.href := "#workloads", "Workloads")),
+            <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
+            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
             seriesPot.renderReady(s =>
-              <.li(<.a("data-toggle".reactAttr := "tab", ^.href := "#waits", "Wait times"))
+              <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times"))
             )
           ),
           <.div(^.className := "tab-content",
@@ -44,8 +46,8 @@ object TerminalPage {
               heatmapOfWaittimes(props.terminalName))
           ),
           <.ul(^.className := "nav nav-tabs",
-            <.li(^.className := "active", <.a("data-toggle".reactAttr := "tab", ^.href := "#arrivals", "Arrivals")),
-            <.li(<.a("data-toggle".reactAttr := "tab", ^.href := "#queues", "Desks & Queues"))
+            <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
+            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues"))
           ),
           <.div(^.className := "tab-content",
             <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
@@ -65,10 +67,10 @@ object TerminalPage {
     }
   }
 
-  def apply(terminalName: TerminalName, ctl: RouterCtl[Loc]): ReactElement =
+  def apply(terminalName: TerminalName, ctl: RouterCtl[Loc]): VdomElement =
     component(Props(terminalName, ctl))
 
-  private val component = ReactComponentB[Props]("Product")
+  private val component = ScalaComponent.builder[Props]("Product")
     .renderBackend[Backend]
     .build
 }

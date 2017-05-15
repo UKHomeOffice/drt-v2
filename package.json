@@ -32,6 +32,7 @@
     "elemental": "v0.5.14",
     "highlight.js": "8.9.1",
     "jsdom": "^9.11.0",
+    "log4javascript": "^1.4.15",
     "material-ui": "v0.15.2",
     "react": "^15.4.1",
     "react-addons-create-fragment": "^15.4.1",
