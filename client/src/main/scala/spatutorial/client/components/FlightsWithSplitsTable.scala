@@ -88,7 +88,6 @@ object FlightsWithSplitsTable {
           ^.left := s"${actChoxPct}px")
       else <.span()
 
-
       val actWidth = (actChoxPct + 24) - actPct
 
       val schDot = <.i(^.className := "dot sch-dot",
@@ -191,25 +190,15 @@ object FlightsWithSplitsTable {
   }
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
-
-    CodeShares.uniqueArrivalsWithSplitsWithCodeshares(flights.flights).map {
+    val uniqueArrivals: List[(ApiFlightWithSplits, Set[ApiFlight])] = CodeShares.uniqueArrivalsWithSplitsAndCodeshares(flights.flights)
+    
+    uniqueArrivals.map {
       case (flightAndSplit, codeShares) =>
         val f = flightAndSplit.apiFlight
         val literal = js.Dynamic.literal
         val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
           .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
         ).map(x => (x._1, x._2.map(_.paxCount).sum))
-
-        import drt.shared.DeskAndPaxTypeCombinations._
-
-        val total = "API total"
-
-        def splitsField(fieldName: String, ptQ: PaxTypeAndQueue): (String, scalajs.js.Any) = {
-          fieldName -> (splitsTuples.get(ptQ) match {
-            case Some(v: Int) => Int.box(v)
-            case None => ""
-          })
-        }
 
         def splitsValues = {
           Seq(
@@ -240,7 +229,6 @@ object FlightsWithSplitsTable {
           "ICAO" -> f.ICAO,
           "Flight" -> allCodes.mkString(" / "),
           "Origin" -> f.Origin)
-
     }
   }
 

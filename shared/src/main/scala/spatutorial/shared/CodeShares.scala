@@ -10,7 +10,7 @@ object CodeShares {
     }).toList
   }
 
-  def uniqueArrivalsWithSplitsWithCodeshares(flights: Seq[ApiFlightWithSplits]): List[(ApiFlightWithSplits, Set[ApiFlight])] = {
+  def uniqueArrivalsWithSplitsAndCodeshares(flights: Seq[ApiFlightWithSplits]): List[(ApiFlightWithSplits, Set[ApiFlight])] = {
     val grouped: Map[(String, String, String), Seq[ApiFlightWithSplits]] = flights.groupBy(f => (f.apiFlight.SchDT, f.apiFlight.Terminal, f.apiFlight.Origin))
     grouped.map((gr: ((String, String, String), Seq[ApiFlightWithSplits])) => {
       val mainFlight: ApiFlightWithSplits = gr._2.sortBy(_.apiFlight.ActPax).reverse.head
