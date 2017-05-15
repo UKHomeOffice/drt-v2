@@ -3,9 +3,8 @@ package drt.client.components
 import drt.client.modules.FlightsWithSplitsView
 import drt.shared.{AirportInfo, MilliDate, PaxTypeAndQueue, PaxTypesAndQueues}
 import diode.data.{Pot, Ready}
-import japgolly.scalajs.react.{ReactComponentB, _}
-import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
@@ -64,7 +63,7 @@ object FlightsWithSplitsTable {
   def timelineComponent(): js.Function = (props: js.Dynamic) => {
     val schPct = 150 - 24
 
-    val re: ReactElement = Try {
+    val re: VdomElement = Try {
       val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[Dictionary[Any]]
       val sch: String = props.rowData.Sch.toString
       val est = rowData("Est")
@@ -101,10 +100,10 @@ object FlightsWithSplitsTable {
 
       val dots = schDot :: actDot :: actChoxDot :: Nil
 
-      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip )
+      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
     } match {
       case Success(s) =>
-       s.render
+        s.render
       case f =>
         <.span(f.toString).render
     }
@@ -242,7 +241,7 @@ object FlightsWithSplitsTable {
   }
 
 
-  val component = ReactComponentB[Props]("FlightsWithSplitsTable")
+  val component = ScalaComponent.builder[Props]("FlightsWithSplitsTable")
     .render_P(props => {
       logger.log.debug(s"rendering flightstable")
 
@@ -275,11 +274,20 @@ object FlightsWithSplitsTable {
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
         props.flightsModelProxy.renderEmpty(ViewTools.spinner),
         props.flightsModelProxy.renderReady(flights => {
-          val rows = flights.toJsArray
-          GriddleComponentWrapper(results = rows,
-            columnMeta = columnMeta,
-            initialSort = "Sch",
-            columns = props.activeCols)()
+          val rows = flights
+          <.table(
+            <.tbody(
+              rows.map(row =>
+                <.tr(
+                  <.td(row.SchDt.toString)
+                )
+              ).toTagMod
+            )
+          )
+          //          GriddleComponentWrapper(results = rows,
+          //            columnMeta = columnMeta,
+          //            initialSort = "Sch",
+          //            columns = props.activeCols)()
         })
       )
     }).build

@@ -24,19 +24,21 @@ object Settings {
   object versions {
     val scala = "2.11.8"
     val scalaDom = "0.9.1"
-    val scalajsReact = "0.11.1"
+    val scalajsReact = "1.0.0"
     val scalajsReactComponents = "0.5.0"
-    val scalaCSS = "0.4.1"
+    val scalaCSS = "0.5.3"
     val log4js = "1.4.10"
     val autowire = "0.2.6"
     val booPickle = "1.2.4"
-    val diode = "1.0.0"
+    val diode = "1.1.2"
     val uTest = "0.4.3"
 
     val akkaVersion = "2.4.16"
 
     val specs2Version = "3.7"
     val react = "15.1.0"
+    val reactVersion = "15.5.4"
+
     val jQuery = "1.11.1"
     val bootstrap = "3.3.6"
     val chartjs = "2.1.3"
@@ -56,6 +58,14 @@ object Settings {
     "com.lihaoyi" %%% "autowire" % versions.autowire,
     "me.chrons" %%% "boopickle" % versions.booPickle
   ))
+
+  val clientNpmDependences = Seq(
+    "react" -> "15.5.4",
+    "react-dom" -> "15.5.4",
+    "log4javascript" -> "1.4.15"
+  )
+
+  val clientNpmDevDependencies = "expose-loader" -> "0.7.1"
 
 
   /** Dependencies only used by the JVM project */
@@ -92,21 +102,38 @@ object Settings {
   val scalajsDependencies = Def.setting(Seq(
     "com.github.japgolly.scalajs-react" %%% "core" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
+    "com.github.japgolly.scalajs-react" %%% "test" % versions.scalajsReact % Test,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
-    "me.chrons" %%% "diode" % versions.diode,
-    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
-    "me.chrons" %%% "diode-react" % versions.diode,
+//    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
+    "io.suzaku" %%% "diode" % versions.diode,
+//    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
+    "io.suzaku" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
   val jsDependencies = Def.setting(Seq(
+    "org.webjars.bower" % "react" % reactVersion % "test"
+      /        "react-with-addons.js"
+      minified "react-with-addons.min.js"
+      commonJSName "React",
+
+    "org.webjars.bower" % "react" % reactVersion % "test"
+      /         "react-dom.js"
+      minified  "react-dom.min.js"
+      dependsOn "react-with-addons.js"
+      commonJSName "ReactDOM",
+
+    "org.webjars.bower" % "react" % reactVersion % "test"
+      /         "react-dom-server.js"
+      minified  "react-dom-server.min.js"
+      dependsOn "react-dom.js"
+      commonJSName "ReactDOMServer",
     //    "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
     //    "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
     //    "org.webjars.npm" % "fixed-data-table" % "0.6.3" / "dist/fixed-data-table.js" minified "dist/fixed-data-table.min.js" dependsOn "react-with-addons.js" commonJSName "ReactFixedDataTable",
-    "org.webjars" % "rgraph" % "3_2014-07-27-stable" / "RGraph.bar.js",
+//    "org.webjars" % "rgraph" % "3_2014-07-27-stable" / "RGraph.bar.js",
     "org.webjars" % "jquery" % versions.jQuery / "jquery.js" minified "jquery.min.js",
     "org.webjars" % "bootstrap" % versions.bootstrap / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
     "org.webjars" % "chartjs" % versions.chartjs / "Chart.js" minified "Chart.min.js",

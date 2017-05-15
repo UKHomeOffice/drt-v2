@@ -1,14 +1,14 @@
 package drt.client.components
 
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import drt.client.SPAMain.Loc
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 
 object Navbar {
-  def apply(ctl: RouterCtl[Loc], page: Loc): ReactTagOf[html.Element] = {
+  def apply(ctl: RouterCtl[Loc], page: Loc): VdomTagOf[html.Element] = {
     val airportConfigRCP = SPACircuit.connect(m => m.airportConfig)
 
     <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",

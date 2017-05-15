@@ -3,8 +3,7 @@ package drt.client.components
 import diode.data.{Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.ReactTagOf
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.TableHeaderCell
 import drt.client.TableViewUtils._
 import drt.client.logger._
@@ -67,7 +66,7 @@ object TerminalDeploymentsTable {
   }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): ReactElement = {
+                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): VdomElement = {
     <.div(
       TerminalDeploymentsTable(
         terminalName,
@@ -202,7 +201,7 @@ object TerminalDeploymentsTable {
             ^.display := "block",
             ^.overflow := "scroll",
             ^.height := "500px",
-            props.items.zipWithIndex map renderItem)))
+            props.items.zipWithIndex.map(renderItem).toTagMod)))
     }
 
     def queueColour(queueName: String): String = queueName + "-user-desk-rec"
@@ -211,7 +210,7 @@ object TerminalDeploymentsTable {
 
     private def subHeadingLevel2(queueNames: List[QueueName]) = {
       val subHeadingLevel2 = queueNames.flatMap(queueName => {
-        val depls: List[ReactTagOf[TableHeaderCell]] = List(
+        val depls: List[VdomTagOf[TableHeaderCell]] = List(
           <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
           <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
         )
@@ -223,12 +222,12 @@ object TerminalDeploymentsTable {
         <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on shifts entered")
     }
 
-    private def thHeaderGroupStart(title: String, xs: TagMod*): ReactTagOf[TableHeaderCell] = {
-      <.th(headerGroupStart, title, xs)
+    private def thHeaderGroupStart(title: String, xs: TagMod*): VdomTagOf[TableHeaderCell] = {
+      <.th(headerGroupStart, title, xs.toTagMod)
     }
   }
 
-  private val component = ReactComponentB[Props]("TerminalDeployments")
+  private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .renderBackend[Backend]
     .build
 
