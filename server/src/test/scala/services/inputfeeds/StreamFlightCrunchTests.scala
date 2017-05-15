@@ -163,7 +163,7 @@ object CrunchTests {
 
   def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
     result match {
-      case cr@CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
+      case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
         waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
       case _ => false
     }
@@ -232,13 +232,9 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
 
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
       val expectedMidnightLocalTime = 1451606400000L
+      val expectedDeskRecs = IndexedSeq.fill(60)(2)
 
-      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime,
-        IndexedSeq(
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
+      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
     }
 
     "Given two flights which are code shares with each other " +
@@ -253,13 +249,9 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
 
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
       val expectedMidnightLocalTime = 1451606400000L
+      val expectedDeskRecs = IndexedSeq.fill(60)(2)
 
-      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime,
-        IndexedSeq(
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
+      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
     }
 
     "Given three flights, two of which are code shares with each other " +
@@ -275,13 +267,9 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
 
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
       val expectedMidnightLocalTime = 1451606400000L
+      val expectedDeskRecs = IndexedSeq.fill(15)(4) ++ IndexedSeq.fill(45)(2)
 
-      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime,
-        IndexedSeq(
-          4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
+      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
     }
   }
 }

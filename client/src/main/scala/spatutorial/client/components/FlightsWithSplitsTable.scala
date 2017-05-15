@@ -191,7 +191,7 @@ object FlightsWithSplitsTable {
 
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
     val uniqueArrivals: List[(ApiFlightWithSplits, Set[ApiFlight])] = CodeShares.uniqueArrivalsWithSplitsAndCodeshares(flights.flights)
-    
+
     uniqueArrivals.map {
       case (flightAndSplit, codeShares) =>
         val f = flightAndSplit.apiFlight
