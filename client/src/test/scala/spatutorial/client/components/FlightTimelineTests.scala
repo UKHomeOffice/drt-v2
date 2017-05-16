@@ -58,17 +58,7 @@ object FlightsTableTests extends TestSuite {
 
   test.WebpackRequire.ReactTestUtils
 
-  val CP = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
-    .renderP((_$, flights) =>
-      <.div(
-        <.table(
-          <.thead(<.tr(<.th("SchDt"), <.th("Pax"))),
-          <.tbody(
-            flights.map(flight =>
-              <.tr(^.key := flight.FlightID.toString,
-                <.td(flight.SchDT)
-              )).toTagMod))))
-    .build
+  import FlightsWithSplitsTable.ArrivalsTable
 
   def tests = TestSuite {
 
@@ -81,6 +71,9 @@ object FlightsTableTests extends TestSuite {
         'Equal - {
           assertRenderedComponentsAreEqual(realComponent("abd"), staticComponent(<.div("abd"))())
         }
+        //        'Failed - {
+        //          assertRenderedComponentsAreEqual(realComponent("def"), staticComponent(<.div("abd"))())
+        //        }
       }
 
 
@@ -108,29 +101,44 @@ object FlightsTableTests extends TestSuite {
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
 
+      "FlightsTables" - {
+        "Given a single flight then we see the FlightCode(ICAO???) " +
+          "Origin, Gate/Stand, Status, Sch and other dates, and something nifty for pax" - {
+          val expected = <.div(
+            <.table(
+              <.thead(<.tr(<.th("Flight"),  <.th("Origin"),
+                <.th("Gate/Stand"),
+                <.th("Status"),
+                <.th("Sch"),
+                <.th("Est"),
+                <.th("Act"),
+                <.th("Est Chox"),
+                <.th("Act Chox"),
+                <.th("Pax")
+              )),
+              <.tbody(
+                <.tr(
+                  <.td(testFlight.ICAO), <.td(testFlight.Origin),
+                  <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
+                  <.td(testFlight.Status),
+                  <.td(testFlight.SchDT), <.td(testFlight.EstDT),
+                  <.td(testFlight.ActDT), <.td(testFlight.EstChoxDT),
+                  <.td(testFlight.ActChoxDT), <.td(testFlight.ActPax)
+                ))))
 
-      ReactTestUtils.withRenderedIntoDocument(CP(testFlight :: Nil)) { m =>
-        val raw = m.getDOMNode.outerHTML
-        println(s"$raw on wwf")
-
-        val scrubbed = m.outerHtmlScrubbed()
-        println(s"$scrubbed")
-        assert(scrubbed == "<div><table><thead><tr><th>SchDt</th><th>Pax</th></tr></thead><tbody><tr><td>2016-01-01T13:00</td></tr></tbody></table></div>")
-
-        //        ReactTestUtils.modifyProps(CP, m)(_ + "ed")
-        //        assert(m.outerHtmlScrubbed() == "<div>start → started</div>")
-        //
-        //        ReactTestUtils.replaceProps(CP, m)("done!")
-        //        assert(m.outerHtmlScrubbed() == "<div>started → done!</div>")
+          assertRenderedComponentsAreEqual(ArrivalsTable(testFlight :: Nil), staticComponent(expected)())
+        }
       }
     }
   }
 
-  def assertRenderedComponentsAreEqual(rc: Unmounted[String, Unit, Unit], expected: Unmounted[Unit, Unit, Unit]) = {
+  def assertRenderedComponentsAreEqual[P](rc: Unmounted[P, Unit, Unit], expected: Unmounted[Unit, Unit, Unit]) = {
     ReactTestUtils.withRenderedIntoDocument(rc) {
       real =>
         ReactTestUtils.withRenderedIntoDocument(expected) { simple =>
-          assert(real.outerHtmlScrubbed() == simple.outerHtmlScrubbed())
+          val actualHtml = real.outerHtmlScrubbed()
+          val simpleHtml = simple.outerHtmlScrubbed()
+          assert(actualHtml == simpleHtml)
         }
     }
   }

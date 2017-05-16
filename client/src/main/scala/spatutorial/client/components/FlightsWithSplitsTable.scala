@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.modules.FlightsWithSplitsView
-import drt.shared.{AirportInfo, MilliDate, PaxTypeAndQueue, PaxTypesAndQueues}
+import drt.shared._
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -19,6 +19,37 @@ import scala.util.{Success, Try}
 object FlightsWithSplitsTable {
 
   type Props = FlightsWithSplitsView.Props
+
+  val ArrivalsTable = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
+    .renderP((_$, flights) =>
+      <.div(
+        <.table(
+          <.thead(<.tr(<.th("Flight"), <.th("Origin"),
+            <.th("Gate/Stand"),
+            <.th("Status"),
+            <.th("Sch"),
+            <.th("Est"),
+            <.th("Act"),
+            <.th("Est Chox"),
+            <.th("Act Chox"),
+            <.th("Pax")
+          )),
+          <.tbody(
+            flights.map(flight =>
+              <.tr(^.key := flight.FlightID.toString,
+                <.td(flight.ICAO),
+                <.td(flight.Origin),
+                <.td(s"${flight.Gate}/${flight.Stand}"),
+                <.td(flight.Status),
+                <.td(flight.SchDT),
+                <.td(flight.EstDT),
+                <.td(flight.ActDT),
+                <.td(flight.EstChoxDT),
+                <.td(flight.ActChoxDT),
+                <.td(flight.ActPax)
+              )).toTagMod))))
+    .build
+
 
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString())
