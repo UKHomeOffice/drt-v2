@@ -60,8 +60,9 @@ object Settings {
   ))
 
   val clientNpmDependences = Seq(
-    "react" -> "15.5.4",
-    "react-dom" -> "15.5.4",
+    "react" -> "15.5.1",
+    "react-dom" -> "15.5.1",
+    "react-addons-test-utils" -> "15.5.1",
     "log4javascript" -> "1.4.15"
   )
 
