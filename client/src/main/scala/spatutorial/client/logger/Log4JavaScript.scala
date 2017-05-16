@@ -3,15 +3,6 @@ package drt.client.logger
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSImport, JSName}
 
-/**
- * Facade for functions in log4javascript that we need
- */
-@js.native
-private[logger] trait Log4JavaScript extends js.Object {
-  def getLogger(name:js.UndefOr[String]):JSLogger = js.native
-  def setEnabled(enabled:Boolean):Unit = js.native
-  def isEnabled:Boolean = js.native
-}
 
 @js.native
 @JSName("log4javascript.Level")
@@ -80,7 +71,6 @@ private[logger] class AjaxAppender(url:String) extends Appender {
 @JSImport("log4javascript", JSImport.Namespace)
 @js.native
 private[logger] object Log4JavaScript extends js.Object {
-//  val log4javascript:Log4JavaScript = js.native
   def getLogger(name:js.UndefOr[String]):JSLogger = js.native
   def setEnabled(enabled:Boolean):Unit = js.native
   def isEnabled:Boolean = js.native
