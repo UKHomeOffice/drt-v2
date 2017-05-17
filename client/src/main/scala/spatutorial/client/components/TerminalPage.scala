@@ -13,7 +13,7 @@ import drt.client.modules.FlightsWithSplitsView
 import drt.client.services.RootModel.TerminalQueueSimulationResults
 import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.SimulationResult
+import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, SimulationResult}
 
 object TerminalPage {
 
@@ -27,7 +27,7 @@ object TerminalPage {
 
 
       val simulationResultRCP = SPACircuit.connect(_.simulationResult)
-      simulationResultRCP((simulationResultMP )=> {
+      simulationResultRCP((simulationResultMP) => {
         val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(props.terminalName, Map()), props.terminalName)
         <.div(
           <.ul(^.className := "nav nav-tabs",
@@ -51,18 +51,29 @@ object TerminalPage {
           ),
           <.div(^.className := "tab-content",
             <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
-              val airportWrapper = SPACircuit.connect(_.airportInfos)
-              val flightsWrapper = SPACircuit.connect(_.flightsWithApiSplits(props.terminalName))
-              airportWrapper(airportInfoProxy =>
-                flightsWrapper(proxy =>
-                  FlightsWithSplitsView(FlightsWithSplitsView.Props(proxy.value, airportInfoProxy.value))))
-            }
-            ),
+              //              val flightsWrapper = SPACircuit.connect(_.flightsWithApiSplits(props.terminalName))
+              val flightsWrapper = SPACircuit.connect(_.flightsWithSplitsPot)
+              //              airportWrapper(airportInfoProxy =>
+              flightsWrapper(proxy => {
+                val flightsWithSplits = proxy.value
+                val flights: Pot[List[ApiFlight]] = flightsWithSplits.map(_.flights.map(_.apiFlight))
+                //                val timelineComp: Option[(ApiFlight) => VdomNode] = Some((flight: ApiFlight) => <.span("timeline"))
+                val timelineComp = Some(FlightsWithSplitsTable.timelineCompFunc _)
+                def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos(portCode))
+
+                def originMapper(portCode: String): VdomElement = {
+                  airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
+                    val airportInfoPot = proxy.value
+                    FlightsWithSplitsTable.airportCodeComponentLensed(airportInfoPot)(portCode)
+                  }
+                }
+                <.div(flights.renderReady(FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper)(_)))
+              })
+            }),
             <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
               TerminalDeploymentsTable.terminalDeploymentsComponent(props.terminalName)
             )
-          )
-        )
+          ))
       })
     }
   }
