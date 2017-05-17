@@ -237,13 +237,22 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.ActDT), date(testFlightT.EstChoxDT),
                   date(testFlightT.ActChoxDT), <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%"))))))
 
-          assertRenderedComponentsAreEqual(FlightsWithSplitsTable.ArrivalsTable(None, (s) => s)(testFlightT :: Nil), staticComponent(expected)())
+          def paxComponent(f: ApiFlight): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
+
+          assertRenderedComponentsAreEqual(FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(testFlightT :: Nil), staticComponent(expected)())
 
 //          val className: TagMod = ^.className := s"pax-${origin}"
 //          val title: TagMod = ^.title := s"from ${origin}"
 //          val relativePax = Math.floor(100 * (pax / 853)).toInt
 //          val style = widthStyle(relativePax)
 //          <.div(po.pax, className, title, ^.style := style)
+//          "Unit tests for paxComponent Hook" - {
+//            val testFlightT = testFlight.copy(ActPax = 0, MaxPax = 150)
+//
+//            def paxComponent(f: ApiFlight): VdomNode = {
+//              <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
+//            }
+//          }
 
         }
       }
