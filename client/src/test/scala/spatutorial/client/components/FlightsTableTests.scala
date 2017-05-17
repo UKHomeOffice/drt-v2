@@ -2,6 +2,7 @@ package spatutorial.client.components
 
 import diode.data.{Pot, Ready}
 import drt.client.components.FlightsWithSplitsTable
+import drt.client.components.FlightsWithSplitsTable.widthStyle
 import drt.shared.{AirportInfo, ApiFlight}
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
@@ -206,6 +207,44 @@ object FlightsTableTests extends TestSuite {
             val actual = FlightsWithSplitsTable.airportCodeComponent(airportInfos)("JFK")
             assertRenderedComponentsAreEqual(staticComponent(actual)(), staticComponent(expected)())
           }
+        }
+        "Arrivals Table has a hook for a better pax column" - {
+          val paxToDisplay = 120
+          val biggestCapacityFlightInTheWorldRightNow = 853
+          val width = ((120.toDouble / biggestCapacityFlightInTheWorldRightNow) * 100).round
+          val testFlightT = testFlight.copy(ActPax = paxToDisplay)
+          val expected = <.div(
+            <.table(
+              ^.className := "table table-responsive table-striped table-hover table-sm",
+              <.thead(<.tr(
+                <.th("Flight"),
+                <.th("Origin"),
+                <.th("Gate/Stand"),
+                <.th("Status"),
+                <.th("Sch"),
+                <.th("Est"),
+                <.th("Act"),
+                <.th("Est Chox"),
+                <.th("Act Chox"),
+                <.th("Pax")
+              )),
+              <.tbody(
+                <.tr(
+                  <.td(testFlightT.ICAO), <.td(testFlightT.Origin),
+                  <.td(s"${testFlightT.Gate}/${testFlightT.Stand}"),
+                  <.td(testFlightT.Status),
+                  date(testFlightT.SchDT), date(testFlightT.EstDT),
+                  date(testFlightT.ActDT), date(testFlightT.EstChoxDT),
+                  date(testFlightT.ActChoxDT), <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%"))))))
+
+          assertRenderedComponentsAreEqual(FlightsWithSplitsTable.ArrivalsTable(None, (s) => s)(testFlightT :: Nil), staticComponent(expected)())
+
+//          val className: TagMod = ^.className := s"pax-${origin}"
+//          val title: TagMod = ^.title := s"from ${origin}"
+//          val relativePax = Math.floor(100 * (pax / 853)).toInt
+//          val style = widthStyle(relativePax)
+//          <.div(po.pax, className, title, ^.style := style)
+
         }
       }
     }

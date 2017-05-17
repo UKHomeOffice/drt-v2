@@ -21,7 +21,8 @@ object FlightsWithSplitsTable {
   type Props = FlightsWithSplitsView.Props
 
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
-                      originMapper: (String) => VdomNode = (portCode) => portCode
+                       originMapper: (String) => VdomNode = (portCode) => portCode,
+                      paxComponent: (ApiFlight) => VdomNode = (flight) => flight.ActPax
                       ) = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
     .renderP((_$, flights) => {
       val sortedFlights = flights.sortBy(_.SchDT) //todo move this closer to the model
@@ -55,13 +56,13 @@ object FlightsWithSplitsTable {
                 <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
                 <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
                 <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                <.td(^.key := flight.FlightID.toString + "-actpax", flight.ActPax)
+                <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight))
               )).toTagMod)))
     })
     .build
 
   def airportCodeComponent(portMapper: Map[String, Pot[AirportInfo]])(port: String): VdomElement = {
-    val tt = airportCodeTooltipText(portMapper)_
+    val tt = airportCodeTooltipText(portMapper) _
     <.span(^.title := tt(port), port)
   }
 
@@ -73,7 +74,9 @@ object FlightsWithSplitsTable {
   def airportCodeTooltipText(portMapper: Map[String, Pot[AirportInfo]])(port: String): String = {
     val portInfoOptPot = portMapper.get(port)
 
-    val res: Option[Pot[String]] = portInfoOptPot.map { potAirportInfoToTooltip }
+    val res: Option[Pot[String]] = portInfoOptPot.map {
+      potAirportInfoToTooltip
+    }
     airportInfoDefault(res)
   }
 
@@ -85,7 +88,7 @@ object FlightsWithSplitsTable {
   }
 
   private def potAirportInfoToTooltip(info: Pot[AirportInfo]) = {
-      info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
+    info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
   }
 
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
@@ -158,7 +161,7 @@ object FlightsWithSplitsTable {
   }
 
   def timelineCompFunc(flight: ApiFlight) = {
-    timelineFunc(150-24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
+    timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
   }
 
   def timelineFunc(schPct: Int, sch: String, act: String, actChox: String): VdomElement = {
@@ -219,17 +222,20 @@ object FlightsWithSplitsTable {
     actClass
   }
 
+  def widthStyle(width: Int) = js.Dictionary("width" -> s"$width%").asInstanceOf[js.Object]
+
   def paxComponent(): js.Function = (props: js.Dynamic) => {
-    def widthStyle(width: Int) = js.Dictionary("width" -> s"$width%").asInstanceOf[js.Object]
 
     val paxRegex = "([0-9]+)(.)".r
     val paxAndOrigin = props.data match {
       case po: PaxAndOrigin =>
-        val className: TagMod = ^.className := s"pax-${po.origin}"
-        val title: TagMod = ^.title := s"from ${po.origin}"
-        val relativePax = Math.floor(100 * (po.pax.toDouble / 853)).toInt
+        val origin = po.origin
+        val pax = po.pax.toDouble
+
+        val className: TagMod = ^.className := s"pax-${origin}"
+        val title: TagMod = ^.title := s"from ${origin}"
+        val relativePax = Math.floor(100 * (pax / 853)).toInt
         val style = widthStyle(relativePax)
-        //        logger.log.info(s"got paxandorigin")
         <.div(po.pax, className, title, ^.style := style)
       case e =>
         logger.log.warn(s"Expected a PaxAndOrigin but got $e")
@@ -334,7 +340,7 @@ object FlightsWithSplitsTable {
     .render_P(props => {
       logger.log.debug(s"rendering flightstable")
 
-      val mappings = airportCodeTooltipText(props.airportInfoProxy)_
+      val mappings = airportCodeTooltipText(props.airportInfoProxy) _
 
       val columnMeta = Some(Seq(
         new GriddleComponentWrapper.ColumnMeta("Timeline",
