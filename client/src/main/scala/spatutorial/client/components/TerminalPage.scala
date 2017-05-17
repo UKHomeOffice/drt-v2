@@ -67,7 +67,16 @@ object TerminalPage {
                     FlightsWithSplitsTable.airportCodeComponentLensed(airportInfoPot)(portCode)
                   }
                 }
-                <.div(flights.renderReady(FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper)(_)))
+                def paxComp(flight: ApiFlight): TagMod = {
+                  val widthMaxPax = 30
+                  val widthPortFeed = 30
+                  val widthApi = 45
+                  <.div(flight.ActPax,
+                    <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%"),
+                    <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%"),
+                    <.div(^.className := "pax-api", ^.width := s"$widthApi%"))
+                }
+                <.div(flights.renderReady(FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp)(_)))
               })
             }),
             <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",

@@ -22,7 +22,7 @@ object FlightsWithSplitsTable {
 
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
-                      paxComponent: (ApiFlight) => VdomNode = (flight) => flight.ActPax
+                      paxComponent: (ApiFlight) => TagMod = (flight) => flight.ActPax
                       ) = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
     .renderP((_$, flights) => {
       val sortedFlights = flights.sortBy(_.SchDT) //todo move this closer to the model
