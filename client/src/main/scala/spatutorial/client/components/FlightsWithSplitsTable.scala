@@ -20,11 +20,19 @@ object FlightsWithSplitsTable {
 
   type Props = FlightsWithSplitsView.Props
 
-  val ArrivalsTable = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
-    .renderP((_$, flights) =>
+  def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
+                      originMapper: (String) => VdomNode = (portCode) => portCode
+                      ) = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
+    .renderP((_$, flights) => {
+      val sortedFlights = flights.sortBy(_.SchDT) //todo move this closer to the model
+      val isTimeLineSupplied = timelineComponent.isDefined
+      val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       <.div(
         <.table(
-          <.thead(<.tr(<.th("Flight"), <.th("Origin"),
+          ^.className := "table table-responsive table-striped table-hover table-sm",
+          <.thead(<.tr(
+            timelineTh,
+            <.th("Flight"), <.th("Origin"),
             <.th("Gate/Stand"),
             <.th("Status"),
             <.th("Sch"),
@@ -35,21 +43,50 @@ object FlightsWithSplitsTable {
             <.th("Pax")
           )),
           <.tbody(
-            flights.map(flight =>
+            sortedFlights.map(flight =>
               <.tr(^.key := flight.FlightID.toString,
-                <.td(flight.ICAO),
-                <.td(flight.Origin),
-                <.td(s"${flight.Gate}/${flight.Stand}"),
-                <.td(flight.Status),
-                <.td(flight.SchDT),
-                <.td(flight.EstDT),
-                <.td(flight.ActDT),
-                <.td(flight.EstChoxDT),
-                <.td(flight.ActChoxDT),
-                <.td(flight.ActPax)
-              )).toTagMod))))
+                timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+                <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+                <.td(^.key := flight.FlightID.toString + "-origin", originMapper(flight.Origin)),
+                <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
+                <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
+                <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+                <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
+                <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
+                <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+                <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+                <.td(^.key := flight.FlightID.toString + "-actpax", flight.ActPax)
+              )).toTagMod)))
+    })
     .build
 
+  def airportCodeComponent(portMapper: Map[String, Pot[AirportInfo]])(port: String): VdomElement = {
+    val tt = airportCodeTooltipText(portMapper)_
+    <.span(^.title := tt(port), port)
+  }
+
+  def airportCodeComponentLensed(portMapper: Pot[AirportInfo])(port: String): VdomElement = {
+    val tt = Option(potAirportInfoToTooltip(portMapper))
+    <.span(^.title := airportInfoDefault(tt), port)
+  }
+
+  def airportCodeTooltipText(portMapper: Map[String, Pot[AirportInfo]])(port: String): String = {
+    val portInfoOptPot = portMapper.get(port)
+
+    val res: Option[Pot[String]] = portInfoOptPot.map { potAirportInfoToTooltip }
+    airportInfoDefault(res)
+  }
+
+  private def airportInfoDefault(res: Option[Pot[String]]) = {
+    res match {
+      case Some(Ready(v)) => v
+      case _ => "waiting for info..."
+    }
+  }
+
+  private def potAirportInfoToTooltip(info: Pot[AirportInfo]) = {
+      info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
+  }
 
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString())
@@ -59,13 +96,21 @@ object FlightsWithSplitsTable {
   def dateTimeComponent(): js.Function = (props: js.Dynamic) => {
     val dt = props.data.toString()
     if (dt != "") {
-      val sdate = SDate.parse(dt)
-      val formatted = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
-      val mod: TagMod = ^.title := sdate.toLocalDateTimeString()
-      <.span(formatted, mod).render
+      localDateTimeWithPopup(dt)
     } else {
       <.div.render
     }
+  }
+
+  def localDateTimeWithPopup(dt: String) = {
+    if (dt.isEmpty) <.span() else localTimePopup(dt)
+  }
+
+  private def localTimePopup(dt: String) = {
+    val sdate = SDate.parse(dt)
+    val hhmm = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
+    val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
+    <.span(hhmm, titlePopup).render
   }
 
   def millisDelta(time1: String, time2: String) = {
@@ -102,43 +147,56 @@ object FlightsWithSplitsTable {
       val estChox = rowData("Est Chox").toString
       val actChox = rowData("Act Chox").toString
 
-      val (actDeltaTooltip: String, actPct: Double, actClass: String) = pctAndClass(sch, act, schPct)
-      val (actChoxToolTip: String, actChoxPct: Double, actChoxClass: String) = pctAndClass(sch, actChox, schPct)
-
-
-      val longToolTip =
-        s"""Sch: ${dateStringAsLocalDisplay(sch)}
-           |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
-           |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
-        """.stripMargin
-
-      val actChoxDot = if (!actChox.isEmpty)
-        <.i(^.className := "dot act-chox-dot " + actChoxClass,
-          ^.title := s"ActChox: $actChox $actChoxToolTip",
-          ^.left := s"${actChoxPct}px")
-      else <.span()
-
-
-      val actWidth = (actChoxPct + 24) - actPct
-
-      val schDot = <.i(^.className := "dot sch-dot",
-        ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
-      val actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot " + actClass,
-        ^.title := s"Actual: ${dateStringAsLocalDisplay(act)}",
-        ^.width := s"${actWidth}px",
-        ^.left := s"${actPct}px")
-      else <.span()
-
-      val dots = schDot :: actDot :: actChoxDot :: Nil
-
-      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
+      timelineFunc(schPct, sch, act, actChox)
     } match {
       case Success(s) =>
-        s.render
+        <.span(s).render
       case f =>
         <.span(f.toString).render
     }
     re
+  }
+
+  def timelineCompFunc(flight: ApiFlight) = {
+    timelineFunc(150-24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
+  }
+
+  def timelineFunc(schPct: Int, sch: String, act: String, actChox: String): VdomElement = {
+    val (actDeltaTooltip: String, actPct: Double, actClass: String) = pctAndClass(sch, act, schPct)
+    val (actChoxToolTip: String, actChoxPct: Double, actChoxClass: String) = pctAndClass(sch, actChox, schPct)
+
+
+    val longToolTip =
+      s"""Sch: ${dateStringAsLocalDisplay(sch)}
+         |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+         |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+    """.stripMargin
+
+    val actChoxDot = if (!actChox.isEmpty)
+      <.i(^.className :=
+        "dot act-chox-dot " + actChoxClass,
+        ^.title := s"ActChox: $actChox $actChoxToolTip",
+        ^.left := s"${actChoxPct}px")
+    else <.span()
+
+    val actWidth = (actChoxPct + 24) -
+      actPct
+
+    val schDot = <.i(^.className := "dot sch-dot",
+      ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
+    val
+    actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot "
+      + actClass,
+      ^.title
+        := s"Actual: ${dateStringAsLocalDisplay(act)}",
+      ^.width := s"${actWidth}px",
+      ^.left := s"${actPct}px")
+    else <.span()
+
+    val dots = schDot :: actDot ::
+      actChoxDot :: Nil
+
+    <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
   }
 
   private def pctAndClass(sch: String, act: String, schPct: Int) = {
@@ -276,17 +334,7 @@ object FlightsWithSplitsTable {
     .render_P(props => {
       logger.log.debug(s"rendering flightstable")
 
-      val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
-
-      def mappings(port: String): String = {
-        val res: Option[Pot[String]] = portMapper.get(port).map { info =>
-          info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
-        }
-        res match {
-          case Some(Ready(v)) => v
-          case _ => "waiting for info..."
-        }
-      }
+      val mappings = airportCodeTooltipText(props.airportInfoProxy)_
 
       val columnMeta = Some(Seq(
         new GriddleComponentWrapper.ColumnMeta("Timeline",
@@ -315,10 +363,7 @@ object FlightsWithSplitsTable {
               ).toTagMod
             )
           )
-          //          GriddleComponentWrapper(results = rows,
-          //            columnMeta = columnMeta,
-          //            initialSort = "Sch",
-          //            columns = props.activeCols)()
+
         })
       )
     }).build

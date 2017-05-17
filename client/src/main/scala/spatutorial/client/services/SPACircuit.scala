@@ -350,13 +350,16 @@ case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
 case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
 
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
+  val flightsRequestFrequency = 10L seconds
+
   protected def handle = {
     case RequestFlights(from, to) =>
       log.info(s"client requesting flights $from $to")
-      val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(60L seconds)
+      val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
       val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
     case UpdateFlightsWithSplits(flightsWithSplits) =>
+      log.info(s"client got ${flightsWithSplits.flights.length} flights")
       val flights = flightsWithSplits.flights.map(_.apiFlight)
 
       val result = if (value.isReady) {
