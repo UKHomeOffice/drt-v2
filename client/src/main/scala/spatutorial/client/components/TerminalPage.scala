@@ -19,7 +19,8 @@ import japgolly.scalajs.react.vdom.html_<^
 
 import scala.util.Try
 
-object TerminalPage {
+object
+TerminalPage {
 
   case class Props(terminalName: TerminalName, ctl: RouterCtl[Loc])
 
@@ -81,22 +82,27 @@ object TerminalPage {
                   }.get
                 }
 
-                def paxComp(flight: ApiFlight): TagMod = {
-                  val widthMaxPax = (flight.MaxPax.toDouble / 853) * 100
-                  val widthPortFeed = (flight.ActPax.toDouble / 853)  * 100
+
+                def paxComp(maxFlightPax:Int = 853)(flight: ApiFlight): TagMod = {
+
+                  val widthMaxPax = (flight.MaxPax.toDouble / maxFlightPax) * 100
+                  val widthPortFeed = (flight.ActPax.toDouble / maxFlightPax)  * 100
                   val widthApi = 45
                   <.div(
                     ^.className := "pax-cell",
-                    <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%", "."),
-                    <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%", "."),
-                    <.div(^.className := "pax-api", ^.width := s"$widthApi%", "."),
+                    <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%"),
+                    <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%"),
+                    <.div(^.className := "pax-api", ^.width := s"$widthApi%"),
                     <.div(^.className := "pax", ^.width := s"$widthApi%",
                       flight.ActPax
                     )
                   )
                 }
 
-                <.div(flights.renderReady(FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp)(_)))
+                <.div(flights.renderReady(flights => {
+                  val maxFlightPax = flights.map(_.MaxPax).max
+                  FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax))(flights)
+                }))
               })
             }),
             <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
