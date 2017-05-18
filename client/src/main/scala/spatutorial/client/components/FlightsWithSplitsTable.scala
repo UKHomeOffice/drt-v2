@@ -66,7 +66,7 @@ object FlightsWithSplitsTable {
                       <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
                       <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
                       <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                      <.td(^.key := flight.FlightID.toString + "-actpax", flight.ActPax)
+                      <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight))
                     )
                   }.recover {
                     case e => log.error(s"couldn't make flight row $e")
