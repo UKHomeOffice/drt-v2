@@ -56,6 +56,7 @@ object FlightsWithSplitsTable {
               sortedFlights.zipWithIndex.map {
                 case (flightWithSplits, idx) => {
                   val flight = flightWithSplits.apiFlight
+                  val splitTotal = flightWithSplits.splits.splits.map(_.paxCount).sum
                   log.info(s"rendering flight row $idx ${flight.toString}")
                   Try {
                     <.tr(^.key := flight.FlightID.toString,
@@ -70,7 +71,9 @@ object FlightsWithSplitsTable {
                       <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
                       <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
                       <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight)),
-                      <.td(^.key := flight.FlightID.toString + "-splits", flightWithSplits.splits.toString))
+                      <.td(^.key := flight.FlightID.toString + "-splits", splitsGraphComponent(flightWithSplits.splits.splits
+                        .sortBy(split => (split.passengerType.toString, split.queueType))
+                        .map(_.paxCount.toDouble / splitTotal * 100))))
                   }.recover {
                     case e => log.error(s"couldn't make flight row $e")
                       <.tr(s"failure $e")
@@ -297,6 +300,13 @@ object FlightsWithSplitsTable {
         <.div(^.className := "bar", ^.style := heightStyle(pc(3))),
         <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
       )).render
+  }
+
+  def splitsGraphComponent(splits: Seq[Double]) = {
+    <.div(^.className := "splits", ^.title := "What?",
+      <.div(^.className := "graph",
+        splits.map(pc => <.div(^.className := "bar", ^.height := s"$pc%")).toTagMod
+      ))
   }
 
 
