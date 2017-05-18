@@ -13,7 +13,7 @@ import drt.client.modules.FlightsWithSplitsView
 import drt.client.services.RootModel.TerminalQueueSimulationResults
 import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, SimulationResult}
+import drt.shared._
 import japgolly.scalajs.react.component.Generic
 import japgolly.scalajs.react.vdom.html_<^
 
@@ -61,10 +61,8 @@ TerminalPage {
               //              airportWrapper(airportInfoProxy =>
               flightsWrapper(proxy => {
                 val flightsWithSplits = proxy.value
-                val flights: Pot[List[ApiFlight]] = flightsWithSplits.map(_.flights.map(_.apiFlight))
-                //                val timelineComp: Option[(ApiFlight) => VdomNode] = Some((flight: ApiFlight) => <.span("timeline"))
+                val flights: Pot[FlightsApi.FlightsWithSplits] = flightsWithSplits
                 val timelineComp: Option[(ApiFlight) => html_<^.VdomElement] = Some(FlightsWithSplitsTable.timelineCompFunc _)
-
                 def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
                 def originMapper(portCode: String): VdomElement = {
@@ -93,15 +91,13 @@ TerminalPage {
                     <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%"),
                     <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%"),
                     <.div(^.className := "pax-api", ^.width := s"$widthApi%"),
-                    <.div(^.className := "pax", ^.width := s"$widthApi%",
-                      flight.ActPax
-                    )
+                    <.div(^.className := "pax", flight.ActPax)
                   )
                 }
 
-                <.div(flights.renderReady(flights => {
-                  val maxFlightPax = flights.map(_.MaxPax).max
-                  FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax))(flights)
+                <.div(flights.renderReady(flightsWithSplits => {
+                  val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
+                  FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax))(flightsWithSplits)
                 }))
               })
             }),

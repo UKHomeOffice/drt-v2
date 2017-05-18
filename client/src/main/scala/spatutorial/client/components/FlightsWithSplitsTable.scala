@@ -26,10 +26,11 @@ object FlightsWithSplitsTable {
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
                        paxComponent: (ApiFlight) => TagMod = (flight) => flight.ActPax
-                      ) = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
-    .renderP((_$, flights) => {
+                      ) = ScalaComponent.builder[FlightsWithSplits]("ArrivalsTable")
+    .renderP((_$, flightsWithSplits) => {
       log.info(s"sorting flights")
-      val sortedFlights = flights.sortBy(_.SchDT) //todo move this closer to the model
+      val flights = flightsWithSplits.flights
+      val sortedFlights = flights.sortBy(_.apiFlight.SchDT) //todo move this closer to the model
       log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
@@ -48,11 +49,13 @@ object FlightsWithSplitsTable {
               <.th("Act"),
               <.th("Est Chox"),
               <.th("Act Chox"),
-              <.th("Pax")
+              <.th("Pax"),
+              <.th("Splits")
             )),
             <.tbody(
               sortedFlights.zipWithIndex.map {
-                case (flight, idx) => {
+                case (flightWithSplits, idx) => {
+                  val flight = flightWithSplits.apiFlight
                   log.info(s"rendering flight row $idx ${flight.toString}")
                   Try {
                     <.tr(^.key := flight.FlightID.toString,
@@ -66,8 +69,8 @@ object FlightsWithSplitsTable {
                       <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
                       <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
                       <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                      <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight))
-                    )
+                      <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight)),
+                      <.td(^.key := flight.FlightID.toString + "-splits", flightWithSplits.splits.toString))
                   }.recover {
                     case e => log.error(s"couldn't make flight row $e")
                       <.tr(s"failure $e")
