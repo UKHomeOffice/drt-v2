@@ -14,7 +14,10 @@ import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.Dictionary
 import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
+import logger._
+
+import scala.collection.JavaConverters._
 
 object FlightsWithSplitsTable {
 
@@ -22,42 +25,64 @@ object FlightsWithSplitsTable {
 
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
-                      paxComponent: (ApiFlight) => TagMod = (flight) => flight.ActPax
+                       paxComponent: (ApiFlight) => TagMod = (flight) => flight.ActPax
                       ) = ScalaComponent.builder[Seq[ApiFlight]]("ArrivalsTable")
     .renderP((_$, flights) => {
+      log.info(s"sorting flights")
       val sortedFlights = flights.sortBy(_.SchDT) //todo move this closer to the model
+      log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
-      <.div(
-        <.table(
-          ^.className := "table table-responsive table-striped table-hover table-sm",
-          <.thead(<.tr(
-            timelineTh,
-            <.th("Flight"), <.th("Origin"),
-            <.th("Gate/Stand"),
-            <.th("Status"),
-            <.th("Sch"),
-            <.th("Est"),
-            <.th("Act"),
-            <.th("Est Chox"),
-            <.th("Act Chox"),
-            <.th("Pax")
-          )),
-          <.tbody(
-            sortedFlights.map(flight =>
-              <.tr(^.key := flight.FlightID.toString,
-                timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-                <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
-                <.td(^.key := flight.FlightID.toString + "-origin", originMapper(flight.Origin)),
-                <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
-                <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
-                <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-                <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
-                <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-                <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
-                <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight))
-              )).toTagMod)))
+      Try {
+
+        <.div(
+          <.table(
+            ^.className := "table table-responsive table-striped table-hover table-sm",
+            <.thead(<.tr(
+              timelineTh,
+              <.th("Flight"), <.th("Origin"),
+              <.th("Gate/Stand"),
+              <.th("Status"),
+              <.th("Sch"),
+              <.th("Est"),
+              <.th("Act"),
+              <.th("Est Chox"),
+              <.th("Act Chox"),
+              <.th("Pax")
+            )),
+            <.tbody(
+              sortedFlights.zipWithIndex.map {
+                case (flight, idx) => {
+                  log.info(s"rendering flight row $idx ${flight.toString}")
+                  Try {
+                    <.tr(^.key := flight.FlightID.toString,
+                      timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+                      <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+                      <.td(^.key := flight.FlightID.toString + "-origin", originMapper(flight.Origin)),
+                      <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
+                      <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
+                      <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+                      <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
+                      <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
+                      <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+                      <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+                      <.td(^.key := flight.FlightID.toString + "-actpax", flight.ActPax)
+                    )
+                  }.recover {
+                    case e => log.error(s"couldn't make flight row $e")
+                      <.tr(s"failure $e")
+                  }.get
+                }
+              }.toTagMod)))
+      } match {
+        case Success(s) =>
+          log.info(s"table rendered!!")
+          s
+
+        case Failure(f) =>
+          log.error(s"filure in table render $f")
+          <.div(s"render failure ${f}")
+      }
     })
     .build
 
@@ -66,8 +91,9 @@ object FlightsWithSplitsTable {
     <.span(^.title := tt(port), port)
   }
 
-  def airportCodeComponentLensed(portMapper: Pot[AirportInfo])(port: String): VdomElement = {
-    val tt = Option(potAirportInfoToTooltip(portMapper))
+  def airportCodeComponentLensed(portInfoPot: Pot[AirportInfo])(port: String): VdomElement = {
+    val tt: Option[Pot[String]] = Option(potAirportInfoToTooltip(portInfoPot))
+    log.info(s"making airport info $port $tt")
     <.span(^.title := airportInfoDefault(tt), port)
   }
 
@@ -80,14 +106,15 @@ object FlightsWithSplitsTable {
     airportInfoDefault(res)
   }
 
-  private def airportInfoDefault(res: Option[Pot[String]]) = {
+  private def airportInfoDefault(res: Option[Pot[String]]): String = {
+    log.info(s"airportInfoDefault got one! $res")
     res match {
       case Some(Ready(v)) => v
       case _ => "waiting for info..."
     }
   }
 
-  private def potAirportInfoToTooltip(info: Pot[AirportInfo]) = {
+  private def potAirportInfoToTooltip(info: Pot[AirportInfo]): Pot[String] = {
     info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
   }
 
@@ -160,8 +187,15 @@ object FlightsWithSplitsTable {
     re
   }
 
-  def timelineCompFunc(flight: ApiFlight) = {
-    timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
+  def timelineCompFunc(flight: ApiFlight): VdomElement = {
+    Try {
+      timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
+    }.recover {
+      case e =>
+        log.error(s"couldn't render timeline of $flight with $e")
+        val recovery: VdomElement = <.div("uhoh!")
+        recovery
+    }.get
   }
 
   def timelineFunc(schPct: Int, sch: String, act: String, actChox: String): VdomElement = {

@@ -1,7 +1,7 @@
 package drt.client.components
 
-import diode.data.Pot
-import diode.react.ModelProxy
+import diode.data.{Failed, Pending, Pot}
+import diode.react.{ModelProxy, ReactConnectProps}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react._
@@ -14,6 +14,10 @@ import drt.client.services.RootModel.TerminalQueueSimulationResults
 import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, SimulationResult}
+import japgolly.scalajs.react.component.Generic
+import japgolly.scalajs.react.vdom.html_<^
+
+import scala.util.Try
 
 object TerminalPage {
 
@@ -58,15 +62,25 @@ object TerminalPage {
                 val flightsWithSplits = proxy.value
                 val flights: Pot[List[ApiFlight]] = flightsWithSplits.map(_.flights.map(_.apiFlight))
                 //                val timelineComp: Option[(ApiFlight) => VdomNode] = Some((flight: ApiFlight) => <.span("timeline"))
-                val timelineComp = Some(FlightsWithSplitsTable.timelineCompFunc _)
-                def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos(portCode))
+                val timelineComp: Option[(ApiFlight) => html_<^.VdomElement] = Some(FlightsWithSplitsTable.timelineCompFunc _)
+
+                def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
                 def originMapper(portCode: String): VdomElement = {
-                  airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
-                    val airportInfoPot = proxy.value
-                    FlightsWithSplitsTable.airportCodeComponentLensed(airportInfoPot)(portCode)
-                  }
+                  Try {
+                    vdomElementFromTag(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
+                      <.span(
+                        proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
+                        proxy().renderEmpty(<.span(portCode)),
+                        proxy().renderPending((n) => <.span(portCode)))
+                    })
+                  }.recover {
+                    case e =>
+                      log.error(s"origin mapper error $e")
+                      vdomElementFromTag(<.div(portCode))
+                  }.get
                 }
+
                 def paxComp(flight: ApiFlight): TagMod = {
                   val widthMaxPax = 30
                   val widthPortFeed = 30
@@ -76,6 +90,7 @@ object TerminalPage {
                     <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%"),
                     <.div(^.className := "pax-api", ^.width := s"$widthApi%"))
                 }
+
                 <.div(flights.renderReady(FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp)(_)))
               })
             }),
