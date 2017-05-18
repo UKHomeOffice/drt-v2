@@ -82,13 +82,18 @@ object TerminalPage {
                 }
 
                 def paxComp(flight: ApiFlight): TagMod = {
-                  val widthMaxPax = 30
-                  val widthPortFeed = 30
+                  val widthMaxPax = (flight.MaxPax.toDouble / 853) * 100
+                  val widthPortFeed = (flight.ActPax.toDouble / 853)  * 100
                   val widthApi = 45
-                  <.div(flight.ActPax,
-                    <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%"),
-                    <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%"),
-                    <.div(^.className := "pax-api", ^.width := s"$widthApi%"))
+                  <.div(
+                    ^.className := "pax-cell",
+                    <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%", "."),
+                    <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%", "."),
+                    <.div(^.className := "pax-api", ^.width := s"$widthApi%", "."),
+                    <.div(^.className := "pax", ^.width := s"$widthApi%",
+                      flight.ActPax
+                    )
+                  )
                 }
 
                 <.div(flights.renderReady(FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp)(_)))

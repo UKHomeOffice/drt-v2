@@ -395,16 +395,33 @@ th h2 {
   height: 200px;
 }
 
+.pax-cell {
+  position: relative;
+  width: 100%;
+  display: inline-block;
+}
+
+@pax-bar-height: 10px;
+
+.pax-bar {
+  position: absolute;
+  height: @pax-bar-height;
+}
+
 .pax-api {
   background-color: #bfb;
+  .pax-bar
 }
 
 .pax-portfeed {
   background-color: #fb6;
+  .pax-bar
 }
 
 .pax-maxpax {
   background-color: #fbb;
+  height: 0px;
+  border-bottom: solid 1px black;
 }
 
 .splits {
