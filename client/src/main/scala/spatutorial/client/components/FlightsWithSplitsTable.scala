@@ -9,6 +9,7 @@ import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
+import japgolly.scalajs.react.vdom.TagOf
 
 import scala.collection.mutable
 import scala.scalajs.js
@@ -16,6 +17,7 @@ import scala.scalajs.js.Dictionary
 import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
 import scala.util.{Failure, Success, Try}
 import logger._
+import org.scalajs.dom.html.Div
 
 import scala.collection.JavaConverters._
 
@@ -25,7 +27,8 @@ object FlightsWithSplitsTable {
 
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
-                       paxComponent: (ApiFlight) => TagMod = (flight) => flight.ActPax
+                       paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                       splitsGraphComponent: (Int, Seq[(String, Double)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Double)]) => <.div()
                       ) = ScalaComponent.builder[FlightsWithSplits]("ArrivalsTable")
     .renderP((_$, flightsWithSplits) => {
       log.info(s"sorting flights")
@@ -59,6 +62,9 @@ object FlightsWithSplitsTable {
                   val splitTotal = flightWithSplits.splits.splits.map(_.paxCount).sum
                   log.info(s"rendering flight row $idx ${flight.toString}")
                   Try {
+                    val splitsAndLabels: List[(String, Double)] = flightWithSplits.splits.splits
+                      .sortBy(split => (split.passengerType.toString, split.queueType))
+                      .map(ptqc => (s"${ptqc.passengerType} > ${ptqc.queueType}", ptqc.paxCount.toDouble / splitTotal * 100))
                     <.tr(^.key := flight.FlightID.toString,
                       timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
                       <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
@@ -70,10 +76,8 @@ object FlightsWithSplitsTable {
                       <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
                       <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
                       <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                      <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight)),
-                      <.td(^.key := flight.FlightID.toString + "-splits", splitsGraphComponent(flightWithSplits.splits.splits
-                        .sortBy(split => (split.passengerType.toString, split.queueType))
-                        .map(_.paxCount.toDouble / splitTotal * 100))))
+                      <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight, flightWithSplits.splits)),
+                      <.td(^.key := flight.FlightID.toString + "-splits", splitsGraphComponent(splitTotal, splitsAndLabels)))
                   }.recover {
                     case e => log.error(s"couldn't make flight row $e")
                       <.tr(s"failure $e")
@@ -211,8 +215,8 @@ object FlightsWithSplitsTable {
 
     val longToolTip =
       s"""Sch: ${dateStringAsLocalDisplay(sch)}
-         |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
-         |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+          |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+          |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
     """.stripMargin
 
     val actChoxDot = if (!actChox.isEmpty)
@@ -302,13 +306,26 @@ object FlightsWithSplitsTable {
       )).render
   }
 
-  def splitsGraphComponent(splits: Seq[Double]) = {
-    <.div(^.className := "splits", ^.title := "What?",
+  def splitsGraphComponent(splitTotal: Int, splits: Seq[(String, Double)]): TagOf[Div] = {
+    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits),
       <.div(^.className := "graph",
-        splits.map(pc => <.div(^.className := "bar", ^.height := s"$pc%")).toTagMod
+        splits.map {
+          case (label, percent) => <.div(
+            ^.className := "bar",
+            ^.height := s"$percent%",
+            ^.title := s"${splitPercentToPaxNo(splitTotal, percent)} $label")
+        }.toTagMod
       ))
   }
 
+  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Double)]): String = splits.map {
+    case (label, percent) =>
+      s"${splitPercentToPaxNo(splitTotal, percent)} $label"
+  }.mkString("\n")
+
+  def splitPercentToPaxNo(splitTotal: Int, pc: Double): Double = {
+    pc / 100 * splitTotal
+  }
 
   @ScalaJSDefined
   class PaxAndOrigin(val pax: Int, val origin: String) extends js.Object
