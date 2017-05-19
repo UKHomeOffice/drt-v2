@@ -52,7 +52,7 @@ object FlightsWithSplitsTable {
               <.th("Act"),
               <.th("Est Chox"),
               <.th("Act Chox"),
-              <.th("Pax"),
+              <.th("Pax Nos"),
               <.th("Splits")
             )),
             <.tbody(
@@ -304,27 +304,6 @@ object FlightsWithSplitsTable {
         <.div(^.className := "bar", ^.style := heightStyle(pc(3))),
         <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
       )).render
-  }
-
-  def splitsGraphComponent(splitTotal: Int, splits: Seq[(String, Double)]): TagOf[Div] = {
-    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits),
-      <.div(^.className := "graph",
-        splits.map {
-          case (label, percent) => <.div(
-            ^.className := "bar",
-            ^.height := s"$percent%",
-            ^.title := s"${splitPercentToPaxNo(splitTotal, percent)} $label")
-        }.toTagMod
-      ))
-  }
-
-  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Double)]): String = splits.map {
-    case (label, percent) =>
-      s"${splitPercentToPaxNo(splitTotal, percent)} $label"
-  }.mkString("\n")
-
-  def splitPercentToPaxNo(splitTotal: Int, pc: Double): Double = {
-    pc / 100 * splitTotal
   }
 
   @ScalaJSDefined

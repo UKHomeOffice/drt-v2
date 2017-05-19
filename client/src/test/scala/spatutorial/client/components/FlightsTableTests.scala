@@ -100,7 +100,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pax"),
+                <.th("Pax Nos"),
                 <.th("Splits")
               )),
               <.tbody(
@@ -131,7 +131,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pax"),
+                <.th("Pax Nos"),
                 <.th("Splits")
               )),
               <.tbody(
@@ -172,7 +172,7 @@ object FlightsTableTests extends TestSuite {
                   <.th("Act"),
                   <.th("Est Chox"),
                   <.th("Act Chox"),
-                  <.th("Pax"),
+                  <.th("Pax Nos"),
                   <.th("Splits")
                 )),
                 <.tbody(
@@ -237,7 +237,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pax"),
+                <.th("Pax Nos"),
                 <.th("Splits")
               )),
               <.tbody(

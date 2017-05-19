@@ -216,7 +216,7 @@ object SPAMain extends js.JSApp {
 
     //    ReactTable.DefaultStyle.addToDocument()
     //    Spinner.Style.addToDocument()
-    //    GlobalStyles.addToDocument()
+    GlobalStyles.addToDocument()
     // create the router
     val router = Router(BaseUrl.until_#, routerConfig)
     // tell React to render the router in the document body
