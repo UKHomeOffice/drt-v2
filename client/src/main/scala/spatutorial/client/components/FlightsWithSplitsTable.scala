@@ -78,8 +78,8 @@ object FlightsWithSplitsTable {
 
       val longToolTip =
         s"""Sch: ${dateStringAsLocalDisplay(sch)}
-           |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
-           |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+            |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+            |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
         """.stripMargin
 
       val actChoxDot = if (!actChox.isEmpty)
@@ -100,10 +100,10 @@ object FlightsWithSplitsTable {
 
       val dots = schDot :: actDot :: actChoxDot :: Nil
 
-      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip )
+      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
     } match {
       case Success(s) =>
-       s.render
+        s.render
       case f =>
         <.span(f.toString).render
     }
@@ -189,8 +189,10 @@ object FlightsWithSplitsTable {
     else s"${max}C"
   }
 
+  val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
+
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
-    val uniqueArrivals: List[(ApiFlightWithSplits, Set[ApiFlight])] = CodeShares.uniqueArrivalsWithSplitsAndCodeshares(flights.flights)
+    val uniqueArrivals: List[(ApiFlightWithSplits, Set[ApiFlight])] = uniqueArrivalsWithCodeShares(flights.flights)
 
     uniqueArrivals.map {
       case (flightAndSplit, codeShares) =>
@@ -200,15 +202,13 @@ object FlightsWithSplitsTable {
           .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
         ).map(x => (x._1, x._2.map(_.paxCount).sum))
 
-        def splitsValues = {
-          Seq(
-            splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToEGate, 0),
-            splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToDesk, 0),
-            splitsTuples.getOrElse(PaxTypesAndQueues.eeaNonMachineReadableToDesk, 0),
-            splitsTuples.getOrElse(PaxTypesAndQueues.visaNationalToDesk, 0),
-            splitsTuples.getOrElse(PaxTypesAndQueues.nonVisaNationalToDesk, 0)
-          )
-        }
+        def splitsValues: Seq[Int] = Seq(
+          PaxTypesAndQueues.eeaMachineReadableToEGate,
+            PaxTypesAndQueues.eeaMachineReadableToDesk,
+            PaxTypesAndQueues.eeaNonMachineReadableToDesk,
+            PaxTypesAndQueues.visaNationalToDesk,
+            PaxTypesAndQueues.nonVisaNationalToDesk
+          ).map(splitsTuples.getOrElse(_, 0))
 
         val allCodes = f.IATA :: codeShares.map(_.IATA).toList
         literal(

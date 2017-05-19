@@ -153,11 +153,13 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     }
   }
 
+  val uniqueArrivalsWithCodeshares = CodeShares.uniqueArrivalsWithCodeshares(identity[ApiFlight]) _
+
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     val tq: QueueName = terminalName + "/" + queueName
     log.info(s"$tq Performing a crunch")
     val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
-    val uniqueArrivals = CodeShares.uniqueArrivalsWithCodeshares(flightsForAirportConfigTerminals).map(_._1)
+    val uniqueArrivals = uniqueArrivalsWithCodeshares(flightsForAirportConfigTerminals).map(_._1)
     val workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]] = queueLoadsByTerminal[Seq[WL]](Future(uniqueArrivals), PaxLoadCalculator.queueWorkLoadCalculator)
 
     val crunchWindowStartTimeMillis = lastLocalMidnight.getMillis
