@@ -12,7 +12,7 @@ import drt.client.logger._
 import drt.client.modules.FlightsWithSplitsView
 import drt.client.services.RootModel.TerminalQueueSimulationResults
 import drt.client.services.{SPACircuit, Workloads}
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.component.Generic
 import japgolly.scalajs.react.vdom.html_<^
@@ -80,22 +80,33 @@ TerminalPage {
                   }.get
                 }
 
+                def paxComp(maxFlightPax: Int = 853)(flight: ApiFlight, apiSplits: ApiSplits): TagMod = {
+                  val apiPax: Int = apiSplits.splits.map(_.paxCount).sum
 
-                def paxComp(maxFlightPax:Int = 853)(flight: ApiFlight): TagMod = {
+                  val (paxNos, paxClass, paxWidth) = if (apiPax > 0)
+                    (apiPax, "pax-api", paxBarWidth(maxFlightPax, apiPax))
+                  else if (flight.ActPax > 0)
+                    (flight.ActPax, "pax-portfeed", paxBarWidth(maxFlightPax, flight.ActPax))
+                  else
+                    (flight.MaxPax, "pax-maxpax", paxBarWidth(maxFlightPax, flight.MaxPax))
 
-                  val widthMaxPax = (flight.MaxPax.toDouble / maxFlightPax) * 100
-                  val widthPortFeed = (flight.ActPax.toDouble / maxFlightPax)  * 100
-                  val widthApi = 45
+                  val paxTitle =
+                    s"""
+                       |API: ${if (apiPax > 0) apiPax else "n/a"}
+                       |Port: ${if (flight.ActPax > 0) flight.ActPax else "n/a"}
+                       |Max: ${if (flight.MaxPax > 0) flight.MaxPax else "n/a"}
+                     """.stripMargin
+
                   <.div(
+                    ^.title := paxTitle,
                     ^.className := "pax-cell",
-                    <.div(^.className := "pax-maxpax", ^.width := s"$widthMaxPax%"),
-                    <.div(^.className := "pax-portfeed", ^.width := s"$widthPortFeed%"),
-                    <.div(^.className := "pax-api", ^.width := s"$widthApi%"),
-                    <.div(^.className := "pax", flight.ActPax)
-                  )
+                    <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, flight.MaxPax)),
+                    <.div(^.className := paxClass, ^.width := paxWidth),
+                    <.div(^.className := "pax", paxNos),
+                    <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, flight.MaxPax)))
                 }
 
-                <.div(flights.renderReady(flightsWithSplits => {
+                <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
                   val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
                   FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax))(flightsWithSplits)
                 }))
@@ -107,6 +118,10 @@ TerminalPage {
           ))
       })
     }
+  }
+
+  def paxBarWidth(maxFlightPax: Int, apiPax: Int): String = {
+    s"${apiPax.toDouble / maxFlightPax * 100}%"
   }
 
   def apply(terminalName: TerminalName, ctl: RouterCtl[Loc]): VdomElement =
