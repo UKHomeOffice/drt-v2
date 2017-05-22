@@ -145,24 +145,22 @@ object FlightComponents {
     s"${apiPax.toDouble / maxFlightPax * 100}%"
   }
 
-  def splitsGraphComponent(splitTotal: Int, splits: Seq[(String, Double)]): TagOf[Div] = {
+  def splitsGraphComponent(splitTotal: Int, splits: Seq[(String, Int)]): TagOf[Div] = {
     <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits),
       <.div(^.className := "graph",
         splits.map {
-          case (label, percent) => <.div(
+          case (label, paxCount) =>
+            val percentage: Double = paxCount.toDouble / splitTotal * 100
+            <.div(
             ^.className := "bar",
-            ^.height := s"$percent%",
-            ^.title := s"${splitPercentToPaxNo(splitTotal, percent)} $label")
+            ^.height := s"${percentage}%",
+            ^.title := s"$paxCount $label")
         }.toTagMod
       ))
   }
 
-  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Double)]): String = splits.map {
-    case (label, percent) =>
-      s"${splitPercentToPaxNo(splitTotal, percent)} $label"
+  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): String = splits.map {
+    case (label, paxCount) =>
+      s"$paxCount $label"
   }.mkString("\n")
-
-  def splitPercentToPaxNo(splitTotal: Int, pc: Double): Double = {
-    pc / 100 * splitTotal
-  }
 }
