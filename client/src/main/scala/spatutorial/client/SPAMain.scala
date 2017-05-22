@@ -16,7 +16,7 @@ import org.scalajs.dom
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.js.annotation.{JSExport, JSImport}
 import scalacss.Defaults._
 
 object TableViewUtils {
@@ -197,6 +197,7 @@ object SPAMain extends js.JSApp {
     log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
+    WebpackBootstrapRequire.Bootstrap
     ()
   }
 
@@ -218,8 +219,17 @@ object SPAMain extends js.JSApp {
     //    Spinner.Style.addToDocument()
     GlobalStyles.addToDocument()
     // create the router
-    val router = Router(BaseUrl.until_#, routerConfig)
+    val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     // tell React to render the router in the document body
     router().renderIntoDOM(dom.document.getElementById("root"))
   }
+}
+
+
+object WebpackBootstrapRequire {
+
+  @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
+  @js.native
+  object Bootstrap extends js.Any
+
 }
