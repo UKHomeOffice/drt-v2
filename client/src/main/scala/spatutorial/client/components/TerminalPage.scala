@@ -80,7 +80,8 @@ TerminalPage {
 
                 <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
                   val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
-                  FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax), splitsGraphComponent)(flightsWithSplits)
+                  val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
+                  FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax), splitsGraphComponent)(flightsForTerminal)
                 }))
               })
             }),
