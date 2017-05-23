@@ -49,7 +49,6 @@ lazy val client: Project = (project in file("client"))
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
-    jsDependencies += ProvidedJS / "bundle.js",
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
