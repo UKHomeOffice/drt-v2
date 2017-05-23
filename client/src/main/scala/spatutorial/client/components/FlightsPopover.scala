@@ -6,20 +6,20 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react._
 import drt.client.modules.{FlightsView, PopoverWrapper}
 import drt.shared.AirportInfo
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.TagOf
 
-
 import scala.collection.immutable.Map
+import scala.scalajs.js
 
 object FlightsPopover {
 
   case class FlightsPopoverState(hovered: Boolean = false)
 
   def apply(trigger: String,
-            matchingFlights: Pot[Flights],
+            matchingFlights: Pot[FlightsWithSplits],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) = ScalaComponent.builder[Unit]("HoverPopover")
     .initialStateFromProps((p) =>
       FlightsPopoverState()
@@ -31,20 +31,19 @@ object FlightsPopover {
     popover
   }).build
 
-  private def showIfHovered(trigger: String, matchingFlights: Pot[Flights],
+  private def showIfHovered(trigger: String, matchingFlights: Pot[FlightsWithSplits],
                             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                             state: FlightsPopoverState) = {
 
-    //    val infos = airportInfos(airportInfo =>
-    //
-    //      if (state.hovered) {
-    //        FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))
-    //        PopoverWrapper(trigger = trigger)(infos)
-    //      } else {
-    //        trigger
-    //      }
-    //    )
-    //    infos
-    trigger
+    val popoverWrapper = airportInfos(airportInfo =>
+      if (state.hovered) {
+        val flightsTable = FlightsTable(FlightsView.Props(matchingFlights, airportInfo.value))
+        <.span(PopoverWrapper.component(PopoverWrapper.props(trigger))(flightsTable))
+      } else {
+        <.span(trigger)
+      }
+    )
+    <.div(popoverWrapper)
+    //    trigger
   }
 }

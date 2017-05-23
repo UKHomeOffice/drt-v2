@@ -63,6 +63,7 @@ object Settings {
     "react" -> "15.5.1",
     "react-dom" -> "15.5.1",
     "react-addons-test-utils" -> "15.5.1",
+    "@terebentina/react-popover" -> "github:terebentina/react-popover#4387cbe765edca75b49650077c0839a1f620bc6c",
     "log4javascript" -> "1.4.15",
     "jquery" -> jQuery,
     "bootstrap" -> bootstrap
@@ -107,9 +108,9 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "test" % versions.scalajsReact % Test,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-//    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
+    //    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
     "io.suzaku" %%% "diode" % versions.diode,
-//    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
+    //    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
     "io.suzaku" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
