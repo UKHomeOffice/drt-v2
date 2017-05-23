@@ -119,8 +119,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
         Left(fnf)
       case Failure(f) =>
         throw f
-    }
-    )
+    })
   }
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {

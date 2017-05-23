@@ -2,9 +2,7 @@ package drt.client.services
 
 import java.util.UUID
 
-import drt.client.services.JSDateConversions.SDate.JSSDate
-import drt.client.services.SDateTests.assert
-import drt.shared.{SDateLike, StaffMovement}
+import drt.shared.StaffMovement
 import utest._
 
 import scala.scalajs.js.Date
