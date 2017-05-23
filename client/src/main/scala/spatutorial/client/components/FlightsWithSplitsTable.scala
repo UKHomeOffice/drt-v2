@@ -368,9 +368,12 @@ object FlightTableRow {
   implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
 
   case class RowState(hasChanged: Boolean)
+  implicit val stateReuse = Reusability.caseClass[RowState]
+
 
   val tableRow = ScalaComponent.builder[Props]("TableRow")
-    .renderP((_$, props) => {
+    .initialState[RowState](RowState(false))
+    .renderPS((_$, props, state) => {
       val idx = props.idx
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -383,7 +386,9 @@ object FlightTableRow {
         val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
           case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
         }
+        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         <.tr(^.key := flight.FlightID.toString,
+          hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
           <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
           <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
@@ -400,6 +405,11 @@ object FlightTableRow {
         case e => log.error(s"couldn't make flight row $e")
           <.tr(s"failure $e")
       }.get
+    })
+    .componentWillReceiveProps(i => {
+      if (i.nextProps != i.currentProps)
+        log.info(s"row ${i.nextProps} changed")
+      i.setState(RowState(i.nextProps != i.currentProps))
     })
     .componentDidMount(p => Callback.log(s"row didMount $p"))
     .configure(Reusability.shouldComponentUpdateWithOverlay)
