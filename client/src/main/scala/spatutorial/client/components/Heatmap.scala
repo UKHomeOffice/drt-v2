@@ -3,8 +3,9 @@ package drt.client.components
 import diode.data.{Pending, Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.prefix_<^._
-import japgolly.scalajs.react.vdom.svg.{all => s}
+import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.TagOf
+
 import org.scalajs.dom.svg.{G, Text}
 import drt.client.components.Heatmap.Series
 import drt.client.logger._
@@ -173,6 +174,9 @@ object TerminalHeatmaps {
 
 object Heatmap {
 
+  import japgolly.scalajs.react.vdom.svg_<^.{< => s}
+  import japgolly.scalajs.react.vdom.svg_<^.{^ => sv}
+
   def bucketScaleDev(n: Int, d: Int): Float = n.toFloat / d
 
   case class Series(name: String, data: IndexedSeq[Double])
@@ -202,12 +206,13 @@ object Heatmap {
 
   case class RectProps(serie: Series, numberofblocks: Int, gridSize: Int, props: Props, sIndex: Int)
 
-  def HeatmapRects = ReactComponentB[RectProps]("HeatmapRectsSeries")
+  def HeatmapRects = ScalaComponent.builder[RectProps]("HeatmapRectsSeries")
     .render_P(props =>
-      s.g(^.key := props.serie.name + "-" + props.sIndex, getRects(props.serie, props.numberofblocks, props.gridSize, props.props, props.sIndex))
+      s.g(^.key := props.serie.name + "-" + props.sIndex,
+        getRects(props.serie, props.numberofblocks, props.gridSize, props.props, props.sIndex))
     ).build
 
-  def getRects(serie: Series, numberofblocks: Int, gridSize: Int, props: Props, sIndex: Int): vdom.ReactTagOf[G] = {
+  def getRects(serie: Series, numberofblocks: Int, gridSize: Int, props: Props, sIndex: Int): TagOf[G] = {
     log.info(s"Rendering rects for $serie")
     Try {
       val rects = serie.data.zipWithIndex.map {
@@ -220,33 +225,34 @@ object Heatmap {
             ^.key := s"rect-${serie.name}-$idx",
             s.rect(
               ^.key := s"${serie.name}-$idx",
-              s.stroke := "black",
-              s.strokeWidth := "1px",
-              s.x := idx * gridSize,
-              s.y := sIndex * gridSize,
-              s.rx := 4,
-              s.ry := 4,
-              s.width := gridSize,
-              s.height := gridSize,
-              s.fill := colors1),
+              sv.stroke := "black",
+              sv.strokeWidth := "1px",
+              sv.x := idx * gridSize,
+              sv.y := sIndex * gridSize,
+              sv.rx := 4,
+              sv.ry := 4,
+              sv.width := gridSize,
+              sv.height := gridSize,
+              sv.fill := colors1),
             if (props.shouldShowRectValue) {
               val verticalAlignmentOffset = 5
               s.text(props.valueDisplayFormatter(periodValue),
-                s.x := idx * gridSize, s.y := sIndex * gridSize + verticalAlignmentOffset,
-                s.transform := s"translate(${halfGrid}, ${halfGrid})", s.textAnchor := "middle")
+                sv.x := idx * gridSize, sv.y := sIndex * gridSize + verticalAlignmentOffset,
+                sv.transform := s"translate(${halfGrid}, ${halfGrid})", sv.textAnchor := "middle")
             }
             else null
           )
         }
       }
-      val label: vdom.ReactTagOf[Text] = s.text(
+      val label = s.text(
         ^.key := s"${serie.name}",
         serie.name,
-        s.x := 0,
-        s.y := sIndex * gridSize,
-        s.transform := s"translate(-100, ${gridSize / 1.5})", s.textAnchor := "middle")
+        sv.x := 0,
+        sv.y := sIndex * gridSize,
+        sv.transform := s"translate(-100, ${gridSize / 1.5})", sv.textAnchor := "middle")
 
-      val allObj = s.g(label, rects)
+
+      val allObj = s.g(label, rects.toTagMod)
       allObj
     } match {
       case Failure(e) =>
@@ -257,7 +263,7 @@ object Heatmap {
     }
   }
 
-  val heatmap = ReactComponentB[Props]("Heatmap")
+  val heatmap = ScalaComponent.builder[Props]("Heatmap")
     .renderP((_, props) => {
       try {
         log.info(s"!!!! rendering heatmap")
@@ -272,15 +278,15 @@ object Heatmap {
           HeatmapRects(RectProps(serie, numberofblocks, gridSize, props, sIndex))
         }
 
-        val hours: IndexedSeq[vdom.ReactTagOf[Text]] = (0 until 24).map(x =>
-          s.text(^.key := s"bucket-$x", f"${x.toInt}%02d", s.x := x * gridSize, s.y := 0,
-            s.transform := s"translate(${gridSize / 2}, -10)", s.textAnchor := "middle"))
+        val hours = (0 until 24).map(x =>
+          s.text(^.key := s"bucket-$x", f"${x.toInt}%02d", sv.x := x * gridSize, sv.y := 0,
+            sv.transform := s"translate(${gridSize / 2}, -10)", sv.textAnchor := "middle"))
 
         <.div(
           s.svg(
             ^.key := "heatmap",
-            s.height := props.height,
-            s.width := componentWidth, s.g(s.transform := "translate(180, 50)", rectsAndLabels.toList, hours.toList)))
+            sv.height := props.height,
+            sv.width := componentWidth, s.g(sv.transform := "translate(180, 50)", rectsAndLabels.toTagMod, hours.toTagMod)))
       } catch {
         case e: Exception =>
           log.error("Issue in heatmap", e)

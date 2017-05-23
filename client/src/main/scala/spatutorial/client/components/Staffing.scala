@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Empty, Pot, Ready}
 import diode.react.ModelProxy
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
@@ -49,7 +49,7 @@ object Staffing {
     }
   }
 
-  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[Shift]], didParseFail: Boolean): ReactTagOf[Div] = {
+  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[Shift]], didParseFail: Boolean): VdomTagOf[Div] = {
     <.div(
       <.h2("Staff over the day"), if (didParseFail) {
         <.div(^.className := "error", "Error in shifts")
@@ -63,20 +63,20 @@ object Staffing {
     )
   }
 
-  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[Div] = {
+  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): VdomTagOf[Div] = {
     <.div(
       <.h2("Movements"),
       if (movements.length > 0)
         <.ul(^.className := "list-unstyled", movements.map(movement => {
-          val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventI) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
+          val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
           <.li(remove, " ", MovementDisplay.toCsv(movement))
-        }))
+        }).toTagMod)
       else
         <.p("No movements recorded")
     )
   }
 
-  def shiftsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): ReactTagOf[html.Div] = {
+  def shiftsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Seq[StaffMovement])]): VdomTagOf[html.Div] = {
 
     val today: SDateLike = SDate.today
     val todayString = today.ddMMyyString
@@ -97,16 +97,18 @@ object Staffing {
       airportConfigRCP(airportConfigMP => {
         <.pre(
           airportConfigMP().renderReady(airportConfig => {
-            val examples = if (airportConfig.shiftExamples.length > 0) airportConfig.shiftExamples
-            else defaultExamples
-            examples.map (line => <.div (line.replace ("{date}", todayString)))
+            val examples = if (airportConfig.shiftExamples.nonEmpty)
+              airportConfig.shiftExamples
+            else
+              defaultExamples
+            <.div(examples.map(line => <.div(line.replace("{date}", todayString))).toTagMod)
           })
         )
       }),
       <.textarea(^.value := rawShifts,
         ^.className := "staffing-editor",
-        ^.onChange ==> ((e: ReactEventI) => mp.dispatch(SetShifts(e.target.value)))),
-      <.button("Save", ^.onClick ==> ((e: ReactEventI) => mp.dispatch(SaveShifts(rawShifts))))
+        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatch(SetShifts(e.target.value)))),
+      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(SaveShifts(rawShifts))))
     )
   }
 
@@ -128,14 +130,14 @@ object Staffing {
                   val d = new Date(t)
                   val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
                   <.th(^.key := t, display)
-                })
+                }).toTagMod
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}",
                 hoursWorthOf15Minutes.map(t => {
                   <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
-                })
+                }).toTagMod
               ))
-        }
+        }.toTagMod
       )
     )
   }
@@ -147,18 +149,18 @@ object Staffing {
           val d = new Date(t)
           val display = f"${d.getHours}%02d:${d.getMinutes}"
           <.td(^.key := t, display)
-        })
+        }).toTagMod
       }),
       <.tr(
-        daysWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}"))
+        daysWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}")).toTagMod
       )
     )
   }
 
-  def apply(): ReactElement =
+  def apply(): VdomElement =
     component(Props())
 
-  private val component = ReactComponentB[Props]("Staffing")
+  private val component = ScalaComponent.builder[Props]("Staffing")
     .renderBackend[Backend]
     .build
 }

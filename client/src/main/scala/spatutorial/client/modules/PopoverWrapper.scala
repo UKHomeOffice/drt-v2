@@ -1,24 +1,52 @@
 package drt.client.modules
 
-import japgolly.scalajs.react.{React, ReactComponentU_, ReactNode}
+import japgolly.scalajs.react.vdom.VdomNode
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.raw.React
 
 import scala.scalajs.js
+import scala.scalajs.js.annotation.{JSImport, JSName}
 
-case class PopoverWrapper(
-                           position: String = "right",
-                           className: String = "flights-popover",
-                           trigger: String
-                         ) {
-  def toJS = {
-    js.Dynamic.literal(
-      position = position,
-      className = className,
-      trigger = trigger
-    )
+
+object PopoverWrapper {
+
+//  @JSName("Popover")
+  @JSImport("@terebentina/react-popover", "Popover")
+  @js.native
+  object RawComponent extends js.Object
+
+  @js.native
+  trait Props extends js.Object {
+    var position: String = js.native
+    var trigger: String = js.native
+    var className: String = js.native
   }
 
-  def apply(children: ReactNode*) = {
-    val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.popover.Popover) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
-    f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
+  def props(trigger: String, position: String = "right"): Props = {
+    val p = (new js.Object).asInstanceOf[Props]
+    p.position = position
+    p.trigger = trigger
+    p.className = "flights-popover"
+    p
   }
+  val component = JsComponent[Props, Children.Varargs, Null](RawComponent)
 }
+
+//case class PopoverWrapper(
+//                           position: String = "right",
+//                           className: String = "flights-popover",
+//                           trigger: String
+//                         ) {
+//  def toJS = {
+//    js.Dynamic.literal(
+//      position = position,
+//      className = className,
+//      trigger = trigger
+//    )
+//  }
+//
+//  def apply(children: VdomNode*) = {
+//    val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.popover.Popover) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
+//    f(toJS, children)
+//  }
+//}

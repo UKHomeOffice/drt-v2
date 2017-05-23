@@ -1,6 +1,5 @@
 package drt.client
 
-import chandu0101.scalajs.react.components.ReactTable
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
@@ -11,13 +10,13 @@ import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import japgolly.scalajs.react.ReactDOM
+import japgolly.scalajs.react.WebpackRequire
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.js.annotation.{JSExport, JSImport}
 import scalacss.Defaults._
 
 object TableViewUtils {
@@ -194,8 +193,18 @@ object SPAMain extends js.JSApp {
 
   def pathToThisApp: String = dom.document.location.pathname
 
+  def require(): Unit = {
+    log.info(s"app main require()")
+    WebpackRequire.React
+    WebpackRequire.ReactDOM
+    WebpackBootstrapRequire.Bootstrap
+    ()
+  }
+
   @JSExport
   def main(): Unit = {
+    require()
+
     //    Perf.start()
     //    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
     log.warn("Application starting")
@@ -206,12 +215,21 @@ object SPAMain extends js.JSApp {
     // create stylesheet
     import scalacss.ScalaCssReact._
 
-    ReactTable.DefaultStyle.addToDocument()
+    //    ReactTable.DefaultStyle.addToDocument()
     //    Spinner.Style.addToDocument()
     GlobalStyles.addToDocument()
     // create the router
-    val router = Router(BaseUrl.until_#, routerConfig)
+    val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     // tell React to render the router in the document body
-    ReactDOM.render(router(), dom.document.getElementById("root"))
+    router().renderIntoDOM(dom.document.getElementById("root"))
   }
+}
+
+
+object WebpackBootstrapRequire {
+
+  @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
+  @js.native
+  object Bootstrap extends js.Any
+
 }

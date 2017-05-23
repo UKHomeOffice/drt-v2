@@ -5,7 +5,8 @@ scalaVersion := Settings.versions.scala
 
 resolvers ++= Seq(
   Resolver.bintrayRepo("mfglabs", "maven"),
-  Resolver.bintrayRepo("dwhjames", "maven")
+  Resolver.bintrayRepo("dwhjames", "maven"),
+  Resolver.sonatypeRepo("snapshots")
 )
 
 // a special crossProject for configuring a JS/JVM/shared structure
@@ -15,7 +16,7 @@ lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
     libraryDependencies ++= Settings.sharedDependencies.value
   )
   // set up settings specific to the JS project
-  .jsConfigure(_ enablePlugins ScalaJSPlay)
+  .jsConfigure(_ enablePlugins ScalaJSWeb)
 
 val bundle = project.in(file("bundle"))
 
@@ -40,93 +41,70 @@ lazy val client: Project = (project in file("client"))
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
+    // reactjs testing
+    requiresDOM := true,
+    scalaJSStage in Test := FastOptStage,
+    // 'new style js dependencies with scalaBundler'
+    npmDependencies in Compile ++= Settings.clientNpmDependences,
+    npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
     jsDependencies += ProvidedJS / "bundle.js",
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
-    persistLauncher := true,
-    persistLauncher in Test := false,
+//    scalaJSUseMainModuleInitializer := true,
+    //    persistLaunch/ser := true,
+    //    scalaJSUseMsainModuleInitializer in Test := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
-    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
     resolvers += Resolver.defaultLocal,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework")
   )
-  .enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+  .enablePlugins(ScalaJSBundlerPlugin, ScalaJSWeb)
   .dependsOn(sharedJS)
 
 // Client projects (just one in this case)
 lazy val clients = Seq(client)
 
-lazy val serverMacros = (project in file("server-macros"))
-  .settings(
-    name := "drtmacros",
-    version := Settings.version,
-    scalaVersion := Settings.versions.scala,
-    scalacOptions ++= Settings.scalacOptions,
-    libraryDependencies ++= Settings.jvmDependencies.value,
-    commands += ReleaseCmd,
-    // connect to the client project
-    scalaJSProjects := clients,
-    pipelineStages := Seq(scalaJSProd, digest, gzip),
-    testFrameworks += new TestFramework("utest.runner.Framework"),
-    resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
-    resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
-    resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
-    resolvers += Resolver.defaultLocal,
-    publishArtifact in(Compile, packageBin) := false,
-    // Disable scaladoc generation for this project (useless)
-    publishArtifact in(Compile, packageDoc) := false,
-    // Disable source jar for this project (useless)
-    publishArtifact in(Compile, packageSrc) := false,
-    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    // compress CSS
-    LessKeys.compress in Assets := true
-  )
-  .enablePlugins(PlayScala)
-  .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
-  .aggregate(clients.map(projectToRef): _*)
-  .dependsOn(sharedJVM)
-
-
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
-  .settings(
-    name := "drt",
-    version := Settings.version,
-    scalaVersion := Settings.versions.scala,
-    scalacOptions ++= Settings.scalacOptions,
-    javaOptions in Test += "-Duser.timezone=UTC",
-    javaOptions in Runtime += "-Duser.timezone=UTC",
-    libraryDependencies ++= Settings.jvmDependencies.value,
-    commands += ReleaseCmd,
-    // connect to the client project
-    scalaJSProjects := clients,
-    pipelineStages := Seq(scalaJSProd, digest, gzip),
-    testFrameworks += new TestFramework("utest.runner.Framework"),
-    resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-    resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
-    resolvers += Resolver.defaultLocal,
-    publishArtifact in(Compile, packageBin) := false,
-    // Disable scaladoc generation for this project (useless)
-    publishArtifact in(Compile, packageDoc) := false,
-    // Disable source jar for this project (useless)
-    publishArtifact in(Compile, packageSrc) := false,
-    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    // compress CSS
-    LessKeys.compress in Assets := true,
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value
-    )
-  )
-  .enablePlugins(PlayScala)
+  .enablePlugins(PlayScala, WebScalaJSBundlerPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
+  .settings(
+  name := "drt",
+  version := Settings.version,
+  scalaVersion := Settings.versions.scala,
+  scalacOptions ++= Settings.scalacOptions,
+  javaOptions in Test += "-Duser.timezone=UTC",
+  javaOptions in Runtime += "-Duser.timezone=UTC",
+  libraryDependencies ++= Settings.jvmDependencies.value,
+  commands += ReleaseCmd,
+  // connect to the client project
+  scalaJSProjects := clients,
+  pipelineStages := Seq(scalaJSProd, digest, gzip),
+  pipelineStages in Assets := Seq(scalaJSPipeline),
+  // triggers scalaJSPipeline when using compile or continuous compilation
+  compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
+  testFrameworks += new TestFramework("utest.runner.Framework"),
+  resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+  resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
+  resolvers += Resolver.defaultLocal,
+  publishArtifact in(Compile, packageBin) := false,
+  // Disable scaladoc generation for this project (useless)
+  publishArtifact in(Compile, packageDoc) := false,
+  // Disable source jar for this project (useless)
+  publishArtifact in(Compile, packageSrc) := false,
+  credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+  // compress CSS
+  LessKeys.compress in Assets := true,
+  PB.targets in Compile := Seq(
+    scalapb.gen() -> (sourceManaged in Compile).value
+  )
+)
   .aggregate(clients.map(projectToRef): _*)
-  .dependsOn(sharedJVM, serverMacros)
+  .dependsOn(sharedJVM)
 
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {

@@ -8,8 +8,11 @@ import drt.client.modules.GriddleComponentWrapper.ColumnMeta
 import drt.shared.AirportInfo
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.raw.ReactComponentUntyped
+import japgolly.scalajs.react.vdom.TopNode
+//import japgolly.scalajs.react.vdom.all.{VdomAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
+import japgolly.scalajs.react.vdom.html_<^._
 
 import scala.language.existentials
 import scala.scalajs.js
@@ -29,8 +32,8 @@ object GriddleComponentWrapper {
 @ScalaJSDefined
 class RowMetaData(val key: String) extends js.Object
 
-case class GriddleComponentWrapper(
-                                    results: js.Any, //Seq[Map[String, Any]],
+case class GriddleComponentWrapper[A](
+                                    results: js.Array[A], //Seq[Map[String, Any]],
                                     columns: Seq[String],
                                     columnMeta: Option[Seq[ColumnMeta]] = None,
                                     rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
@@ -49,7 +52,7 @@ case class GriddleComponentWrapper(
       useFixedHeader = false,
       showPager = true,
       resultsPerPage = 200)
-    (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm.toJsArray) }
+    (columnMeta).foreach { case cm => p.updateDynamic("columnMetadata")(cm) }
 
     fixWeirdCharacterEncoding(p)
 
@@ -68,12 +71,12 @@ case class GriddleComponentWrapper(
     p.updateDynamic("sortDescendingComponent")(" ▼")
   }
 
-  //  def customColumn = ReactComponentB[String].render(
+  //  def customColumn = ScalaComponent.builder[String].render(
   //    (s) =>  <.p("custom here")
   //  )
-  def apply(children: ReactNode*) = {
-    val f = React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.griddle) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
-    f(toJS, children.toJsArray).asInstanceOf[ReactComponentU_]
+  def apply(children: VdomNode*) = {
+    val f = WebpackRequire.React.asInstanceOf[js.Dynamic].createFactory(js.Dynamic.global.Bundle.griddle) // access real js component , make sure you wrap with createFactory (this is needed from 0.13 onwards)
+    f(toJS, children).asInstanceOf[ReactComponentUntyped]
   }
 
 }
@@ -86,7 +89,7 @@ object FlightsView {
   import scala.language.existentials
 
   case class Props(
-                    flightsModelProxy: Pot[Flights],
+                    flightsModelProxy: Pot[FlightsWithSplits],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
                       "IATA",
@@ -110,7 +113,7 @@ object FlightsView {
                     airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
                   )
 
-  val component = ReactComponentB[Props]("Flights")
+  val component = ScalaComponent.builder[Props]("Flights")
     .render_P((props) => {
       <.div(
         <.h2("Flights"),
@@ -121,7 +124,7 @@ object FlightsView {
       )
     }).build
 
-  def apply(props: Props): ReactComponentU[Props, Unit, Unit, TopNode] = component(props)
+  def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)
 }
 
 
@@ -156,13 +159,13 @@ object FlightsWithSplitsView {
                     airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
                   )
 
-  val component = ReactComponentB[Props]("FlightsWithSplits")
+  val component = ScalaComponent.builder[Props]("FlightsWithSplits")
     .render_P((props) => {
       <.div(
         Panel(Panel.Props(""), FlightsWithSplitsTable(props))
       )
     }).build
 
-  def apply(props: Props): ReactComponentU[Props, Unit, Unit, TopNode] = component(props)
+  def apply(props: Props) = component(props)
 }
 

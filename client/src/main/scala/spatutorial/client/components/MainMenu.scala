@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.Pot
 import diode.data.PotState.PotReady
-import diode.react.ModelProxy
+import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain._
 import drt.client.components.Bootstrap.CommonStyle
 import drt.client.components.Icon._
@@ -10,8 +10,11 @@ import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.html.LI
 
+import scala.collection.immutable
 import scalacss.ScalaCssReact._
 
 object MainMenu {
@@ -20,13 +23,14 @@ object MainMenu {
 
   case class Props(router: RouterCtl[Loc], currentLoc: Loc)
 
-  case class MenuItem(idx: Int, label: (Props) => ReactNode, icon: Icon, location: Loc)
+  case class MenuItem(idx: Int, label: (Props) => VdomNode, icon: Icon, location: Loc)
 
   // build the Todo menu item, showing the number of open todos
-  private def buildTodoMenu(props: Props): ReactElement = {
+  private def buildTodoMenu(props: Props): VdomElement = {
     <.span(
       <.span("User Desk Overrides"),
-      <.span(bss.labelOpt(CommonStyle.danger), bss.labelAsBadge)
+      <.span(^.classSet(bss.labelDanger.toSeq: _*) ,
+        ^.className := bss.labelAsBadgeCls)
     )
   }
 
@@ -50,23 +54,29 @@ object MainMenu {
 
   private class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
-      val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
+      val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
       airportConfigPotRCP(airportConfigPotMP => {
         <.div(
-          airportConfigPotMP().renderReady(airportConfig =>
-            <.ul(bss.navbar, ^.className := "mr-auto")(
+          airportConfigPotMP().renderReady(airportConfig => {
+
+            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfigPotMP)) yield {
+              val classes = Seq(("active", props.currentLoc == item.location))
+              <.li(^.key := item.idx, ^.classSet(classes: _*),
+                props.router.link(item.location)(item.icon, " ", item.label(props)))
+            }
+
+            <.ul(^.classSet(bss.navbarClsSet.map(cn => (cn, true)): _*), ^.className := "mr-auto")(
               //           build a list of menu items
-              for (item <- menuItems(airportConfigPotMP)) yield
-                <.li(^.key := item.idx, (props.currentLoc == item.location) ?= (^.className := "active"),
-                  props.router.link(item.location)(item.icon, " ", item.label(props))))))
+              children.toTagMod)
+          }))
       })
     }
   }
 
-  private val component = ReactComponentB[Props]("MainMenu")
+  private val component = ScalaComponent.builder[Props]("MainMenu")
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc): ReactElement =
+  def apply(ctl: RouterCtl[Loc], currentLoc: Loc): VdomElement =
     component(Props(ctl, currentLoc))
 }
