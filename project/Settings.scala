@@ -116,30 +116,5 @@ object Settings {
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
-  val jsDependencies = Def.setting(Seq(
-    "org.webjars.bower" % "react" % reactVersion % "test"
-      /        "react-with-addons.js"
-      minified "react-with-addons.min.js"
-      commonJSName "React",
-
-    "org.webjars.bower" % "react" % reactVersion % "test"
-      /         "react-dom.js"
-      minified  "react-dom.min.js"
-      dependsOn "react-with-addons.js"
-      commonJSName "ReactDOM",
-
-    "org.webjars.bower" % "react" % reactVersion % "test"
-      /         "react-dom-server.js"
-      minified  "react-dom-server.min.js"
-      dependsOn "react-dom.js"
-      commonJSName "ReactDOMServer",
-    //    "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
-    //    "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
-    //    "org.webjars.npm" % "fixed-data-table" % "0.6.3" / "dist/fixed-data-table.js" minified "dist/fixed-data-table.min.js" dependsOn "react-with-addons.js" commonJSName "ReactFixedDataTable",
-//    "org.webjars" % "rgraph" % "3_2014-07-27-stable" / "RGraph.bar.js",
-    "org.webjars" % "jquery" % versions.jQuery / "jquery.js" minified "jquery.min.js",
-    "org.webjars" % "bootstrap" % versions.bootstrap / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
-    "org.webjars" % "chartjs" % versions.chartjs / "Chart.js" minified "Chart.min.js",
-    "org.webjars" % "log4javascript" % versions.log4js / "js/log4javascript_uncompressed.js" minified "js/log4javascript.js"
-  ))
+  val jsDependencies = Def.setting(Seq())
 }

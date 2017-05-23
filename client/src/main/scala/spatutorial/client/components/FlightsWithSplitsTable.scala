@@ -20,6 +20,7 @@ import logger._
 import org.scalajs.dom.html.Div
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 
 object FlightsWithSplitsTable {
 
@@ -28,7 +29,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
                        paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                       splitsGraphComponent: (Int, Seq[(String, Double)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Double)]) => <.div()
+                       splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
                       ) = ScalaComponent.builder[FlightsWithSplits]("ArrivalsTable")
     .renderP((_$, flightsWithSplits) => {
       log.info(s"sorting flights")
@@ -59,12 +60,15 @@ object FlightsWithSplitsTable {
               sortedFlights.zipWithIndex.map {
                 case (flightWithSplits, idx) => {
                   val flight = flightWithSplits.apiFlight
-                  val splitTotal = flightWithSplits.splits.splits.map(_.paxCount).sum
+                  val flightSplits: ApiSplits = flightWithSplits.splits
+                  val splitTotal = flightSplits.splits.map(_.paxCount).sum
                   log.info(s"rendering flight row $idx ${flight.toString}")
                   Try {
-                    val splitsAndLabels: List[(String, Double)] = flightWithSplits.splits.splits
-                      .sortBy(split => (split.passengerType.toString, split.queueType))
-                      .map(ptqc => (s"${ptqc.passengerType} > ${ptqc.queueType}", ptqc.paxCount.toDouble / splitTotal * 100))
+                    val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
+                    val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+                    val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+                      case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+                    }
                     <.tr(^.key := flight.FlightID.toString,
                       timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
                       <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
