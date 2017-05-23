@@ -64,7 +64,7 @@ object FlightsTable {
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
         props.flightsModelProxy.renderEmpty(ViewTools.spinner),
         props.flightsModelProxy.renderReady(flights => {
-            <.div(s"Table goes here! ${flights.flights.length} flights")
+            FlightsWithSplitsTable.ArrivalsTable()(flights)
           //          GriddleComponentWrapper[Dynamic](results = reactTableFlightsAsJsonDynamic(flights),
 //            columnMeta = columnMeta,
 //            initialSort = "SchDt",

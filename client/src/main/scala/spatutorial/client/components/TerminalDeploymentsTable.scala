@@ -9,7 +9,7 @@ import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services._
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
@@ -37,7 +37,7 @@ object TerminalDeploymentsTable {
   case class Props(
                     terminalName: String,
                     items: Seq[TerminalDeploymentsRow],
-                    flights: Pot[Flights],
+                    flights: Pot[FlightsWithSplits],
                     airportConfigPot: Pot[AirportConfig],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
@@ -81,7 +81,7 @@ object TerminalDeploymentsTable {
 
   case class PracticallyEverything(
                                     airportInfos: Map[String, Pot[AirportInfo]],
-                                    flights: Pot[Flights],
+                                    flights: Pot[FlightsWithSplits],
                                     simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
@@ -92,10 +92,9 @@ object TerminalDeploymentsTable {
   def terminalDeploymentsComponent(terminalName: TerminalName) = {
     log.info(s"userdeskrecs for $terminalName")
     val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model => {
-      val flightsWithoutSplits = model.flightsWithSplitsPot.map(f => Flights(f.flights.map(afws => afws.apiFlight)))
       PracticallyEverything(
         model.airportInfos,
-        flightsWithoutSplits,
+        model.flightsWithSplitsPot,
         model.simulationResult,
         model.workloadPot,
         model.queueCrunchResults,
@@ -128,7 +127,7 @@ object TerminalDeploymentsTable {
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(props: Props) = {
-      log.info("%%%%%%%rendering table...")
+      log.info("%%%%%%%rendering terminal deployments table...")
 
       val style = bss.listGroup
 
@@ -138,8 +137,8 @@ object TerminalDeploymentsTable {
 
         val time = item.time
         val windowSize = 60000 * 15
-        val flights: Pot[Flights] = props.flights.map(flights =>
-          flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
+        val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
+          flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
 
         val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
@@ -231,7 +230,7 @@ object TerminalDeploymentsTable {
     .renderBackend[Backend]
     .build
 
-  def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[Flights],
+  def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],
             airportConfigPot: Pot[AirportConfig],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =

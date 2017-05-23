@@ -39,55 +39,57 @@ object FlightsWithSplitsTable {
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {
-
-        <.div(
-          <.table(
-            ^.className := "table table-responsive table-striped table-hover table-sm",
-            <.thead(<.tr(
-              timelineTh,
-              <.th("Flight"), <.th("Origin"),
-              <.th("Gate/Stand"),
-              <.th("Status"),
-              <.th("Sch"),
-              <.th("Est"),
-              <.th("Act"),
-              <.th("Est Chox"),
-              <.th("Act Chox"),
-              <.th("Pax Nos"),
-              <.th("Splits")
-            )),
-            <.tbody(
-              sortedFlights.zipWithIndex.map {
-                case (flightWithSplits, idx) => {
-                  val flight = flightWithSplits.apiFlight
-                  val flightSplits: ApiSplits = flightWithSplits.splits
-                  val splitTotal = flightSplits.splits.map(_.paxCount).sum
-                  log.info(s"rendering flight row $idx ${flight.toString}")
-                  Try {
-                    val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
-                    val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-                    val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-                      case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-                    }
-                    <.tr(^.key := flight.FlightID.toString,
-                      timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-                      <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
-                      <.td(^.key := flight.FlightID.toString + "-origin", originMapper(flight.Origin)),
-                      <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
-                      <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
-                      <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-                      <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
-                      <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-                      <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
-                      <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                      <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight, flightWithSplits.splits)),
-                      <.td(^.key := flight.FlightID.toString + "-splits", splitsGraphComponent(splitTotal, splitsAndLabels)))
-                  }.recover {
-                    case e => log.error(s"couldn't make flight row $e")
-                      <.tr(s"failure $e")
-                  }.get
-                }
-              }.toTagMod)))
+        if (sortedFlights.nonEmpty)
+          <.div(
+            <.table(
+              ^.className := "table table-responsive table-striped table-hover table-sm",
+              <.thead(<.tr(
+                timelineTh,
+                <.th("Flight"), <.th("Origin"),
+                <.th("Gate/Stand"),
+                <.th("Status"),
+                <.th("Sch"),
+                <.th("Est"),
+                <.th("Act"),
+                <.th("Est Chox"),
+                <.th("Act Chox"),
+                <.th("Pax Nos"),
+                <.th("Splits")
+              )),
+              <.tbody(
+                sortedFlights.zipWithIndex.map {
+                  case (flightWithSplits, idx) => {
+                    val flight = flightWithSplits.apiFlight
+                    val flightSplits: ApiSplits = flightWithSplits.splits
+                    val splitTotal = flightSplits.splits.map(_.paxCount).sum
+                    log.info(s"rendering flight row $idx ${flight.toString}")
+                    Try {
+                      val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
+                      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+                      val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+                        case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+                      }
+                      <.tr(^.key := flight.FlightID.toString,
+                        timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+                        <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+                        <.td(^.key := flight.FlightID.toString + "-origin", originMapper(flight.Origin)),
+                        <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
+                        <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
+                        <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+                        <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
+                        <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
+                        <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+                        <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+                        <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight, flightWithSplits.splits)),
+                        <.td(^.key := flight.FlightID.toString + "-splits", splitsGraphComponent(splitTotal, splitsAndLabels)))
+                    }.recover {
+                      case e => log.error(s"couldn't make flight row $e")
+                        <.tr(s"failure $e")
+                    }.get
+                  }
+                }.toTagMod)))
+        else
+          <.div("No flights in this time period")
       } match {
         case Success(s) =>
           log.info(s"table rendered!!")
@@ -219,8 +221,8 @@ object FlightsWithSplitsTable {
 
     val longToolTip =
       s"""Sch: ${dateStringAsLocalDisplay(sch)}
-          |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
-          |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+         |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+         |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
     """.stripMargin
 
     val actChoxDot = if (!actChox.isEmpty)
