@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.modules.FlightsWithSplitsView
-import drt.shared.{AirportInfo, MilliDate, PaxTypeAndQueue, PaxTypesAndQueues}
+import drt.shared._
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react.{ReactComponentB, _}
 import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
@@ -78,8 +78,8 @@ object FlightsWithSplitsTable {
 
       val longToolTip =
         s"""Sch: ${dateStringAsLocalDisplay(sch)}
-           |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
-           |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+            |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
+            |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
         """.stripMargin
 
       val actChoxDot = if (!actChox.isEmpty)
@@ -87,7 +87,6 @@ object FlightsWithSplitsTable {
           ^.title := s"ActChox: $actChox $actChoxToolTip",
           ^.left := s"${actChoxPct}px")
       else <.span()
-
 
       val actWidth = (actChoxPct + 24) - actPct
 
@@ -101,10 +100,10 @@ object FlightsWithSplitsTable {
 
       val dots = schDot :: actDot :: actChoxDot :: Nil
 
-      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip )
+      <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
     } match {
       case Success(s) =>
-       s.render
+        s.render
       case f =>
         <.span(f.toString).render
     }
@@ -190,55 +189,47 @@ object FlightsWithSplitsTable {
     else s"${max}C"
   }
 
+  val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
+
   def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
+    val uniqueArrivals: List[(ApiFlightWithSplits, Set[ApiFlight])] = uniqueArrivalsWithCodeShares(flights.flights)
 
-    flights.flights.map(flightAndSplit => {
-      val f = flightAndSplit.apiFlight
-      val literal = js.Dynamic.literal
-      val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
-        .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
-      ).map(x => (x._1, x._2.map(_.paxCount).sum))
+    uniqueArrivals.map {
+      case (flightAndSplit, codeShares) =>
+        val f = flightAndSplit.apiFlight
+        val literal = js.Dynamic.literal
+        val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
+          .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
+        ).map(x => (x._1, x._2.map(_.paxCount).sum))
 
-      import drt.shared.DeskAndPaxTypeCombinations._
+        def splitsValues: Seq[Int] = Seq(
+          PaxTypesAndQueues.eeaMachineReadableToEGate,
+            PaxTypesAndQueues.eeaMachineReadableToDesk,
+            PaxTypesAndQueues.eeaNonMachineReadableToDesk,
+            PaxTypesAndQueues.visaNationalToDesk,
+            PaxTypesAndQueues.nonVisaNationalToDesk
+          ).map(splitsTuples.getOrElse(_, 0))
 
-      val total = "API total"
-
-      def splitsField(fieldName: String, ptQ: PaxTypeAndQueue): (String, scalajs.js.Any) = {
-        fieldName -> (splitsTuples.get(ptQ) match {
-          case Some(v: Int) => Int.box(v)
-          case None => ""
-        })
-      }
-
-      def splitsValues = {
-        Seq(
-          splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToEGate, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.eeaMachineReadableToDesk, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.eeaNonMachineReadableToDesk, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.visaNationalToDesk, 0),
-          splitsTuples.getOrElse(PaxTypesAndQueues.nonVisaNationalToDesk, 0)
-        )
-      }
-
-      literal(
-        //        "Operator" -> f.Operator,
-        "Timeline" -> "0",
-        "Status" -> f.Status,
-        "Sch" -> f.SchDT,
-        "Est" -> f.EstDT,
-        "Act" -> f.ActDT,
-        "Est Chox" -> f.EstChoxDT,
-        "Act Chox" -> f.ActChoxDT,
-        "Gate" -> f.Gate,
-        "Stand" -> f.Stand,
-        "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
-        "Splits" -> splitsValues.mkString("|"),
-        "TranPax" -> f.TranPax,
-        "Terminal" -> f.Terminal,
-        "ICAO" -> f.ICAO,
-        "Flight" -> f.IATA,
-        "Origin" -> f.Origin)
-    })
+        val allCodes = f.IATA :: codeShares.map(_.IATA).toList
+        literal(
+          //        "Operator" -> f.Operator,
+          "Timeline" -> "0",
+          "Status" -> f.Status,
+          "Sch" -> f.SchDT,
+          "Est" -> f.EstDT,
+          "Act" -> f.ActDT,
+          "Est Chox" -> f.EstChoxDT,
+          "Act Chox" -> f.ActChoxDT,
+          "Gate" -> f.Gate,
+          "Stand" -> f.Stand,
+          "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
+          "Splits" -> splitsValues.mkString("|"),
+          "TranPax" -> f.TranPax,
+          "Terminal" -> f.Terminal,
+          "ICAO" -> f.ICAO,
+          "Flight" -> allCodes.mkString(" / "),
+          "Origin" -> f.Origin)
+    }
   }
 
 

@@ -133,6 +133,51 @@ object CrunchTests {
     PersistenceCleanup.deleteJournal(journalDirName)
     res
   }
+
+  def hoursInMinutes(hours: Int) = 60 * hours
+
+  def crunchAndGetCrunchResult(flights: Seq[ApiFlight], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
+    val props: Props = crunchActorProps(hoursToCrunch, () => now)
+
+    val result = withContextCustomActor(props) { context =>
+      context.sendToCrunch(PerformCrunchOnFlights(flights))
+      context.sendToCrunch(GetLatestCrunch(crunchTerminal, deskToInspect))
+      context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
+        case cr: CrunchResult => true
+      }
+    }
+    result
+  }
+
+  def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
+    val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
+    val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
+    val paxFlowCalculator = (flight: ApiFlight) => {
+      PaxFlow.makeFlightPaxFlowCalculator(
+        PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
+    }
+    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
+    props
+  }
+
+  def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
+    result match {
+      case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
+        waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
+      case _ => false
+    }
+  }
+
+  def assertCrunchResultDeskRecs(result: Any, expectedMidnightLocalTime: Long, expectedDeskRecs: IndexedSeq[Int]): Boolean = {
+    result match {
+      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
+        recommendedDesks == expectedDeskRecs
+      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
+        println(s"recommendedDesks: found: $recommendedDesks, expected: $expectedDeskRecs")
+        false
+    }
+  }
 }
 
 class NewStreamFlightCrunchTests extends SpecificationLike {
@@ -144,81 +189,87 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
   "Streamed Flight Crunch Tests" >> {
     "and we have sent it flights for different terminals A1 and A2" in {
       "when we ask for the latest crunch for eeaDesk at terminal A1, we get a crunch result only including flights at that terminal" in {
-        val airportConfig: AirportConfig = CrunchTests.airportConfig
-        val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
+        val hoursToCrunch = 4
+        val terminalToCrunch = "A1"
+        val flights = List(
+          apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00", flightId = 1),
+          apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-01-01T00:00", flightId = 2))
 
-        val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
-
-        val paxFlowCalculator = (flight: ApiFlight) => {
-          PaxFlow.makeFlightPaxFlowCalculator(
-            PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
-        }
-        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
-
-        withContextCustomActor(props) { context =>
-          val flights = Flights(
-            List(
-              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00", flightId = 1),
-              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-01-01T00:00", flightId = 2)))
-          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-          context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
-          val exp =
-            CrunchResult(
-              timeProvider().getMillis,
-              60000,
-              Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-              Vector(1, 2, 2, 3, 4, 4, 5, 5, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12, 12, 13, 14, 14, 15, 15, 16, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-
-          context.expectMsg(15 seconds, exp)
-          true
-        }
+        val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
+        val expectedMidnightLocalTime = 1451606400000L
+        assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(0))
       }
 
       "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
-        val airportConfig: AirportConfig = CrunchTests.airportConfig
-        val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
+        val hoursToCrunch = 4
+        val terminalToCrunch = "A1"
+        val flights = List(
+          apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00", flightId = 1))
 
-        val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
-
-        val paxFlowCalculator = (flight: ApiFlight) => {
-          PaxFlow.makeFlightPaxFlowCalculator(
-            PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-            PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
-        }
-        val props = Props(classOf[ProdCrunchActor], 1, airportConfig, paxFlowCalculator, timeProvider)
-
-        withContextCustomActor(props) { context =>
-          val flights = Flights(
-            List(
-              apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T01:00", flightId = 1) /*,
-              apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-01-01T10:00", flightId = 2)*/))
-          context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-          context.sendToCrunch(GetLatestCrunch("A1", "eGate"))
-          val exp =
-            CrunchResult(
-              timeProvider().getMillis,
-              60000,
-              Vector(
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-              Vector(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-
-
-          context.expectMsg(15 seconds, exp)
-          true
-        }
+        val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eGate", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
+        val expectedMidnightLocalTime = 1451606400000L
+        assertCrunchResult(result, expectedMidnightLocalTime, -1)
       }
+    }
+  }
+}
+
+class CodeShareFlightsCrunchTests extends SpecificationLike {
+  isolated
+  sequential
+
+  import CrunchTests._
+
+  "Code Share Flights Crunch Tests" >> {
+    "Given one flight " +
+      "When we ask for the latest crunch for eeaDesk at terminal A1, " +
+      "Then we get recommended desks for that single flight" >> {
+      val hoursToCrunch = 1
+      val terminalToCrunch = "A1"
+      val flights = List(
+        apiFlight(flightId = 1, flightCode = "EZ456", terminal = "A1", totalPax = 100, scheduledDatetime = "2016-01-01T00:00")
+      )
+
+      val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
+      val expectedMidnightLocalTime = 1451606400000L
+      val expectedDeskRecs = IndexedSeq.fill(60)(2)
+
+      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
+    }
+
+    "Given two flights which are code shares with each other " +
+      "When we ask for the latest crunch for eeaDesk at terminal A1, " +
+      "Then we get recommended desks for the main code share flight" >> {
+      val hoursToCrunch = 1
+      val terminalToCrunch = "A1"
+      val flights = List(
+        apiFlight(flightId = 1, flightCode = "BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00"),
+        apiFlight(flightId = 2, flightCode = "EZ456", terminal = "A1", totalPax = 100, scheduledDatetime = "2016-01-01T00:00")
+      )
+
+      val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
+      val expectedMidnightLocalTime = 1451606400000L
+      val expectedDeskRecs = IndexedSeq.fill(60)(2)
+
+      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
+    }
+
+    "Given three flights, two of which are code shares with each other " +
+      "When we ask for the latest crunch for eeaDesk at terminal A1, " +
+      "Then we get recommended desks for the single flight and the main code share flight" >> {
+      val hoursToCrunch = 1
+      val terminalToCrunch = "A1"
+      val flights = List(
+        apiFlight(flightId = 1, flightCode = "BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00"),
+        apiFlight(flightId = 2, flightCode = "BA555", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00"),
+        apiFlight(flightId = 3, flightCode = "EZ456", terminal = "A1", totalPax = 100, scheduledDatetime = "2016-01-01T00:05")
+      )
+
+      val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
+      val expectedMidnightLocalTime = 1451606400000L
+      val expectedDeskRecs = IndexedSeq.fill(15)(4) ++ IndexedSeq.fill(45)(2)
+
+      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
     }
   }
 }
@@ -251,7 +302,7 @@ class TimezoneFlightCrunchTests extends SpecificationLike {
           val flights = List(
             apiFlight("BA123", terminal = terminalToCrunch, totalPax = 200, scheduledDatetime = "2016-01-01T02:00", flightId = 1))
 
-          val result = crunchFlights(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160101_1011)
+          val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160101_1011)
           val expectedMidnightLocalTime = 1451606400000L
           assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(2))
         }
@@ -264,46 +315,11 @@ class TimezoneFlightCrunchTests extends SpecificationLike {
           val flights = List(
             apiFlight("FR991", terminal = terminalToCrunch, totalPax = 200, scheduledDatetime = "2016-07-01T02:00Z", flightId = 1))
 
-          val result = crunchFlights(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160701_0555)
+          val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160701_0555)
           val expectedMidnightLocalTime = 1467327600000L
           assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(3))
         }
       }
-    }
-  }
-
-  private def hoursInMinutes(hours: Int) = 60 * hours
-
-  private def crunchFlights(flights: Seq[ApiFlight], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
-    val props: Props = crunchActorProps(hoursToCrunch, () => now)
-
-    val result = withContextCustomActor(props) { context =>
-      context.sendToCrunch(PerformCrunchOnFlights(flights))
-      context.sendToCrunch(GetLatestCrunch(crunchTerminal, deskToInspect))
-      context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
-        case cr: CrunchResult => true
-      }
-    }
-    result
-  }
-
-  private def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
-    val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-    val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
-    val paxFlowCalculator = (flight: ApiFlight) => {
-      PaxFlow.makeFlightPaxFlowCalculator(
-        PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
-    }
-    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
-    props
-  }
-
-  private def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
-    result match {
-      case cr@CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
-        waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
-      case _ => false
     }
   }
 }
@@ -325,6 +341,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
         }
       }
     }
+
     "given a crunch actor with airport config for terminals A1 and A2" >> {
       "when we send it a flight for A3" >> {
         "then the crunch should log an error (untested) and ??ignore the flight??, and crunch successfully" in {
