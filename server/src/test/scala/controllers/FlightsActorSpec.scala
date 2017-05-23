@@ -40,7 +40,7 @@ class FlightsActorSpec extends Specification {
       implicit val timeout: Timeout = Timeout(5 seconds)
       val actor: ActorRef = flightsActor(system)
 
-      actor ! Flights(List(apiFlight(flightId = 1, iataFlightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00")))
+      actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
       val futureFlights: Future[List[ApiFlight]] = futureResult.collect{
