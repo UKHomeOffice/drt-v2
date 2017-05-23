@@ -89,7 +89,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     "org.iq80.leveldb" % "leveldb" % "0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
-    "com.lihaoyi" %%% "utest" % versions.uTest % Test,
+    "com.lihaoyi" %%% "utest" % versions.uTest % Test,uilduil
     "org.renjin" % "renjin-script-engine" % "0.8.2195",
     "com.amazonaws" % "aws-java-sdk" % "1.11.89",
     "com.mfglabs" %% "commons-aws" % "0.10.0",
@@ -116,6 +116,7 @@ object Settings {
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
   ))
 
-  /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
+  /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
+    * this is ignored now that we're using webpack via the sbt-bundle plugin */
   val jsDependencies = Def.setting(Seq())
 }
