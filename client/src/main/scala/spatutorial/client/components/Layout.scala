@@ -2,7 +2,7 @@ package drt.client.components
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.SPAMain._
 
 
@@ -12,7 +12,7 @@ object Layout {
 
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  val component = ReactComponentB[Props]("Layout")
+  val component = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
         <.div(
           <.div(
@@ -25,5 +25,5 @@ object Layout {
     })
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): ReactElement = component(Props(ctl, currentLoc))
+  def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }

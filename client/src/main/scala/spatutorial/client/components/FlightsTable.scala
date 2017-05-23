@@ -1,13 +1,14 @@
 package drt.client.components
 
-import chandu0101.scalajs.react.components.Spinner
+//import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
-import japgolly.scalajs.react.{ReactComponentB, _}
-import japgolly.scalajs.react.vdom.all.{ReactAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
-import japgolly.scalajs.react.vdom.prefix_<^._
+//import japgolly.scalajs.react.vdom.all.{VdomAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
+import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}
 import drt.shared.AirportInfo
 import drt.shared.FlightsApi.{Flights}
+import japgolly.scalajs.react._
+
 
 import scala.language.existentials
 import scala.scalajs.js
@@ -44,7 +45,7 @@ object FlightsTable {
     })
   }
 
-  val component = ReactComponentB[FlightsView.Props]("FlightsTable")
+  val component = ScalaComponent.builder[FlightsView.Props]("FlightsTable")
     .render_P(props => {
       val portMapper: Map[String, Pot[AirportInfo]] = props.airportInfoProxy
 
@@ -63,10 +64,11 @@ object FlightsTable {
         props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
         props.flightsModelProxy.renderEmpty(ViewTools.spinner),
         props.flightsModelProxy.renderReady(flights => {
-          GriddleComponentWrapper(results = reactTableFlightsAsJsonDynamic(flights).toJsArray,
-            columnMeta = columnMeta,
-            initialSort = "SchDt",
-            columns = props.activeCols)()
+            FlightsWithSplitsTable.ArrivalsTable()(flights)
+          //          GriddleComponentWrapper[Dynamic](results = reactTableFlightsAsJsonDynamic(flights),
+//            columnMeta = columnMeta,
+//            initialSort = "SchDt",
+//            columns = props.activeCols)()
         })
       )
     }).build

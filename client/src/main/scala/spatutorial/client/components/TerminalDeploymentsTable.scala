@@ -3,14 +3,13 @@ package drt.client.components
 import diode.data.{Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.ReactTagOf
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.TableHeaderCell
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services._
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
@@ -38,7 +37,7 @@ object TerminalDeploymentsTable {
   case class Props(
                     terminalName: String,
                     items: Seq[TerminalDeploymentsRow],
-                    flights: Pot[Flights],
+                    flights: Pot[FlightsWithSplits],
                     airportConfigPot: Pot[AirportConfig],
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
@@ -67,7 +66,7 @@ object TerminalDeploymentsTable {
   }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): ReactElement = {
+                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): VdomElement = {
     <.div(
       TerminalDeploymentsTable(
         terminalName,
@@ -82,7 +81,7 @@ object TerminalDeploymentsTable {
 
   case class PracticallyEverything(
                                     airportInfos: Map[String, Pot[AirportInfo]],
-                                    flights: Pot[Flights],
+                                    flights: Pot[FlightsWithSplits],
                                     simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
@@ -93,10 +92,9 @@ object TerminalDeploymentsTable {
   def terminalDeploymentsComponent(terminalName: TerminalName) = {
     log.info(s"userdeskrecs for $terminalName")
     val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model => {
-      val flightsWithoutSplits = model.flightsWithSplitsPot.map(f => Flights(f.flights.map(afws => afws.apiFlight)))
       PracticallyEverything(
         model.airportInfos,
-        flightsWithoutSplits,
+        model.flightsWithSplitsPot,
         model.simulationResult,
         model.workloadPot,
         model.queueCrunchResults,
@@ -129,7 +127,7 @@ object TerminalDeploymentsTable {
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(props: Props) = {
-      log.info("%%%%%%%rendering table...")
+      log.info("%%%%%%%rendering terminal deployments table...")
 
       val style = bss.listGroup
 
@@ -139,8 +137,8 @@ object TerminalDeploymentsTable {
 
         val time = item.time
         val windowSize = 60000 * 15
-        val flights: Pot[Flights] = props.flights.map(flights =>
-          flights.copy(flights = flights.flights.filter(f => time <= f.PcpTime && f.PcpTime <= (time + windowSize))))
+        val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
+          flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
 
         val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
         val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
@@ -202,7 +200,7 @@ object TerminalDeploymentsTable {
             ^.display := "block",
             ^.overflow := "scroll",
             ^.height := "500px",
-            props.items.zipWithIndex map renderItem)))
+            props.items.zipWithIndex.map(renderItem).toTagMod)))
     }
 
     def queueColour(queueName: String): String = queueName + "-user-desk-rec"
@@ -211,7 +209,7 @@ object TerminalDeploymentsTable {
 
     private def subHeadingLevel2(queueNames: List[QueueName]) = {
       val subHeadingLevel2 = queueNames.flatMap(queueName => {
-        val depls: List[ReactTagOf[TableHeaderCell]] = List(
+        val depls: List[VdomTagOf[TableHeaderCell]] = List(
           <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
           <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
         )
@@ -223,16 +221,16 @@ object TerminalDeploymentsTable {
         <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on shifts entered")
     }
 
-    private def thHeaderGroupStart(title: String, xs: TagMod*): ReactTagOf[TableHeaderCell] = {
-      <.th(headerGroupStart, title, xs)
+    private def thHeaderGroupStart(title: String, xs: TagMod*): VdomTagOf[TableHeaderCell] = {
+      <.th(headerGroupStart, title, xs.toTagMod)
     }
   }
 
-  private val component = ReactComponentB[Props]("TerminalDeployments")
+  private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .renderBackend[Backend]
     .build
 
-  def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[Flights],
+  def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],
             airportConfigPot: Pot[AirportConfig],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =

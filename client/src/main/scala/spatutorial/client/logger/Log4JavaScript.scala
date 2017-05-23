@@ -1,21 +1,12 @@
 package drt.client.logger
 
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSName
+import scala.scalajs.js.annotation.{JSImport, JSName}
 
-/**
- * Facade for functions in log4javascript that we need
- */
-@js.native
-private[logger] trait Log4JavaScript extends js.Object {
-  def getLogger(name:js.UndefOr[String]):JSLogger = js.native
-  def setEnabled(enabled:Boolean):Unit = js.native
-  def isEnabled:Boolean = js.native
-}
 
 @js.native
-@JSName("log4javascript.Level")
-private[logger] trait Level extends js.Object {
+@JSImport("log4javascript", "Level")
+private[logger] class Level extends js.Object {
   val ALL:Level = js.native
   val TRACE:Level = js.native
   val DEBUG:Level = js.native
@@ -26,8 +17,8 @@ private[logger] trait Level extends js.Object {
 }
 
 @js.native
-@JSName("log4javascript.Logger")
-private[logger] trait JSLogger extends js.Object {
+@JSImport("log4javascript", "Logger")
+private[logger] class JSLogger extends js.Object {
   def addAppender(appender:Appender):Unit = js.native
   def removeAppender(appender:Appender):Unit = js.native
   def removeAllAppenders(appender:Appender):Unit = js.native
@@ -48,37 +39,41 @@ private[logger] trait JSLogger extends js.Object {
 }
 
 @js.native
-@JSName("log4javascript.Layout")
-private[logger] trait Layout extends js.Object
+@JSImport("log4javascript", "Layout")
+private[logger] class Layout extends js.Object
 
 @js.native
-@JSName("log4javascript.JsonLayout")
+@JSImport("log4javascript", "JsonLayout")
 private[logger] class JsonLayout extends Layout
 
 @js.native
-@JSName("log4javascript.Appender")
-private[logger] trait Appender extends js.Object {
+@JSImport("log4javascript", "Appender")
+private[logger] class Appender extends js.Object {
   def setLayout(layout:Layout):Unit = js.native
   def setThreshold(level:Level):Unit = js.native
 }
 
 @js.native
-@JSName("log4javascript.BrowserConsoleAppender")
+@JSImport("log4javascript", "BrowserConsoleAppender")
 private[logger] class BrowserConsoleAppender extends Appender
 
 @js.native
-@JSName("log4javascript.PopUpAppender")
+@JSImport("log4javascript", "PopUpAppender")
 private[logger] class PopUpAppender extends Appender
 
 @js.native
-@JSName("log4javascript.AjaxAppender")
+@JSImport("log4javascript", "AjaxAppender")
 private[logger] class AjaxAppender(url:String) extends Appender {
   def addHeader(header:String, value:String):Unit = js.native
 }
 
+
+@JSImport("log4javascript", JSImport.Namespace)
 @js.native
-private[logger] object Log4JavaScript extends js.GlobalScope {
-  val log4javascript:Log4JavaScript = js.native
+private[logger] object Log4JavaScript extends js.Object {
+  def getLogger(name:js.UndefOr[String]):JSLogger = js.native
+  def setEnabled(enabled:Boolean):Unit = js.native
+  def isEnabled:Boolean = js.native
 }
 
 class L4JSLogger(jsLogger:JSLogger) extends Logger {
