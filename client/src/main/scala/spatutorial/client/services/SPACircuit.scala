@@ -89,14 +89,6 @@ case class RootModel(
                       flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
                     ) {
 
-  def flightsWithApiSplits(terminalName: TerminalName): Pot[List[js.Dynamic]] = {
-    flightsWithSplitsPot map { (flightsWithSplits: FlightsWithSplits) =>
-      val terminalFlights = flightsWithSplits.flights.filter(_.apiFlight.Terminal == terminalName)
-      FlightsWithSplitsTable.reactTableFlightsAsJsonDynamic(
-        FlightsWithSplits(terminalFlights))
-    }
-  }
-
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
     val rawShiftsString = shiftsRaw match {
       case Ready(rawShifts) => rawShifts
