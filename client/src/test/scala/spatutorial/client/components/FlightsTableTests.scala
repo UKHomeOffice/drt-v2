@@ -2,7 +2,7 @@ package spatutorial.client.components
 
 import diode.data.{Pot, Ready}
 import drt.client.components.FlightsWithSplitsTable
-import drt.client.components.FlightsWithSplitsTable.widthStyle
+import drt.client.components.FlightTableComponents
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, ApiSplits}
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -114,8 +114,9 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div())
                 ))))
 
-          assertRenderedComponentsAreEqual(ArrivalsTable(timelineComponent = None)(
-            FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil)), staticComponent(expected)()))
+          assertRenderedComponentsAreEqual(
+            ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil))),
+              staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
           val expected = <.div(
@@ -151,7 +152,9 @@ object FlightsTableTests extends TestSuite {
           //          val timelineComponent = ScalaComponent.builder[ApiFlight]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
           val timelineComponent: (ApiFlight) => VdomNode = (f: ApiFlight) => <.span("herebecallback")
-          assertRenderedComponentsAreEqual(ArrivalsTable(Some(timelineComponent))(withSplits(testFlight :: Nil)), staticComponent(expected)())
+          assertRenderedComponentsAreEqual(
+            ArrivalsTable(Some(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil))),
+            staticComponent(expected)())
         }
 
         def date(dt: String) = <.td(flightDate(dt))
@@ -192,14 +195,14 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = (port) => originMapperComponent(port)
-            )(withSplits(testFlight :: Nil))
+            )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil)))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
           "Unit tests for airportOrigin Hook" - {
             val airportInfos = Map[String, Pot[AirportInfo]](
               "JFK" -> Ready(AirportInfo("Johnny Frank Kelvin", "Bulawayo", "Zimbabwe", "JFK")))
-            val originTooltip = FlightsWithSplitsTable.airportCodeTooltipText(airportInfos) _
+            val originTooltip = FlightTableComponents.airportCodeTooltipText(airportInfos) _
 
             'TooltipFound - {
               val actual = originTooltip("JFK")
@@ -216,7 +219,7 @@ object FlightsTableTests extends TestSuite {
             val airportInfos = Map[String, Pot[AirportInfo]](
               "JFK" -> Ready(AirportInfo("Johnny Frank Kelvin", "Bulawayo", "Zimbabwe", "JFK")))
             val expected: VdomElement = <.span(^.title := "Johnny Frank Kelvin, Bulawayo, Zimbabwe", "JFK")
-            val actual = FlightsWithSplitsTable.airportCodeComponent(airportInfos)("JFK")
+            val actual = FlightTableComponents.airportCodeComponent(airportInfos)("JFK")
             assertRenderedComponentsAreEqual(staticComponent(actual)(), staticComponent(expected)())
           }
         }
@@ -258,7 +261,9 @@ object FlightsTableTests extends TestSuite {
 
           def paxComponent(f: ApiFlight, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
 
-          assertRenderedComponentsAreEqual(FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(withSplits(testFlightT :: Nil)), staticComponent(expected)())
+          assertRenderedComponentsAreEqual(
+            FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil))),
+            staticComponent(expected)())
 
 //          val className: TagMod = ^.className := s"pax-${origin}"
 //          val title: TagMod = ^.title := s"from ${origin}"
