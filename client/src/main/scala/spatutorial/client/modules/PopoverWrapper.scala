@@ -22,14 +22,17 @@ object PopoverWrapper {
     var className: String = js.native
   }
 
-  def props(trigger: String, position: String = "right"): Props = {
+  def props(trigger: String,
+            position: String = "right",
+            className: String = "flights-popover"): Props = {
     val p = (new js.Object).asInstanceOf[Props]
     p.position = position
     p.trigger = trigger
-    p.className = "flights-popover"
+    p.className = className
     p
   }
   val component = JsComponent[Props, Children.Varargs, Null](RawComponent)
+//  def apply(trigger: String, position: String, className: String) = component(props(trigger, position, className))_
 }
 
 //case class PopoverWrapper(
