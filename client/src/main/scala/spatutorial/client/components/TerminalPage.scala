@@ -23,8 +23,36 @@ TerminalPage {
   case class Props(terminalName: TerminalName, ctl: RouterCtl[Loc])
 
   class Backend($: BackendScope[Props, Unit]) {
+    log.info(s"creating terminalPage backend")
 
     import TerminalHeatmaps._
+
+    val timelineComp: Option[(ApiFlight) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
+    def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
+
+    def originMapper(portCode: String): VdomElement = {
+      Try {
+        vdomElementFromComponent(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
+          <.span(
+            proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
+            proxy().renderEmpty(<.span(portCode)),
+            proxy().renderPending((n) => <.span(portCode)))
+        })
+      }.recover {
+        case e =>
+          log.error(s"origin mapper error $e")
+          vdomElementFromTag(<.div(portCode))
+      }.get
+    }
+
+    val maxFlightPax = 853 // todo this should come from state update
+
+    val arrivalsTable = FlightsWithSplitsTable.ArrivalsTable(
+      timelineComp,
+      originMapper,
+      paxComp(maxFlightPax),
+      splitsGraphComponent)
+
 
     def render(props: Props) = {
 
@@ -60,28 +88,11 @@ TerminalPage {
               flightsWrapper(proxy => {
                 val flightsWithSplits = proxy.value
                 val flights: Pot[FlightsApi.FlightsWithSplits] = flightsWithSplits
-                val timelineComp: Option[(ApiFlight) => html_<^.VdomElement] = Some(FlightsWithSplitsTable.timelineCompFunc _)
-                def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
-
-                def originMapper(portCode: String): VdomElement = {
-                  Try {
-                    vdomElementFromComponent(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
-                      <.span(
-                        proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
-                        proxy().renderEmpty(<.span(portCode)),
-                        proxy().renderPending((n) => <.span(portCode)))
-                    })
-                  }.recover {
-                    case e =>
-                      log.error(s"origin mapper error $e")
-                      vdomElementFromTag(<.div(portCode))
-                  }.get
-                }
-
                 <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
                   val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
                   val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
-                  FlightsWithSplitsTable.ArrivalsTable(timelineComp, originMapper, paxComp(maxFlightPax), splitsGraphComponent)(flightsForTerminal)
+
+                  arrivalsTable(FlightsWithSplitsTable.Props(flightsForTerminal))
                 }))
               })
             }),
@@ -97,6 +108,7 @@ TerminalPage {
 
   private val component = ScalaComponent.builder[Props]("Product")
     .renderBackend[Backend]
+    .componentDidMount((p) => Callback.log(s"terminalPage didMount $p"))
     .build
 }
 
@@ -152,9 +164,9 @@ object FlightComponents {
           case (label, paxCount) =>
             val percentage: Double = paxCount.toDouble / splitTotal * 100
             <.div(
-            ^.className := "bar",
-            ^.height := s"${percentage}%",
-            ^.title := s"$paxCount $label")
+              ^.className := "bar",
+              ^.height := s"${percentage}%",
+              ^.title := s"$paxCount $label")
         }.toTagMod
       ))
   }

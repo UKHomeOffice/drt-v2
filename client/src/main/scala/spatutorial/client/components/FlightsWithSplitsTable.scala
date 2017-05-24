@@ -1,6 +1,5 @@
 package drt.client.components
 
-import drt.client.modules.FlightsWithSplitsView
 import drt.shared._
 import diode.data.{Pot, Ready}
 import japgolly.scalajs.react._
@@ -9,7 +8,8 @@ import drt.client.logger
 import drt.client.modules.{GriddleComponentWrapper, ViewTools}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 
 import scala.collection.mutable
 import scala.scalajs.js
@@ -24,15 +24,32 @@ import scala.collection.immutable.Seq
 
 object FlightsWithSplitsTable {
 
-  type Props = FlightsWithSplitsView.Props
+  case class Props(flightsWithSplits: FlightsWithSplits)
+
+
+  implicit val paxTypeReuse = Reusability.byRef[PaxType]
+  implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
+  implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
+  implicit val flightReuse = Reusability.caseClassDebug[ApiFlight]
+  implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
+  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
+
+  //  implicit val listOfapiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
+  //  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[List[FlightsWithSplits]]
+  implicit val propsReuse = Reusability.caseClassDebug[Props]
+
 
   def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
                        paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
                        splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
-                      ) = ScalaComponent.builder[FlightsWithSplits]("ArrivalsTable")
-    .renderP((_$, flightsWithSplits) => {
+                      ) = ScalaComponent.builder[Props]("ArrivalsTable")
+
+    .renderP((_$, props) => {
       log.info(s"sorting flights")
+      val flightsWithSplits = props.flightsWithSplits
       val flights = flightsWithSplits.flights
       val sortedFlights = flights.sortBy(_.apiFlight.SchDT) //todo move this closer to the model
       log.info(s"sorted flights")
@@ -59,33 +76,13 @@ object FlightsWithSplitsTable {
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case (flightWithSplits, idx) => {
-                    val flight = flightWithSplits.apiFlight
-                    val flightSplits: ApiSplits = flightWithSplits.splits
-                    val splitTotal = flightSplits.splits.map(_.paxCount).sum
-                    log.info(s"rendering flight row $idx ${flight.toString}")
-                    Try {
-                      val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
-                      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-                      val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-                        case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-                      }
-                      <.tr(^.key := flight.FlightID.toString,
-                        timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-                        <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
-                        <.td(^.key := flight.FlightID.toString + "-origin", originMapper(flight.Origin)),
-                        <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
-                        <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
-                        <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-                        <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
-                        <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-                        <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
-                        <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-                        <.td(^.key := flight.FlightID.toString + "-actpax", paxComponent(flight, flightWithSplits.splits)),
-                        <.td(^.key := flight.FlightID.toString + "-splits", splitsGraphComponent(splitTotal, splitsAndLabels)))
-                    }.recover {
-                      case e => log.error(s"couldn't make flight row $e")
-                        <.tr(s"failure $e")
-                    }.get
+                    FlightTableRow.tableRow(FlightTableRow.Props(
+                      flightWithSplits, idx,
+                      timelineComponent = timelineComponent,
+                      originMapper = originMapper,
+                      paxComponent = paxComponent,
+                      splitsGraphComponent = splitsGraphComponent
+                    ))
                   }
                 }.toTagMod)))
         else
@@ -96,11 +93,17 @@ object FlightsWithSplitsTable {
           s
 
         case Failure(f) =>
-          log.error(s"filure in table render $f")
+          log.error(s"failure in table render $f")
           <.div(s"render failure ${f}")
       }
     })
+    .componentDidMount((props) => Callback.log(s"componentDidMount! $props"))
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
+
+}
+
+object FlightTableComponents {
 
   def airportCodeComponent(portMapper: Map[String, Pot[AirportInfo]])(port: String): VdomElement = {
     val tt = airportCodeTooltipText(portMapper) _
@@ -335,86 +338,81 @@ object FlightsWithSplitsTable {
   }
 
   val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
-
-  def reactTableFlightsAsJsonDynamic(flights: FlightsWithSplits): List[js.Dynamic] = {
-    val uniqueArrivals: List[(ApiFlightWithSplits, Set[ApiFlight])] = uniqueArrivalsWithCodeShares(flights.flights)
-
-    uniqueArrivals.map {
-      case (flightAndSplit, codeShares) =>
-        val f = flightAndSplit.apiFlight
-        val literal = js.Dynamic.literal
-        val splitsTuples: Map[PaxTypeAndQueue, Int] = flightAndSplit.splits
-          .splits.groupBy(split => PaxTypeAndQueue(split.passengerType, split.queueType)
-        ).map(x => (x._1, x._2.map(_.paxCount).sum))
-
-        def splitsValues: Seq[Int] = Seq(
-          PaxTypesAndQueues.eeaMachineReadableToEGate,
-          PaxTypesAndQueues.eeaMachineReadableToDesk,
-          PaxTypesAndQueues.eeaNonMachineReadableToDesk,
-          PaxTypesAndQueues.visaNationalToDesk,
-          PaxTypesAndQueues.nonVisaNationalToDesk
-        ).map(splitsTuples.getOrElse(_, 0))
-
-        val allCodes = f.IATA :: codeShares.map(_.IATA).toList
-        literal(
-          //        "Operator" -> f.Operator,
-          "Timeline" -> "0",
-          "Status" -> f.Status,
-          "Sch" -> f.SchDT,
-          "Est" -> f.EstDT,
-          "Act" -> f.ActDT,
-          "Est Chox" -> f.EstChoxDT,
-          "Act Chox" -> f.ActChoxDT,
-          "Gate" -> f.Gate,
-          "Stand" -> f.Stand,
-          "Pax" -> paxOriginDisplay(f.MaxPax, f.ActPax, splitsTuples.values.sum),
-          "Splits" -> splitsValues.mkString("|"),
-          "TranPax" -> f.TranPax,
-          "Terminal" -> f.Terminal,
-          "ICAO" -> f.ICAO,
-          "Flight" -> allCodes.mkString(" / "),
-          "Origin" -> f.Origin)
-    }
-  }
+}
 
 
-  val component = ScalaComponent.builder[Props]("FlightsWithSplitsTable")
-    .render_P(props => {
-      logger.log.debug(s"rendering flightstable")
+object FlightTableRow {
 
-      val mappings = airportCodeTooltipText(props.airportInfoProxy) _
+  import FlightTableComponents._
 
-      val columnMeta = Some(Seq(
-        new GriddleComponentWrapper.ColumnMeta("Timeline",
-          cssClassName = "timeline-column",
-          customComponent = timelineComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings)),
-        new GriddleComponentWrapper.ColumnMeta("Sch", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Est", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Act", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Est Chox", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Act Chox", customComponent = dateTimeComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Pax", customComponent = paxComponent()),
-        new GriddleComponentWrapper.ColumnMeta("Splits", customComponent = splitsComponent())
-      ))
-      <.div(^.className := "table-responsive timeslot-flight-popover",
-        props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
-        props.flightsModelProxy.renderEmpty(ViewTools.spinner),
-        props.flightsModelProxy.renderReady(flights => {
-          val rows = flights
-          <.table(
-            <.tbody(
-              rows.map(row =>
-                <.tr(
-                  <.td(row.SchDt.toString)
-                )
-              ).toTagMod
-            )
-          )
+  type OriginMapperF = (String) => VdomNode
 
-        })
-      )
-    }).build
+  case class Props(flightWithSplits: ApiFlightWithSplits,
+                   idx: Int,
+                   timelineComponent: Option[(ApiFlight) => VdomNode],
+                   originMapper: OriginMapperF = (portCode) => portCode,
+                   paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div())
 
-  def apply(props: Props) = component(props)
+
+  implicit val paxTypeReuse = Reusability.byRef[PaxType]
+  implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
+  implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
+  implicit val flightReuse = Reusability.caseClassDebug[ApiFlight]
+  implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
+  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
+
+  implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
+  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
+
+  case class RowState(hasChanged: Boolean)
+  implicit val stateReuse = Reusability.caseClass[RowState]
+
+
+  val tableRow = ScalaComponent.builder[Props]("TableRow")
+    .initialState[RowState](RowState(false))
+    .renderPS((_$, props, state) => {
+      val idx = props.idx
+      val flightWithSplits = props.flightWithSplits
+      val flight = flightWithSplits.apiFlight
+      val flightSplits: ApiSplits = flightWithSplits.splits
+      val splitTotal = flightSplits.splits.map(_.paxCount).sum
+      log.info(s"rendering flight row $idx ${flight.toString}")
+      Try {
+        val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
+        val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+        val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+          case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+        }
+        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+        <.tr(^.key := flight.FlightID.toString,
+          hasChangedStyle,
+          props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+          <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+          <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
+          <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
+          <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
+          <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+          <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
+          <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
+          <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, flightWithSplits.splits)),
+          <.td(^.key := flight.FlightID.toString + "-splits", props.splitsGraphComponent(splitTotal, splitsAndLabels)))
+      }.recover {
+        case e => log.error(s"couldn't make flight row $e")
+          <.tr(s"failure $e")
+      }.get
+    })
+    .componentWillReceiveProps(i => {
+      if (i.nextProps != i.currentProps)
+        log.info(s"row ${i.nextProps} changed")
+      i.setState(RowState(i.nextProps != i.currentProps))
+    })
+    .componentDidMount(p => Callback.log(s"row didMount $p"))
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .build
+
 }
