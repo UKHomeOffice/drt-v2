@@ -123,7 +123,6 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
     case info: VoyageManifest =>
       info.scheduleArrivalDateTime match {
         case Some(scheduledDateTime) =>
-          log.info(s"Got a valid date time: $scheduledDateTime")
           val child = getRCActor(childName(info.ArrivalPortCode, info.CarrierCode, info.VoyageNumber, scheduledDateTime))
           child.tell(info, sender)
         case _ =>
