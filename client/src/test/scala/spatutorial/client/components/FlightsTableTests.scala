@@ -114,7 +114,8 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div())
                 ))))
 
-          assertRenderedComponentsAreEqual(ArrivalsTable(timelineComponent = None)(withSplits(testFlight :: Nil)), staticComponent(expected)())
+          assertRenderedComponentsAreEqual(ArrivalsTable(timelineComponent = None)(
+            FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil)), staticComponent(expected)()))
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
           val expected = <.div(
