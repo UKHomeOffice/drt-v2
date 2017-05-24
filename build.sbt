@@ -3,11 +3,6 @@ import sbt.Project.projectToRef
 
 scalaVersion := Settings.versions.scala
 
-resolvers ++= Seq(
-  Resolver.bintrayRepo("mfglabs", "maven"),
-  Resolver.bintrayRepo("dwhjames", "maven"),
-  Resolver.sonatypeRepo("snapshots")
-)
 
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
@@ -52,7 +47,7 @@ lazy val client: Project = (project in file("client"))
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
-//    scalaJSUseMainModuleInitializer := true,
+    //    scalaJSUseMainModuleInitializer := true,
     //    persistLaunch/ser := true,
     //    scalaJSUseMsainModuleInitializer in Test := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
@@ -87,9 +82,12 @@ lazy val server = (project in file("server"))
   // triggers scalaJSPipeline when using compile or continuous compilation
   compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
   testFrameworks += new TestFramework("utest.runner.Framework"),
-  resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-  resolvers += "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
-  resolvers += Resolver.defaultLocal,
+  resolvers ++= Seq(
+    "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    Resolver.bintrayRepo("mfglabs", "maven"),
+    Resolver.bintrayRepo("dwhjames", "maven"),
+    "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
+    Resolver.defaultLocal),
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)
   publishArtifact in(Compile, packageDoc) := false,
@@ -104,6 +102,14 @@ lazy val server = (project in file("server"))
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
+
+
+
+//server.resolvers  ++= Seq(
+//  Resolver.bintrayRepo("mfglabs", "maven"),
+//  Resolver.bintrayRepo("dwhjames", "maven"),
+//  Resolver.sonatypeRepo("snapshots")
+//)
 
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
