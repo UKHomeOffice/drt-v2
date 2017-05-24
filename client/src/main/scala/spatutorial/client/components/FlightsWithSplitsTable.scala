@@ -390,7 +390,7 @@ object FlightTableRow {
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-          <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+          <.td(^.key := flight.FlightID.toString + "-flightNo", flight.IATA),
           <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
           <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
           <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
