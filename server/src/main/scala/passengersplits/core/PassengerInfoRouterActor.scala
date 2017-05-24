@@ -29,6 +29,7 @@ object PassengerInfoRouterActor {
   case object LogStatus
 
   case class VoyageManifestZipFileComplete(zipfilename: String, completionMonitor: ActorRef)
+
   case class VoyageManifestZipFileCompleteAck(zipfilename: String)
 
   case object ManifestZipFileInit
@@ -55,7 +56,6 @@ trait SimpleRouterActor[C <: Actor] {
   def childProps: Props
 
   def getRCActor(id: String) = {
-//    log.info(s"childActorKeys: ${childActorMap.keys}")
     childActorMap getOrElse(id, {
       val c = context actorOf childProps
       childActorMap += id -> c
@@ -66,8 +66,7 @@ trait SimpleRouterActor[C <: Actor] {
   }
 }
 
-class PassengerSplitsInfoByPortRouter extends
-  Actor with PassengerQueueCalculator with ActorLogging
+class PassengerSplitsInfoByPortRouter extends Actor with PassengerQueueCalculator with ActorLogging
   with SimpleRouterActor[PassengerInfoRouterActor] {
 
   def childProps = Props[PassengerInfoRouterActor]
@@ -122,8 +121,15 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
 
   def receive = LoggingReceive {
     case info: VoyageManifest =>
-      val child = getRCActor(childName(info.ArrivalPortCode, info.CarrierCode, info.VoyageNumber, info.scheduleArrivalDateTime.get))
-      child.tell(info, sender)
+      info.scheduleArrivalDateTime match {
+        case Some(scheduledDateTime) =>
+          log.info(s"Got a valid date time: $scheduledDateTime")
+          val child = getRCActor(childName(info.ArrivalPortCode, info.CarrierCode, info.VoyageNumber, scheduledDateTime))
+          child.tell(info, sender)
+        case _ =>
+          log.warning(s"Failed to parse scheduled arrival date time: ${info.scheduleDateTimeString}")
+          sender ! PassengerSplitsAck
+      }
     case report: ReportVoyagePaxSplit =>
       val name: String = childName(report.destinationPort, report.carrierCode, report.voyageNumber,
         report.scheduledArrivalDateTime)
