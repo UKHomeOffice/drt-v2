@@ -302,39 +302,32 @@ object ShiftsServiceTests extends TestSuite {
 
           "Staff movements" - {
             import StaffMovements._
-            val shiftServiceTry = ShiftService(parsedShifts.toList)
+            val shiftService = ShiftService(parsedShifts.toList).get
+            val fixedPointService = ShiftService(parseRawTsv("").toList).get
 
-            assert(shiftServiceTry.isSuccess)
 
             "Shifts can be represented as staff movements" - {
-              shiftServiceTry match {
-                case Success(shiftService) =>
-                  val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
-
-                  val sDate = SDate(2016, 12, 10, 10, 0)
-                  assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate) - 2)
-              }
+              val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
+              val sDate = SDate(2016, 12, 10, 10, 0)
+              assert(staffAt(shiftService, fixedPointService)(movements)(sDate) == shiftService.staffAt(sDate) - 2)
             }
-            "Movements from after the asked for date are not included" - {
-              shiftServiceTry match {
-                case Success(shiftService) =>
-                  val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
 
-                  val sDate = SDate(2016, 12, 10, 9, 0)
-                  assert(staffAt(shiftService)(movements)(sDate) == shiftService.staffAt(sDate))
-              }
+            "Movements from after the asked for date are not included" - {
+
+              val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
+              val sDate = SDate(2016, 12, 10, 9, 0)
+              assert(staffAt(shiftService, fixedPointService)(movements)(sDate) == shiftService.staffAt(sDate))
             }
             "Two movements at the same time are both taken into account" - {
-              shiftServiceTry match {
-                case Success(shiftService) =>
-                  val movements = (
-                    StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
-                      StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) :: Nil
-                    ).sortBy(_.time)
 
-                  val sDate = SDate(2016, 12, 11, 0, 0)
-                  assert(staffAt(shiftService)(movements)(sDate) == -2)
-              }
+              val movements = (
+                StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
+                  StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) :: Nil
+                ).sortBy(_.time)
+
+              val sDate = SDate(2016, 12, 11, 0, 0)
+              assert(staffAt(shiftService, fixedPointService)(movements)(sDate) == -2)
+
             }
             "Two movements at the same time as a shift entry are all taken into account" - {
               val shiftServiceWithOneShift = ShiftService(List(Shift("blah", "any", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
@@ -346,7 +339,7 @@ object ShiftsServiceTests extends TestSuite {
                 ).sortBy(_.time)
 
               val sDate = SDate(2016, 12, 11, 0, 0)
-              val staff: Int = staffAt(shiftServiceWithOneShift)(movements)(sDate)
+              val staff: Int = staffAt(shiftServiceWithOneShift, fixedPointService)(movements)(sDate)
               assert(staff == 8)
             }
             "escaped commas are allowed in shift name" - {
@@ -362,21 +355,26 @@ object ShiftsServiceTests extends TestSuite {
               }
             }
           }
-        }
-      }
-    }
+          "Staff movements with fixed points" - {
+            import StaffMovements._
+            val fixedPointRaw =
+              """
+                |eGate Monitor	any	10/12/16	10:00	11:00	1
+              """.stripMargin
 
-    'TerminalStaffShifts - {
-      "Given a shift of 10 people at T1, if we ask how many staff are available" - {
-        val shifts = Shift("alpha", "T1", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10)
-        val shiftService = ShiftService(shifts :: Nil)
+            val shiftService = ShiftService(parsedShifts.toList).get
+            val fixedPointService = ShiftService(parseRawTsv(fixedPointRaw).toList).get
 
-        "at T1 at its first bound, then we get 10" - {
-          assert(shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 10, 0)) == 10)
-        }
 
-        "at T2 at its first bound, then we get 0" - {
-          assert(shiftService.terminalStaffAt("T2", SDate(2016, 12, 10, 10, 0)) == 0)
+            "Shifts can be represented as staff movements" - {
+
+              val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
+
+              val sDate = SDate(2016, 12, 10, 10, 0)
+              assert(staffAt(shiftService, fixedPointService)(movements)(sDate) == 5)
+              assert(false)
+            }
+          }
         }
       }
     }

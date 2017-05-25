@@ -57,7 +57,8 @@ object Staffing {
       else {
         val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
         val ss = ShiftService(successfulShifts)
-        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss)(movements) _
+        val fps = ShiftService(List[Shift]())
+        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss, fps)(movements) _
         staffingTableHourPerColumn(daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
       }
     )
@@ -138,21 +139,6 @@ object Staffing {
                 }).toTagMod
               ))
         }.toTagMod
-      )
-    )
-  }
-
-  private def simpleStaffingTable(daysWorthOf15Minutes: NumericRange[Long], ss: ShiftService) = {
-    <.table(
-      <.tr({
-        daysWorthOf15Minutes.map((t: Long) => {
-          val d = new Date(t)
-          val display = f"${d.getHours}%02d:${d.getMinutes}"
-          <.td(^.key := t, display)
-        }).toTagMod
-      }),
-      <.tr(
-        daysWorthOf15Minutes.map(t => <.td(^.key := t, s"${StaffMovements.staffAt(ss)(Nil)(t)}")).toTagMod
       )
     )
   }

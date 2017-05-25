@@ -73,7 +73,6 @@ object JSDateConversions {
       JSSDate(d)
     }
   }
-
 }
 
 case class Shift(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
@@ -175,7 +174,7 @@ object StaffMovements {
 
   def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate) = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
 
-  def staffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(dateTime: MilliDate) = {
+  def staffAt(shiftService: ShiftService, fixedPointService: ShiftService)(movements: Seq[StaffMovement])(dateTime: MilliDate) = {
     val baseStaff = shiftService.staffAt(dateTime)
     baseStaff + adjustmentsAt(movements)(dateTime)
   }
