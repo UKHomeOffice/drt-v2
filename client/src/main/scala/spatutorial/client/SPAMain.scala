@@ -225,7 +225,6 @@ object SPAMain extends js.JSApp {
   }
 }
 
-
 object WebpackBootstrapRequire {
 
   @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)

@@ -357,22 +357,34 @@ object ShiftsServiceTests extends TestSuite {
           }
           "Staff movements with fixed points" - {
             import StaffMovements._
-            val fixedPointRaw =
+            val shiftsRaw =
               """
-                |eGate Monitor	any	10/12/16	10:00	11:00	1
+                |Alpha,any,10/12/16,08:00,16:00,10
               """.stripMargin
 
-            val shiftService = ShiftService(parsedShifts.toList).get
-            val fixedPointService = ShiftService(parseRawTsv(fixedPointRaw).toList).get
+            val fixedPointRaw =
+              """
+                |eGate Monitor,any,10/12/16,08:00,14:00,1
+              """.stripMargin
 
 
-            "Shifts can be represented as staff movements" - {
+            val shiftService = ShiftService(ShiftParser(shiftsRaw).parsedShifts.toList).get
+            val fixedPointService = ShiftService(ShiftParser(fixedPointRaw).parsedShifts.toList).get
 
-              val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
+
+            "Fixed Points should be subracted from available staff" - {
 
               val sDate = SDate(2016, 12, 10, 10, 0)
-              assert(staffAt(shiftService, fixedPointService)(movements)(sDate) == 5)
-              assert(false)
+              val result = staffAt(shiftService, fixedPointService)(Nil)(sDate)
+
+              assert(result == 9)
+            }
+            "Fixed Points should only be included for the time specified" - {
+
+              val sDate = SDate(2016, 12, 10, 15, 0)
+              val result = staffAt(shiftService, fixedPointService)(Nil)(sDate)
+
+              assert(result == 10)
             }
           }
         }
