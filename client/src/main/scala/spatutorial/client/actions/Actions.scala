@@ -3,7 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
-import drt.client.services.{DeskRecTimeslot, Shift}
+import drt.client.services.{DeskRecTimeslot, StaffAssignment}
 import drt.shared._
 import drt.shared.FlightsApi._
 
@@ -31,9 +31,9 @@ object Actions {
 
   case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
 
-  case class SetFixedPoints(shifts: String) extends Action
+  case class SetFixedPoints(fixedPoints: String) extends Action
 
-  case class SaveFixedPoints(shifts: String) extends Action
+  case class SaveFixedPoints(fixedPoints: String) extends Action
 
   case class GetFixedPoints() extends Action
 
@@ -43,7 +43,7 @@ object Actions {
 
   case class GetShifts() extends Action
 
-  case class AddShift(shift: Shift) extends Action
+  case class AddShift(shift: StaffAssignment) extends Action
 
   case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 

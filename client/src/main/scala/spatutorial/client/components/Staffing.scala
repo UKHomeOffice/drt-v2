@@ -23,8 +23,8 @@ object Staffing {
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(props: Props) = {
-      val shiftsAndMovementsRCP = SPACircuit.connect(m => (m.shiftsRaw, m.fixedPointsRaw, m.staffMovements))
-      shiftsAndMovementsRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]) => {
+      val staffingRCP = SPACircuit.connect(m => (m.shiftsRaw, m.fixedPointsRaw, m.staffMovements))
+      staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]) => {
         val rawShifts = staffingMP() match {
           case (Ready(shifts),_ , _) => shifts
           case _ => ""
@@ -37,33 +37,39 @@ object Staffing {
           case (_,_, sm) => sm
         }
 
-        val shifts: List[Try[Shift]] = ShiftParser(rawShifts).parsedShifts.toList
-        val fixedPoints: List[Try[Shift]] = ShiftParser(rawFixedPoints).parsedShifts.toList
-        val didParseFail = shifts exists (s => s.isFailure)
+        val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
+        val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
         <.div(
-          <.div(^.className := "container",
-            <.h1("Staffing"),
-            <.div(^.className := "col-md-3", shiftsEditor(rawShifts, staffingMP)),
-            <.div(^.className := "col-md-3", fixedPointsEditor(rawFixedPoints, staffingMP)),
-            <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP))
-          ),
-          <.div(^.className := "container",
-            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, didParseFail)))
+        <.div(^.className := "container",
+        <.h1("Staffing"),
+        <.div(^.className := "col-md-3", shiftsEditor(rawShifts, staffingMP)),
+        <.div(^.className := "col-md-3", fixedPointsEditor(rawFixedPoints, staffingMP)),
+        <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP))
+        ),
+        <.div(^.className := "container",
+        <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints)))
         )
       })
     }
   }
 
-  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[Shift]], fixedPoints: List[Try[Shift]], didParseFail: Boolean): VdomTagOf[Div] = {
+  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], fixedPoints: List[Try[StaffAssignment]]): VdomTagOf[Div] = {
+    val didParseFixedPointsFail = fixedPoints exists (s => s.isFailure)
+    val didParseShiftsFail = shifts exists (s => s.isFailure)
     <.div(
-      <.h2("Staff over the day"), if (didParseFail) {
-        <.div(^.className := "error", "Error in shifts")
+      <.h2("Staff over the day"), if (didParseShiftsFail || didParseFixedPointsFail) {
+        if (didParseShiftsFail)
+          <.div(^.className := "error", "Error in Shifts")
+        else ""
+        if (fixedPoints exists (s => s.isFailure))
+          <.div(^.className := "error", "Error in Fixed Points")
+        else ""
       }
       else {
-        val successfulShifts: List[Shift] = shifts.collect { case Success(s) => s }
-        val successfulFixedPoints: List[Shift] = fixedPoints.collect { case Success(s) => s }
-        val ss = ShiftService(successfulShifts)
-        val fps = ShiftService(successfulFixedPoints)
+        val successfulShifts: List[StaffAssignment] = shifts.collect { case Success(s) => s }
+        val successfulFixedPoints: List[StaffAssignment] = fixedPoints.collect { case Success(s) => s }
+        val ss = StaffAssignmentService(successfulShifts)
+        val fps = StaffAssignmentService(successfulFixedPoints)
         val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss, fps)(movements) _
         staffingTableHourPerColumn(daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
       }
@@ -119,7 +125,7 @@ object Staffing {
     )
   }
 
-  def fixedPointsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]): VdomTagOf[html.Div] = {
+  def fixedPointsEditor(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]): VdomTagOf[html.Div] = {
 
     val today: SDateLike = SDate.today
     val todayString = today.ddMMyyString
@@ -127,7 +133,7 @@ object Staffing {
     val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
 
     val defaultExamples = Seq(
-      "Roaving Officer,{date},00:00,00:23,59"
+      "Roaving Officer,{date},00:00,23:59,1"
     )
 
     <.div(
@@ -144,10 +150,10 @@ object Staffing {
           })
         )
       }),
-      <.textarea(^.value := rawShifts,
+      <.textarea(^.value := rawFixedPoints,
         ^.className := "staffing-editor",
         ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatch(SetFixedPoints(e.target.value)))),
-      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(SaveFixedPoints(rawShifts))))
+      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(SaveFixedPoints(rawFixedPoints))))
     )
   }
 

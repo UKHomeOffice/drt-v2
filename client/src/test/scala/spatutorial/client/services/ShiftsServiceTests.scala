@@ -20,8 +20,8 @@ object ShiftsServiceTests extends TestSuite {
 
 
         "Given a shift of 10 people, if we ask how many staff are available" - {
-          val shifts = Shift("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10)
-          val shiftService = ShiftService(shifts :: Nil)
+          val shifts = StaffAssignment("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10)
+          val shiftService = StaffAssignmentService(shifts :: Nil)
           "at its first bound, then we get 10" - {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 10, 0)) == 10)
           }
@@ -37,15 +37,15 @@ object ShiftsServiceTests extends TestSuite {
         "some implicits make things nicer whether we're server side or client side " - {
           val startDt = SDate(2016, 12, 10, 10, 0)
           val endDate = SDate(2016, 12, 19, 12, 0)
-          val shifts = Shift("alpha", "any", startDt, endDate, 10)
+          val shifts = StaffAssignment("alpha", "any", startDt, endDate, 10)
 
-          assert(shifts == Shift("alpha", "any", 1481364000000L, 1482148800000L, 10))
+          assert(shifts == StaffAssignment("alpha", "any", 1481364000000L, 1482148800000L, 10))
         }
 
-        "Given two overlapping shifts" - {
-          val shifts = Shift("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10) ::
-            Shift("beta", "any", SDate(2016, 12, 10, 18, 0), SDate(2016, 12, 10, 23, 0), 5) :: Nil
-          val shiftService = ShiftService(shifts)
+        "Given two overlapping assignments" - {
+          val shifts = StaffAssignment("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10) ::
+            StaffAssignment("beta", "any", SDate(2016, 12, 10, 18, 0), SDate(2016, 12, 10, 23, 0), 5) :: Nil
+          val shiftService = StaffAssignmentService(shifts)
           "on the overlap the staff is the sum of both" - {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 18, 30)) == 15)
           }
@@ -63,29 +63,29 @@ object ShiftsServiceTests extends TestSuite {
           }
         }
 
-        "Shift parsing " - {
+        "StaffAssignment parsing " - {
           "Parse a single shift line" - {
             val shiftsRawCsv =
               """
-                |Shift 1,any,01/12/16,06:30,15:18,2
+                |StaffAssignment 1,any,01/12/16,06:30,15:18,2
               """.stripMargin
 
 
-            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
-            assert(shifts == Success(Shift("Shift 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2)) :: Nil)
+            val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
+            assert(shifts == Success(StaffAssignment("StaffAssignment 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2)) :: Nil)
           }
 
           " Parse a couple of shift lines" - {
             val shiftsRawCsv =
               """
-                |Shift 1,any,01/12/16,06:30,15:18,2
-                |Shift 2,any,01/12/16,19:00,22:24,4
+                |StaffAssignment 1,any,01/12/16,06:30,15:18,2
+                |StaffAssignment 2,any,01/12/16,19:00,22:24,4
               """.stripMargin
 
 
-            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
-            val expectedShifts = Success(Shift("Shift 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2)) ::
-              Success(Shift("Shift 2", "any", SDate(2016, 12, 1, 19, 0), SDate(2016, 12, 1, 22, 24), 4)) ::
+            val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2)) ::
+              Success(StaffAssignment("StaffAssignment 2", "any", SDate(2016, 12, 1, 19, 0), SDate(2016, 12, 1, 22, 24), 4)) ::
               Nil
             assert(shifts == expectedShifts
             )
@@ -94,12 +94,12 @@ object ShiftsServiceTests extends TestSuite {
           "-ve numbers are fine in movements" - {
             val shiftsRawCsv =
               """
-                |Shift 1,any,01/12/16,06:30,15:18,-2
+                |StaffAssignment 1,any,01/12/16,06:30,15:18,-2
               """.stripMargin
 
 
-            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
-            val expectedShifts = Success(Shift("Shift 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
+            val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
             assert(shifts == expectedShifts)
           }
 
@@ -107,12 +107,12 @@ object ShiftsServiceTests extends TestSuite {
             val shiftsRawCsv =
               """
                 |# here be a comment - not because of the hash but because no commas
-                |Shift 1,any,01/12/16,06:30,15:18,-2
+                |StaffAssignment 1,any,01/12/16,06:30,15:18,-2
               """.stripMargin
 
 
-            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
-            val expectedShifts = Success(Shift("Shift 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
+            val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
             assert(shifts == expectedShifts)
           }
 
@@ -120,12 +120,12 @@ object ShiftsServiceTests extends TestSuite {
             val shiftsRawCsv =
               """
                 |
-                |Shift 1,any,01/12/16,06:30,15:18,-2
+                |StaffAssignment 1,any,01/12/16,06:30,15:18,-2
               """.stripMargin
 
 
-            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
-            val expectedShifts = Success(Shift("Shift 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
+            val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "any", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2)) :: Nil
             assert(shifts == expectedShifts)
           }
 
@@ -136,7 +136,7 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
 
-            val shifts = ShiftParser(shiftsRawCsv).parsedShifts.toList
+            val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
             shifts match {
               case Failure(t) :: Nil => assert(true)
               case other =>
@@ -146,9 +146,9 @@ object ShiftsServiceTests extends TestSuite {
           }
         }
 
-        "Shift to csv string representation" - {
+        "StaffAssignment to csv string representation" - {
           "Given a shift when I ask for a csv string then I should get a string with the fields separated by commas" - {
-            val shiftTry: Try[Shift] = Shift("My shift", "any", "01/01/17", "08:00", "11:59", "2")
+            val shiftTry: Try[StaffAssignment] = StaffAssignment("My shift", "any", "01/01/17", "08:00", "11:59", "2")
             val shift = shiftTry.get
 
             val csvString = shift.toCsv
@@ -159,7 +159,7 @@ object ShiftsServiceTests extends TestSuite {
           }
         }
 
-        "Given all the shifts" - {
+        "Given all the assignments" - {
           val shiftsRawTsv =
             """
               |Alpha 1 ODM	any	01/12/16	06:30	15:18
@@ -252,49 +252,49 @@ object ShiftsServiceTests extends TestSuite {
               |Night	any	01/12/16	22:30	07:18
             """.stripMargin
 
-          val parsedShifts: Array[Try[Shift]] = parseRawTsv(shiftsRawTsv)
+          val parsedShifts: Array[Try[StaffAssignment]] = parseRawTsv(shiftsRawTsv)
 
           println(parsedShifts.mkString("\n"))
 
           // Commented out some performance tests we used to evaluate different approaches.
 
           //          "asking for a whole days shape with individual stuff" - {
-          //            val shiftService = ShiftService(parsedShifts.toList)
+          //            val assignmentService = StaffAssignmentService(parsedAssignments.toList)
           //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
           //            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
           //            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
           //
           //            TestTimer.timeIt("individuals")(50) {
           //              val staffAtTIme = daysWorthOf15Minutes.map {
-          //                time => (time) -> shiftService.staffAt(time)
+          //                time => (time) -> assignmentService.staffAt(time)
           //              }
           //            }
           //
           //          }
 
           //          "asking for a whole days shape with grouped staff" - {
-          //            val shiftService = ShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts).toList)
+          //            val assignmentService = StaffAssignmentService(StaffAssignmentService.groupPeopleByShiftTimes(parsedAssignments).toList)
           //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
           //            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
           //            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
           //
           //            TestTimer.timeIt("grouped")(50) {
           //              val staffAtTIme = daysWorthOf15Minutes.map {
-          //                time => (time) -> shiftService.staffAt(time)
+          //                time => (time) -> assignmentService.staffAt(time)
           //              }
           //            }
           //          }
           //
           //
           //          "asking for a whole days shape with movements of grouped staff" - {
-          //            val shiftService = MovementsShiftService(ShiftService.groupPeopleByShiftTimes(parsedShifts.toList).toList)
+          //            val assignmentService = MovementsShiftService(StaffAssignmentService.groupPeopleByShiftTimes(parsedAssignments.toList).toList)
           //            val startOfDay: Long = SDate(2016, 12, 1, 0, 0)
           //            val timeMinPlusOneDay: Long = startOfDay + WorkloadsHelpers.oneMinute * 60 * 36
           //            val daysWorthOf15Minutes = startOfDay until timeMinPlusOneDay by (WorkloadsHelpers.oneMinute * 15)
           //
           //            TestTimer.timeIt("movements")(1000) {
           //              val staffAtTIme = daysWorthOf15Minutes.map {
-          //                time => (time) -> shiftService.staffAt(time)
+          //                time => (time) -> assignmentService.staffAt(time)
           //              }
           //            }
           //
@@ -302,8 +302,8 @@ object ShiftsServiceTests extends TestSuite {
 
           "Staff movements" - {
             import StaffMovements._
-            val shiftService = ShiftService(parsedShifts.toList).get
-            val fixedPointService = ShiftService(parseRawTsv("").toList).get
+            val shiftService = StaffAssignmentService(parsedShifts.toList).get
+            val fixedPointService = StaffAssignmentService(parseRawTsv("").toList).get
 
 
             "Shifts can be represented as staff movements" - {
@@ -330,7 +330,7 @@ object ShiftsServiceTests extends TestSuite {
 
             }
             "Two movements at the same time as a shift entry are all taken into account" - {
-              val shiftServiceWithOneShift = ShiftService(List(Shift("blah", "any", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
+              val shiftServiceWithOneShift = StaffAssignmentService(List(StaffAssignment("blah", "any", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
               val movements = (
                 StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
                   StaffMovement("T1", "IS81", SDate(2016, 12, 11, 1, 0), 1, UUID.randomUUID) ::
@@ -347,10 +347,10 @@ object ShiftsServiceTests extends TestSuite {
                 """
                   |Alpha\, 1 ODM,any,01/12/16,06:30,15:18
                 """.stripMargin
-              val parsedShift: Try[Shift] = ShiftParser(shiftsRawCsv).parsedShifts.head
+              val parsedShift: Try[StaffAssignment] = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.head
 
               parsedShift match {
-                case Success(Shift(name, _, _, _, _)) =>
+                case Success(StaffAssignment(name, _, _, _, _)) =>
                   assert(name == "Alpha\\, 1 ODM")
               }
             }
@@ -368,8 +368,8 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
 
-            val shiftService = ShiftService(ShiftParser(shiftsRaw).parsedShifts.toList).get
-            val fixedPointService = ShiftService(ShiftParser(fixedPointRaw).parsedShifts.toList).get
+            val shiftService = StaffAssignmentService(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
+            val fixedPointService = StaffAssignmentService(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
 
 
             "Fixed Points should be subracted from available staff" - {
@@ -400,8 +400,8 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
 
-            val shiftService = ShiftService(ShiftParser(shiftsRaw).parsedShifts.toList).get
-            val fixedPointService = ShiftService(ShiftParser(fixedPointRaw).parsedShifts.toList).get
+            val shiftService = StaffAssignmentService(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
+            val fixedPointService = StaffAssignmentService(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
 
 
             "Contain staff for a terminal shift" - {
@@ -414,7 +414,7 @@ object ShiftsServiceTests extends TestSuite {
 //            "Fixed Points should only be included for the time specified" - {
 //
 //              val sDate = SDate(2016, 12, 10, 15, 0)
-//              val result = staffAt(shiftService, fixedPointService)(Nil)(sDate)
+//              val result = staffAt(assignmentService, fixedPointService)(Nil)(sDate)
 //
 //              assert(result == 10)
 //            }
@@ -424,11 +424,11 @@ object ShiftsServiceTests extends TestSuite {
     }
   }
 
-  def parseRawTsv(shiftsRawTsv: String): Array[Try[Shift]] = {
+  def parseRawTsv(shiftsRawTsv: String): Array[Try[StaffAssignment]] = {
     val lines = shiftsRawTsv.split("\n")
     val parsedShifts = lines.map(l => l.split("\t"))
       .filter(_.length == 5)
-      .map(pl => Shift(pl(0), pl(1), pl(2), pl(3), pl(4)))
+      .map(pl => StaffAssignment(pl(0), pl(1), pl(2), pl(3), pl(4)))
     parsedShifts
   }
 }

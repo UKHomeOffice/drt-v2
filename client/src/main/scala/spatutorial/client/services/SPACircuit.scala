@@ -100,18 +100,17 @@ case class RootModel(
       case _ => ""
     }
 
-    val shifts = ShiftParser(rawShiftsString).parsedShifts.toList
-    val fixedPoints = ShiftParser(rawFixedPointsString).parsedShifts.toList
+    val shifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
+    val fixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
     //todo we have essentially this code elsewhere, look for successfulShifts
     val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure) || fixedPoints.exists(s => s.isFailure)) {
-      log.error("Couldn't parse raw shifts")
       (t: TerminalName, m: MilliDate) => 0
     } else {
       val successfulShifts = shifts.collect { case Success(s) => s }
-      val ss = ShiftService(successfulShifts)
+      val ss = StaffAssignmentService(successfulShifts)
 
       val successfulFixedPoints = fixedPoints.collect { case Success(s) => s }
-      val fps = ShiftService(successfulFixedPoints)
+      val fps = StaffAssignmentService(successfulFixedPoints)
       StaffMovements.terminalStaffAt(ss, fps)(staffMovements) _
     }
 
@@ -550,13 +549,13 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
 
 class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case SetFixedPoints(shifts: String) =>
-      updated(Ready(shifts), Effect(Future(RunAllSimulations())))
-    case SaveFixedPoints(shifts: String) =>
-      AjaxClient[Api].saveFixedPoints(shifts).call()
+    case SetFixedPoints(fixedPoints: String) =>
+      updated(Ready(fixedPoints), Effect(Future(RunAllSimulations())))
+    case SaveFixedPoints(fixedPoints: String) =>
+      AjaxClient[Api].saveFixedPoints(fixedPoints).call()
       noChange
-    case AddShift(shift) =>
-      updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
+    case AddShift(fixedPoints) =>
+      updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
     case GetFixedPoints() =>
       effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res))))
   }
