@@ -288,6 +288,10 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def getShifts(): Future[String]
 
+  def saveFixedPoints(rawFixedPoints: String): Unit
+
+  def getFixedPoints(): Future[String]
+
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
   def getStaffMovements(): Future[Seq[StaffMovement]]

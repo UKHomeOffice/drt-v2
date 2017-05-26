@@ -92,7 +92,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       assert(t3Deps(MilliDate(120000L)) == 13)
     }
 
-    "Given terminal queue crunch results for one queue and staff shifts we should get suggested deployments for the queue" - {
+    "Given terminal queue crunch results for one queue and staff assignments we should get suggested deployments for the queue" - {
       val startTime = SDate(2016, 12, 1).millisSinceEpoch
       val oneHour = 60000
       val deskRecs = List.fill(60)(2).toIndexedSeq
@@ -118,7 +118,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       assert(result == expected)
     }
 
-    "Given terminal queue crunch results for two queues and staff shifts we should get suggested deployments for each queue" - {
+    "Given terminal queue crunch results for two queues and staff assignments we should get suggested deployments for each queue" - {
       val startTime = SDate(2016, 12, 1).millisSinceEpoch
       val oneHour = 60000
       val eeaDeskRecs = List.fill(60)(4).toIndexedSeq

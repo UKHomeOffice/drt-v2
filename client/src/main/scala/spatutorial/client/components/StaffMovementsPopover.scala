@@ -77,10 +77,10 @@ object StaffMovementsPopover {
       val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
       val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
       val numberOfStaff: String = s"-${state.numberOfStaff.toString}"
-      val shiftTry = Shift(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff)
+      val shiftTry = StaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff)
       shiftTry match {
         case Success(shift) =>
-          for (movement <- StaffMovements.shiftsToMovements(Seq(shift))) yield {
+          for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {
             SPACircuit.dispatch(AddStaffMovement(movement))
             log.info(s"Dispatched AddStaffMovement($movement")
           }
