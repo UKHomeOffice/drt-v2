@@ -31,6 +31,12 @@ object Actions {
 
   case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
 
+  case class SetFixedPoints(shifts: String) extends Action
+
+  case class SaveFixedPoints(shifts: String) extends Action
+
+  case class GetFixedPoints() extends Action
+
   case class SetShifts(shifts: String) extends Action
 
   case class SaveShifts(shifts: String) extends Action

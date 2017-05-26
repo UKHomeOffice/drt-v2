@@ -51,7 +51,8 @@ case class AirportConfig(
                           defaultPaxSplits: SplitRatios,
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
                           minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                          shiftExamples: Seq[String] = Seq()
+                          shiftExamples: Seq[String] = Seq(),
+                          fixedPointExamples: Seq[String] = Seq()
                         ) extends AirportConfigLike {
 
 }

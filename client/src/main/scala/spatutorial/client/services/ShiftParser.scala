@@ -180,8 +180,9 @@ object StaffMovements {
     baseStaff - fixedPoints + adjustmentsAt(movements)(dateTime)
   }
 
-  def terminalStaffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
+  def terminalStaffAt(shiftService: ShiftService, fixedPointService: ShiftService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
     val baseStaff = shiftService.terminalStaffAt(terminalName, dateTime)
-    baseStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
+    val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTime)
+    baseStaff - fixedPointStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
   }
 }

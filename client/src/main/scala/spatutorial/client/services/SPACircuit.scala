@@ -84,6 +84,7 @@ case class RootModel(
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
                       shiftsRaw: Pot[String] = Empty,
+                      fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
                       slotsInADay: Int = 96,
                       flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
@@ -94,16 +95,24 @@ case class RootModel(
       case Ready(rawShifts) => rawShifts
       case _ => ""
     }
+    val rawFixedPointsString = fixedPointsRaw match {
+      case Ready(rawFixedPoints) => rawFixedPoints
+      case _ => ""
+    }
 
     val shifts = ShiftParser(rawShiftsString).parsedShifts.toList
+    val fixedPoints = ShiftParser(rawFixedPointsString).parsedShifts.toList
     //todo we have essentially this code elsewhere, look for successfulShifts
-    val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure)) {
+    val staffFromShiftsAndMovementsAt = if (shifts.exists(s => s.isFailure) || fixedPoints.exists(s => s.isFailure)) {
       log.error("Couldn't parse raw shifts")
       (t: TerminalName, m: MilliDate) => 0
     } else {
       val successfulShifts = shifts.collect { case Success(s) => s }
       val ss = ShiftService(successfulShifts)
-      StaffMovements.terminalStaffAt(ss)(staffMovements) _
+
+      val successfulFixedPoints = fixedPoints.collect { case Success(s) => s }
+      val fps = ShiftService(successfulFixedPoints)
+      StaffMovements.terminalStaffAt(ss, fps)(staffMovements) _
     }
 
     val pdr = PortDeployment.portDeskRecs(queueCrunchResults)
@@ -539,6 +548,20 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
   }
 }
 
+class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+  protected def handle = {
+    case SetFixedPoints(shifts: String) =>
+      updated(Ready(shifts), Effect(Future(RunAllSimulations())))
+    case SaveFixedPoints(shifts: String) =>
+      AjaxClient[Api].saveFixedPoints(shifts).call()
+      noChange
+    case AddShift(shift) =>
+      updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
+    case GetFixedPoints() =>
+      effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res))))
+  }
+}
+
 class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
@@ -579,6 +602,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
+      new FixedPointsHandler(zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v)))
     )
 

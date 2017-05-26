@@ -159,7 +159,7 @@ object ShiftsServiceTests extends TestSuite {
           }
         }
 
-        "Given all the shifts, how fast is it?" - {
+        "Given all the shifts" - {
           val shiftsRawTsv =
             """
               |Alpha 1 ODM	any	01/12/16	06:30	15:18
@@ -386,6 +386,38 @@ object ShiftsServiceTests extends TestSuite {
 
               assert(result == 10)
             }
+          }
+          "Staff for a terminal should" - {
+            import StaffMovements._
+            val shiftsRaw =
+              """
+                |Alpha,T1,10/12/16,08:00,16:00,10
+              """.stripMargin
+
+            val fixedPointRaw =
+              """
+                |eGate Monitor,T1,10/12/16,08:00,14:00,1
+              """.stripMargin
+
+
+            val shiftService = ShiftService(ShiftParser(shiftsRaw).parsedShifts.toList).get
+            val fixedPointService = ShiftService(ShiftParser(fixedPointRaw).parsedShifts.toList).get
+
+
+            "Contain staff for a terminal shift" - {
+
+              val sDate = SDate(2016, 12, 10, 10, 0)
+              val result = terminalStaffAt( shiftService, fixedPointService)(Nil)("T1", sDate)
+
+              assert(result == 9)
+            }
+//            "Fixed Points should only be included for the time specified" - {
+//
+//              val sDate = SDate(2016, 12, 10, 15, 0)
+//              val result = staffAt(shiftService, fixedPointService)(Nil)(sDate)
+//
+//              assert(result == 10)
+//            }
           }
         }
       }

@@ -167,6 +167,7 @@ object SPAMain extends js.JSApp {
     GetWorkloads("", ""),
     RequestFlights(0, 0),
     GetShifts(),
+    GetFixedPoints(),
     GetStaffMovements()
   )
 
