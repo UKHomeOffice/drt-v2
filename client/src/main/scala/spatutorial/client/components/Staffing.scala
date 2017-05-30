@@ -133,7 +133,7 @@ object Staffing {
     val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
 
     val defaultExamples = Seq(
-      "Roaving Officer,{date},00:00,23:59,1"
+      "Roving Officer,any,{date},00:00,23:59,1"
     )
 
     <.div(
