@@ -8,16 +8,20 @@ import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 
-object TerminalDeploymentTests extends TestSuite {
+object TerminalDeploymentTests extends TestSuite  {
 
   import drt.client.TableViewUtils._
+  val TestAirportConfig = "Tests"
 
   val airportConfig = AirportConfig(
     portCode = "STN",
     queues = Map("T1" -> Seq("eeaDesk", "nonEeaDesk", "eGate")),
     slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20),
     terminalNames = Seq("T1"),
-    defaultPaxSplits = SplitRatios(List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
+    defaultPaxSplits = SplitRatios(
+      TestAirportConfig,
+
+      List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
     defaultProcessingTimes = Map(),
     minMaxDesksByTerminalQueue = Map("T1" -> Map(
       "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),

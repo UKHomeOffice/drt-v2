@@ -29,7 +29,6 @@ object PassengerInfoRouterActor {
   case object LogStatus
 
   case class VoyageManifestZipFileComplete(zipfilename: String, completionMonitor: ActorRef)
-
   case class VoyageManifestZipFileCompleteAck(zipfilename: String)
 
   case object ManifestZipFileInit
@@ -56,6 +55,7 @@ trait SimpleRouterActor[C <: Actor] {
   def childProps: Props
 
   def getRCActor(id: String) = {
+//    log.info(s"childActorKeys: ${childActorMap.keys}")
     childActorMap getOrElse(id, {
       val c = context actorOf childProps
       childActorMap += id -> c
@@ -66,7 +66,8 @@ trait SimpleRouterActor[C <: Actor] {
   }
 }
 
-class PassengerSplitsInfoByPortRouter extends Actor with PassengerQueueCalculator with ActorLogging
+class PassengerSplitsInfoByPortRouter extends
+  Actor with PassengerQueueCalculator with ActorLogging
   with SimpleRouterActor[PassengerInfoRouterActor] {
 
   def childProps = Props[PassengerInfoRouterActor]
@@ -121,14 +122,8 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
 
   def receive = LoggingReceive {
     case info: VoyageManifest =>
-      info.scheduleArrivalDateTime match {
-        case Some(scheduledDateTime) =>
-          val child = getRCActor(childName(info.ArrivalPortCode, info.CarrierCode, info.VoyageNumber, scheduledDateTime))
-          child.tell(info, sender)
-        case _ =>
-          log.warning(s"Failed to parse scheduled arrival date time: ${info.scheduleDateTimeString}")
-          sender ! PassengerSplitsAck
-      }
+      val child = getRCActor(childName(info.ArrivalPortCode, info.CarrierCode, info.VoyageNumber, info.scheduleArrivalDateTime.get))
+      child.tell(info, sender)
     case report: ReportVoyagePaxSplit =>
       val name: String = childName(report.destinationPort, report.carrierCode, report.voyageNumber,
         report.scheduledArrivalDateTime)
@@ -234,11 +229,15 @@ class SingleFlightActor
     log.info(s"$self sent response $splits")
   }
 
-  def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyageManifest): VoyagePaxSplits = {
+
+  def calculateFlightSplits(port: String, carrierCode: String, voyageNumber: String,
+                            scheduledArrivalDateTime: SDateLike,
+                            flight: VoyageManifest, flightEgatePercentage: Double = 0.6d): VoyagePaxSplits = {
     log.info(s"$self calculating splits $port $carrierCode $voyageNumber ${scheduledArrivalDateTime.toString}")
     val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
-      convertPassengerInfoToPaxQueueCounts(flight.PassengerList)
-    VoyagePaxSplits(port,
+          convertPassengerInfoToPaxQueueCounts(flight.PassengerList, flightEgatePercentage)
+    VoyagePaxSplits(
+      port,
       carrierCode, voyageNumber, flight.PassengerList.length, scheduledArrivalDateTime,
       paxTypeAndQueueCount)
   }

@@ -28,6 +28,8 @@ object FlightsWithSplitsTable {
 
 
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
+  implicit val doubleReuse = Reusability.double(0.001)
+  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
@@ -98,84 +100,7 @@ object FlightsWithSplitsTable {
       }
     })
     .componentDidMount((props) => Callback.log(s"componentDidMount! $props"))
-    .configure(Reusability.shouldComponentUpdate)
-    .build
-
-}
-
-object FlightTableRow {
-
-  import FlightTableComponents._
-
-  type OriginMapperF = (String) => VdomNode
-
-  case class Props(flightWithSplits: ApiFlightWithSplits,
-                   idx: Int,
-                   timelineComponent: Option[(ApiFlight) => VdomNode],
-                   originMapper: OriginMapperF = (portCode) => portCode,
-                   paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div())
-
-
-  implicit val paxTypeReuse = Reusability.byRef[PaxType]
-  implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
-  implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
-  implicit val flightReuse = Reusability.caseClassDebug[ApiFlight]
-  implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
-  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
-
-  implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
-  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
-
-  case class RowState(hasChanged: Boolean)
-
-  implicit val stateReuse = Reusability.caseClass[RowState]
-
-
-  val tableRow = ScalaComponent.builder[Props]("TableRow")
-    .initialState[RowState](RowState(false))
-    .renderPS((_$, props, state) => {
-      val idx = props.idx
-      val flightWithSplits = props.flightWithSplits
-      val flight = flightWithSplits.apiFlight
-      val flightSplits: ApiSplits = flightWithSplits.splits
-      val splitTotal = flightSplits.splits.map(_.paxCount).sum
-      log.info(s"rendering flight row $idx ${flight.toString}")
-      Try {
-        val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
-        val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-        val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-          case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-        }
-        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        <.tr(^.key := flight.FlightID.toString,
-          hasChangedStyle,
-          props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-          <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
-          <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
-          <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
-          <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
-          <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-          <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
-          <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-          <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
-          <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, flightWithSplits.splits)),
-          <.td(^.key := flight.FlightID.toString + "-splits", props.splitsGraphComponent(splitTotal, splitsAndLabels)))
-      }.recover {
-        case e => log.error(s"couldn't make flight row $e")
-          <.tr(s"failure $e")
-      }.get
-    })
-    .componentWillReceiveProps(i => {
-      if (i.nextProps != i.currentProps)
-        log.info(s"row ${i.nextProps} changed")
-      i.setState(RowState(i.nextProps != i.currentProps))
-    })
-    .componentDidMount(p => Callback.log(s"row didMount $p"))
-    .configure(Reusability.shouldComponentUpdate)
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
 
 }
@@ -260,27 +185,6 @@ object FlightTableComponents {
   def dateStringAsLocalDisplay(dt: String) = dt match {
     case "" => ""
     case some => SDate.parse(dt).toLocalDateTimeString()
-  }
-
-  def timelineComponent(): js.Function = (props: js.Dynamic) => {
-    val schPct = 150 - 24
-
-    val re: VdomElement = Try {
-      val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[Dictionary[Any]]
-      val sch: String = props.rowData.Sch.toString
-      val est = rowData("Est")
-      val act: String = rowData("Act").toString
-      val estChox = rowData("Est Chox").toString
-      val actChox = rowData("Act Chox").toString
-
-      timelineFunc(schPct, sch, act, actChox)
-    } match {
-      case Success(s) =>
-        <.span(s).render
-      case f =>
-        <.span(f.toString).render
-    }
-    re
   }
 
   def timelineCompFunc(flight: ApiFlight): VdomElement = {
@@ -415,4 +319,117 @@ object FlightTableComponents {
   }
 
   val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
+}
+
+
+object FlightTableRow {
+
+  import FlightTableComponents._
+
+  type OriginMapperF = (String) => VdomNode
+
+  case class Props(flightWithSplits: ApiFlightWithSplits,
+                   idx: Int,
+                   timelineComponent: Option[(ApiFlight) => VdomNode],
+                   originMapper: OriginMapperF = (portCode) => portCode,
+                   paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div())
+
+  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
+  implicit val paxTypeReuse = Reusability.byRef[PaxType]
+  implicit val doubleReuse = Reusability.double(0.01)
+  implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
+  implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
+  implicit val flightReuse = Reusability.caseClassDebug[ApiFlight]
+  implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
+  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
+
+  implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
+  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
+
+  case class RowState(hasChanged: Boolean)
+
+  implicit val stateReuse = Reusability.caseClass[RowState]
+
+
+  val tableRow = ScalaComponent.builder[Props]("TableRow")
+    .initialState[RowState](RowState(false))
+    .renderPS((_$, props, state) => {
+      val idx = props.idx
+      val flightWithSplits = props.flightWithSplits
+      val flight = flightWithSplits.apiFlight
+
+      log.info(s"rendering flight row $idx ${flight.toString}")
+      Try {
+        val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+        val splitsComponents = flightSplitsList map {
+          flightSplits => {
+            val splitStyle = flightSplits.splitStyle
+            val vdomElement: VdomElement = splitStyle match {
+              case PaxNumbers => {
+                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
+                val splitStyleUnitLabe = "pax"
+                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
+                  case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
+                }).toMap
+                val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+                val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+                  case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+                }
+                <.div(props.splitsGraphComponent(splitTotal, splitsAndLabels), flightSplits.source)
+              }
+              case Percentage => {
+                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
+                val splitStyle = flightSplits.splitStyle
+                val splitStyleUnitLabe = "%"
+                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
+                  case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
+                }).toMap
+                val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+                val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+                  case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+                }
+                <.div(props.splitsGraphComponent(splitTotal, splitsAndLabels), flightSplits.source)
+              }
+            }
+            vdomElement
+          }
+        }
+
+
+        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+        <.tr(^.key := flight.FlightID.toString,
+          hasChangedStyle,
+          props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+          <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+          <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
+          <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
+          <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
+          <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+          <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
+          <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
+          <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, flightWithSplits.splits.headOption.getOrElse(ApiSplits(Nil, "no splits - client")))),
+          <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
+      }.recover {
+        case e => log.error(s"couldn't make flight row $e")
+          <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace().mkString(",")}")
+      }.get
+    }
+
+    )
+    .componentWillReceiveProps(i => {
+      if (i.nextProps != i.currentProps)
+        log.info(s"row ${
+          i.nextProps
+        } changed")
+      i.setState(RowState(i.nextProps != i.currentProps))
+    })
+    .componentDidMount(p => Callback.log(s"row didMount $p"))
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .build
+
 }

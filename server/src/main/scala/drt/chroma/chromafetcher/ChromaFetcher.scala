@@ -52,6 +52,11 @@ trait ChromaFetcher extends ChromaConfig with WithSendAndReceive {
   val logResponse: HttpResponse => HttpResponse = { resp =>
     log.info(s"Response Object: $resp")
     log.debug(s"Response: ${resp.entity.asString}")
+    if (resp.status.isFailure) {
+      log.warn(s"Failed to talk to chroma ${resp.headers}")
+      log.warn(s"Failed to talk to chroma: entity ${resp.entity.data.asString}")
+    }
+
     resp
   }
 

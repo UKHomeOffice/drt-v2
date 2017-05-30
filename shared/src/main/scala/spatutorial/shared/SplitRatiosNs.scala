@@ -2,10 +2,11 @@ package drt.shared
 
 object SplitRatiosNs {
 //  type SplitRatios = List[SplitRatio]
-  case class SplitRatios(splits: List[SplitRatio]=Nil)
+  case class SplitRatios(splits: List[SplitRatio]=Nil, origin: String)
 
   object SplitRatios {
-    def apply(ratios: SplitRatio*): SplitRatios = SplitRatios(ratios.toList)
+    def apply(origin: String, ratios: SplitRatio*): SplitRatios = SplitRatios(ratios.toList, origin)
+    def apply(origin: String, ratios: List[SplitRatio]): SplitRatios = SplitRatios(ratios.toList, origin)
   }
   case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
 }

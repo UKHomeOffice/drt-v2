@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import akka.persistence._
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import services.SDate
+import services.{CSVPassengerSplitsProvider, SDate, SplitsProvider}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared._
 import services.SDate.implicits._
@@ -25,6 +25,7 @@ import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsMessage}
 import drt.shared.ApiFlight
 import actors.FlightMessageConversion._
 import com.typesafe.config.ConfigFactory
+import drt.shared.PaxTypes.EeaMachineReadable
 import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
 
 import scala.util.{Success, Try}
@@ -148,6 +149,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
     log.error(cause, "recovery failed in flightsActors")
   }
 
+  val csvProvider = SplitsProvider.csvProvider
 
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights) =>
@@ -177,21 +179,32 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
         val AdvPaxInfo = "advPaxInfo"
         FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
           case Some((carrierCode, voyageNumber)) =>
-
             val future = splitsActor ? ReportVoyagePaxSplit(flight.AirportID,
               flight.Operator, voyageNumber, scheduledDate)
             future map {
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
                 val paxSplits = vps.paxSplits
-                ApiFlightWithSplits(flight, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo))
+                //todo this should be injected:
+                val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvProvider(flight), 0.6)
+                val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(vps, egatePercentage)
+                log.info(s"applying egate percentage $voyagePaxSplitsWithEgatePercentage")
+                ApiFlightWithSplits(flight,
+                  List(
+                    ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo),
+                    ApiSplits(
+                      voyagePaxSplitsWithEgatePercentage.paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)),
+                      s"ApiSplitsWithCsvPercentage of $egatePercentage"),
+                    calcCsvApiSplits(flight)
+                  ))
               case notFound: FlightNotFound =>
                 log.info(s"notgot splits for ${flight}")
-                ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo)) //Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
+                ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo) :: calcCsvApiSplits(flight) :: Nil) //Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
             }
           case None =>
             log.info(s"couldnot parse IATA for ${flight}")
-            Future.successful(ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo))) //Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
+            //todo this was supposed to be an Either!
+            Future.successful(ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo) :: Nil)) //Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
 
         }
       }
@@ -228,6 +241,15 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
 
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
+  }
+
+  private def calcCsvApiSplits(flight: ApiFlight) = {
+    val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvProvider(flight)
+
+    val apiPaxAndQueueRatios: Option[List[ApiPaxTypeAndQueueCount]] = csvSplits.map(s => s.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100)))
+    val toList: List[ApiPaxTypeAndQueueCount] = apiPaxAndQueueRatios.toList.flatten
+    val csvApiSplits = ApiSplits(toList, "CsvSplits (these are a percentage!): " + csvSplits.map(_.origin), splitStyle = Percentage)
+    csvApiSplits
   }
 
   private def requestCrunch(newFlights: List[ApiFlight]) = {

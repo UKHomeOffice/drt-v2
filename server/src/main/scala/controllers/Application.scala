@@ -3,6 +3,7 @@ package controllers
 import java.nio.ByteBuffer
 
 import actors.{CrunchActor, FlightsActor, GetFlights, GetFlightsWithSplits}
+import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
 import akka.stream.Materializer
@@ -111,6 +112,7 @@ trait SystemActors extends Core {
   val flightsActorAskable: AskableActorRef = flightsActor
 
   def splitsProviders(): List[SplitsProvider]
+
   def flightWalkTimeProvider(flight: ApiFlight): Millis
 }
 
@@ -137,8 +139,21 @@ trait ProdPassengerSplitProviders {
 
   import scala.concurrent.ExecutionContext.global
 
-  val apiSplitsProvider = (flight: ApiFlight) => AdvPaxSplitsProvider.splitRatioProvider(airportConfig.portCode)(flightPassengerSplitReporter)(flight)(timeout, global)
-  override val splitsProviders = List(apiSplitsProvider, SplitsProvider.csvProvider, SplitsProvider.defaultProvider(airportConfig))
+  val csvprovider: (ApiFlight) => Option[SplitRatios] = SplitsProvider.csvProvider
+
+  def egatePercentageProvider(apiFlight: ApiFlight): Double = {
+    log.info(s"looking for egate split for $apiFlight")
+    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvprovider(apiFlight), 0.6)
+  }
+
+  def apiSplitsProv(flight: ApiFlight): Option[SplitRatios] =
+    AdvPaxSplitsProvider.splitRatioProviderWithCsvEgatePercentage(
+      airportConfig.portCode)(
+      flightPassengerSplitReporter)(
+      egatePercentageProvider)(flight)(timeout, global)
+
+  val apiSplitsProvider: (ApiFlight) => Option[SplitRatios] = (flight: ApiFlight) => apiSplitsProv(flight)
+  override val splitsProviders = List(apiSplitsProvider, csvprovider, SplitsProvider.defaultProvider(airportConfig))
 }
 
 trait ImplicitTimeoutProvider {
@@ -175,12 +190,8 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  val flightPaxFlowCalculator = PaxFlow.makeFlightPaxFlowCalculator(
-    PaxFlow.splitRatioForFlight(splitsProviders),
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
-
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
-    override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = flightPaxFlowCalculator(flight)
+    override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 
@@ -253,7 +264,7 @@ class Application @Inject()(
 
   val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
   val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  afp.beginPolling(
+  val pollingDone: Future[Done] = afp.beginPolling(
     SimpleAtmosReader(bucket, atmosHost, log),
     ctrl.flightPassengerSplitReporter,
     afp.previousDayDqFilename(SDate.now()),
@@ -261,6 +272,10 @@ class Application @Inject()(
     afp.tickingSource(1 seconds, 1 minutes),
     batchAtMost = 400 seconds)
 
+  pollingDone.onComplete(
+    pollingCompletion =>
+      log.warning(s"Atmos Polling completed with ${pollingCompletion}")
+  )
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))
   }

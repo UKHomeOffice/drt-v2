@@ -29,6 +29,7 @@ import scala.concurrent.duration._
 
 object CrunchTests {
   val airportConfig = airportConfigForHours(1)
+  val AirportConfigOrigin = "Airport Config"
 
   def airportConfigForHours(hours: Int) = {
     val seqOfHoursInts = List.fill[Int](hours) _
@@ -48,6 +49,7 @@ object CrunchTests {
       firstPaxOffMillis = 0L,
       defaultWalkTimeMillis = 0L,
       defaultPaxSplits = SplitRatios(
+        AirportConfigOrigin,
         SplitRatio(eeaMachineReadableToDesk, 0.4875),
         SplitRatio(eeaMachineReadableToEGate, 0.1625),
         SplitRatio(eeaNonMachineReadableToDesk, 0.1625),

@@ -1,38 +1,73 @@
 package services
 
 import com.typesafe.config.ConfigFactory
+import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PaxTypes.EeaMachineReadable
+import drt.shared.Queues.{EGate, EeaDesk}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 
+object CSVPassengerSplitsProvider {
+  def egatePercentageFromSplit(split: Option[SplitRatios], defaultPct: Double) = {
+    split
+      .map(_.splits
+        .find(p => p.paxType.queueType == Queues.EGate)
+        .map(_.ratio).getOrElse(defaultPct)).getOrElse(defaultPct)
+  }
+
+  def applyEgatesSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], egatePct: Double): List[SplitsPaxTypeAndQueueCount] = {
+    ptaqc.flatMap {
+      case s@SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count) =>
+        val eeaDeskPax = Math.round(count * (1 - egatePct)).toInt
+        s.copy(queueType = EGate, paxCount = count - eeaDeskPax) ::
+          s.copy(queueType = EeaDesk, paxCount = eeaDeskPax) :: Nil
+      case s => s :: Nil
+    }
+  }
+
+  def applyEgates(vps: VoyagePaxSplits, egatePct: Double): VoyagePaxSplits = vps.copy(paxSplits = applyEgatesSplits(vps.paxSplits, egatePct))
+
+}
+
 case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
   private val log = LoggerFactory.getLogger(getClass)
 
-  log.info("Using CSV Splits")
-
-  lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
+  log.info("Initialising CSV Splits")
+  val SplitOrigin = "CSV"
+  lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = {
+    val splitsLines = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
+    log.info(s"Initialising CSV Splits will use $splitsLines")
+    splitsLines
+  }
 
   def splitRatioProvider: (ApiFlight => Option[SplitRatios]) = flight => {
     val flightDate = DateTime.parse(flight.SchDT)
-    flightDate.monthOfYear.getAsText
+    //todo - we should profile this, but it's likely much more efficient to store in nested map IATA -> DayOfWeek -> MonthOfYear
+    //todo OR IATA -> (DayOfWeek, MonthOfYear)
+    val iata = flight.IATA
+    val dayOfWeek = flightDate.dayOfWeek.getAsText
+    val month = flightDate.monthOfYear.getAsText
 
-    val foundFlights = flightPaxSplits.filter(row =>
-      row.flightCode == flight.IATA &&
-      row.dayOfWeek == flightDate.dayOfWeek.getAsText &&
-      row.month == flightDate.monthOfYear.getAsText
-    ).toList
-
-    val splits: Option[SplitRatios] = foundFlights match {
-      case head :: Nil =>
-        log.info(s"Found split for $flight")
-        Option(SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(head)))
-      case _ =>
-        log.info(s"Failed to find split for $flight in CSV")
-        None
+    val splitOpt = getFlightSplitRatios(iata, dayOfWeek, month)
+    splitOpt match {
+      case Some(sr) => log.info(s"Found SplitRatio for $flight as $sr")
+      case None => log.info(s"Failed to find split for $flight")
     }
-    splits
+    splitOpt
   }
+
+  def getFlightSplitRatios(iata: String, dayOfWeek: String, month: String): Option[SplitRatios] = {
+    flightPaxSplits.find(row => {
+      row.flightCode == iata &&
+        row.dayOfWeek == dayOfWeek &&
+        row.month == month
+    }
+    ).map(matchFlight => SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight), origin = SplitOrigin))
+  }
+
+
 }
 
 object CsvPassengerSplitsReader {
@@ -64,26 +99,26 @@ object CsvPassengerSplitsReader {
   }
 
   case class FlightPaxSplit(
-                          flightCode: String,
-                          originPort: String,
-                          eeaMachineReadable: Int,
-                          eeaNonMachineReadable: Int,
-                          nonVisaNationals: Int,
-                          visaNationals: Int,
-                          eeaMachineReadableToEgate: Int,
-                          eeaMachineReadableToDesk: Int,
-                          eeaNonMachineReadableToDesk: Int,
-                          nonVisaToFastTrack: Int,
-                          nonVisaToNonEEA: Int,
-                          visaToFastTrack: Int,
-                          visaToNonEEA: Int,
-                          transfers: Int,
-                          dayOfWeek: String,
-                          month: String,
-                          port: String,
-                          terminal: String,
-                          originCountryCode: String
-                        )
+                             flightCode: String,
+                             originPort: String,
+                             eeaMachineReadable: Int,
+                             eeaNonMachineReadable: Int,
+                             nonVisaNationals: Int,
+                             visaNationals: Int,
+                             eeaMachineReadableToEgate: Int,
+                             eeaMachineReadableToDesk: Int,
+                             eeaNonMachineReadableToDesk: Int,
+                             nonVisaToFastTrack: Int,
+                             nonVisaToNonEEA: Int,
+                             visaToFastTrack: Int,
+                             visaToNonEEA: Int,
+                             transfers: Int,
+                             dayOfWeek: String,
+                             month: String,
+                             port: String,
+                             terminal: String,
+                             originCountryCode: String
+                           )
 
   def flightPaxSplitsFromLines(flightPaxSplits: Seq[String]): Seq[FlightPaxSplit] = {
 

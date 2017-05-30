@@ -83,7 +83,7 @@ object FlightsTableTests extends TestSuite {
       )
 
       def withSplits(flights: Seq[ApiFlight]) = {
-        FlightsWithSplits(flights.map(ApiFlightWithSplits(_, ApiSplits(List(), ""))).toList)
+        FlightsWithSplits(flights.map(ApiFlightWithSplits(_, ApiSplits(List(), "") :: Nil)).toList)
       }
 
       "FlightsTables" - {

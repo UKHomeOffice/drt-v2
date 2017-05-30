@@ -115,7 +115,7 @@ TerminalPage {
 object FlightComponents {
 
   def paxComp(maxFlightPax: Int = 853)(flight: ApiFlight, apiSplits: ApiSplits): TagMod = {
-    val apiPax: Int = apiSplits.splits.map(_.paxCount).sum
+    val apiPax: Int = apiSplits.splits.map(_.paxCount.toInt).sum
 
     val (paxNos, paxClass, paxWidth) = if (apiPax > 0)
       (apiPax, "pax-api", paxBarWidth(maxFlightPax, apiPax))

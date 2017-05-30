@@ -43,7 +43,7 @@ object VoyageManifestParser {
 
     def passengerInfos: Seq[PassengerInfo] = PassengerList.map(_.toPassengerInfo)
 
-    def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
+    private def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
 
     def summary: String = s"${DeparturePortCode}->${ArrivalPortCode}/${CarrierCode}${VoyageNumber}@${scheduleDateTimeString}"
   }

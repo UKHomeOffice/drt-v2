@@ -1,9 +1,11 @@
 package services
 
+import drt.services.AirportConfigHelpers
 import org.specs2.mutable.SpecificationLike
 import passengersplits.core.PassengerInfoRouterActor
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import services.WorkloadCalculatorTests.TestAirportConfig
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -11,7 +13,7 @@ import scala.collection.mutable
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
 
-class PaxSplitsProviderTests extends SpecificationLike {
+class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers {
 
   def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
     ApiFlight(
@@ -40,8 +42,9 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
   "Voyage Number should be padded to 4 digits" >> {
     "3 digits should pad to 4" in {
-    PassengerInfoRouterActor.padTo4Digits("123") === "0123"}
-    "4 digitis should remain 4 " in {
+      PassengerInfoRouterActor.padTo4Digits("123") === "0123"
+    }
+    "4 digits should remain 4 " in {
       PassengerInfoRouterActor.padTo4Digits("0123") === "0123"
     }
     "we think 5 is invalid, but we should return unharmed" in {
@@ -52,7 +55,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
   "Splits from multiple providers" >> {
 
     "Given 1 provider with splits for a flight, when we ask for splits then we should see Some()" >> {
-      def provider(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios())
+      def provider(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios(TestAirportConfig))
 
       val providers: List[(ApiFlight) => Some[SplitRatios]] = List(provider)
 
@@ -64,7 +67,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
     }
 
     "Given 2 providers, the 1st with splits and 2nd without, when we ask for splits then we should see Some()" >> {
-      def providerWith(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios())
+      def providerWith(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios(TestAirportConfig))
 
       def providerWithout(apiFlight: ApiFlight) = None
 
@@ -80,7 +83,7 @@ class PaxSplitsProviderTests extends SpecificationLike {
     "Given 2 providers, the 1st without splits and 2nd with, when we ask for splits then we should see Some()" >> {
       def providerWith(apiFlight: ApiFlight) = None
 
-      def providerWithout(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios())
+      def providerWithout(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios(TestAirportConfig))
 
       val providers: List[(ApiFlight) => Option[SplitRatios]] = List(providerWith, providerWithout)
 
@@ -93,9 +96,11 @@ class PaxSplitsProviderTests extends SpecificationLike {
 
     "Given a stateful, non-idempotent provider, we get the different result each time" >> {
       val ratios1 = SplitRatios(
+        TestAirportConfig,
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "eea"), 23),
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "visa"), 10))
       val ratios2 = SplitRatios(
+        TestAirportConfig,
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "eea"), 4),
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, "visa"), 3))
 
