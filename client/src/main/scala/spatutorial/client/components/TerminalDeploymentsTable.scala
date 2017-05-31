@@ -218,7 +218,7 @@ object TerminalDeploymentsTable {
       })
       subHeadingLevel2 :+
         <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks") :+
-        <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on shifts entered")
+        <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on assignments entered")
     }
 
     private def thHeaderGroupStart(title: String, xs: TagMod*): VdomTagOf[TableHeaderCell] = {

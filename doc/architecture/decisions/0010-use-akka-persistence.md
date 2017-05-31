@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-We're storing state in actors (A flights actor, a shifts actor), to decrease lag on startup, use akka persistence. 
+We're storing state in actors (A flights actor, a staffAssignments actor), to decrease lag on startup, use akka persistence. 
 We don't have a need (yet) for a database for the live system. 
 
 ## Decision

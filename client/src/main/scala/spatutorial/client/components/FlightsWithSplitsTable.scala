@@ -52,8 +52,9 @@ object FlightsWithSplitsTable {
     .renderP((_$, props) => {
       log.info(s"sorting flights")
       val flightsWithSplits = props.flightsWithSplits
-      val flights = flightsWithSplits.flights
-      val sortedFlights = flights.sortBy(_.apiFlight.SchDT) //todo move this closer to the model
+      val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[ApiFlight])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
+
+      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.SchDT) //todo move this closer to the model
       log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
@@ -77,9 +78,9 @@ object FlightsWithSplitsTable {
               )),
               <.tbody(
                 sortedFlights.zipWithIndex.map {
-                  case (flightWithSplits, idx) => {
+                  case ((flightWithSplits, codeShares), idx) => {
                     FlightTableRow.tableRow(FlightTableRow.Props(
-                      flightWithSplits, idx,
+                      flightWithSplits, codeShares, idx,
                       timelineComponent = timelineComponent,
                       originMapper = originMapper,
                       paxComponent = paxComponent,
@@ -104,6 +105,7 @@ object FlightsWithSplitsTable {
     .build
 
 }
+
 
 object FlightTableComponents {
 
@@ -268,6 +270,7 @@ object FlightTableRow {
   type OriginMapperF = (String) => VdomNode
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
+                   codeShares: Set[ApiFlight],
                    idx: Int,
                    timelineComponent: Option[(ApiFlight) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
@@ -297,12 +300,15 @@ object FlightTableRow {
     .initialState[RowState](RowState(false))
     .renderPS((_$, props, state) => {
       val idx = props.idx
+      val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
+      val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
       log.info(s"rendering flight row $idx ${flight.toString}")
       Try {
         val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+
         val splitsComponents = flightSplitsList map {
           flightSplits => {
             val splitStyle = flightSplits.splitStyle
@@ -343,7 +349,7 @@ object FlightTableRow {
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-          <.td(^.key := flight.FlightID.toString + "-flightNo", flight.ICAO),
+          <.td(^.key := flight.FlightID.toString + "-flightNo", allCodes.mkString(" - ")),
           <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
           <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
           <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
@@ -363,9 +369,7 @@ object FlightTableRow {
     )
     .componentWillReceiveProps(i => {
       if (i.nextProps != i.currentProps)
-        log.info(s"row ${
-          i.nextProps
-        } changed")
+        log.info(s"row ${i.nextProps} changed")
       i.setState(RowState(i.nextProps != i.currentProps))
     })
     .componentDidMount(p => Callback.log(s"row didMount $p"))

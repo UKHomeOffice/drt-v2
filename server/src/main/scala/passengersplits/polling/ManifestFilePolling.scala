@@ -175,11 +175,26 @@ object AtmosManifestFilePolling {
     def latestFile = latestFileName
   }
 
-
   def runSingleBatch(tickId: TickId, zipFilenamesSource: Source[String, NotUsed], unzipFileContent: UnzipFileContentFunc[String],
                      flightPassengerReporter: ActorRef, batchFileState: BatchFileState,
                      batchAtMost: FiniteDuration,
                      voyageManifestFilter: (VoyageManifest) => Boolean)(implicit actorSystem: ActorSystem, materializer: Materializer): Unit = {
+    Try {
+      innerRunSingleBatch(
+        tickId, zipFilenamesSource, unzipFileContent, flightPassengerReporter, batchFileState, batchAtMost,
+        voyageManifestFilter)
+    } match {
+      case Success(s) => log.info(s"tickId: $tickId runSingleBatch success with $s")
+      case Failure(f) => log.warn(s"tickId: $tickId runSingleBatch failure with $f", f)
+    }
+  }
+
+
+  def innerRunSingleBatch(tickId: TickId, zipFilenamesSource: Source[String, NotUsed], unzipFileContent: UnzipFileContentFunc[String],
+                          flightPassengerReporter: ActorRef, batchFileState: BatchFileState,
+                          batchAtMost: FiniteDuration,
+                          voyageManifestFilter: (VoyageManifest) => Boolean)(implicit actorSystem: ActorSystem, materializer: Materializer): Unit = {
+
     log.info(s"tickId: $tickId Starting batch")
     val futureZipFiles: Future[Seq[String]] = zipFilenamesSource.runWith(Sink.seq)
 

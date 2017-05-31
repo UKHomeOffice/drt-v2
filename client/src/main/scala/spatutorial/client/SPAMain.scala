@@ -167,6 +167,7 @@ object SPAMain extends js.JSApp {
     GetWorkloads("", ""),
     RequestFlights(0, 0),
     GetShifts(),
+    GetFixedPoints(),
     GetStaffMovements()
   )
 
@@ -223,7 +224,6 @@ object SPAMain extends js.JSApp {
     router().renderIntoDOM(dom.document.getElementById("root"))
   }
 }
-
 
 object WebpackBootstrapRequire {
 

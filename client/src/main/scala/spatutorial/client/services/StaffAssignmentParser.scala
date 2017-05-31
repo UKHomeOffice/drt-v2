@@ -52,11 +52,9 @@ object JSDateConversions {
       def millisSinceEpoch: Long = date.getTime().toLong
     }
 
-    def asUTCDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
-
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = asUTCDate(new Date(y, m - 1, d, h, mm))
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
 
     def parse(dateString: String): SDateLike = new Date(dateString)
 
@@ -65,7 +63,7 @@ object JSDateConversions {
       d.setHours(0)
       d.setMinutes(0)
       d.setMilliseconds(0)
-      JSSDate(asUTCDate(d))
+      JSSDate(d)
     }
 
     def now(): SDateLike = {
@@ -73,10 +71,9 @@ object JSDateConversions {
       JSSDate(d)
     }
   }
-
 }
 
-case class Shift(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
+case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
   def toCsv = {
     val startDate: SDateLike = SDate(startDt)
     val endDate: SDateLike = SDate(endDt)
@@ -88,11 +85,11 @@ case class Shift(name: String, terminalName: TerminalName, startDt: MilliDate, e
   }
 }
 
-object Shift {
+object StaffAssignment {
 
   import JSDateConversions._
 
-  def apply(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[Shift] = {
+  def apply(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
@@ -108,7 +105,7 @@ object Shift {
       endDt <- endDtTry
       staffDelta: Int <- staffDeltaTry
     } yield {
-      Shift(name, terminalName, startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta)
+      StaffAssignment(name, terminalName, startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta)
     }
   }
 
@@ -131,57 +128,58 @@ object Shift {
   }
 }
 
-case class ShiftParser(rawShifts: String) {
-  val lines = rawShifts.split("\n")
-  val parsedShifts: Array[Try[Shift]] = lines.map(l => {
+case class StaffAssignmentParser(rawStaffAssignments: String) {
+  val lines = rawStaffAssignments.split("\n")
+  val parsedAssignments: Array[Try[StaffAssignment]] = lines.map(l => {
     l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
   })
     .filter(parts => parts.length == 5 || parts.length == 6)
     .map {
       case List(description, terminalName, startDay, startTime, endTime) =>
-        Shift(description, terminalName, startDay, startTime, endTime)
+        StaffAssignment(description, terminalName, startDay, startTime, endTime)
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
-        Shift(description, terminalName, startDay, startTime, endTime, staffNumberDelta)
+        StaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta)
     }
 }
 
-case class ShiftService(shifts: Seq[Shift]) {
-  def staffAt(date: MilliDate): Int = shifts.filter(shift =>
-    shift.startDt <= date && date <= shift.endDt).map(_.numberOfStaff).sum
-  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = shifts.filter(shift => {
-    shift.startDt <= date && date <= shift.endDt && shift.terminalName == terminalName
+case class StaffAssignmentService(assignments: Seq[StaffAssignment]) {
+  def staffAt(date: MilliDate): Int = assignments.filter(assignment =>
+    assignment.startDt <= date && date <= assignment.endDt).map(_.numberOfStaff).sum
+  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
+    assignment.startDt <= date && date <= assignment.endDt && assignment.terminalName == terminalName
   }).map(_.numberOfStaff).sum
 }
 
-object ShiftService {
-  def apply(shifts: Seq[Try[Shift]]): Try[ShiftService] = {
-    if (shifts.exists(_.isFailure))
-      Failure(new Exception("Couldn't parse shifts"))
+object StaffAssignmentService {
+  def apply(assignments: Seq[Try[StaffAssignment]]): Try[StaffAssignmentService] = {
+    if (assignments.exists(_.isFailure))
+      Failure(new Exception("Couldn't parse assignments"))
     else {
-      val successfulShifts = shifts.map { case Success(s) => s }
-      Success(ShiftService(successfulShifts))
+      Success(StaffAssignmentService(assignments.map { case Success(s) => s }))
     }
   }
 }
 
 object StaffMovements {
-  def shiftsToMovements(shifts: Seq[Shift]) = {
-    shifts.flatMap(shift => {
+  def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]) = {
+    staffAssignments.flatMap(assignment => {
       val uuid: UUID = UUID.randomUUID()
-      StaffMovement(shift.terminalName, shift.name + " start", time = shift.startDt, shift.numberOfStaff, uuid) ::
-        StaffMovement(shift.terminalName, shift.name + " end", time = shift.endDt, -shift.numberOfStaff, uuid) :: Nil
+      StaffMovement(assignment.terminalName, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid) ::
+        StaffMovement(assignment.terminalName, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid) :: Nil
     }).sortBy(_.time)
   }
 
   def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate) = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
 
-  def staffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(dateTime: MilliDate) = {
-    val baseStaff = shiftService.staffAt(dateTime)
-    baseStaff + adjustmentsAt(movements)(dateTime)
+  def staffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentService)(movements: Seq[StaffMovement])(dateTime: MilliDate) = {
+    val baseStaff = assignmentService.staffAt(dateTime)
+    val fixedPoints = fixedPointService.staffAt(dateTime)
+    baseStaff - fixedPoints + adjustmentsAt(movements)(dateTime)
   }
 
-  def terminalStaffAt(shiftService: ShiftService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
-    val baseStaff = shiftService.terminalStaffAt(terminalName, dateTime)
-    baseStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
+  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
+    val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
+    val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTime)
+    baseStaff - fixedPointStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
   }
 }

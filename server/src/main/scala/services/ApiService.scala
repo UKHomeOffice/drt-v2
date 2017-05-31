@@ -7,7 +7,7 @@ import akka.actor.ActorRef
 import akka.event.DiagnosticLoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared._
@@ -99,6 +99,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
     with ActorBackedCrunchService
     with CrunchResultProvider
     with ShiftPersistence
+    with FixedPointPersistence
     with StaffMovementsPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
@@ -119,8 +120,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
         Left(fnf)
       case Failure(f) =>
         throw f
-    }
-    )
+    })
   }
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
