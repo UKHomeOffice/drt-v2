@@ -31,7 +31,7 @@ object TerminalHeatmaps {
               val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
               log.info(s"Got max workload of ${maxAcrossAllSeries}")
               <.div(
-                Heatmap.heatmap(Heatmap.Props(series = heatMapSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+                Heatmap.heatmap(Heatmap.Props(series = heatMapSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
               )
             case None =>
               <.div(s"No workloads for ${terminalName}")
@@ -60,7 +60,7 @@ object TerminalHeatmaps {
           val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
           log.info(s"Got max waittime of ${maxAcrossAllSeries}")
           <.div(
-            Heatmap.heatmap(Heatmap.Props(series = queueSeries, scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+            Heatmap.heatmap(Heatmap.Props(series = queueSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
           )
         }))
     })
@@ -72,10 +72,10 @@ object TerminalHeatmaps {
       case (queueName, Ready((Ready(crunchResult)))) =>
         val series = Heatmap.seriesFromCrunchResult(crunchResult)
         Series(terminalName + "/" + queueName, series.map(_.toDouble))
-    }.toList)
+    }.toList.sortBy(_.name))
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
-        Heatmap.heatmap(Heatmap.Props(series = serMP(), scaleFunction = Heatmap.bucketScale(20)))
+        Heatmap.heatmap(Heatmap.Props(series = serMP().sortBy(_.name), scaleFunction = Heatmap.bucketScale(20)))
       )
     })
   }
@@ -98,7 +98,7 @@ object TerminalHeatmaps {
               seriesPot.renderReady(series => {
                 val maxRatioAcrossAllSeries = emptySafeMax(series.map(_.data.max)) + 1
                 <.div(
-                  Heatmap.heatmap(Heatmap.Props(series = series, scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries), valueDisplayFormatter = v => f"${v}%.1f")))
+                  Heatmap.heatmap(Heatmap.Props(series = series.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxRatioAcrossAllSeries), valueDisplayFormatter = v => f"${v}%.1f")))
               }))
           })
         )
