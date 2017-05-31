@@ -52,11 +52,9 @@ object JSDateConversions {
       def millisSinceEpoch: Long = date.getTime().toLong
     }
 
-    def asUTCDate(d: Date): Date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
-
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = asUTCDate(new Date(y, m - 1, d, h, mm))
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
 
     def parse(dateString: String): SDateLike = new Date(dateString)
 
@@ -65,7 +63,7 @@ object JSDateConversions {
       d.setHours(0)
       d.setMinutes(0)
       d.setMilliseconds(0)
-      JSSDate(asUTCDate(d))
+      JSSDate(d)
     }
 
     def now(): SDateLike = {
