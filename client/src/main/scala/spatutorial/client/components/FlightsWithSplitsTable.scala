@@ -257,67 +257,6 @@ object FlightTableComponents {
     actClass
   }
 
-  def widthStyle(width: Int) = js.Dictionary("width" -> s"$width%").asInstanceOf[js.Object]
-
-  def paxComponent(): js.Function = (props: js.Dynamic) => {
-
-    val paxRegex = "([0-9]+)(.)".r
-    val paxAndOrigin = props.data match {
-      case po: PaxAndOrigin =>
-        val origin = po.origin
-        val pax = po.pax.toDouble
-
-        val className: TagMod = ^.className := s"pax-${origin}"
-        val title: TagMod = ^.title := s"from ${origin}"
-        val relativePax = Math.floor(100 * (pax / 853)).toInt
-        val style = widthStyle(relativePax)
-        <.div(po.pax, className, title, ^.style := style)
-      case e =>
-        logger.log.warn(s"Expected a PaxAndOrigin but got $e")
-        <.div("unknown")
-    }
-    paxAndOrigin.render
-  }
-
-  def splitsComponent(): js.Function = (props: js.Dynamic) => {
-    def heightStyle(height: String) = js.Dictionary("height" -> height).asInstanceOf[js.Object]
-
-    val splitLabels = Array("eGate", "EEA", "EEA NMR", "Visa", "Non-visa")
-    val splits = props.data.toString.split("\\|").map(_.toInt)
-    val desc = 0 to 4 map (idx => s"${splitLabels(idx)}: ${splits(idx)}")
-    val sum = splits.sum
-    val pc = splits.map(s => s"${(100 * s.toDouble / sum).round}%")
-    <.div(^.className := "splits", ^.title := desc.mkString("\n"),
-      <.div(^.className := "graph",
-        <.div(^.className := "bar", ^.style := heightStyle(pc(0))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(1))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(2))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(3))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
-      )).render
-  }
-
-  @ScalaJSDefined
-  class PaxAndOrigin(val pax: Int, val origin: String) extends js.Object
-
-  object PaxAndOrigin {
-    def apply(paxNos: Int, origin: String) = {
-      new PaxAndOrigin(paxNos, origin)
-    }
-  }
-
-  def paxOriginDisplay(max: Int, act: Int, api: Int): PaxAndOrigin = {
-    if (api > 0) PaxAndOrigin(api, "api")
-    else if (act > 0) PaxAndOrigin(act, "port")
-    else PaxAndOrigin(max, "capacity")
-  }
-
-  def paxDisplay(max: Int, act: Int, api: Int): String = {
-    if (api > 0) s"${api}A"
-    else if (act > 0) s"${act}B"
-    else s"${max}C"
-  }
-
   val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
 }
 
@@ -391,7 +330,7 @@ object FlightTableRow {
                 val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
                   case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
                 }
-                <.div(props.splitsGraphComponent(splitTotal, splitsAndLabels), flightSplits.source)
+                <.div(props.splitsGraphComponent(splitTotal, splitsAndLabels), <.span(^.className := "flightSplitSource", flightSplits.source))
               }
             }
             vdomElement
@@ -400,6 +339,7 @@ object FlightTableRow {
 
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+        val apiSplits = flightWithSplits.splits.find(splits => splits.source == SplitRatiosNs.SplitSources.AdvPaxInfo).getOrElse(ApiSplits(Nil, "no splits - client"))
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -412,7 +352,7 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, flightWithSplits.splits.headOption.getOrElse(ApiSplits(Nil, "no splits - client")))),
+          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
           <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {
         case e => log.error(s"couldn't make flight row $e")

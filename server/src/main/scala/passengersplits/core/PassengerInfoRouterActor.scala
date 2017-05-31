@@ -222,7 +222,7 @@ class SingleFlightActor
 
   def calculateAndSendPaxSplits(replyTo: ActorRef,
                                 port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyageManifest): Unit = {
-    val splits: VoyagePaxSplits = calculateFlightSplits(port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight)
+    val splits: VoyagePaxSplits = calculateFlightSplits(port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight, flightEgatePercentage = 0)
     log.info(s"$self ${flight.summary} calculated splits to $splits")
 
     replyTo ! splits
