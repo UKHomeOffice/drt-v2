@@ -11,6 +11,7 @@ import services.SplitsProvider
 import drt.shared.FlightsApi.Flights
 import drt.shared.{AirportConfig, ApiFlight, MilliDate, StaffMovement}
 import akka.pattern._
+import controllers.SystemActors.SplitsProvider
 import org.joda.time.DateTime
 import services.inputfeeds.CrunchTests
 
@@ -23,8 +24,9 @@ import scala.util.Success
 class FlightsActorSpec extends Specification {
   sequential
 
+  val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
   private def flightsActor(system: ActorSystem) = {
-    system.actorOf(Props(classOf[FlightsActor], crunchActor(system), Actor.noSender), "FlightsActor")
+    system.actorOf(Props(classOf[FlightsActor], crunchActor(system), Actor.noSender, testSplitsProvider), "FlightsActor")
   }
 
   private def crunchActor(system: ActorSystem) = {

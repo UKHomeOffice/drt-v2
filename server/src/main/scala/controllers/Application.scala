@@ -107,10 +107,11 @@ trait SystemActors extends Core {
     () => DateTime.now()), "crunchActor")
 
   val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
-  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter), "flightsActor")
+  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
 
+  def csvSplitsProvider: SplitsProvider
   def splitsProviders(): List[SplitsProvider]
 
   def flightWalkTimeProvider(flight: ApiFlight): Millis
@@ -139,11 +140,11 @@ trait ProdPassengerSplitProviders {
 
   import scala.concurrent.ExecutionContext.global
 
-  val csvprovider: (ApiFlight) => Option[SplitRatios] = SplitsProvider.csvProvider
+  override val csvSplitsProvider: (ApiFlight) => Option[SplitRatios] = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: ApiFlight): Double = {
     log.info(s"looking for egate split for $apiFlight")
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvprovider(apiFlight), 0.6)
+    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
   }
 
   def apiSplitsProv(flight: ApiFlight): Option[SplitRatios] =
@@ -153,7 +154,7 @@ trait ProdPassengerSplitProviders {
       egatePercentageProvider)(flight)(timeout, global)
 
   val apiSplitsProvider: (ApiFlight) => Option[SplitRatios] = (flight: ApiFlight) => apiSplitsProv(flight)
-  override val splitsProviders = List(apiSplitsProvider, csvprovider, SplitsProvider.defaultProvider(airportConfig))
+  override val splitsProviders = List(apiSplitsProvider, csvSplitsProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
 trait ImplicitTimeoutProvider {

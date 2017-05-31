@@ -78,7 +78,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
 
         result === Some(SplitRatios(
-          TestAirportConfig,
+          "CSV",
           SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.291),
           SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.6789999999999999),
           SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk), 0.0),

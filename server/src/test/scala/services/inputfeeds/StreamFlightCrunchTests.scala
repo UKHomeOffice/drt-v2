@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.testkit.TestSubscriber.Probe
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
+import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
@@ -382,12 +383,13 @@ class StreamFlightCrunchTests
 
   val log = LoggerFactory.getLogger(getClass)
 
+  val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       import WorkloadCalculatorTests._
-      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender), "flightsActor")
+      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights
@@ -403,7 +405,6 @@ class StreamFlightCrunchTests
 
         val flights = Flights(
           List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T00:31")))
-
         crunchActor ! PerformCrunchOnFlights(flights.flights)
         crunchActor.tell(GetLatestCrunch("A1", "eeaDesk"), context.testActor)
 

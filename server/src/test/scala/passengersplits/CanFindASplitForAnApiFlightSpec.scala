@@ -41,10 +41,7 @@ class CanFindASplitForAnApiFlightSpec extends
       "When we ask for a report of voyage pax splits then we should see pax splits of the 1 passenger in eeaDesk queue" in {
         val flightScheduledDateTime = SDate(2017, 4, 2, 15, 33)
         flightPassengerReporter ! ReportVoyagePaxSplit("LGW", "EZ", "12345", flightScheduledDateTime)
-        val expectedPaxSplits = List(
-          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
-          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 0)
-        )
+        val expectedPaxSplits = List(SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1))
         expectMsg(VoyagePaxSplits("LGW", "EZ", "12345", 1, flightScheduledDateTime, expectedPaxSplits))
         success
       }
@@ -62,7 +59,6 @@ class CanFindASplitForAnApiFlightSpec extends
 
         val expectedPaxSplits = List(
           SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
-          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 0),
           SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
         )
         expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
@@ -81,14 +77,13 @@ class CanFindASplitForAnApiFlightSpec extends
 
         val expectedPaxSplits = List(
           SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
-          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 0),
           SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
         )
         expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
         success
       }
     }
-    "Given a single flight STN BA978 flight, with 100 passengers, and a default egate usage of 60%" in {
+    "Given a single flight STN BA978 flight, with 100 passengers, and a default egate usage of 60% - " in  {
       "When we ask for a report of voyage pax splits" in {
         flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BCN", "978", "BA", "2015-07-12", "10:22:00",
           List.tabulate(80)(passengerNumber => PassengerInfoJson(Some("P"), "GBR", "EEA", Some((passengerNumber % 60 + 16).toString))) :::
@@ -102,7 +97,7 @@ class CanFindASplitForAnApiFlightSpec extends
           SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
         )))
         success
-      }
+      }.pendingUntilFixed("ignore - possibly delete - we have disabled AdvPaxInfo egate")
     }
 
     "Given no flights" in {

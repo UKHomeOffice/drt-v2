@@ -29,6 +29,7 @@ import actors.FlightMessageConversion._
 import com.typesafe.config.ConfigFactory
 import drt.shared.PaxTypes.EeaMachineReadable
 import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
+import services.SplitsProvider.SplitProvider
 
 import scala.util.{Success, Try}
 
@@ -134,7 +135,8 @@ object FlightMessageConversion {
   }
 }
 
-class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
+class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
+                   csvSplitsProvider: SplitProvider)
   extends PersistentActor
     with ActorLogging
     with FlightState
@@ -152,8 +154,8 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
     super.onRecoveryFailure(cause, event)
     log.error(cause, "recovery failed in flightsActors")
   }
-
-  val csvProvider = SplitsProvider.csvProvider
+  //todo this should be injected:
+//  val csvProvider: SplitProvider = SplitsProvider.csvProvider
 
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights) =>
@@ -188,8 +190,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
                 val paxSplits = vps.paxSplits
-                //todo this should be injected:
-                val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvProvider(flight), 0.6)
+                val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(flight), 0.6)
                 val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(vps, egatePercentage)
                 log.info(s"applying egate percentage $voyagePaxSplitsWithEgatePercentage")
                 val egateDisplayPct = Math.round(100.0 * egatePercentage).toInt
@@ -251,7 +252,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
   }
 
   private def calcCsvApiSplits(flight: ApiFlight): List[ApiSplits] = {
-    val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvProvider(flight)
+    val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvSplitsProvider(flight)
 
     val apiPaxAndQueueRatios: Option[List[ApiPaxTypeAndQueueCount]] = csvSplits.map(s => s.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100)))
     val toList: List[ApiPaxTypeAndQueueCount] = apiPaxAndQueueRatios.toList.flatten

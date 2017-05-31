@@ -100,7 +100,7 @@ object FlightsWithSplitsTable {
       }
     })
     .componentDidMount((props) => Callback.log(s"componentDidMount! $props"))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
 }
@@ -369,7 +369,7 @@ object FlightTableRow {
       i.setState(RowState(i.nextProps != i.currentProps))
     })
     .componentDidMount(p => Callback.log(s"row didMount $p"))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
 }

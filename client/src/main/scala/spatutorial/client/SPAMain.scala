@@ -197,8 +197,6 @@ object SPAMain extends js.JSApp {
     log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
-    WebpackBootstrapRequire.jQuery
-//    WebpackBootstrapRequire.Bootstrap
     ()
   }
 
