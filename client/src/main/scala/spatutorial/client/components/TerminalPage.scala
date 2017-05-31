@@ -14,6 +14,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray, html_<^}
 import org.scalajs.dom.html.Div
+import drt.client.components.FlightTableComponents
 
 import scala.util.Try
 

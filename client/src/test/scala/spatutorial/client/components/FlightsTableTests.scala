@@ -1,8 +1,7 @@
 package spatutorial.client.components
 
 import diode.data.{Pot, Ready}
-import drt.client.components.FlightsWithSplitsTable
-import drt.client.components.FlightTableComponents
+import drt.client.components.{FlightTableComponents, FlightsWithSplitsTable}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, ApiSplits}
 import japgolly.scalajs.react.component.Scala.Unmounted
