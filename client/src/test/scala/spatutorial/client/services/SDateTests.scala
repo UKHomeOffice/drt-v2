@@ -52,10 +52,10 @@ object SDateTests extends TestSuite {
       }
 
       "During BST" - {
-        "should take dates as UTC but return as local time with day, month, date, time constructor" - {
+        "should take dates as UTC and return millis since epoch as UTC" - {
           val d = SDate(2017, 3, 28, 14, 44)
-          val actual = d.toString
-          assert(actual == "2017-03-28T1544")
+          val actual = d.millisSinceEpoch
+          assert(actual == 1490708640000L)
         }
         "should take dates as UTC but return as local time with millisecond constructor" - {
           val d = SDate(MilliDate(1490708453000L)) //2017-03-28 13:40 GMT
