@@ -1,13 +1,14 @@
 package services
 
 import actors.EGateBankCrunchTransformations
+import drt.services.AirportConfigHelpers
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Seq}
 
-object EGateBanksTests extends TestSuite {
+object EGateBanksTests extends TestSuite with AirportConfigHelpers {
 
   def tests = TestSuite {
     def intoBanksOf5WithSlaOf10 = EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, 10) _
@@ -94,7 +95,7 @@ object EGateBanksTests extends TestSuite {
         queues = Map(),
         slaByQueue = Map("eeaDesk" -> 5),
         terminalNames = Seq(),
-        defaultPaxSplits = SplitRatios(),
+        defaultPaxSplits = SplitRatios(TestAirportConfig),
         defaultProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map()
       )
@@ -123,7 +124,7 @@ object EGateBanksTests extends TestSuite {
         queues = Map(),
         slaByQueue = Map("eGate" -> 5),
         terminalNames = Seq(),
-        defaultPaxSplits = SplitRatios(),
+        defaultPaxSplits = SplitRatios(TestAirportConfig),
         defaultProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map()
       )

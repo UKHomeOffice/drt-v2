@@ -1,9 +1,11 @@
 package services
 
+import drt.services.AirportConfigHelpers
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike
+import services.WorkloadCalculatorTests.TestAirportConfig
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
@@ -12,7 +14,7 @@ import scala.collection.immutable.{IndexedSeq, Iterable}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
-class WorkloadsServiceTests extends SpecificationLike {
+class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers {
   def apiFlight(iataFlightCode: String,
                 totalPax: Int, scheduledDatetime: String,
                 terminal: String
@@ -47,12 +49,16 @@ class WorkloadsServiceTests extends SpecificationLike {
       "then we should see 1 minute with 200 workload" >> {
       val wc = new WorkloadCalculator {
         def splitRatioProvider = (apiFlight: ApiFlight) => {
-          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
+          Some(SplitRatios(
+            TestAirportConfig,
+
+            SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 20d
 
         def pcpArrivalTimeProvider(flight: ApiFlight) = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+
         def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
       }
 
@@ -73,7 +79,9 @@ class WorkloadsServiceTests extends SpecificationLike {
       "then we should see each terminal's processing times applied " >> {
       val wc = new WorkloadCalculator {
         def splitRatioProvider = (apiFlight: ApiFlight) => {
-          Some(SplitRatios(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
+          Some(SplitRatios(
+            TestAirportConfig,
+            SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 1)))
         }
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
@@ -81,6 +89,7 @@ class WorkloadsServiceTests extends SpecificationLike {
         }
 
         def pcpArrivalTimeProvider(flight: ApiFlight) = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+
         def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
       }
 

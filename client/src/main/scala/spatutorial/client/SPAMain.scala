@@ -198,7 +198,6 @@ object SPAMain extends js.JSApp {
     log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
-//    WebpackBootstrapRequire.Bootstrap
     ()
   }
 
@@ -228,7 +227,11 @@ object SPAMain extends js.JSApp {
 
 object WebpackBootstrapRequire {
 
-  @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
+  @JSImport("expose-loader?jQuery!jquery", JSImport.Namespace)
+  @js.native
+  object jQuery extends js.Any
+
+ @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
   @js.native
   object Bootstrap extends js.Any
 

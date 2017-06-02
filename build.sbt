@@ -51,6 +51,7 @@ lazy val client: Project = (project in file("client"))
     //    scalaJSUseMainModuleInitializer := true,
     //    persistLaunch/ser := true,
     //    scalaJSUseMsainModuleInitializer in Test := false,
+//    webpackConfigFile := Some(baseDirectory.value / "custom.webpack.config.js"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),

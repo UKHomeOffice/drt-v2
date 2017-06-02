@@ -4,6 +4,7 @@ import actors.CrunchActor
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
+import drt.services.AirportConfigHelpers
 import org.joda.time.{DateTime, DateTimeZone}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
@@ -41,9 +42,11 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
-  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now()) extends CrunchActor(hours, conf, timeProvider) {
+  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
+    extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
     def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
       _ => Some(SplitRatios(
+        TestAirportConfig,
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.315),
         SplitRatio(PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk), 0.07),
@@ -60,6 +63,7 @@ object FlightCrunchInteractionTests extends TestSuite {
       }
 
     def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+
     def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
       PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
 

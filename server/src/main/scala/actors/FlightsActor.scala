@@ -1,5 +1,7 @@
 package actors
 
+import java.io
+
 import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.AskableActorRef
@@ -14,7 +16,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import akka.persistence._
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import services.SDate
+import services.{CSVPassengerSplitsProvider, SDate, SplitsProvider}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared._
 import services.SDate.implicits._
@@ -25,7 +27,9 @@ import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsMessage}
 import drt.shared.ApiFlight
 import actors.FlightMessageConversion._
 import com.typesafe.config.ConfigFactory
+import drt.shared.PaxTypes.EeaMachineReadable
 import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
+import services.SplitsProvider.SplitProvider
 
 import scala.util.{Success, Try}
 
@@ -131,12 +135,15 @@ object FlightMessageConversion {
   }
 }
 
-class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
+class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
+                   csvSplitsProvider: SplitProvider)
   extends PersistentActor
     with ActorLogging
     with FlightState
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
+
+  import SplitRatiosNs.SplitSources._
 
   val snapshotInterval = 20
 
@@ -147,7 +154,8 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
     super.onRecoveryFailure(cause, event)
     log.error(cause, "recovery failed in flightsActors")
   }
-
+  //todo this should be injected:
+//  val csvProvider: SplitProvider = SplitsProvider.csvProvider
 
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights) =>
@@ -174,24 +182,34 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
       val allSplitRequests: Seq[Future[ApiFlightWithSplits]] = apiFlights map { flight =>
         val scheduledDate = SDate(flight.SchDT)
 
-        val AdvPaxInfo = "advPaxInfo"
         FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
           case Some((carrierCode, voyageNumber)) =>
-
             val future = splitsActor ? ReportVoyagePaxSplit(flight.AirportID,
               flight.Operator, voyageNumber, scheduledDate)
-            future map {
+            val futureResp = future map {
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
                 val paxSplits = vps.paxSplits
-                ApiFlightWithSplits(flight, ApiSplits(paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo))
+                val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(flight), 0.6)
+                val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(vps, egatePercentage)
+                log.info(s"applying egate percentage $voyagePaxSplitsWithEgatePercentage")
+                val splitses: List[ApiSplits] = List(
+                  ApiSplits(
+                    voyagePaxSplitsWithEgatePercentage.paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)),
+                    ApiSplitsWithCsvPercentage)
+                ) ::: calcCsvApiSplits(flight)
+
+                ApiFlightWithSplits(flight, splitses)
+
               case notFound: FlightNotFound =>
                 log.info(s"notgot splits for ${flight}")
-                ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo)) //Left(FlightNotFound(carrierCode, voyageNumber, scheduledDate)))
+                ApiFlightWithSplits(flight, calcCsvApiSplits(flight))
             }
+            futureResp
           case None =>
             log.info(s"couldnot parse IATA for ${flight}")
-            Future.successful(ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo))) //Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
+            //todo this was supposed to be an Either!
+            Future.successful(ApiFlightWithSplits(flight, Nil))
 
         }
       }
@@ -228,6 +246,14 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef)
 
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
+  }
+
+  private def calcCsvApiSplits(flight: ApiFlight): List[ApiSplits] = {
+    val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvSplitsProvider(flight)
+
+    val apiPaxAndQueueRatios: Option[List[ApiPaxTypeAndQueueCount]] = csvSplits.map(s => s.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100)))
+    val toList: List[ApiPaxTypeAndQueueCount] = apiPaxAndQueueRatios.toList.flatten
+    csvSplits.map(csvSplit => ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)).toList
   }
 
   private def requestCrunch(newFlights: List[ApiFlight]) = {

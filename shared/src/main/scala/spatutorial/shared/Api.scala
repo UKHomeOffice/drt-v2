@@ -4,7 +4,8 @@ import java.util.Date
 
 import drt.shared.FlightsApi._
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import drt.shared.PassengerSplits.{FlightNotFound, PaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.SplitRatiosNs.SplitRatio
 
 import scala.collection.immutable._
 import scala.concurrent.Future
@@ -33,11 +34,13 @@ object FlightParsing {
   }
 }
 
-case class SplitR(name: String, size: Double)
 
-case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String)
+sealed trait SplitStyle
+case object PaxNumbers extends SplitStyle
+case object Percentage extends SplitStyle
 
-case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: ApiSplits)
+case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers)
+case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: List[ApiSplits])
 
 case class ApiFlight(
                       Operator: String,
@@ -241,15 +244,16 @@ case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int,
 object PassengerQueueTypes {
   def egatePercentage = 0.6d
 
-  type PaxTypeAndQueueCounts = List[PaxTypeAndQueueCount]
+  type PaxTypeAndQueueCounts = List[SplitsPaxTypeAndQueueCount]
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Int)
+sealed trait SplitCounts
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double) extends SplitCounts
 
 object PassengerSplits {
   type QueueType = String
 
-  case class PaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
+  case class SplitsPaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
 
   case object FlightsNotFound
 
@@ -259,7 +263,7 @@ object PassengerSplits {
                              voyageNumber: String,
                              totalPaxCount: Int,
                              scheduledArrivalDateTime: MilliDate,
-                             paxSplits: List[PaxTypeAndQueueCount])
+                             paxSplits: List[SplitsPaxTypeAndQueueCount])
 
 }
 

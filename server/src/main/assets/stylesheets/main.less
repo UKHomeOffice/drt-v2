@@ -415,22 +415,26 @@ th h2 {
 
 @pax-bar-height: 20px;
 
+@reliability-low: #ff9999;
+@reliability-medium: #ffeeaa;
+@reliability-high: #77ff77;
+
 .pax-bar {
   height: @pax-bar-height;
 }
 
-.pax-api {
-  background-color: #77ff77;
+.pax-maxpax {
+  background-color: @reliability-low;
   .pax-bar
 }
 
 .pax-portfeed {
-  background-color: #ffeeaa;
+  background-color: @reliability-medium;
   .pax-bar
 }
 
-.pax-maxpax {
-  background-color: #ff9999;
+.pax-api {
+  background-color: @reliability-high;
   .pax-bar
 }
 
@@ -445,10 +449,20 @@ th h2 {
   left: 0;
 }
 
+
+.splitsource-historical {
+  background: @reliability-medium;
+}
+
+.splitsource-apisplitswithhistoricalegatepercentage {
+  background: @reliability-high;
+}
+
 .splits {
   width: 120px;
   position: relative;
   height: 28px;
+  display: inline-block;
 }
 
 .splits .graph {

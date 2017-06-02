@@ -1,11 +1,11 @@
 package spatutorial.client.components
 
 import diode.data.{Pot, Ready}
-import drt.client.components.FlightsWithSplitsTable
-import drt.client.components.FlightTableComponents
+import drt.client.components.{FlightTableComponents, FlightsWithSplitsTable}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, ApiSplits}
 import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.vdom.html_<^.<
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.Span
 import utest._
@@ -83,7 +83,7 @@ object FlightsTableTests extends TestSuite {
       )
 
       def withSplits(flights: Seq[ApiFlight]) = {
-        FlightsWithSplits(flights.map(ApiFlightWithSplits(_, ApiSplits(List(), ""))).toList)
+        FlightsWithSplits(flights.map(ApiFlightWithSplits(_, Nil)).toList)
       }
 
       "FlightsTables" - {
@@ -111,12 +111,11 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")), <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")), <.td(testFlight.ActPax),
-                  <.td(<.div())
-                ))))
+                    <.td()))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil))),
-              staticComponent(expected)())
+            staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
           val expected = <.div(
@@ -145,9 +144,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.SchDT), date(testFlight.EstDT),
                   date(testFlight.ActDT), date(testFlight.EstChoxDT),
                   date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
-                  <.td(<.div())
-                ))))
-
+                    <.td()))))
 
           //          val timelineComponent = ScalaComponent.builder[ApiFlight]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
@@ -187,8 +184,7 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.SchDT), date(testFlight.EstDT),
                     date(testFlight.ActDT), date(testFlight.EstChoxDT),
                     date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
-                    <.td(<.div())
-                  ))))
+                    <.td()))))
 
 
             def originMapperComponent(portCode: String): VdomNode = <.span(^.title := "JFK, New York, USA", portCode)
@@ -256,7 +252,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.EstChoxDT),
                   date(testFlightT.ActChoxDT),
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
-                  <.td(<.div())
+                  <.td()
                 ))))
 
           def paxComponent(f: ApiFlight, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
@@ -265,18 +261,18 @@ object FlightsTableTests extends TestSuite {
             FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil))),
             staticComponent(expected)())
 
-//          val className: TagMod = ^.className := s"pax-${origin}"
-//          val title: TagMod = ^.title := s"from ${origin}"
-//          val relativePax = Math.floor(100 * (pax / 853)).toInt
-//          val style = widthStyle(relativePax)
-//          <.div(po.pax, className, title, ^.style := style)
-//          "Unit tests for paxComponent Hook" - {
-//            val testFlightT = testFlight.copy(ActPax = 0, MaxPax = 150)
-//
-//            def paxComponent(f: ApiFlight): VdomNode = {
-//              <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
-//            }
-//          }
+          //          val className: TagMod = ^.className := s"pax-${origin}"
+          //          val title: TagMod = ^.title := s"from ${origin}"
+          //          val relativePax = Math.floor(100 * (pax / 853)).toInt
+          //          val style = widthStyle(relativePax)
+          //          <.div(po.pax, className, title, ^.style := style)
+          //          "Unit tests for paxComponent Hook" - {
+          //            val testFlightT = testFlight.copy(ActPax = 0, MaxPax = 150)
+          //
+          //            def paxComponent(f: ApiFlight): VdomNode = {
+          //              <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
+          //            }
+          //          }
 
         }
       }

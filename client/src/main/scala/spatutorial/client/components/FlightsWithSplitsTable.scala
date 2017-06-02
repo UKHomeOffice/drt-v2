@@ -18,6 +18,8 @@ import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
 import scala.util.{Failure, Success, Try}
 import logger._
 import org.scalajs.dom.html.Div
+import drt.client.components.FlightTableComponents
+import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -28,6 +30,8 @@ object FlightsWithSplitsTable {
 
 
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
+  implicit val doubleReuse = Reusability.double(0.001)
+  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
@@ -104,6 +108,7 @@ object FlightsWithSplitsTable {
 
 }
 
+
 object FlightTableRow {
 
   import FlightTableComponents._
@@ -118,8 +123,9 @@ object FlightTableRow {
                    paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
                    splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div())
 
-
+  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
+  implicit val doubleReuse = Reusability.double(0.01)
   implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
@@ -132,6 +138,7 @@ object FlightTableRow {
   implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
 
   case class RowState(hasChanged: Boolean)
+
   implicit val stateReuse = Reusability.caseClass[RowState]
 
 
@@ -142,17 +149,55 @@ object FlightTableRow {
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
-      val flightSplits: ApiSplits = flightWithSplits.splits
-      val splitTotal = flightSplits.splits.map(_.paxCount).sum
+      val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
+
       log.info(s"rendering flight row $idx ${flight.toString}")
       Try {
-        val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map(s => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount).toMap
-        val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-        val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-          case (ptqc, paxCount) => (s"${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+        val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+        def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
+          SplitSources.ApiSplitsWithCsvPercentage -> "Live",
+          SplitSources.Historical -> "Historical"
+          ).getOrElse(name, name)
+
+        val splitsComponents = flightSplitsList.take(1).map {
+          flightSplits => {
+            val splitStyle = flightSplits.splitStyle
+            val vdomElement: VdomElement = splitStyle match {
+              case PaxNumbers => {
+                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
+                val splitStyleUnitLabe = "pax"
+                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
+                  case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
+                }).toMap
+                val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+                val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+                  case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+                }
+                <.div(^.className := "splitsource-" + flightSplits.source.toLowerCase,
+                  props.splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplayName(flightSplits.source))
+              }
+              case Percentage => {
+                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
+                val splitStyle = flightSplits.splitStyle
+                val splitStyleUnitLabe = "%"
+                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
+                  case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
+                }).toMap
+                val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+                val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+                  case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+                }
+                <.div(^.className := "splitsource-" + flightSplits.source.toLowerCase,
+                  props.splitsGraphComponent(splitTotal, splitsAndLabels),
+                  <.span(^.className := "flightSplitSource", sourceDisplayName(flightSplits.source)))
+              }
+            }
+            vdomElement
+          }
         }
-        val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
+
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+        val apiSplits = flightWithSplits.splits.find(splits => splits.source == SplitRatiosNs.SplitSources.AdvPaxInfo).getOrElse(ApiSplits(Nil, "no splits - client"))
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -165,13 +210,15 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, flightWithSplits.splits)),
-          <.td(^.key := flight.FlightID.toString + "-splits", props.splitsGraphComponent(splitTotal, splitsAndLabels)))
+          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
+          <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {
         case e => log.error(s"couldn't make flight row $e")
-          <.tr(s"failure $e")
+          <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace().mkString(",")}")
       }.get
-    })
+    }
+
+    )
     .componentWillReceiveProps(i => {
       if (i.nextProps != i.currentProps)
         log.info(s"row ${i.nextProps} changed")
@@ -184,239 +231,6 @@ object FlightTableRow {
 }
 
 
-object FlightTableComponents {
-
-  def airportCodeComponent(portMapper: Map[String, Pot[AirportInfo]])(port: String): VdomElement = {
-    val tt = airportCodeTooltipText(portMapper) _
-    <.span(^.title := tt(port), port)
-  }
-
-  def airportCodeComponentLensed(portInfoPot: Pot[AirportInfo])(port: String): VdomElement = {
-    val tt: Option[Pot[String]] = Option(potAirportInfoToTooltip(portInfoPot))
-    log.info(s"making airport info $port $tt")
-    <.span(^.title := airportInfoDefault(tt), port)
-  }
-
-  def airportCodeTooltipText(portMapper: Map[String, Pot[AirportInfo]])(port: String): String = {
-    val portInfoOptPot = portMapper.get(port)
-
-    val res: Option[Pot[String]] = portInfoOptPot.map {
-      potAirportInfoToTooltip
-    }
-    airportInfoDefault(res)
-  }
-
-  private def airportInfoDefault(res: Option[Pot[String]]): String = {
-    log.info(s"airportInfoDefault got one! $res")
-    res match {
-      case Some(Ready(v)) => v
-      case _ => "waiting for info..."
-    }
-  }
-
-  private def potAirportInfoToTooltip(info: Pot[AirportInfo]): Pot[String] = {
-    info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
-  }
-
-  def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
-    val mod: TagMod = ^.title := originMapper(props.data.toString())
-    <.span(props.data.toString(), mod).render
-  }
-
-  def dateTimeComponent(): js.Function = (props: js.Dynamic) => {
-    val dt = props.data.toString()
-    if (dt != "") {
-      localDateTimeWithPopup(dt)
-    } else {
-      <.div.render
-    }
-  }
-
-  def localDateTimeWithPopup(dt: String) = {
-    if (dt.isEmpty) <.span() else localTimePopup(dt)
-  }
-
-  private def localTimePopup(dt: String) = {
-    val sdate = SDate.parse(dt)
-    val hhmm = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
-    val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
-    <.span(hhmm, titlePopup).render
-  }
-
-  def millisDelta(time1: String, time2: String) = {
-    SDate.parse(time1).millisSinceEpoch - SDate.parse(time2).millisSinceEpoch
-  }
 
 
-  def asOffset(delta: Long, range: Double) = {
-    val aggression = 1.0019
-    val deltaTranslate = 1700
-    val scaledDelta = 1.0 * delta / 1000
-    val isLate = delta < 0
-    if (isLate) {
-      (range / (1 + Math.pow(aggression, (scaledDelta + deltaTranslate))))
-    }
-    else {
-      -(range / (1 + Math.pow(aggression, -1.0 * (scaledDelta - deltaTranslate))))
-    }
-  }
 
-  def dateStringAsLocalDisplay(dt: String) = dt match {
-    case "" => ""
-    case some => SDate.parse(dt).toLocalDateTimeString()
-  }
-
-  def timelineComponent(): js.Function = (props: js.Dynamic) => {
-    val schPct = 150 - 24
-
-    val re: VdomElement = Try {
-      val rowData: mutable.Map[String, Any] = props.rowData.asInstanceOf[Dictionary[Any]]
-      val sch: String = props.rowData.Sch.toString
-      val est = rowData("Est")
-      val act: String = rowData("Act").toString
-      val estChox = rowData("Est Chox").toString
-      val actChox = rowData("Act Chox").toString
-
-      timelineFunc(schPct, sch, act, actChox)
-    } match {
-      case Success(s) =>
-        <.span(s).render
-      case f =>
-        <.span(f.toString).render
-    }
-    re
-  }
-
-  def timelineCompFunc(flight: ApiFlight): VdomElement = {
-    Try {
-      timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
-    }.recover {
-      case e =>
-        log.error(s"couldn't render timeline of $flight with $e")
-        val recovery: VdomElement = <.div("uhoh!")
-        recovery
-    }.get
-  }
-
-  def timelineFunc(schPct: Int, sch: String, act: String, actChox: String): VdomElement = {
-    val (actDeltaTooltip: String, actPct: Double, actClass: String) = pctAndClass(sch, act, schPct)
-    val (actChoxToolTip: String, actChoxPct: Double, actChoxClass: String) = pctAndClass(sch, actChox, schPct)
-
-
-    val longToolTip =
-      s"""Sch: ${dateStringAsLocalDisplay(sch)}
-         |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
-         |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
-        """.stripMargin
-
-    val actChoxDot = if (!actChox.isEmpty)
-      <.i(^.className :=
-        "dot act-chox-dot " + actChoxClass,
-        ^.title := s"ActChox: $actChox $actChoxToolTip",
-        ^.left := s"${actChoxPct}px")
-    else <.span()
-
-
-    val actWidth = (actChoxPct + 24) - actPct
-
-    val schDot = <.i(^.className := "dot sch-dot",
-      ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
-    val
-    actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot "
-      + actClass,
-      ^.title
-        := s"Actual: ${dateStringAsLocalDisplay(act)}",
-      ^.width := s"${actWidth}px",
-      ^.left := s"${actPct}px")
-    else <.span()
-
-    val dots = schDot :: actDot ::
-      actChoxDot :: Nil
-
-    <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
-
-  }
-
-  private def pctAndClass(sch: String, act: String, schPct: Int) = {
-    val actDelta = millisDelta(sch, act)
-    val actDeltaTooltip = {
-      val dm = (actDelta / 60000)
-      Math.abs(dm) + s"mins ${deltaMessage(actDelta)}"
-    }
-    val actPct = schPct + asOffset(actDelta, 150.0)
-    val actClass: String = deltaMessage(actDelta)
-    (actDeltaTooltip, actPct, actClass)
-  }
-
-  def deltaMessage(actDelta: Long) = {
-    val actClass = actDelta match {
-      case d if d < 0 => "late"
-      case d if d == 0 => "on-time"
-      case d if d > 0 => "early"
-    }
-    actClass
-  }
-
-  def widthStyle(width: Int) = js.Dictionary("width" -> s"$width%").asInstanceOf[js.Object]
-
-  def paxComponent(): js.Function = (props: js.Dynamic) => {
-
-    val paxRegex = "([0-9]+)(.)".r
-    val paxAndOrigin = props.data match {
-      case po: PaxAndOrigin =>
-        val origin = po.origin
-        val pax = po.pax.toDouble
-
-        val className: TagMod = ^.className := s"pax-${origin}"
-        val title: TagMod = ^.title := s"from ${origin}"
-        val relativePax = Math.floor(100 * (pax / 853)).toInt
-        val style = widthStyle(relativePax)
-        <.div(po.pax, className, title, ^.style := style)
-      case e =>
-        logger.log.warn(s"Expected a PaxAndOrigin but got $e")
-        <.div("unknown")
-    }
-    paxAndOrigin.render
-  }
-
-  def splitsComponent(): js.Function = (props: js.Dynamic) => {
-    def heightStyle(height: String) = js.Dictionary("height" -> height).asInstanceOf[js.Object]
-
-    val splitLabels = Array("eGate", "EEA", "EEA NMR", "Visa", "Non-visa")
-    val splits = props.data.toString.split("\\|").map(_.toInt)
-    val desc = 0 to 4 map (idx => s"${splitLabels(idx)}: ${splits(idx)}")
-    val sum = splits.sum
-    val pc = splits.map(s => s"${(100 * s.toDouble / sum).round}%")
-    <.div(^.className := "splits", ^.title := desc.mkString("\n"),
-      <.div(^.className := "graph",
-        <.div(^.className := "bar", ^.style := heightStyle(pc(0))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(1))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(2))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(3))),
-        <.div(^.className := "bar", ^.style := heightStyle(pc(4)))
-      )).render
-  }
-
-  @ScalaJSDefined
-  class PaxAndOrigin(val pax: Int, val origin: String) extends js.Object
-
-  object PaxAndOrigin {
-    def apply(paxNos: Int, origin: String) = {
-      new PaxAndOrigin(paxNos, origin)
-    }
-  }
-
-  def paxOriginDisplay(max: Int, act: Int, api: Int): PaxAndOrigin = {
-    if (api > 0) PaxAndOrigin(api, "api")
-    else if (act > 0) PaxAndOrigin(act, "port")
-    else PaxAndOrigin(max, "capacity")
-  }
-
-  def paxDisplay(max: Int, act: Int, api: Int): String = {
-    if (api > 0) s"${api}A"
-    else if (act > 0) s"${act}B"
-    else s"${max}C"
-  }
-
-  val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
-}
