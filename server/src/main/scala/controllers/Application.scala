@@ -97,7 +97,7 @@ trait SystemActors extends Core {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val paxFlowCalculator = PaxFlow.makeFlightPaxFlowCalculator(
+  val paxFlowCalculator: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxFlow.makeFlightPaxFlowCalculator(
     PaxFlow.splitRatioForFlight(splitsProviders),
     PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
 

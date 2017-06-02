@@ -6,7 +6,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.{EGate, EeaDesk}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 
 object CSVPassengerSplitsProvider {
@@ -35,7 +35,6 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
   private val log = LoggerFactory.getLogger(getClass)
 
   log.info("Initialising CSV Splits")
-  val SplitOrigin = "CSV"
   lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = {
     val splitsLines = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
     log.info(s"Initialising CSV Splits will use $splitsLines")
@@ -64,7 +63,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
         row.dayOfWeek == dayOfWeek &&
         row.month == month
     }
-    ).map(matchFlight => SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight), origin = SplitOrigin))
+    ).map(matchFlight => SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight), origin = SplitSources.Historical))
   }
 
 

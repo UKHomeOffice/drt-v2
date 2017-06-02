@@ -19,6 +19,7 @@ import scala.util.{Failure, Success, Try}
 import logger._
 import org.scalajs.dom.html.Div
 import drt.client.components.FlightTableComponents
+import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -153,8 +154,12 @@ object FlightTableRow {
       log.info(s"rendering flight row $idx ${flight.toString}")
       Try {
         val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+        def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
+          SplitSources.ApiSplitsWithCsvPercentage -> "Live",
+          SplitSources.Historical -> "Historical"
+          ).getOrElse(name, name)
 
-        val splitsComponents = flightSplitsList map {
+        val splitsComponents = flightSplitsList.take(1).map {
           flightSplits => {
             val splitStyle = flightSplits.splitStyle
             val vdomElement: VdomElement = splitStyle match {
@@ -168,7 +173,8 @@ object FlightTableRow {
                 val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
                   case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
                 }
-                <.div(props.splitsGraphComponent(splitTotal, splitsAndLabels), flightSplits.source)
+                <.div(^.className := "splitsource-" + flightSplits.source.toLowerCase,
+                  props.splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplayName(flightSplits.source))
               }
               case Percentage => {
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
@@ -181,13 +187,14 @@ object FlightTableRow {
                 val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
                   case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
                 }
-                <.div(props.splitsGraphComponent(splitTotal, splitsAndLabels), <.span(^.className := "flightSplitSource", flightSplits.source))
+                <.div(^.className := "splitsource-" + flightSplits.source.toLowerCase,
+                  props.splitsGraphComponent(splitTotal, splitsAndLabels),
+                  <.span(^.className := "flightSplitSource", sourceDisplayName(flightSplits.source)))
               }
             }
             vdomElement
           }
         }
-
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val apiSplits = flightWithSplits.splits.find(splits => splits.source == SplitRatiosNs.SplitSources.AdvPaxInfo).getOrElse(ApiSplits(Nil, "no splits - client"))

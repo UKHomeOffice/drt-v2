@@ -193,13 +193,10 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
                 val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(flight), 0.6)
                 val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(vps, egatePercentage)
                 log.info(s"applying egate percentage $voyagePaxSplitsWithEgatePercentage")
-                val egateDisplayPct = Math.round(100.0 * egatePercentage).toInt
                 val splitses: List[ApiSplits] = List(
                   ApiSplits(
-                    paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)), AdvPaxInfo), //todo, we probably don't want this, and the next long term - in as part of drt-4568
-                  ApiSplits(
                     voyagePaxSplitsWithEgatePercentage.paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)),
-                    s"ApiSplitsWithCsvPercentage of ${egateDisplayPct}%")
+                    ApiSplitsWithCsvPercentage)
                 ) ::: calcCsvApiSplits(flight)
 
                 ApiFlightWithSplits(flight, splitses)
@@ -212,7 +209,7 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
           case None =>
             log.info(s"couldnot parse IATA for ${flight}")
             //todo this was supposed to be an Either!
-            Future.successful(ApiFlightWithSplits(flight, ApiSplits(Nil, AdvPaxInfo) :: Nil)) //Left(FlightNotFound("n/a", flight.ICAO, scheduledDate))))
+            Future.successful(ApiFlightWithSplits(flight, Nil))
 
         }
       }

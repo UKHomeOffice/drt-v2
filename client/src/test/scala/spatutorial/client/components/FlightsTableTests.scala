@@ -83,7 +83,7 @@ object FlightsTableTests extends TestSuite {
       )
 
       def withSplits(flights: Seq[ApiFlight]) = {
-        FlightsWithSplits(flights.map(ApiFlightWithSplits(_, ApiSplits(List(), "") :: Nil)).toList)
+        FlightsWithSplits(flights.map(ApiFlightWithSplits(_, Nil)).toList)
       }
 
       "FlightsTables" - {
@@ -111,7 +111,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")), <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")), <.td(testFlight.ActPax),
-                    <.td(<.div(<.div()))))))
+                    <.td()))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil))),
@@ -144,7 +144,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.SchDT), date(testFlight.EstDT),
                   date(testFlight.ActDT), date(testFlight.EstChoxDT),
                   date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
-                    <.td(<.div(<.div()))))))
+                    <.td()))))
 
           //          val timelineComponent = ScalaComponent.builder[ApiFlight]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
@@ -184,7 +184,7 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.SchDT), date(testFlight.EstDT),
                     date(testFlight.ActDT), date(testFlight.EstChoxDT),
                     date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
-                    <.td(<.div(<.div()))))))
+                    <.td()))))
 
 
             def originMapperComponent(portCode: String): VdomNode = <.span(^.title := "JFK, New York, USA", portCode)
@@ -252,7 +252,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.EstChoxDT),
                   date(testFlightT.ActChoxDT),
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
-                  <.td(<.div(<.div()))
+                  <.td()
                 ))))
 
           def paxComponent(f: ApiFlight, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
