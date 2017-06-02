@@ -192,9 +192,9 @@ object AirportConfigs {
       "Delta, T1, {date}, 16:00, 00:48, 0",
       "Night, T1, {date}, 22:36, 07:24, 0"
     ),
-    fixedPointExamples = Seq("Roving Officer,any,02/06/17,00:00,23:59,1",
-      "Referral Officer,any,02/06/17,00:00,23:59,1",
-      "Forgery Officer,any,02/06/17,00:00,23:59,1")
+    fixedPointExamples = Seq("Roving Officer,any,{date},00:00,23:59,1",
+      "Referral Officer,any,{date},00:00,23:59,1",
+      "Forgery Officer,any,{date},00:00,23:59,1")
   )
   val man = AirportConfig(
     portCode = "MAN",
