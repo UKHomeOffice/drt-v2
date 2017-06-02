@@ -114,7 +114,7 @@ object AirportConfigs {
     portCode = "EDI",
     queues = Map(
       "A1" -> Seq(EeaDesk, EGate, NonEeaDesk),
-      "A2" -> Seq(EeaDesk, NonEeaDesk)
+      "A2" -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("A1", "A2"),
