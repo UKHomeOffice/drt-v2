@@ -154,10 +154,11 @@ object FlightTableRow {
       log.info(s"rendering flight row $idx ${flight.toString}")
       Try {
         val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+
         def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
           SplitSources.ApiSplitsWithCsvPercentage -> "Live",
           SplitSources.Historical -> "Historical"
-          ).getOrElse(name, name)
+        ).getOrElse(name, name)
 
         val splitsComponents = flightSplitsList.take(1).map {
           flightSplits => {
@@ -197,7 +198,10 @@ object FlightTableRow {
         }
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        val apiSplits = flightWithSplits.splits.find(splits => splits.source == SplitRatiosNs.SplitSources.AdvPaxInfo).getOrElse(ApiSplits(Nil, "no splits - client"))
+        val apiSplits = flightWithSplits.splits
+          .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
+          .getOrElse(ApiSplits(Nil, "no splits - client"))
+
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
