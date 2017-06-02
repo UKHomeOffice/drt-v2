@@ -3,6 +3,7 @@ import sbt.Project.projectToRef
 
 scalaVersion := Settings.versions.scala
 
+enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
