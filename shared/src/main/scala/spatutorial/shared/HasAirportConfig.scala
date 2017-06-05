@@ -77,10 +77,11 @@ object PaxTypesAndQueues {
   val eeaNonMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk)
   val visaNationalToDesk = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk)
   val nonVisaNationalToDesk = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
-  val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
+  val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
-  val inOrder = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
+  val inOrder = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk,
+    eeaNonMachineReadableToDesk, visaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToDesk, nonVisaNationalToFastTrack)
 }
 
 object AirportConfigs {
@@ -156,46 +157,56 @@ object AirportConfigs {
       "Evening shift, A1, {date}, 17:00, 23:59,17"
     )
   )
-  val stn = AirportConfig(
-    portCode = "STN",
-    queues = Map(
-      "T1" -> Seq(EeaDesk, EGate, NonEeaDesk)
-    ),
-    slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
-    terminalNames = Seq("T1"),
-    defaultPaxSplits = SplitRatios(
-      AirportConfigOrigin,
-      SplitRatio(eeaMachineReadableToDesk, 0.4875),
-      SplitRatio(eeaMachineReadableToEGate, 0.1625),
-      SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
-      SplitRatio(visaNationalToDesk, 0.05),
-      SplitRatio(nonVisaNationalToDesk, 0.05)
-    ),
-    defaultProcessingTimes = Map("T1" -> Map(
-      eeaMachineReadableToDesk -> 20d / 60,
-      eeaMachineReadableToEGate -> 35d / 60,
-      eeaNonMachineReadableToDesk -> 50d / 60,
-      visaNationalToDesk -> 90d / 60,
-      nonVisaNationalToDesk -> 78d / 60
-    )),
-    minMaxDesksByTerminalQueue = Map(
-      "T1" -> Map(
-        "eGate" -> (List(2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
-        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
-        "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
-      )
-    ),
-    shiftExamples = Seq(
-      "Alpha, T1, {date}, 07:00, 15:48, 0",
-      "Bravo, T1, {date}, 07:45, 16:33, 0",
-      "Charlie, T1, {date}, 15:00, 23:48, 0",
-      "Delta, T1, {date}, 16:00, 00:48, 0",
-      "Night, T1, {date}, 22:36, 07:24, 0"
-    ),
-    fixedPointExamples = Seq("Roving Officer,any,{date},00:00,23:59,1",
-      "Referral Officer,any,{date},00:00,23:59,1",
-      "Forgery Officer,any,{date},00:00,23:59,1")
-  )
+  val stn = {
+    val defaultFastTrackPct = 0.05
+
+    AirportConfig(
+      portCode = "STN",
+      queues = Map(
+        "T1" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack)
+      ),
+      slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45, FastTrack -> 15),
+      terminalNames = Seq("T1"),
+      defaultPaxSplits = SplitRatios(
+        AirportConfigOrigin,
+        SplitRatio(eeaMachineReadableToDesk, 0.4875),
+        SplitRatio(eeaMachineReadableToEGate, 0.1625),
+        SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+        SplitRatio(visaNationalToDesk, 0.05 * (1 - defaultFastTrackPct)),
+        SplitRatio(visaNationalToFastTrack, 0.05 * defaultFastTrackPct),
+        SplitRatio(nonVisaNationalToDesk, 0.05 * (1- defaultFastTrackPct)),
+        SplitRatio(nonVisaNationalToDesk, 0.05 * defaultFastTrackPct)
+      ),
+      defaultProcessingTimes = Map("T1" -> Map(
+        eeaMachineReadableToDesk -> 20d / 60,
+        eeaMachineReadableToEGate -> 35d / 60,
+        eeaNonMachineReadableToDesk -> 50d / 60,
+        visaNationalToDesk -> 90d / 60,
+        nonVisaNationalToDesk -> 78d / 60,
+        nonVisaNationalToFastTrack -> 78d / 60,
+        visaNationalToFastTrack -> 78d / 6
+      )),
+      minMaxDesksByTerminalQueue = Map(
+        "T1" -> Map(
+          "eGate" -> (List(2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+          "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
+          "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)),
+          FastTrack -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+        )
+      ),
+      shiftExamples = Seq(
+        "Alpha, T1, {date}, 07:00, 15:48, 0",
+        "Bravo, T1, {date}, 07:45, 16:33, 0",
+        "Charlie, T1, {date}, 15:00, 23:48, 0",
+        "Delta, T1, {date}, 16:00, 00:48, 0",
+        "Night, T1, {date}, 22:36, 07:24, 0"
+      ),
+      fixedPointExamples = Seq("Roving Officer,any,{date},00:00,23:59,1",
+        "Referral Officer,any,{date},00:00,23:59,1",
+        "Forgery Officer,any,{date},00:00,23:59,1")
+    )
+  }
+
   val man = AirportConfig(
     portCode = "MAN",
     queues = Map(
