@@ -49,11 +49,11 @@ object AdvPaxSplitsProvider {
   }
 
 
-  def splitRatioProviderWithCsvEgatePercentage(destinationPort: String)
-                                              (passengerInfoRouterActor: AskableActorRef)
-                                              (egatePercentageProvider: (ApiFlight) => Double)
-                                              (flight: ApiFlight)
-                                              (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
+  def splitRatioProviderWithCsvPercentages(destinationPort: String)
+                                          (passengerInfoRouterActor: AskableActorRef)
+                                          (egatePercentageProvider: (ApiFlight) => Double)
+                                          (flight: ApiFlight)
+                                          (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
     log.debug(s"${flight.IATA} splitRatioProviderWithCsvEgatepercentage")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
       case Some((cc, number)) =>
