@@ -2,29 +2,32 @@ package services.inputfeeds
 
 import java.io.File
 
-import actors.{FlightsActor, GetLatestCrunch, PerformCrunchOnFlights, TimeZone}
+import actors._
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.testkit.TestSubscriber.Probe
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import controllers._
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.services.AirportConfigHelpers
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import drt.shared._
-import org.joda.time.chrono.ISOChronology
-import org.joda.time.{DateTime, DateTimeZone}
+import drt.shared.{ApiFlight, _}
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
 import services.FlightCrunchInteractionTests.TestCrunchActor
-import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator}
+import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator}
 import services.WorkloadCalculatorTests._
-import services.{FlightCrunchInteractionTests, SplitsProvider, WorkloadCalculatorTests}
+import services.workloadcalculator.PaxLoadCalculator
+import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
+import services.{FlightCrunchInteractionTests, SDate, SplitsProvider, WorkloadCalculatorTests}
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
@@ -117,8 +120,8 @@ object CrunchTests {
     def getCrunchActor = system.actorSelection("CrunchActor")
   }
 
-  def withContextCustomActor[T](props: Props, tn: String = "")(f: (TestContext) => T): T = {
-    val context = TestContext(levelDbTestActorSystem(tn), props: Props)
+  def withContextCustomActor[T](props: Props, actorSystem: ActorSystem)(f: (TestContext) => T): T = {
+    val context = TestContext(actorSystem, props: Props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
     res
@@ -142,7 +145,7 @@ object CrunchTests {
   def crunchAndGetCrunchResult(flights: Seq[ApiFlight], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
     val props: Props = crunchActorProps(hoursToCrunch, () => now)
 
-    val result = withContextCustomActor(props) { context =>
+    val result = withContextCustomActor(props, actorSystem = levelDbTestActorSystem("")) { context =>
       context.sendToCrunch(PerformCrunchOnFlights(flights))
       context.sendToCrunch(GetLatestCrunch(crunchTerminal, deskToInspect))
       context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
@@ -356,9 +359,8 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
               PaxFlow.splitRatioForFlight(splitsProviders),
               PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: ApiFlight) => 0L))(flight),
             timeProvider)
-          withContextCustomActor(testActorProps) {
+          withContextCustomActor(testActorProps, levelDbTestActorSystem("")) {
             context =>
-              println("here we are, born to be kings")
               val flights = Flights(
                 List(
                   apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1),
@@ -368,6 +370,75 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
               context.expectMsgAnyClassOf(classOf[CrunchResult])
               true
+          }
+        }
+      }
+    }
+  }
+}
+
+class SplitsRequestRecordingCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (ApiFlight => Option[SplitRatios]))
+  extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
+
+  def splitRatioProvider = _splitRatioProvider
+
+  def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 1d
+
+  def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+
+  def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
+
+  override def lastLocalMidnightString: String = "2000-01-01"
+
+  override def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
+    Future.successful(CrunchResult(0L, 0L, IndexedSeq(), Seq()))
+  }
+}
+
+class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
+  isolated
+  sequential
+
+  import CrunchTests._
+
+  "given a crunch actor" >> {
+
+    "given a crunch actor with airport config for terminals A1 and A2 and a single flight at A1" >> {
+      "when we request a crunch for flights" >> {
+        "then we should see one request for splits for each queue at A1" in {
+
+          object SplitsCounter {
+            private var counter = 0
+            def increment(): Unit = counter = counter + 1
+            def readCounter: Int = counter
+          }
+          def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
+            (_: ApiFlight) => {
+              SplitsCounter.increment()
+              Some(SplitRatios(
+                TestAirportConfig,
+                SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
+                SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.315),
+                SplitRatio(PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk), 0.07),
+                SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.03)
+              ))
+            }
+          val timeProvider = () => DateTime.parse("2016-09-01")
+          val testActorProps = Props(classOf[SplitsRequestRecordingCrunchActor],
+            1, airportConfig, timeProvider, splitRatioProvider
+          )
+
+          withContextCustomActor(testActorProps, ActorSystem("splitsRequestActorSystem")) {
+            context =>
+              val flights = Flights(
+                List(
+                  apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1)))
+              context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
+              context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
+              context.expectMsgAnyClassOf(classOf[CrunchResult])
+
+              SplitsCounter.readCounter === airportConfig.queues("A1").length
           }
         }
       }

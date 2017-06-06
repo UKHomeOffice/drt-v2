@@ -63,7 +63,8 @@ object PaxFlow {
                                    splitRatioForFlight: (ApiFlight) => Option[SplitRatios],
                                    pcpArrivalTimeForFlight: (ApiFlight) => MilliDate
                                  ): (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    (flight) => PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight)(flight)
+    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight)
+    (flight) => provider(flight)
   }
 
   def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: ApiFlight): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
