@@ -49,11 +49,12 @@ object AdvPaxSplitsProvider {
   }
 
 
-  def splitRatioProviderWithCsvEgatePercentage(destinationPort: String)
-                                              (passengerInfoRouterActor: AskableActorRef)
-                                              (egatePercentageProvider: (ApiFlight) => Double)
-                                              (flight: ApiFlight)
-                                              (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
+  def splitRatioProviderWithCsvPercentages(destinationPort: String)
+                                          (passengerInfoRouterActor: AskableActorRef)
+                                          (egatePercentageProvider: (ApiFlight) => Double,
+                                           fastTrackPercentageProvider: (ApiFlight) => Option[FastTrackPercentages])
+                                          (flight: ApiFlight)
+                                          (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
     log.debug(s"${flight.IATA} splitRatioProviderWithCsvEgatepercentage")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
       case Some((cc, number)) =>
@@ -62,15 +63,21 @@ object AdvPaxSplitsProvider {
         def logSr(mm: => String) = log.info(s"$splitRequest $mm")
 
         logSr("sending request")
-        val futResp = passengerInfoRouterActor ? splitRequest
+        val futResp = passengerInfoRouterActor ? splitRequest //todo should this just be a (SplitRequest) => Either[FlightNotFound, VoyagePaxSplits], might be slightly simple in tests, and a bit more flexible?
         val splitsFut = futResp.map {
           case voyagePaxSplits: VoyagePaxSplits =>
             logSr(s"${flight.IATA} didgotsplitcrunch")
             val egatePercentage = egatePercentageProvider(flight)
             val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(voyagePaxSplits, egatePercentage)
+            val fastTrackPercentages = fastTrackPercentageProvider(flight)
+            val withFastTrack = fastTrackPercentages match {
+              case Some(fastTrackPercentages) => CSVPassengerSplitsProvider.applyFastTrack (voyagePaxSplits, fastTrackPercentages = fastTrackPercentages)
+              case None => voyagePaxSplitsWithEgatePercentage
+            }
             logSr(s"applying egate percentage $egatePercentage to $voyagePaxSplits")
             logSr(s"applied egate percentage $egatePercentage => $voyagePaxSplitsWithEgatePercentage")
-            Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(voyagePaxSplitsWithEgatePercentage))
+            logSr(s"applied fasttrack percentage $fastTrackPercentages => $withFastTrack")
+            Some(convertVoyagePaxSplitPeopleCountsToSplitRatios(withFastTrack))
           case _: FlightNotFound =>
             log.debug(s"${flight.IATA} notgotsplitcrunch")
             None
