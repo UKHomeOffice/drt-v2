@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import akka.persistence._
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import services.{CSVPassengerSplitsProvider, SDate, SplitsProvider}
+import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate, SplitsProvider}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared._
 import services.SDate.implicits._
@@ -135,7 +135,8 @@ object FlightMessageConversion {
   }
 }
 
-class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
+class FlightsActor(crunchActorRef: ActorRef,
+                   dqApiSplitsActorRef: AskableActorRef,
                    csvSplitsProvider: SplitProvider)
   extends PersistentActor
     with ActorLogging
@@ -184,18 +185,27 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
 
         FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
           case Some((carrierCode, voyageNumber)) =>
-            val future = splitsActor ? ReportVoyagePaxSplit(flight.AirportID,
+            val future = dqApiSplitsActorRef ? ReportVoyagePaxSplit(flight.AirportID,
               flight.Operator, voyageNumber, scheduledDate)
             val futureResp = future map {
               case vps: VoyagePaxSplits =>
                 log.info(s"didgot splits ${vps} for ${flight}")
                 val paxSplits = vps.paxSplits
-                val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(flight), 0.6)
+                val csvSplits = csvSplitsProvider(flight)
+                log.info(s"flight: $flight csvSplits are $csvSplits")
+                val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplits, 0.6)
+
+                val fastTrackPercentages: FastTrackPercentages = CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
                 val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(vps, egatePercentage)
-                log.info(s"applying egate percentage $voyagePaxSplitsWithEgatePercentage")
+                log.info(s"applied egate percentage $egatePercentage toget $voyagePaxSplitsWithEgatePercentage")
+
+                val withFastTrackPercentages = CSVPassengerSplitsProvider.applyFastTrack(voyagePaxSplitsWithEgatePercentage, fastTrackPercentages)
+
+                log.info(s"applied fasttrack percentage $fastTrackPercentages toget $withFastTrackPercentages")
+
                 val splitses: List[ApiSplits] = List(
                   ApiSplits(
-                    voyagePaxSplitsWithEgatePercentage.paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)),
+                    withFastTrackPercentages.paxSplits.map(s => ApiPaxTypeAndQueueCount(s.passengerType, s.queueType, s.paxCount)),
                     ApiSplitsWithCsvPercentage)
                 ) ::: calcCsvApiSplits(flight)
 
@@ -258,6 +268,6 @@ class FlightsActor(crunchActor: ActorRef, splitsActor: AskableActorRef,
 
   private def requestCrunch(newFlights: List[ApiFlight]) = {
     if (newFlights.nonEmpty)
-      crunchActor ! PerformCrunchOnFlights(newFlights)
+      crunchActorRef ! PerformCrunchOnFlights(newFlights)
   }
 }

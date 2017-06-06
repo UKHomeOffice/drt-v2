@@ -26,23 +26,32 @@ class FastTrackPercentagesFromPaxSplitsCsvTest extends Specification {
 
   "DRT-4537 Given a Flight Passenger Split" >> {
     "When we ask for the fast track percentages, we get a multiplier for visa and non visa nationals" >> {
-      val csvLines = Seq(s"""BA1234,JHB,0,0,40,60,0,0,0,100,0,100,0,0,Monday,January,STN,T1,SA""")
+      val visaToFastTrack = "60"
+      val nonVisaToFastTrack = "70"
+      val csvLines = Seq(s"BA1234,JHB,0,0,40,60,0,0,0,$nonVisaToFastTrack,30,$visaToFastTrack,40,0,Monday,January,STN,T1,SA")
       val csvSplitProvider = CSVPassengerSplitsProvider(csvLines)
 
       val split: Option[SplitRatios] = csvSplitProvider.getFlightSplitRatios("BA1234", "Monday", "January")
+//      println(s"a) splitRatios sum ${split.map(_.splits.map(_.ratio).sum)}")
       val fastTrackPercentages = CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(split, 0, 0)
-      val expectedFastTrackPercentage = FastTrackPercentages(visaNational = 0.6, nonVisaNational = 0.4)
+      val expectedFastTrackPercentage = FastTrackPercentages(nonVisaNational = 0.7, visaNational = 0.6)
 
       fastTrackPercentages === expectedFastTrackPercentage
     }
-    "When we ask for the fast track percentages, we get a multiplier for visa and non visa nationals" >> {
-      val csvLines = Seq(s"""BA1234,JHB,0,0,50,50,0,0,0,14,0,8,0,0,Monday,January,STN,T1,SA""")
-      val csvSplitProvider = CSVPassengerSplitsProvider(csvLines)
+    "Given csvSplit line where the fasttrackpct are 14% and 8%" >> {
+      "When we ask for the fast track percentages, we get a multiplier for visa and non visa nationals" >> {
+        val nonVisaToFastTrack = "8"
+        val visaToFastTrack = "14"
+        val csvLines = Seq(s"""BA1234,JHB,0,0,50,50,0,0,0,$nonVisaToFastTrack,92,$visaToFastTrack,86,0,Monday,January,STN,T1,SA""")
+        val csvSplitProvider = CSVPassengerSplitsProvider(csvLines)
 
-      val split: Option[SplitRatios] = csvSplitProvider.getFlightSplitRatios("BA1234", "Monday", "January")
-      val fastTrackPercentages = CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(split, 0, 0)
-      val expectedFastTrackPercentage = FastTrackPercentages(visaNational = 0.04, nonVisaNational = 0.07)
-      fastTrackPercentages === expectedFastTrackPercentage
+        val split: Option[SplitRatios] = csvSplitProvider.getFlightSplitRatios("BA1234", "Monday", "January")
+//        println(s"b) splitRatios sum ${split.map(_.splits.map(_.ratio).sum)}")
+
+        val fastTrackPercentages = CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(split, 0, 0)
+        val expectedFastTrackPercentage = FastTrackPercentages(nonVisaNational = 0.08, visaNational = 0.14)
+        fastTrackPercentages === expectedFastTrackPercentage
+      }
     }
 
     "Given the flight isn't in the CSV files" +

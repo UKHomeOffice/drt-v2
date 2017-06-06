@@ -16,8 +16,16 @@ class EgatePercentagesFromPaxSplitsCsv extends Specification {
 
   "DRT-4568 Given a Flight Passenger Split" >> {
     "When we ask for the egate percentage, we get a multiplier" >> {
-      val egatePercentageStr = "70"
-      val csvLines = Seq(s"""BA1234,JHB,100,0,0,0,$egatePercentageStr,30,0,0,0,0,0,0,Monday,January,STN,T1,SA""")
+      val csvLines = Seq(s"""BA1234,JHB,100,0,0,0,${"70"},30,0,0,0,0,0,0,Monday,January,STN,T1,SA""")
+      val csvSplitProvider = CSVPassengerSplitsProvider(csvLines)
+
+      val split: Option[SplitRatios] = csvSplitProvider.getFlightSplitRatios("BA1234", "Monday", "January")
+      val egatePct = CSVPassengerSplitsProvider.egatePercentageFromSplit(split, 0)
+      val expectedEgatePercentage = 0.7d
+      expectedEgatePercentage === egatePct
+    }
+    "We need the raw percentage at that level of the splits hierarchy - it should not be affected by higher levels " >> {
+      val csvLines = Seq(s"""BA1234,JHB,50,50,0,0,${"70"},30,0,0,0,0,0,0,Monday,January,STN,T1,SA""")
       val csvSplitProvider = CSVPassengerSplitsProvider(csvLines)
 
       val split: Option[SplitRatios] = csvSplitProvider.getFlightSplitRatios("BA1234", "Monday", "January")
@@ -27,8 +35,7 @@ class EgatePercentagesFromPaxSplitsCsv extends Specification {
     }
     "Given the flight isn't in the CSV files" +
       "When we request the egatePercentage, we get the default percentage " >> {
-      val egatePercentageStr = "70"
-      val csvLines = Seq(s"""BA1234,JHB,100,0,0,0,$egatePercentageStr,30,0,0,0,0,0,0,Monday,January,STN,T1,SA""")
+      val csvLines = Seq(s"""BA1234,JHB,100,0,0,0,0,30,0,0,0,0,0,0,Monday,January,STN,T1,SA""")
 
       val csvSplitProvider = CSVPassengerSplitsProvider(csvLines)
 
