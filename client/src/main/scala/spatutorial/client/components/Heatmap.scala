@@ -67,12 +67,27 @@ object TerminalHeatmaps {
 
   }
 
-  def heatmapOfDeskRecs(terminalName: TerminalName) = {
+  def heatmapOfCrunchDeskRecs(terminalName: TerminalName) = {
     val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).collect {
       case (queueName, Ready((Ready(crunchResult)))) =>
         val series = Heatmap.seriesFromCrunchResult(crunchResult)
         Series(terminalName + "/" + queueName, series.map(_.toDouble))
     }.toList.sortBy(_.name))
+    seriiRCP((serMP: ModelProxy[List[Series]]) => {
+      <.div(
+        Heatmap.heatmap(Heatmap.Props(series = serMP().sortBy(_.name), scaleFunction = Heatmap.bucketScale(20)))
+      )
+    })
+  }
+
+  def heatmapOfStaffDeploymentDeskRecs(terminalName: TerminalName) = {
+    val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(_.staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map()).collect {
+      case (queueName, Ready(queueStaffDeployments)) =>
+        val queustaffDeploymentItems = queueStaffDeployments.items
+        //queueStaffDeployments are in 15 minute chunks
+        val series = queustaffDeploymentItems.map(_.deskRec).grouped(4).map(_.max)
+        Series(terminalName + "/" + queueName, series.map(_.toDouble).toIndexedSeq)
+    }.toList.sortBy(x=> x.name))
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
         Heatmap.heatmap(Heatmap.Props(series = serMP().sortBy(_.name), scaleFunction = Heatmap.bucketScale(20)))
