@@ -97,7 +97,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
       val replyTo = sender()
       log.info(s"Sender is ${sender}")
-      log.info(s"Flights is ${flights.values}")
 
       flights.values match {
         case Nil =>

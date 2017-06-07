@@ -144,7 +144,6 @@ trait ProdPassengerSplitProviders {
   override val csvSplitsProvider: (ApiFlight) => Option[SplitRatios] = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: ApiFlight): Double = {
-    log.info(s"looking for egate split for $apiFlight")
     CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
   }
 
