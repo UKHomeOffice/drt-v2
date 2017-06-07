@@ -148,7 +148,7 @@ trait ProdPassengerSplitProviders {
   }
 
   def apiSplitsProv(flight: ApiFlight): Option[SplitRatios] =
-    AdvPaxSplitsProvider.splitRatioProviderWithCsvEgatePercentage(
+    AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
       airportConfig.portCode)(
       flightPassengerSplitReporter)(
       egatePercentageProvider)(flight)(timeout, global)
