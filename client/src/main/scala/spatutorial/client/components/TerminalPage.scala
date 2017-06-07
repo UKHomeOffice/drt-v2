@@ -71,7 +71,7 @@ TerminalPage {
           ),
           <.div(^.className := "tab-content",
             <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
-              heatmapOfDeskRecs(props.terminalName)),
+              heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
             <.div(^.id := "workloads", ^.className := "tab-pane fade",
               heatmapOfWorkloads(props.terminalName)),
             <.div(^.id := "waits", ^.className := "tab-pane fade",
