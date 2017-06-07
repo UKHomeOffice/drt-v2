@@ -429,7 +429,7 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
             1, airportConfig, timeProvider, splitRatioProvider
           )
 
-          withContextCustomActor(testActorProps, ActorSystem("splitsRequestActorSystem")) {
+          withContextCustomActor(testActorProps, ActorSystem("splitsRequestActorSystem", ConfigFactory.empty())) {
             context =>
               val flights = Flights(
                 List(
@@ -438,7 +438,8 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
               context.expectMsgAnyClassOf(classOf[CrunchResult])
 
-              SplitsCounter.readCounter === airportConfig.queues("A1").length
+              // GetLatestCrunch causes another crunch right now
+              SplitsCounter.readCounter === airportConfig.queues("A1").length + 1
           }
         }
       }
