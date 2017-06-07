@@ -136,7 +136,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       tn <- airportConfig.terminalNames
       qn <- airportConfig.queues(tn)
     } {
-
+    log.info(s"reCrunchAllTerminalsAndQueues $tn/$qn")
 
       val crunch: Future[CrunchResult] = performCrunch(tn, qn)
 //      crunchCache.get(cacheKey(tn, qn)) match {
