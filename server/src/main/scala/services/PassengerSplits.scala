@@ -60,7 +60,7 @@ object AdvPaxSplitsProvider {
       case Some((cc, number)) =>
         val splitRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT))
 
-        def logSr(mm: => String) = log.info(s"$splitRequest $mm")
+        def logSr(mm: => String) = log.debug(s"$splitRequest $mm")
 
         logSr("sending request")
         val futResp = passengerInfoRouterActor ? splitRequest //todo should this just be a (SplitRequest) => Either[FlightNotFound, VoyagePaxSplits], might be slightly simple in tests, and a bit more flexible?

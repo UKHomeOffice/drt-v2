@@ -81,12 +81,11 @@ class ProdCrunchActor(hours: Int,
                       timeProvider: () => DateTime
                      ) extends CrunchActor(hours, airportConfig, timeProvider) {
   override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
-    log.info(s"Looking for defaultProcessingTime($terminalName)($paxTypeAndQueue) in ${airportConfig.defaultProcessingTimes}")
+    log.debug(s"Looking for defaultProcessingTime($terminalName)($paxTypeAndQueue) in ${airportConfig.defaultProcessingTimes}")
     airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
   }
 
   override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    log.info(s"wtfwtf: ${flight}, ${_flightPaxTypeAndQueueCountsFlow}")
     _flightPaxTypeAndQueueCountsFlow(flight)
   }
 }
