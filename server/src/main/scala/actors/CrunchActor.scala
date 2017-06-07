@@ -133,10 +133,18 @@ abstract class CrunchActor(crunchPeriodHours: Int,
 
   def reCrunchAllTerminalsAndQueues(): Unit = {
     for {
-      tn <- airportConfig.terminalNames;
+      tn <- airportConfig.terminalNames
       qn <- airportConfig.queues(tn)
     } {
+
+
       val crunch: Future[CrunchResult] = performCrunch(tn, qn)
+//      crunchCache.get(cacheKey(tn, qn)) match {
+//        case None => crunchCache(cacheKey(tn, qn)) {
+//          crunch
+//        }
+//        case _ =>
+//      }
       crunch.onSuccess {
         case crunchResult =>
           self ! SaveCrunchResult(tn, qn, crunchResult)
@@ -158,7 +166,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     val tq: QueueName = terminalName + "/" + queueName
     log.info(s"$tq Performing a crunch")
-    val flightsForAirportConfigTerminals = flights.values.filter(flight => airportConfig.terminalNames.contains(flight.Terminal)).toList
+    val flightsForAirportConfigTerminals = flights.values.filter(flight => flight.Terminal == terminalName).toList
     val uniqueArrivals = uniqueArrivalsWithCodeshares(flightsForAirportConfigTerminals).map(_._1)
     val workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]] = queueLoadsByTerminal[Seq[WL]](
       Future(uniqueArrivals),
@@ -167,6 +175,11 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     val crunchWindowStartTimeMillis = lastLocalMidnight.getMillis
     log.info(s"$tq lastMidnight: $lastLocalMidnight")
 
+    crunchWorkloads(workloads, terminalName, queueName, crunchWindowStartTimeMillis)
+  }
+
+  def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
+    val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")
