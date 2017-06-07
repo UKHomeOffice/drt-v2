@@ -296,7 +296,7 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
         case (terminalName, queueMapPot) => {
           queueMapPot.map {
             case (queueName, deployedDesks) =>
-              val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
+//              val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
               val desks = deployedDesks.get.items.map(_.deskRec)
               val desksList = desks.toList
               Effect(Future(RunSimulation(terminalName, queueName, desksList)))
@@ -305,17 +305,19 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
       }.toList
       log.info(s"runAllSimulations effects ${actions}")
       effectOnly(seqOfEffectsToEffectSeq(actions))
-    case RunSimulation(terminalName, queueName, desks) =>
+    case rs@RunSimulation(terminalName, queueName, desks) =>
       log.info(s"Requesting simulation for $terminalName, $queueName")
       val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
       val firstNonZeroIndex = queueWorkload.indexWhere(_ != 0)
       log.info(s"run sim first != 0 workload $firstNonZeroIndex")
+      log.info(s"run sum $rs workload $queueWorkload")
       val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
       effectOnly(
         Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
       )
-    case UpdateSimulationResult(terminalName, queueName, simResult) =>
+    case sr@UpdateSimulationResult(terminalName, queueName, simResult) =>
       val firstNonZeroIndex = simResult.waitTimes.indexWhere(_ != 0)
+      log.info(s"run sim simResult $sr")
       log.info(s"$terminalName/$queueName updateSimResult ${firstNonZeroIndex}")
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }

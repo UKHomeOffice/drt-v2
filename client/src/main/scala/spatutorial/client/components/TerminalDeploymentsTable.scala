@@ -120,7 +120,7 @@ object TerminalDeploymentsTable {
                   })))
           }
         }),
-        peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
+         peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
     })
   }
 
