@@ -77,10 +77,14 @@ object PaxTypesAndQueues {
   val eeaNonMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk)
   val visaNationalToDesk = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk)
   val nonVisaNationalToDesk = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
-  val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
+  val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
+  /*todo - we should move the usages of this to airportConfig */
   val inOrder = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
+
+  val inOrderWithFastTrack = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk,
+    eeaNonMachineReadableToDesk, visaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToDesk, nonVisaNationalToFastTrack)
 }
 
 object AirportConfigs {

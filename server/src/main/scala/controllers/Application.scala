@@ -80,7 +80,10 @@ class ProdCrunchActor(hours: Int,
                       val _flightPaxTypeAndQueueCountsFlow: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
                       timeProvider: () => DateTime
                      ) extends CrunchActor(hours, airportConfig, timeProvider) {
-  override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+  override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
+    log.info(s"Looking for defaultProcessingTime($terminalName)($paxTypeAndQueue) in ${airportConfig.defaultProcessingTimes}")
+    airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
+  }
 
   override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     log.info(s"wtfwtf: ${flight}, ${_flightPaxTypeAndQueueCountsFlow}")
@@ -147,11 +150,15 @@ trait ProdPassengerSplitProviders {
     CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
   }
 
+  def fastTrackPercentageProvider(apiFlight: ApiFlight): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
+
   def apiSplitsProv(flight: ApiFlight): Option[SplitRatios] =
-    AdvPaxSplitsProvider.splitRatioProviderWithCsvEgatePercentage(
+    AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
       airportConfig.portCode)(
       flightPassengerSplitReporter)(
-      egatePercentageProvider)(flight)(timeout, global)
+      egatePercentageProvider,
+      fastTrackPercentageProvider
+    )(flight)(timeout, global)
 
   val apiSplitsProvider: (ApiFlight) => Option[SplitRatios] = (flight: ApiFlight) => apiSplitsProv(flight)
   override val splitsProviders = List(apiSplitsProvider, csvSplitsProvider, SplitsProvider.defaultProvider(airportConfig))

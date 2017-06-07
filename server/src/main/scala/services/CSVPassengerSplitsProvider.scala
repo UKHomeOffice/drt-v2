@@ -2,19 +2,56 @@ package services
 
 import com.typesafe.config.ConfigFactory
 import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
-import drt.shared.PaxTypes.EeaMachineReadable
+import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 
+
+case class FastTrackPercentages(visaNational: Double, nonVisaNational: Double)
+
+
 object CSVPassengerSplitsProvider {
-  def egatePercentageFromSplit(split: Option[SplitRatios], defaultPct: Double) = {
-    split
-      .map(_.splits
-        .find(p => p.paxType.queueType == Queues.EGate)
-        .map(_.ratio).getOrElse(defaultPct)).getOrElse(defaultPct)
+  def fastTrackPercentagesFromSplit(splitOpt: Option[SplitRatios], defaultVisaPct: Double, defaultNonVisaPct: Double): FastTrackPercentages = {
+    val visaNational = splitOpt
+      .map {
+        ratios =>
+
+          val splits = ratios.splits
+          val visaNationalSplits = splits.filter(s => s.paxType.passengerType == PaxTypes.VisaNational)
+
+          val totalVisaNationalSplit = visaNationalSplits.map(_.ratio).sum
+
+          splits
+            .find(p => p.paxType.passengerType == PaxTypes.VisaNational && p.paxType.queueType == Queues.FastTrack)
+            .map(_.ratio / totalVisaNationalSplit).getOrElse(defaultVisaPct)
+      }.getOrElse(defaultVisaPct)
+
+    val nonVisaNational = splitOpt
+      .map {
+        ratios =>
+          val splits = ratios.splits
+          val totalNonVisaNationalSplit = splits.filter(s => s.paxType.passengerType == PaxTypes.NonVisaNational).map(_.ratio).sum
+
+          splits
+            .find(p => p.paxType.passengerType == PaxTypes.NonVisaNational && p.paxType.queueType == Queues.FastTrack)
+            .map(_.ratio / totalNonVisaNationalSplit).getOrElse(defaultNonVisaPct)
+      }.getOrElse(defaultNonVisaPct)
+    FastTrackPercentages(visaNational, nonVisaNational)
+  }
+
+  def egatePercentageFromSplit(splitOpt: Option[SplitRatios], defaultPct: Double): Double = {
+    splitOpt
+      .map { x =>
+        val splits = x.splits
+        val interestingSplits = splits.filter(s => s.paxType.passengerType == PaxTypes.EeaMachineReadable)
+        val interestingSplitsTotal = interestingSplits.map(_.ratio).sum
+        splits
+          .find(p => p.paxType.queueType == Queues.EGate)
+          .map(_.ratio / interestingSplitsTotal).getOrElse(defaultPct)
+      }.getOrElse(defaultPct)
   }
 
   def applyEgatesSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], egatePct: Double): List[SplitsPaxTypeAndQueueCount] = {
@@ -27,7 +64,26 @@ object CSVPassengerSplitsProvider {
     }
   }
 
-  def applyEgates(vps: VoyagePaxSplits, egatePct: Double): VoyagePaxSplits = vps.copy(paxSplits = applyEgatesSplits(vps.paxSplits, egatePct))
+  def applyFastTrackSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[SplitsPaxTypeAndQueueCount] = {
+    ptaqc.flatMap {
+      case s@SplitsPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) =>
+        val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
+        s.copy(queueType = Queues.FastTrack, paxCount = count - nonVisaNationalNonEeaDesk) ::
+          s.copy(paxCount = nonVisaNationalNonEeaDesk) :: Nil
+      case s@SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count) =>
+        val visaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.visaNational)).toInt
+        s.copy(queueType = Queues.FastTrack, paxCount = count - visaNationalNonEeaDesk) ::
+          s.copy(paxCount = visaNationalNonEeaDesk) :: Nil
+      case s => s :: Nil
+    }
+  }
+
+  def applyEgates(vps: VoyagePaxSplits,
+                  egatePct: Double): VoyagePaxSplits = vps.copy(paxSplits = applyEgatesSplits(vps.paxSplits, egatePct))
+
+  def applyFastTrack(vps: VoyagePaxSplits,
+                     fastTrackPercentages: FastTrackPercentages): VoyagePaxSplits = vps.copy(
+    paxSplits = applyFastTrackSplits(vps.paxSplits, fastTrackPercentages))
 
 }
 
@@ -63,7 +119,9 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
         row.dayOfWeek == dayOfWeek &&
         row.month == month
     }
-    ).map(matchFlight => SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight), origin = SplitSources.Historical))
+    ).map(matchFlight => {
+      SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight), origin = SplitSources.Historical)
+    })
   }
 
 
@@ -86,6 +144,12 @@ object CsvPassengerSplitsReader {
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk),
         calcQueueRatio(row.visaNationals, row.visaToNonEEA)),
+      SplitRatio(
+        PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack),
+        calcQueueRatio(row.visaNationals, row.visaToFastTrack)),
+      SplitRatio(
+        PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack),
+        calcQueueRatio(row.nonVisaNationals, row.nonVisaToFastTrack)),
       SplitRatio(
         PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk),
         calcQueueRatio(row.nonVisaNationals, row.nonVisaToNonEEA))
