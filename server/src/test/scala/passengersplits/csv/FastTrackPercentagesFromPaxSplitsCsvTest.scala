@@ -81,6 +81,16 @@ class FastTrackPercentagesFromPaxSplitsCsvTest extends Specification {
 
       converted.paxSplits.toSet === CSVPassengerSplitsProvider.applyFastTrack(vps, FastTrackPercentages(0, 0.4)).paxSplits.toSet
     }
+    "If fastTrack percentage is 0 then don't include a SplitsPaxTypeAndQueueCount because it's probably not in AirportConfig and could break other things" >> {
+      val vps = VoyagePaxSplits("STN", "BA", "978", 100, SDate(2017, 10, 1, 10, 30), List(
+        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 100)
+      ))
+      val converted = vps.copy(paxSplits = List(
+        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 100)
+      ))
+
+      converted.paxSplits.toSet === CSVPassengerSplitsProvider.applyFastTrack(vps, FastTrackPercentages(0, 0)).paxSplits.toSet
+    }
 
     "We can convert a VoyagePassengerInfo (split from DQ API) into an ApiSplit where we apply a percentage calculation to the" +
       "visa nationals, diverting that percentage to fast track" >> {

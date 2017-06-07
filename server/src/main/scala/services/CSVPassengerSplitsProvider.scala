@@ -63,19 +63,21 @@ object CSVPassengerSplitsProvider {
       case s => s :: Nil
     }
   }
-
+  val log = LoggerFactory.getLogger(getClass)
   def applyFastTrackSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[SplitsPaxTypeAndQueueCount] = {
-    ptaqc.flatMap {
-      case s@SplitsPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) =>
+    val results = ptaqc.flatMap {
+      case s@SplitsPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
         val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
         s.copy(queueType = Queues.FastTrack, paxCount = count - nonVisaNationalNonEeaDesk) ::
           s.copy(paxCount = nonVisaNationalNonEeaDesk) :: Nil
-      case s@SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count) =>
+      case s@SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.visaNational != 0 =>
         val visaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.visaNational)).toInt
         s.copy(queueType = Queues.FastTrack, paxCount = count - visaNationalNonEeaDesk) ::
           s.copy(paxCount = visaNationalNonEeaDesk) :: Nil
       case s => s :: Nil
     }
+    log.debug(s"applied fastTrack $fastTrackPercentages got $ptaqc")
+    results
   }
 
   def applyEgates(vps: VoyagePaxSplits,
@@ -120,7 +122,8 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
         row.month == month
     }
     ).map(matchFlight => {
-      SplitRatios(CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight), origin = SplitSources.Historical)
+      val splitRatiosWith0FastTrackFiltersOut = CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight).filterNot(sr => sr.paxType.queueType == Queues.FastTrack && sr.ratio == 0 )
+      SplitRatios(splitRatiosWith0FastTrackFiltersOut, origin = SplitSources.Historical)
     })
   }
 
