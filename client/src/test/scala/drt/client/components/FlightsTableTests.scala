@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.{Pot, Ready}
 import drt.client.components.{FlightTableComponents, FlightsWithSplitsTable}
@@ -9,6 +9,7 @@ import japgolly.scalajs.react.vdom.html_<^.<
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.Span
 import utest._
+
 
 object FlightsTableTests extends TestSuite {
 

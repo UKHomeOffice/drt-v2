@@ -62,6 +62,7 @@ TerminalPage {
       simulationResultRCP((simulationResultMP) => {
         val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(props.terminalName, Map()), props.terminalName)
         <.div(
+          BigSummaryBoxed.SummaryBox(BigSummaryBoxed.Props(300, 4000)),
           <.ul(^.className := "nav nav-tabs",
             <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
             <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),

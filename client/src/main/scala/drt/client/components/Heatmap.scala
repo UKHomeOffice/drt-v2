@@ -2,22 +2,57 @@ package drt.client.components
 
 import diode.data.{Pending, Pot, Ready}
 import diode.react._
+import drt.client.components.FlightTableRow.Props
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.TagOf
-
 import org.scalajs.dom.svg.{G, Text}
 import drt.client.components.Heatmap.Series
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.FlightsApi._
 import drt.shared._
+import japgolly.scalajs.react.extra.Reusability
 
 import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
 import scala.util.{Failure, Success, Try}
 
+object BigSummaryBoxed {
+  def flightInPeriod(f: ApiFlightWithSplits, now: SDateLike, nowPlus3Hours: SDateLike) = {
+    val flightDt = SDate.parse(f.apiFlight.SchDT)
+    println(s"now: ${now.toString} nowPlus: ${nowPlus3Hours.toString} flightDt: ${flightDt}")
+    now.millisSinceEpoch <= flightDt.millisSinceEpoch && flightDt.millisSinceEpoch <= nowPlus3Hours.millisSinceEpoch
+  }
+
+  def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike) = {
+    flights.filter(flightInPeriod(_, now, nowPlus3Hours))
+  }
+
+  def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
+    rootModel.flightsWithSplitsPot.map(splits => flightsInPeriod(splits.flights, now, nowPlus3Hours).length)
+  }
+
+
+  def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
+    rootModel.flightsWithSplitsPot.map(splits => {
+      val period = flightsInPeriod(splits.flights, now, nowPlus3Hours)
+      println(s"matching flights: $period")
+      period.map(_.apiFlight.ActPax).sum
+    })
+  }
+
+  case class Props(flightCount: Int, actPaxCount: Int)
+
+  val SummaryBox = ScalaComponent.builder[Props]("SummaryBox")
+    .render_P((p) =>
+      <.div(^.className := "summary-box",
+        <.div("Flights in the next 3 hours", <.span(^.className := "summary-box-count flight-count", p.flightCount)),
+        <.div("Pax at chox in the next 3 hours", <.span(^.className := "summary-box-count act-pax-count", p.actPaxCount))))
+    .build
+}
 
 object TerminalHeatmaps {
   def heatmapOfWorkloads(terminalName: TerminalName) = {
@@ -87,7 +122,7 @@ object TerminalHeatmaps {
         //queueStaffDeployments are in 15 minute chunks
         val series = queustaffDeploymentItems.map(_.deskRec).grouped(4).map(_.max)
         Series(terminalName + "/" + queueName, series.map(_.toDouble).toIndexedSeq)
-    }.toList.sortBy(x=> x.name))
+    }.toList.sortBy(x => x.name))
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
         Heatmap.heatmap(Heatmap.Props(series = serMP().sortBy(_.name), scaleFunction = Heatmap.bucketScale(20)))
@@ -196,9 +231,14 @@ object Heatmap {
 
   case class Series(name: String, data: IndexedSeq[Double])
 
-  case class Props(width: Int = 960, numberOfBlocks: Int = 24, series: Seq[Series], scaleFunction: (Double) => Int, shouldShowRectValue: Boolean = true, valueDisplayFormatter: (Double) => String = _.toInt.toString) {
+  case class Props(width: Int = 960, numberOfBlocks: Int = 24, series: List[Series], scaleFunction: (Double) => Int, shouldShowRectValue: Boolean = true, valueDisplayFormatter: (Double) => String = _.toInt.toString) {
     def height = 50 * (series.length + 1)
   }
+
+  implicit val doubleReuse = Reusability.double(0.01)
+  implicit val doubleSeqReuse = Reusability.indexedSeq[IndexedSeq, Double]
+  implicit val seriesReuse = Reusability.caseClass[Series]
+  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('valueDisplayFormatter, 'scaleFunction)
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
     "#E0C54B", "#DD983A", "#DA6429", "#D72A18")
@@ -307,6 +347,8 @@ object Heatmap {
           log.error("Issue in heatmap", e)
           throw e
       }
-    }).build
+    })
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .build
 }
 

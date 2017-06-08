@@ -161,7 +161,7 @@ case class RootModel(
        |simulationResult: $simulationResult
        |flights: $flightsWithSplitsPot
        |airportInfos: $airportInfos
-       |flightPaxSplits: ${flightSplits}
+       |flightPaxSplits: $flightSplits
        |)
      """.stripMargin
 }
@@ -371,7 +371,14 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
         if (oldFlightsSet != newFlightsSet) {
           val airportCodes = flights.map(_.Origin).toSet
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
-          val allEffects = airportInfos
+
+          val getWorkloads = {
+            //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
+            log.info("flights Have changed - will re-request workloads")
+            Effect(Future(GetWorkloads("", "")))
+          }
+
+          val allEffects = airportInfos //>> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
