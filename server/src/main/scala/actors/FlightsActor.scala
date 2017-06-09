@@ -124,7 +124,8 @@ object FlightMessageConversion {
           rawIATA = flightMessage.iATA.getOrElse(""),
           Origin = flightMessage.origin.getOrElse(""),
           SchDT = apiFlightDateTime(flightMessage.scheduled),
-          PcpTime = flightMessage.pcpTime.getOrElse(0)
+          PcpTime = flightMessage.pcpTime.getOrElse(0),
+          LastKnownPax = flightMessage.lastKnownPax
         )
     }
   }
@@ -134,6 +135,38 @@ object FlightMessageConversion {
     case _ => ""
   }
 }
+
+object FlightPaxNumbers {
+  var flightPaxNos: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
+
+  def updateFlights(flights: List[ApiFlight]) = {
+    flights.foreach(f => flightPaxNos(key(f)) = bestPaxNoForFlight(f))
+  }
+
+  def latestPaxForFlight(f: ApiFlight): Option[Int] = {
+    flightPaxNos.get(key(f))
+  }
+
+  def bestPaxNoForFlight(flight: ApiFlight) = {
+    val defaultPax = 200
+
+    flight match {
+      case f if f.ActPax > 0 && f.ActPax != defaultPax =>
+        f.ActPax
+      case f if f.LastKnownPax.isDefined  =>
+        f.LastKnownPax.get
+      case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
+        f.MaxPax
+      case _ =>
+        defaultPax
+    }
+  }
+
+  def key(flight: ApiFlight) = {
+    flight.IATA + flight.ICAO
+  }
+}
+
 
 class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,

@@ -1,0 +1,129 @@
+package controllers
+
+import actors.FlightPaxNumbers
+import drt.shared.ApiFlight
+import org.specs2.mutable.Specification
+
+class LHRFlightPaxHackSpec extends Specification {
+  def flightWithBestPax(newFlight: ApiFlight, currentFlights: List[ApiFlight]): ApiFlight = {
+    if (newFlight.ActPax != 200)
+      newFlight
+    else {
+      val lastFlight = currentFlights.find(f => f.IATA == newFlight.IATA)
+
+      val flight = lastFlight.map(f => {
+        newFlight.copy(LastKnownPax = Option(f.ActPax))
+      })
+
+      flight.getOrElse(newFlight)
+    }
+  }
+
+
+
+
+  "Find best pax no for flight" >> {
+    "Given a flight with non 200 ActPax" >> {
+      "Then we should get the ActPax no" >> {
+        val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500, None)
+
+        300 === FlightPaxNumbers.bestPaxNoForFlight(newFlight)
+      }
+    }
+    "Given a flight with 200 ActPax and no LastKnownPax" >> {
+      "Then we should get 200" >> {
+        val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 500, None)
+
+        200 === FlightPaxNumbers.bestPaxNoForFlight(newFlight)
+      }
+    }
+    "Given a flight with no ActPax and no LastKnownPax with MaxPax of 300" >> {
+      "Then we should get 300" >> {
+        val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 300, None)
+
+        300 === FlightPaxNumbers.bestPaxNoForFlight(newFlight)
+      }
+    }
+
+    "Given a list of different flights " >> {
+      "when we ask for latest pax numbers for a flight in the list" >> {
+        "Then we should get the latest pax numbers for the flight" >> {
+          val newFlights = List(
+            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500),
+            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 400, 500)
+          )
+
+          FlightPaxNumbers.updateFlights(newFlights)
+          val result = FlightPaxNumbers.latestPaxForFlight(apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0))
+
+          result === Some(300)
+        }
+      }
+      "when we ask for latest pax numbers for a flight not in the list" >> {
+        "Then we should get none" >> {
+          val newFlights = List(
+            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500),
+            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 400, 500)
+          )
+
+          FlightPaxNumbers.updateFlights(newFlights)
+          val result = FlightPaxNumbers.latestPaxForFlight(apiFlight("SA123", "SA123", "2017-06-08T12:00:00.00Z", 0, 0))
+
+          result === None
+        }
+      }
+    }
+    "Given a list of flights containing default pax numbers" >> {
+      "When we have historic pax nos for that flight" >> {
+        "Then we should see the historic paxnos in the LastKnownPax field for those flights" >> {
+
+          val oldFlights = List(
+            apiFlight("SA324", "SA324", "2017-06-07T12:00:00.00Z", 300, 0),
+            apiFlight("BA123", "SA324", "2017-06-07T12:00:00.00Z", 300, 0)
+          )
+
+          val newFlights = List(
+            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 0),
+            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 200, 0)
+          )
+          val expected = List(
+            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 0, Option(300)),
+            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 200, 0, Option(300))
+          )
+
+          FlightPaxNumbers.updateFlights(oldFlights)
+          val result = FlightPaxNumbers.updateFlights(newFlights)
+
+          result === expected
+        }
+      }
+    }
+  }
+
+  def apiFlight(iataCode: String, icaoCode: String, schDt: String, actPax: Int, maxPax: Int, lastKnownPax: Option[Int] = None): ApiFlight =
+    ApiFlight(
+      FlightID = 0,
+      rawICAO = icaoCode,
+      rawIATA = iataCode,
+      SchDT = schDt,
+      ActPax = actPax,
+
+      Terminal = "T1",
+      Origin = "",
+      Operator = "",
+      Status = "",
+      EstDT = "",
+      ActDT = "",
+      EstChoxDT = "",
+      ActChoxDT = "",
+      Gate = "",
+      Stand = "",
+      MaxPax = maxPax,
+      TranPax = 0,
+      RunwayID = "",
+      BaggageReclaimId = "",
+      AirportID = "",
+      PcpTime = 0,
+      LastKnownPax = lastKnownPax
+    )
+}

@@ -63,7 +63,8 @@ case class ApiFlight(
                       rawIATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long) {
+                      PcpTime: Long,
+                      LastKnownPax: Option[Int] = None) {
   lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
   lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
 }

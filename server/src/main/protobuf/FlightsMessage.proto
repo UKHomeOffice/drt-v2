@@ -32,4 +32,5 @@ message FlightMessage {
     optional int64 Touchdown = 24;
     optional int64 EstimatedChox = 25;
     optional int64 ActualChox = 26;
+    optional int32 LastKnownPax = 27;
 }
