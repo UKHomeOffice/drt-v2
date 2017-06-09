@@ -61,9 +61,10 @@ trait Core {
 object PaxFlow {
   def makeFlightPaxFlowCalculator(
                                    splitRatioForFlight: (ApiFlight) => Option[SplitRatios],
-                                   pcpArrivalTimeForFlight: (ApiFlight) => MilliDate
+                                   pcpArrivalTimeForFlight: (ApiFlight) => MilliDate,
+                                   bestPax: (ApiFlight) => Int
                                  ): (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight)
+    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight, bestPax)
     (flight) => provider(flight)
   }
 
@@ -102,7 +103,9 @@ trait SystemActors extends Core {
 
   val paxFlowCalculator: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxFlow.makeFlightPaxFlowCalculator(
     PaxFlow.splitRatioForFlight(splitsProviders),
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider),
+    BestPax(airportConfig.portCode)
+  )
 
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,
