@@ -20,40 +20,6 @@ import japgolly.scalajs.react.extra.Reusability
 import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
 import scala.util.{Failure, Success, Try}
 
-object BigSummaryBoxed {
-  def flightInPeriod(f: ApiFlightWithSplits, now: SDateLike, nowPlus3Hours: SDateLike) = {
-    val flightDt = SDate.parse(f.apiFlight.SchDT)
-    println(s"now: ${now.toString} nowPlus: ${nowPlus3Hours.toString} flightDt: ${flightDt}")
-    now.millisSinceEpoch <= flightDt.millisSinceEpoch && flightDt.millisSinceEpoch <= nowPlus3Hours.millisSinceEpoch
-  }
-
-  def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike) = {
-    flights.filter(flightInPeriod(_, now, nowPlus3Hours))
-  }
-
-  def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
-    rootModel.flightsWithSplitsPot.map(splits => flightsInPeriod(splits.flights, now, nowPlus3Hours).length)
-  }
-
-
-  def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
-    rootModel.flightsWithSplitsPot.map(splits => {
-      val period = flightsInPeriod(splits.flights, now, nowPlus3Hours)
-      println(s"matching flights: $period")
-      period.map(_.apiFlight.ActPax).sum
-    })
-  }
-
-  case class Props(flightCount: Int, actPaxCount: Int)
-
-  val SummaryBox = ScalaComponent.builder[Props]("SummaryBox")
-    .render_P((p) =>
-      <.div(^.className := "summary-box",
-        <.div("Flights in the next 3 hours", <.span(^.className := "summary-box-count flight-count", p.flightCount)),
-        <.div("Pax at chox in the next 3 hours", <.span(^.className := "summary-box-count act-pax-count", p.actPaxCount))))
-    .build
-}
-
 object TerminalHeatmaps {
   def heatmapOfWorkloads(terminalName: TerminalName) = {
     val workloadsRCP = SPACircuit.connect(_.workloadPot)

@@ -100,9 +100,11 @@ trait SystemActors extends Core {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
+  val pcpArrivalTimeCalculator = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider)_
+
   val paxFlowCalculator: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxFlow.makeFlightPaxFlowCalculator(
     PaxFlow.splitRatioForFlight(splitsProviders),
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
+    pcpArrivalTimeCalculator)
 
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,

@@ -3,18 +3,21 @@ package drt.client.components
 import diode.data.Ready
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
-import drt.shared.{ApiFlight, ApiFlightWithSplits, SDateLike}
+import drt.shared._
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.SplitRatiosNs.SplitSources
 import japgolly.scalajs.react.{test, _}
 import japgolly.scalajs.react.test._
 import japgolly.scalajs.react.vdom.html_<^._
 import utest.TestSuite
 import utest._
 
+import scala.collection.immutable
+
 
 object BigSummaryBoxTests extends TestSuite {
 
-  import BigSummaryBoxed._
+  import BigSummaryBoxes._
 
   test.WebpackRequire.ReactTestUtils
 
@@ -50,7 +53,7 @@ object BigSummaryBoxTests extends TestSuite {
               ApiFlightWithSplits(apiFlight3, Nil) :: Nil)))
 
           "AND a current time of 2017-05-01T12:00" - {
-            val now = SDate(2017, 5, 1, 12, 0)
+            val now = SDate.parse("2017-05-01T12:00Z")
             val nowPlus3Hours = now.addHours(3)
 
             "Then we can get a number of flights arriving in that period" - {
@@ -64,6 +67,107 @@ object BigSummaryBoxTests extends TestSuite {
             }
           }
         }
+        "Given 3 flights with a nonZero PcpTime we use the pcpTime " - {
+          import ApiFlightGenerator._
+
+          def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+
+          val apiFlightPcpBeforeNow = apiFlight("2017-05-01T11:40Z", FlightID = 0, ActPax = 7, PcpTime = mkMillis("2017-05-01T11:40Z"))
+          val apiFlight0aPcpAfterNow = apiFlight("2017-05-01T11:40Z", FlightID = 1, ActPax = 11, PcpTime = mkMillis("2017-05-01T12:05Z"))
+          val apiFlight1 = apiFlight("2017-05-01T12:05Z", FlightID = 2, ActPax = 200, PcpTime = mkMillis("2017-05-01T12:05Z"))
+          val apiFlight2 = apiFlight("2017-05-01T13:05Z", FlightID = 3, ActPax = 300, PcpTime = mkMillis("2017-05-01T13:15Z"))
+          val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = 4, ActPax = 40, PcpTime = mkMillis("2017-05-01T13:22Z"))
+
+
+          val rootModel = RootModel(flightsWithSplitsPot = Ready(FlightsWithSplits(
+            ApiFlightWithSplits(apiFlightPcpBeforeNow, Nil) ::
+              ApiFlightWithSplits(apiFlight0aPcpAfterNow, Nil) ::
+              ApiFlightWithSplits(apiFlight1, Nil) ::
+              ApiFlightWithSplits(apiFlight2, Nil) ::
+              ApiFlightWithSplits(apiFlight3, Nil) :: Nil)))
+
+          "AND a current time of 2017-05-01T12:00" - {
+            val now = SDate.parse("2017-05-01T12:00Z")
+            val nowPlus3Hours = now.addHours(3)
+
+            "Then we can get a number of flights arriving in that period" - {
+              val countOfFlights = countFlightsInPeriod(rootModel, now, nowPlus3Hours)
+              val expected = Ready(4)
+              assert(countOfFlights == expected)
+            }
+            "And we can get the total pax to the PCP" - {
+              val countOfPax = countPaxInPeriod(rootModel, now, nowPlus3Hours)
+              assert(countOfPax == Ready(11 + 200 + 300 + 40))
+            }
+          }
+        }
+        "Given 3 flights with a nonZero PcpTime we use the pcpTime " - {
+          "AND we can filter by Terminal - we're interested in T1" - {
+            val ourTerminal = "T1"
+
+            import ApiFlightGenerator._
+
+            def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+
+            val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 200, PcpTime = mkMillis("2017-05-01T12:05Z"))
+            val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = 3, ActPax = 300, PcpTime = mkMillis("2017-05-01T13:15Z"))
+            val notOurTerminal = apiFlight("2017-05-01T13:20Z", Terminal = "T4", FlightID = 4, ActPax = 40, PcpTime = mkMillis("2017-05-01T13:22Z"))
+
+            val flights = FlightsWithSplits(
+              ApiFlightWithSplits(apiFlight1, Nil) ::
+                ApiFlightWithSplits(apiFlight2, Nil) ::
+                ApiFlightWithSplits(notOurTerminal, Nil) :: Nil)
+            val rootModel = RootModel(flightsWithSplitsPot = Ready(flights))
+
+            "AND a current time of 2017-05-01T12:00" - {
+              val now = SDate.parse("2017-05-01T12:00Z")
+              val nowPlus3Hours = now.addHours(3)
+
+              "Then we can get a number of flights arriving in that period" - {
+                val flightsPcp = flightsInPeriod(flights.flights, now, nowPlus3Hours)
+                val flightsInTerminal = flightsAtTerminal(flightsPcp, ourTerminal)
+                val countOfFlights = flightsInTerminal.length
+                val expected = 2
+                assert(countOfFlights == expected)
+              }
+            }
+          }
+        }
+        "Given 3 flights " - {
+          "And they have splits" - {
+            "Then we can aggregate the splits for a graph" - {
+              val ourTerminal = "T1"
+
+              import ApiFlightGenerator._
+
+              def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+
+              val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 200, PcpTime = mkMillis("2017-05-01T12:05Z"))
+              val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = 3, ActPax = 300, PcpTime = mkMillis("2017-05-01T13:15Z"))
+
+              val splits1 = ApiSplits(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41) ::
+                ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 23) :: Nil,
+                SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
+
+              val splits2 = ApiSplits(
+                ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11) ::
+                  ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 17) :: Nil
+                , SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
+
+              val flights = FlightsWithSplits(
+                ApiFlightWithSplits(apiFlight1, List(splits1)) ::
+                  ApiFlightWithSplits(apiFlight2, List(splits2)) :: Nil)
+
+              val aggSplits = aggregateSplits(flights)
+
+              val expectedAggSplits = Map(
+                PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (41 + 11),
+                  PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) ->  (23 + 17))
+
+              assert(aggSplits == expectedAggSplits)
+            }
+          }
+        }
       }
     }
   }
@@ -72,6 +176,7 @@ object BigSummaryBoxTests extends TestSuite {
 }
 
 object ApiFlightGenerator {
+
   def apiFlight(
                  SchDT: String,
                  Operator: String = "",

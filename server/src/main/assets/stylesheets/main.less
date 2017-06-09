@@ -450,17 +450,28 @@ th h2 {
 }
 
 /* summary-boxes */
-.summary-box {
-  background-color: #dddddd;
+.summary-boxes {
+  height: 90px;
+}
+
+.summary-box-container {
   display: inline-block;
-  margin-left: 5px;
+  height: 80px;
+  background-color: #dddddd;
+  padding: 5px 5px 5px 5px;
+  margin: 5px 5px 5px 5px;
 }
 
 .summary-box-count {
   font-size: 40pt;
   font-weight: bold;
+  display: inline-block;
 }
 
+.summary-box-container .split-graph-container .splits .graph {
+  height: 80px;
+  top: -5px;
+}
 
 .splitsource-historical {
   background: @reliability-medium;
