@@ -461,7 +461,7 @@ class StreamFlightCrunchTests
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       import WorkloadCalculatorTests._
-      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider), "flightsActor")
+      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, CrunchTests.airportConfig), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights

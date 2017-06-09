@@ -19,7 +19,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
                 scheduledDatetime: String,
                 terminal: String = "A1",
                 origin: String = "",
-                flightId: Int = 1
+                flightId: Int = 1,
+                lastKnownPax: Option[Int] = None
                ): ApiFlight =
     ApiFlight(
       FlightID = flightId,
@@ -34,7 +35,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
       ActChoxDT = "",
       Gate = "",
       Stand = "",
-      MaxPax = 1,
+      MaxPax = 0,
       ActPax = totalPax,
       TranPax = 0,
       RunwayID = "",
@@ -42,7 +43,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
       AirportID = airportCode,
       rawICAO = flightCode,
       rawIATA = flightCode,
-      PcpTime = 0
+      PcpTime = 0,
+      LastKnownPax = lastKnownPax
     )
 
   def tests = TestSuite {

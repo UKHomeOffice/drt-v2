@@ -25,8 +25,14 @@ class FlightsActorSpec extends Specification {
   sequential
 
   val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
-  private def flightsActor(system: ActorSystem) = {
-    system.actorOf(Props(classOf[FlightsActor], crunchActor(system), Actor.noSender, testSplitsProvider), "FlightsActor")
+
+  private def flightsActor(system: ActorSystem, airportCode: String = "EDI") = {
+    system.actorOf(Props(
+      classOf[FlightsActor],
+      crunchActor(system),
+      Actor.noSender,
+      testSplitsProvider,
+      CrunchTests.airportConfig.copy(portCode=airportCode)), "FlightsActor")
   }
 
   private def crunchActor(system: ActorSystem) = {
@@ -45,13 +51,13 @@ class FlightsActorSpec extends Specification {
       actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
-      val futureFlights: Future[List[ApiFlight]] = futureResult.collect{
+      val futureFlights: Future[List[ApiFlight]] = futureResult.collect {
         case Success(Flights(fs)) => fs
       }
 
       val result = Await.result(futureResult, 1 second)
 
-      assert(Flights(List(apiFlight("SA0123", "STN", 1, "2017-08-02T20:00"))) == result)
+      result === Flights(List(apiFlight("SA0123", "STN", 1, "2017-08-02T20:00")))
     }
 
     "Store a flight and retrieve it after a shutdown" in {
@@ -60,6 +66,49 @@ class FlightsActorSpec extends Specification {
 
       Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
     }
+
+    "Remember the previous Pax for a flight and use them if the flight comes in with default pax" in
+      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+        implicit val timeout: Timeout = Timeout(5 seconds)
+        val actor: ActorRef = flightsActor(system, "LHR")
+
+        actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "STN", totalPax = 300, scheduledDatetime = "2017-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
+
+        val futureResult: Future[Any] = actor ? GetFlights
+        val futureFlights: Future[List[ApiFlight]] = futureResult.collect {
+          case Success(Flights(fs)) => fs
+        }
+
+        val result = Await.result(futureResult, 1 second)
+
+        val expected = Flights(List(
+          apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "STN", totalPax = 300, scheduledDatetime = "2017-08-01T20:00"),
+          apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00", lastKnownPax=Option(300))))
+
+        result === expected
+      }
+    "not add last known pax for ports other than LHR" in
+      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+        implicit val timeout: Timeout = Timeout(5 seconds)
+        val actor: ActorRef = flightsActor(system)
+
+        actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "STN", totalPax = 300, scheduledDatetime = "2017-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
+
+        val futureResult: Future[Any] = actor ? GetFlights
+        val futureFlights: Future[List[ApiFlight]] = futureResult.collect {
+          case Success(Flights(fs)) => fs
+        }
+
+        val result = Await.result(futureResult, 1 second)
+
+        val expected = Flights(List(
+          apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "STN", totalPax = 300, scheduledDatetime = "2017-08-01T20:00"),
+          apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
+
+        result === expected
+      }
   }
 
   implicit val timeout: Timeout = Timeout(5 seconds)

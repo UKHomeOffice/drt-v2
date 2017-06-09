@@ -3,8 +3,10 @@ package controllers
 import actors.FlightPaxNumbers
 import drt.shared.ApiFlight
 import org.specs2.mutable.Specification
+import org.specs2.specification.BeforeEach
 
-class LHRFlightPaxHackSpec extends Specification {
+class LHRFlightPaxHackSpec extends Specification with BeforeEach{
+  isolated
   def flightWithBestPax(newFlight: ApiFlight, currentFlights: List[ApiFlight]): ApiFlight = {
     if (newFlight.ActPax != 200)
       newFlight
@@ -18,30 +20,42 @@ class LHRFlightPaxHackSpec extends Specification {
       flight.getOrElse(newFlight)
     }
   }
-
-
-
+  def flightPaxNumbers = new FlightPaxNumbers {}
 
   "Find best pax no for flight" >> {
     "Given a flight with non 200 ActPax" >> {
       "Then we should get the ActPax no" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500, None)
 
-        300 === FlightPaxNumbers.bestPaxNoForFlight(newFlight)
+        300 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
       }
     }
     "Given a flight with 200 ActPax and no LastKnownPax" >> {
       "Then we should get 200" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 500, None)
 
-        200 === FlightPaxNumbers.bestPaxNoForFlight(newFlight)
+        200 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
       }
     }
     "Given a flight with no ActPax and no LastKnownPax with MaxPax of 300" >> {
       "Then we should get 300" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 300, None)
 
-        300 === FlightPaxNumbers.bestPaxNoForFlight(newFlight)
+        300 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+      }
+    }
+    "Given a flight with default ActPax and LastKnownPax of 300" >> {
+      "Then we should get 300" >> {
+        val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0, Option(300))
+
+        300 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+      }
+    }
+    "Given a flight with no ActPax no MaxPax and no LastKnownPax" >> {
+      "Then we should get 200" >> {
+        val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0, None)
+
+        200 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
       }
     }
 
@@ -53,8 +67,9 @@ class LHRFlightPaxHackSpec extends Specification {
             apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 400, 500)
           )
 
-          FlightPaxNumbers.updateFlights(newFlights)
-          val result = FlightPaxNumbers.latestPaxForFlight(apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0))
+          val fpx = flightPaxNumbers
+          fpx.storeLastKnownPaxForFlights(newFlights)
+          val result = fpx.lastKnownPaxForFlight(apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0))
 
           result === Some(300)
         }
@@ -62,12 +77,13 @@ class LHRFlightPaxHackSpec extends Specification {
       "when we ask for latest pax numbers for a flight not in the list" >> {
         "Then we should get none" >> {
           val newFlights = List(
-            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500),
-            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 400, 500)
+          apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500),
+          apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 400, 500)
           )
 
-          FlightPaxNumbers.updateFlights(newFlights)
-          val result = FlightPaxNumbers.latestPaxForFlight(apiFlight("SA123", "SA123", "2017-06-08T12:00:00.00Z", 0, 0))
+          val fpx = flightPaxNumbers
+          fpx.storeLastKnownPaxForFlights(newFlights)
+          val result = fpx.lastKnownPaxForFlight(apiFlight("SA123", "SA123", "2017-06-08T12:00:00.00Z", 0, 0))
 
           result === None
         }
@@ -78,21 +94,22 @@ class LHRFlightPaxHackSpec extends Specification {
         "Then we should see the historic paxnos in the LastKnownPax field for those flights" >> {
 
           val oldFlights = List(
-            apiFlight("SA324", "SA324", "2017-06-07T12:00:00.00Z", 300, 0),
-            apiFlight("BA123", "SA324", "2017-06-07T12:00:00.00Z", 300, 0)
+          apiFlight("SA324", "SA324", "2017-06-07T12:00:00.00Z", 300, 0),
+          apiFlight("BA124", "BA124", "2017-06-07T12:00:00.00Z", 300, 0)
           )
 
           val newFlights = List(
-            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 0),
-            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 200, 0)
+          apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 0),
+          apiFlight("BA124", "BA124", "2017-06-08T12:00:00.00Z", 200, 0)
           )
           val expected = List(
-            apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 0, Option(300)),
-            apiFlight("BA123", "SA324", "2017-06-08T12:00:00.00Z", 200, 0, Option(300))
+          apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 0, Option(300)),
+          apiFlight("BA124", "BA124", "2017-06-08T12:00:00.00Z", 200, 0, Option(300))
           )
 
-          FlightPaxNumbers.updateFlights(oldFlights)
-          val result = FlightPaxNumbers.updateFlights(newFlights)
+          val fpx = flightPaxNumbers
+          fpx.storeLastKnownPaxForFlights(oldFlights)
+          val result = fpx.addLastKnownPaxNos(newFlights)
 
           result === expected
         }
@@ -100,30 +117,35 @@ class LHRFlightPaxHackSpec extends Specification {
     }
   }
 
-  def apiFlight(iataCode: String, icaoCode: String, schDt: String, actPax: Int, maxPax: Int, lastKnownPax: Option[Int] = None): ApiFlight =
-    ApiFlight(
-      FlightID = 0,
-      rawICAO = icaoCode,
-      rawIATA = iataCode,
-      SchDT = schDt,
-      ActPax = actPax,
+  override protected def before: Any = {
+    flightPaxNumbers.lastKnowPaxToFlightCode = collection.mutable.Map()
+  }
 
-      Terminal = "T1",
-      Origin = "",
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = maxPax,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      AirportID = "",
-      PcpTime = 0,
-      LastKnownPax = lastKnownPax
-    )
+  def apiFlight(iataCode: String, icaoCode: String, schDt: String, actPax: Int, maxPax: Int, lastKnownPax: Option[Int] = None): ApiFlight =
+  ApiFlight(
+  FlightID = 0,
+  rawICAO = icaoCode,
+  rawIATA = iataCode,
+  SchDT = schDt,
+  ActPax = actPax,
+
+  Terminal = "T1",
+  Origin = "",
+  Operator = "",
+  Status = "",
+  EstDT = "",
+  ActDT = "",
+  EstChoxDT = "",
+  ActChoxDT = "",
+  Gate = "",
+  Stand = "",
+  MaxPax = maxPax,
+  TranPax = 0,
+  RunwayID = "",
+  BaggageReclaimId = "",
+  AirportID = "",
+  PcpTime = 0,
+  LastKnownPax = lastKnownPax
+  )
+
 }

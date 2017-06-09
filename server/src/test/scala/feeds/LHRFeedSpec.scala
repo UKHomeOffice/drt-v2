@@ -1,5 +1,6 @@
 package feeds
 
+import actors.FlightPaxNumbers
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Sink, Source}
@@ -32,6 +33,8 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
   //        csvContents.length > 0
   //      }nN
   //    }
+
+  def flightPaxNumbers = new FlightPaxNumbers {}
 
   "lhrCsvToApiFlights" should {
     "Produce an ApiFlight source with one flight based on a line from the LHR csv" in {

@@ -136,15 +136,20 @@ object FlightMessageConversion {
   }
 }
 
-object FlightPaxNumbers {
-  var flightPaxNos: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
+trait FlightPaxNumbers {
 
-  def updateFlights(flights: List[ApiFlight]) = {
-    flights.foreach(f => flightPaxNos(key(f)) = bestPaxNoForFlight(f))
+  def addLastKnownPaxNos(newFlights: List[ApiFlight]) = {
+    newFlights.map(f => f.copy(LastKnownPax = lastKnownPaxForFlight(f)))
   }
 
-  def latestPaxForFlight(f: ApiFlight): Option[Int] = {
-    flightPaxNos.get(key(f))
+  var lastKnowPaxToFlightCode: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
+
+  def storeLastKnownPaxForFlights(flights: List[ApiFlight]) = {
+    flights.foreach(f => lastKnowPaxToFlightCode(key(f)) = bestPaxNoForFlight(f))
+  }
+
+  def lastKnownPaxForFlight(f: ApiFlight): Option[Int] = {
+    lastKnowPaxToFlightCode.get(key(f))
   }
 
   def bestPaxNoForFlight(flight: ApiFlight) = {
@@ -153,7 +158,7 @@ object FlightPaxNumbers {
     flight match {
       case f if f.ActPax > 0 && f.ActPax != defaultPax =>
         f.ActPax
-      case f if f.LastKnownPax.isDefined  =>
+      case f if f.LastKnownPax.isDefined =>
         f.LastKnownPax.get
       case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
         f.MaxPax
@@ -170,10 +175,12 @@ object FlightPaxNumbers {
 
 class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
-                   csvSplitsProvider: SplitProvider)
+                   csvSplitsProvider: SplitProvider,
+                   airportConfig: AirportConfig)
   extends PersistentActor
     with ActorLogging
     with FlightState
+    with FlightPaxNumbers
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
@@ -188,8 +195,9 @@ class FlightsActor(crunchActorRef: ActorRef,
     super.onRecoveryFailure(cause, event)
     log.error(cause, "recovery failed in flightsActors")
   }
+
   //todo this should be injected:
-//  val csvProvider: SplitProvider = SplitsProvider.csvProvider
+  //  val csvProvider: SplitProvider = SplitsProvider.csvProvider
 
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights) =>
@@ -270,13 +278,20 @@ class FlightsActor(crunchActorRef: ActorRef,
           replyTo ! FlightsWithSplits(s.toList)
       }
     case Flights(newFlights) =>
-      val flightsMessage = FlightsMessage(newFlights.map(apiFlightToFlightMessage))
+      val flights = if (airportConfig.portCode == "LHR") {
 
-      log.info(s"Adding ${newFlights.length} new flights")
+        val flightsWithLastKnownPax = addLastKnownPaxNos(newFlights)
+        storeLastKnownPaxForFlights(newFlights)
+        flightsWithLastKnownPax
+      } else newFlights
+
+      val flightsMessage = FlightsMessage(flights.map(apiFlightToFlightMessage))
+
+      log.info(s"Adding ${flights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
       val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(newFlights, lastMidnight, domesticPorts)
+      onFlightUpdates(flights, lastMidnight, domesticPorts)
       persist(flightsMessage) { (event: FlightsMessage) =>
         log.info(s"Storing ${event.flightMessages.length} flights")
         context.system.eventStream.publish(event)
@@ -285,7 +300,7 @@ class FlightsActor(crunchActorRef: ActorRef,
           saveSnapshot(state)
         }
       }
-      requestCrunch(newFlights)
+      requestCrunch(flights)
 
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
