@@ -1,7 +1,7 @@
 package controllers
 
 import actors.FlightPaxNumbers
-import drt.shared.ApiFlight
+import drt.shared.{ApiFlight, BestPax}
 import org.specs2.mutable.Specification
 import org.specs2.specification.BeforeEach
 
@@ -27,35 +27,35 @@ class LHRFlightPaxHackSpec extends Specification with BeforeEach{
       "Then we should get the ActPax no" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 300, 500, None)
 
-        300 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+        300 === BestPax.lhrBestPax(newFlight)
       }
     }
     "Given a flight with 200 ActPax and no LastKnownPax" >> {
       "Then we should get 200" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 200, 500, None)
 
-        200 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+        200 === BestPax.lhrBestPax(newFlight)
       }
     }
     "Given a flight with no ActPax and no LastKnownPax with MaxPax of 300" >> {
       "Then we should get 300" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 300, None)
 
-        300 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+        300 === BestPax.lhrBestPax(newFlight)
       }
     }
     "Given a flight with default ActPax and LastKnownPax of 300" >> {
       "Then we should get 300" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0, Option(300))
 
-        300 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+        300 === BestPax.lhrBestPax(newFlight)
       }
     }
     "Given a flight with no ActPax no MaxPax and no LastKnownPax" >> {
       "Then we should get 200" >> {
         val newFlight = apiFlight("SA324", "SA324", "2017-06-08T12:00:00.00Z", 0, 0, None)
 
-        200 === flightPaxNumbers.bestPaxNoForFlight(newFlight)
+        200 === BestPax.lhrBestPax(newFlight)
       }
     }
 

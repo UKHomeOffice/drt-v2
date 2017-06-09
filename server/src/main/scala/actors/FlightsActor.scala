@@ -137,6 +137,8 @@ object FlightMessageConversion {
 }
 
 trait FlightPaxNumbers {
+  //TODO make this a bit more elegant
+  import BestPax.lhrBestPax
 
   def addLastKnownPaxNos(newFlights: List[ApiFlight]) = {
     newFlights.map(f => f.copy(LastKnownPax = lastKnownPaxForFlight(f)))
@@ -145,26 +147,11 @@ trait FlightPaxNumbers {
   var lastKnowPaxToFlightCode: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
 
   def storeLastKnownPaxForFlights(flights: List[ApiFlight]) = {
-    flights.foreach(f => lastKnowPaxToFlightCode(key(f)) = bestPaxNoForFlight(f))
+    flights.foreach(f => lastKnowPaxToFlightCode(key(f)) = lhrBestPax(f))
   }
 
   def lastKnownPaxForFlight(f: ApiFlight): Option[Int] = {
     lastKnowPaxToFlightCode.get(key(f))
-  }
-
-  def bestPaxNoForFlight(flight: ApiFlight) = {
-    val defaultPax = 200
-
-    flight match {
-      case f if f.ActPax > 0 && f.ActPax != defaultPax =>
-        f.ActPax
-      case f if f.LastKnownPax.isDefined =>
-        f.LastKnownPax.get
-      case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
-        f.MaxPax
-      case _ =>
-        defaultPax
-    }
   }
 
   def key(flight: ApiFlight) = {

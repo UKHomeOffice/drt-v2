@@ -161,7 +161,9 @@ object CrunchTests {
     val paxFlowCalculator = (flight: ApiFlight) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
+        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)),
+        BestPax.bestPax
+      )(flight)
     }
     val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
     props
@@ -357,7 +359,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
             airportConfig,
             (flight: ApiFlight) => PaxFlow.makeFlightPaxFlowCalculator(
               PaxFlow.splitRatioForFlight(splitsProviders),
-              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: ApiFlight) => 0L))(flight),
+              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: ApiFlight) => 0L), BestPax.bestPax)(flight),
             timeProvider)
           withContextCustomActor(testActorProps, levelDbTestActorSystem("")) {
             context =>
@@ -387,7 +389,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, conf: AirportConfig, timePro
   def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
   def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
 
   override def lastLocalMidnightString: String = "2000-01-01"
 

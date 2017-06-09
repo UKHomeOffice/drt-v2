@@ -65,7 +65,7 @@ object FlightCrunchInteractionTests extends TestSuite {
     def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
     def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
+      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
 
     override def lastLocalMidnightString: String = "2000-01-01"
   }

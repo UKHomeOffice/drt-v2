@@ -62,7 +62,11 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
               SplitRatio((PaxTypes.EeaMachineReadable, Queues.EGate), 0.5)
             )))
 
-          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)) _
+          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
+            splitRatioProvider,
+            (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
+            BestPax.bestPax
+          ) _
 
           val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
@@ -215,7 +219,10 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
               SplitRatio((PaxTypes.VisaNational, Queues.EeaDesk), 0.5)
             )))
 
-          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)) _
+          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
+            splitRatioProvider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
+            BestPax.bestPax
+          ) _
 
           val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
