@@ -71,6 +71,7 @@ object FlightsWithSplitsTable {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -203,6 +204,16 @@ object FlightTableRow {
           .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
           .getOrElse(ApiSplits(Nil, "no splits - client"))
 
+        val triedMod: Try[TagMod] = {
+          log.info(s"tryingpcp ${flight.PcpTime}")
+          val pcpDate = SDate(MilliDate(flight.PcpTime))
+          log.info(s"tryingpcpd ${pcpDate}")
+          Try(localDateTimeWithPopup(pcpDate.toApiFlightString()))
+        }
+        val pcpTime: TagMod = triedMod.recoverWith{
+          case f => Try(<.span(f.toString, s"in flight $flight"))
+        }.get
+
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -210,8 +221,8 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
           <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
           <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
-          <.td(^.key := flight.FlightID.toString + "-pcptime", SDate(MilliDate(flight.PcpTime)).toString),
           <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+          <.td(^.key := flight.FlightID.toString + "-pcptime", pcpTime),
           <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),

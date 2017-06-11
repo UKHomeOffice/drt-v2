@@ -9,16 +9,19 @@ import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
 import drt.shared._
 import FlightComponents.{paxComp, splitsGraphComponent}
-import japgolly.scalajs.react.{BackendScope, _}
+import japgolly.scalajs.react.{BackendScope, CtorType, _}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray, html_<^}
 import org.scalajs.dom.html.Div
 import drt.client.components.FlightTableComponents
 import drt.client.services.JSDateConversions.SDate
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 
 import scala.collection.immutable.Seq
 import scala.util.Try
+
+
 
 object
 TerminalPage {
@@ -58,30 +61,35 @@ TerminalPage {
       splitsGraphComponent)
 
 
-
-
     def render(props: Props) = {
 
       val flightsWithSplitsPotRCP = SPACircuit.connect(_.flightsWithSplitsPot)
 
       val liveSummaryBoxes = flightsWithSplitsPotRCP((flightsWithSplitsPot) => {
         val now = SDate.now()
-        val hoursToAdd = 3
+        val hoursToAdd = 1
         val nowplus3 = now.addHours(hoursToAdd)
 
         <.div(
           <.h2(s"In the next $hoursToAdd hours"),
           flightsWithSplitsPot().renderReady(flightsWithSplits => {
-            val filteredFlights = BigSummaryBoxes.flightsInPeriod(flightsWithSplits.flights, now, nowplus3)
-            val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
-            val flightCount = flightsAtTerminal.length
+            val tried: Try[VdomNode] = Try {
+              val filteredFlights = BigSummaryBoxes.flightsInPeriod(flightsWithSplits.flights, now, nowplus3)
+              val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
+              val flightCount = flightsAtTerminal.length
 
-            val actPax = BigSummaryBoxes.sumPax(flightsAtTerminal)
-            val aggSplits = BigSummaryBoxes.aggregateSplits(flightsAtTerminal)
+              val actPax = BigSummaryBoxes.sumActPax(flightsAtTerminal)
+              val bestPax = BigSummaryBoxes.sumBestPax(flightsAtTerminal).toInt
+              val aggSplits = BigSummaryBoxes.aggregateSplits(flightsAtTerminal)
 
-            val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, aggSplits))
+              val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
 
-            summaryBoxes
+              summaryBoxes
+            }
+            val recovered = tried recoverWith {
+              case f => Try(<.div(f.toString))
+            }
+            <.span(recovered.get)
           }),
 
           flightsWithSplitsPot().renderPending((t) => s"Waiting for flights $t")

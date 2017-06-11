@@ -39,7 +39,9 @@ sealed trait SplitStyle
 case object PaxNumbers extends SplitStyle
 case object Percentage extends SplitStyle
 
-case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers)
+case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
+  lazy val totalPax = splits.map(_.paxCount).sum
+}
 case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: List[ApiSplits])
 
 case class ApiFlight(

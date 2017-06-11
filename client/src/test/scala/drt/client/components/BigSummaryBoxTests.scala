@@ -158,11 +158,46 @@ object BigSummaryBoxTests extends TestSuite {
                 ApiFlightWithSplits(apiFlight1, List(splits1)) ::
                   ApiFlightWithSplits(apiFlight2, List(splits2)) :: Nil)
 
-              val aggSplits = aggregateSplits(flights)
+              val aggSplits = aggregateSplits(flights.flights)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (41 + 11),
                   PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) ->  (23 + 17))
+
+              assert(aggSplits == expectedAggSplits)
+            }
+          }
+        }
+        "Given 3 flights " - {
+          "And they have percentage splits" - {
+            "Then we can aggregate the splits by multiply the % against the bestPax for a graph" - {
+              val ourTerminal = "T1"
+
+              import ApiFlightGenerator._
+
+              def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+
+              val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, PcpTime = mkMillis("2017-05-01T12:05Z"))
+              val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = 3, ActPax = 100, PcpTime = mkMillis("2017-05-01T13:15Z"))
+
+              val splits1 = ApiSplits(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 0.2) ::
+                ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 0.7) :: Nil,
+                SplitSources.ApiSplitsWithCsvPercentage, Percentage)
+
+              val splits2 = ApiSplits(
+                ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 0.4) ::
+                  ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 0.6) :: Nil
+                , SplitSources.ApiSplitsWithCsvPercentage, Percentage)
+
+              val flights = FlightsWithSplits(
+                ApiFlightWithSplits(apiFlight1, List(splits1)) ::
+                  ApiFlightWithSplits(apiFlight2, List(splits2)) :: Nil)
+
+              val aggSplits = aggregateSplits(flights.flights)
+
+              val expectedAggSplits = Map(
+                PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (20 + 40),
+                  PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) ->  (70 + 60))
 
               assert(aggSplits == expectedAggSplits)
             }

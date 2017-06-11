@@ -3,7 +3,7 @@ package drt.client
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
-import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage}
+import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import drt.client.services.RootModel.QueueCrunchResults
@@ -11,6 +11,8 @@ import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.WebpackRequire
+import japgolly.scalajs.react.component.Js
+import japgolly.scalajs.react.component.Scala.MountedImpure
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 
@@ -160,6 +162,8 @@ object SPAMain extends js.JSApp {
 
   case class TerminalDepsLoc(id: String) extends Loc
 
+  case class TerminalsDashboardLoc(hours: Int) extends Loc
+
   case object StaffingLoc extends Loc
 
   val initActions = Seq(
@@ -181,9 +185,15 @@ object SPAMain extends js.JSApp {
     val home = staticRoute(root, StaffingLoc) ~> renderStaffing
     val staffing = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
     val terminal = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => TerminalPage(page.id, ctl))
+      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => {
+      TerminalPage(page.id, ctl)
+    })
+    val terminalsDashboard = dynamicRouteCT("#terminalsDashboard" / int
+      .caseClass[TerminalsDashboardLoc]) ~> dynRenderR ((page: TerminalsDashboardLoc, ctl) => {
+      TerminalsDashboardPage(page.hours, ctl)
+    })
 
-    val rule = home | terminal | staffing
+    val rule = home | terminal | staffing | terminalsDashboard
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
@@ -231,7 +241,7 @@ object WebpackBootstrapRequire {
   @js.native
   object jQuery extends js.Any
 
- @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
+  @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
   @js.native
   object Bootstrap extends js.Any
 

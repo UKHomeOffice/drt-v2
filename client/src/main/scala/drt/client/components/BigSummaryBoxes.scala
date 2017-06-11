@@ -1,15 +1,18 @@
 package drt.client.components
 
-import drt.client.components.FlightComponents.splitsGraphComponent
+import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import org.scalajs.dom.raw.HTMLElement
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
+import scala.util.Try
 
 object BigSummaryBoxes {
   def flightPcpInPeriod(f: ApiFlightWithSplits, now: SDateLike, nowPlus3Hours: SDateLike) = {
@@ -35,23 +38,54 @@ object BigSummaryBoxes {
   def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
     rootModel.flightsWithSplitsPot.map(splits => {
       val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(splits.flights, now, nowPlus3Hours)
-      sumPax(flights)
+      sumActPax(flights)
     })
   }
 
 
+  def bestFlightPax(f: ApiFlight) = {
+    if (f.ActPax > 0) f.ActPax
+    else f.MaxPax
+  }
+
   def aggregateSplits(flights: Seq[ApiFlightWithSplits]) = {
     val newSplits = Map[PaxTypeAndQueue, Int]()
-    val map = flights.flatMap(f => f.splits)
-    println(s"flatMapped $map")
-    //todo import cats
-    val allSplits: immutable.Seq[ApiPaxTypeAndQueueCount] = map.map(_.splits).flatten
-    println(s"flattened $allSplits")
-    val aggSplits: Map[PaxTypeAndQueue, Int] = allSplits.foldLeft(newSplits) { (agg, s) =>
-      println(s"folding $agg $s")
-      val k = PaxTypeAndQueue(s.passengerType, s.queueType)
-      val g = agg.getOrElse(k, 0)
-      agg.updated(k, s.paxCount.toInt + g)
+    println(s"flightDiff start")
+    val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap {
+      case ApiFlightWithSplits(f, Nil) =>
+        println(s"No splits for $f")
+        Nil
+      case ApiFlightWithSplits(f, headSplit :: ss) if headSplit.splitStyle == PaxNumbers =>
+        headSplit.splits.map {
+          s =>
+            val splitTotal = headSplit.totalPax
+            val paxDelta = splitTotal - bestFlightPax(f)
+            println(s"flightDiff ${splitTotal} vs ${bestFlightPax(f)} $paxDelta")
+            (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount)
+        }
+      case ApiFlightWithSplits(f, headSplit :: ss) if headSplit.splitStyle == Percentage =>
+        val splits = headSplit.splits
+        val splitsTotal = headSplit.totalPax
+        println(s"flightDiff pct $splitsTotal")
+        splits.map {
+          s => {
+            println(s"a pct split $s of $splitsTotal ")
+            (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * bestFlightPax(f))
+          }
+        }
+    }
+    //    println(s"flatMapped $map")
+    //    //todo import cats
+    //    val allSplits: immutable.Seq[ApiPaxTypeAndQueueCount] = map.map(_.splits).flatten
+    println(s"flightDiff end")
+    println(allSplits.map("flattened" + _).mkString("\n"))
+    val totalPax = allSplits.map(_._2).sum
+    println(s"flattened total $totalPax on ${allSplits.length} splits over ${flights.length} flights.  Max: ${flights.map(_.apiFlight.MaxPax).sum} Act: ${flights.map(_.apiFlight.ActPax).sum}")
+    val aggSplits: Map[PaxTypeAndQueue, Int] = allSplits.foldLeft(newSplits) {
+      case (agg, s@(k, v)) =>
+        println(s"folding $agg $s")
+        val g = agg.getOrElse(k, 0)
+        agg.updated(k, v.toInt + g)
     }
     aggSplits
   }
@@ -69,33 +103,43 @@ object BigSummaryBoxes {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
 
-  case class Props(flightCount: Int, actPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
+  def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map {
+    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: ss) => h.totalPax
+    case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
+  }.sum
+
+  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
 
 
   def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
-    val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-    val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-      case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+    val value = Try {
+      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val nbsp = "\u00a0"
+      <.h3(
+        nbsp,
+        <.span(
+          <.div(^.className := "split-graph-container splitsource-" + source,
+            splitsGraphComponentColoure(splitTotal, orderedSplitCounts), sourceDisplay))
+      )
     }
-    val nbsp = "\u00a0"
-    <.h3(
-      nbsp,
-      <.div(^.className := "split-graph-container splitsource-" + source,
-        splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplay))
+    val g: Try[TagOf[HTMLElement]] = value recoverWith {
+      case f => Try(<.div(f.toString))
+    }
+    g.get
   }
 
 
   val SummaryBox = ScalaComponent.builder[Props]("SummaryBox")
-    .render_P((p) =>
+    .render_P((p) => {
       <.div(^.className := "summary-boxes",
-        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", p.flightCount), <.span(^.className := "sub", "Flights"))),
-        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count act-pax-count", p.actPaxCount), <.span(^.className := "sub", "Pax"))),
-        <.div(^.className := "summary-box-container",
-          GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)
-        )
-
-      ))
+        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d "), <.span(^.className := "sub", "Flights"))),
+        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count act-pax-count", f"${p.actPaxCount}%,d "), <.span(^.className := "sub", "Pax"))),
+        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count best-pax-count", f"${p.bestPaxCount}%,d "), <.span(^.className := "sub", "Best Pax"))),
+        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)),
+        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count", p.aggSplits.values.sum), <.span(^.className := "sub", "Pax from Splits")))
+      )
+    })
     .build
 }

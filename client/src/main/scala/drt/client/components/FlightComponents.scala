@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.shared.{ApiFlight, ApiSplits}
+import drt.shared.{ApiFlight, ApiSplits, PaxTypeAndQueue}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.Div
@@ -66,8 +66,29 @@ object FlightComponents {
       ))
   }
 
-  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): String = splits.map {
-    case (label, paxCount) =>
-      s"$paxCount $label"
-  }.mkString("\n")
+  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.passengerType} > ${ptqc.queueType}"
+
+  def splitsGraphComponentColoure(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)]): TagOf[Div] = {
+    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits.map{case (k, v) => (paxTypeAndQueueString(k), v)}),
+      <.div(^.className := "graph",
+        splits.map {
+          case (paxTypeAndQueue, paxCount) =>
+            val percentage: Double = paxCount.toDouble / splitTotal * 100
+            val label = paxTypeAndQueueString(paxTypeAndQueue)
+            <.div(
+              ^.className := "bar " + paxTypeAndQueue.queueType,
+              ^.height := s"${percentage}%",
+              ^.title := s"$paxCount $label")
+        }.toTagMod
+      ))
+  }
+
+  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): String = {
+    val totalLine = s"Total: ${splits.map(_._2).sum}\n"
+    val splitLines = splits.map {
+      case (label, paxCount) =>
+        s"$paxCount $label"
+    }.mkString("\n")
+    totalLine + splitLines
+  }
 }
