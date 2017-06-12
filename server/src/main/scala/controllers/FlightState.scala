@@ -5,7 +5,7 @@ import akka.event.LoggingAdapter
 import com.typesafe.config.ConfigFactory
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
-import drt.shared.{ApiFlight, MilliDate}
+import drt.shared.{Arrival, MilliDate}
 import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
 
 import scala.language.postfixOps
@@ -15,9 +15,10 @@ import scala.collection.mutable
 trait FlightState {
   def log: LoggingAdapter
 
-  var flights = Map[Int, ApiFlight]()
+  var flights = Map[Int, Arrival]()
+  var lastKnownPax = Map[String, Int]()
 
-  def onFlightUpdates(newFlights: List[ApiFlight], since: String, domesticPorts: Seq[String]) = {
+  def onFlightUpdates(newFlights: List[Arrival], since: String, domesticPorts: Seq[String]) = {
     logNewFlightInfo(flights, newFlights)
 
     val withNewFlights = addNewFlights(flights, newFlights)
@@ -29,15 +30,15 @@ trait FlightState {
 
   def state = flights
 
-  def setFlights(withoutDomesticFlights: Map[Int, ApiFlight]) = {
+  def setFlights(withoutDomesticFlights: Map[Int, Arrival]) = {
     flights = withoutDomesticFlights
   }
 
-  def addNewFlights(existingFlights: Map[Int, ApiFlight], newFlights: List[ApiFlight]) = {
+  def addNewFlights(existingFlights: Map[Int, Arrival], newFlights: List[Arrival]) = {
     existingFlights ++ newFlights.map(newFlight => (newFlight.FlightID, newFlight))
   }
 
-  def filterOutFlightsBeforeThreshold(flights: Map[Int, ApiFlight], since: String): Map[Int, ApiFlight] = {
+  def filterOutFlightsBeforeThreshold(flights: Map[Int, Arrival], since: String): Map[Int, Arrival] = {
     val totalFlightsBeforeFilter = flights.size
     val flightsWithOldDropped = flights.filter { case (key, flight) => flight.EstDT >= since || flight.SchDT >= since }
     val totalFlightsAfterFilter = flights.size
@@ -45,11 +46,11 @@ trait FlightState {
     flightsWithOldDropped
   }
 
-  def filterOutDomesticFlights(flights: Map[Int, ApiFlight], domesticPorts: Seq[String]) = {
+  def filterOutDomesticFlights(flights: Map[Int, Arrival], domesticPorts: Seq[String]) = {
     flights.filter(flight => !domesticPorts.contains(flight._2.Origin))
   }
 
-  def logNewFlightInfo(currentFlights: Map[Int, ApiFlight], newOrUpdatingFlights: List[ApiFlight]) = {
+  def logNewFlightInfo(currentFlights: Map[Int, Arrival], newOrUpdatingFlights: List[Arrival]) = {
     val inboundFlightIds: Set[Int] = newOrUpdatingFlights.map(_.FlightID).toSet
     val existingFlightIds: Set[Int] = currentFlights.keys.toSet
 

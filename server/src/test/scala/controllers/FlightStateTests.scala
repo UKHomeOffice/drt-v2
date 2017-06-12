@@ -5,8 +5,8 @@ import spray.http.HttpHeaders.Origin
 import utest._
 
 object FlightStateTests extends TestSuite {
-  def apiFlight(flightId: Int, schDt: String, estDt: String = "", origin: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(flightId: Int, schDt: String, estDt: String = "", origin: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = estDt,
@@ -81,7 +81,7 @@ object FlightStateTests extends TestSuite {
       "when new flights arrive, " +
       "then the flight state should contain no flights before the threshold" - {
       val startThreshold = "2016-01-01T12:00"
-      val existingFlights: List[(Int, ApiFlight)] = List((1, apiFlight(1, "2016-01-01T11:00", "2016-01-01T11:00", origin = "JFK")))
+      val existingFlights: List[(Int, Arrival)] = List((1, apiFlight(1, "2016-01-01T11:00", "2016-01-01T11:00", origin = "JFK")))
       val newFlights = List(
         apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30", origin = "JFK")
       )
@@ -105,8 +105,8 @@ object FlightStateTests extends TestSuite {
       "then the flight state should contain old flights arriving after the threshold" - {
       val startThreshold = "2016-01-01T12:00"
 
-      val existingFlightAfterThreshold: ApiFlight = apiFlight(1, "2016-01-01T13:00", "2016-01-01T13:00", origin = "JFK")
-      val existingFlights: List[(Int, ApiFlight)] = List((1, existingFlightAfterThreshold))
+      val existingFlightAfterThreshold: Arrival = apiFlight(1, "2016-01-01T13:00", "2016-01-01T13:00", origin = "JFK")
+      val existingFlights: List[(Int, Arrival)] = List((1, existingFlightAfterThreshold))
 
       val newFlightAfterThreshold = apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30", origin = "JFK")
       val newFlights = List(newFlightAfterThreshold)
@@ -136,7 +136,7 @@ object FlightStateTests extends TestSuite {
       val newInternationalFlight = apiFlight(flightId = 2, schDt = "2016-01-01T12:30", origin = "JFK")
       val newFlights = List(newDomesticFlight, newInternationalFlight)
 
-      val existingFlights: List[(Int, ApiFlight)] = List()
+      val existingFlights: List[(Int, Arrival)] = List()
 
       withContext() { context =>
         val flightState = new FlightState {
@@ -155,7 +155,7 @@ object FlightStateTests extends TestSuite {
     }
   }
 
-  def getFlightStateFlightsListFromUpdate(context: TestContext, startThreshold: String, newFlights: List[ApiFlight]): List[ApiFlight] = {
+  def getFlightStateFlightsListFromUpdate(context: TestContext, startThreshold: String, newFlights: List[Arrival]): List[Arrival] = {
     val flightState = new FlightState {
       def log = context.system.log
     }

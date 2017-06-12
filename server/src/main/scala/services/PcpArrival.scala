@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{ApiFlight, MilliDate}
+import drt.shared.{Arrival, MilliDate}
 import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
@@ -49,15 +49,15 @@ object PcpArrival {
   type GateOrStand = String
   type Millis = Long
   type GateOrStandWalkTime = (GateOrStand, TerminalName) => Option[Millis]
-  type FlightPcpArrivalTimeCalculator = (ApiFlight) => MilliDate
+  type FlightPcpArrivalTimeCalculator = (Arrival) => MilliDate
 
   def walkTimeMillis(walkTimes: Map[(String, String), Long])(from: String, terminal: String): Option[Millis] = {
     walkTimes.get((from, terminal))
   }
 
-  type FlightWalkTime = (ApiFlight) => Long
+  type FlightWalkTime = (Arrival) => Long
 
-  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)(flight: ApiFlight): MilliDate = {
+  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)(flight: Arrival): MilliDate = {
     val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight).getOrElse({
       log.error(s"could not get best choxTime for ${flight}")
       0L
@@ -69,13 +69,13 @@ object PcpArrival {
 
   def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
                                     standWalkTimesProvider: GateOrStandWalkTime,
-                                    defaultWalkTimeMillis: Millis)(flight: ApiFlight): Millis = {
+                                    defaultWalkTimeMillis: Millis)(flight: Arrival): Millis = {
     standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
       gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
 
   }
 
-  def bestChoxTime(timeToChoxMillis: Long, flight: ApiFlight): Option[Millis] = {
+  def bestChoxTime(timeToChoxMillis: Long, flight: Arrival): Option[Millis] = {
     def parseMillis(s: => String) = if (s != "") Option(SDate.parseString(s).millisSinceEpoch) else None
 
     def addTimeToChox(s: String) = parseMillis(s).map(_ + timeToChoxMillis)

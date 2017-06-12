@@ -13,7 +13,7 @@ import drt.services.AirportConfigHelpers
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import drt.shared.{ApiFlight, _}
+import drt.shared.{Arrival, _}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
@@ -103,7 +103,8 @@ object CrunchTests {
     "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
     "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
     "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir(tn),
-    "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
+    "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
+    "akka.persistence.snapshot-store.local.dir" -> s"$tn/snapshot"
   )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString)))
 
   case class TestContext(override val system: ActorSystem, props: Props) extends
@@ -142,7 +143,7 @@ object CrunchTests {
 
   def hoursInMinutes(hours: Int) = 60 * hours
 
-  def crunchAndGetCrunchResult(flights: Seq[ApiFlight], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
+  def crunchAndGetCrunchResult(flights: Seq[Arrival], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
     val props: Props = crunchActorProps(hoursToCrunch, () => now)
 
     val result = withContextCustomActor(props, actorSystem = levelDbTestActorSystem("")) { context =>
@@ -158,10 +159,12 @@ object CrunchTests {
   def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
     val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
     val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
-    val paxFlowCalculator = (flight: ApiFlight) => {
+    val paxFlowCalculator = (flight: Arrival) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)))(flight)
+        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)),
+        BestPax.bestPax
+      )(flight)
     }
     val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
     props
@@ -355,9 +358,9 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
           val timeProvider = () => DateTime.parse("2016-09-01")
           val testActorProps = Props(classOf[ProdCrunchActor], 1,
             airportConfig,
-            (flight: ApiFlight) => PaxFlow.makeFlightPaxFlowCalculator(
+            (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
               PaxFlow.splitRatioForFlight(splitsProviders),
-              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: ApiFlight) => 0L))(flight),
+              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: Arrival) => 0L), BestPax.bestPax)(flight),
             timeProvider)
           withContextCustomActor(testActorProps, levelDbTestActorSystem("")) {
             context =>
@@ -377,17 +380,17 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
   }
 }
 
-class SplitsRequestRecordingCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (ApiFlight => Option[SplitRatios]))
+class SplitsRequestRecordingCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
   extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
 
   def splitRatioProvider = _splitRatioProvider
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 1d
 
-  def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+  def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-  def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
+  def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
 
   override def lastLocalMidnightString: String = "2000-01-01"
 
@@ -413,8 +416,8 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
             def increment(): Unit = counter = counter + 1
             def readCounter: Int = counter
           }
-          def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
-            (_: ApiFlight) => {
+          def splitRatioProvider: (Arrival => Option[SplitRatios]) =
+            (_: Arrival) => {
               SplitsCounter.increment()
               Some(SplitRatios(
                 TestAirportConfig,
@@ -461,7 +464,7 @@ class StreamFlightCrunchTests
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       import WorkloadCalculatorTests._
-      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider), "flightsActor")
+      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, CrunchTests.airportConfig), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights

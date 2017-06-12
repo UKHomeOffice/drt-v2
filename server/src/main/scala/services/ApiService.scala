@@ -124,7 +124,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
   }
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
-    val flightsFut: Future[List[ApiFlight]] = getFlights(0, 0)
+    val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
     val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
       val names: Set[TerminalName] = airportConfig.terminalNames.toSet
       allFlights.filter(flight => {

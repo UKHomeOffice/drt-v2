@@ -20,7 +20,7 @@ import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{AirportConfig, Api, ApiFlight, CrunchResult, _}
+import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, DateTimeZone}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
@@ -60,24 +60,25 @@ trait Core {
 
 object PaxFlow {
   def makeFlightPaxFlowCalculator(
-                                   splitRatioForFlight: (ApiFlight) => Option[SplitRatios],
-                                   pcpArrivalTimeForFlight: (ApiFlight) => MilliDate
-                                 ): (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight)
+                                   splitRatioForFlight: (Arrival) => Option[SplitRatios],
+                                   pcpArrivalTimeForFlight: (Arrival) => MilliDate,
+                                   bestPax: (Arrival) => Int
+                                 ): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight, bestPax)
     (flight) => provider(flight)
   }
 
-  def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: ApiFlight): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
+  def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: Arrival): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
 
   def pcpArrivalTimeForFlight(airportConfig: AirportConfig)
                              (walkTimeProvider: FlightWalkTime)
-                             (flight: ApiFlight): MilliDate = pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeProvider)(flight)
+                             (flight: Arrival): MilliDate = pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeProvider)(flight)
 
 }
 
 class ProdCrunchActor(hours: Int,
                       val airportConfig: AirportConfig,
-                      val _flightPaxTypeAndQueueCountsFlow: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
+                      val _flightPaxTypeAndQueueCountsFlow: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
                       timeProvider: () => DateTime
                      ) extends CrunchActor(hours, airportConfig, timeProvider) {
   override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
@@ -85,13 +86,13 @@ class ProdCrunchActor(hours: Int,
     airportConfig.defaultProcessingTimes(terminalName).getOrElse(paxTypeAndQueue, 0)
   }
 
-  override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+  override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     _flightPaxTypeAndQueueCountsFlow(flight)
   }
 }
 
 object SystemActors {
-  type SplitsProvider = (ApiFlight) => Option[SplitRatios]
+  type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
 
 
@@ -100,9 +101,11 @@ trait SystemActors extends Core {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val paxFlowCalculator: (ApiFlight) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxFlow.makeFlightPaxFlowCalculator(
+  val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxFlow.makeFlightPaxFlowCalculator(
     PaxFlow.splitRatioForFlight(splitsProviders),
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider))
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider),
+    BestPax(airportConfig.portCode)
+  )
 
   val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
     airportConfig,
@@ -110,14 +113,14 @@ trait SystemActors extends Core {
     () => DateTime.now()), "crunchActor")
 
   val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
-  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider), "flightsActor")
+  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, airportConfig), "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
 
   def csvSplitsProvider: SplitsProvider
   def splitsProviders(): List[SplitsProvider]
 
-  def flightWalkTimeProvider(flight: ApiFlight): Millis
+  def flightWalkTimeProvider(flight: Arrival): Millis
 }
 
 
@@ -143,15 +146,15 @@ trait ProdPassengerSplitProviders {
 
   import scala.concurrent.ExecutionContext.global
 
-  override val csvSplitsProvider: (ApiFlight) => Option[SplitRatios] = SplitsProvider.csvProvider
+  override val csvSplitsProvider: (Arrival) => Option[SplitRatios] = SplitsProvider.csvProvider
 
-  def egatePercentageProvider(apiFlight: ApiFlight): Double = {
+  def egatePercentageProvider(apiFlight: Arrival): Double = {
     CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
   }
 
-  def fastTrackPercentageProvider(apiFlight: ApiFlight): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
+  def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
 
-  def apiSplitsProv(flight: ApiFlight): Option[SplitRatios] =
+  def apiSplitsProv(flight: Arrival): Option[SplitRatios] =
     AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
       airportConfig.portCode)(
       flightPassengerSplitReporter)(
@@ -159,7 +162,7 @@ trait ProdPassengerSplitProviders {
       fastTrackPercentageProvider
     )(flight)(timeout, global)
 
-  val apiSplitsProvider: (ApiFlight) => Option[SplitRatios] = (flight: ApiFlight) => apiSplitsProv(flight)
+  val apiSplitsProvider: (Arrival) => Option[SplitRatios] = (flight: Arrival) => apiSplitsProv(flight)
   override val splitsProviders = List(apiSplitsProvider, csvSplitsProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
@@ -189,7 +192,7 @@ class Application @Inject()(
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
-  override def flightWalkTimeProvider(flight: ApiFlight): Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
+  override def flightWalkTimeProvider(flight: Arrival): Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
 
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
@@ -198,7 +201,7 @@ class Application @Inject()(
   log.info(s"Application using airportConfig $airportConfig")
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
-    override def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
+    override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 
@@ -221,7 +224,7 @@ class Application @Inject()(
   }
 
   trait GetFlightsFromActor extends FlightsService {
-    override def getFlights(start: Long, end: Long): Future[List[ApiFlight]] = {
+    override def getFlights(start: Long, end: Long): Future[List[Arrival]] = {
       val flights: Future[Any] = ctrl.flightsActorAskable ? GetFlights
       val fsFuture = flights.collect {
         case Flights(fs) => fs

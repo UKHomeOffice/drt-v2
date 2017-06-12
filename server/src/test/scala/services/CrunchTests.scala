@@ -44,7 +44,7 @@ object FlightCrunchInteractionTests extends TestSuite {
 
   class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
     extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
-    def splitRatioProvider: (ApiFlight => Option[SplitRatios]) =
+    def splitRatioProvider: (Arrival => Option[SplitRatios]) =
       _ => Some(SplitRatios(
         TestAirportConfig,
         SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
@@ -62,10 +62,10 @@ object FlightCrunchInteractionTests extends TestSuite {
         case PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) => 75d / 60d
       }
 
-    def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
+    def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-    def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider)(flight)
+    def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
 
     override def lastLocalMidnightString: String = "2000-01-01"
   }

@@ -112,7 +112,11 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
 
             val provider = splitRatioProvider("LHR")(passengerInfoRouterActor) _
-            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
+              provider,
+              (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
+              BestPax.bestPax
+            ) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
@@ -151,9 +155,13 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
 
           "with simple pax splits all at the same paxType" in {
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
-            val egatePercentageProvider = (flight: ApiFlight) => 0.9d
+            val egatePercentageProvider = (flight: Arrival) => 0.9d
             val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, (f) => None) _
-            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
+              provider,
+              (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
+              BestPax.bestPax
+            ) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 

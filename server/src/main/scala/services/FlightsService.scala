@@ -9,7 +9,7 @@ import scala.concurrent.{Await, Future}
 
 
 trait FlightsService extends FlightsApi {
-  def getFlights(st: Long, end: Long): Future[List[ApiFlight]]
+  def getFlights(st: Long, end: Long): Future[List[Arrival]]
   def getFlightsWithSplits(st: Long, end: Long): Future[FlightsWithSplits]
 
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights = {

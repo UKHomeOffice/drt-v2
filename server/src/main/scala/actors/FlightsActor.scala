@@ -23,8 +23,8 @@ import services.SDate.implicits._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsMessage}
-import drt.shared.ApiFlight
+import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
+import drt.shared.Arrival
 import actors.FlightMessageConversion._
 import com.typesafe.config.ConfigFactory
 import drt.shared.PaxTypes.EeaMachineReadable
@@ -38,7 +38,7 @@ case object GetFlights
 case object GetFlightsWithSplits
 
 object FlightMessageConversion {
-  def apiFlightToFlightMessage(apiFlight: ApiFlight): FlightMessage = {
+  def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
       operator = Some(apiFlight.Operator),
       gate = Some(apiFlight.Gate),
@@ -76,10 +76,10 @@ object FlightMessageConversion {
       }
   }
 
-  def flightMessageToApiFlight(flightMessage: FlightMessage): ApiFlight = {
+  def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     flightMessage.schDTOLD match {
       case Some(s) =>
-        ApiFlight(
+        Arrival(
           Operator = flightMessage.operator.getOrElse(""),
           Status = flightMessage.status.getOrElse(""),
           EstDT = flightMessage.estDTOLD.getOrElse(""),
@@ -103,7 +103,7 @@ object FlightMessageConversion {
           PcpTime = flightMessage.pcpTime.getOrElse(0)
         )
       case None =>
-        ApiFlight(
+        Arrival(
           Operator = flightMessage.operator.getOrElse(""),
           Status = flightMessage.status.getOrElse(""),
           EstDT = apiFlightDateTime(flightMessage.estimated),
@@ -124,7 +124,8 @@ object FlightMessageConversion {
           rawIATA = flightMessage.iATA.getOrElse(""),
           Origin = flightMessage.origin.getOrElse(""),
           SchDT = apiFlightDateTime(flightMessage.scheduled),
-          PcpTime = flightMessage.pcpTime.getOrElse(0)
+          PcpTime = flightMessage.pcpTime.getOrElse(0),
+          LastKnownPax = flightMessage.lastKnownPax
         )
     }
   }
@@ -135,12 +136,38 @@ object FlightMessageConversion {
   }
 }
 
+trait FlightPaxNumbers {
+  //TODO make this a bit more elegant
+  import BestPax.lhrBestPax
+
+  def addLastKnownPaxNos(newFlights: List[Arrival]) = {
+    newFlights.map(f => f.copy(LastKnownPax = lastKnownPaxForFlight(f)))
+  }
+
+  var lastKnowPaxToFlightCode: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
+
+  def storeLastKnownPaxForFlights(flights: List[Arrival]) = {
+    flights.foreach(f => lastKnowPaxToFlightCode(key(f)) = lhrBestPax(f))
+  }
+
+  def lastKnownPaxForFlight(f: Arrival): Option[Int] = {
+    lastKnowPaxToFlightCode.get(key(f))
+  }
+
+  def key(flight: Arrival) = {
+    flight.IATA + flight.ICAO
+  }
+}
+
+
 class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
-                   csvSplitsProvider: SplitProvider)
+                   csvSplitsProvider: SplitProvider,
+                   airportConfig: AirportConfig)
   extends PersistentActor
     with ActorLogging
     with FlightState
+    with FlightPaxNumbers
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
@@ -155,16 +182,53 @@ class FlightsActor(crunchActorRef: ActorRef,
     super.onRecoveryFailure(cause, event)
     log.error(cause, "recovery failed in flightsActors")
   }
+
   //todo this should be injected:
-//  val csvProvider: SplitProvider = SplitsProvider.csvProvider
+  //  val csvProvider: SplitProvider = SplitsProvider.csvProvider
 
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights) =>
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       setFlights(recoveredFlights.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap)
-    case SnapshotOffer(_, snapshot: Map[Int, ApiFlight]) =>
-      log.info(s"Restoring from snapshot")
-      flights = snapshot
+    case SnapshotOffer(_, snapshot) =>
+      flights = snapshot match {
+        case flightStateSnapshot: FlightStateSnapshotMessage =>
+          flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
+        case flights: Map[Int, ApiFlight] =>
+          flights.mapValues( f => Arrival(
+            f.Operator,
+            f.Status,
+            f.EstDT,
+            f.ActDT,
+            f.EstChoxDT,
+            f.ActChoxDT,
+            f.Gate,
+            f.Stand,
+            f.MaxPax,
+            f.ActPax,
+            f.TranPax,
+            f.RunwayID,
+            f.BaggageReclaimId,
+            f.FlightID,
+            f.AirportID,
+            f.Terminal,
+            f.rawICAO,
+            f.rawIATA,
+            f.Origin,
+            f.SchDT,
+            f.PcpTime,
+            None
+          ))
+      }
+      lastKnownPax = snapshot match {
+        case flightStateSnapshot: FlightStateSnapshotMessage =>
+          flightStateSnapshot.lastKnownPax.collect{
+            case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
+              (key, pax)
+          }.toMap
+        case _ => Map()
+      }
+
     case RecoveryCompleted =>
       requestCrunch(state.values.toList)
       log.info("Flights recovery completed, triggering crunch")
@@ -237,13 +301,20 @@ class FlightsActor(crunchActorRef: ActorRef,
           replyTo ! FlightsWithSplits(s.toList)
       }
     case Flights(newFlights) =>
-      val flightsMessage = FlightsMessage(newFlights.map(apiFlightToFlightMessage))
+      val flights = if (airportConfig.portCode == "LHR") {
 
-      log.info(s"Adding ${newFlights.length} new flights")
+        val flightsWithLastKnownPax = addLastKnownPaxNos(newFlights)
+        storeLastKnownPaxForFlights(newFlights)
+        flightsWithLastKnownPax
+      } else newFlights
+
+      val flightsMessage = FlightsMessage(flights.map(apiFlightToFlightMessage))
+
+      log.info(s"Adding ${flights.length} new flights")
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
       val lastMidnight = LocalDate.now().toString(formatter)
-      onFlightUpdates(newFlights, lastMidnight, domesticPorts)
+      onFlightUpdates(flights, lastMidnight, domesticPorts)
       persist(flightsMessage) { (event: FlightsMessage) =>
         log.info(s"Storing ${event.flightMessages.length} flights")
         context.system.eventStream.publish(event)
@@ -252,13 +323,13 @@ class FlightsActor(crunchActorRef: ActorRef,
           saveSnapshot(state)
         }
       }
-      requestCrunch(newFlights)
+      requestCrunch(flights)
 
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }
 
-  private def calcCsvApiSplits(flight: ApiFlight): List[ApiSplits] = {
+  private def calcCsvApiSplits(flight: Arrival): List[ApiSplits] = {
     val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvSplitsProvider(flight)
 
     val apiPaxAndQueueRatios: Option[List[ApiPaxTypeAndQueueCount]] = csvSplits.map(s => s.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100)))
@@ -266,7 +337,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     csvSplits.map(csvSplit => ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)).toList
   }
 
-  private def requestCrunch(newFlights: List[ApiFlight]) = {
+  private def requestCrunch(newFlights: List[Arrival]) = {
     if (newFlights.nonEmpty)
       crunchActorRef ! PerformCrunchOnFlights(newFlights)
   }

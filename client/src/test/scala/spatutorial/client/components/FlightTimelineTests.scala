@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.ApiFlight
+
 import japgolly.scalajs.react.CtorType
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted

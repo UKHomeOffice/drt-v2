@@ -13,7 +13,7 @@ import services.SDate.implicits._
 import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes._
 import drt.shared.Queues._
-import drt.shared.{ApiFlight, PassengerQueueTypes, SDateLike}
+import drt.shared.{Arrival, PassengerQueueTypes, SDateLike}
 
 
 class CanFindASplitForAnApiFlightSpec extends

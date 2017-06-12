@@ -1,8 +1,8 @@
 package services
 
-import drt.shared.ApiFlight
+import drt.shared.Arrival
 import drt.shared.SplitRatiosNs.SplitRatios
 
 trait PassengerSplitRatioProvider {
-  def splitRatioProvider: (ApiFlight) => Option[SplitRatios]
+  def splitRatioProvider: (Arrival) => Option[SplitRatios]
 }

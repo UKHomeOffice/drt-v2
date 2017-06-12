@@ -99,7 +99,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
     splitsLines
   }
 
-  def splitRatioProvider: (ApiFlight => Option[SplitRatios]) = flight => {
+  def splitRatioProvider: (Arrival => Option[SplitRatios]) = flight => {
     val flightDate = DateTime.parse(flight.SchDT)
     //todo - we should profile this, but it's likely much more efficient to store in nested map IATA -> DayOfWeek -> MonthOfYear
     //todo OR IATA -> (DayOfWeek, MonthOfYear)
