@@ -29,7 +29,8 @@ abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(Acto
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
   "akka.persistence.journal.leveldb.dir" -> dbLocation,
-  "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
+  "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
+  "akka.persistence.snapshot-store.dir" -> s"$dbLocation/snapshot"
 )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString))))
   with After
   with ImplicitSender {

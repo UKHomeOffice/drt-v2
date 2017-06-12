@@ -16,6 +16,7 @@ trait FlightState {
   def log: LoggingAdapter
 
   var flights = Map[Int, Arrival]()
+  var lastKnownPax = Map[String, Int]()
 
   def onFlightUpdates(newFlights: List[Arrival], since: String, domesticPorts: Seq[String]) = {
     logNewFlightInfo(flights, newFlights)

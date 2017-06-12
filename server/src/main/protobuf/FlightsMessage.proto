@@ -4,6 +4,16 @@ message FlightsMessage {
     repeated FlightMessage flightMessages = 1;
 }
 
+message FlightStateSnapshotMessage {
+    repeated FlightMessage flightMessages = 1;
+    repeated FlightLastKnownPaxMessage lastKnownPax = 2;
+}
+
+message FlightLastKnownPaxMessage {
+    optional string flightKey = 1;
+    optional int32 lastKnownPax = 2;
+}
+
 message FlightMessage {
     optional string SchDT_OLD = 20;
     optional string EstDT_OLD = 5;

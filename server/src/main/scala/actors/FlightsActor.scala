@@ -23,7 +23,7 @@ import services.SDate.implicits._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsMessage}
+import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
 import drt.shared.Arrival
 import actors.FlightMessageConversion._
 import com.typesafe.config.ConfigFactory
@@ -190,9 +190,45 @@ class FlightsActor(crunchActorRef: ActorRef,
     case FlightsMessage(recoveredFlights) =>
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       setFlights(recoveredFlights.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap)
-    case SnapshotOffer(_, snapshot: Map[Int, Arrival]) =>
-      log.info(s"Restoring from snapshot")
-      flights = snapshot
+    case SnapshotOffer(_, snapshot) =>
+      flights = snapshot match {
+        case flightStateSnapshot: FlightStateSnapshotMessage =>
+          flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
+        case flights: Map[Int, ApiFlight] =>
+          flights.mapValues( f => Arrival(
+            f.Operator,
+            f.Status,
+            f.EstDT,
+            f.ActDT,
+            f.EstChoxDT,
+            f.ActChoxDT,
+            f.Gate,
+            f.Stand,
+            f.MaxPax,
+            f.ActPax,
+            f.TranPax,
+            f.RunwayID,
+            f.BaggageReclaimId,
+            f.FlightID,
+            f.AirportID,
+            f.Terminal,
+            f.rawICAO,
+            f.rawIATA,
+            f.Origin,
+            f.SchDT,
+            f.PcpTime,
+            None
+          ))
+      }
+      lastKnownPax = snapshot match {
+        case flightStateSnapshot: FlightStateSnapshotMessage =>
+          flightStateSnapshot.lastKnownPax.collect{
+            case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
+              (key, pax)
+          }.toMap
+        case _ => Map()
+      }
+
     case RecoveryCompleted =>
       requestCrunch(state.values.toList)
       log.info("Flights recovery completed, triggering crunch")
