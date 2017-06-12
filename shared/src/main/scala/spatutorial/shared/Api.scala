@@ -70,6 +70,7 @@ case class Arrival(
 }
 
 //This is used for handling historic snapshots, do not change or remove.
+@SerialVersionUID(-2103953769229068778L)
 case class ApiFlight(
                       Operator: String,
                       Status: String,
@@ -91,7 +92,26 @@ case class ApiFlight(
                       rawIATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long)
+                      PcpTime: Long){
+
+  lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
+  lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
+
+
+}
+object ApiFlight {
+
+  def standardiseFlightCode(flightCode: String): String = {
+    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+
+    flightCode match {
+      case flightCodeRegex(operator, flightNumber, suffix) =>
+        f"${operator}${flightNumber.toInt}%04d${suffix}"
+      case _ => flightCode
+    }
+  }
+}
+
 
 object Arrival {
 
