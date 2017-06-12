@@ -135,11 +135,8 @@ object BigSummaryBoxes {
     .render_P((p) => {
       <.div(^.className := "summary-boxes",
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d "), <.span(^.className := "sub", "Flights"))),
-        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count act-pax-count", f"${p.actPaxCount}%,d "), <.span(^.className := "sub", "Pax"))),
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count best-pax-count", f"${p.bestPaxCount}%,d "), <.span(^.className := "sub", "Best Pax"))),
-        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)),
-        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count", p.aggSplits.values.sum), <.span(^.className := "sub", "Pax from Splits")))
-      )
+        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)))
     })
     .build
 }
