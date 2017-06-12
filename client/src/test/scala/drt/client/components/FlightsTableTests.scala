@@ -97,6 +97,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -109,7 +110,9 @@ object FlightsTableTests extends TestSuite {
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                   <.td(testFlight.Status),
-                  <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
+                  <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
+                  <.td(<.span(^.title := "2016-01-01 13:30", "13:30")), //pcp
+                  <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")), <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")), <.td(testFlight.ActPax),
                     <.td()))))
@@ -129,6 +132,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -142,7 +146,9 @@ object FlightsTableTests extends TestSuite {
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                   <.td(testFlight.Status),
-                  date(testFlight.SchDT), date(testFlight.EstDT),
+                  date(testFlight.SchDT),
+                  date("2016-01-01T13:30"), //pcp
+                  date(testFlight.EstDT),
                   date(testFlight.ActDT), date(testFlight.EstChoxDT),
                   date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
                     <.td()))))
@@ -170,6 +176,7 @@ object FlightsTableTests extends TestSuite {
                   <.th("Gate/Stand"),
                   <.th("Status"),
                   <.th("Sch"),
+                  <.th("Pcp"),
                   <.th("Est"),
                   <.th("Act"),
                   <.th("Est Chox"),
@@ -182,7 +189,9 @@ object FlightsTableTests extends TestSuite {
                     <.td(testFlight.ICAO), <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
                     <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                     <.td(testFlight.Status),
-                    date(testFlight.SchDT), date(testFlight.EstDT),
+                    date(testFlight.SchDT),
+                    date("2016-01-01T13:30"), //pcp
+                    date(testFlight.EstDT),
                     date(testFlight.ActDT), date(testFlight.EstChoxDT),
                     date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
                     <.td()))))
@@ -234,6 +243,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -248,6 +258,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(s"${testFlightT.Gate}/${testFlightT.Stand}"),
                   <.td(testFlightT.Status),
                   date(testFlightT.SchDT),
+                  date("2016-01-01T13:30"), //pcp
                   date(testFlightT.EstDT),
                   date(testFlightT.ActDT),
                   date(testFlightT.EstChoxDT),
@@ -261,20 +272,6 @@ object FlightsTableTests extends TestSuite {
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil))),
             staticComponent(expected)())
-
-          //          val className: TagMod = ^.className := s"pax-${origin}"
-          //          val title: TagMod = ^.title := s"from ${origin}"
-          //          val relativePax = Math.floor(100 * (pax / 853)).toInt
-          //          val style = widthStyle(relativePax)
-          //          <.div(po.pax, className, title, ^.style := style)
-          //          "Unit tests for paxComponent Hook" - {
-          //            val testFlightT = testFlight.copy(ActPax = 0, MaxPax = 150)
-          //
-          //            def paxComponent(f: ApiFlight): VdomNode = {
-          //              <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
-          //            }
-          //          }
-
         }
       }
     }

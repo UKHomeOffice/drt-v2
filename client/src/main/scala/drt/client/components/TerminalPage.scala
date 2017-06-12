@@ -22,7 +22,6 @@ import scala.collection.immutable.Seq
 import scala.util.Try
 
 
-
 object
 TerminalPage {
 
@@ -67,7 +66,7 @@ TerminalPage {
 
       val liveSummaryBoxes = flightsWithSplitsPotRCP((flightsWithSplitsPot) => {
         val now = SDate.now()
-        val hoursToAdd = 1
+        val hoursToAdd = 3
         val nowplus3 = now.addHours(hoursToAdd)
 
         <.div(
@@ -78,13 +77,38 @@ TerminalPage {
               val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
               val flightCount = flightsAtTerminal.length
 
+
+              val debugTable = <.table(
+                <.thead(
+                  <.tr(
+                    <.th("ICAO"),
+                    <.th("Sch"),
+                    <.th("Act"),
+                    <.th("Max"),
+                    <.th("Split Source"),
+                    <.th("split pax"),
+                    <.th("bestSplitPax")
+                  )),
+                <.tbody(
+                  flightsAtTerminal.map(f =>
+                    <.tr(
+                      <.td(f.apiFlight.ICAO),
+                      <.td(f.apiFlight.SchDT),
+                      <.td(f.apiFlight.ActPax),
+                      <.td(f.apiFlight.MaxPax),
+                      <.td(f.splits.headOption.map(_.source).toString),
+                      <.td(f.splits.headOption.map(_.totalPax).getOrElse(0d).toString),
+                      <.td(BigSummaryBoxes.bestFlightSplitPax(f)))).toTagMod))
+
               val actPax = BigSummaryBoxes.sumActPax(flightsAtTerminal)
               val bestPax = BigSummaryBoxes.sumBestPax(flightsAtTerminal).toInt
               val aggSplits = BigSummaryBoxes.aggregateSplits(flightsAtTerminal)
 
               val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
 
-              summaryBoxes
+              <.div(
+//                debugTable,
+                summaryBoxes)
             }
             val recovered = tried recoverWith {
               case f => Try(<.div(f.toString))

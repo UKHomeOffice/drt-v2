@@ -27,13 +27,11 @@ object BigSummaryBoxes {
     now.millisSinceEpoch <= bestTime && bestTime <= nowPlus3Hours.millisSinceEpoch
   }
 
-  def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike) = {
+  def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike) =
     flights.filter(flightPcpInPeriod(_, now, nowPlus3Hours))
-  }
 
-  def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
+  def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) =
     rootModel.flightsWithSplitsPot.map(splits => flightsInPeriod(splits.flights, now, nowPlus3Hours).length)
-  }
 
   def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
     rootModel.flightsWithSplitsPot.map(splits => {
@@ -105,10 +103,12 @@ object BigSummaryBoxes {
 
   def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
 
-  def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map {
+  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: ss) => h.totalPax
     case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
-  }.sum
+  }
+
+  def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
 
