@@ -103,7 +103,8 @@ object CrunchTests {
     "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
     "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
     "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir(tn),
-    "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local"
+    "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
+    "akka.persistence.snapshot-store.local.dir" -> s"$tn/snapshot"
   )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString)))
 
   case class TestContext(override val system: ActorSystem, props: Props) extends
