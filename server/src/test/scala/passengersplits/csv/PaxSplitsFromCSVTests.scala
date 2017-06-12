@@ -21,8 +21,8 @@ import scala.concurrent.duration._
 class PaxSplitsFromCSVTests extends SpecificationLike {
   val CsvSplitSource = "Historical"
 
-  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = "",
@@ -149,7 +149,7 @@ class WTFPaxSplitsFromCSVTests extends Specification {
       val csvSplitProvider = CSVPassengerSplitsProvider(Seq(s"BA1234,JHB,100,0,0,0,70,30,0,0,0,0,0,0,${today.dayOfWeek.getAsText},${today.monthOfYear.getAsText},STN,T1,SA"))
       val log = LoggerFactory.getLogger(getClass)
 
-      def pcpArrivalTimeProvider(flight: ApiFlight): MilliDate = {
+      def pcpArrivalTimeProvider(flight: Arrival): MilliDate = {
         log.error("don't call me!!!")
         MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
       }
@@ -159,7 +159,7 @@ class WTFPaxSplitsFromCSVTests extends Specification {
 
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
 
-        def flightPaxTypeAndQueueCountsFlow(flight: ApiFlight): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
           PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
       }
 
@@ -189,8 +189,8 @@ class WTFPaxSplitsFromCSVTests extends Specification {
   }
 
 
-  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = "",

@@ -34,9 +34,9 @@ object FlightsWithSplitsTable {
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[Arrival]]
   implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
-  implicit val flightReuse = Reusability.caseClassDebug[ApiFlight]
+  implicit val flightReuse = Reusability.caseClassDebug[Arrival]
   implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
   implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
 
@@ -45,16 +45,16 @@ object FlightsWithSplitsTable {
   implicit val propsReuse = Reusability.caseClassDebug[Props]
 
 
-  def ArrivalsTable[C](timelineComponent: Option[(ApiFlight) => VdomNode] = None,
+  def ArrivalsTable[C](timelineComponent: Option[(Arrival) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
-                       paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                       paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
                        splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
                       ) = ScalaComponent.builder[Props]("ArrivalsTable")
 
     .renderP((_$, props) => {
       log.info(s"sorting flights")
       val flightsWithSplits = props.flightsWithSplits
-      val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[ApiFlight])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
+      val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
 
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.SchDT) //todo move this closer to the model
       log.info(s"sorted flights")
@@ -116,11 +116,11 @@ object FlightTableRow {
   type OriginMapperF = (String) => VdomNode
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
-                   codeShares: Set[ApiFlight],
+                   codeShares: Set[Arrival],
                    idx: Int,
-                   timelineComponent: Option[(ApiFlight) => VdomNode],
+                   timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
-                   paxComponent: (ApiFlight, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                   paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
                    splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div())
 
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
@@ -128,9 +128,9 @@ object FlightTableRow {
   implicit val doubleReuse = Reusability.double(0.01)
   implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
   //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiFlight]]
+  //  implicit val flightReuse = Reusability.caseClassDebug[List[Arrival]]
   implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
-  implicit val flightReuse = Reusability.caseClassDebug[ApiFlight]
+  implicit val flightReuse = Reusability.caseClassDebug[Arrival]
   implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
   implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
 

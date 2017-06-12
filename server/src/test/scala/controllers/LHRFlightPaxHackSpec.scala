@@ -1,13 +1,13 @@
 package controllers
 
 import actors.FlightPaxNumbers
-import drt.shared.{ApiFlight, BestPax}
+import drt.shared.{Arrival, BestPax}
 import org.specs2.mutable.Specification
 import org.specs2.specification.BeforeEach
 
 class LHRFlightPaxHackSpec extends Specification with BeforeEach{
   isolated
-  def flightWithBestPax(newFlight: ApiFlight, currentFlights: List[ApiFlight]): ApiFlight = {
+  def flightWithBestPax(newFlight: Arrival, currentFlights: List[Arrival]): Arrival = {
     if (newFlight.ActPax != 200)
       newFlight
     else {
@@ -121,8 +121,8 @@ class LHRFlightPaxHackSpec extends Specification with BeforeEach{
     flightPaxNumbers.lastKnowPaxToFlightCode = collection.mutable.Map()
   }
 
-  def apiFlight(iataCode: String, icaoCode: String, schDt: String, actPax: Int, maxPax: Int, lastKnownPax: Option[Int] = None): ApiFlight =
-  ApiFlight(
+  def apiFlight(iataCode: String, icaoCode: String, schDt: String, actPax: Int, maxPax: Int, lastKnownPax: Option[Int] = None): Arrival =
+  Arrival(
   FlightID = 0,
   rawICAO = icaoCode,
   rawIATA = iataCode,

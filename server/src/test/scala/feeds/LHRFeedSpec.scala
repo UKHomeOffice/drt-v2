@@ -7,7 +7,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.{Specification, SpecificationLike}
-import drt.shared.ApiFlight
+import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
@@ -37,7 +37,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
   def flightPaxNumbers = new FlightPaxNumbers {}
 
   "lhrCsvToApiFlights" should {
-    "Produce an ApiFlight source with one flight based on a line from the LHR csv" in {
+    "Produce an Arrival source with one flight based on a line from the LHR csv" in {
       //
       val csvString =
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
@@ -52,21 +52,21 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       val probe = TestProbe()
 
-      val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
+      val flightsSource: Source[List[Arrival], NotUsed] = lhrFeed.copiedToApiFlights
 
-      val futureFlightsSeq: Future[Seq[List[ApiFlight]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
       val flights = Await.result(futureFlightsSeq, 3 seconds)
 
       flights match {
-        case Vector(ApiFlight("Qatar Airways", "UNK", "2017-03-09T21:32:00.000Z", "2017-03-09T21:33:00.000Z", "2017-03-09T21:43:00.000Z", "2017-03-09T21:45:00.000Z", "", "10", 795, 142, 1, "", "", _, "LHR", "T4", "QR005", "QR005", "DOH", "2017-03-09T22:00:00.000Z", 1489097040000L, None) :: tail) =>
+        case Vector(Arrival("Qatar Airways", "UNK", "2017-03-09T21:32:00.000Z", "2017-03-09T21:33:00.000Z", "2017-03-09T21:43:00.000Z", "2017-03-09T21:45:00.000Z", "", "10", 795, 142, 1, "", "", _, "LHR", "T4", "QR005", "QR005", "DOH", "2017-03-09T22:00:00.000Z", 1489097040000L, None) :: tail) =>
           true
         case _ =>
           false
       }
     }
 
-    "Produce an ApiFlight source with one flight based on a line with missing values from the LHR csv" in {
+    "Produce an Arrival source with one flight based on a line with missing values from the LHR csv" in {
       val csvString =
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
            |"4","KL1033","KLM Royal Dutch Airlines","AMS","Amsterdam","20:50 09/03/2017","20:50 09/03/2017","","","","","","","""""
@@ -82,13 +82,13 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
 
       val probe = TestProbe()
-      val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
-      val futureFlightsSeq: Future[Seq[List[ApiFlight]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+      val flightsSource: Source[List[Arrival], NotUsed] = lhrFeed.copiedToApiFlights
+      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
       val flights = Await.result(futureFlightsSeq, 3 seconds)
 
       flights match {
-        case Vector(List(flight: ApiFlight)) =>
+        case Vector(List(flight: Arrival)) =>
           true
         case _ =>
           false
@@ -110,7 +110,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     }
 
 //  TODO: We need to figure out how to make this test reliably pass.
-    // "Produce an ApiFlight with scheduled datetime in UTC when given a flight with a date falling inside BST" in {
+    // "Produce an Arrival with scheduled datetime in UTC when given a flight with a date falling inside BST" in {
 //      //
 //      val csvString =
 //        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
@@ -125,16 +125,16 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 //
 //      val probe = TestProbe()
 //
-//      val flightsSource: Source[List[ApiFlight], NotUsed] = lhrFeed.copiedToApiFlights
+//      val flightsSource: Source[List[Arrival], NotUsed] = lhrFeed.copiedToApiFlights
 //
-//      val futureFlightsSeq: Future[Seq[List[ApiFlight]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+//      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 //
-//      val flights: Seq[List[ApiFlight]] = Await.result(futureFlightsSeq, 3 seconds)
+//      val flights: Seq[List[Arrival]] = Await.result(futureFlightsSeq, 3 seconds)
 //
 //      flights match {
-//        case Vector(ApiFlight(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, "2017-04-09T22:00:00.000Z", _) :: tail) =>
+//        case Vector(Arrival(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, "2017-04-09T22:00:00.000Z", _) :: tail) =>
 //          true
-//        case Vector(ApiFlight(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, scheduled, _) :: tail) =>
+//        case Vector(Arrival(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, scheduled, _) :: tail) =>
 //          println(s"CHECK JVM TIMEZONE SETTING!! SchDT: $scheduled != '2017-04-09T22:00:00.000Z'")
 //          false
 //        case _ => false

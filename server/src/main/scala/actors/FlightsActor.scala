@@ -24,7 +24,7 @@ import services.SDate.implicits._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsMessage}
-import drt.shared.ApiFlight
+import drt.shared.Arrival
 import actors.FlightMessageConversion._
 import com.typesafe.config.ConfigFactory
 import drt.shared.PaxTypes.EeaMachineReadable
@@ -38,7 +38,7 @@ case object GetFlights
 case object GetFlightsWithSplits
 
 object FlightMessageConversion {
-  def apiFlightToFlightMessage(apiFlight: ApiFlight): FlightMessage = {
+  def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
       operator = Some(apiFlight.Operator),
       gate = Some(apiFlight.Gate),
@@ -76,10 +76,10 @@ object FlightMessageConversion {
       }
   }
 
-  def flightMessageToApiFlight(flightMessage: FlightMessage): ApiFlight = {
+  def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     flightMessage.schDTOLD match {
       case Some(s) =>
-        ApiFlight(
+        Arrival(
           Operator = flightMessage.operator.getOrElse(""),
           Status = flightMessage.status.getOrElse(""),
           EstDT = flightMessage.estDTOLD.getOrElse(""),
@@ -103,7 +103,7 @@ object FlightMessageConversion {
           PcpTime = flightMessage.pcpTime.getOrElse(0)
         )
       case None =>
-        ApiFlight(
+        Arrival(
           Operator = flightMessage.operator.getOrElse(""),
           Status = flightMessage.status.getOrElse(""),
           EstDT = apiFlightDateTime(flightMessage.estimated),
@@ -140,21 +140,21 @@ trait FlightPaxNumbers {
   //TODO make this a bit more elegant
   import BestPax.lhrBestPax
 
-  def addLastKnownPaxNos(newFlights: List[ApiFlight]) = {
+  def addLastKnownPaxNos(newFlights: List[Arrival]) = {
     newFlights.map(f => f.copy(LastKnownPax = lastKnownPaxForFlight(f)))
   }
 
   var lastKnowPaxToFlightCode: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
 
-  def storeLastKnownPaxForFlights(flights: List[ApiFlight]) = {
+  def storeLastKnownPaxForFlights(flights: List[Arrival]) = {
     flights.foreach(f => lastKnowPaxToFlightCode(key(f)) = lhrBestPax(f))
   }
 
-  def lastKnownPaxForFlight(f: ApiFlight): Option[Int] = {
+  def lastKnownPaxForFlight(f: Arrival): Option[Int] = {
     lastKnowPaxToFlightCode.get(key(f))
   }
 
-  def key(flight: ApiFlight) = {
+  def key(flight: Arrival) = {
     flight.IATA + flight.ICAO
   }
 }
@@ -190,7 +190,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     case FlightsMessage(recoveredFlights) =>
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       setFlights(recoveredFlights.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap)
-    case SnapshotOffer(_, snapshot: Map[Int, ApiFlight]) =>
+    case SnapshotOffer(_, snapshot: Map[Int, Arrival]) =>
       log.info(s"Restoring from snapshot")
       flights = snapshot
     case RecoveryCompleted =>
@@ -293,7 +293,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     case message => log.error("Actor saw unexpected message: " + message.toString)
   }
 
-  private def calcCsvApiSplits(flight: ApiFlight): List[ApiSplits] = {
+  private def calcCsvApiSplits(flight: Arrival): List[ApiSplits] = {
     val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvSplitsProvider(flight)
 
     val apiPaxAndQueueRatios: Option[List[ApiPaxTypeAndQueueCount]] = csvSplits.map(s => s.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100)))
@@ -301,7 +301,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     csvSplits.map(csvSplit => ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)).toList
   }
 
-  private def requestCrunch(newFlights: List[ApiFlight]) = {
+  private def requestCrunch(newFlights: List[Arrival]) = {
     if (newFlights.nonEmpty)
       crunchActorRef ! PerformCrunchOnFlights(newFlights)
   }

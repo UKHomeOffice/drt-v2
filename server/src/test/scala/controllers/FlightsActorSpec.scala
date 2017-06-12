@@ -9,7 +9,7 @@ import org.specs2.mutable.Specification
 import services.WorkloadCalculatorTests.apiFlight
 import services.SplitsProvider
 import drt.shared.FlightsApi.Flights
-import drt.shared.{AirportConfig, ApiFlight, MilliDate, StaffMovement}
+import drt.shared.{AirportConfig, Arrival, MilliDate, StaffMovement}
 import akka.pattern._
 import controllers.SystemActors.SplitsProvider
 import org.joda.time.DateTime
@@ -51,7 +51,7 @@ class FlightsActorSpec extends Specification {
       actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
-      val futureFlights: Future[List[ApiFlight]] = futureResult.collect {
+      val futureFlights: Future[List[Arrival]] = futureResult.collect {
         case Success(Flights(fs)) => fs
       }
 
@@ -76,7 +76,7 @@ class FlightsActorSpec extends Specification {
         actor ! Flights(List(apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
 
         val futureResult: Future[Any] = actor ? GetFlights
-        val futureFlights: Future[List[ApiFlight]] = futureResult.collect {
+        val futureFlights: Future[List[Arrival]] = futureResult.collect {
           case Success(Flights(fs)) => fs
         }
 
@@ -97,7 +97,7 @@ class FlightsActorSpec extends Specification {
         actor ! Flights(List(apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
 
         val futureResult: Future[Any] = actor ? GetFlights
-        val futureFlights: Future[List[ApiFlight]] = futureResult.collect {
+        val futureFlights: Future[List[Arrival]] = futureResult.collect {
           case Success(Flights(fs)) => fs
         }
 

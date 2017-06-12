@@ -3,7 +3,7 @@ package actors
 import akka.actor._
 import controllers.FlightState
 import drt.shared.FlightsApi._
-import drt.shared.{ApiFlight, _}
+import drt.shared.{Arrival, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import services._
@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
-case class PerformCrunchOnFlights(flights: Seq[ApiFlight])
+case class PerformCrunchOnFlights(flights: Seq[Arrival])
 
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
@@ -159,7 +159,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     }
   }
 
-  val uniqueArrivalsWithCodeshares = CodeShares.uniqueArrivalsWithCodeshares(identity[ApiFlight]) _
+  val uniqueArrivalsWithCodeshares = CodeShares.uniqueArrivalsWithCodeshares(identity[Arrival]) _
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     val tq: QueueName = terminalName + "/" + queueName

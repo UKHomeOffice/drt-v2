@@ -28,7 +28,7 @@ TerminalPage {
 
     import TerminalHeatmaps._
 
-    val timelineComp: Option[(ApiFlight) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
+    val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
     def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
@@ -116,7 +116,7 @@ TerminalPage {
 
 object FlightComponents {
 
-  def paxComp(maxFlightPax: Int = 853)(flight: ApiFlight, apiSplits: ApiSplits): TagMod = {
+  def paxComp(maxFlightPax: Int = 853)(flight: Arrival, apiSplits: ApiSplits): TagMod = {
 
     val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
@@ -143,7 +143,7 @@ object FlightComponents {
     })
   }
 
-  def paxComponentTitle(flight: ApiFlight, apiPax: Int): String = {
+  def paxComponentTitle(flight: Arrival, apiPax: Int): String = {
     val api: Any = if (apiPax > 0) apiPax else "n/a"
     val port: Any = if (flight.ActPax > 0) flight.ActPax else "n/a"
     val max: Any = if (flight.MaxPax > 0) flight.MaxPax else "n/a"
@@ -154,7 +154,7 @@ object FlightComponents {
                   """.stripMargin
   }
 
-  def maxCapacityLine(maxFlightPax: Int, flight: ApiFlight): TagMod = {
+  def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
     if (flight.MaxPax > 0)
       <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, flight.MaxPax))
     else

@@ -5,7 +5,7 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
-import drt.shared.ApiFlight
+import drt.shared.Arrival
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
@@ -88,13 +88,13 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
   def dateOptToStringOrEmptyString = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
 
-  lazy val copiedToApiFlights: Source[List[ApiFlight], NotUsed] = Source(
+  lazy val copiedToApiFlights: Source[List[Arrival], NotUsed] = Source(
     List(
       successfulFlights.map(flight => {
         val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
         val schDtIso = flight.scheduled.toDateTimeISO().toString()
         val defaultPaxPerFlight = 200
-        ApiFlight(
+        Arrival(
           Operator = flight.operator,
           Status = "UNK",
           EstDT = dateOptToStringOrEmptyString(flight.estimated),
@@ -143,12 +143,12 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String) = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => String = csvContentsProviderProd _): Source[List[ApiFlight], Cancellable] = {
+  def apply(csvContentsProvider: () => String = csvContentsProviderProd _): Source[List[Arrival], Cancellable] = {
     log.info(s"preparing lhrfeed")
 
     val pollFrequency = 1 minute
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[Source[List[ApiFlight], NotUsed], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+    val tickingSource: Source[Source[List[Arrival], NotUsed], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((t) => {
         log.info(s"about to request csv")
         val csvContents: String = csvContentsProvider()
@@ -158,7 +158,7 @@ object LHRFlightFeed {
         f
       })
 
-    val recoverableTicking: Source[List[ApiFlight], Cancellable] = tickingSource.flatMapConcat(s => s.map(x => x))
+    val recoverableTicking: Source[List[Arrival], Cancellable] = tickingSource.flatMapConcat(s => s.map(x => x))
 
     recoverableTicking
   }

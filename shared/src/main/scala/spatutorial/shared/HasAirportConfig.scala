@@ -64,12 +64,12 @@ object BestPax {
     case _ => bestPax
   }
 
-  def bestPax = (f: ApiFlight) => {
+  def bestPax = (f: Arrival) => {
     if (f.ActPax > 0) f.ActPax
     else f.MaxPax
   }
 
-  def lhrBestPax = (flight: ApiFlight) => {
+  def lhrBestPax = (flight: Arrival) => {
     val defaultPax = 200
 
     flight match {

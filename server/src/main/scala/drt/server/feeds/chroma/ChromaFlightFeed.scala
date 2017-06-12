@@ -8,7 +8,7 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.http.ProdSendAndReceive
-import drt.shared.ApiFlight
+import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 
 import scala.concurrent.duration._
@@ -67,7 +67,7 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
       flights.map(flight => {
         val walkTimeMinutes = 4
         val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-        ApiFlight(
+        Arrival(
           Operator = flight.Operator,
           Status = flight.Status, EstDT = flight.EstDT,
           ActDT = flight.ActDT, EstChoxDT = flight.EstChoxDT,
@@ -93,7 +93,7 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
 
   val copiedToApiFlights = apiFlightCopy(EdiChroma.ediMapping).map(Flights(_))
 
-  def chromaEdiFlights(): Source[List[ApiFlight], Cancellable] = {
+  def chromaEdiFlights(): Source[List[Arrival], Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
 
     def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
@@ -107,7 +107,7 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
     apiFlightCopy(ediMapping)
   }
 
-  def chromaVanillaFlights(): Source[List[ApiFlight], Cancellable] = {
+  def chromaVanillaFlights(): Source[List[Arrival], Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)
     apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
   }

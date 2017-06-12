@@ -21,8 +21,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
                 origin: String = "",
                 flightId: Int = 1,
                 lastKnownPax: Option[Int] = None
-               ): ApiFlight =
-    ApiFlight(
+               ): Arrival =
+    Arrival(
       FlightID = flightId,
       SchDT = scheduledDatetime,
       Terminal = terminal,
@@ -55,7 +55,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
         def defaultProcTimesProvider(paxTypeAndQueue: PaxTypeAndQueue) = 1
 
         "with simple pax splits all at the same paxType" - {
-          def splitRatioProvider(flight: ApiFlight) = Some(SplitRatios(
+          def splitRatioProvider(flight: Arrival) = Some(SplitRatios(
             TestAirportConfig,
             List(
               SplitRatio((PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5),
@@ -64,7 +64,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
 
           val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
             splitRatioProvider,
-            (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
+            (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
             BestPax.bestPax
           ) _
 
@@ -212,7 +212,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
         }
 
         "with paxSplits of differing paxType to the same queue" - {
-          def splitRatioProvider(flight: ApiFlight) = Some(SplitRatios(
+          def splitRatioProvider(flight: Arrival) = Some(SplitRatios(
             TestAirportConfig,
             List(
               SplitRatio((PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5),
@@ -220,7 +220,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             )))
 
           val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-            splitRatioProvider, (flight: ApiFlight) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
+            splitRatioProvider, (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
             BestPax.bestPax
           ) _
 
