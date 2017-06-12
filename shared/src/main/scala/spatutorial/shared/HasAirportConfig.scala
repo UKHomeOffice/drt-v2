@@ -64,7 +64,11 @@ object BestPax {
     case _ => bestPax
   }
 
-  def bestPax = (f: ApiFlight) => f.ActPax
+  def bestPax = (f: ApiFlight) => {
+    if (f.ActPax > 0) f.ActPax
+    else f.MaxPax
+  }
+
   def lhrBestPax = (flight: ApiFlight) => {
     val defaultPax = 200
 
