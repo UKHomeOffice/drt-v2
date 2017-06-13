@@ -1,6 +1,6 @@
 package passengersplits.csv
 
-import drt.shared.ApiFlight
+import drt.shared.Arrival
 import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational}
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -80,8 +80,8 @@ class EgatePercentagesFromPaxSplitsCsv extends Specification {
   }
 
 
-  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = "",

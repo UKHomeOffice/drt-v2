@@ -15,8 +15,8 @@ import scala.util.{Failure, Success}
 
 class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers {
 
-  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = "",
@@ -55,9 +55,9 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
   "Splits from multiple providers" >> {
 
     "Given 1 provider with splits for a flight, when we ask for splits then we should see Some()" >> {
-      def provider(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios(TestAirportConfig))
+      def provider(apiFlight: Arrival) = Some[SplitRatios](SplitRatios(TestAirportConfig))
 
-      val providers: List[(ApiFlight) => Some[SplitRatios]] = List(provider)
+      val providers: List[(Arrival) => Some[SplitRatios]] = List(provider)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
@@ -67,11 +67,11 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
     }
 
     "Given 2 providers, the 1st with splits and 2nd without, when we ask for splits then we should see Some()" >> {
-      def providerWith(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios(TestAirportConfig))
+      def providerWith(apiFlight: Arrival) = Some[SplitRatios](SplitRatios(TestAirportConfig))
 
-      def providerWithout(apiFlight: ApiFlight) = None
+      def providerWithout(apiFlight: Arrival) = None
 
-      val providers: List[(ApiFlight) => Option[SplitRatios]] = List(providerWith, providerWithout)
+      val providers: List[(Arrival) => Option[SplitRatios]] = List(providerWith, providerWithout)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
@@ -81,11 +81,11 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
     }
 
     "Given 2 providers, the 1st without splits and 2nd with, when we ask for splits then we should see Some()" >> {
-      def providerWith(apiFlight: ApiFlight) = None
+      def providerWith(apiFlight: Arrival) = None
 
-      def providerWithout(apiFlight: ApiFlight) = Some[SplitRatios](SplitRatios(TestAirportConfig))
+      def providerWithout(apiFlight: Arrival) = Some[SplitRatios](SplitRatios(TestAirportConfig))
 
-      val providers: List[(ApiFlight) => Option[SplitRatios]] = List(providerWith, providerWithout)
+      val providers: List[(Arrival) => Option[SplitRatios]] = List(providerWith, providerWithout)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 
@@ -106,13 +106,13 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
 
       val ratios = mutable.Queue(ratios1, ratios2)
 
-      def statefulProvider(apiFlight: ApiFlight): Option[SplitRatios] = {
+      def statefulProvider(apiFlight: Arrival): Option[SplitRatios] = {
         val head = ratios.dequeue()
         Option(head)
       }
 
 
-      val providers: List[(ApiFlight) => Option[SplitRatios]] = List(statefulProvider)
+      val providers: List[(Arrival) => Option[SplitRatios]] = List(statefulProvider)
 
       val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
 

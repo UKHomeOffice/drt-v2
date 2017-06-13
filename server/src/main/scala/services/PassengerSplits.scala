@@ -5,7 +5,7 @@ import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
-import drt.shared.{AirportConfig, ApiFlight, FlightParsing, PaxTypeAndQueue}
+import drt.shared.{AirportConfig, Arrival, FlightParsing, PaxTypeAndQueue}
 import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 
@@ -17,7 +17,7 @@ object AdvPaxSplitsProvider {
 
   def splitRatioProvider(destinationPort: String)
                         (passengerInfoRouterActor: AskableActorRef)
-                        (flight: ApiFlight)
+                        (flight: Arrival)
                         (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
     log.debug(s"${flight.IATA} splitRatioProvider")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
@@ -51,9 +51,9 @@ object AdvPaxSplitsProvider {
 
   def splitRatioProviderWithCsvPercentages(destinationPort: String)
                                           (passengerInfoRouterActor: AskableActorRef)
-                                          (egatePercentageProvider: (ApiFlight) => Double,
-                                           fastTrackPercentageProvider: (ApiFlight) => Option[FastTrackPercentages])
-                                          (flight: ApiFlight)
+                                          (egatePercentageProvider: (Arrival) => Double,
+                                           fastTrackPercentageProvider: (Arrival) => Option[FastTrackPercentages])
+                                          (flight: Arrival)
                                           (implicit timeOut: Timeout, ec: ExecutionContext): Option[SplitRatios] = {
     log.debug(s"${flight.IATA} splitRatioProviderWithCsvEgatepercentage")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
@@ -103,10 +103,10 @@ object AdvPaxSplitsProvider {
 }
 
 object SplitsProvider {
-  type SplitProvider = (ApiFlight) => Option[SplitRatios]
+  type SplitProvider = (Arrival) => Option[SplitRatios]
   val log = LoggerFactory.getLogger(getClass)
 
-  def splitsForFlight(providers: List[SplitProvider])(apiFlight: ApiFlight): Option[SplitRatios] = {
+  def splitsForFlight(providers: List[SplitProvider])(apiFlight: Arrival): Option[SplitRatios] = {
     providers.foldLeft(None: Option[SplitRatios])((prev, provider) => {
       prev match {
         case Some(split) => prev
@@ -134,7 +134,7 @@ object SplitsProvider {
     }
   }
 
-  def defaultProvider(airportConf: AirportConfig): (ApiFlight) => Some[SplitRatios] = {
+  def defaultProvider(airportConf: AirportConfig): (Arrival) => Some[SplitRatios] = {
     _ => Some(airportConf.defaultPaxSplits)
   }
 

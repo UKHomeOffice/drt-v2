@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 class FlightFeedsSpec extends Specification {
 
-  import drt.shared.ApiFlight.standardiseFlightCode
+  import drt.shared.Arrival.standardiseFlightCode
 
   "standardiseFlightCode should" >> {
     "left pad the flight number with zeros to 4 digits and retain the operator code" >> {

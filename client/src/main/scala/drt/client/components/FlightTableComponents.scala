@@ -113,7 +113,7 @@ object FlightTableComponents {
     case some => SDate.parse(dt).toLocalDateTimeString()
   }
 
-  def timelineCompFunc(flight: ApiFlight): VdomElement = {
+  def timelineCompFunc(flight: Arrival): VdomElement = {
     Try {
       timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
     }.recover {

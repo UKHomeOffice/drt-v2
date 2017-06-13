@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.{ApiFlight, MilliDate, SDateLike}
+import drt.shared.{Arrival, MilliDate, SDateLike}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 import actors.FlightMessageConversion._
@@ -8,8 +8,8 @@ import actors.FlightMessageConversion._
 class ApiFlightsToProtoBufSpec extends Specification {
 
   "apiFlightToFlightMessage" should {
-    "take a single ApiFlight and return a FlightMessage representing it" in {
-      val apiFlight = ApiFlight(
+    "take a single Arrival and return a FlightMessage representing it" in {
+      val apiFlight = Arrival(
         Operator = "Op",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",
@@ -61,7 +61,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
       flightMessage === expected
     }
 
-    "take a single v1 FlightMessage and return an ApiFlight representing it" in {
+    "take a single v1 FlightMessage and return an Arrival representing it" in {
       val flightMessage = FlightMessage(
         operator = Some("Op"),
         schDTOLD = Some("2016-01-01T13:00"),
@@ -88,7 +88,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
 
       val apiFlight = flightMessageToApiFlight(flightMessage)
 
-      val expected = ApiFlight(
+      val expected = Arrival(
         Operator = "Op",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",
@@ -115,7 +115,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
       apiFlight === expected
     }
 
-    "take a single v1 FlightMessage with missing datetimes and return an ApiFlight representing it" in {
+    "take a single v1 FlightMessage with missing datetimes and return an Arrival representing it" in {
       val flightMessage = FlightMessage(
         operator = Some("Op"),
         schDTOLD = Some("2016-01-01T13:00"),
@@ -142,7 +142,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
 
       val apiFlight = flightMessageToApiFlight(flightMessage)
 
-      val expected = ApiFlight(
+      val expected = Arrival(
         Operator = "Op",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",
@@ -169,7 +169,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
       apiFlight === expected
     }
 
-    "take a single v2 FlightMessage and return an ApiFlight representing it" in {
+    "take a single v2 FlightMessage and return an Arrival representing it" in {
       val flightMessage = FlightMessage(
         operator = Some("Op"),
         gate = Some("10"),
@@ -196,7 +196,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
 
       val apiFlight = flightMessageToApiFlight(flightMessage)
 
-      val expected = ApiFlight(
+      val expected = Arrival(
         Operator = "Op",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",
@@ -223,7 +223,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
       apiFlight === expected
     }
 
-    "take a single v2 FlightMessage with missing datetimes and return an ApiFlight representing it" in {
+    "take a single v2 FlightMessage with missing datetimes and return an Arrival representing it" in {
       val flightMessage = FlightMessage(
         operator = Some("Op"),
         gate = Some("10"),
@@ -250,7 +250,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
 
       val apiFlight = flightMessageToApiFlight(flightMessage)
 
-      val expected = ApiFlight(
+      val expected = Arrival(
         Operator = "Op",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",

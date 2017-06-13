@@ -57,6 +57,34 @@ case class AirportConfig(
 
 }
 
+object BestPax {
+
+  def apply(portCode: String) = portCode match {
+    case "LHR" => lhrBestPax
+    case _ => bestPax
+  }
+
+  def bestPax = (f: Arrival) => {
+    if (f.ActPax > 0) f.ActPax
+    else f.MaxPax
+  }
+
+  def lhrBestPax = (flight: Arrival) => {
+    val defaultPax = 200
+
+    flight match {
+      case f if f.ActPax > 0 && f.ActPax != defaultPax =>
+        f.ActPax
+      case f if f.LastKnownPax.isDefined =>
+        f.LastKnownPax.get
+      case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
+        f.MaxPax
+      case _ =>
+        defaultPax
+    }
+  }
+}
+
 trait HasAirportConfig {
   val airportConfig: AirportConfig
 }

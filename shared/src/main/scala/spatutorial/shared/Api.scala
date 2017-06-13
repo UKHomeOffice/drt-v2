@@ -42,8 +42,37 @@ case object Percentage extends SplitStyle
 case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalPax = splits.map(_.paxCount).sum
 }
-case class ApiFlightWithSplits(apiFlight: ApiFlight, splits: List[ApiSplits])
+case class ApiFlightWithSplits(apiFlight: Arrival, splits: List[ApiSplits])
 
+case class Arrival(
+                      Operator: String,
+                      Status: String,
+                      EstDT: String,
+                      ActDT: String,
+                      EstChoxDT: String,
+                      ActChoxDT: String,
+                      Gate: String,
+                      Stand: String,
+                      MaxPax: Int,
+                      ActPax: Int,
+                      TranPax: Int,
+                      RunwayID: String,
+                      BaggageReclaimId: String,
+                      FlightID: Int,
+                      AirportID: String,
+                      Terminal: String,
+                      rawICAO: String,
+                      rawIATA: String,
+                      Origin: String,
+                      SchDT: String,
+                      PcpTime: Long,
+                      LastKnownPax: Option[Int] = None) {
+  lazy val ICAO = Arrival.standardiseFlightCode(rawICAO)
+  lazy val IATA = Arrival.standardiseFlightCode(rawIATA)
+}
+
+//This is used for handling historic snapshots, do not change or remove.
+@SerialVersionUID(2414259893568926057L)
 case class ApiFlight(
                       Operator: String,
                       Status: String,
@@ -65,12 +94,28 @@ case class ApiFlight(
                       rawIATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long) {
+                      PcpTime: Long){
+
   lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
   lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
+
+
+}
+object ApiFlight {
+
+  def standardiseFlightCode(flightCode: String): String = {
+    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+
+    flightCode match {
+      case flightCodeRegex(operator, flightNumber, suffix) =>
+        f"${operator}${flightNumber.toInt}%04d${suffix}"
+      case _ => flightCode
+    }
+  }
 }
 
-object ApiFlight {
+
+object Arrival {
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
@@ -128,7 +173,7 @@ case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Se
 
 object FlightsApi {
 
-  case class Flights(flights: List[ApiFlight])
+  case class Flights(flights: List[Arrival])
 
   case class FlightsWithSplits(flights: List[ApiFlightWithSplits])
 

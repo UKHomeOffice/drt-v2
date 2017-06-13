@@ -5,7 +5,7 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import drt.shared.{ApiFlight, PaxTypeAndQueue, Queues, SDateLike}
+import drt.shared.{Arrival, PaxTypeAndQueue, Queues, SDateLike}
 import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues._
@@ -120,8 +120,8 @@ class FastTrackPercentagesFromPaxSplitsCsvTest extends Specification {
   }
 
 
-  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = "",
@@ -156,8 +156,8 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def apiFlight(iataFlightCode: String, schDT: String): ApiFlight =
-    ApiFlight(
+  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
+    Arrival(
       Operator = "",
       Status = "",
       EstDT = "",
@@ -187,8 +187,8 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
       val scheduledArrivalTimeStr = "2017-06-04T16:15:00"
 
       val passengerInfoRouterActor: AskableActorRef = MockSplitsActor(SplitsMocks.defaultSplits(SDate(scheduledArrivalTimeStr)))
-      val egatePercentageProvider = (flight: ApiFlight) => 0.9d
-      val fastTrackPercentageProvider = (flight: ApiFlight) => None
+      val egatePercentageProvider = (flight: Arrival) => 0.9d
+      val fastTrackPercentageProvider = (flight: Arrival) => None
 
       val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
 
@@ -215,9 +215,9 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
         ))
 
         val passengerInfoRouterActor: AskableActorRef = MockSplitsActor(splitsFromDqApi)
-        val egatePercentageProvider = (flight: ApiFlight) => 0d
+        val egatePercentageProvider = (flight: Arrival) => 0d
 
-        val fastTrackPercentageProvider = (flight: ApiFlight) => Some(FastTrackPercentages(
+        val fastTrackPercentageProvider = (flight: Arrival) => Some(FastTrackPercentages(
           visaNational = 0.03,
           nonVisaNational = 0.06))
         val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
@@ -247,9 +247,9 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
         ))
 
         val passengerInfoRouterActor: AskableActorRef = MockSplitsActor(splitsFromDqApi)
-        val egatePercentageProvider = (flight: ApiFlight) => 0d
+        val egatePercentageProvider = (flight: Arrival) => 0d
 
-        val fastTrackPercentageProvider = (flight: ApiFlight) => Some(FastTrackPercentages(
+        val fastTrackPercentageProvider = (flight: Arrival) => Some(FastTrackPercentages(
           visaNational = 0.03,
           nonVisaNational = 0.06))
         val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
@@ -279,9 +279,9 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
         ))
 
         val passengerInfoRouterActor: AskableActorRef = MockSplitsActor(splitsFromDqApi)
-        val egatePercentageProvider = (flight: ApiFlight) => 0d
+        val egatePercentageProvider = (flight: Arrival) => 0d
 
-        val fastTrackPercentageProvider = (flight: ApiFlight) => Some(FastTrackPercentages(
+        val fastTrackPercentageProvider = (flight: Arrival) => Some(FastTrackPercentages(
           visaNational = 0.03,
           nonVisaNational = 0.06))
         val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _

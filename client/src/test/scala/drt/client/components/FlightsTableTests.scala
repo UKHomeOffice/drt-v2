@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.{Pot, Ready}
 import drt.client.components.{FlightTableComponents, FlightsWithSplitsTable}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{AirportInfo, ApiFlight, ApiFlightWithSplits, ApiSplits}
+import drt.shared.{AirportInfo, Arrival, ApiFlightWithSplits, ApiSplits}
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^.<
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
@@ -35,7 +35,7 @@ object FlightsTableTests extends TestSuite {
       }
 
 
-      val testFlight = ApiFlight(
+      val testFlight = Arrival(
         Operator = "Op",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",
@@ -59,7 +59,7 @@ object FlightsTableTests extends TestSuite {
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
 
-      val testFlight2 = ApiFlight(
+      val testFlight2 = Arrival(
         Operator = "EZ",
         Status = "scheduled",
         SchDT = "2016-01-01T13:00",
@@ -83,7 +83,7 @@ object FlightsTableTests extends TestSuite {
         PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
       )
 
-      def withSplits(flights: Seq[ApiFlight]) = {
+      def withSplits(flights: Seq[Arrival]) = {
         FlightsWithSplits(flights.map(ApiFlightWithSplits(_, Nil)).toList)
       }
 
@@ -153,9 +153,9 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
                     <.td()))))
 
-          //          val timelineComponent = ScalaComponent.builder[ApiFlight]("TimeLine")
+          //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
-          val timelineComponent: (ApiFlight) => VdomNode = (f: ApiFlight) => <.span("herebecallback")
+          val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
             ArrivalsTable(Some(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil))),
             staticComponent(expected)())
@@ -267,11 +267,25 @@ object FlightsTableTests extends TestSuite {
                   <.td()
                 ))))
 
-          def paxComponent(f: ApiFlight, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
+          def paxComponent(f: Arrival, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil))),
             staticComponent(expected)())
+
+          //          val className: TagMod = ^.className := s"pax-${origin}"
+          //          val title: TagMod = ^.title := s"from ${origin}"
+          //          val relativePax = Math.floor(100 * (pax / 853)).toInt
+          //          val style = widthStyle(relativePax)
+          //          <.div(po.pax, className, title, ^.style := style)
+          //          "Unit tests for paxComponent Hook" - {
+          //            val testFlightT = testFlight.copy(ActPax = 0, MaxPax = 150)
+          //
+          //            def paxComponent(f: Arrival): VdomNode = {
+          //              <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
+          //            }
+          //          }
+
         }
       }
     }
