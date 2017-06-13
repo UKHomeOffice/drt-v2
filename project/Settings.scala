@@ -95,7 +95,9 @@ object Settings {
     "com.mfglabs" %% "commons-aws" % "0.10.0",
     "org.apache.commons" % "commons-csv" % "1.4",
     "com.vmunier" %% "scalajs-scripts" % "1.0.0",
-    "joda-time" % "joda-time" % "2.9.4") :::
+    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
+
+  "joda-time" % "joda-time" % "2.9.4") :::
     List("io.spray" %% "spray-client" % versions.sprayVersion,
       "io.spray" %% "spray-routing" % versions.sprayVersion,
       "io.spray" %% "spray-json" % "1.3.2",

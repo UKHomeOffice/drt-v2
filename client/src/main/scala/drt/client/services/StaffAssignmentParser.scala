@@ -54,8 +54,17 @@ object JSDateConversions {
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
+    /****
+      * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
+      */
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
 
+    /***
+      * dateString is an ISO parseable datetime representation, with optional timezone
+      *
+      * @param dateString
+      * @return
+      */
     def parse(dateString: String): SDateLike = new Date(dateString)
 
     def today(): SDateLike = {

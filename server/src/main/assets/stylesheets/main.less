@@ -24,10 +24,10 @@
 
 @dotDiameter: 24px;
 
-
 .hasChanged {
   background-color: red;
 }
+
 .timeline-column {
   width: 324px;
   height: @dotDiameter;
@@ -444,11 +444,38 @@ th h2 {
 }
 
 .pax {
-  position:absolute;
+  position: absolute;
   top: 0;
   left: 0;
 }
 
+/* summary-boxes */
+.summary-boxes {
+  height: 90px;
+}
+
+.summary-box-container h3 {
+  margin-top: 0px;
+}
+
+.summary-box-container {
+  display: inline-block;bet
+  height: 80px;
+  background-color: #dddddd;
+  padding: 5px 5px 5px 5px;
+  margin: 5px 5px 5px 5px;
+}
+
+.summary-box-count {
+  font-size: 40pt;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.summary-box-container .split-graph-container .splits .graph {
+  height: 80px;
+  top: -5px;
+}
 
 .splitsource-historical {
   background: @reliability-medium;
@@ -480,6 +507,23 @@ th h2 {
   position: relative;
   background-color: rgba(140, 140, 145, 1);
   vertical-align: baseline;
+}
+
+.splits .graph .bar.eeaDesk {
+  background-color: orange;
+
+}
+
+.splits .graph .bar.eGate {
+  background-color: deepskyblue;
+}
+
+.splits .graph .bar.nonEeaDesk {
+  background-color: darkblue;
+}
+
+.splits .graph .bar.fastTrack {
+  background-color: purple;
 }
 
 #arrivals tbody:nth-child(odd) {

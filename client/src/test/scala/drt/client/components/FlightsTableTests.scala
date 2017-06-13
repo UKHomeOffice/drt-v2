@@ -1,4 +1,4 @@
-package spatutorial.client.components
+package drt.client.components
 
 import diode.data.{Pot, Ready}
 import drt.client.components.{FlightTableComponents, FlightsWithSplitsTable}
@@ -9,6 +9,7 @@ import japgolly.scalajs.react.vdom.html_<^.<
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.Span
 import utest._
+
 
 object FlightsTableTests extends TestSuite {
 
@@ -96,6 +97,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -108,7 +110,9 @@ object FlightsTableTests extends TestSuite {
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                   <.td(testFlight.Status),
-                  <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
+                  <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
+                  <.td(<.span(^.title := "2016-01-01 13:30", "13:30")), //pcp
+                  <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")), <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")), <.td(testFlight.ActPax),
                     <.td()))))
@@ -128,6 +132,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -141,7 +146,9 @@ object FlightsTableTests extends TestSuite {
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                   <.td(testFlight.Status),
-                  date(testFlight.SchDT), date(testFlight.EstDT),
+                  date(testFlight.SchDT),
+                  date("2016-01-01T13:30"), //pcp
+                  date(testFlight.EstDT),
                   date(testFlight.ActDT), date(testFlight.EstChoxDT),
                   date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
                     <.td()))))
@@ -169,6 +176,7 @@ object FlightsTableTests extends TestSuite {
                   <.th("Gate/Stand"),
                   <.th("Status"),
                   <.th("Sch"),
+                  <.th("Pcp"),
                   <.th("Est"),
                   <.th("Act"),
                   <.th("Est Chox"),
@@ -181,7 +189,9 @@ object FlightsTableTests extends TestSuite {
                     <.td(testFlight.ICAO), <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
                     <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                     <.td(testFlight.Status),
-                    date(testFlight.SchDT), date(testFlight.EstDT),
+                    date(testFlight.SchDT),
+                    date("2016-01-01T13:30"), //pcp
+                    date(testFlight.EstDT),
                     date(testFlight.ActDT), date(testFlight.EstChoxDT),
                     date(testFlight.ActChoxDT), <.td(testFlight.ActPax),
                     <.td()))))
@@ -233,6 +243,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -247,6 +258,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(s"${testFlightT.Gate}/${testFlightT.Stand}"),
                   <.td(testFlightT.Status),
                   date(testFlightT.SchDT),
+                  date("2016-01-01T13:30"), //pcp
                   date(testFlightT.EstDT),
                   date(testFlightT.ActDT),
                   date(testFlightT.EstChoxDT),

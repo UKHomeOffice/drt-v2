@@ -71,6 +71,7 @@ object FlightsWithSplitsTable {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
+                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
@@ -160,9 +161,21 @@ object FlightTableRow {
           SplitSources.Historical -> "Historical"
         ).getOrElse(name, name)
 
+        def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
+          val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+          val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
+            case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
+          }
+          <.div(^.className := "splitsource-" + source,
+            props.splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplay)
+        }
+
+        //todo - we need to lift this splitsComponent code out somewhere more useful
         val splitsComponents = flightSplitsList.take(1).map {
           flightSplits => {
             val splitStyle = flightSplits.splitStyle
+            val source = flightSplits.source.toLowerCase
+            val sourceDisplay = sourceDisplayName(flightSplits.source)
             val vdomElement: VdomElement = splitStyle match {
               case PaxNumbers => {
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
@@ -170,12 +183,7 @@ object FlightTableRow {
                 val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
                   case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
                 }).toMap
-                val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-                val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-                  case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-                }
-                <.div(^.className := "splitsource-" + flightSplits.source.toLowerCase,
-                  props.splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplayName(flightSplits.source))
+                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax)
               }
               case Percentage => {
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
@@ -184,13 +192,7 @@ object FlightTableRow {
                 val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
                   case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
                 }).toMap
-                val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-                val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-                  case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-                }
-                <.div(^.className := "splitsource-" + flightSplits.source.toLowerCase,
-                  props.splitsGraphComponent(splitTotal, splitsAndLabels),
-                  <.span(^.className := "flightSplitSource", sourceDisplayName(flightSplits.source)))
+                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax)
               }
             }
             vdomElement
@@ -202,6 +204,16 @@ object FlightTableRow {
           .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
           .getOrElse(ApiSplits(Nil, "no splits - client"))
 
+        val triedMod: Try[TagMod] = {
+          log.info(s"tryingpcp ${flight.PcpTime}")
+          val pcpDate = SDate(MilliDate(flight.PcpTime))
+          log.info(s"tryingpcpd ${pcpDate}")
+          Try(localDateTimeWithPopup(pcpDate.toApiFlightString()))
+        }
+        val pcpTime: TagMod = triedMod.recoverWith{
+          case f => Try(<.span(f.toString, s"in flight $flight"))
+        }.get
+
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -210,6 +222,7 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
           <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
           <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+          <.td(^.key := flight.FlightID.toString + "-pcptime", pcpTime),
           <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
@@ -231,6 +244,7 @@ object FlightTableRow {
     .componentDidMount(p => Callback.log(s"row didMount $p"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+
 
 }
 

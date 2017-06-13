@@ -75,10 +75,19 @@ object FlightTableComponents {
   }
 
   private def localTimePopup(dt: String) = {
-    val sdate = SDate.parse(dt)
-    val hhmm = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
-    val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
-    <.span(hhmm, titlePopup).render
+    val p = Try {
+      log.info(s"parsing $dt")
+      val sdate = SDate.parse(dt)
+      log.info(s"parsing to $sdate")
+      val hhmm = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
+      val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
+      <.span(hhmm, titlePopup)
+    }.recover {
+      case f =>
+        log.error(s"$f from $dt")
+        <.div(f.toString())
+    }.get
+    p.render
   }
 
   def millisDelta(time1: String, time2: String) = {

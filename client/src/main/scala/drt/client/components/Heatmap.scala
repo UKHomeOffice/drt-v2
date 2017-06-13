@@ -2,22 +2,23 @@ package drt.client.components
 
 import diode.data.{Pending, Pot, Ready}
 import diode.react._
+import drt.client.components.FlightTableRow.Props
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.TagOf
-
 import org.scalajs.dom.svg.{G, Text}
 import drt.client.components.Heatmap.Series
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.FlightsApi._
 import drt.shared._
+import japgolly.scalajs.react.extra.Reusability
 
 import scala.collection.immutable.{IndexedSeq, Map, NumericRange, Seq}
 import scala.util.{Failure, Success, Try}
-
 
 object TerminalHeatmaps {
   def heatmapOfWorkloads(terminalName: TerminalName) = {
@@ -87,7 +88,7 @@ object TerminalHeatmaps {
         //queueStaffDeployments are in 15 minute chunks
         val series = queustaffDeploymentItems.map(_.deskRec).grouped(4).map(_.max)
         Series(terminalName + "/" + queueName, series.map(_.toDouble).toIndexedSeq)
-    }.toList.sortBy(x=> x.name))
+    }.toList.sortBy(x => x.name))
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
         Heatmap.heatmap(Heatmap.Props(series = serMP().sortBy(_.name), scaleFunction = Heatmap.bucketScale(20)))
@@ -196,9 +197,14 @@ object Heatmap {
 
   case class Series(name: String, data: IndexedSeq[Double])
 
-  case class Props(width: Int = 960, numberOfBlocks: Int = 24, series: Seq[Series], scaleFunction: (Double) => Int, shouldShowRectValue: Boolean = true, valueDisplayFormatter: (Double) => String = _.toInt.toString) {
+  case class Props(width: Int = 960, numberOfBlocks: Int = 24, series: List[Series], scaleFunction: (Double) => Int, shouldShowRectValue: Boolean = true, valueDisplayFormatter: (Double) => String = _.toInt.toString) {
     def height = 50 * (series.length + 1)
   }
+
+  implicit val doubleReuse = Reusability.double(0.01)
+  implicit val doubleSeqReuse = Reusability.indexedSeq[IndexedSeq, Double]
+  implicit val seriesReuse = Reusability.caseClass[Series]
+  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('valueDisplayFormatter, 'scaleFunction)
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
     "#E0C54B", "#DD983A", "#DA6429", "#D72A18")
@@ -307,6 +313,8 @@ object Heatmap {
           log.error("Issue in heatmap", e)
           throw e
       }
-    }).build
+    })
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .build
 }
 
