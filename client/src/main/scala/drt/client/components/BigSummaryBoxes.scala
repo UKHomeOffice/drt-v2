@@ -3,7 +3,6 @@ package drt.client.components
 import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.TagOf
@@ -15,16 +14,27 @@ import scala.collection.immutable.Seq
 import scala.util.Try
 
 object BigSummaryBoxes {
-  def flightPcpInPeriod(f: ApiFlightWithSplits, now: SDateLike, nowPlus3Hours: SDateLike) = {
+  def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike) = {
+    val bt: Long = bestTime(f)
+    start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
+  }
+
+  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax else f.MaxPax
+
+  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
+    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalPax
+    case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
+  }
+
+  def bestTime(f: ApiFlightWithSplits) = {
     val bestTime = {
       val flightDt = SDate.parse(f.apiFlight.SchDT)
-      println(s"now: ${now.toString} == ${now.millisSinceEpoch} nowPlus: ${nowPlus3Hours.toString} flightDt: ${flightDt} == ${flightDt.millisSinceEpoch} pcpTime: ${f.apiFlight.PcpTime}")
 
       if (f.apiFlight.PcpTime != 0) f.apiFlight.PcpTime else {
         flightDt.millisSinceEpoch
       }
     }
-    now.millisSinceEpoch <= bestTime && bestTime <= nowPlus3Hours.millisSinceEpoch
+    bestTime
   }
 
   def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike) =
@@ -41,47 +51,26 @@ object BigSummaryBoxes {
   }
 
 
-  def bestFlightPax(f: Arrival) = {
-    if (f.ActPax > 0) f.ActPax
-    else f.MaxPax
-  }
-
   def aggregateSplits(flights: Seq[ApiFlightWithSplits]) = {
     val newSplits = Map[PaxTypeAndQueue, Int]()
-    println(s"flightDiff start")
     val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap {
-      case ApiFlightWithSplits(f, Nil) =>
-        println(s"No splits for $f")
-        Nil
-      case ApiFlightWithSplits(f, headSplit :: ss) if headSplit.splitStyle == PaxNumbers =>
+      case ApiFlightWithSplits(_, Nil) => Nil
+      case ApiFlightWithSplits(_, headSplit :: _) if headSplit.splitStyle == PaxNumbers =>
         headSplit.splits.map {
           s =>
-            val splitTotal = headSplit.totalPax
-            val paxDelta = splitTotal - bestFlightPax(f)
-            println(s"flightDiff ${splitTotal} vs ${bestFlightPax(f)} $paxDelta")
             (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount)
         }
-      case ApiFlightWithSplits(f, headSplit :: ss) if headSplit.splitStyle == Percentage =>
+      case ApiFlightWithSplits(f, headSplit :: _) if headSplit.splitStyle == Percentage =>
         val splits = headSplit.splits
-        val splitsTotal = headSplit.totalPax
-        println(s"flightDiff pct $splitsTotal")
         splits.map {
           s => {
-            println(s"a pct split $s of $splitsTotal ")
             (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * bestFlightPax(f))
           }
         }
     }
-    //    println(s"flatMapped $map")
-    //    //todo import cats
-    //    val allSplits: immutable.Seq[ApiPaxTypeAndQueueCount] = map.map(_.splits).flatten
-    println(s"flightDiff end")
-    println(allSplits.map("flattened" + _).mkString("\n"))
-    val totalPax = allSplits.map(_._2).sum
-    println(s"flattened total $totalPax on ${allSplits.length} splits over ${flights.length} flights.  Max: ${flights.map(_.apiFlight.MaxPax).sum} Act: ${flights.map(_.apiFlight.ActPax).sum}")
+    //    //todo import cats - it makes short, efficient work of this sort of aggregation.
     val aggSplits: Map[PaxTypeAndQueue, Int] = allSplits.foldLeft(newSplits) {
-      case (agg, s@(k, v)) =>
-        println(s"folding $agg $s")
+      case (agg, (k, v)) =>
         val g = agg.getOrElse(k, 0)
         agg.updated(k, v.toInt + g)
     }
@@ -103,10 +92,7 @@ object BigSummaryBoxes {
 
   def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
 
-  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
-    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: ss) => h.totalPax
-    case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
-  }
+
 
   def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
 
