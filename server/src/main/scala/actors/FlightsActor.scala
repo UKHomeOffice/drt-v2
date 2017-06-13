@@ -194,35 +194,39 @@ class FlightsActor(crunchActorRef: ActorRef,
       flights = snapshot match {
         case flightStateSnapshot: FlightStateSnapshotMessage =>
           flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
-        case flights: Map[Int, ApiFlight] =>
-          flights.mapValues( f => Arrival(
-            f.Operator,
-            f.Status,
-            f.EstDT,
-            f.ActDT,
-            f.EstChoxDT,
-            f.ActChoxDT,
-            f.Gate,
-            f.Stand,
-            f.MaxPax,
-            f.ActPax,
-            f.TranPax,
-            f.RunwayID,
-            f.BaggageReclaimId,
-            f.FlightID,
-            f.AirportID,
-            f.Terminal,
-            f.rawICAO,
-            f.rawIATA,
-            f.Origin,
-            f.SchDT,
-            f.PcpTime,
-            None
-          ))
+        case someSortOfFlights: Map[Int, Any] =>
+          someSortOfFlights.mapValues {
+            case a: Arrival => a
+            case f: ApiFlight =>
+              Arrival(
+                f.Operator,
+                f.Status,
+                f.EstDT,
+                f.ActDT,
+                f.EstChoxDT,
+                f.ActChoxDT,
+                f.Gate,
+                f.Stand,
+                f.MaxPax,
+                f.ActPax,
+                f.TranPax,
+                f.RunwayID,
+                f.BaggageReclaimId,
+                f.FlightID,
+                f.AirportID,
+                f.Terminal,
+                f.rawICAO,
+                f.rawIATA,
+                f.Origin,
+                f.SchDT,
+                f.PcpTime,
+                None
+              )
+          }
       }
       lastKnownPax = snapshot match {
         case flightStateSnapshot: FlightStateSnapshotMessage =>
-          flightStateSnapshot.lastKnownPax.collect{
+          flightStateSnapshot.lastKnownPax.collect {
             case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
               (key, pax)
           }.toMap
