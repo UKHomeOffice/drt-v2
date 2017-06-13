@@ -70,7 +70,7 @@ case class Arrival(
 }
 
 //This is used for handling historic snapshots, do not change or remove.
-@SerialVersionUID(-2103953769229068778L)
+@SerialVersionUID(2414259893568926057L)
 case class ApiFlight(
                       Operator: String,
                       Status: String,
