@@ -41,7 +41,7 @@ object BigSummaryBoxes {
   }
 
 
-  def bestFlightPax(f: ApiFlight) = {
+  def bestFlightPax(f: Arrival) = {
     if (f.ActPax > 0) f.ActPax
     else f.MaxPax
   }

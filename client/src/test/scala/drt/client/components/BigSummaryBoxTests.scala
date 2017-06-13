@@ -302,8 +302,8 @@ object ApiFlightGenerator {
                  rawICAO: String = "",
                  iataFlightCode: String = "BA123",
                  Origin: String = "",
-                 PcpTime: Long = 0): ApiFlight =
-    ApiFlight(
+                 PcpTime: Long = 0): Arrival =
+    Arrival(
       Operator = Operator,
       Status = Status,
       EstDT = EstDT,
