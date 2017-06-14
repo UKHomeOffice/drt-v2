@@ -37,7 +37,6 @@ class FlightsActor(crunchActorRef: ActorRef,
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
-
   import SplitRatiosNs.SplitSources._
 
   val snapshotInterval = 20
@@ -62,6 +61,7 @@ class FlightsActor(crunchActorRef: ActorRef,
         case flights: Map[Int, Any] =>
           log.info(s"Restoring snapshot from legacy ApiFlight")
           flights.mapValues {
+            case a: Arrival => a
             case f: ApiFlight => ApiFlightToArrival(f)
           }
       }
