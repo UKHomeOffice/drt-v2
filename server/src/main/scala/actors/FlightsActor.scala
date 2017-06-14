@@ -193,10 +193,11 @@ class FlightsActor(crunchActorRef: ActorRef,
     case SnapshotOffer(_, snapshot) =>
       flights = snapshot match {
         case flightStateSnapshot: FlightStateSnapshotMessage =>
+          log.info(s"Restoring snapshot from protobuf message")
           flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
-        case someSortOfFlights: Map[Int, Any] =>
-          someSortOfFlights.mapValues {
-            case a: Arrival => a
+        case flights: Map[Int, Any] =>
+          log.info(s"Restoring snapshot from legacy ApiFlight")
+          flights.mapValues {
             case f: ApiFlight =>
               Arrival(
                 f.Operator,
@@ -226,7 +227,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       }
       lastKnownPax = snapshot match {
         case flightStateSnapshot: FlightStateSnapshotMessage =>
-          flightStateSnapshot.lastKnownPax.collect {
+          flightStateSnapshot.lastKnownPax.collect{
             case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
               (key, pax)
           }.toMap
@@ -324,13 +325,20 @@ class FlightsActor(crunchActorRef: ActorRef,
         context.system.eventStream.publish(event)
         if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
           log.info("saving flights snapshot")
-          saveSnapshot(state)
+          saveSnapshot(flightStateSnapshotMessageFromState)
         }
       }
       requestCrunch(flights)
 
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
     case message => log.error("Actor saw unexpected message: " + message.toString)
+  }
+
+  def flightStateSnapshotMessageFromState = {
+    FlightStateSnapshotMessage(
+      state.map { case (_, f) => apiFlightToFlightMessage(f) }.toSeq,
+      lastKnownPax.map { case (key, pax) => FlightLastKnownPaxMessage(Option(key), Option(pax)) }.toSeq
+    )
   }
 
   private def calcCsvApiSplits(flight: Arrival): List[ApiSplits] = {
