@@ -136,40 +136,16 @@ object FlightMessageConversion {
   }
 }
 
-trait FlightPaxNumbers {
-  //TODO make this a bit more elegant
-  import BestPax.lhrBestPax
-
-  def addLastKnownPaxNos(newFlights: List[Arrival]) = {
-    newFlights.map(f => f.copy(LastKnownPax = lastKnownPaxForFlight(f)))
-  }
-
-  var lastKnowPaxToFlightCode: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map()
-
-  def storeLastKnownPaxForFlights(flights: List[Arrival]) = {
-    flights.foreach(f => lastKnowPaxToFlightCode(key(f)) = lhrBestPax(f))
-  }
-
-  def lastKnownPaxForFlight(f: Arrival): Option[Int] = {
-    lastKnowPaxToFlightCode.get(key(f))
-  }
-
-  def key(flight: Arrival) = {
-    flight.IATA + flight.ICAO
-  }
-}
-
-
 class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
                    csvSplitsProvider: SplitProvider,
-                   airportConfig: AirportConfig)
+                   override val airportConfig: AirportConfig)
   extends PersistentActor
     with ActorLogging
     with FlightState
-    with FlightPaxNumbers
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
+
 
   import SplitRatiosNs.SplitSources._
 
@@ -191,7 +167,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       log.info(s"Recovering ${recoveredFlights.length} new flights")
       setFlights(recoveredFlights.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap)
     case SnapshotOffer(_, snapshot) =>
-      flights = snapshot match {
+      val flightsFromSnapshot = snapshot match {
         case flightStateSnapshot: FlightStateSnapshotMessage =>
           log.info(s"Restoring snapshot from protobuf message")
           flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
@@ -225,17 +201,19 @@ class FlightsActor(crunchActorRef: ActorRef,
               )
           }
       }
-      lastKnownPax = snapshot match {
+      val lastKnownPaxFromSnapshot = snapshot match {
         case flightStateSnapshot: FlightStateSnapshotMessage =>
           flightStateSnapshot.lastKnownPax.collect{
             case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
               (key, pax)
           }.toMap
-        case _ => Map()
+        case _ => Map[String, Int]()
       }
+      setFlights(flightsFromSnapshot)
+      setLastKnownPax(lastKnownPaxFromSnapshot)
 
     case RecoveryCompleted =>
-      requestCrunch(state.values.toList)
+      requestCrunch(flights.values.toList)
       log.info("Flights recovery completed, triggering crunch")
     case message => log.error(s"unhandled message - $message")
   }
@@ -336,7 +314,7 @@ class FlightsActor(crunchActorRef: ActorRef,
 
   def flightStateSnapshotMessageFromState = {
     FlightStateSnapshotMessage(
-      state.map { case (_, f) => apiFlightToFlightMessage(f) }.toSeq,
+      flights.map { case (_, f) => apiFlightToFlightMessage(f) }.toSeq,
       lastKnownPax.map { case (key, pax) => FlightLastKnownPaxMessage(Option(key), Option(pax)) }.toSeq
     )
   }

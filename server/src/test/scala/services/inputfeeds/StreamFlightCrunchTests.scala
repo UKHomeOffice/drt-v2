@@ -380,8 +380,8 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
   }
 }
 
-class SplitsRequestRecordingCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
-  extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
+class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
+  extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
 
   def splitRatioProvider = _splitRatioProvider
 

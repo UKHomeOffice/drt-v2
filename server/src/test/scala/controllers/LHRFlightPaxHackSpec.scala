@@ -1,11 +1,11 @@
 package controllers
 
-import actors.FlightPaxNumbers
-import drt.shared.{Arrival, BestPax}
+import akka.event.LoggingAdapter
+import drt.shared.{AirportConfig, Arrival, BestPax}
+import org.mockito.Mockito.mock
 import org.specs2.mutable.Specification
-import org.specs2.specification.BeforeEach
 
-class LHRFlightPaxHackSpec extends Specification with BeforeEach{
+class LHRFlightPaxHackSpec extends Specification {
   isolated
   def flightWithBestPax(newFlight: Arrival, currentFlights: List[Arrival]): Arrival = {
     if (newFlight.ActPax != 200)
@@ -20,7 +20,11 @@ class LHRFlightPaxHackSpec extends Specification with BeforeEach{
       flight.getOrElse(newFlight)
     }
   }
-  def flightPaxNumbers = new FlightPaxNumbers {}
+  def flightPaxNumbers = new FlightState {
+    override def airportConfig: AirportConfig = airportConfig
+
+    override def log: LoggingAdapter = mock(classOf[LoggingAdapter])
+  }
 
   "Find best pax no for flight" >> {
     "Given a flight with non 200 ActPax" >> {
@@ -117,9 +121,6 @@ class LHRFlightPaxHackSpec extends Specification with BeforeEach{
     }
   }
 
-  override protected def before: Any = {
-    flightPaxNumbers.lastKnowPaxToFlightCode = collection.mutable.Map()
-  }
 
   def apiFlight(iataCode: String, icaoCode: String, schDt: String, actPax: Int, maxPax: Int, lastKnownPax: Option[Int] = None): Arrival =
   Arrival(

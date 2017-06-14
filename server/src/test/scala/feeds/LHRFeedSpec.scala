@@ -1,8 +1,9 @@
 package feeds
 
-import actors.FlightPaxNumbers
+//import actors.FlightPaxNumbers
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.event.LoggingAdapter
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
@@ -11,8 +12,11 @@ import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
+import controllers.FlightState
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import org.slf4j.LoggerFactory
+import services.inputfeeds.CrunchTests.TestContext
 import spray.http.DateTime
 
 import scala.collection.generic.SeqFactory
@@ -34,7 +38,10 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
   //      }nN
   //    }
 
-  def flightPaxNumbers = new FlightPaxNumbers {}
+//  def flightPaxNumbers = new FlightState {
+//    val context = TestContext(system, Props(classOf[]))
+//    override def log = LoggerFactory.
+//  }
 
   "lhrCsvToApiFlights" should {
     "Produce an Arrival source with one flight based on a line from the LHR csv" in {

@@ -47,11 +47,12 @@ lazy val client: Project = (project in file("client"))
     jsDependencies += RuntimeDOM % "test",
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
+    testOptions in Test += Tests.Argument("-verbosity", "2"),
     // use Scala.js provided launcher code to start the client app
     //    scalaJSUseMainModuleInitializer := true,
     //    persistLaunch/ser := true,
     //    scalaJSUseMsainModuleInitializer in Test := false,
-//    webpackConfigFile := Some(baseDirectory.value / "custom.webpack.config.js"),
+    //    webpackConfigFile := Some(baseDirectory.value / "custom.webpack.config.js"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
@@ -97,6 +98,7 @@ lazy val server = (project in file("server"))
   publishArtifact in(Compile, packageSrc) := false,
   credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   // compress CSS
+  testOptions in Test += Tests.Argument("-verbosity", "2"),
   LessKeys.compress in Assets := true,
   PB.targets in Compile := Seq(
     scalapb.gen() -> (sourceManaged in Compile).value
@@ -125,6 +127,8 @@ lazy val ReleaseCmd = Command.command("release") {
       "set elideOptions in client := Seq()" ::
       state
 }
+
+testOptions in Test += Tests.Argument("-verbosity", "1")
 
 fork in run := true
 

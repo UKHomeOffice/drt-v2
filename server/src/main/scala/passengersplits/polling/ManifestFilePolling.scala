@@ -308,7 +308,7 @@ object AtmosManifestFilePolling {
   }
 
   // todo rather than this List[ZipUtils.UnzippedFileContent] we should be trying to deal in Sources, if we do
-  // that should enable us to reduce some of the Future state management
+  // that should enable us to reduce some of the Future flights management
   private def parseManifests(logInfo: (String) => Unit, advPaxReporter: ActorRef, manifests: List[ZipUtils.UnzippedFileContent]): Seq[(Option[String], String, Try[VoyageManifest])]
   = {
     manifests.map((flightManifest) => {

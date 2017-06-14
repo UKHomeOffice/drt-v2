@@ -42,8 +42,8 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
-  class TestCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
-    extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
+  class TestCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
+    extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
     def splitRatioProvider: (Arrival => Option[SplitRatios]) =
       _ => Some(SplitRatios(
         TestAirportConfig,
