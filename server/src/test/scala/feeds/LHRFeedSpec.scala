@@ -1,8 +1,9 @@
 package feeds
 
-import actors.FlightPaxNumbers
+//import actors.FlightPaxNumbers
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.event.LoggingAdapter
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
@@ -11,8 +12,11 @@ import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
+import controllers.FlightState
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import org.slf4j.LoggerFactory
+import services.inputfeeds.CrunchTests.TestContext
 import spray.http.DateTime
 
 import scala.collection.generic.SeqFactory
@@ -23,18 +27,6 @@ import sys.process._
 import scala.concurrent.duration._
 
 class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
-  //  val username = ConfigFactory.load.getString("lhr_live_username")
-  //  val password = ConfigFactory.load.getString("lhr_live_password")
-  //
-  //    "Executing the LHR feed script" should {
-  //      "get us some content" in {
-  //        val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
-  //println(csvContents)
-  //        csvContents.length > 0
-  //      }nN
-  //    }
-
-  def flightPaxNumbers = new FlightPaxNumbers {}
 
   "lhrCsvToApiFlights" should {
     "Produce an Arrival source with one flight based on a line from the LHR csv" in {

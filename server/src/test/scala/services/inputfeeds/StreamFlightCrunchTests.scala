@@ -166,7 +166,7 @@ object CrunchTests {
         BestPax.bestPax
       )(flight)
     }
-    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider)
+    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider, BestPax.bestPax)
     props
   }
 
@@ -356,12 +356,14 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
         "then the crunch should log an error (untested) and ??ignore the flight??, and crunch successfully" in {
           val splitsProviders = List(SplitsProvider.defaultProvider(airportConfig))
           val timeProvider = () => DateTime.parse("2016-09-01")
+          val paxFlowCalculator = (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
+            PaxFlow.splitRatioForFlight(splitsProviders),
+            PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: Arrival) => 0L), BestPax.bestPax)(flight)
           val testActorProps = Props(classOf[ProdCrunchActor], 1,
             airportConfig,
-            (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
-              PaxFlow.splitRatioForFlight(splitsProviders),
-              PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: Arrival) => 0L), BestPax.bestPax)(flight),
-            timeProvider)
+            paxFlowCalculator,
+            timeProvider,
+            BestPax.bestPax)
           withContextCustomActor(testActorProps, levelDbTestActorSystem("")) {
             context =>
               val flights = Flights(
@@ -380,8 +382,10 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
   }
 }
 
-class SplitsRequestRecordingCrunchActor(hours: Int, conf: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
-  extends CrunchActor(hours, conf, timeProvider) with AirportConfigHelpers {
+class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
+  extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
+
+  override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
 
   def splitRatioProvider = _splitRatioProvider
 
@@ -464,7 +468,8 @@ class StreamFlightCrunchTests
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       import WorkloadCalculatorTests._
-      val flightsActor = context.system.actorOf(Props(classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, CrunchTests.airportConfig), "flightsActor")
+      val flightsActor = context.system.actorOf(Props(
+        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI")), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights

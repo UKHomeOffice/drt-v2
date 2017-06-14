@@ -1,6 +1,7 @@
 package controllers
 
 import drt.shared._
+import services.inputfeeds.CrunchTests
 import spray.http.HttpHeaders.Origin
 import utest._
 
@@ -79,7 +80,7 @@ object FlightStateTests extends TestSuite {
 
     "given existing flights before the threshold, " +
       "when new flights arrive, " +
-      "then the flight state should contain no flights before the threshold" - {
+      "then the flight flights should contain no flights before the threshold" - {
       val startThreshold = "2016-01-01T12:00"
       val existingFlights: List[(Int, Arrival)] = List((1, apiFlight(1, "2016-01-01T11:00", "2016-01-01T11:00", origin = "JFK")))
       val newFlights = List(
@@ -88,9 +89,10 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
+          override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
-        flightState.flights ++= existingFlights
+        flightState.setFlights(flightState.flights ++ existingFlights)
 
         flightState.onFlightUpdates(newFlights, startThreshold, Seq())
 
@@ -102,7 +104,7 @@ object FlightStateTests extends TestSuite {
 
     "given existing flights after the threshold, " +
       "when new flights arrive, " +
-      "then the flight state should contain old flights arriving after the threshold" - {
+      "then the flight flights should contain old flights arriving after the threshold" - {
       val startThreshold = "2016-01-01T12:00"
 
       val existingFlightAfterThreshold: Arrival = apiFlight(1, "2016-01-01T13:00", "2016-01-01T13:00", origin = "JFK")
@@ -113,9 +115,10 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
+          override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
-        flightState.flights ++= existingFlights
+        flightState.setFlights(flightState.flights ++ existingFlights)
 
         flightState.onFlightUpdates(newFlights, startThreshold, Seq())
 
@@ -129,7 +132,7 @@ object FlightStateTests extends TestSuite {
 
     "given no existing flights, " +
       "when 2 flights arrive - one domestic and one international, " +
-      "then the state should only contain the international flight" - {
+      "then the flights should only contain the international flight" - {
       val startThreshold = "1970-01-01T00:00"
 
       val newDomesticFlight = apiFlight(flightId = 1, schDt = "2016-01-01T12:30", origin = "DUB")
@@ -140,10 +143,11 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
+          override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
 
-        flightState.flights ++= existingFlights
+        flightState.setFlights(flightState.flights ++ existingFlights)
         flightState.onFlightUpdates(newFlights, startThreshold, Seq("DUB"))
 
         val result = flightState.flights.toList.map(_._2)
@@ -157,6 +161,7 @@ object FlightStateTests extends TestSuite {
 
   def getFlightStateFlightsListFromUpdate(context: TestContext, startThreshold: String, newFlights: List[Arrival]): List[Arrival] = {
     val flightState = new FlightState {
+      override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
       def log = context.system.log
     }
 

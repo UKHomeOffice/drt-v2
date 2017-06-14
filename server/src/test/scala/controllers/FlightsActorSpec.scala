@@ -26,11 +26,11 @@ import scala.util.Success
 class FlightsTestActor(crunchActorRef: ActorRef,
                        dqApiSplitsActorRef: AskableActorRef,
                        csvSplitsProvider: SplitProvider,
-                       airportConfig: AirportConfig)
+                       bestPax: (Arrival) => Int)
   extends FlightsActor(crunchActorRef,
     dqApiSplitsActorRef,
     csvSplitsProvider,
-    airportConfig) {
+    bestPax) {
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -58,7 +58,7 @@ class FlightsActorSpec extends Specification {
       crunchActor(system),
       Actor.noSender,
       testSplitsProvider,
-      CrunchTests.airportConfig.copy(portCode = airportCode)), "FlightsActor")
+      BestPax(airportCode)), "FlightsActor")
   }
 
 
@@ -68,13 +68,14 @@ class FlightsActorSpec extends Specification {
       crunchActor(system),
       Actor.noSender,
       testSplitsProvider,
-      CrunchTests.airportConfig.copy(portCode = airportCode)), "FlightsActor")
+      BestPax.bestPax
+    ), "FlightsActor")
   }
 
   private def crunchActor(system: ActorSystem) = {
     val airportConfig: AirportConfig = CrunchTests.airportConfig
     val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-    val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider)
+    val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
     val crunchActor = system.actorOf(props, "CrunchActor")
     crunchActor
   }
@@ -121,27 +122,6 @@ class FlightsActorSpec extends Specification {
         val expected = Flights(List(
           apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "LHR", totalPax = 300, scheduledDatetime = "2017-08-01T20:00"),
           apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "LHR", totalPax = 200, scheduledDatetime = "2017-08-02T20:00", lastKnownPax = Option(300))))
-
-        result === expected
-      }
-    "not add last known pax for ports other than LHR" in
-      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
-        implicit val timeout: Timeout = Timeout(5 seconds)
-        val actor: ActorRef = flightsActor(system)
-
-        actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "STN", totalPax = 300, scheduledDatetime = "2017-08-01T20:00")))
-        actor ! Flights(List(apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
-
-        val futureResult: Future[Any] = actor ? GetFlights
-        val futureFlights: Future[List[Arrival]] = futureResult.collect {
-          case Success(Flights(fs)) => fs
-        }
-
-        val result = Await.result(futureResult, 1 second)
-
-        val expected = Flights(List(
-          apiFlight(flightId = 1, flightCode = "SA0124", airportCode = "STN", totalPax = 300, scheduledDatetime = "2017-08-01T20:00"),
-          apiFlight(flightId = 2, flightCode = "SA0124", airportCode = "STN", totalPax = 200, scheduledDatetime = "2017-08-02T20:00")))
 
         result === expected
       }
