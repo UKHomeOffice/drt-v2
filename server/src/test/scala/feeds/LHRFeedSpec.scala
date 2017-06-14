@@ -27,21 +27,6 @@ import sys.process._
 import scala.concurrent.duration._
 
 class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
-  //  val username = ConfigFactory.load.getString("lhr_live_username")
-  //  val password = ConfigFactory.load.getString("lhr_live_password")
-  //
-  //    "Executing the LHR feed script" should {
-  //      "get us some content" in {
-  //        val csvContents = Seq("/usr/local/bin/lhr-live-fetch-latest-feed.sh", "-u", username, "-p", password).!!
-  //println(csvContents)
-  //        csvContents.length > 0
-  //      }nN
-  //    }
-
-//  def flightPaxNumbers = new FlightState {
-//    val context = TestContext(system, Props(classOf[]))
-//    override def log = LoggerFactory.
-//  }
 
   "lhrCsvToApiFlights" should {
     "Produce an Arrival source with one flight based on a line from the LHR csv" in {

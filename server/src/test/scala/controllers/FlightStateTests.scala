@@ -1,6 +1,7 @@
 package controllers
 
 import drt.shared._
+import services.inputfeeds.CrunchTests
 import spray.http.HttpHeaders.Origin
 import utest._
 
@@ -88,7 +89,7 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
-          override def airportConfig = airportConfig
+          override def airportConfig: AirportConfig = CrunchTests.airportConfig
           def log = context.system.log
         }
         flightState.setFlights(flightState.flights ++ existingFlights)
@@ -114,8 +115,7 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
-          override def airportConfig = airportConfig
-
+          override def airportConfig: AirportConfig = CrunchTests.airportConfig
           def log = context.system.log
         }
         flightState.setFlights(flightState.flights ++ existingFlights)
@@ -143,7 +143,7 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
-          override def airportConfig = airportConfig
+          override def airportConfig: AirportConfig = CrunchTests.airportConfig
           def log = context.system.log
         }
 
@@ -161,7 +161,7 @@ object FlightStateTests extends TestSuite {
 
   def getFlightStateFlightsListFromUpdate(context: TestContext, startThreshold: String, newFlights: List[Arrival]): List[Arrival] = {
     val flightState = new FlightState {
-      override def airportConfig = airportConfig
+      override def airportConfig: AirportConfig = CrunchTests.airportConfig
       def log = context.system.log
     }
 

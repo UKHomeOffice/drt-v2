@@ -76,28 +76,3 @@ object FlightCrunchInteractionTests extends TestSuite {
     }
   }
 }
-
-object CrunchTests extends TestSuite {
-  def tests = TestSuite {
-    'canUseCsvForWorkloadInput - {
-      val bufferedSource = scala.io.Source.fromURL(
-        getClass.getResource("/optimiser-LHR-T2-NON-EEA-2016-09-12_121059-in-out.csv"))
-      val recs: List[Array[String]] = bufferedSource.getLines.map { l =>
-        l.split(",").map(_.trim)
-      }.toList
-
-      val workloads = recs.map(_ (0).toDouble)
-      val minDesks = recs.map(_ (1).toInt)
-      val maxDesks = recs.map(_ (2).toInt)
-      val recDesks = recs.map(_ (3).toInt)
-
-      val tryCrunchRes = TryRenjin.crunch(workloads, minDesks, maxDesks, OptimizerConfig(25))
-      tryCrunchRes map {
-        cr =>
-          println(cr.recommendedDesks.toString())
-          println(("recDesks", recDesks.toVector))
-      }
-    }
-  }
-}
-

@@ -4,6 +4,7 @@ import akka.event.LoggingAdapter
 import drt.shared.{AirportConfig, Arrival, BestPax}
 import org.mockito.Mockito.mock
 import org.specs2.mutable.Specification
+import services.inputfeeds.CrunchTests
 
 class LHRFlightPaxHackSpec extends Specification {
   isolated
@@ -21,8 +22,7 @@ class LHRFlightPaxHackSpec extends Specification {
     }
   }
   def flightPaxNumbers = new FlightState {
-    override def airportConfig: AirportConfig = airportConfig
-
+    override def airportConfig: AirportConfig = CrunchTests.airportConfig
     override def log: LoggingAdapter = mock(classOf[LoggingAdapter])
   }
 

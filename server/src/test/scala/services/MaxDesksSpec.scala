@@ -1,19 +1,9 @@
 package services
 
-import actors.ShiftsActor
-import akka.actor.{Actor, ActorRef, Props}
-import akka.actor.Actor.Receive
-import akka.event.{DiagnosticLoggingAdapter, Logging, LoggingAdapter}
-import org.slf4j.LoggerFactory
-import controllers.{AkkaTestkitSpecs2Support, ProdCrunchActor}
+import akka.util.Timeout
 import org.specs2.mutable.Specification
-import services.CrunchTests.getClass
 
 import scala.concurrent.duration._
-import akka.pattern._
-import akka.util.Timeout
-
-import scala.concurrent.Await
 import scala.util.{Failure, Success}
 
 class MaxDesksSpec extends Specification {
