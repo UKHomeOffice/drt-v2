@@ -26,15 +26,15 @@ object FlightMessageConversion {
       origin = Some(apiFlight.Origin),
       pcpTime = Some(apiFlight.PcpTime),
 
-      scheduled = millisFromApiFlightString(apiFlight.SchDT),
-      estimated = millisFromApiFlightString(apiFlight.EstDT),
-      touchdown = millisFromApiFlightString(apiFlight.ActDT),
-      estimatedChox = millisFromApiFlightString(apiFlight.EstChoxDT),
-      actualChox = millisFromApiFlightString(apiFlight.ActChoxDT)
+      scheduled = millisOptionFromArrivalDateString(apiFlight.SchDT),
+      estimated = millisOptionFromArrivalDateString(apiFlight.EstDT),
+      touchdown = millisOptionFromArrivalDateString(apiFlight.ActDT),
+      estimatedChox = millisOptionFromArrivalDateString(apiFlight.EstChoxDT),
+      actualChox = millisOptionFromArrivalDateString(apiFlight.ActChoxDT)
     )
   }
 
-  def millisFromApiFlightString(datetime: String): Option[Long] = datetime match {
+  def millisOptionFromArrivalDateString(datetime: String): Option[Long] = datetime match {
     case "" => None
     case _ =>
       Try {

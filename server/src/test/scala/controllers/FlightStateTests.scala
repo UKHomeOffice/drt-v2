@@ -89,7 +89,7 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
-          override def airportConfig: AirportConfig = CrunchTests.airportConfig
+          override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
         flightState.setFlights(flightState.flights ++ existingFlights)
@@ -115,7 +115,7 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
-          override def airportConfig: AirportConfig = CrunchTests.airportConfig
+          override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
         flightState.setFlights(flightState.flights ++ existingFlights)
@@ -143,7 +143,7 @@ object FlightStateTests extends TestSuite {
 
       withContext() { context =>
         val flightState = new FlightState {
-          override def airportConfig: AirportConfig = CrunchTests.airportConfig
+          override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
 
@@ -161,7 +161,7 @@ object FlightStateTests extends TestSuite {
 
   def getFlightStateFlightsListFromUpdate(context: TestContext, startThreshold: String, newFlights: List[Arrival]): List[Arrival] = {
     val flightState = new FlightState {
-      override def airportConfig: AirportConfig = CrunchTests.airportConfig
+      override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
       def log = context.system.log
     }
 

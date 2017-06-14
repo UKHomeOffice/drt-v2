@@ -79,8 +79,10 @@ object PaxFlow {
 class ProdCrunchActor(hours: Int,
                       val airportConfig: AirportConfig,
                       val _flightPaxTypeAndQueueCountsFlow: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
-                      timeProvider: () => DateTime
+                      timeProvider: () => DateTime,
+                      _bestPax: (Arrival) => Int
                      ) extends CrunchActor(hours, airportConfig, timeProvider) {
+  override def bestPax(a: Arrival): Int = _bestPax(a)
   override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
     log.debug(s"Looking for defaultProcessingTime($terminalName)($paxTypeAndQueue) in ${airportConfig.defaultProcessingTimes}")
     airportConfig.defaultProcessingTimes(terminalName).getOrElse(paxTypeAndQueue, 0)
@@ -101,25 +103,27 @@ trait SystemActors extends Core {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val pcpArrivalTimeCalculator = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider)_
+  val pcpArrivalTimeCalculator = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider) _
 
   val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxFlow.makeFlightPaxFlowCalculator(
-    PaxFlow.splitRatioForFlight(splitsProviders),
+      PaxFlow.splitRatioForFlight(splitsProviders),
       pcpArrivalTimeCalculator,
-    BestPax(airportConfig.portCode))
+      BestPax(airportConfig.portCode))
 
-  val crunchActor: ActorRef = system.actorOf(Props(classOf[ProdCrunchActor], 24,
-    airportConfig,
-    paxFlowCalculator,
-    () => DateTime.now()), "crunchActor")
+  val crunchActorProps = Props(
+    classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
+  val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
 
   val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
-  val flightsActor: ActorRef = system.actorOf(Props(classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, airportConfig), "flightsActor")
+  private val flightsActorProps = Props(
+    classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode))
+  val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
 
   def csvSplitsProvider: SplitsProvider
+
   def splitsProviders(): List[SplitsProvider]
 
   def flightWalkTimeProvider(flight: Arrival): Millis
@@ -288,6 +292,7 @@ class Application @Inject()(
     pollingCompletion =>
       log.warning(s"Atmos Polling completed with ${pollingCompletion}")
   )
+
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))
   }

@@ -22,7 +22,7 @@ class LHRFlightPaxHackSpec extends Specification {
     }
   }
   def flightPaxNumbers = new FlightState {
-    override def airportConfig: AirportConfig = CrunchTests.airportConfig
+    override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
     override def log: LoggingAdapter = mock(classOf[LoggingAdapter])
   }
 

@@ -14,14 +14,13 @@ import scala.collection.mutable
 
 //todo think about where we really want this flight flights, one source of truth?
 trait FlightState {
-
-  def airportConfig: AirportConfig
   def log: LoggingAdapter
 
-  case class State(var flights: Map[Int, Arrival], var lastKnownPax: Map[String, Int])
+  def bestPax(f: Arrival): Int
 
-  val state = State(Map(), Map())
+  case class State(flights: Map[Int, Arrival], lastKnownPax: Map[String, Int])
 
+  var state = State(Map(), Map())
 
   def onFlightUpdates(newFlights: List[Arrival], since: String, domesticPorts: Seq[String]) = {
     logNewFlightInfo(flights, newFlights)
@@ -37,15 +36,15 @@ trait FlightState {
   def lastKnownPax = state.lastKnownPax
 
   def setFlights(withoutDomesticFlights: Map[Int, Arrival]) = {
-    state.flights = withoutDomesticFlights
+    state = state.copy(flights = withoutDomesticFlights)
   }
 
   def setLastKnownPax(lkp: Map[String, Int]): Unit = {
-    state.lastKnownPax = lkp
+    state = state.copy(lastKnownPax = lkp)
   }
 
   def setLastKnownPaxForFlight(key: String, pax: Int) = {
-    state.lastKnownPax = state.lastKnownPax + (key -> pax)
+    state = state.copy(lastKnownPax = state.lastKnownPax + (key -> pax))
   }
 
   def addNewFlights(existingFlights: Map[Int, Arrival], newFlights: List[Arrival]) = {
@@ -86,7 +85,7 @@ trait FlightState {
   }
 
   def storeLastKnownPaxForFlights(flights: List[Arrival]) = {
-    flights.foreach(f => setLastKnownPaxForFlight(lastKnownPaxFlightKey(f), BestPax(airportConfig.portCode)(f)))
+    flights.foreach(f => setLastKnownPaxForFlight(lastKnownPaxFlightKey(f), bestPax(f)))
   }
 
   def lastKnownPaxForFlight(f: Arrival): Option[Int] = {

@@ -44,6 +44,7 @@ object FlightCrunchInteractionTests extends TestSuite {
 
   class TestCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
     extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
+    override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
     def splitRatioProvider: (Arrival => Option[SplitRatios]) =
       _ => Some(SplitRatios(
         TestAirportConfig,

@@ -30,12 +30,14 @@ case object GetFlightsWithSplits
 class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
                    csvSplitsProvider: SplitProvider,
-                   val airportConfig: AirportConfig)
+                   _bestPax: (Arrival) => Int)
   extends PersistentActor
     with ActorLogging
     with FlightState
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
+
+  override def bestPax(a: Arrival): Int = _bestPax(a)
 
   import SplitRatiosNs.SplitSources._
 
@@ -111,11 +113,8 @@ class FlightsActor(crunchActorRef: ActorRef,
       }
 
     case Flights(newFlights) =>
-      val flights = if (airportConfig.portCode == "LHR") {
-        val flightsWithLastKnownPax = addLastKnownPaxNos(newFlights)
-        storeLastKnownPaxForFlights(newFlights)
-        flightsWithLastKnownPax
-      } else newFlights
+      val flights = addLastKnownPaxNos(newFlights)
+      storeLastKnownPaxForFlights(newFlights)
 
       val flightsMessage = FlightsMessage(flights.map(apiFlightToFlightMessage))
 

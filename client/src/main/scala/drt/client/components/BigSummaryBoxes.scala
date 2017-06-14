@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.SPAMain
 import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
