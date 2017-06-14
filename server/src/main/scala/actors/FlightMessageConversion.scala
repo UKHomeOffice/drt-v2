@@ -6,9 +6,6 @@ import services.SDate
 
 import scala.util.{Success, Try}
 
-/**
-  * Created by rich on 14/06/17.
-  */
 object FlightMessageConversion {
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
