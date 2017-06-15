@@ -314,7 +314,7 @@ object Heatmap {
           throw e
       }
     })
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 }
 
