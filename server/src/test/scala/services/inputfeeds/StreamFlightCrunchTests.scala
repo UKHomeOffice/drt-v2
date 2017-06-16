@@ -447,7 +447,7 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
                   apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1)))
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
 
-              Thread.sleep(200)
+              Thread.sleep(500)
 
               SplitsCounter.readCounter === airportConfig.queues("A1").length
           }
