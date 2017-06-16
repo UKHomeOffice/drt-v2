@@ -23,9 +23,7 @@ object PersistenceCleanup {
     val directory = new File(dbLocation)
     Option(directory.listFiles())
       .map(files => files.map((file: File) => {
-        println(s"deleteJournal is deleting $file")
         val result = if (file.isDirectory) deleteJournal(file.getPath) else file.delete()
-        println(s"delete said $result")
       }))
   }
 }
