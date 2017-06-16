@@ -239,7 +239,8 @@ object Heatmap {
       val rects = serie.data.zipWithIndex.map {
         case (periodValue, idx) => {
           val colorBucket = props.scaleFunction(periodValue)
-          val clippedColorBucket = Math.min(colors.length - 1, colorBucket)
+          val clippedUpperColorBucket = Math.min(colors.length - 1, colorBucket)
+          val clippedColorBucket = Math.max(0, clippedUpperColorBucket)
           val colors1 = colors(clippedColorBucket)
           val halfGrid: Int = gridSize / 2
           s.g(
@@ -277,7 +278,7 @@ object Heatmap {
       allObj
     } match {
       case Failure(e) =>
-        log.error("failure in heatmap: " + e.toString)
+        log.error("failure in heatmap: " + e.toString, e.asInstanceOf[Exception])
         throw e
       case Success(success) =>
         success
