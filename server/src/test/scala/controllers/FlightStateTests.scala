@@ -92,11 +92,11 @@ object FlightStateTests extends TestSuite {
           override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
-        flightState.setFlights(flightState.flights ++ existingFlights)
+        flightState.setFlights(flightState.flightState ++ existingFlights)
 
         flightState.onFlightUpdates(newFlights, startThreshold, Seq())
 
-        val result = flightState.flights.toList.map(_._2)
+        val result = flightState.flightState.toList.map(_._2)
 
         assert(result == newFlights)
       }
@@ -118,11 +118,11 @@ object FlightStateTests extends TestSuite {
           override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
           def log = context.system.log
         }
-        flightState.setFlights(flightState.flights ++ existingFlights)
+        flightState.setFlights(flightState.flightState ++ existingFlights)
 
         flightState.onFlightUpdates(newFlights, startThreshold, Seq())
 
-        val result = flightState.flights.toList.map(_._2)
+        val result = flightState.flightState.toList.map(_._2)
 
         val expected = newFlightAfterThreshold :: existingFlightAfterThreshold :: Nil
 
@@ -147,10 +147,10 @@ object FlightStateTests extends TestSuite {
           def log = context.system.log
         }
 
-        flightState.setFlights(flightState.flights ++ existingFlights)
+        flightState.setFlights(flightState.flightState ++ existingFlights)
         flightState.onFlightUpdates(newFlights, startThreshold, Seq("DUB"))
 
-        val result = flightState.flights.toList.map(_._2)
+        val result = flightState.flightState.toList.map(_._2)
 
         val expected = newInternationalFlight :: Nil
 
@@ -167,7 +167,7 @@ object FlightStateTests extends TestSuite {
 
     flightState.onFlightUpdates(newFlights, startThreshold, Seq())
 
-    val result = flightState.flights.toList.map(_._2)
+    val result = flightState.flightState.toList.map(_._2)
     result
   }
 }

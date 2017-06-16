@@ -23,20 +23,20 @@ trait FlightState {
   var state = State(Map(), Map())
 
   def onFlightUpdates(newFlights: List[Arrival], since: String, domesticPorts: Seq[String]) = {
-    logNewFlightInfo(flights, newFlights)
+    logNewFlightInfo(flightState, newFlights)
 
-    val withNewFlights = addNewFlights(flights, newFlights)
+    val withNewFlights = addNewFlights(flightState, newFlights)
     val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
     val withoutDomesticFlights = filterOutDomesticFlights(withoutOldFlights, domesticPorts)
 
     setFlights(withoutDomesticFlights)
   }
 
-  def flights = state.flights
-  def lastKnownPax = state.lastKnownPax
+  def flightState = state.flights
+  def lastKnownPaxState = state.lastKnownPax
 
-  def setFlights(withoutDomesticFlights: Map[Int, Arrival]) = {
-    state = state.copy(flights = withoutDomesticFlights)
+  def setFlights(flights: Map[Int, Arrival]) = {
+    state = state.copy(flights = flights)
   }
 
   def setLastKnownPax(lkp: Map[String, Int]): Unit = {
@@ -77,9 +77,6 @@ trait FlightState {
     currentFlights
   }
 
-  //TODO make this a bit more elegant
-  import BestPax.lhrBestPax
-
   def addLastKnownPaxNos(newFlights: List[Arrival]) = {
     newFlights.map(f => f.copy(LastKnownPax = lastKnownPaxForFlight(f)))
   }
@@ -89,7 +86,7 @@ trait FlightState {
   }
 
   def lastKnownPaxForFlight(f: Arrival): Option[Int] = {
-    lastKnownPax.get(lastKnownPaxFlightKey(f))
+    lastKnownPaxState.get(lastKnownPaxFlightKey(f))
   }
 
   def lastKnownPaxFlightKey(flight: Arrival) = {
