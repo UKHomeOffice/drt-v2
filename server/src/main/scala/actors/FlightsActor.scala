@@ -32,9 +32,9 @@ class FlightsActor(crunchActorRef: ActorRef,
                    csvSplitsProvider: SplitProvider,
                    _bestPax: (Arrival) => Int)
   extends PersistentActor
-    with ActorLogging
-    with FlightState
-    with DomesticPortList {
+  with ActorLogging
+  with FlightState
+  with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
   override def bestPax(a: Arrival): Int = _bestPax(a)
@@ -79,22 +79,22 @@ class FlightsActor(crunchActorRef: ActorRef,
       setLastKnownPax(lastKnownPaxFromSnapshot)
 
     case RecoveryCompleted =>
-      requestCrunch(flights.values.toList)
+      requestCrunch(flightState.values.toList)
       log.info("Flights recovery completed, triggering crunch")
     case message => log.error(s"unhandled message - $message")
   }
 
   val receiveCommand: Receive = LoggingReceive {
     case GetFlights =>
-      log.info(s"Being asked for flights and I know about ${flights.size}")
-      sender ! Flights(flights.values.toList)
+      log.info(s"Being asked for flights and I know about ${flightState.size}")
+      sender ! Flights(flightState.values.toList)
 
     case GetFlightsWithSplits =>
-      log.info(s"Being asked for flights with splits and I know about ${flights.size}")
+      log.info(s"Being asked for flights with splits and I know about ${flightState.size}")
 
       val startTime = org.joda.time.DateTime.now()
       val replyTo = sender()
-      val apiFlights = flights.values.toList
+      val apiFlights = flightState.values.toList
       val allSplitRequests: Seq[Future[ApiFlightWithSplits]] = apiFlights.map(addSplitsToArrival)
 
       val futureOfSeq: Future[Seq[ApiFlightWithSplits]] = Future.sequence(allSplitRequests)
@@ -113,15 +113,15 @@ class FlightsActor(crunchActorRef: ActorRef,
       }
 
     case Flights(newFlights) =>
-      val flights = addLastKnownPaxNos(newFlights)
+      val flightsWithLastKnownPax = addLastKnownPaxNos(newFlights)
       storeLastKnownPaxForFlights(newFlights)
 
-      val flightsMessage = FlightsMessage(flights.map(apiFlightToFlightMessage))
-
-      log.info(s"Adding ${flights.length} new flights")
-
+      log.info(s"Adding ${flightsWithLastKnownPax.length} new flights")
       val lastMidnight = LocalDate.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd"))
-      onFlightUpdates(flights, lastMidnight, domesticPorts)
+
+      onFlightUpdates(flightsWithLastKnownPax, lastMidnight, domesticPorts)
+      log.info(s"flight state now contains ${flightState.values.toList}")
+      val flightsMessage = FlightsMessage(flightState.values.toList.map(apiFlightToFlightMessage))
 
       persist(flightsMessage) { (event: FlightsMessage) =>
         log.info(s"Storing ${event.flightMessages.length} flights")
@@ -131,11 +131,12 @@ class FlightsActor(crunchActorRef: ActorRef,
           saveSnapshot(flightStateSnapshotMessageFromState)
         }
       }
-      requestCrunch(flights)
+      requestCrunch(flightsWithLastKnownPax)
 
     case SaveSnapshotSuccess(metadata) => log.info(s"Finished saving flights snapshot")
 
     case message => log.error("Actor saw unexpected message: " + message.toString)
+
   }
 
   def addSplitsToArrival(flight: Arrival): Future[ApiFlightWithSplits] = {
@@ -184,8 +185,8 @@ class FlightsActor(crunchActorRef: ActorRef,
 
   def flightStateSnapshotMessageFromState: FlightStateSnapshotMessage = {
     FlightStateSnapshotMessage(
-      flights.map { case (_, f) => apiFlightToFlightMessage(f) }.toSeq,
-      lastKnownPax.map { case (key, pax) => FlightLastKnownPaxMessage(Option(key), Option(pax)) }.toSeq
+      flightState.map { case (_, f) => apiFlightToFlightMessage(f) }.toSeq,
+      lastKnownPaxState.map { case (key, pax) => FlightLastKnownPaxMessage(Option(key), Option(pax)) }.toSeq
     )
   }
 

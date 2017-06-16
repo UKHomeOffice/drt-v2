@@ -10,7 +10,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
-import org.specs2.mutable.{After, Specification}
+import org.specs2.mutable.{After, Before, Specification}
 import org.specs2.specification.AfterAll
 
 import scala.collection.JavaConversions._
@@ -19,14 +19,18 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 object PersistenceCleanup {
-  def deleteJournal(dbLocation: String) = {
+  def deleteJournal(dbLocation: String): Unit = {
     val directory = new File(dbLocation)
     Option(directory.listFiles())
-      .map(files => files.map(_.delete()))
+      .map(files => files.map((file: File) => {
+        println(s"deleteJournal is deleting $file")
+        val result = if (file.isDirectory) deleteJournal(file.getPath) else file.delete()
+        println(s"delete said $result")
+      }))
   }
 }
 
-abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
   "akka.persistence.journal.leveldb.dir" -> dbLocation,
@@ -38,6 +42,7 @@ abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(Acto
 
   def after = {
     shutDownActorSystem
+    PersistenceCleanup.deleteJournal(s"$dbLocation/snapshot")
     PersistenceCleanup.deleteJournal(dbLocation)
   }
 
@@ -51,7 +56,7 @@ abstract class AkkaTestkitSpecs2Support(dbLocation: String) extends TestKit(Acto
 
 class ShiftsActorSpec extends Specification {
   sequential
-
+  isolated
 
   private def shiftsActor(system: ActorSystem) = {
     val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsactor")
@@ -61,7 +66,7 @@ class ShiftsActorSpec extends Specification {
   implicit val timeout: Timeout = Timeout(5 seconds)
 
   def getTestKit = {
-    new AkkaTestkitSpecs2Support("target/test") {
+    new AkkaTestkitSpecs2SupportForPersistence("target/test") {
       def getActor = shiftsActor(system)
 
       def getState(actor: ActorRef) = {
@@ -157,7 +162,7 @@ class ShiftsActorSpec extends Specification {
     }
 
     "ShiftsPersistenceApi" should {
-      "allow setting and getting of shift data" in new AkkaTestkitSpecs2Support("target/test") {
+      "allow setting and getting of shift data" in new AkkaTestkitSpecs2SupportForPersistence("target/test") {
 
         val shiftPersistenceApi = new ShiftPersistence {
 

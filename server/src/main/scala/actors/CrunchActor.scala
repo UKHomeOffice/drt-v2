@@ -98,7 +98,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       val replyTo = sender()
       log.info(s"Sender is ${sender}")
 
-      flights.values match {
+      flightState.values match {
         case Nil =>
           replyTo ! NoCrunchAvailable()
         case fs =>
@@ -164,7 +164,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
     val tq: QueueName = terminalName + "/" + queueName
     log.info(s"$tq Performing a crunch")
-    val flightsForAirportConfigTerminals = flights.values.filter(flight => flight.Terminal == terminalName).toList
+    val flightsForAirportConfigTerminals = flightState.values.filter(flight => flight.Terminal == terminalName).toList
     val uniqueArrivals = uniqueArrivalsWithCodeshares(flightsForAirportConfigTerminals).map(_._1)
     val workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]] = queueLoadsByTerminal[Seq[WL]](
       Future(uniqueArrivals),

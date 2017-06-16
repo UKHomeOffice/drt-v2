@@ -4,8 +4,10 @@ import java.io.File
 
 import actors._
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern._
 import akka.stream.testkit.TestSubscriber.Probe
 import akka.testkit.{ImplicitSender, TestKit}
+import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import controllers._
@@ -27,7 +29,7 @@ import services.{FlightCrunchInteractionTests, SDate, SplitsProvider, WorkloadCa
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.{IndexedSeq, Seq}
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 
@@ -109,8 +111,10 @@ object CrunchTests {
 
   case class TestContext(override val system: ActorSystem, props: Props) extends
     TestKit(system) with ImplicitSender {
+    implicit val timeout: Timeout = Timeout(5 seconds)
 
     def sendToCrunch[T](o: T) = crunchActor ! o
+    def askCrunchAndWaitForReply[T](o: T) = Await.result(crunchActor ? o, 1 second)
 
     lazy val crunchActor = createCrunchActor
 
@@ -442,11 +446,10 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
                 List(
                   apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1)))
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-              context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
-              context.expectMsgAnyClassOf(classOf[CrunchResult])
 
-              // GetLatestCrunch causes another crunch right now
-              SplitsCounter.readCounter === airportConfig.queues("A1").length + 1
+              Thread.sleep(200)
+
+              SplitsCounter.readCounter === airportConfig.queues("A1").length
           }
         }
       }

@@ -40,15 +40,17 @@ class FlightsTestActor(crunchActorRef: ActorRef,
     case fssm: FlightStateSnapshotMessage =>
       saveSnapshot(fssm)
     case GetLastKnownPax =>
-      sender() ! lastKnownPax
+      sender() ! lastKnownPaxState
   }
 }
 
 case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
+
 case object GetLastKnownPax
 
 class FlightsActorSpec extends Specification {
   sequential
+  isolated
 
   val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
 
@@ -81,7 +83,7 @@ class FlightsActorSpec extends Specification {
   }
 
   "FlightsActor " should {
-    "Store a flight and retrieve it" in new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+    "Store a flight and retrieve it" in new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
       implicit val timeout: Timeout = Timeout(5 seconds)
       val actor: ActorRef = flightsActor(system)
 
@@ -92,20 +94,28 @@ class FlightsActorSpec extends Specification {
         case Success(Flights(fs)) => fs
       }
 
-      val result = Await.result(futureResult, 1 second)
+      val result = Await.result(futureResult, 1 second).asInstanceOf[Flights] match {
+        case Flights(flights) => flights.toSet
+      }
 
-      result === Flights(List(apiFlight("SA0123", "STN", 1, "2017-08-02T20:00")))
+      val expected = Set(apiFlight("SA0123", "STN", 1, "2017-08-02T20:00"))
+
+      result === expected
     }
 
     "Store a flight and retrieve it after a shutdown" in {
       setFlightsAndShutdownActorSystem(Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))))
-      val result = startNewActorSystemAndRetrieveFlights
+      val result = startNewActorSystemAndRetrieveFlights match {
+        case Flights(flights) => flights.toSet
+      }
 
-      Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
+      val expected = Set(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))
+
+      result === expected
     }
 
     "Remember the previous Pax for a flight and use them if the flight comes in with default pax" in
-      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         implicit val timeout: Timeout = Timeout(5 seconds)
         val actor: ActorRef = flightsActor(system, "LHR")
 
@@ -127,26 +137,26 @@ class FlightsActorSpec extends Specification {
       }
 
     "Restore from a v1 snapshot using legacy ApiFlight" in
-      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2017-10-02T20:00")))
         val result = startNewActorSystemAndRetrieveFlights
 
         Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
       }
     "Restore from a v2 snapshot using protobuf" in
-      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
-          Seq(FlightMessage(iATA=Option("SA324"))),
+          Seq(FlightMessage(iATA = Option("SA324"))),
           Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
         ))
         val result = startNewActorSystemAndRetrieveFlights
 
-        result === Flights(List(Arrival("","","","","","","","",0,0,0,"","",0,"","","","SA324","","",0,None)))
+        result === Flights(List(Arrival("", "", "", "", "", "", "", "", 0, 0, 0, "", "", 0, "", "", "", "SA324", "", "", 0, None)))
       }
     "Restore from a v2 snapshot using protobuf" in
-      new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
-          Seq(FlightMessage(iATA=Option("SA324"))),
+          Seq(FlightMessage(iATA = Option("SA324"))),
           Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
         ))
         val result = startNewActorSystemAndRetrieveLastKnownPax
@@ -157,11 +167,11 @@ class FlightsActorSpec extends Specification {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
 
-  def startNewActorSystemAndRetrieveFlights() = {
-    val testKit2 = new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+  def startNewActorSystemAndRetrieveFlights(): Flights = {
+    val testKit2 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
       def getFlights = {
         val futureResult = flightsActor(system) ? GetFlights
-        Await.result(futureResult, 2 seconds)
+        Await.result(futureResult, 2 seconds).asInstanceOf[Flights]
       }
     }
 
@@ -169,11 +179,12 @@ class FlightsActorSpec extends Specification {
     testKit2.shutDownActorSystem
     result
   }
-  def startNewActorSystemAndRetrieveLastKnownPax() = {
-    val testKit2 = new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+
+  def startNewActorSystemAndRetrieveLastKnownPax(): Map[String, Int] = {
+    val testKit2 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
       def getLastKnownPax = {
         val futureResult = flightsActorWithSnapshotIntervalOf1(system) ? GetLastKnownPax
-        Await.result(futureResult, 2 seconds)
+        Await.result(futureResult, 2 seconds).asInstanceOf[Map[String, Int]]
       }
     }
 
@@ -183,7 +194,7 @@ class FlightsActorSpec extends Specification {
   }
 
   def setFlightsAndShutdownActorSystem(flights: Flights) = {
-    val testKit1 = new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+    val testKit1 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
       def setFlights(flights: Flights) = {
         flightsActor(system) ! flights
       }
@@ -192,8 +203,19 @@ class FlightsActorSpec extends Specification {
     testKit1.shutDownActorSystem
   }
 
+  def setFlightsAndShutdownActorSystem(flightSets: Set[Flights]) = {
+    val testKit1 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+      def setFlights(flightSets: Set[Flights]) = {
+        val flightsActorRef = flightsActor(system)
+        flightSets.foreach(flights => { flightsActorRef ! flights})
+      }
+    }
+    testKit1.setFlights(flightSets)
+    testKit1.shutDownActorSystem
+  }
+
   def createV1SnapshotAndShutdownActorSystem(flights: Map[Int, ApiFlight]) = {
-    val testKit1 = new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+    val testKit1 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
       def saveSnapshot(flights: Map[Int, ApiFlight]) = {
         flightsActorWithSnapshotIntervalOf1(system) ! TriggerV1Snapshot(flights)
       }
@@ -203,7 +225,7 @@ class FlightsActorSpec extends Specification {
   }
 
   def createV2SnapshotAndShutdownActorSystem(flightStateSnapshotMessage: FlightStateSnapshotMessage) = {
-    val testKit1 = new AkkaTestkitSpecs2Support("target/testFlightsActor") {
+    val testKit1 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
       def saveSnapshot(flightStateSnapshotMessage: FlightStateSnapshotMessage) = {
         flightsActorWithSnapshotIntervalOf1(system) ! flightStateSnapshotMessage
       }
