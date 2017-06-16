@@ -313,7 +313,7 @@ object AtmosManifestFilePolling {
   = {
     manifests.map((flightManifest) => {
       logInfo(s"AdvPaxInfo: parsing manifest ${flightManifest.filename} from ${flightManifest.zipFilename}")
-      (flightManifest.zipFilename, flightManifest.filename, VoyagePassengerInfoParser.parseVoyagePassengerInfo(flightManifest.content))
+      (flightManifest.zipFilename, flightManifest.filename, VoyageManifestParser.parseVoyagePassengerInfo(flightManifest.content))
     })
   }
 }

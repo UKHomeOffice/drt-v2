@@ -21,6 +21,7 @@ import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
 import passengersplits.parsing.VoyageManifestParser
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.SDateLike
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
@@ -161,7 +162,7 @@ class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber wi
       //      queue += sender
       // todo move this passengersplits.parsing to be part of the akka flow pipe? because then we can just apply a port level filter without akka stateful magic.
       // ln(s"Found a file content $filename")
-      val parsed = VoyagePassengerInfoParser.parseVoyagePassengerInfo(content)
+      val parsed = VoyageManifestParser.parseVoyagePassengerInfo(content)
       log.info(s"flubflub ${parsed}")
       parsed match {
         case Success(voyagePassengerInfo) =>
@@ -209,7 +210,7 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
 }
 
 
-object VoyagePassengerInfoParser {
+object VoyageManifestParser {
 
   import VoyageManifestParser._
   import FlightPassengerInfoProtocol._
