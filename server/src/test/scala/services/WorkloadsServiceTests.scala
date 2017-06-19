@@ -15,34 +15,6 @@ import scala.concurrent.duration._
 import controllers.ArrivalGenerator.apiFlight
 
 class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers {
-//  def apiFlight(iata: String,
-//                actPax: Int, schDt: String,
-//                terminal: String
-//               ): Arrival =
-//    Arrival(
-//      Operator = "",
-//      Status = "",
-//      EstDT = "",
-//      ActDT = "",
-//      EstChoxDT = "",
-//      ActChoxDT = "",
-//      Gate = "",
-//      Stand = "",
-//      MaxPax = 1,
-//      ActPax = actPax,
-//      TranPax = 0,
-//      RunwayID = "",
-//      BaggageReclaimId = "",
-//      FlightID = 1,
-//      AirportID = "EDI",
-//      Terminal = terminal,
-//      rawICAO = "",
-//      rawIATA = iata,
-//      Origin = "",
-//      PcpTime = 0,
-//      SchDT = schDt
-//    )
-
   "WorkloadsCalculator" >> {
     "Given a flight with 10 pax with processing time of 20 seconds, " +
       "when we ask for the terminal workloads, " +

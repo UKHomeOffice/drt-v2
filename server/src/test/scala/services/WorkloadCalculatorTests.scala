@@ -1,52 +1,18 @@
 package services
 
 import drt.services.AirportConfigHelpers
-import org.joda.time.DateTime
-import services.workloadcalculator.PassengerQueueTypes._
-import services.workloadcalculator._
 import drt.shared.FlightsApi.QueueName
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import org.joda.time.DateTime
+import services.workloadcalculator._
 import utest.{TestSuite, _}
+import controllers.ArrivalGenerator.apiFlight
 
 import scala.collection.immutable.Seq
 import scala.language.implicitConversions
 
 object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
-  def apiFlight(iata: String,
-                airportId: String = "EDI",
-                actPax: Int,
-                schDt: String,
-                terminal: String = "A1",
-                origin: String = "",
-                flightId: Int = 1,
-                lastKnownPax: Option[Int] = None,
-                pcpTime: Long = 0
-               ): Arrival =
-    Arrival(
-      FlightID = flightId,
-      SchDT = schDt,
-      Terminal = terminal,
-      Origin = origin,
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 0,
-      ActPax = actPax,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      AirportID = airportId,
-      rawICAO = iata,
-      rawIATA = iata,
-      PcpTime = if (pcpTime != 0) pcpTime else SDate(schDt).millisSinceEpoch,
-      LastKnownPax = lastKnownPax
-    )
 
   def tests = TestSuite {
     'WorkloadCalculator - {
@@ -71,7 +37,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
 
             "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" - {
               val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 20, startTime))
+              val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 20, schDt = startTime))
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
@@ -83,7 +49,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given a single flight with two minutes of flow and two desks when we apply paxSplits and flow rate, " +
               "then we should see flow applied to the flight, and splits applied to that flow" - {
               val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 40, startTime))
+              val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 40, schDt = startTime))
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
@@ -95,8 +61,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights when we apply paxSplits and flow rate, " +
               "then we should see flow applied to the flight, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", actPax = 40, schDt = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", actPax = 40, schDt = "2020-01-01T01:10:00Z")
+                apiFlight(flightId = 1, iata = "BA0001", actPax = 40, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight(flightId = 1, iata = "ZZ0001", actPax = 40, schDt = "2020-01-01T01:10:00Z")
               )
 
               val workloads = extractWorkloads(sut(flights)).toSet
@@ -113,8 +79,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights where load overlaps when we apply paxSplits and flow rate, " +
               "then we should see flow applied to the flight, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", actPax = 40, schDt = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", actPax = 40, schDt = "2020-01-01T00:00:00Z")
+                apiFlight(flightId = 1, iata = "BA0001", actPax = 40, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight(flightId = 1, iata = "ZZ0001", actPax = 40, schDt = "2020-01-01T00:00:00Z")
               )
 
               val workloads = extractWorkloads(sut(flights)).toSet
@@ -132,7 +98,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, " +
               "then we should see queues containing flow applied to the flight, and splits applied to that flow" - {
               val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 20, startTime))
+              val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 20, schDt = startTime))
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
@@ -150,7 +116,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given a single flight with 2 minute's worth of flow, when we apply paxSplits and flow rate," +
               "then we should see queues containing flow applied to the flight, and splits applied to that flow" - {
               val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 30, startTime))
+              val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 30, schDt = startTime))
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
@@ -168,8 +134,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights each with one minute's worth of flow not overlapping, when we apply paxSplits and flow rate," +
               "then we should see queues containing flow applied to the flights, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", actPax = 20, schDt = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", actPax = 20, schDt = "2020-01-01T01:10:00Z")
+                apiFlight(flightId = 1, iata = "BA0001", actPax = 20, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight(flightId = 2, iata = "ZZ0001", actPax = 20, schDt = "2020-01-01T01:10:00Z")
               )
 
               val queueWorkloads = sut(flights).toSet
@@ -188,8 +154,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights each with one minute's worth of overlapping flow, when we apply paxSplits and flow rate," +
               "then we should see queues containing flow applied to the flights, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", actPax = 20, schDt = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", actPax = 20, schDt = "2020-01-01T00:00:00Z")
+                apiFlight(flightId = 1, iata = "BA0001", actPax = 20, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight(flightId = 1, iata = "ZZ0001", actPax = 20, schDt = "2020-01-01T00:00:00Z")
               )
 
               val queueWorkloads = sut(flights).toSet
@@ -223,7 +189,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
           "Examining workloads specifically" - {
             "Given a single flight, we see different passenger types aggregated into one workload number" - {
               val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 40, startTime))
+              val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 40, schDt = startTime))
 
               val workloads = extractWorkloads(sut(flights)).toSet
               val expected = Map(
@@ -235,7 +201,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
           "Examining Queue Workloads" - {
             "Given a single flight, we see different passenger types aggregated into one workload number" - {
               val startTime: String = "2020-01-01T00:00:00Z"
-              val flights = List(apiFlight("BA0001", "LHR", 40, startTime))
+              val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 40, schDt = startTime))
 
               val queueWorkloads = sut(flights).toSet
               val expected = Map(
