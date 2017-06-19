@@ -13,10 +13,10 @@ import scala.collection.immutable.Seq
 import scala.language.implicitConversions
 
 object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
-  def apiFlight(flightCode: String,
-                airportCode: String = "EDI",
-                totalPax: Int,
-                scheduledDatetime: String,
+  def apiFlight(iata: String,
+                airportId: String = "EDI",
+                actPax: Int,
+                schDt: String,
                 terminal: String = "A1",
                 origin: String = "",
                 flightId: Int = 1,
@@ -25,7 +25,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
                ): Arrival =
     Arrival(
       FlightID = flightId,
-      SchDT = scheduledDatetime,
+      SchDT = schDt,
       Terminal = terminal,
       Origin = origin,
       Operator = "",
@@ -37,14 +37,14 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
       Gate = "",
       Stand = "",
       MaxPax = 0,
-      ActPax = totalPax,
+      ActPax = actPax,
       TranPax = 0,
       RunwayID = "",
       BaggageReclaimId = "",
-      AirportID = airportCode,
-      rawICAO = flightCode,
-      rawIATA = flightCode,
-      PcpTime = if (pcpTime != 0) pcpTime else SDate(scheduledDatetime).millisSinceEpoch,
+      AirportID = airportId,
+      rawICAO = iata,
+      rawIATA = iata,
+      PcpTime = if (pcpTime != 0) pcpTime else SDate(schDt).millisSinceEpoch,
       LastKnownPax = lastKnownPax
     )
 
@@ -95,8 +95,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights when we apply paxSplits and flow rate, " +
               "then we should see flow applied to the flight, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", totalPax = 40, scheduledDatetime = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", totalPax = 40, scheduledDatetime = "2020-01-01T01:10:00Z")
+                apiFlight("BA0001", actPax = 40, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight("ZZ0001", actPax = 40, schDt = "2020-01-01T01:10:00Z")
               )
 
               val workloads = extractWorkloads(sut(flights)).toSet
@@ -113,8 +113,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights where load overlaps when we apply paxSplits and flow rate, " +
               "then we should see flow applied to the flight, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", totalPax = 40, scheduledDatetime = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", totalPax = 40, scheduledDatetime = "2020-01-01T00:00:00Z")
+                apiFlight("BA0001", actPax = 40, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight("ZZ0001", actPax = 40, schDt = "2020-01-01T00:00:00Z")
               )
 
               val workloads = extractWorkloads(sut(flights)).toSet
@@ -168,8 +168,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights each with one minute's worth of flow not overlapping, when we apply paxSplits and flow rate," +
               "then we should see queues containing flow applied to the flights, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", totalPax = 20, scheduledDatetime = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", totalPax = 20, scheduledDatetime = "2020-01-01T01:10:00Z")
+                apiFlight("BA0001", actPax = 20, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight("ZZ0001", actPax = 20, schDt = "2020-01-01T01:10:00Z")
               )
 
               val queueWorkloads = sut(flights).toSet
@@ -188,8 +188,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
             "Given 2 flights each with one minute's worth of overlapping flow, when we apply paxSplits and flow rate," +
               "then we should see queues containing flow applied to the flights, and splits applied to that flow" - {
               val flights = List(
-                apiFlight("BA0001", totalPax = 20, scheduledDatetime = "2020-01-01T00:00:00Z"),
-                apiFlight("ZZ0001", totalPax = 20, scheduledDatetime = "2020-01-01T00:00:00Z")
+                apiFlight("BA0001", actPax = 20, schDt = "2020-01-01T00:00:00Z"),
+                apiFlight("ZZ0001", actPax = 20, schDt = "2020-01-01T00:00:00Z")
               )
 
               val queueWorkloads = sut(flights).toSet

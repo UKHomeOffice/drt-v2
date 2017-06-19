@@ -1,26 +1,22 @@
 package controllers
 
-import java.util.UUID
-
 import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern._
 import akka.util.Timeout
-import org.specs2.mutable.Specification
-import services.WorkloadCalculatorTests.apiFlight
-import services.{PcpArrival, SDate, SplitsProvider}
+import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import akka.pattern._
-import controllers.SystemActors.SplitsProvider
 import org.joda.time.DateTime
-import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
-import services.SplitsProvider.SplitProvider
+import org.specs2.mutable.Specification
+//import services.WorkloadCalculatorTests.apiFlight
+import ArrivalGenerator.apiFlight
 import services.inputfeeds.CrunchTests
+import services.{SDate, SplitsProvider}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.immutable.Seq
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.util.Success
 
 
@@ -56,7 +52,7 @@ class FlightsActorSpec extends Specification {
       implicit val timeout: Timeout = Timeout(5 seconds)
       val actor: ActorRef = flightsActor(system)
 
-      actor ! Flights(List(apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00")))
+      actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
       val futureFlights: Future[List[Arrival]] = futureResult.collect {
@@ -67,7 +63,7 @@ class FlightsActorSpec extends Specification {
         case Flights(flights) => flights.toSet
       }
 
-      val expected = Set(apiFlight(flightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00", pcpTime = 1501704000000L))
+      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-08-02T20:00"))
 
       result === expected
     }
