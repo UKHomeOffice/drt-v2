@@ -145,7 +145,9 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
     val qlByT = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
 
-    log.debug(s"qlByT ${qlByT}")
+    qlByT.onComplete(
+      r => log.debug(s"qlByT ${qlByT} $r")
+    )
     qlByT
   }
 
