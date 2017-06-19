@@ -76,9 +76,7 @@ object FlightTableComponents {
 
   def localTimePopup(dt: String) = {
     val p = Try {
-      log.info(s"parsing $dt")
       val sdate = SDate.parse(dt)
-      log.info(s"parsing to $sdate")
       sdateLocalTimePopup(sdate)
     }.recover {
       case f =>
