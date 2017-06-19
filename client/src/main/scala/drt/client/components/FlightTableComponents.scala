@@ -76,11 +76,9 @@ object FlightTableComponents {
 
   private def localTimePopup(dt: String) = {
     val p = Try {
-      log.info(s"parsing $dt")
-      val sdate = SDate.parse(dt)
-      log.info(s"parsing to $sdate")
-      val hhmm = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
-      val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
+      val date = SDate.parse(dt)
+      val hhmm = f"${date.getHours}%02d:${date.getMinutes}%02d"
+      val titlePopup: TagMod = ^.title := date.toLocalDateTimeString()
       <.span(hhmm, titlePopup)
     }.recover {
       case f =>
