@@ -125,13 +125,28 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
     val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
+
+    val bestPax: (Arrival) => Int = BestPax(airportConfig.portCode)
+
+
     val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
       val names: Set[TerminalName] = airportConfig.terminalNames.toSet
       allFlights.filter(flight => {
         names.contains(flight.Terminal)
       })
     }
-    queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
+
+    for {flights <- flightsForTerminalsWeCareAbout
+         flightsByTerminal: Map[String, List[Arrival]] = flights.groupBy(_.Terminal)
+    } {
+      val paxByTerminal = flightsByTerminal.mapValues((arrivals: List[Arrival]) => arrivals.map(bestPax(_)).sum)
+      log.debug(s"paxByTerminal: ${paxByTerminal}")
+    }
+
+    val qlByT = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
+
+    log.debug(s"qlByT ${qlByT}")
+    qlByT
   }
 
   override def welcomeMsg(name: String): String = {

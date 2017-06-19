@@ -36,39 +36,56 @@ object FlightParsing {
 
 
 sealed trait SplitStyle
+
 case object PaxNumbers extends SplitStyle
+
 case object Percentage extends SplitStyle
 
 case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalPax = splits.map(_.paxCount).sum
 }
+
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: List[ApiSplits])
 
 case class Arrival(
-                      Operator: String,
-                      Status: String,
-                      EstDT: String,
-                      ActDT: String,
-                      EstChoxDT: String,
-                      ActChoxDT: String,
-                      Gate: String,
-                      Stand: String,
-                      MaxPax: Int,
-                      ActPax: Int,
-                      TranPax: Int,
-                      RunwayID: String,
-                      BaggageReclaimId: String,
-                      FlightID: Int,
-                      AirportID: String,
-                      Terminal: String,
-                      rawICAO: String,
-                      rawIATA: String,
-                      Origin: String,
-                      SchDT: String,
-                      PcpTime: Long,
-                      LastKnownPax: Option[Int] = None) {
+                    Operator: String,
+                    Status: String,
+                    EstDT: String,
+                    ActDT: String,
+                    EstChoxDT: String,
+                    ActChoxDT: String,
+                    Gate: String,
+                    Stand: String,
+                    MaxPax: Int,
+                    ActPax: Int,
+                    TranPax: Int,
+                    RunwayID: String,
+                    BaggageReclaimId: String,
+                    FlightID: Int,
+                    AirportID: String,
+                    Terminal: String,
+                    rawICAO: String,
+                    rawIATA: String,
+                    Origin: String,
+                    SchDT: String,
+                    PcpTime: Long,
+                    LastKnownPax: Option[Int] = None) {
   lazy val ICAO = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA = Arrival.standardiseFlightCode(rawIATA)
+}
+
+object Arrival {
+  def summaryString(arrival: Arrival) = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
+
+  def standardiseFlightCode(flightCode: String): String = {
+    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+
+    flightCode match {
+      case flightCodeRegex(operator, flightNumber, suffix) =>
+        f"${operator}${flightNumber.toInt}%04d${suffix}"
+      case _ => flightCode
+    }
+  }
 }
 
 //This is used for handling historic snapshots, do not change or remove.
@@ -94,13 +111,14 @@ case class ApiFlight(
                       rawIATA: String,
                       Origin: String,
                       SchDT: String,
-                      PcpTime: Long){
+                      PcpTime: Long) {
 
   lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
   lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
 
 
 }
+
 object ApiFlight {
 
   def standardiseFlightCode(flightCode: String): String = {
@@ -115,19 +133,6 @@ object ApiFlight {
 }
 
 
-object Arrival {
-
-  def standardiseFlightCode(flightCode: String): String = {
-    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
-
-    flightCode match {
-      case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"${operator}${flightNumber.toInt}%04d${suffix}"
-      case _ => flightCode
-    }
-  }
-
-}
 
 trait SDateLike {
 
@@ -295,6 +300,7 @@ object PassengerQueueTypes {
 }
 
 sealed trait SplitCounts
+
 case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double) extends SplitCounts
 
 object PassengerSplits {
