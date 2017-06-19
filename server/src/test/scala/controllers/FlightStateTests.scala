@@ -1,37 +1,11 @@
 package controllers
 
+import controllers.ArrivalGenerator.apiFlight
 import drt.shared._
-import services.inputfeeds.CrunchTests
-import spray.http.HttpHeaders.Origin
 import utest._
 
 object FlightStateTests extends TestSuite {
-  def apiFlight(flightId: Int, schDt: String, estDt: String = "", origin: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = estDt,
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 0,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = flightId,
-      AirportID = "",
-      Terminal = "",
-      rawICAO = "",
-      rawIATA = "",
-      Origin = origin,
-      PcpTime = 0,
-      SchDT = schDt
-    )
-
-  import services.inputfeeds.CrunchTests._
+  import services.inputfeeds.CrunchTests.{withContext, TestContext}
 
   def tests = TestSuite {
     "given a flight arriving after the start threshold, " +
@@ -107,7 +81,7 @@ object FlightStateTests extends TestSuite {
       "then the flight flights should contain old flights arriving after the threshold" - {
       val startThreshold = "2016-01-01T12:00"
 
-      val existingFlightAfterThreshold: Arrival = apiFlight(1, "2016-01-01T13:00", "2016-01-01T13:00", origin = "JFK")
+      val existingFlightAfterThreshold: Arrival = apiFlight(flightId = 1, schDt = "2016-01-01T13:00", estDt = "2016-01-01T13:00", origin = "JFK")
       val existingFlights: List[(Int, Arrival)] = List((1, existingFlightAfterThreshold))
 
       val newFlightAfterThreshold = apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30", origin = "JFK")
