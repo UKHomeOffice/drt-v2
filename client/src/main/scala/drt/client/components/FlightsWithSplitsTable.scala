@@ -84,16 +84,12 @@ object FlightsWithSplitsTable {
         else
           <.div("No flights in this time period")
       } match {
-        case Success(s) =>
-          log.info(s"table rendered!!")
-          s
-
+        case Success(s) => s
         case Failure(f) =>
           log.error(s"failure in table render $f")
           <.div(s"render failure ${f}")
       }
     })
-    .componentDidMount((props) => Callback.log(s"componentDidMount! $props"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
