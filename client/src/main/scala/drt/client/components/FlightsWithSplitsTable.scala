@@ -208,7 +208,7 @@ object FlightTableRow {
           log.info(s"tryingpcp ${flight.PcpTime}")
           val pcpDate = SDate(MilliDate(flight.PcpTime))
           log.info(s"tryingpcpd ${pcpDate}")
-          Try(localDateTimeWithPopup(pcpDate.toApiFlightString()))
+          Try(sdateLocalTimePopup(pcpDate))
         }
         val pcpTime: TagMod = triedMod.recoverWith{
           case f => Try(<.span(f.toString, s"in flight $flight"))

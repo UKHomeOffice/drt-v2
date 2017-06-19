@@ -4,6 +4,7 @@ import java.time.chrono.Chronology
 
 import org.joda.time.{DateTime, DateTimeZone}
 import drt.shared.{MilliDate, SDateLike}
+import org.joda.time.format.ISODateTimeFormat
 import org.slf4j.LoggerFactory
 
 object SDate {
@@ -28,9 +29,12 @@ object SDate {
     def addHours(hoursToAdd: Int): SDateLike = dateTime.plusHours(hoursToAdd)
 
     def millisSinceEpoch: Long = dateTime.getMillis
+
+
   }
 
   object implicits {
+
     implicit def jodaToSDate(dateTime: DateTime): SDateLike = JodaSDate(dateTime)
 
     //    implicit def sprayToSDate(dateTime: spray.http.DateTime): SDate = JodaSDate(dateTime.year, dateTime.
@@ -39,6 +43,13 @@ object SDate {
 
     implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
   }
+
+  def jodaSDateToIsoString(dateTime: SDateLike) = {
+    val fmt = ISODateTimeFormat.dateTimeNoMillis()
+    val dt = dateTime.asInstanceOf[JodaSDate].dateTime
+    fmt.print(dt)
+  }
+
 
   def parseString(dateTime: String) = {
     MilliDate(apply(dateTime).millisSinceEpoch)

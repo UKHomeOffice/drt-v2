@@ -106,7 +106,7 @@ object FlightMessageConversion {
   }
 
   def apiFlightDateTime(millisOption: Option[Long]): String = millisOption match {
-    case Some(millis: Long) => SDate(millis).toApiFlightString
+    case Some(millis: Long) => SDate.jodaSDateToIsoString(SDate(millis))
     case _ => ""
   }
 }

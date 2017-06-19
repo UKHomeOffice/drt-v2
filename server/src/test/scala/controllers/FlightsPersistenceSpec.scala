@@ -61,12 +61,12 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   "FlightsActor " should {
 
     "Store a flight and retrieve it after a shutdown" in {
-      setFlightsAndShutdownActorSystem(Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))))
+      setFlightsAndShutdownActorSystem(Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00:00Z"))))
       val result = startNewActorSystemAndRetrieveFlights match {
         case Flights(flights) => flights.toSet
       }
 
-      val expected = Set(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))
+      val expected = Set(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00:00Z"))
 
       result === expected
     }
@@ -75,8 +75,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors
 
       Set(
-        Flights(List(apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "JFK", totalPax = 100, scheduledDatetime = "2017-10-02T20:00"))),
-        Flights(List(apiFlight(flightId = 2, flightCode = "BA0001", airportCode = "JFK", totalPax = 150, scheduledDatetime = "2017-10-02T21:55")))
+        Flights(List(apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "JFK", totalPax = 100, scheduledDatetime = "2017-10-02T20:00:00Z"))),
+        Flights(List(apiFlight(flightId = 2, flightCode = "BA0001", airportCode = "JFK", totalPax = 150, scheduledDatetime = "2017-10-02T21:55:00Z")))
       ).foreach(flights => {
         flightsActorRef1 ! flights
       })
@@ -94,8 +94,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       }
 
       val expected = Set(
-        apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "JFK", totalPax = 100, scheduledDatetime = "2017-10-02T20:00"),
-        apiFlight(flightId = 2, flightCode = "BA0001", airportCode = "JFK", totalPax = 150, scheduledDatetime = "2017-10-02T21:55")
+        apiFlight(flightId = 1, flightCode = "SA0123", airportCode = "JFK", totalPax = 100, scheduledDatetime = "2017-10-02T20:00:00Z"),
+        apiFlight(flightId = 2, flightCode = "BA0001", airportCode = "JFK", totalPax = 150, scheduledDatetime = "2017-10-02T21:55:00Z")
       )
 
       result === expected
