@@ -9,13 +9,25 @@ import scala.util.Try
 
 object VoyageManifestParser {
 
+
+  def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
+    import FlightPassengerInfoProtocol._
+    import spray.json._
+    Try(content.parseJson.convertTo[VoyageManifest])
+  }
+
   case class PassengerInfo(DocumentType: Option[String],
                            DocumentIssuingCountryCode: String, Age: Option[Int] = None)
 
   case class PassengerInfoJson(DocumentType: Option[String],
                                DocumentIssuingCountryCode: String,
                                EEAFlag: String,
-                               Age: Option[String] = None) {
+                               Age: Option[String] = None,
+                               DisembarkationPortCode: Option[String],
+                               InTransitFlag: String = "N",
+                               DisembarkationPortCountryCode: Option[String] = None,
+                               NationalityCountryCode: Option[String] = None
+                              ) {
     def toPassengerInfo = PassengerInfo(DocumentType, DocumentIssuingCountryCode, Age match {
       case Some(age) => Try(age.toInt).toOption
       case None => None
@@ -49,8 +61,16 @@ object VoyageManifestParser {
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {
-    implicit val passengerInfoConverter = jsonFormat(PassengerInfoJson, "DocumentType",
-      "DocumentIssuingCountryCode", "NationalityCountryEEAFlag", "Age")
+    implicit val passengerInfoConverter = jsonFormat(PassengerInfoJson,
+      "DocumentType",
+      "DocumentIssuingCountryCode",
+      "NationalityCountryEEAFlag",
+      "Age",
+      "DisembarkationPortCode",
+      "InTransitFlag",
+      "DisembarkationPortCountryCode",
+      "NationalityCountryCode"
+    )
     implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)
   }
 

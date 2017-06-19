@@ -34,9 +34,13 @@ class CanFindASplitForAnApiFlightSpec extends
   }
 
   "Should be able to find a flight" >> {
+    def paxInfo(documentType: Some[String] = Some("P"),
+                documentIssuingCountryCode: String = "GBR", eeaFlag: String = "EEA", age: Option[String] = None): PassengerInfoJson =
+      PassengerInfoJson(documentType, documentIssuingCountryCode, eeaFlag, age, None,
+        DisembarkationPortCountryCode =  None)
     "Given a single flight, with just one GBR passenger" in {
       flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "LGW", "BRG", "12345", "EZ", "2017-04-02", "15:33:00",
-        PassengerInfoJson(Some("P"), "GBR", "EEA", None) :: Nil)
+        paxInfo() :: Nil)
 
       "When we ask for a report of voyage pax splits then we should see pax splits of the 1 passenger in eeaDesk queue" in {
         val flightScheduledDateTime = SDate(2017, 4, 2, 15, 33)
@@ -50,8 +54,8 @@ class CanFindASplitForAnApiFlightSpec extends
     "Given a single flight STN EZ789 flight, with just one GBR and one nationals passenger" in {
       "When we ask for a report of voyage pax splits" in {
         flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-02-01", "13:55:00",
-          PassengerInfoJson(Some("P"), "GBR", "EEA", None) ::
-            PassengerInfoJson(Some("P"), "NZL", "", None) ::
+          paxInfo() ::
+            PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN")) ::
             Nil)
 
         val scheduleArrivalTime = SDate(2015, 2, 1, 13, 55)
@@ -68,8 +72,8 @@ class CanFindASplitForAnApiFlightSpec extends
     "Given a single flight STN EZ789 flight where the scheduled date is in British Summer Time (BST) with just one GBR and one nationals passenger" in {
       "When we ask for a report of voyage pax splits" in {
         flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2017-03-27", "12:10:00",
-          PassengerInfoJson(Some("P"), "GBR", "EEA", None) ::
-            PassengerInfoJson(Some("P"), "NZL", "", None) ::
+          paxInfo() ::
+            PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN")) ::
             Nil)
 
         val scheduleArrivalTime = SDate(2017, 3,27, 12, 10)
@@ -86,8 +90,8 @@ class CanFindASplitForAnApiFlightSpec extends
     "Given a single flight STN BA978 flight, with 100 passengers, and a default egate usage of 60% - " in  {
       "When we ask for a report of voyage pax splits" in {
         flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BCN", "978", "BA", "2015-07-12", "10:22:00",
-          List.tabulate(80)(passengerNumber => PassengerInfoJson(Some("P"), "GBR", "EEA", Some((passengerNumber % 60 + 16).toString))) :::
-            List.tabulate(20)(_ => PassengerInfoJson(Some("P"), "NZL", "", None)))
+          List.tabulate(80)(passengerNumber => PassengerInfoJson(Some("P"), "GBR", "EEA", Some((passengerNumber % 60 + 16).toString), DisembarkationPortCode = Some("STN"))) :::
+            List.tabulate(20)(_ => PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN"))))
 
         val scheduleArrivalSDate: SDateLike = SDate(2015, 7, 12, 10, 22)
         flightPassengerReporter ! ReportVoyagePaxSplit("STN", "BA", "978", scheduleArrivalSDate)

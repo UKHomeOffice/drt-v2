@@ -18,9 +18,9 @@ import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import passengersplits._
 import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
-import passengersplits.parsing.VoyageManifestParser
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.SDateLike
+import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -148,7 +148,6 @@ object WorkerPool {
 class WorkerPool(flightPassengerInfoRouter: ActorRef) extends ActorSubscriber with ActorLogging {
 
   import ActorSubscriberMessage._
-  import VoyageManifestParser._
 
   val MaxQueueSize = 10
   var queue = Map.empty[Int, ActorRef]
@@ -207,19 +206,6 @@ class SplitCalculatorWorkerPool extends ActorSubscriber with ActorLogging {
       log.error(s"WorkerPool got unknown ${unknown}")
   }
 
-}
-
-
-object VoyageManifestParser {
-
-  import VoyageManifestParser._
-  import FlightPassengerInfoProtocol._
-  import VoyageManifestParser._
-  import spray.json._
-
-  def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
-    Try(content.parseJson.convertTo[VoyageManifest])
-  }
 }
 
 //trait S3Actors {
