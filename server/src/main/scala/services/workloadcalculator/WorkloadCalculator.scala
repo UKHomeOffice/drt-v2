@@ -93,7 +93,8 @@ object PaxLoadCalculator {
                                     , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[Arrival]): Map[QueueName, QueuePaxAndWorkLoads] = {
     val queuePaxLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumPaxLoads)(flights)
     val queueWorkLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumWorkLoads(procTimeProvider))(flights)
-
+    val summedQueuePaxLoads = queuePaxLoads.flatMap(_._2.map(_._2)).sum
+    log.info(s"queueWorkAndPaxLoadCalculator flights ${flights} ===> $queuePaxLoads $summedQueuePaxLoads")
     queuePaxLoads.keys.map(queueName => {
       (queueName, (
         queueWorkLoads(queueName).map(tuple => WL(tuple._1, tuple._2)),
