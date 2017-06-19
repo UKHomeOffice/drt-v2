@@ -197,7 +197,8 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
 
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
-        case VoyageManifest("CI", "ABZ", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(PassengerInfoJson(Some("P"), "BWA", "", Some("61")))) :: Nil =>
+        case VoyageManifest("CI", "ABZ", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("ABZ"), "N", Some("GBR"), Some("BWA")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")
@@ -261,7 +262,8 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
 
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
-        case VoyageManifest("CI", "LHR", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(PassengerInfoJson(Some("P"), "BWA", "", Some("61")))) :: Nil =>
+        case VoyageManifest("CI", "LHR", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("Ab"), "", Some(""), Some("")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")
@@ -325,7 +327,8 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
 
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
-        case VoyageManifest("CI", "BHX", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(PassengerInfoJson(Some("P"), "BWA", "", Some("61")))) :: Nil =>
+        case VoyageManifest("CI", "BHX", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("Ab"), "", Some(""), Some("")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")
@@ -387,7 +390,8 @@ class WhenUnzippingOnlyProcessAppropriateMessagesAtAHigherScopeSpec extends Test
 
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
-        case VoyageManifest("CI", "BHX", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(PassengerInfoJson(Some("P"), "BWA", "", Some("61")))) :: Nil =>
+        case VoyageManifest("CI", "BHX", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("Ab"), "", Some(""), Some("")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")

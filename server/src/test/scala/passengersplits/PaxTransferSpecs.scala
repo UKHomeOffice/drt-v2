@@ -23,18 +23,27 @@ class PaxTransferSpecs extends Specification {
     """
 
   def transferPaxAreRemovedFromSplits = {
-    s2"""
-    Given A Flight, with 2 pax on it, and 1 of them is a transfer passenger,
-      When we calculate the splits,
-      Then we do NOT see them in the split counts
-      $e1
-    """
 
     def e1 = {
-      val vpi = VoyageManifest(EventCodes.CI, "LHR", "___", "123", "BA", "2017/05/12", "10:15",
-        PassengerInfoJson(Some("P"), )
+      val vpi = VoyageManifest(EventCodes.CheckIn, "LHR", "___", "123", "BA", "2017/05/12", "10:15",
+        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("23"),
+          DisembarkationPortCode = Some("LHR"), InTransitFlag = "N", DisembarkationPortCountryCode = Some("GBR"),
+          NationalityCountryCode = None) ::
+          PassengerInfoJson(Some("P"), DocumentIssuingCountryCode = "GBR", EEAFlag = "EEA", Age = Some("45"),
+            DisembarkationPortCode = Some("COL"), InTransitFlag = "Y", DisembarkationPortCountryCode = Some("MNP"),
+            NationalityCountryCode = None) :: Nil
       )
+
+
+      pending("what?")
     }
+    s2"""
+    Given A Flight, with 2 pax on it, and 1 of them is a transfer passenger,
+    When we calculate the splits,
+    Then we do NOT see them in the split counts
+    $e1
+    """
   }
+
   def transferPaxCanBeRetrievedIndependently = pending("tbd")
 }
