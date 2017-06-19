@@ -162,11 +162,9 @@ object CrunchTests {
 
   def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
     val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-    val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
     val paxFlowCalculator = (flight: Arrival) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)),
         BestPax.bestPax
       )(flight)
     }
@@ -361,8 +359,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
           val splitsProviders = List(SplitsProvider.defaultProvider(airportConfig))
           val timeProvider = () => DateTime.parse("2016-09-01")
           val paxFlowCalculator = (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
-            PaxFlow.splitRatioForFlight(splitsProviders),
-            PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: Arrival) => 0L), BestPax.bestPax)(flight)
+            PaxFlow.splitRatioForFlight(splitsProviders), BestPax.bestPax)(flight)
           val testActorProps = Props(classOf[ProdCrunchActor], 1,
             airportConfig,
             paxFlowCalculator,
@@ -398,7 +395,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportCo
   def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
 
   override def lastLocalMidnightString: String = "2000-01-01"
 
@@ -472,7 +469,8 @@ class StreamFlightCrunchTests
     CrunchTests.withContext("tellCrunch") { context =>
       import WorkloadCalculatorTests._
       val flightsActor = context.system.actorOf(Props(
-        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI")), "flightsActor")
+        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI"), (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
+      ), "flightsActor")
       val flights = Flights(
         List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
       flightsActor ! flights

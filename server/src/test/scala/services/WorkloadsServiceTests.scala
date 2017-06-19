@@ -59,7 +59,8 @@ class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers 
 
         def pcpArrivalTimeProvider(flight: Arrival) = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
       }
 
       val flightsFuture = Future.successful(List(apiFlight(iataFlightCode = "BA0001", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A1")))
@@ -90,7 +91,8 @@ class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers 
 
         def pcpArrivalTimeProvider(flight: Arrival) = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
       }
 
       val flightsFuture = Future.successful(List(

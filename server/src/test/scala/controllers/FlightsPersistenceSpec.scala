@@ -1,24 +1,21 @@
 package controllers
 
 import actors.{FlightsActor, GetFlights}
-import akka.actor.{Actor, ActorRef, ActorSystem, Kill, PoisonPill, Props}
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
-import drt.shared.{AirportConfig, ApiFlight, Arrival, BestPax}
 import drt.shared.FlightsApi.Flights
+import drt.shared._
 import org.joda.time.DateTime
-import org.specs2.mutable.{After, Before, SpecificationLike}
+import org.specs2.mutable.{Before, SpecificationLike}
 import server.protobuf.messages.FlightsMessage.FlightStateSnapshotMessage
-import services.SplitsProvider
 import services.SplitsProvider.SplitProvider
 import services.WorkloadCalculatorTests.apiFlight
 import services.inputfeeds.CrunchTests
+import services.{SDate, SplitsProvider}
 
-import scala.collection.JavaConversions._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -29,11 +26,13 @@ case object GetLastKnownPax
 class FlightsTestActor(crunchActorRef: ActorRef,
                        dqApiSplitsActorRef: AskableActorRef,
                        csvSplitsProvider: SplitProvider,
-                       bestPax: (Arrival) => Int)
+                       bestPax: (Arrival) => Int,
+                       pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT).millisSinceEpoch))
   extends FlightsActor(crunchActorRef,
     dqApiSplitsActorRef,
     csvSplitsProvider,
-    bestPax) {
+    bestPax,
+    pcpArrivalTimeForFlight) {
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -82,8 +81,9 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       })
 
       Await.ready(flightsActorRef1 ? GetFlights, 5 seconds)
-      Await.ready(gracefulStop(flightsActorRef1, 5 seconds), 6 seconds)
-      Await.ready(gracefulStop(crunchActorRef1, 5 seconds), 6 seconds)
+      system.stop(flightsActorRef1)
+      system.stop(crunchActorRef1)
+      Thread.sleep(200L)
 
       val (flightsActorRef2, _) = flightsAndCrunchActors
 
@@ -108,7 +108,9 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       crunchActor(system),
       Actor.noSender,
       testSplitsProvider,
-      BestPax(airportCode)), "FlightsActor")
+      BestPax(airportCode),
+      (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
+    ), "FlightsActor")
   }
 
   def crunchActor(system: ActorSystem) = {
@@ -126,7 +128,9 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       crunchActorRef,
       Actor.noSender,
       testSplitsProvider,
-      BestPax.bestPax), "flightActor")
+      BestPax.bestPax,
+      (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
+    ), "flightActor")
     (flightsActorRef, crunchActorRef)
   }
 

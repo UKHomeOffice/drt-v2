@@ -71,11 +71,11 @@ object FlightsWithSplitsTable {
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
-                <.th("Pcp"),
                 <.th("Est"),
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
+                <.th("Pcp"),
                 <.th("Pax Nos"),
                 <.th("Splits")
               )),
@@ -222,11 +222,11 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
           <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
           <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-          <.td(^.key := flight.FlightID.toString + "-pcptime", pcpTime),
           <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-pcptime", pcpTime),
           <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
           <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {

@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import org.specs2.mutable.Specification
 import services.WorkloadCalculatorTests.apiFlight
-import services.SplitsProvider
+import services.{PcpArrival, SDate, SplitsProvider}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import akka.pattern._
@@ -30,6 +30,7 @@ class FlightsActorSpec extends Specification {
   isolated
 
   val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
+  val testPcpArrival = (a: Arrival) => MilliDate(SDate.parseString(a.SchDT).millisSinceEpoch)
 
   private def flightsActor(system: ActorSystem, airportCode: String = "EDI") = {
     system.actorOf(Props(
@@ -37,7 +38,9 @@ class FlightsActorSpec extends Specification {
       crunchActor(system),
       Actor.noSender,
       testSplitsProvider,
-      BestPax(airportCode)), "FlightsActor")
+      BestPax(airportCode),
+      testPcpArrival
+    ), "FlightsActor")
   }
 
   private def crunchActor(system: ActorSystem) = {
@@ -64,7 +67,7 @@ class FlightsActorSpec extends Specification {
         case Flights(flights) => flights.toSet
       }
 
-      val expected = Set(apiFlight("SA0123", "STN", 1, "2017-08-02T20:00"))
+      val expected = Set(apiFlight(flightCode = "SA0123", airportCode = "STN", totalPax = 1, scheduledDatetime = "2017-08-02T20:00", pcpTime = 1501704000000L))
 
       result === expected
     }

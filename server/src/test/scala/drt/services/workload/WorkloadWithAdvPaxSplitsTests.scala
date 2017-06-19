@@ -112,11 +112,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
 
             val provider = splitRatioProvider("LHR")(passengerInfoRouterActor) _
-            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-              provider,
-              (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
-              BestPax.bestPax
-            ) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider, BestPax.bestPax) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
@@ -157,11 +153,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
             val egatePercentageProvider = (flight: Arrival) => 0.9d
             val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, (f) => None) _
-            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-              provider,
-              (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
-              BestPax.bestPax
-            ) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider, BestPax.bestPax) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 

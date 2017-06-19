@@ -30,11 +30,12 @@ case object GetFlightsWithSplits
 class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
                    csvSplitsProvider: SplitProvider,
-                   _bestPax: (Arrival) => Int)
+                   _bestPax: (Arrival) => Int,
+                   pcpArrivalTimeForFlight: (Arrival) => MilliDate)
   extends PersistentActor
-  with ActorLogging
-  with FlightState
-  with DomesticPortList {
+    with ActorLogging
+    with FlightState
+    with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
 
   override def bestPax(a: Arrival): Int = _bestPax(a)
@@ -113,7 +114,13 @@ class FlightsActor(crunchActorRef: ActorRef,
       }
 
     case Flights(newFlights) =>
-      val flightsWithLastKnownPax = addLastKnownPaxNos(newFlights)
+      val flightsWithPcpTime = newFlights.map(arrival => {
+        val a = arrival.copy(PcpTime = pcpArrivalTimeForFlight(arrival).millisSinceEpoch)
+        log.info(s"pcp arrival: $a")
+        a
+      })
+
+      val flightsWithLastKnownPax = addLastKnownPaxNos(flightsWithPcpTime)
       storeLastKnownPaxForFlights(newFlights)
 
       log.info(s"Adding ${flightsWithLastKnownPax.length} new flights")

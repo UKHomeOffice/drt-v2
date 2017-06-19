@@ -20,7 +20,8 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
                 terminal: String = "A1",
                 origin: String = "",
                 flightId: Int = 1,
-                lastKnownPax: Option[Int] = None
+                lastKnownPax: Option[Int] = None,
+                pcpTime: Long = 0
                ): Arrival =
     Arrival(
       FlightID = flightId,
@@ -43,7 +44,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
       AirportID = airportCode,
       rawICAO = flightCode,
       rawIATA = flightCode,
-      PcpTime = 0,
+      PcpTime = if (pcpTime != 0) pcpTime else SDate(scheduledDatetime).millisSinceEpoch,
       LastKnownPax = lastKnownPax
     )
 
@@ -62,11 +63,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
               SplitRatio((PaxTypes.EeaMachineReadable, Queues.EGate), 0.5)
             )))
 
-          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-            splitRatioProvider,
-            (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
-            BestPax.bestPax
-          ) _
+          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider, BestPax.bestPax) _
 
           val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
@@ -219,10 +216,7 @@ object WorkloadCalculatorTests extends TestSuite with AirportConfigHelpers {
               SplitRatio((PaxTypes.VisaNational, Queues.EeaDesk), 0.5)
             )))
 
-          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-            splitRatioProvider, (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
-            BestPax.bestPax
-          ) _
+          val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(splitRatioProvider, BestPax.bestPax) _
 
           val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 

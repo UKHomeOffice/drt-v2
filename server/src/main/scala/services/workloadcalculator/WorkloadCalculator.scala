@@ -128,16 +128,13 @@ object PaxLoadCalculator {
   }
 
   def flightPaxFlowProvider(splitRatioProvider: (Arrival) => Option[SplitRatios],
-                            pcpArrivalTimeProvider: (Arrival) => MilliDate,
                             bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    voyagePaxSplitsFlowOverTime(splitRatioProvider, pcpArrivalTimeProvider, bestPax)
+    voyagePaxSplitsFlowOverTime(splitRatioProvider, bestPax)
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (Arrival) => Option[SplitRatios],
-                                  pcpStartTimeForFlight: (Arrival) => MilliDate,
-                                  bestPax: (Arrival) => Int)
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (Arrival) => Option[SplitRatios], bestPax: (Arrival) => Int)
                                  (flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val pcpStartTimeMillis = pcpStartTimeForFlight(flight).millisSinceEpoch
+    val pcpStartTimeMillis = MilliDate(flight.PcpTime).millisSinceEpoch
     //TODO fix this get
     val splits = splitsRatioProvider(flight).get.splits
     val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpStartTimeMillis, 1)

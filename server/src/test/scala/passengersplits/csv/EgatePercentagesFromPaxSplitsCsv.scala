@@ -78,30 +78,4 @@ class EgatePercentagesFromPaxSplitsCsv extends Specification {
 
     }
   }
-
-
-  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 2,
-      AirportID = "STN",
-      Terminal = "1",
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = schDT
-    )
 }
