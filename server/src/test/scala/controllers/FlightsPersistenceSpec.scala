@@ -68,7 +68,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
     "Store a flight and retrieve it after a shutdown" in {
       val arrivals = List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
-      setFlightsAndShutdown(arrivals)
+      setFlightsAndStopActors(arrivals)
 
       val result = getFlightsAsSet
       val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
@@ -95,7 +95,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
   implicit val timeout: Timeout = Timeout(0.5 seconds)
 
-  private def setFlightsStopAndSleep(flightsSet: Set[Flights]) = {
+  def setFlightsStopAndSleep(flightsSet: Set[Flights]) = {
     val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors(system)
 
     flightsSet.foreach(flightsActorRef1 ! _)
@@ -106,7 +106,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     Thread.sleep(100L)
   }
 
-  private def getFlightsAsSet = {
+  def getFlightsAsSet = {
     val (flightsActorRef2, crunchActorRef2) = flightsAndCrunchActors(system)
     val futureResult = flightsActorRef2 ? GetFlights
 
@@ -117,7 +117,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     result
   }
 
-  private def setFlightsAndShutdown(arrivals: List[Arrival]) = {
+  def setFlightsAndStopActors(arrivals: List[Arrival]) = {
     val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors(system)
 
     flightsActorRef1 ! Flights(arrivals)
@@ -125,13 +125,13 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     syncStopAndSleep(flightsActorRef1, crunchActorRef1)
   }
 
-  private def stopAndShutdown(flightsActorRef2: ActorRef, crunchActorRef2: ActorRef) = {
+  def stopAndShutdown(flightsActorRef2: ActorRef, crunchActorRef2: ActorRef) = {
     system.stop(flightsActorRef2)
     system.stop(crunchActorRef2)
     shutDownActorSystem
   }
 
-  private def syncStopAndSleep(flightsActorRef1: ActorRef, crunchActorRef1: ActorRef) = {
+  def syncStopAndSleep(flightsActorRef1: ActorRef, crunchActorRef1: ActorRef) = {
     Await.ready(flightsActorRef1 ? GetFlights, 1 seconds)
     system.stop(flightsActorRef1)
     system.stop(crunchActorRef1)

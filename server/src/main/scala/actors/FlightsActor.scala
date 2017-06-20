@@ -115,9 +115,7 @@ class FlightsActor(crunchActorRef: ActorRef,
 
     case Flights(newFlights) =>
       val flightsWithPcpTime = newFlights.map(arrival => {
-        val a = arrival.copy(PcpTime = pcpArrivalTimeForFlight(arrival).millisSinceEpoch)
-        log.info(s"pcp arrival: $a")
-        a
+        arrival.copy(PcpTime = pcpArrivalTimeForFlight(arrival).millisSinceEpoch)
       })
 
       val flightsWithLastKnownPax = addLastKnownPaxNos(flightsWithPcpTime)
