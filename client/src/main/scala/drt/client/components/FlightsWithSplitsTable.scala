@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.shared._
 import diode.data.{Pot, Ready}
+import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.logger
@@ -19,6 +20,7 @@ import scala.util.{Failure, Success, Try}
 import logger._
 import org.scalajs.dom.html.Div
 import drt.client.components.FlightTableComponents
+import drt.client.services.SPACircuit
 import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.JavaConverters._
@@ -60,38 +62,46 @@ object FlightsWithSplitsTable {
       log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
+      val airportConfigRCP = SPACircuit.connect(_.airportConfig)
       Try {
-        if (sortedFlights.nonEmpty)
+        if (sortedFlights.nonEmpty) {
           <.div(
-            <.table(
-              ^.className := "table table-responsive table-striped table-hover table-sm",
-              <.thead(<.tr(
-                timelineTh,
-                <.th("Flight"), <.th("Origin"),
-                <.th("Gate/Stand"),
-                <.th("Status"),
-                <.th("Sch"),
-                <.th("Est"),
-                <.th("Act"),
-                <.th("Est Chox"),
-                <.th("Act Chox"),
-                <.th("Pcp"),
-                <.th("Pax Nos"),
-                <.th("Splits")
-              )),
-              <.tbody(
-                sortedFlights.zipWithIndex.map {
-                  case ((flightWithSplits, codeShares), idx) => {
-                    FlightTableRow.tableRow(FlightTableRow.Props(
-                      flightWithSplits, codeShares, idx,
-                      timelineComponent = timelineComponent,
-                      originMapper = originMapper,
-                      paxComponent = paxComponent,
-                      splitsGraphComponent = splitsGraphComponent
-                    ))
-                  }
-                }.toTagMod)))
-        else
+            airportConfigRCP((airportConfigMP: ModelProxy[Pot[AirportConfig]]) => {
+              <.div(
+                airportConfigMP().renderReady(airportConfig => {
+                  <.table(
+                    ^.className := "table table-responsive table-striped table-hover table-sm",
+                    <.thead(<.tr(
+                      timelineTh,
+                      <.th("Flight"), <.th("Origin"),
+                      <.th("Gate/Stand"),
+                      <.th("Status"),
+                      <.th("Sch"),
+                      <.th("Est"),
+                      <.th("Act"),
+                      <.th("Est Chox"),
+                      <.th("Act Chox"),
+                      <.th("Pcp From"),
+                      <.th("Pcp To"),
+                      <.th("Pax Nos"),
+                      <.th("Splits")
+                    )),
+                    <.tbody(
+                      sortedFlights.zipWithIndex.map {
+                        case ((flightWithSplits, codeShares), idx) => {
+                          FlightTableRow.tableRow(FlightTableRow.Props(
+                            flightWithSplits, codeShares, idx,
+                            timelineComponent = timelineComponent,
+                            originMapper = originMapper,
+                            paxComponent = paxComponent,
+                            splitsGraphComponent = splitsGraphComponent,
+                            bestPax = BestPax(airportConfig.portCode)
+                          ))
+                        }
+                      }.toTagMod))
+                }))
+            }))
+        } else
           <.div("No flights in this time period")
       } match {
         case Success(s) =>
@@ -115,6 +125,7 @@ object FlightTableRow {
   import FlightTableComponents._
 
   type OriginMapperF = (String) => VdomNode
+  type BestPaxForArrivalF = (Arrival) => Int
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShares: Set[Arrival],
@@ -122,7 +133,9 @@ object FlightTableRow {
                    timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div())
+                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div(),
+                   bestPax: (Arrival) => Int
+                  )
 
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
@@ -136,6 +149,7 @@ object FlightTableRow {
   implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
 
   implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
+  implicit val arrivalToPax = Reusability.byRefOr_==[BestPaxForArrivalF]
   implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
 
   case class RowState(hasChanged: Boolean)
@@ -204,13 +218,24 @@ object FlightTableRow {
           .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
           .getOrElse(ApiSplits(Nil, "no splits - client"))
 
-        val triedMod: Try[TagMod] = {
-          log.info(s"tryingpcp ${flight.PcpTime}")
-          val pcpDate = SDate(MilliDate(flight.PcpTime))
+        def triedMod(timeMillis: Long): Try[TagMod] = {
+          log.info(s"tryingpcp ${timeMillis}")
+          val pcpDate = SDate(MilliDate(timeMillis))
           log.info(s"tryingpcpd ${pcpDate}")
           Try(sdateLocalTimePopup(pcpDate))
         }
-        val pcpTime: TagMod = triedMod.recoverWith{
+
+        val pcpTimeFrom: TagMod = triedMod(flight.PcpTime).recoverWith {
+          case f => Try(<.span(f.toString, s"in flight $flight"))
+        }.get
+
+        def millisToDisembark(pax: Int): Long = {
+          val minutesToDisembark = (pax.toDouble / 20).ceil
+          val oneMinuteInMillis = 60 * 1000
+          (minutesToDisembark * oneMinuteInMillis).toLong
+        }
+
+        val pcpTimeTo: TagMod = triedMod(flight.PcpTime + millisToDisembark(props.bestPax(flight))).recoverWith {
           case f => Try(<.span(f.toString, s"in flight $flight"))
         }.get
 
@@ -226,7 +251,8 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.FlightID.toString + "-pcptime", pcpTime),
+          <.td(^.key := flight.FlightID.toString + "-pcptimefrom", pcpTimeFrom),
+          <.td(^.key := flight.FlightID.toString + "-pcptimeto", pcpTimeTo),
           <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
           <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {
