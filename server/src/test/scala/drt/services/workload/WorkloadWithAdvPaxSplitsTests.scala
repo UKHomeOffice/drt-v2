@@ -56,7 +56,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
   implicit val timeout: Timeout = 3 seconds
 
   import WorkloadCalculatorTests._
-
+  import controllers.ArrivalGenerator.apiFlight
   import scala.concurrent.ExecutionContext.Implicits.global
 
   import services.AdvPaxSplitsProvider._
@@ -112,11 +112,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
 
             val provider = splitRatioProvider("LHR")(passengerInfoRouterActor) _
-            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-              provider,
-              (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
-              BestPax.bestPax
-            ) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider, BestPax.bestPax) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
@@ -124,7 +120,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
 
               "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" in {
                 val startTime: String = "2020-01-01T00:00:00Z"
-                val flights = List(apiFlight("BA0001", "LHR", 20, startTime))
+                val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 20, schDt = startTime))
 
                 val workloads = extractWorkloads(sut(flights)).toSet
                 val expected = Map(
@@ -144,7 +140,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             "If the flight isn't found in the AdvPaxInfo actor splitRatioProvider should return None" in {
               val startTime: String = "2020-01-01T00:00:00Z"
 
-              splitRatioProvider("LHR")(passengerInfoRouterActor)(apiFlight("ZZ9999", "LHR", 20, startTime)) === None
+              splitRatioProvider("LHR")(passengerInfoRouterActor)(apiFlight(flightId = 1, iata = "ZZ9999", airportId = "LHR", actPax = 20, schDt = startTime)) === None
             }
           }
         }
@@ -157,11 +153,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             val passengerInfoRouterActor: AskableActorRef = system.actorOf(Props(classOf[MockSplitsActor]))
             val egatePercentageProvider = (flight: Arrival) => 0.9d
             val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, (f) => None) _
-            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(
-              provider,
-              (flight: Arrival) => MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch),
-              BestPax.bestPax
-            ) _
+            val calcPaxTypeAndQueueCountForAFlightOverTime = PaxLoadCalculator.voyagePaxSplitsFlowOverTime(provider, BestPax.bestPax) _
 
             val sut = PaxLoadCalculator.queueWorkAndPaxLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, defaultProcTimesProvider) _
 
@@ -169,7 +161,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
 
               "Given a single flight with one minute's worth of flow when we apply paxSplits and flow rate, then we should see flow applied to the flight, and splits applied to that flow" in {
                 val startTime: String = "2020-01-01T00:00:00Z"
-                val flights = List(apiFlight("BA0001", "LHR", 20, startTime))
+                val flights = List(apiFlight(flightId = 1, iata = "BA0001", airportId = "LHR", actPax = 20, schDt = startTime))
 
                 val workloads = extractWorkloads(sut(flights)).toSet
                 val expected = Map(
@@ -189,7 +181,7 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
             "If the flight isn't found in the AdvPaxInfo actor splitRatioProvider should return None" in {
               val startTime: String = "2020-01-01T00:00:00Z"
 
-              splitRatioProvider("LHR")(passengerInfoRouterActor)(apiFlight("ZZ9999", "LHR", 20, startTime)) === None
+              splitRatioProvider("LHR")(passengerInfoRouterActor)(apiFlight(flightId = 1, iata = "ZZ9999", airportId = "LHR", actPax = 20, schDt = startTime)) === None
             }
           }
         }

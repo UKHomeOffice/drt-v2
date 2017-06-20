@@ -1,44 +1,15 @@
 package services
 
 import drt.services.AirportConfigHelpers
-import org.specs2.mutable.SpecificationLike
-import passengersplits.core.PassengerInfoRouterActor
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
-import services.WorkloadCalculatorTests.TestAirportConfig
+import org.specs2.mutable.SpecificationLike
+import passengersplits.core.PassengerInfoRouterActor
+import controllers.ArrivalGenerator.apiFlight
 
-import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 import scala.collection.mutable
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
 
 class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers {
-
-  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 2,
-      AirportID = "STN",
-      Terminal = "1",
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = schDT
-    )
 
   "Voyage Number should be padded to 4 digits" >> {
     "3 digits should pad to 4" in {
@@ -59,7 +30,7 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
 
       val providers: List[(Arrival) => Some[SplitRatios]] = List(provider)
 
-      val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
+      val flight = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T00:00:00")
 
       val result = SplitsProvider.splitsForFlight(providers)(flight)
 
@@ -73,7 +44,7 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
 
       val providers: List[(Arrival) => Option[SplitRatios]] = List(providerWith, providerWithout)
 
-      val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
+      val flight = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T00:00:00")
 
       val result = SplitsProvider.splitsForFlight(providers)(flight)
 
@@ -87,7 +58,7 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
 
       val providers: List[(Arrival) => Option[SplitRatios]] = List(providerWith, providerWithout)
 
-      val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
+      val flight = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T00:00:00")
 
       val result: Option[SplitRatios] = SplitsProvider.splitsForFlight(providers)(flight)
 
@@ -114,7 +85,7 @@ class PaxSplitsProviderTests extends SpecificationLike with AirportConfigHelpers
 
       val providers: List[(Arrival) => Option[SplitRatios]] = List(statefulProvider)
 
-      val flight = apiFlight("BA0001", "2016-01-01T00:00:00")
+      val flight = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T00:00:00")
 
       val splitsForFlight = SplitsProvider.splitsForFlight(providers) _
 

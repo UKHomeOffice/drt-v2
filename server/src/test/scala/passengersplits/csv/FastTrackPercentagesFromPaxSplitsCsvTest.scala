@@ -5,18 +5,19 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import drt.shared.{Arrival, PaxTypeAndQueue, Queues, SDateLike}
 import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared.{Arrival, PaxTypeAndQueue, Queues, SDateLike}
 import org.joda.time.format.DateTimeFormat
 import org.specs2.mutable.{Specification, SpecificationLike}
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import passengersplits.csv.SplitsMocks.{MockSplitsActor, testVoyagePaxSplits}
 import services.AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages
 import services.SDate.implicits._
-import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate, WorkloadCalculatorTests}
+import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate}
+import controllers.ArrivalGenerator.apiFlight
 
 import scala.concurrent.duration._
 
@@ -118,32 +119,6 @@ class FastTrackPercentagesFromPaxSplitsCsvTest extends Specification {
       converted.paxSplits.toSet === CSVPassengerSplitsProvider.applyFastTrack(vps, FastTrackPercentages(0, 0.99)).paxSplits.toSet
     }
   }
-
-
-  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 2,
-      AirportID = "STN",
-      Terminal = "1",
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = schDT
-    )
 }
 
 class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("WorkloadwithAdvPaxInfoSplits", ConfigFactory.empty()))
@@ -151,35 +126,9 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
 
   isolated
 
-  implicit val timeout: Timeout = 3 seconds
-
+  implicit val timeout: Timeout = 1 second
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 2,
-      AirportID = "STN",
-      Terminal = "1",
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = schDT
-    )
 
   "DRT-4567, DRT-4568 We should apply both fast track and E-Gate splits to API VoyagePaxSplits" >> {
     "Given only CSV EGate percentages" +
@@ -192,7 +141,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
 
       val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
 
-      val testFlight = apiFlight("BA1234", scheduledArrivalTimeStr).copy(ActPax = 100)
+      val testFlight = apiFlight(flightId = 1, iata = "BA1234", schDt = scheduledArrivalTimeStr).copy(ActPax = 100)
 
       val actual = provider(testFlight)
       val actualEeaMachine = actual.get.splits.filter(_.paxType.passengerType == EeaMachineReadable)
@@ -222,7 +171,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
           nonVisaNational = 0.06))
         val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
 
-        val testFlight = apiFlight("BA1234", scheduledArrivalTimeStr).copy(ActPax = 100)
+        val testFlight = apiFlight(flightId = 1, iata = "BA1234", schDt = scheduledArrivalTimeStr).copy(ActPax = 100)
 
 
         val result = provider(testFlight)
@@ -254,7 +203,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
           nonVisaNational = 0.06))
         val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
 
-        val testFlight = apiFlight("BA1234", scheduledArrivalTimeStr).copy(ActPax = 100)
+        val testFlight = apiFlight(flightId = 1, iata = "BA1234", schDt = scheduledArrivalTimeStr).copy(ActPax = 100)
 
 
         val result = provider(testFlight)
@@ -286,7 +235,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
           nonVisaNational = 0.06))
         val provider = splitRatioProviderWithCsvPercentages("LHR")(passengerInfoRouterActor)(egatePercentageProvider, fastTrackPercentageProvider) _
 
-        val testFlight = apiFlight("BA1234", scheduledArrivalTimeStr).copy(ActPax = 100)
+        val testFlight = apiFlight(flightId = 1, iata = "BA1234", schDt = scheduledArrivalTimeStr).copy(ActPax = 100)
 
         val result = provider(testFlight)
         val visaRelated = List(NonVisaNational, VisaNational)

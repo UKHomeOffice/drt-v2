@@ -23,14 +23,14 @@ object TerminalDeploymentsTable {
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class QueueDeploymentsRow(
-                              timestamp: Long,
-                              pax: Double,
-                              crunchDeskRec: Int,
-                              userDeskRec: DeskRecTimeslot,
-                              waitTimeWithCrunchDeskRec: Int,
-                              waitTimeWithUserDeskRec: Int,
-                              queueName: QueueName
-                            )
+                                  timestamp: Long,
+                                  pax: Double,
+                                  crunchDeskRec: Int,
+                                  userDeskRec: DeskRecTimeslot,
+                                  waitTimeWithCrunchDeskRec: Int,
+                                  waitTimeWithUserDeskRec: Int,
+                                  queueName: QueueName
+                                )
 
   case class TerminalDeploymentsRow(time: Long, queueDetails: Seq[QueueDeploymentsRow])
 
@@ -38,7 +38,7 @@ object TerminalDeploymentsTable {
                     terminalName: String,
                     items: Seq[TerminalDeploymentsRow],
                     flights: Pot[FlightsWithSplits],
-                    airportConfigPot: Pot[AirportConfig],
+                    airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                     stateChange: (QueueName, DeskRecTimeslot) => Callback
                   )
@@ -66,13 +66,13 @@ object TerminalDeploymentsTable {
   }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportWrapper: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfigPotMP: ModelProxy[Pot[AirportConfig]]): VdomElement = {
+                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
     <.div(
       TerminalDeploymentsTable(
         terminalName,
         rows,
         peMP().flights,
-        airportConfigPotMP(),
+        airportConfig,
         airportWrapper,
         (queueName: QueueName, deskRecTimeslot: DeskRecTimeslot) =>
           peMP.dispatch(UpdateDeskRecsTime(terminalName, queueName, deskRecTimeslot))
@@ -89,8 +89,9 @@ object TerminalDeploymentsTable {
                                     shiftsRaw: Pot[String]
                                   )
 
-  def terminalDeploymentsComponent(terminalName: TerminalName) = {
-    log.info(s"userdeskrecs for $terminalName")
+  case class TerminalProps(terminalName: String)
+
+  def terminalDeploymentsComponent(props: TerminalProps) = {
     val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model => {
       PracticallyEverything(
         model.airportInfos,
@@ -103,7 +104,9 @@ object TerminalDeploymentsTable {
       )
     })
 
-    val terminalUserDeskRecsRows: ReactConnectProxy[Option[Pot[List[TerminalDeploymentsRow]]]] = SPACircuit.connect(model => model.calculatedDeploymentRows.getOrElse(Map()).get(terminalName))
+    val terminalUserDeskRecsRows = SPACircuit.connect(model =>
+      model.calculatedDeploymentRows.getOrElse(Map()).get(props.terminalName)
+    )
     val airportWrapper = SPACircuit.connect(_.airportInfos)
     val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
 
@@ -116,11 +119,14 @@ object TerminalDeploymentsTable {
               <.div(
                 rowsPot.renderReady(rows =>
                   airportConfigPotRCP(airportConfigPotMP => {
-                    renderTerminalUserTable(terminalName, airportWrapper, peMP, rows, airportConfigPotMP)
+                    <.div(
+                      airportConfigPotMP().renderReady(airportConfig =>
+                        renderTerminalUserTable(props.terminalName, airportWrapper, peMP, rows, airportConfig))
+                    )
                   })))
           }
         }),
-         peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
+        peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
     })
   }
 
@@ -147,12 +153,7 @@ object TerminalDeploymentsTable {
         val queueRowCells = item.queueDetails.flatMap(
           (q: QueueDeploymentsRow) => {
             val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
-            val dangerWait = props.airportConfigPot match {
-              case Ready(airportConfig) =>
-                if (q.waitTimeWithUserDeskRec > airportConfig.slaByQueue(q.queueName)) "table-danger"
-              case _ =>
-                ""
-            }
+            val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue(q.queueName)) "table-danger" else ""
 
             def qtd(xs: TagMod*) = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
 
@@ -177,7 +178,7 @@ object TerminalDeploymentsTable {
 
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-      val headings = props.airportConfigPot.get.queues(props.terminalName).map {
+      val headings = props.airportConfig.queues(props.terminalName).map {
         case (queueName) =>
           qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
       }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
@@ -195,7 +196,7 @@ object TerminalDeploymentsTable {
           <.thead(
             ^.display := "block",
             <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfigPot.get.queues(props.terminalName).toList): _*)),
+            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList): _*)),
           <.tbody(
             ^.display := "block",
             ^.overflow := "scroll",
@@ -231,8 +232,8 @@ object TerminalDeploymentsTable {
     .build
 
   def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],
-            airportConfigPot: Pot[AirportConfig],
+            airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =
-    component(Props(terminalName, items, flights, airportConfigPot, airportInfos, stateChange))
+    component(Props(terminalName, items, flights, airportConfig, airportInfos, stateChange))
 }

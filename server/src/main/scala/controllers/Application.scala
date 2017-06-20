@@ -59,12 +59,9 @@ trait Core {
 
 
 object PaxFlow {
-  def makeFlightPaxFlowCalculator(
-                                   splitRatioForFlight: (Arrival) => Option[SplitRatios],
-                                   pcpArrivalTimeForFlight: (Arrival) => MilliDate,
-                                   bestPax: (Arrival) => Int
-                                 ): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, pcpArrivalTimeForFlight, bestPax)
+  def makeFlightPaxFlowCalculator(splitRatioForFlight: (Arrival) => Option[SplitRatios],
+                                  bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, bestPax)
     (arrival) => {
       val pax = bestPax(arrival)
       val paxFlow = provider(arrival)
@@ -113,10 +110,7 @@ trait SystemActors extends Core {
   val pcpArrivalTimeCalculator = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider) _
 
   val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxFlow.makeFlightPaxFlowCalculator(
-      PaxFlow.splitRatioForFlight(splitsProviders),
-      pcpArrivalTimeCalculator,
-      BestPax(airportConfig.portCode))
+    PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax(airportConfig.portCode))
 
   val crunchActorProps = Props(
     classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
@@ -124,7 +118,7 @@ trait SystemActors extends Core {
 
   val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
   private val flightsActorProps = Props(
-    classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode))
+    classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode), pcpArrivalTimeCalculator)
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor

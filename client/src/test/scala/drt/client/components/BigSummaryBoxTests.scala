@@ -3,22 +3,17 @@ package drt.client.components
 import diode.data.Ready
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
-import drt.shared._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
-import japgolly.scalajs.react.{test, _}
-import japgolly.scalajs.react.test._
-import japgolly.scalajs.react.vdom.html_<^._
-import utest.TestSuite
-import utest._
-
-import scala.collection.immutable
+import drt.shared._
+import japgolly.scalajs.react.test
+import utest.{TestSuite, _}
 
 
 object BigSummaryBoxTests extends TestSuite {
 
-  import BigSummaryBoxes._
   import ApiFlightGenerator._
+  import BigSummaryBoxes._
 
   test.WebpackRequire.ReactTestUtils
 
@@ -323,7 +318,7 @@ object ApiFlightGenerator {
       rawICAO = rawICAO,
       rawIATA = iataFlightCode,
       Origin = Origin,
-      PcpTime = PcpTime,
+      PcpTime = if (PcpTime != 0) PcpTime else SDate.parse(SchDT).millisSinceEpoch,
       SchDT = SchDT
     )
 
