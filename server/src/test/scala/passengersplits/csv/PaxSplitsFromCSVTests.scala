@@ -1,13 +1,10 @@
 package passengersplits.csv
 
 import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
-import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
-import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational}
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import org.joda.time.{DateTime, LocalDate}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.{Specification, SpecificationLike}
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
@@ -17,34 +14,10 @@ import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate}
 import scala.collection.immutable.IndexedSeq
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import controllers.ArrivalGenerator.apiFlight
 
 class PaxSplitsFromCSVTests extends SpecificationLike {
   val CsvSplitSource = "Historical"
-
-  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 2,
-      AirportID = "STN",
-      Terminal = "1",
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = schDT
-    )
 
   import CsvPassengerSplitsReader._
 
@@ -77,7 +50,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
         ))
 
-        val result = splitsProvider.splitRatioProvider(apiFlight("BA1234", "2017-01-01"))
+        val result = splitsProvider.splitRatioProvider(apiFlight(flightId = 1, iata = "BA1234", schDt = "2017-01-01"))
 
         result === Some(SplitRatios(
           CsvSplitSource,
@@ -95,7 +68,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           Seq()
         }
 
-        val result = splitsProvider.splitRatioProvider(apiFlight("XXXX", "2017-01-01"))
+        val result = splitsProvider.splitRatioProvider(apiFlight(flightId = 1, iata = "XXXX", schDt = "2017-01-01"))
 
         result === None
       }
@@ -141,8 +114,6 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
 }
 
 class WTFPaxSplitsFromCSVTests extends Specification {
-
-
   "Given a Flight Passenger Split" >> {
     "When we ask for workloads by terminal, then we should see the split applied" >> {
       val today = new DateTime(2017, 1, 1, 14, 0)
@@ -160,7 +131,7 @@ class WTFPaxSplitsFromCSVTests extends Specification {
         override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 3d
 
         def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
       }
 
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -168,7 +139,7 @@ class WTFPaxSplitsFromCSVTests extends Specification {
 
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
       val flights = Future {
-        List(apiFlight("BA1234", today.toString(formatter)))
+        List(apiFlight(flightId = 1, iata = "BA1234", actPax = 1, airportId = "STN", terminal = "1", schDt = today.toString(formatter)))
       }
 
       val result: Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = workloadsCalculator.queueLoadsByTerminal(flights, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
@@ -179,42 +150,8 @@ class WTFPaxSplitsFromCSVTests extends Specification {
       val eGateSplit = actList.find(split => split._1 == "eGate")
       val eeaDeskSplit = actList.find(split => split._1 == "eeaDesk")
       (eGateSplit.get._2._2.head.pax, eeaDeskSplit.get._2._2.head.pax) === (0.7, 0.3)
-      //      match
-      //      {
-      //        case List(("eeaDesk", (_, List(Pax(_, 0.3)))), ("eGate", (_, List(Pax(_, 0.7)))), ("nonEeaDesk", (_, List(Pax(_, 0.0))))) => true
-      //        case thing => println(s"thing: $thing")
-      //          false
-      //      }
     }
   }
-
-
-  def apiFlight(iataFlightCode: String, schDT: String): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = 0,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 2,
-      AirportID = "STN",
-      Terminal = "1",
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = schDT
-    )
-
-
 }
 
 

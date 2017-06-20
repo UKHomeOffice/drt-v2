@@ -5,7 +5,6 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import org.specs2.mutable.SpecificationLike
-import services.WorkloadCalculatorTests.TestAirportConfig
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 
@@ -13,36 +12,9 @@ import scala.collection.Set
 import scala.collection.immutable.{IndexedSeq, Iterable}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import controllers.ArrivalGenerator.apiFlight
 
 class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers {
-  def apiFlight(iataFlightCode: String,
-                totalPax: Int, scheduledDatetime: String,
-                terminal: String
-               ): Arrival =
-    Arrival(
-      Operator = "",
-      Status = "",
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = 1,
-      ActPax = totalPax,
-      TranPax = 0,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 1,
-      AirportID = "EDI",
-      Terminal = terminal,
-      rawICAO = "",
-      rawIATA = iataFlightCode,
-      Origin = "",
-      PcpTime = 0,
-      SchDT = scheduledDatetime
-    )
-
   "WorkloadsCalculator" >> {
     "Given a flight with 10 pax with processing time of 20 seconds, " +
       "when we ask for the terminal workloads, " +
@@ -59,10 +31,11 @@ class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers 
 
         def pcpArrivalTimeProvider(flight: Arrival) = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
       }
 
-      val flightsFuture = Future.successful(List(apiFlight(iataFlightCode = "BA0001", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A1")))
+      val flightsFuture = Future.successful(List(apiFlight(flightId = 0, iata = "BA0001", actPax = 10, schDt = "2016-01-01T00:00:00", terminal = "A1")))
 
       val resultFuture = wc.queueLoadsByTerminal(flightsFuture, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
 
@@ -90,12 +63,13 @@ class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers 
 
         def pcpArrivalTimeProvider(flight: Arrival) = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+        def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+          PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
       }
 
       val flightsFuture = Future.successful(List(
-        apiFlight(iataFlightCode = "BA0001", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A1"),
-        apiFlight(iataFlightCode = "BA0002", totalPax = 10, scheduledDatetime = "2016-01-01T00:00:00", terminal = "A2")
+        apiFlight(flightId = 0, iata = "BA0001", actPax = 10, schDt = "2016-01-01T00:00:00", terminal = "A1"),
+        apiFlight(flightId = 0, iata = "BA0002", actPax = 10, schDt = "2016-01-01T00:00:00", terminal = "A2")
       ))
 
       val resultFuture = wc.queueLoadsByTerminal(flightsFuture, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)

@@ -9,6 +9,7 @@ import akka.stream.testkit.TestSubscriber.Probe
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
+import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.services.AirportConfigHelpers
@@ -21,7 +22,6 @@ import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
 import services.FlightCrunchInteractionTests.TestCrunchActor
-import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator}
 import services.WorkloadCalculatorTests._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
@@ -29,8 +29,8 @@ import services.{FlightCrunchInteractionTests, SDate, SplitsProvider, WorkloadCa
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.{IndexedSeq, Seq}
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 
 object CrunchTests {
@@ -162,11 +162,9 @@ object CrunchTests {
 
   def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
     val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-    val walkTimeProvider: GateOrStandWalkTime = (_, _) => Some(0L)
     val paxFlowCalculator = (flight: Arrival) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-        PaxFlow.pcpArrivalTimeForFlight(airportConfig)(gateOrStandWalkTimeCalculator(walkTimeProvider, walkTimeProvider, airportConfig.defaultWalkTimeMillis)),
         BestPax.bestPax
       )(flight)
     }
@@ -205,8 +203,8 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
         val hoursToCrunch = 4
         val terminalToCrunch = "A1"
         val flights = List(
-          apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00", flightId = 1),
-          apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-01-01T00:00", flightId = 2))
+          apiFlight(iata = "BA123", icao = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00", flightId = 1),
+          apiFlight(iata = "EZ456", icao = "EZ456", terminal = "A2", actPax = 100, schDt = "2016-01-01T00:00", flightId = 2))
 
         val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
         val expectedMidnightLocalTime = 1451606400000L
@@ -217,7 +215,7 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
         val hoursToCrunch = 4
         val terminalToCrunch = "A1"
         val flights = List(
-          apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00", flightId = 1))
+          apiFlight(iata = "BA123", icao = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00", flightId = 1))
 
         val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eGate", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
         val expectedMidnightLocalTime = 1451606400000L
@@ -240,7 +238,7 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
       val hoursToCrunch = 1
       val terminalToCrunch = "A1"
       val flights = List(
-        apiFlight(flightId = 1, flightCode = "EZ456", terminal = "A1", totalPax = 100, scheduledDatetime = "2016-01-01T00:00")
+        apiFlight(flightId = 1, iata = "EZ456", terminal = "A1", actPax = 100, schDt = "2016-01-01T00:00")
       )
 
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
@@ -256,8 +254,8 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
       val hoursToCrunch = 1
       val terminalToCrunch = "A1"
       val flights = List(
-        apiFlight(flightId = 1, flightCode = "BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00"),
-        apiFlight(flightId = 2, flightCode = "EZ456", terminal = "A1", totalPax = 100, scheduledDatetime = "2016-01-01T00:00")
+        apiFlight(flightId = 1, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
+        apiFlight(flightId = 2, iata = "EZ456", terminal = "A1", actPax = 100, schDt = "2016-01-01T00:00")
       )
 
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
@@ -273,9 +271,9 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
       val hoursToCrunch = 1
       val terminalToCrunch = "A1"
       val flights = List(
-        apiFlight(flightId = 1, flightCode = "BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00"),
-        apiFlight(flightId = 2, flightCode = "BA555", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-01-01T00:00"),
-        apiFlight(flightId = 3, flightCode = "EZ456", terminal = "A1", totalPax = 100, scheduledDatetime = "2016-01-01T00:05")
+        apiFlight(flightId = 1, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
+        apiFlight(flightId = 2, iata = "BA555", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
+        apiFlight(flightId = 3, iata = "EZ456", terminal = "A1", actPax = 100, schDt = "2016-01-01T00:05")
       )
 
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
@@ -313,7 +311,7 @@ class TimezoneFlightCrunchTests extends SpecificationLike {
           val hoursToCrunch = 4
           val terminalToCrunch = "A1"
           val flights = List(
-            apiFlight("BA123", terminal = terminalToCrunch, totalPax = 200, scheduledDatetime = "2016-01-01T02:00", flightId = 1))
+            apiFlight(iata = "BA123", terminal = terminalToCrunch, actPax = 200, schDt = "2016-01-01T02:00", flightId = 1))
 
           val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160101_1011)
           val expectedMidnightLocalTime = 1451606400000L
@@ -326,7 +324,7 @@ class TimezoneFlightCrunchTests extends SpecificationLike {
           val hoursToCrunch = 4
           val terminalToCrunch = "A1"
           val flights = List(
-            apiFlight("FR991", terminal = terminalToCrunch, totalPax = 200, scheduledDatetime = "2016-07-01T02:00Z", flightId = 1))
+            apiFlight(iata = "FR991", terminal = terminalToCrunch, actPax = 200, schDt = "2016-07-01T02:00Z", flightId = 1))
 
           val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160701_0555)
           val expectedMidnightLocalTime = 1467327600000L
@@ -361,8 +359,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
           val splitsProviders = List(SplitsProvider.defaultProvider(airportConfig))
           val timeProvider = () => DateTime.parse("2016-09-01")
           val paxFlowCalculator = (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
-            PaxFlow.splitRatioForFlight(splitsProviders),
-            PaxFlow.pcpArrivalTimeForFlight(airportConfig)((_: Arrival) => 0L), BestPax.bestPax)(flight)
+            PaxFlow.splitRatioForFlight(splitsProviders), BestPax.bestPax)(flight)
           val testActorProps = Props(classOf[ProdCrunchActor], 1,
             airportConfig,
             paxFlowCalculator,
@@ -372,9 +369,9 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
             context =>
               val flights = Flights(
                 List(
-                  apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1),
-                  apiFlight("EZ456", terminal = "A2", totalPax = 100, scheduledDatetime = "2016-09-01T10:30", flightId = 2),
-                  apiFlight("RY789", terminal = "A3", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 3)))
+                  apiFlight(iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T10:31", flightId = 1),
+                  apiFlight(iata = "EZ456", terminal = "A2", actPax = 100, schDt = "2016-09-01T10:30", flightId = 2),
+                  apiFlight(iata = "RY789", terminal = "A3", actPax = 200, schDt = "2016-09-01T10:31", flightId = 3)))
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
               context.sendToCrunch(GetLatestCrunch("A1", "eeaDesk"))
               context.expectMsgAnyClassOf(classOf[CrunchResult])
@@ -398,7 +395,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportCo
   def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, pcpArrivalTimeProvider, BestPax.bestPax)(flight)
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
 
   override def lastLocalMidnightString: String = "2000-01-01"
 
@@ -444,10 +441,10 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
             context =>
               val flights = Flights(
                 List(
-                  apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T10:31", flightId = 1)))
+                  apiFlight(iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T10:31", flightId = 1)))
               context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
 
-              Thread.sleep(500)
+              Thread.sleep(1000)
 
               SplitsCounter.readCounter === airportConfig.queues("A1").length
           }
@@ -456,7 +453,6 @@ class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
     }
   }
 }
-
 
 class StreamFlightCrunchTests
   extends Specification {
@@ -470,11 +466,11 @@ class StreamFlightCrunchTests
 
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
-      import WorkloadCalculatorTests._
       val flightsActor = context.system.actorOf(Props(
-        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI")), "flightsActor")
+        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI"), (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
+      ), "flightsActor")
       val flights = Flights(
-        List(apiFlight("BA123", totalPax = 200, scheduledDatetime = "2016-09-01T10:31")))
+        List(apiFlight(flightId = 0, iata = "BA123", actPax = 200, schDt = "2016-09-01T10:31")))
       flightsActor ! flights
       context.expectMsg(PerformCrunchOnFlights(flights.flights))
       true
@@ -487,7 +483,7 @@ class StreamFlightCrunchTests
         val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
 
         val flights = Flights(
-          List(apiFlight("BA123", terminal = "A1", totalPax = 200, scheduledDatetime = "2016-09-01T00:31")))
+          List(apiFlight(flightId = 0, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T00:31")))
         crunchActor ! PerformCrunchOnFlights(flights.flights)
         crunchActor.tell(GetLatestCrunch("A1", "eeaDesk"), context.testActor)
 
