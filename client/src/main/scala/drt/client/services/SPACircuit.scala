@@ -145,19 +145,6 @@ case class RootModel(
 
           val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
 
-          log.debug({
-            val terminalPaxInByQueue = terminalWorkloads.mapValues(_._2.map(_.pax).sum)
-            val queuePaxTotals = paxLoad.mapValues(_.sum)
-            val paxLoadTotal = terminalWorkloads.flatMap(_._2._2.map(_.pax)).sum
-            val start = SDate(MilliDate(startFromMilli))
-            val end = SDate(MilliDate(minutesRangeInMillis.end))
-
-            val earliestAndLatest = terminalWorkloads.mapValues(v =>
-              (SDate(MilliDate(v._2.head.time)), SDate(MilliDate(v._2.last.time)))
-            )
-            s"calculateTerminalDeploymentRows ($start, $end) $terminalName $earliestAndLatest inputTotal: $paxLoadTotal outputTotal: ${queuePaxTotals.values.sum} inputShape: $terminalPaxInByQueue outputShape: $queuePaxTotals"
-          })
-
           TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
         case None =>
           Nil
