@@ -142,7 +142,22 @@ case class RootModel(
           val timestamps = workloads.timeStamps()
           val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
           val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+
           val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+
+          log.debug({
+            val terminalPaxInByQueue = terminalWorkloads.mapValues(_._2.map(_.pax).sum)
+            val queuePaxTotals = paxLoad.mapValues(_.sum)
+            val paxLoadTotal = terminalWorkloads.flatMap(_._2._2.map(_.pax)).sum
+            val start = SDate(MilliDate(startFromMilli))
+            val end = SDate(MilliDate(minutesRangeInMillis.end))
+
+            val earliestAndLatest = terminalWorkloads.mapValues(v =>
+              (SDate(MilliDate(v._2.head.time)), SDate(MilliDate(v._2.last.time)))
+            )
+            s"calculateTerminalDeploymentRows ($start, $end) $terminalName $earliestAndLatest inputTotal: $paxLoadTotal outputTotal: ${queuePaxTotals.values.sum} inputShape: $terminalPaxInByQueue outputShape: $queuePaxTotals"
+          })
+
           TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
         case None =>
           Nil
@@ -261,8 +276,29 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
       updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
-    case UpdateWorkloads(terminalQueueWorkloads) =>
-      updated(Ready(Workloads(terminalQueueWorkloads)))
+    case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
+      val paxLoadsByTerminalAndQueue: Map[TerminalName, Map[QueueName, Seq[Pax]]] = terminalQueueWorkloads.mapValues(_.mapValues(_._2))
+      for {(t, tl) <- paxLoadsByTerminalAndQueue
+           loadAtTerminal = tl.map(_._2.map(_.pax).sum)
+           (q, ql) <- tl
+           loadAtQueue = ql.map(_.pax).sum
+           firstTime = ql.headOption.map(_.time)
+           lastTimeOpt = ql.lastOption.map(_.time)
+      } {
+        val firstTimeSDate = firstTime.map(d => SDate(MilliDate(d)))
+        val lastTime = lastTimeOpt.map(d => SDate(MilliDate(d)))
+        log.info(s"received workloads: paxLoads:  firstTime: $firstTime (${firstTimeSDate}) lastTime $lastTime $t/$q $loadAtQueue / $loadAtTerminal from $ql")
+      }
+
+      val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
+        (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),
+          plWl._2.map(pl => Pax(timeFromMillisToNearestSecond(pl.time), pl.pax)))))
+
+      updated(Ready(Workloads(roundedTimesToMinutes)))
+  }
+
+  private def timeFromMillisToNearestSecond(time: Long) = {
+    Math.round(time.toDouble / 60000) * 60000
   }
 }
 
@@ -296,7 +332,7 @@ class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeploym
         case (terminalName, queueMapPot) => {
           queueMapPot.map {
             case (queueName, deployedDesks) =>
-//              val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
+              //              val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
               val desks = deployedDesks.get.items.map(_.deskRec)
               val desksList = desks.toList
               Effect(Future(RunSimulation(terminalName, queueName, desksList)))
@@ -459,7 +495,6 @@ object StaffDeploymentCalculator {
           val queueNames = terminalQueueCrunchResults(terminalName).keys
           val deskRecs: Iterable[(Int, QueueName)] = deskRecTimeSlots.map(_.deskRec).zip(queueNames)
           val deps = queueRecsToDeployments(_.toInt)(deskRecs.toList, terminalStaffAvailable(timeInMillis), minMaxDesksForTime(queueMinAndMaxDesks(terminalName), timeInMillis.millisSinceEpoch))
-          println(s"Deps: $deps")
           deps
         }
         val deployments = queueDeskRecsOverTime.map(timeslotsToInts).transpose

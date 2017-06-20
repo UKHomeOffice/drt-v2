@@ -8,6 +8,43 @@ class PcpArrivalSpec extends SpecificationLike {
 
   import PcpArrival._
 
+
+  "DRT-4607 parseWalkTimeWithMinuteRounding" +
+    "We must round the walktimes to the nearest hour to keep the web client happy" +
+    "See DRT-4607 for the why. Perhaps we will revisit" >> {
+    "Given a valid walk time csv line string " +
+      " AND the walktime is 45 seconds" +
+      "then we should get back a WalkTime of 1 minutes" >> {
+      val validCsvLine = "101,45,T1"
+
+      val result = walkTimeFromStringWithRounding(validCsvLine)
+      val expected = Some(WalkTime("101", "T1", 60000L))
+
+      result === expected
+    }
+    "Given a valid walk time csv line string " +
+      " AND the walktime is 65 seconds" +
+      "then we should get back a WalkTime of 1 minutes" >> {
+      val validCsvLine = "101,65,T1"
+
+      val result = walkTimeFromStringWithRounding(validCsvLine)
+      val expected = Some(WalkTime("101", "T1", 60000L))
+
+      result === expected
+    }
+    "Given a valid walk time csv line string " +
+      " AND the walktime is 125 seconds" +
+      "then we should get back a WalkTime of 2 minutes (120000L)" >> {
+      val validCsvLine = "101,125,T1"
+
+      val result = walkTimeFromStringWithRounding(validCsvLine)
+      val expected = Some(WalkTime("101", "T1", 120000L))
+
+      result === expected
+    }
+  }
+
+
   "parseWalkTime" >> {
     "Given a valid walk time csv line string " +
       "then we should get back a WalkTime representing it" >> {
@@ -18,6 +55,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
       result === expected
     }
+
 
     "Given a invalid walk time csv line string with a non-numeric walk time, " +
       "then we should get a None" >> {
