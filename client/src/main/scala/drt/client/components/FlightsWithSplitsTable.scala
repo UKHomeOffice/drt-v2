@@ -136,6 +136,11 @@ object FlightTableRow {
 
   implicit val stateReuse = Reusability.caseClass[RowState]
 
+  def millisToDisembark(pax: Int): Long = {
+    val minutesToDisembark = (pax.toDouble / 20).ceil
+    val oneMinuteInMillis = 60 * 1000
+    (minutesToDisembark * oneMinuteInMillis).toLong
+  }
 
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
@@ -198,25 +203,18 @@ object FlightTableRow {
           .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
           .getOrElse(ApiSplits(Nil, "no splits - client"))
 
-        def triedMod(timeMillis: Long): Try[TagMod] = {
-          log.info(s"tryingpcp ${timeMillis}")
+        def millisToTagModTry(timeMillis: Long): Try[TagMod] = {
           val pcpDate = SDate(MilliDate(timeMillis))
-          log.info(s"tryingpcpd ${pcpDate}")
           Try(sdateLocalTimePopup(pcpDate))
         }
 
-        val pcpTimeFrom: TagMod = triedMod(flight.PcpTime).recoverWith {
-          case f => Try(<.span(f.toString, s"in flight $flight"))
+        val pcpTimeFrom: TagMod = millisToTagModTry(flight.PcpTime).recoverWith {
+          case f => Try(<.span("n/a"))
         }.get
 
-        def millisToDisembark(pax: Int): Long = {
-          val minutesToDisembark = (pax.toDouble / 20).ceil
-          val oneMinuteInMillis = 60 * 1000
-          (minutesToDisembark * oneMinuteInMillis).toLong
-        }
-
-        val pcpTimeTo: TagMod = triedMod(flight.PcpTime + millisToDisembark(props.bestPax(flight))).recoverWith {
-          case f => Try(<.span(f.toString, s"in flight $flight"))
+        val pcpEndTimeMillis = flight.PcpTime + millisToDisembark(props.bestPax(flight))
+        val pcpTimeTo: TagMod = millisToTagModTry(pcpEndTimeMillis).recoverWith {
+          case f => Try(<.span("n/a"))
         }.get
 
         <.tr(^.key := flight.FlightID.toString,

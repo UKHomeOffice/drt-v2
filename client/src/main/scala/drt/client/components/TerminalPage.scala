@@ -111,10 +111,11 @@ object TerminalPage {
         )
       })
 
-      val simulationResultAndAirportConfigRCP = SPACircuit.connect(model => (model.simulationResult, model.airportConfig))
-      val simulationResultComponent = simulationResultAndAirportConfigRCP((stuffMP: ModelProxy[(TerminalQueueSimulationResults, Pot[AirportConfig])]) => {
-        val airportConfigPot = stuffMP()._2
-        val seriesPot: Pot[List[Series]] = waitTimes(stuffMP()._1.getOrElse(props.terminalName, Map()), props.terminalName)
+      val simResAndAirportConfigRCP = SPACircuit.connect(model => (model.simulationResult, model.airportConfig))
+
+      val simulationResultComponent = simResAndAirportConfigRCP((simResAndAirportConfigMP: ModelProxy[(TerminalQueueSimulationResults, Pot[AirportConfig])]) => {
+        val airportConfigPot = simResAndAirportConfigMP()._2
+        val seriesPot: Pot[List[Series]] = waitTimes(simResAndAirportConfigMP()._1.getOrElse(props.terminalName, Map()), props.terminalName)
         <.div(
           airportConfigPot.renderReady(airportConfig => {
             val bestPax = BestPax(airportConfig.portCode)
