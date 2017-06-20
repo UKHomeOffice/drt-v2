@@ -28,7 +28,7 @@ import scala.collection.immutable.Seq
 
 object FlightsWithSplitsTable {
 
-  case class Props(flightsWithSplits: FlightsWithSplits)
+  case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int)
 
 
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
@@ -41,6 +41,7 @@ object FlightsWithSplitsTable {
   implicit val flightReuse = Reusability.caseClassDebug[Arrival]
   implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
   implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
+  implicit val bestPaxReuse = Reusability.byRefOr_==[(Arrival) => Int]
 
   //  implicit val listOfapiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
   //  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[List[FlightsWithSplits]]
@@ -56,51 +57,46 @@ object FlightsWithSplitsTable {
     .renderP((_$, props) => {
       log.info(s"sorting flights")
       val flightsWithSplits = props.flightsWithSplits
+      val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
 
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.SchDT) //todo move this closer to the model
       log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
-      val airportConfigRCP = SPACircuit.connect(_.airportConfig)
       Try {
         if (sortedFlights.nonEmpty) {
           <.div(
-            airportConfigRCP((airportConfigMP: ModelProxy[Pot[AirportConfig]]) => {
-              <.div(
-                airportConfigMP().renderReady(airportConfig => {
-                  <.table(
-                    ^.className := "table table-responsive table-striped table-hover table-sm",
-                    <.thead(<.tr(
-                      timelineTh,
-                      <.th("Flight"), <.th("Origin"),
-                      <.th("Gate/Stand"),
-                      <.th("Status"),
-                      <.th("Sch"),
-                      <.th("Est"),
-                      <.th("Act"),
-                      <.th("Est Chox"),
-                      <.th("Act Chox"),
-                      <.th("Pcp From"),
-                      <.th("Pcp To"),
-                      <.th("Pax Nos"),
-                      <.th("Splits")
-                    )),
-                    <.tbody(
-                      sortedFlights.zipWithIndex.map {
-                        case ((flightWithSplits, codeShares), idx) => {
-                          FlightTableRow.tableRow(FlightTableRow.Props(
-                            flightWithSplits, codeShares, idx,
-                            timelineComponent = timelineComponent,
-                            originMapper = originMapper,
-                            paxComponent = paxComponent,
-                            splitsGraphComponent = splitsGraphComponent,
-                            bestPax = BestPax(airportConfig.portCode)
-                          ))
-                        }
-                      }.toTagMod))
-                }))
-            }))
+            <.table(
+              ^.className := "table table-responsive table-striped table-hover table-sm",
+              <.thead(<.tr(
+                timelineTh,
+                <.th("Flight"), <.th("Origin"),
+                <.th("Gate/Stand"),
+                <.th("Status"),
+                <.th("Sch"),
+                <.th("Est"),
+                <.th("Act"),
+                <.th("Est Chox"),
+                <.th("Act Chox"),
+                <.th("Pcp From"),
+                <.th("Pcp To"),
+                <.th("Pax Nos"),
+                <.th("Splits")
+              )),
+              <.tbody(
+                sortedFlights.zipWithIndex.map {
+                  case ((flightWithSplits, codeShares), idx) => {
+                    FlightTableRow.tableRow(FlightTableRow.Props(
+                      flightWithSplits, codeShares, idx,
+                      timelineComponent = timelineComponent,
+                      originMapper = originMapper,
+                      paxComponent = paxComponent,
+                      splitsGraphComponent = splitsGraphComponent,
+                      bestPax = bestPax
+                    ))
+                  }
+                }.toTagMod)))
         } else
           <.div("No flights in this time period")
       } match {

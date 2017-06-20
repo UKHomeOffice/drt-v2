@@ -16,14 +16,14 @@ import japgolly.scalajs.react.vdom.{TagOf, VdomArray, html_<^}
 import org.scalajs.dom.html.Div
 import drt.client.components.FlightTableComponents
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.RootModel.TerminalQueueSimulationResults
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 
 import scala.collection.immutable.Seq
 import scala.util.Try
 
 
-object
-TerminalPage {
+object TerminalPage {
 
   case class Props(terminalName: TerminalName, ctl: RouterCtl[Loc])
 
@@ -33,6 +33,7 @@ TerminalPage {
     import TerminalHeatmaps._
 
     val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
+
     def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
     def originMapper(portCode: String): VdomElement = {
@@ -51,13 +52,6 @@ TerminalPage {
     }
 
     val maxFlightPax = 853 // todo this should come from state update
-
-    val arrivalsTable = FlightsWithSplitsTable.ArrivalsTable(
-      timelineComp,
-      originMapper,
-      paxComp(maxFlightPax),
-      splitsGraphComponent)
-
 
     def render(props: Props) = {
 
@@ -106,7 +100,7 @@ TerminalPage {
               val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
 
               <.div(
-//                debugTable,
+                //                debugTable,
                 summaryBoxes)
             }
             val recovered = tried recoverWith {
@@ -119,49 +113,60 @@ TerminalPage {
         )
       })
 
-      val simulationResultRCP = SPACircuit.connect(_.simulationResult)
-      val simulationResultComponent = simulationResultRCP((simulationResultMP) => {
-        val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(props.terminalName, Map()), props.terminalName)
+      val simulationResultAndAirportConfigRCP = SPACircuit.connect(model => (model.simulationResult, model.airportConfig))
+      val simulationResultComponent = simulationResultAndAirportConfigRCP((stuffMP: ModelProxy[(TerminalQueueSimulationResults, Pot[AirportConfig])]) => {
+        val airportConfigPot = stuffMP()._2
+        val seriesPot: Pot[List[Series]] = waitTimes(stuffMP()._1.getOrElse(props.terminalName, Map()), props.terminalName)
         <.div(
-          <.ul(^.className := "nav nav-tabs",
-            <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
-            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
-            seriesPot.renderReady(s =>
-              <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times"))
+          airportConfigPot.renderReady(airportConfig => {
+            val bestPax = BestPax(airportConfig.portCode)
+            val terminalProps = TerminalDeploymentsTable.TerminalProps(props.terminalName)
+            <.div(
+            <.ul(^.className := "nav nav-tabs",
+              <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
+              <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
+              seriesPot.renderReady(s =>
+                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times"))
+              )
             )
-          ),
-          <.div(^.className := "tab-content",
-            <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
-              heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
-            <.div(^.id := "workloads", ^.className := "tab-pane fade",
-              heatmapOfWorkloads(props.terminalName)),
-            <.div(^.id := "waits", ^.className := "tab-pane fade",
-              heatmapOfWaittimes(props.terminalName))
-          ),
-          <.ul(^.className := "nav nav-tabs",
-            <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
-            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues"))
-          ),
-          <.div(^.className := "tab-content",
-            <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
-              //              val flightsWrapper = SPACircuit.connect(_.flightsWithApiSplits(props.terminalName))
-              val flightsWrapper = SPACircuit.connect(_.flightsWithSplitsPot)
-              //              airportWrapper(airportInfoProxy =>
-              flightsWrapper(proxy => {
-                val flightsWithSplits = proxy.value
-                val flights: Pot[FlightsApi.FlightsWithSplits] = flightsWithSplits
-                <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-                  val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
-                  val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
+            ,
+            <.div(^.className := "tab-content",
+              <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
+                heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
+              <.div(^.id := "workloads", ^.className := "tab-pane fade",
+                heatmapOfWorkloads(props.terminalName)),
+              <.div(^.id := "waits", ^.className := "tab-pane fade",
+                heatmapOfWaittimes(props.terminalName))
+            )
+            ,
+            <.ul(^.className := "nav nav-tabs",
+              <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
+              <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues"))
+            )
+            ,
+            <.div(^.className := "tab-content",
+              <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
+                val flightsWrapper = SPACircuit.connect(_.flightsWithSplitsPot)
+                flightsWrapper(proxy => {
+                  val flightsWithSplits = proxy.value
+                  val flights: Pot[FlightsApi.FlightsWithSplits] = flightsWithSplits
+                  <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
+                    val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
+                    val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
 
-                  arrivalsTable(FlightsWithSplitsTable.Props(flightsForTerminal))
-                }))
-              })
-            }),
-            <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
-              TerminalDeploymentsTable.terminalDeploymentsComponent(props.terminalName)
-            )
-          ))
+                    FlightsWithSplitsTable.ArrivalsTable(
+                      timelineComp,
+                      originMapper,
+                      paxComp(maxFlightPax),
+                      splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
+                  }))
+                })
+              }),
+              <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+                TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
+              )
+            ))
+          }))
       })
       <.div(liveSummaryBoxes, simulationResultComponent)
 

@@ -5,7 +5,7 @@ import diode.react.ReactConnectProxy
 import drt.client.components.Bootstrap.Panel
 import drt.client.components._
 import drt.client.modules.GriddleComponentWrapper.ColumnMeta
-import drt.shared.AirportInfo
+import drt.shared.{AirportConfig, AirportInfo}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -33,14 +33,14 @@ object GriddleComponentWrapper {
 class RowMetaData(val key: String) extends js.Object
 
 case class GriddleComponentWrapper[A](
-                                    results: js.Array[A], //Seq[Map[String, Any]],
-                                    columns: Seq[String],
-                                    columnMeta: Option[Seq[ColumnMeta]] = None,
-                                    rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
-                                    showSettings: Boolean = true,
-                                    showFilter: Boolean = true,
-                                    initialSort: js.UndefOr[String] = js.undefined
-                                  ) {
+                                       results: js.Array[A], //Seq[Map[String, Any]],
+                                       columns: Seq[String],
+                                       columnMeta: Option[Seq[ColumnMeta]] = None,
+                                       rowMetaData: js.UndefOr[RowMetaData] = js.undefined,
+                                       showSettings: Boolean = true,
+                                       showFilter: Boolean = true,
+                                       initialSort: js.UndefOr[String] = js.undefined
+                                     ) {
   def toJS = {
     val p = js.Dynamic.literal(
       results = results,
@@ -112,18 +112,5 @@ object FlightsView {
                     flights: ReactConnectProxy[Pot[Flights]],
                     airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
                   )
-
-  val component = ScalaComponent.builder[Props]("Flights")
-    .render_P((props) => {
-      <.div(
-        <.h2("Flights"),
-        Panel(
-          Panel.Props("Flights"),
-          FlightsTable(props)
-        )
-      )
-    }).build
-
-  def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)
 }
 
