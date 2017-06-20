@@ -99,9 +99,7 @@ object TerminalPage {
 
               val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
 
-              <.div(
-                //                debugTable,
-                summaryBoxes)
+              <.div(summaryBoxes)
             }
             val recovered = tried recoverWith {
               case f => Try(<.div(f.toString))

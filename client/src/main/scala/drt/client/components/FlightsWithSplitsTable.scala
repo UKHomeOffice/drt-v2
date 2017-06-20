@@ -1,52 +1,36 @@
 package drt.client.components
 
-import drt.shared._
-import diode.data.{Pot, Ready}
-import diode.react.ModelProxy
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.logger
-import drt.client.modules.{GriddleComponentWrapper, ViewTools}
+import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
-import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.{TagMod, TagOf}
-
-import scala.collection.mutable
-import scala.scalajs.js
-import scala.scalajs.js.Dictionary
-import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
-import scala.util.{Failure, Success, Try}
-import logger._
-import org.scalajs.dom.html.Div
-import drt.client.components.FlightTableComponents
-import drt.client.services.SPACircuit
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.{TagMod, TagOf}
+import org.scalajs.dom.html.Div
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+import scala.util.{Failure, Success, Try}
 
 object FlightsWithSplitsTable {
 
-  case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int)
+  type BestPaxForArrivalF = (Arrival) => Int
 
+  case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int)
 
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
   implicit val doubleReuse = Reusability.double(0.001)
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[Arrival]]
   implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
   implicit val flightReuse = Reusability.caseClassDebug[Arrival]
   implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
   implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
-  implicit val bestPaxReuse = Reusability.byRefOr_==[(Arrival) => Int]
-
-  //  implicit val listOfapiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
-  //  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[List[FlightsWithSplits]]
+  implicit val bestPaxReuse = Reusability.byRefOr_==[BestPaxForArrivalF]
   implicit val propsReuse = Reusability.caseClassDebug[Props]
-
 
   def ArrivalsTable[C](timelineComponent: Option[(Arrival) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
@@ -65,7 +49,7 @@ object FlightsWithSplitsTable {
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {
-        if (sortedFlights.nonEmpty) {
+        if (sortedFlights.nonEmpty)
           <.div(
             <.table(
               ^.className := "table table-responsive table-striped table-hover table-sm",
@@ -97,7 +81,7 @@ object FlightsWithSplitsTable {
                     ))
                   }
                 }.toTagMod)))
-        } else
+        else
           <.div("No flights in this time period")
       } match {
         case Success(s) =>
