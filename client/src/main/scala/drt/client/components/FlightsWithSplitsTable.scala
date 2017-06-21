@@ -44,7 +44,7 @@ object FlightsWithSplitsTable {
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
 
-      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.SchDT) //todo move this closer to the model
+      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime) //todo move this closer to the model
       log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
@@ -63,8 +63,7 @@ object FlightsWithSplitsTable {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pcp From"),
-                <.th("Pcp To"),
+                <.th("Est PCP"),
                 <.th("Pax Nos"),
                 <.th("Splits")
               )),
@@ -136,12 +135,6 @@ object FlightTableRow {
 
   implicit val stateReuse = Reusability.caseClass[RowState]
 
-  def millisToDisembark(pax: Int): Long = {
-    val minutesToDisembark = (pax.toDouble / 20).ceil
-    val oneMinuteInMillis = 60 * 1000
-    (minutesToDisembark * oneMinuteInMillis).toLong
-  }
-
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .renderPS((_$, props, state) => {
@@ -203,20 +196,6 @@ object FlightTableRow {
           .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
           .getOrElse(ApiSplits(Nil, "no splits - client"))
 
-        def millisToTagModTry(timeMillis: Long): Try[TagMod] = {
-          val pcpDate = SDate(MilliDate(timeMillis))
-          Try(sdateLocalTimePopup(pcpDate))
-        }
-
-        val pcpTimeFrom: TagMod = millisToTagModTry(flight.PcpTime).recoverWith {
-          case f => Try(<.span("n/a"))
-        }.get
-
-        val pcpEndTimeMillis = flight.PcpTime + millisToDisembark(props.bestPax(flight))
-        val pcpTimeTo: TagMod = millisToTagModTry(pcpEndTimeMillis).recoverWith {
-          case f => Try(<.span("n/a"))
-        }.get
-
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -229,8 +208,7 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.FlightID.toString + "-pcptimefrom", pcpTimeFrom),
-          <.td(^.key := flight.FlightID.toString + "-pcptimeto", pcpTimeTo),
+          <.td(^.key := flight.FlightID.toString + "-pcptimefrom", pcpTimeRange(flight, props.bestPax)),
           <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
           <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {
