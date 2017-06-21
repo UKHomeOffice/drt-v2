@@ -1,27 +1,14 @@
 package drt.client.components
 
-import drt.shared._
 import diode.data.{Pot, Ready}
-import drt.client.components.FlightTableRow.millisToDisembark
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.html_<^._
-import drt.client.logger
-import drt.client.modules.{GriddleComponentWrapper, ViewTools}
+import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.FlightsApi.FlightsWithSplits
-import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.{TagMod, TagOf}
+import drt.shared._
+import japgolly.scalajs.react.vdom.TagMod
+import japgolly.scalajs.react.vdom.html_<^._
 
-import scala.collection.mutable
 import scala.scalajs.js
-import scala.scalajs.js.Dictionary
-import scala.scalajs.js.annotation.{JSExportAll, ScalaJSDefined}
-import scala.util.{Failure, Success, Try}
-import logger._
-import org.scalajs.dom.html.Div
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
+import scala.util.Try
 
 object FlightTableComponents {
 
@@ -85,6 +72,12 @@ object FlightTableComponents {
         <.div("n/a")
     }.get
     p.render
+  }
+
+  def millisToDisembark(pax: Int): Long = {
+    val minutesToDisembark = (pax.toDouble / 20).ceil
+    val oneMinuteInMillis = 60 * 1000
+    (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
   def pcpTimeRange(arrival: Arrival, bestPax: (Arrival) => Int) = {

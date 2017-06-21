@@ -135,12 +135,6 @@ object FlightTableRow {
 
   implicit val stateReuse = Reusability.caseClass[RowState]
 
-  def millisToDisembark(pax: Int): Long = {
-    val minutesToDisembark = (pax.toDouble / 20).ceil
-    val oneMinuteInMillis = 60 * 1000
-    (minutesToDisembark * oneMinuteInMillis).toLong
-  }
-
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .renderPS((_$, props, state) => {
