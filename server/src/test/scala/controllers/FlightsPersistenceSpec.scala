@@ -4,19 +4,21 @@ import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
+import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.joda.time.DateTime
-import org.specs2.mutable.{After, Before, BeforeAfter, SpecificationLike}
+import org.specs2.mutable.{BeforeAfter, SpecificationLike}
 import server.protobuf.messages.FlightsMessage.FlightStateSnapshotMessage
 import services.SplitsProvider.SplitProvider
-import ArrivalGenerator.apiFlight
 import services.inputfeeds.CrunchTests
 import services.{SDate, SplitsProvider}
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.util.Success
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
@@ -91,6 +93,56 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
       result === expected
     }
+
+    "Remember the previous Pax for a flight and use them if the flight comes in with default pax" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        implicit val timeout: Timeout = Timeout(5 seconds)
+        val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
+
+        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+
+        val futureResult: Future[Any] = actor ? GetFlights
+        val futureFlights: Future[List[Arrival]] = futureResult.collect {
+          case Success(Flights(fs)) => fs
+        }
+
+        val result = Await.result(futureResult, 1 second)
+
+        val expected = Flights(List(
+          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00"),
+          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00", lastKnownPax = Option(300))))
+
+        result === expected
+      }
+
+//    "Restore from a v1 snapshot using legacy ApiFlight" in
+//      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+//        createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2017-10-02T20:00")))
+//        val result = startNewActorSystemAndRetrieveFlights
+//
+//        Flights(List(apiFlight("SA0123", "STN", 1, "2017-10-02T20:00"))) === result
+//      }
+//    "Restore from a v2 snapshot using protobuf" in
+//      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+//        createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
+//          Seq(FlightMessage(iATA = Option("SA324"))),
+//          Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+//        ))
+//        val result = startNewActorSystemAndRetrieveFlights
+//
+//        result === Flights(List(Arrival("", "", "", "", "", "", "", "", 0, 0, 0, "", "", 0, "", "", "", "SA324", "", "", 0, None)))
+//      }
+//    "Restore from a v2 snapshot using protobuf" in
+//      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+//        createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
+//          Seq(FlightMessage(iATA = Option("SA324"))),
+//          Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+//        ))
+//        val result = startNewActorSystemAndRetrieveLastKnownPax
+//
+//        result === Map("SA324" -> 300)
+//      }
   }
 
   implicit val timeout: Timeout = Timeout(0.5 seconds)
@@ -144,7 +196,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     (flightsActorRef, crunchActorRef)
   }
 
-  def flightsActor(system: ActorSystem, crunchActorRef: ActorRef, airportCode: String = "EDI") = {
+  def flightsActor(system: ActorSystem, crunchActorRef: ActorRef = crunchActor(system), airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsActor],
       crunchActorRef,
