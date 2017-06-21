@@ -92,18 +92,18 @@ object FlightsTableTests extends TestSuite {
 
       val airportConfig = AirportConfig(
         portCode = "STN",
-        queues = Map("T1" \u2192 Seq("eeaDesk", "nonEeaDesk", "eGate")),
-        slaByQueue = Map("eeaDesk" \u2192 25, "nonEeaDesk" \u2192 45, "eGate" \u2192 20),
+        queues = Map("T1" -> Seq("eeaDesk", "nonEeaDesk", "eGate")),
+        slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20),
         terminalNames = Seq("T1"),
         defaultPaxSplits = SplitRatios(
           TestAirportConfig,
 
           List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
         defaultProcessingTimes = Map(),
-        minMaxDesksByTerminalQueue = Map("T1" \u2192 Map(
-          "eeaDesk" \u2192 (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-          "nonEeaDesk" \u2192 (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-          "eGate" \u2192 (List.fill[Int](24)(1), List.fill[Int](24)(20))
+        minMaxDesksByTerminalQueue = Map("T1" -> Map(
+          "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+          "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
+          "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
         ))
       )
 
@@ -234,7 +234,7 @@ object FlightsTableTests extends TestSuite {
           }
           "Unit tests for airportOrigin Hook" - {
             val airportInfos = Map[String, Pot[AirportInfo]](
-              "JFK" \u2192 Ready(AirportInfo("Johnny Frank Kelvin", "Bulawayo", "Zimbabwe", "JFK")))
+              "JFK" -> Ready(AirportInfo("Johnny Frank Kelvin", "Bulawayo", "Zimbabwe", "JFK")))
             val originTooltip = FlightTableComponents.airportCodeTooltipText(airportInfos) _
 
             'TooltipFound - {
@@ -250,7 +250,7 @@ object FlightsTableTests extends TestSuite {
           }
           "Component test for airportMapper" - {
             val airportInfos = Map[String, Pot[AirportInfo]](
-              "JFK" \u2192 Ready(AirportInfo("Johnny Frank Kelvin", "Bulawayo", "Zimbabwe", "JFK")))
+              "JFK" -> Ready(AirportInfo("Johnny Frank Kelvin", "Bulawayo", "Zimbabwe", "JFK")))
             val expected: VdomElement = <.span(^.title := "Johnny Frank Kelvin, Bulawayo, Zimbabwe", "JFK")
             val actual = FlightTableComponents.airportCodeComponent(airportInfos)("JFK")
             assertRenderedComponentsAreEqual(staticComponent(actual)(), staticComponent(expected)())
