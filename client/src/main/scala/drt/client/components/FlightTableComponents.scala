@@ -85,7 +85,7 @@ object FlightTableComponents {
     val sdateTo = SDate(MilliDate(arrival.PcpTime + millisToDisembark(bestPax(arrival))))
     <.div(
       sdateLocalTimePopup(sdateFrom),
-      " -> ",
+      " \u2192 ",
       sdateLocalTimePopup(sdateTo)
     )
   }
