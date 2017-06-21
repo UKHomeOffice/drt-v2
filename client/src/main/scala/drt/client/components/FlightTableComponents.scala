@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.shared._
 import diode.data.{Pot, Ready}
+import drt.client.components.FlightTableRow.millisToDisembark
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.logger
@@ -81,9 +82,19 @@ object FlightTableComponents {
     }.recover {
       case f =>
         log.error(s"$f from $dt")
-        <.div(f.toString())
+        <.div("n/a")
     }.get
     p.render
+  }
+
+  def pcpTimeRange(arrival: Arrival, bestPax: (Arrival) => Int) = {
+    val sdateFrom = SDate(MilliDate(arrival.PcpTime))
+    val sdateTo = SDate(MilliDate(arrival.PcpTime + millisToDisembark(bestPax(arrival))))
+    <.div(
+      sdateLocalTimePopup(sdateFrom),
+      " -> ",
+      sdateLocalTimePopup(sdateTo)
+    )
   }
 
   def sdateLocalTimePopup(sdate: SDateLike) = {
