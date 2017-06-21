@@ -404,56 +404,6 @@ class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportCo
   }
 }
 
-class SplitsRequestsForMultiTerminalPort extends SpecificationLike {
-  isolated
-  sequential
-
-  import CrunchTests._
-
-  "given a crunch actor" >> {
-
-    "given a crunch actor with airport config for terminals A1 and A2 and a single flight at A1" >> {
-      "when we request a crunch for flights" >> {
-        "then we should see one request for splits for each queue at A1" in {
-
-          object SplitsCounter {
-            private var counter = 0
-            def increment(): Unit = counter = counter + 1
-            def readCounter: Int = counter
-          }
-          def splitRatioProvider: (Arrival => Option[SplitRatios]) =
-            (_: Arrival) => {
-              SplitsCounter.increment()
-              Some(SplitRatios(
-                TestAirportConfig,
-                SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
-                SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.315),
-                SplitRatio(PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk), 0.07),
-                SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.03)
-              ))
-            }
-          val timeProvider = () => DateTime.parse("2016-09-01")
-          val testActorProps = Props(classOf[SplitsRequestRecordingCrunchActor],
-            1, airportConfig, timeProvider, splitRatioProvider
-          )
-
-          withContextCustomActor(testActorProps, ActorSystem("splitsRequestActorSystem", ConfigFactory.empty())) {
-            context =>
-              val flights = Flights(
-                List(
-                  apiFlight(iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T10:31", flightId = 1)))
-              context.sendToCrunch(PerformCrunchOnFlights(flights.flights))
-
-              Thread.sleep(1000)
-
-              SplitsCounter.readCounter === airportConfig.queues("A1").length
-          }
-        }
-      }
-    }
-  }
-}
-
 class StreamFlightCrunchTests
   extends Specification {
   isolated
