@@ -119,7 +119,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       })
 
       val flightsWithLastKnownPax = addLastKnownPaxNos(flightsWithPcpTime)
-      storeLastKnownPaxForFlights(newFlights)
+      storeLastKnownPaxForFlights(flightsWithLastKnownPax)
 
       log.info(s"Adding ${flightsWithLastKnownPax.length} new flights")
       val lastMidnight = LocalDate.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd"))

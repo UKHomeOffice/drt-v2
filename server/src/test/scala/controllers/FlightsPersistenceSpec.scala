@@ -116,6 +116,29 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         result === expected
       }
 
+    "Remember the previous Pax for a flight and use them if the flight comes in with default pax" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        implicit val timeout: Timeout = Timeout(5 seconds)
+        val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
+
+        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+
+        val futureResult: Future[Any] = actor ? GetFlights
+        val futureFlights: Future[List[Arrival]] = futureResult.collect {
+          case Success(Flights(fs)) => fs
+        }
+
+        val result = Await.result(futureResult, 1 second)
+
+        val expected = Flights(List(
+          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00"),
+          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00", lastKnownPax = Option(300))))
+
+        result === expected
+      }
+
     "Restore from a v1 snapshot using legacy ApiFlight" in
       new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2017-10-02T20:00")))
