@@ -14,6 +14,7 @@ object Queues {
   val EGate = "eGate"
   val NonEeaDesk = "nonEeaDesk"
   val FastTrack = "fastTrack"
+  val Transfer = "transfer"
 }
 
 sealed trait PaxType {
@@ -23,6 +24,8 @@ sealed trait PaxType {
 object PaxTypes {
 
   case object EeaNonMachineReadable extends PaxType
+
+  case object Transit extends PaxType
 
   case object VisaNational extends PaxType
 

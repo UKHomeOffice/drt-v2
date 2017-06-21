@@ -5,7 +5,7 @@ import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import drt.shared.{PassengerQueueTypes, PaxType}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
-import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.PaxTypes._
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Iterable
@@ -32,10 +32,12 @@ trait PassengerQueueCalculator {
       case (EeaNonMachineReadable, paxCount) =>
         Seq(SplitsPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
       case (EeaMachineReadable, paxCount) =>
-          Seq(SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount))
+        Seq(SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount))
+      case (Transit, c) => Seq(SplitsPaxTypeAndQueueCount(Transit, Transfer, c))
       case (otherPaxType, c) => Seq(SplitsPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
     }
   }
+
   def calculateQueuesFromPaxTypes(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[SplitsPaxTypeAndQueueCount] = {
     paxTypeAndCount match {
       case (EeaNonMachineReadable, paxCount) =>
@@ -72,7 +74,8 @@ object PassengerTypeCalculator {
   def paxTypes(passengerInfos: Seq[PassengerInfoJson]) = {
     passengerInfos.map {
       (pi) =>
-        paxType(pi.EEAFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
+        if (pi.InTransitFlag == "Y") Transit else
+          paxType(pi.EEAFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
     }
   }
 
