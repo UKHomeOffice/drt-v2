@@ -97,11 +97,11 @@ object Staffing {
     val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
 
     val defaultExamples = Seq(
-      "Midnight shift,{date},00:00,00:59,14",
-      "Night shift,{date},01:00,06:59,6",
-      "Morning shift,{date},07:00,13:59,25",
-      "Afternoon shift,{date},14:00,16:59,13",
-      "Evening shift,{date},17:00,23:59,20"
+      "Midnight shift,T1,{date},00:00,00:59,14",
+      "Night shift,T1,{date},01:00,06:59,6",
+      "Morning shift,T1,{date},07:00,13:59,25",
+      "Afternoon shift,T1,{date},14:00,16:59,13",
+      "Evening shift,T1,{date},17:00,23:59,20"
     )
 
     <.div(
