@@ -182,12 +182,9 @@ class SingleFlightActor
 
       def matches: (VoyageManifest) => Boolean = (flight) => doesFlightMatch(carrierCode, paddedVoyageNumber, scheduledArrivalDateTime, flight)
 
-      val matchingFlights: Option[VoyageManifest] = latestMessage.find {
-        (flight) => {
-          matches(flight)
-        }
-      }
-      matchingFlights match {
+      val matchingFlight: Option[VoyageManifest] = latestMessage.find(matches)
+
+      matchingFlight match {
         case Some(flight) =>
           log.debug(s"$replyTo Matching flight is ${flight.summary}")
           calculateAndSendPaxSplits(sender, port, carrierCode, requestedVoyageNumber, scheduledArrivalDateTime, flight)
