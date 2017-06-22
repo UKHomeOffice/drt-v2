@@ -59,7 +59,7 @@ case class AirportConfig(
 
 object BestPax {
 
-  def apply(portCode: String) = portCode match {
+  def apply(portCode: String) = portCode.toUpperCase match {
     case "LHR" => lhrBestPax
     case _ => bestPax
   }
@@ -75,7 +75,7 @@ object BestPax {
     flight match {
       case f if f.ActPax > 0 && f.ActPax != defaultPax =>
         f.ActPax
-      case f if f.LastKnownPax.isDefined =>
+      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get != defaultPax =>
         f.LastKnownPax.get
       case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
         f.MaxPax

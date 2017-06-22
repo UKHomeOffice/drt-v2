@@ -19,11 +19,9 @@ object FlightComponents {
     airportConfigRCP(acPot => {
       <.div(
         acPot().renderReady(ac => {
-          val (paxNos, paxClass, paxWidth) = if (apiPax > 0)
-            (apiPax, "pax-api", paxBarWidth(maxFlightPax, apiPax))
-          else
-            (flight.ActPax, "pax-portfeed", paxBarWidth(maxFlightPax, BestPax(ac.portCode)(flight)))
-
+          val paxToDisplay = if (apiPax > 0) apiPax else BestPax(ac.portCode)(flight)
+          val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
+          val paxClass = paxDisplayClass(flight, apiPax, paxToDisplay)
           val maxCapLine = maxCapacityLine(maxFlightPax, flight)
 
           <.div(
@@ -31,19 +29,32 @@ object FlightComponents {
             ^.className := "pax-cell",
             maxCapLine,
             <.div(^.className := paxClass, ^.width := paxWidth),
-            <.div(^.className := "pax", paxNos),
+            <.div(^.className := "pax", paxToDisplay),
             maxCapLine)
         }))
     })
   }
 
+  private def paxDisplayClass(flight: Arrival, apiPax: Int, paxToDisplay: Int) = {
+    if (apiPax > 0) {
+      "pax-api"
+    } else if (paxToDisplay == flight.ActPax) {
+      "pax-portfeed"
+    } else {
+      "pax-unknown"
+    }
+  }
+
   def paxComponentTitle(flight: Arrival, apiPax: Int): String = {
-    val api: Any = if (apiPax > 0) apiPax else "n/a"
-    val port: Any = if (flight.ActPax > 0) flight.ActPax else "n/a"
-    val max: Any = if (flight.MaxPax > 0) flight.MaxPax else "n/a"
+    val api: String = if (apiPax > 0) apiPax.toString else "n/a"
+    val port: String = if (flight.ActPax > 0) flight.ActPax.toString else "n/a"
+    val last: String = flight.LastKnownPax.getOrElse("n/a").toString
+    val max: String = if (flight.MaxPax > 0) flight.MaxPax.toString else "n/a"
+
     s"""
        |API: ${api}
        |Port: ${port}
+       |Previous: ${last}
        |Max: ${max}
                   """.stripMargin
   }
@@ -76,7 +87,7 @@ object FlightComponents {
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.passengerType} > ${ptqc.queueType}"
 
   def splitsGraphComponentColoure(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)]): TagOf[Div] = {
-    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits.map{case (k, v) => (paxTypeAndQueueString(k), v)}),
+    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits.map { case (k, v) => (paxTypeAndQueueString(k), v) }),
       <.div(^.className := "graph",
         splits.map {
           case (paxTypeAndQueue, paxCount) =>
