@@ -4,7 +4,7 @@ import akka.actor._
 import akka.event.LoggingReceive
 import passengersplits.core
 import core.PassengerInfoRouterActor._
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{EventCodes, VoyageManifest}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.SDateLike
 import services.SDate.implicits._
@@ -29,6 +29,7 @@ object PassengerInfoRouterActor {
   case object LogStatus
 
   case class VoyageManifestZipFileComplete(zipfilename: String, completionMonitor: ActorRef)
+
   case class VoyageManifestZipFileCompleteAck(zipfilename: String)
 
   case object ManifestZipFileInit
@@ -55,7 +56,7 @@ trait SimpleRouterActor[C <: Actor] {
   def childProps: Props
 
   def getRCActor(id: String) = {
-//    log.info(s"childActorKeys: ${childActorMap.keys}")
+    //    log.info(s"childActorKeys: ${childActorMap.keys}")
     childActorMap getOrElse(id, {
       val c = context actorOf childProps
       childActorMap += id -> c
@@ -165,9 +166,10 @@ class SingleFlightActor
   }
 
   def receive = LoggingReceive {
-    case info: VoyageManifest =>
-      log.debug(s"${self} SingleFlightActor received ${info.summary}")
-      latestMessage = Option(info)
+    case newManifest: VoyageManifest =>
+      log.info(s"${self} SingleFlightActor received ${newManifest.summary}")
+      val manifestToUse = if (isManifestSane(newManifest)) Option(newManifest) else latestMessage
+      latestMessage = manifestToUse
       log.debug(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
       log.debug(s"$self Acking to $sender")
       sender ! PassengerSplitsAck
@@ -217,6 +219,27 @@ class SingleFlightActor
       log.error(s"Got unhandled $default")
   }
 
+  def isManifestSane(newManifest: VoyageManifest): Boolean = {
+    if (latestMessage.isEmpty) {
+      true
+    } else {
+      latestMessage.get match {
+        case currentManifest@VoyageManifest(prevEc, _, _, _, _, _, _, prevPaxList) =>
+          val ciPax = prevPaxList.length
+          val dcPax = newManifest.PassengerList.length
+          val pcDiff = (100 * (Math.abs(ciPax - dcPax).toDouble / ciPax)).toInt
+          val newEc = newManifest.EventCode
+          log.info(s"${currentManifest.flightCode} $prevEc had $ciPax pax. $newEc has $dcPax pax. $pcDiff% difference")
+
+          if (prevEc == EventCodes.CheckIn && newEc == EventCodes.DoorsClosed && pcDiff > 50) {
+            log.info(s"${currentManifest.flightCode} DC message with $pcDiff% difference in pax seems not to be sane")
+            false
+          }
+          else true
+      }
+    }
+  }
+
   def calculateAndSendPaxSplits(replyTo: ActorRef,
                                 port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyageManifest): Unit = {
     val splits: VoyagePaxSplits = calculateFlightSplits(port, carrierCode, voyageNumber, scheduledArrivalDateTime, flight, flightEgatePercentage = 0)
@@ -232,7 +255,7 @@ class SingleFlightActor
                             flight: VoyageManifest, flightEgatePercentage: Double = 0.6d): VoyagePaxSplits = {
     log.info(s"$self calculating splits $port $carrierCode $voyageNumber ${scheduledArrivalDateTime.toString}")
     val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
-          convertPassengerInfoToPaxQueueCounts(flight.PassengerList, flightEgatePercentage)
+      convertPassengerInfoToPaxQueueCounts(flight.PassengerList, flightEgatePercentage)
     VoyagePaxSplits(
       port,
       carrierCode, voyageNumber, flight.PassengerList.length, scheduledArrivalDateTime,
