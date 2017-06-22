@@ -29,9 +29,9 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
 
   def transferPaxGoToATransferQueue =
     s2"""
-    Given A Flight $createFlight
+    - Given A Flight $createFlight
      And the flight has passengers
-     And a Passenger is from {UK} {InTransit} disembarking {BCN} $addPassenger
+     And a Passenger is from {DEU} {InTransit} disembarking {BCN} $addPassenger
      And a Passenger is from {DEU} {NotInTransit} disembarking {LHR} $addPassenger
     When we calculate the splits $calcSplits
     Then we do NOT see them in the split counts
