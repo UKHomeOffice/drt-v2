@@ -116,7 +116,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         result === expected
       }
 
-    "Remember the previous Pax for a flight and use them if the flight comes in with default pax" in
+    "Not remember the previous Pax for a flight if it was the default" in
       new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         implicit val timeout: Timeout = Timeout(5 seconds)
         val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
@@ -146,21 +146,34 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
         Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-10-02T20:00"))) === result
       }
+
     "Restore flights from a v2 snapshot using protobuf" in
       new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
-          Seq(FlightMessage(iATA = Option("SA324"))),
-          Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+          flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
+          lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
         ))
         val result = startNewActorSystemAndRetrieveFlights
 
         result === Flights(List(Arrival("", "", "", "", "", "", "", "", 0, 0, 0, "", "", 0, "", "", "", "SA324", "", "", 0, None)))
       }
+
     "Restore last known pax from a v2 snapshot using protobuf" in
       new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
-          Seq(FlightMessage(iATA = Option("SA324"))),
-          Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+          flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
+          lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+        ))
+        val result = startNewActorSystemAndRetrieveLastKnownPax
+
+        result === Map("SA324" -> 300)
+      }
+
+    "Restore last known pax from a v2 snapshot using protobuf" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
+          flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
+          lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
         ))
         val result = startNewActorSystemAndRetrieveLastKnownPax
 
