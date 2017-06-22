@@ -147,7 +147,7 @@ object FlightTableRow {
       val flight = flightWithSplits.apiFlight
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
-      log.info(s"rendering flight row $idx ${flight.toString}")
+      log.debug(s"rendering flight row $idx ${flight.toString}")
       Try {
         val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
 
@@ -241,7 +241,6 @@ object FlightTableRow {
         log.info(s"row ${i.nextProps} changed")
       i.setState(RowState(i.nextProps != i.currentProps))
     })
-    .componentDidMount(p => Callback.log(s"row didMount $p"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
