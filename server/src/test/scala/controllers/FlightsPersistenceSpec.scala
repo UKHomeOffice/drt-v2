@@ -168,17 +168,6 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
         result === Map("SA324" -> 300)
       }
-
-    "Restore last known pax from a v2 snapshot using protobuf" in
-      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
-        createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
-          flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
-          lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
-        ))
-        val result = startNewActorSystemAndRetrieveLastKnownPax
-
-        result === Map("SA324" -> 300)
-      }
   }
 
   implicit val timeout: Timeout = Timeout(0.5 seconds)
