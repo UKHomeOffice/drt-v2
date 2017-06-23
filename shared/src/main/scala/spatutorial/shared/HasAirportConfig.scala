@@ -109,6 +109,7 @@ object PaxTypesAndQueues {
   val visaNationalToDesk = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk)
   val nonVisaNationalToDesk = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
   val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)
+  val transitToTransfer = PaxTypeAndQueue(PaxTypes.Transit, Queues.Transfer)
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
   /*todo - we should move the usages of this to airportConfig */
@@ -274,15 +275,16 @@ object AirportConfigs {
     visaNationalToDesk -> 96d / 60,
     nonVisaNationalToDesk -> 78d / 60,
     nonVisaNationalToFastTrack -> 78d / 60,
-    visaNationalToFastTrack -> 78d / 60
+    visaNationalToFastTrack -> 78d / 60,
+    transitToTransfer -> 0d
   )
   val lhr = AirportConfig(
     portCode = "LHR",
     queues = Map(
-      "T2" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack),
-      "T3" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack),
-      "T4" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack),
-      "T5" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack)
+      "T2" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
+      "T3" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
+      "T4" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
+      "T5" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer)
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     terminalNames = Seq("T2", "T3", "T4", "T5"),

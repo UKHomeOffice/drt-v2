@@ -59,9 +59,11 @@ trait PassengerQueueCalculator {
 }
 
 object PassengerQueueCalculator extends PassengerQueueCalculator {
+  val log = LoggerFactory.getLogger(getClass)
   def convertPassengerInfoToPaxQueueCounts(ps: Seq[PassengerInfoJson], egatePercentage: Double): PassengerQueueTypes.PaxTypeAndQueueCounts = {
     val paxTypes = PassengerTypeCalculator.paxTypes(ps)
     val paxTypeCounts = countPassengerTypes(paxTypes)
+    log.info(s"paxTypes: $paxTypeCounts")
     val queuePaxCounts = calculateQueuePaxCounts(paxTypeCounts, egatePercentage)
     queuePaxCounts
   }

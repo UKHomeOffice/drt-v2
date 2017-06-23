@@ -39,13 +39,10 @@ object FlightsWithSplitsTable {
                       ) = ScalaComponent.builder[Props]("ArrivalsTable")
 
     .renderP((_$, props) => {
-      log.info(s"sorting flights")
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
-
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.SchDT) //todo move this closer to the model
-      log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {

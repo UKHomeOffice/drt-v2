@@ -33,7 +33,8 @@ object TableViewUtils {
     */
   def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
 
-  def queueDisplayName = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
+  val queueDisplayNames = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
+  def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
 
   def terminalDeploymentsRows(
                                terminalName: TerminalName,
@@ -46,22 +47,8 @@ object TableViewUtils {
                              ): List[TerminalDeploymentsRow] = {
     airportConfigPot match {
       case Ready(airportConfig) =>
-        log.info(s"call terminalUserDeskRecsRows")
         val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map(queueName => {
-          simulationResult.get(queueName) match {
-            case Some(Ready(sr)) =>
-              val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
-              log.info(s"before transpose it is ${result}")
-              log.info(s"before transpose it is ${result.map(_.length)}")
-              queueDeploymentsRowsFromNos(queueName, result)
-            case None =>
-              queueCrunchResultsForTerminal.get(queueName) match {
-                case Some(Ready(cr)) =>
-                  queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
-                case _ =>
-                  List()
-              }
-          }
+          processQueue(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
         }).toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
@@ -71,6 +58,23 @@ object TableViewUtils {
           TerminalDeploymentsRow(queueRows._1, qr)
         }).toList.sortWith(_.time < _.time)
       case _ => List()
+    }
+  }
+
+  def processQueue(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]], simulationResult: Map[QueueName, Pot[SimulationResult]], userDeskRec: QueueStaffDeployments, queueName: QueueName) = {
+    simulationResult.get(queueName) match {
+      case Some(Ready(sr)) =>
+        val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
+        log.info(s"before transpose it is ${result}")
+        log.info(s"before transpose it is ${result.map(_.length)}")
+        queueDeploymentsRowsFromNos(queueName, result)
+      case None =>
+        queueCrunchResultsForTerminal.get(queueName) match {
+          case Some(Ready(cr)) =>
+            queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
+          case _ =>
+            List()
+        }
     }
   }
 
@@ -100,17 +104,27 @@ object TableViewUtils {
 
     log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
     log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
+    val simulationResultWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
+    val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)
+    val simResultRecDesks = simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
+    val paddedRecDesks: List[Long] = padSimResult(simResultRecDesks, numberOf15MinuteSlots)
+
     Seq(
       ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList,
+      paddedRecDesks,
       queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
       getSafeUserDeskRecs(userDeskRec, qn, ts),
       queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-      simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+      paddedSimulationResultWaitTimes
     )
   }
 
+
+  private def padSimResult(simulationResultWaitTimes: List[Long], numberOf15MinuteSlots: Int): List[Long] = {
+    if (simulationResultWaitTimes.isEmpty) List.fill(numberOf15MinuteSlots)(0) else simulationResultWaitTimes
+  }
 
   def queueNosFromCrunchResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
                                queueCrunchResultsForTerminal: QueueCrunchResults,
@@ -189,7 +203,7 @@ object SPAMain extends js.JSApp {
       TerminalPage(page.id, ctl)
     })
     val terminalsDashboard = dynamicRouteCT("#terminalsDashboard" / int
-      .caseClass[TerminalsDashboardLoc]) ~> dynRenderR ((page: TerminalsDashboardLoc, ctl) => {
+      .caseClass[TerminalsDashboardLoc]) ~> dynRenderR((page: TerminalsDashboardLoc, ctl) => {
       TerminalsDashboardPage(page.hours, ctl)
     })
 

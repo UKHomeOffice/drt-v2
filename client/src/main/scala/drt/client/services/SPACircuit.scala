@@ -135,17 +135,24 @@ case class RootModel(
     val crv = queueCrunchResults.getOrElse(terminalName, Map())
     val srv = simulationResult.getOrElse(terminalName, Map())
     val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
-    log.info(s"tud: ${terminalName}")
     val terminalDeploymentRows: Pot[List[TerminalDeploymentsRow]] = workloadPot.map(workloads => {
       workloads.workloads.get(terminalName) match {
         case Some(terminalWorkloads) =>
-          val timestamps = workloads.timeStamps()
-          val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-          val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+          val tried: Try[List[TerminalDeploymentsRow]] = Try {
+            val timestamps = workloads.timeStamps()
+            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
 
-          val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
 
-          TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
+            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
+          } recover {
+            case f =>
+              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads)
+              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint")
+              Nil
+          }
+          tried.get
         case None =>
           Nil
       }
@@ -262,7 +269,12 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
   protected def handle = {
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
-      updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
+      updated(Pending(),
+        Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads).recover {
+          case f =>
+            log.error(s"failure getting workloads $f")
+            NoAction
+        }))
     case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
       val paxLoadsByTerminalAndQueue: Map[TerminalName, Map[QueueName, Seq[Pax]]] = terminalQueueWorkloads.mapValues(_.mapValues(_._2))
       for {(t, tl) <- paxLoadsByTerminalAndQueue
@@ -379,7 +391,6 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
   protected def handle = {
     case RequestFlights(from, to) =>
-      log.info(s"client requesting flights $from $to")
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
       val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
@@ -395,11 +406,10 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
           val airportCodes = flights.map(_.Origin).toSet
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
 
-          val getWorkloads = {
-            //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
-            log.info("flights Have changed - will re-request workloads")
-            Effect(Future(GetWorkloads("", "")))
-          }
+//          val getWorkloads = {
+//            //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
+//            Effect.action(log.info("flights Have changed - will re-request workloads")) >> Effect(Future(GetWorkloads("", "")))
+//          }
 
           val allEffects = airportInfos //>> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
@@ -434,7 +444,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
         case Right(crunchResultWithTimeAndInterval) =>
           UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
         case Left(ncr) =>
-          log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
+          log.debug(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
           NoAction
       }
       effectOnly(Effect(fe) + crunchEffect)

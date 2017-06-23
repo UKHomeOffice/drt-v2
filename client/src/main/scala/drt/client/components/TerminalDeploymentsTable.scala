@@ -4,7 +4,7 @@ import diode.data.{Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.TableHeaderCell
+import org.scalajs.dom.html.{TableHeaderCell, TableRow}
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
@@ -14,9 +14,11 @@ import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
+import japgolly.scalajs.react.vdom.TagOf
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
+import scala.util.Try
 
 object TerminalDeploymentsTable {
   // shorthand for styles
@@ -92,7 +94,7 @@ object TerminalDeploymentsTable {
   case class TerminalProps(terminalName: String)
 
   def terminalDeploymentsComponent(props: TerminalProps) = {
-    val airportFlightsSimresWorksQcrsUdrs = SPACircuit.connect(model => {
+    val practicallyEverything = SPACircuit.connect(model => {
       PracticallyEverything(
         model.airportInfos,
         model.flightsWithSplitsPot,
@@ -110,13 +112,16 @@ object TerminalDeploymentsTable {
     val airportWrapper = SPACircuit.connect(_.airportInfos)
     val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
 
-    airportFlightsSimresWorksQcrsUdrs(peMP => {
+    practicallyEverything(peMP => {
       <.div(
         terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
           rowsOptMP() match {
-            case None => <.div()
+            case None => <.div("No rows yet")
             case Some(rowsPot) =>
+              log.info(s"rowLen ${rowsPot.map(_.length)}")
+              log.info(s"rowsAre $rowsPot")
               <.div(
+                "RowsState:" + rowsPot.state,
                 rowsPot.renderReady(rows =>
                   airportConfigPotRCP(airportConfigPotMP => {
                     <.div(
@@ -126,85 +131,106 @@ object TerminalDeploymentsTable {
                   })))
           }
         }),
-        peMP().workload.renderPending(_ => <.div("Waiting for crunch results")))
+        peMP().workload.renderPending(_ => <.div("Waiting for workloads")))
     })
   }
+
+  case class RowProps(item: TerminalDeploymentsRow, index: Int,
+                      flights: Pot[FlightsWithSplits],
+                      airportConfig: AirportConfig,
+                      airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]])
+
+  val itemRow = ScalaComponent.builder[RowProps]("deploymentRow")
+    .render_P((p) => renderRow(p))
+    .build
+
+  def renderRow(props: RowProps): TagOf[TableRow] = {
+    val item = props.item
+    val index = props.index
+    log.info(s"rendering terminalDeploymentsRow $index")
+    val time = item.time
+    val windowSize = 60000 * 15
+    val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
+      flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
+
+    val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
+    val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
+    val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
+
+    val queueRowCells = item.queueDetails.flatMap(
+      (q: QueueDeploymentsRow) => {
+        val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
+        val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
+
+        def qtd(xs: TagMod*) = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+
+        Seq(
+          qtd(q.pax),
+          qtd(q.userDeskRec.deskRec),
+          qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
+      }
+    ).toList
+    val totalRequired = item.queueDetails.map(_.crunchDeskRec).sum
+    val totalDeployed = item.queueDetails.map(_.userDeskRec.deskRec).sum
+    val ragClass = totalRequired.toDouble / totalDeployed match {
+      case diff if diff >= 1 => "red"
+      case diff if diff >= 0.75 => "amber"
+      case _ => ""
+    }
+    val queueRowCellsWithTotal = queueRowCells :+
+      <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
+      <.td(^.className := s"total-deployed $ragClass", totalDeployed)
+    <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
+  }
+
+  def queueColour(queueName: String): String = queueName + "-user-desk-rec"
 
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(props: Props) = {
-      log.info("%%%%%%%rendering terminal deployments table...")
+      val t = Try {
+        log.info("%%%%%%%rendering terminal deployments table...")
 
-      val style = bss.listGroup
+        val style = bss.listGroup
 
-      def renderItem(itemWithIndex: (TerminalDeploymentsRow, Int)) = {
-        val item = itemWithIndex._1
-        val index = itemWithIndex._2
+        def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-        val time = item.time
-        val windowSize = 60000 * 15
-        val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
-          flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
+        log.info(s"here1")
+        val headings = props.airportConfig.queues(props.terminalName).map {
+          case (queueName) =>
+            qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+        }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
-        val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
-        val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
-        val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
-
-        val queueRowCells = item.queueDetails.flatMap(
-          (q: QueueDeploymentsRow) => {
-            val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
-            val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue(q.queueName)) "table-danger" else ""
-
-            def qtd(xs: TagMod*) = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
-
-            Seq(
-              qtd(q.pax),
-              qtd(q.userDeskRec.deskRec),
-              qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
-          }
-        ).toList
-        val totalRequired = item.queueDetails.map(_.crunchDeskRec).sum
-        val totalDeployed = item.queueDetails.map(_.userDeskRec.deskRec).sum
-        val ragClass = totalRequired.toDouble / totalDeployed match {
-          case diff if diff >= 1 => "red"
-          case diff if diff >= 0.75 => "amber"
-          case _ => ""
+        val defaultNumberOfQueues = 3
+        val headOption = props.items.headOption
+        val numQueues = headOption match {
+          case Some(item) => item.queueDetails.length
+          case None =>
+            defaultNumberOfQueues
         }
-        val queueRowCellsWithTotal = queueRowCells :+
-          <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
-          <.td(^.className := s"total-deployed $ragClass", totalDeployed)
-        <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
+
+        <.div(
+          <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
+            <.thead(
+              ^.display := "block",
+              <.tr(<.th("") :: headings: _*),
+              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList): _*)),
+            <.tbody(
+              ^.display := "block",
+              ^.overflow := "scroll",
+              ^.height := "500px",
+              props.items.zipWithIndex.map {
+                case (item, index) => renderRow(RowProps(item, index, props.flights, props.airportConfig, props.airportInfos))
+              }.toTagMod)))
+      } recover {
+        case t =>
+          log.error(s"Failed to render deployment table $t", t.asInstanceOf[Exception])
+          <.div(s"Can't render bcause $t")
       }
 
-      def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
-
-      val headings = props.airportConfig.queues(props.terminalName).map {
-        case (queueName) =>
-          qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
-      }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
-
-      val defaultNumberOfQueues = 3
-      val headOption = props.items.headOption
-      val numQueues = headOption match {
-        case Some(item) => item.queueDetails.length
-        case None =>
-          defaultNumberOfQueues
-      }
-
-      <.div(
-        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
-          <.thead(
-            ^.display := "block",
-            <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList): _*)),
-          <.tbody(
-            ^.display := "block",
-            ^.overflow := "scroll",
-            ^.height := "500px",
-            props.items.zipWithIndex.map(renderItem).toTagMod)))
+      t.get
     }
 
-    def queueColour(queueName: String): String = queueName + "-user-desk-rec"
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 

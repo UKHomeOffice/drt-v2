@@ -10,7 +10,10 @@
 
     <!--<logger name="services.AdvPaxSplitsProvider" level="DEBUG" />-->
 
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
+    <logger level="DEBUG" name="services">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 </configuration>

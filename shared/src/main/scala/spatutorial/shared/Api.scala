@@ -164,6 +164,7 @@ object CrunchResult {
   def empty = CrunchResult(0, 0, Vector[Int](), Nil)
 }
 
+
 case class CrunchResult(
                          firstTimeMillis: Long,
                          intervalMillis: Long,
