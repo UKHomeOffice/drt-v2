@@ -56,7 +56,6 @@ trait SimpleRouterActor[C <: Actor] {
   def childProps: Props
 
   def getRCActor(id: String) = {
-    //    log.info(s"childActorKeys: ${childActorMap.keys}")
     childActorMap getOrElse(id, {
       val c = context actorOf childProps
       childActorMap += id -> c
@@ -151,6 +150,7 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
 
 class SingleFlightActor
   extends Actor with PassengerQueueCalculator with ActorLogging {
+  val dcPaxIncreaseThreshold = 50
   var latestMessage: Option[VoyageManifest] = None
 
   @scala.throws[Exception](classOf[Exception])
@@ -170,8 +170,10 @@ class SingleFlightActor
       log.info(s"${self} SingleFlightActor received ${newManifest.summary}")
 
       val manifestToUse = if (latestMessage.isEmpty) Option(newManifest)
-      else if (shouldAcceptNewManifest(newManifest, latestMessage.get)) Option(newManifest)
-      else latestMessage
+      else {
+        if (shouldAcceptNewManifest(newManifest, latestMessage.get, dcPaxIncreaseThreshold)) Option(newManifest)
+        else latestMessage
+      }
 
       latestMessage = manifestToUse
       log.debug(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
@@ -222,13 +224,13 @@ class SingleFlightActor
       log.error(s"Got unhandled $default")
   }
 
-  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest): Boolean = {
+  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest, dcPaxIncreaseThreshold: Int): Boolean = {
     val ciPax = existing.PassengerList.length
     val dcPax = candidate.PassengerList.length
     val pcDiff = (100 * (Math.abs(ciPax - dcPax).toDouble / ciPax)).toInt
     log.info(s"${existing.flightCode} ${existing.EventCode} had $ciPax pax. ${candidate.EventCode} has $dcPax pax. $pcDiff% difference")
 
-    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && pcDiff > 50) {
+    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && pcDiff > dcPaxIncreaseThreshold) {
       log.info(s"${existing.flightCode} DC message with $pcDiff% difference in pax. Not trusting it")
       false
     } else true
