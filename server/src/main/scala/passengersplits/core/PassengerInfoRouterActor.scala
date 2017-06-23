@@ -168,12 +168,15 @@ class SingleFlightActor
   def receive = LoggingReceive {
     case newManifest: VoyageManifest =>
       log.info(s"${self} SingleFlightActor received ${newManifest.summary}")
-      val manifestToUse = if (isManifestSane(newManifest)) Option(newManifest) else latestMessage
+
+      val manifestToUse = if (latestMessage.isEmpty) Option(newManifest)
+      else if (shouldAcceptNewManifest(newManifest, latestMessage.get)) Option(newManifest)
+      else latestMessage
+
       latestMessage = manifestToUse
       log.debug(s"$self latestMessage now set ${latestMessage.toString.take(30)}")
       log.debug(s"$self Acking to $sender")
       sender ! PassengerSplitsAck
-
 
     case ReportVoyagePaxSplit(port, carrierCode, requestedVoyageNumber, scheduledArrivalDateTime) =>
       val replyTo = sender()
@@ -219,25 +222,16 @@ class SingleFlightActor
       log.error(s"Got unhandled $default")
   }
 
-  def isManifestSane(newManifest: VoyageManifest): Boolean = {
-    if (latestMessage.isEmpty) {
-      true
-    } else {
-      latestMessage.get match {
-        case currentManifest@VoyageManifest(prevEc, _, _, _, _, _, _, prevPaxList) =>
-          val ciPax = prevPaxList.length
-          val dcPax = newManifest.PassengerList.length
-          val pcDiff = (100 * (Math.abs(ciPax - dcPax).toDouble / ciPax)).toInt
-          val newEc = newManifest.EventCode
-          log.info(s"${currentManifest.flightCode} $prevEc had $ciPax pax. $newEc has $dcPax pax. $pcDiff% difference")
+  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest): Boolean = {
+    val ciPax = existing.PassengerList.length
+    val dcPax = candidate.PassengerList.length
+    val pcDiff = (100 * (Math.abs(ciPax - dcPax).toDouble / ciPax)).toInt
+    log.info(s"${existing.flightCode} ${existing.EventCode} had $ciPax pax. ${candidate.EventCode} has $dcPax pax. $pcDiff% difference")
 
-          if (prevEc == EventCodes.CheckIn && newEc == EventCodes.DoorsClosed && pcDiff > 50) {
-            log.info(s"${currentManifest.flightCode} DC message with $pcDiff% difference in pax seems not to be sane")
-            false
-          }
-          else true
-      }
-    }
+    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && pcDiff > 50) {
+      log.info(s"${existing.flightCode} DC message with $pcDiff% difference in pax. Not trusting it")
+      false
+    } else true
   }
 
   def calculateAndSendPaxSplits(replyTo: ActorRef,
