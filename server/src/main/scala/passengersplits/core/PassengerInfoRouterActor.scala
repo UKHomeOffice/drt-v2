@@ -150,7 +150,7 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
 
 class SingleFlightActor
   extends Actor with PassengerQueueCalculator with ActorLogging {
-  val dcPaxIncreaseThreshold = 50
+  val dcPaxIncPercentThreshold = 50
   var latestMessage: Option[VoyageManifest] = None
 
   @scala.throws[Exception](classOf[Exception])
@@ -171,7 +171,7 @@ class SingleFlightActor
 
       val manifestToUse = if (latestMessage.isEmpty) Option(newManifest)
       else {
-        if (shouldAcceptNewManifest(newManifest, latestMessage.get, dcPaxIncreaseThreshold)) Option(newManifest)
+        if (shouldAcceptNewManifest(newManifest, latestMessage.get, dcPaxIncPercentThreshold)) Option(newManifest)
         else latestMessage
       }
 
@@ -224,14 +224,14 @@ class SingleFlightActor
       log.error(s"Got unhandled $default")
   }
 
-  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest, dcPaxIncreaseThreshold: Int): Boolean = {
-    val ciPax = existing.PassengerList.length
-    val dcPax = candidate.PassengerList.length
-    val pcDiff = (100 * (Math.abs(ciPax - dcPax).toDouble / ciPax)).toInt
-    log.info(s"${existing.flightCode} ${existing.EventCode} had $ciPax pax. ${candidate.EventCode} has $dcPax pax. $pcDiff% difference")
+  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest, dcPaxIncPercentThreshold: Int): Boolean = {
+    val existingPax = existing.PassengerList.length
+    val candidatePax = candidate.PassengerList.length
+    val percentageDiff = (100 * (Math.abs(existingPax - candidatePax).toDouble / existingPax)).toInt
+    log.info(s"${existing.flightCode} ${existing.EventCode} had $existingPax pax. ${candidate.EventCode} has $candidatePax pax. $percentageDiff% difference")
 
-    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && pcDiff > dcPaxIncreaseThreshold) {
-      log.info(s"${existing.flightCode} DC message with $pcDiff% difference in pax. Not trusting it")
+    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && percentageDiff > dcPaxIncPercentThreshold) {
+      log.info(s"${existing.flightCode} DC message with $percentageDiff% difference in pax. Not trusting it")
       false
     } else true
   }
