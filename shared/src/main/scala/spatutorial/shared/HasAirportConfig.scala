@@ -61,14 +61,18 @@ object BestPax {
 
   def apply(portCode: String) = portCode.toUpperCase match {
     case "LHR" => lhrBestPax
-    case "MAN" => manBestPax
     case _ => bestPax
   }
 
-  def bestPax = (f: Arrival) => {
-    if (f.ActPax > 0) f.ActPax
-    else f.MaxPax
-  }
+  def bestPax = (flight: Arrival) => {
+    flight match {
+      case f if f.ActPax > 0 =>
+        f.ActPax
+      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get > 0 =>
+        f.LastKnownPax.get
+      case f =>
+        f.MaxPax
+    }  }
 
   def lhrBestPax = (flight: Arrival) => {
     val defaultPax = 200
@@ -82,17 +86,6 @@ object BestPax {
         f.MaxPax
       case _ =>
         defaultPax
-    }
-  }
-
-  def manBestPax = (flight: Arrival) => {
-    flight match {
-      case f if f.ActPax > 0 =>
-        f.ActPax
-      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get > 0 =>
-        f.LastKnownPax.get
-      case f =>
-        f.MaxPax
     }
   }
 }
