@@ -14,6 +14,7 @@ import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
+import japgolly.scalajs.react.extra.Reusability
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
@@ -32,11 +33,11 @@ object TerminalDeploymentsTable {
                                   queueName: QueueName
                                 )
 
-  case class TerminalDeploymentsRow(time: Long, queueDetails: Seq[QueueDeploymentsRow])
+  case class TerminalDeploymentsRow(time: Long, queueDetails: List[QueueDeploymentsRow])
 
   case class Props(
                     terminalName: String,
-                    items: Seq[TerminalDeploymentsRow],
+                    items: List[TerminalDeploymentsRow],
                     flights: Pot[FlightsWithSplits],
                     airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -130,9 +131,9 @@ object TerminalDeploymentsTable {
     })
   }
 
-  class Backend($: BackendScope[Props, Unit]) {
+  object RenderTable {
 
-    def render(props: Props) = {
+    def apply(props: Props) = {
       log.info("%%%%%%%rendering terminal deployments table...")
 
       val style = bss.listGroup
@@ -227,13 +228,47 @@ object TerminalDeploymentsTable {
     }
   }
 
+//  implicit val terminalReuse = Reusability.string
+  implicit val doubleReuse = Reusability.double(0.001)
+  implicit val deskRecTimeslotReuse = Reusability.caseClass[DeskRecTimeslot]
+//  implicit val queueDeploymentsRowReuse = Reusability.caseClass[QueueDeploymentsRow]
+    implicit val queueDeploymentsRowReuse = Reusability.caseClass[QueueDeploymentsRow]
+  implicit val itemsReuse = Reusability.caseClass[TerminalDeploymentsRow]
+//  implicit val arrivalReuse = Reusability.caseClass[Arrival]
+//  implicit val queueNameReuse = Reusability.caseClass[QueueName]
+//  implicit val terminalNameReuse = Reusability.caseClass[TerminalName]
+  //  implicit val paxTypeEeaMachineReadableReuse = Reusability.caseClass[PaxTypes.EeaMachineReadable]
+  //  implicit val paxTypeEeaNonMachineReadableReuse = Reusability.caseClass[PaxTypes.EeaNonMachineReadable]
+//  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
+
+//  implicit val apiPaxTypeAndQueueCountSplitsReuse = Reusability.caseClassExcept[ApiPaxTypeAndQueueCount]('passengerType)
+//  implicit val apiSplitsReuse = Reusability.caseClass[ApiSplits]
+//  implicit val apiFlightWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
+//  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
+  //  implicit val airportInfosReuse = Reusability.caseClassDebug[AirportConfig]
+//  implicit val airportConfigReuse = Reusability.by_==[AirportConfig]
+//  implicit val stateChangeReuse = Reusability.byRefOr_==[(QueueName, DeskRecTimeslot) => Callback]
+  //  case class Props(
+  //                    terminalName: String,
+  //                    items: Seq[TerminalDeploymentsRow],
+  //                    flights: Pot[FlightsWithSplits],
+  //                    airportConfig: AirportConfig,
+  //                    airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+  //                    stateChange: (QueueName, DeskRecTimeslot) => Callback
+  //                  )
+
+  implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos, 'stateChange)
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
-    .renderBackend[Backend]
+    .renderP((_$, props) => {
+      RenderTable(props)
+    })
+    .componentDidMount((props) => Callback.log(s"componentDidMount! $props"))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(terminalName: String, items: Seq[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],
             airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
             stateChange: (QueueName, DeskRecTimeslot) => Callback) =
-    component(Props(terminalName, items, flights, airportConfig, airportInfos, stateChange))
+    component(Props(terminalName, items.toList, flights, airportConfig, airportInfos, stateChange))
 }
