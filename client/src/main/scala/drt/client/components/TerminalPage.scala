@@ -111,28 +111,32 @@ object TerminalPage {
 
       val simulationResultComponent = airportConfigRCP((airportConfigMP: ModelProxy[Pot[AirportConfig]]) => {
         val airportConfigPot = airportConfigMP()
-//        val seriesPot: Pot[List[Series]] = waitTimes(simResAndAirportConfigMP()._1.getOrElse(props.terminalName, Map()), props.terminalName)
         <.div({
           airportConfigPot.renderReady(airportConfig => {
             val bestPax = BestPax(airportConfig.portCode)
             val terminalProps = TerminalDeploymentsTable.TerminalProps(props.terminalName)
             <.div(
-              <.ul(^.className := "nav nav-tabs",
-                <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
-                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads"))/*,
-                seriesPot.renderReady(s =>
-                  <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times"))
-                )*/
-              )
-              ,
-              <.div(^.className := "tab-content",
-                <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
-                  heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
-                <.div(^.id := "workloads", ^.className := "tab-pane fade",
-                  heatmapOfWorkloads(props.terminalName)),
-                <.div(^.id := "waits", ^.className := "tab-pane fade",
-                  heatmapOfWaittimes(props.terminalName))
-              )
+              <.div({
+                val simResRCP = SPACircuit.connect(_.simulationResult)
+                simResRCP(simResMP => {
+                  val seriesPot: Pot[List[Series]] = waitTimes(simResMP().getOrElse(props.terminalName, Map()), props.terminalName)
+                    <.div(
+                      <.ul(^.className := "nav nav-tabs",
+                        <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
+                        <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
+                        <.li(seriesPot.renderReady(s => {<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times")}))
+                      )
+                      ,
+                      <.div(^.className := "tab-content",
+                        <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
+                          heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
+                        <.div(^.id := "workloads", ^.className := "tab-pane fade",
+                          heatmapOfWorkloads(props.terminalName)),
+                        <.div(^.id := "waits", ^.className := "tab-pane fade",
+                          heatmapOfWaittimes(props.terminalName))
+                      ))
+                })
+              })
               ,
               <.ul(^.className := "nav nav-tabs",
                 <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
@@ -149,20 +153,22 @@ object TerminalPage {
                       val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
                       val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
 
-//                      "flight here"
-                                          FlightsWithSplitsTable.ArrivalsTable(
-                                            timelineComp,
-                                            originMapper,
-                                            paxComp(maxFlightPax),
-                                            splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
+                      //                      "flight here"
+                      FlightsWithSplitsTable.ArrivalsTable(
+                        timelineComp,
+                        originMapper,
+                        paxComp(maxFlightPax),
+                        splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
                     }))
                   })
                 }),
                 <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
                   TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
                 )
-              ))})
-          })})
+              ))
+          })
+        })
+      })
       <.div(liveSummaryBoxes, simulationResultComponent)
 
     }
