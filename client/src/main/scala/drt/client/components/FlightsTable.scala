@@ -62,14 +62,10 @@ object FlightsTable {
 
       val columnMeta = Some(Seq(new GriddleComponentWrapper.ColumnMeta("Origin", customComponent = originComponent(mappings))))
       <.div(^.className := "table-responsive timeslot-flight-popover",
-        props.flightsModelProxy.renderPending((t) => ViewTools.spinner),
-        props.flightsModelProxy.renderEmpty(ViewTools.spinner),
-        props.flightsModelProxy.renderReady(flights => {
+        props.flightsWithSplitsPot.renderPending((t) => ViewTools.spinner),
+        props.flightsWithSplitsPot.renderEmpty(ViewTools.spinner),
+        props.flightsWithSplitsPot.renderReady(flights => {
             FlightsWithSplitsTable.ArrivalsTable()(FlightsWithSplitsTable.Props(flights, BestPax.bestPax))
-          //          GriddleComponentWrapper[Dynamic](results = reactTableFlightsAsJsonDynamic(flights),
-//            columnMeta = columnMeta,
-//            initialSort = "SchDt",
-//            columns = props.activeCols)()
         })
       )
     }).build
