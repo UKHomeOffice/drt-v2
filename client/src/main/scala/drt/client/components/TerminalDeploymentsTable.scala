@@ -1,20 +1,19 @@
 package drt.client.components
 
-import diode.data.{Pot, Ready}
+import diode.data.Pot
 import diode.react._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.TableHeaderCell
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
-import drt.client.services._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
-import drt.shared._
-import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
+import drt.client.services._
+import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared._
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.html.TableHeaderCell
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
@@ -123,8 +122,6 @@ object TerminalDeploymentsTable {
     })
   }
 
-  //  class Backend($: BackendScope[Props, Unit]) {
-
   object Backend {
     def apply(props: Props) = {
       log.info("%%%%%%%rendering terminal deployments table...")
@@ -229,7 +226,6 @@ object TerminalDeploymentsTable {
   implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos)
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
-    //    .render
     .renderP((_$, props) => Backend(props))
     .configure(Reusability.shouldComponentUpdate)
     .build
