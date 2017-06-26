@@ -159,7 +159,6 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
 
         def zipFilenameToEventualFileContent(zipFileName: String) = {
           Future {
-            Thread.sleep(1000) /// take longer than we need, but not too long
             UnzippedFileContent("drt_160302_060000_FR3631_DC_4089.json",
               """
 {"EventCode": "DC", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "ABZ", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
@@ -185,8 +184,6 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
         batchAtMost,
         alwaysTrue
       )
-
-      val expectedZipFile = zipFilename
 
       pollingFuture.onFailure {
         case f: Throwable => {
@@ -218,7 +215,6 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
 
         def zipFilenameToEventualFileContent(zipFileName: String) = {
           Future {
-            Thread.sleep(1000) /// take longer than we need, but not too long
             UnzippedFileContent("drt_160302_060000_BA0001_CI_4089.json",
               """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "LHR", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
@@ -251,8 +247,6 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
         voyageManifestFilter
       )
 
-      val expectedZipFile = zipFilename
-
       pollingFuture.onFailure {
         case f: Throwable => {
           system.log.error(f, "failure on outer batches")
@@ -263,7 +257,7 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
         case VoyageManifest("CI", "LHR", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
-        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("Ab"), "", Some(""), Some("")))) :: Nil =>
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("ABZ"), "N", Some("GBR"), Some("BWA")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")
@@ -283,7 +277,6 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
 
         def zipFilenameToEventualFileContent(zipFileName: String) = {
           Future {
-            Thread.sleep(1000) /// take longer than we need, but not too long
             UnzippedFileContent("drt_160302_060000_BA0001_CI_4089.json",
               """
 {"EventCode": "CI", "DeparturePortCode": "SVG", "VoyageNumberTrailingLetter": "", "ArrivalPortCode": "LHR", "DeparturePortCountryCode": "NOR", "VoyageNumber": "3631", "VoyageKey": "a1c9cbec34df3f33ca5e1e934f920364", "ScheduledDateOfDeparture": "2016-03-03", "ScheduledDateOfArrival": "2016-03-03", "CarrierType": "AIR", "CarrierCode": "FR", "ScheduledTimeOfDeparture": "08:05:00", "PassengerList": [{"DocumentIssuingCountryCode": "BWA", "PersonType": "P", "DocumentLevel": "Primary", "Age": "61", "DisembarkationPortCode": "ABZ", "InTransitFlag": "N", "DisembarkationPortCountryCode": "GBR", "NationalityCountryEEAFlag": "", "DocumentType": "P", "PoavKey": "1768895616a4fd245b3a2c31f8fbd407", "NationalityCountryCode": "BWA"}], "ScheduledTimeOfArrival": "09:10:00", "FileId": "drt_160302_060000_FR3631_DC_4089"}
@@ -328,7 +321,7 @@ class WhenUnzippingOnlyProcessAppropriateMessagesSpec extends TestKit(ActorSyste
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
         case VoyageManifest("CI", "BHX", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
-        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("Ab"), "", Some(""), Some("")))) :: Nil =>
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("ABZ"), "N", Some("GBR"), Some("BWA")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")
@@ -391,7 +384,7 @@ class WhenUnzippingOnlyProcessAppropriateMessagesAtAHigherScopeSpec extends Test
       Await.ready(pollingFuture, 2 seconds)
       testQueue.toList match {
         case VoyageManifest("CI", "BHX", "SVG", "3631", "FR", "2016-03-03", "09:10:00", List(
-        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("Ab"), "", Some(""), Some("")))) :: Nil =>
+        PassengerInfoJson(Some("P"), "BWA", "", Some("61"), Some("ABZ"), "N", Some("GBR"), Some("BWA")))) :: Nil =>
           true
         case f =>
           system.log.error(s"Got $f")
