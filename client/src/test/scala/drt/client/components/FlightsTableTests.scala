@@ -122,8 +122,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pcp From"),
-                <.th("Pcp To"),
+                <.th("Est PCP"),
                 <.th("Pax Nos"),
                 <.th("Splits")
               )),
@@ -137,8 +136,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")),
                   <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
-                  <.td(<.span(^.title := "2016-01-01 13:30", "13:30")), //pcp
-                  <.td(<.span(^.title := "2016-01-01 13:38", "13:38")),
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
                   <.td(testFlight.ActPax),
                   <.td()))))
 
@@ -161,8 +159,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pcp From"),
-                <.th("Pcp To"),
+                <.th("Est PCP"),
                 <.th("Pax Nos"),
                 <.th("Splits")
               )),
@@ -177,8 +174,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.ActDT),
                   date(testFlight.EstChoxDT),
                   date(testFlight.ActChoxDT),
-                  date("2016-01-01T13:30"), //pcp from
-                  date("2016-01-01T13:38"), //pcp to
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
                   <.td(testFlight.ActPax),
                     <.td()))))
 
@@ -209,8 +205,7 @@ object FlightsTableTests extends TestSuite {
                   <.th("Act"),
                   <.th("Est Chox"),
                   <.th("Act Chox"),
-                  <.th("Pcp From"),
-                  <.th("Pcp To"),
+                  <.th("Est PCP"),
                   <.th("Pax Nos"),
                   <.th("Splits")
                 )),
@@ -224,8 +219,7 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.ActDT),
                     date(testFlight.EstChoxDT),
                     date(testFlight.ActChoxDT),
-                    date("2016-01-01T13:30"), //pcp from
-                    date("2016-01-01T13:38"), //pcp to
+                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
                     <.td(testFlight.ActPax),
                     <.td()))))
 
@@ -280,8 +274,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act"),
                 <.th("Est Chox"),
                 <.th("Act Chox"),
-                <.th("Pcp From"),
-                <.th("Pcp To"),
+                <.th("Est PCP"),
                 <.th("Pax Nos"),
                 <.th("Splits")
               )),
@@ -296,8 +289,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.ActDT),
                   date(testFlightT.EstChoxDT),
                   date(testFlightT.ActChoxDT),
-                  date("2016-01-01T13:30"), //pcp from
-                  date("2016-01-01T13:36"), //pcp to
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))), //pcp
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
                   <.td()
                 ))))

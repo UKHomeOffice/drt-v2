@@ -286,10 +286,8 @@ object AtmosManifestFilePolling {
               Nil
             case (_, _, Success(vpi: VoyageManifest)) => vpi :: Nil
           }
-          val justMyPort = successfullyParsed.filter(voyageManifestFilter)
-          val relevantManifests = justMyPort.collect {
-            case vm if vm.EventCode == VoyageManifestParser.EventCodes.CheckIn => vm
-          }
+
+          val relevantManifests = successfullyParsed.filter(voyageManifestFilter)
 
           val zipSendingGraph: RunnableGraph[NotUsed] = relevantManifests.to(subscriberFlightActor)
           zipSendingGraph.run()

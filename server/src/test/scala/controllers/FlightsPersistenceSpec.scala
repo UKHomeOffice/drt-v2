@@ -4,19 +4,21 @@ import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
+import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
-import drt.shared._
+import drt.shared.{AirportConfig, ApiFlight, BestPax, _}
 import org.joda.time.DateTime
-import org.specs2.mutable.{After, Before, BeforeAfter, SpecificationLike}
-import server.protobuf.messages.FlightsMessage.FlightStateSnapshotMessage
+import org.specs2.mutable.{BeforeAfter, SpecificationLike}
+import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SplitsProvider.SplitProvider
-import ArrivalGenerator.apiFlight
 import services.inputfeeds.CrunchTests
 import services.{SDate, SplitsProvider}
 
-import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.util.Success
 
 
 case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
@@ -91,6 +93,81 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       )
       result === expected
     }
+
+    "Remember the previous Pax for a flight and use them if the flight comes in with default pax" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        implicit val timeout: Timeout = Timeout(5 seconds)
+        val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
+
+        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+
+        val futureResult: Future[Any] = actor ? GetFlights
+        val futureFlights: Future[List[Arrival]] = futureResult.collect {
+          case Success(Flights(fs)) => fs
+        }
+
+        val result = Await.result(futureResult, 1 second)
+
+        val expected = Flights(List(
+          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00"),
+          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00", lastKnownPax = Option(300))))
+
+        result === expected
+      }
+
+    "Not remember the previous Pax for a flight if it was the default" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        implicit val timeout: Timeout = Timeout(5 seconds)
+        val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
+
+        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+
+        val futureResult: Future[Any] = actor ? GetFlights
+        val futureFlights: Future[List[Arrival]] = futureResult.collect {
+          case Success(Flights(fs)) => fs
+        }
+
+        val result = Await.result(futureResult, 1 second)
+
+        val expected = Flights(List(
+          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00"),
+          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00", lastKnownPax = Option(300))))
+
+        result === expected
+      }
+
+    "Restore from a v1 snapshot using legacy ApiFlight" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2017-10-02T20:00")))
+        val result = startNewActorSystemAndRetrieveFlights
+
+        Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-10-02T20:00"))) === result
+      }
+
+    "Restore flights from a v2 snapshot using protobuf" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
+          flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
+          lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+        ))
+        val result = startNewActorSystemAndRetrieveFlights
+
+        result === Flights(List(Arrival("", "", "", "", "", "", "", "", 0, 0, 0, "", "", 0, "", "", "", "SA324", "", "", 0, None)))
+      }
+
+    "Restore last known pax from a v2 snapshot using protobuf" in
+      new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+        createV2SnapshotAndShutdownActorSystem(FlightStateSnapshotMessage(
+          flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
+          lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
+        ))
+        val result = startNewActorSystemAndRetrieveLastKnownPax
+
+        result === Map("SA324" -> 300)
+      }
   }
 
   implicit val timeout: Timeout = Timeout(0.5 seconds)
@@ -144,7 +221,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     (flightsActorRef, crunchActorRef)
   }
 
-  def flightsActor(system: ActorSystem, crunchActorRef: ActorRef, airportCode: String = "EDI") = {
+  def flightsActor(system: ActorSystem, crunchActorRef: ActorRef = crunchActor(system), airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsActor],
       crunchActorRef,
@@ -161,4 +238,93 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
     system.actorOf(props, "crunchActor")
   }
+
+  def flightsActorWithSnapshotIntervalOf1(system: ActorSystem, airportCode: String = "EDI") = {
+    system.actorOf(Props(
+      classOf[FlightsTestActor],
+      crunchActor(system),
+      Actor.noSender,
+      testSplitsProvider,
+      BestPax.bestPax,
+      (a: Arrival) => MilliDate(SDate(a.ActChoxDT).millisSinceEpoch)
+    ), "FlightsActor")
+  }
+
+  def createV1SnapshotAndShutdownActorSystem(flights: Map[Int, ApiFlight]) = {
+    val testKit1 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+      def saveSnapshot(flights: Map[Int, ApiFlight]) = {
+        flightsActorWithSnapshotIntervalOf1(system) ! TriggerV1Snapshot(flights)
+      }
+    }
+    testKit1.saveSnapshot(flights)
+    testKit1.shutDownActorSystem
+  }
+
+  def createV2SnapshotAndShutdownActorSystem(flightStateSnapshotMessage: FlightStateSnapshotMessage) = {
+    val testKit1 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+      def saveSnapshot(flightStateSnapshotMessage: FlightStateSnapshotMessage) = {
+        flightsActorWithSnapshotIntervalOf1(system) ! flightStateSnapshotMessage
+      }
+    }
+    testKit1.saveSnapshot(flightStateSnapshotMessage)
+    testKit1.shutDownActorSystem
+  }
+
+  def startNewActorSystemAndRetrieveFlights(): Flights = {
+    val testKit2 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+      def getFlights = {
+        val futureResult = flightsActor(system) ? GetFlights
+        Await.result(futureResult, 2 seconds).asInstanceOf[Flights]
+      }
+    }
+
+    val result = testKit2.getFlights
+    testKit2.shutDownActorSystem
+    result
+  }
+
+  def startNewActorSystemAndRetrieveLastKnownPax(): Map[String, Int] = {
+    val testKit2 = new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
+      def getLastKnownPax = {
+        val futureResult = flightsActorWithSnapshotIntervalOf1(system) ? GetLastKnownPax
+        Await.result(futureResult, 2 seconds).asInstanceOf[Map[String, Int]]
+      }
+    }
+
+    val result = testKit2.getLastKnownPax
+    testKit2.shutDownActorSystem
+    result
+  }
+  def legacyApiFlight(iata: String,
+                      airportId: String = "EDI",
+                      actPax: Int,
+                      schDt: String,
+                      terminal: String = "T1",
+                      origin: String = "",
+                      flightId: Int = 1,
+                      lastKnownPax: Option[Int] = None
+                     ): ApiFlight =
+    ApiFlight(
+      FlightID = flightId,
+      SchDT = schDt,
+      Terminal = terminal,
+      Origin = origin,
+      Operator = "",
+      Status = "",
+      EstDT = "",
+      ActDT = "",
+      EstChoxDT = "",
+      ActChoxDT = "",
+      Gate = "",
+      Stand = "",
+      MaxPax = 0,
+      ActPax = actPax,
+      TranPax = 0,
+      RunwayID = "",
+      BaggageReclaimId = "",
+      AirportID = airportId,
+      rawICAO = "",
+      rawIATA = iata,
+      PcpTime = if (schDt != "") SDate(schDt).millisSinceEpoch else 0
+    )
 }

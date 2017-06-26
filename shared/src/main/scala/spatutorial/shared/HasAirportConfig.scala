@@ -62,15 +62,20 @@ case class AirportConfig(
 
 object BestPax {
 
-  def apply(portCode: String) = portCode match {
+  def apply(portCode: String) = portCode.toUpperCase match {
     case "LHR" => lhrBestPax
     case _ => bestPax
   }
 
-  def bestPax = (f: Arrival) => {
-    if (f.ActPax > 0) f.ActPax
-    else f.MaxPax
-  }
+  def bestPax = (flight: Arrival) => {
+    flight match {
+      case f if f.ActPax > 0 =>
+        f.ActPax
+      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get > 0 =>
+        f.LastKnownPax.get
+      case f =>
+        f.MaxPax
+    }  }
 
   def lhrBestPax = (flight: Arrival) => {
     val defaultPax = 200
@@ -78,7 +83,7 @@ object BestPax {
     flight match {
       case f if f.ActPax > 0 && f.ActPax != defaultPax =>
         f.ActPax
-      case f if f.LastKnownPax.isDefined =>
+      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get != defaultPax =>
         f.LastKnownPax.get
       case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
         f.MaxPax
@@ -167,10 +172,11 @@ object AirportConfigs {
         nonVisaNationalToDesk -> 64d / 60
       ),
       "A2" -> Map(
-        eeaMachineReadableToDesk -> 30d / 60,
+        eeaMachineReadableToDesk -> 16d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
         eeaNonMachineReadableToDesk -> 50d / 60,
-        visaNationalToDesk -> 120d / 60,
-        nonVisaNationalToDesk -> 120d / 60
+        visaNationalToDesk -> 75d / 60,
+        nonVisaNationalToDesk -> 64d / 60
       )),
     minMaxDesksByTerminalQueue = Map(
       "A1" -> Map(

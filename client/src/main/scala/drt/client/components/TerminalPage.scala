@@ -13,13 +13,9 @@ import japgolly.scalajs.react.{BackendScope, CtorType, _}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray, html_<^}
-import org.scalajs.dom.html.Div
-import drt.client.components.FlightTableComponents
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.TerminalQueueSimulationResults
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 
-import scala.collection.immutable.Seq
 import scala.util.Try
 
 
@@ -111,35 +107,40 @@ object TerminalPage {
         )
       })
 
-      val simResAndAirportConfigRCP = SPACircuit.connect(model => (model.simulationResult, model.airportConfig))
+      val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
-      val simulationResultComponent = simResAndAirportConfigRCP((simResAndAirportConfigMP: ModelProxy[(TerminalQueueSimulationResults, Pot[AirportConfig])]) => {
-        val airportConfigPot = simResAndAirportConfigMP()._2
+      val simulationResultComponent = airportConfigRCP((airportConfigMP: ModelProxy[Pot[AirportConfig]]) => {
+        val airportConfigPot = airportConfigMP()
         val seriesPot: Pot[List[Series]] = waitTimes(simResAndAirportConfigMP()._1.getOrElse(props.terminalName, Map()), props.terminalName)
-        <.div(
+
+        <.div({
           airportConfigPot.renderReady(airportConfig => {
             val bestPax = BestPax(airportConfig.portCode)
             val terminalProps = TerminalDeploymentsTable.TerminalProps(props.terminalName)
             <.div(
-              <.ul(^.className := "nav nav-tabs",
-                <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
-                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
-                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Paxloads")),
-                seriesPot.renderReady(s =>
-                  <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times"))
-                )
-              )
-              ,
-              <.div(^.className := "tab-content",
-                <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
-                  heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
-                <.div(^.id := "workloads", ^.className := "tab-pane fade",
-                  heatmapOfWorkloads(props.terminalName)),
-                <.div(^.id := "paxloads", ^.className := "tab-pane fade",
-                  heatmapOfPaxloads(props.terminalName)),
-                <.div(^.id := "waits", ^.className := "tab-pane fade",
-                  heatmapOfWaittimes(props.terminalName))
-              )
+              <.div({
+                val simResRCP = SPACircuit.connect(_.simulationResult)
+                simResRCP(simResMP => {
+                  val seriesPot: Pot[List[Series]] = waitTimes(simResMP().getOrElse(props.terminalName, Map()), props.terminalName)
+                    <.div(
+                      <.ul(^.className := "nav nav-tabs",
+                        <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
+                        <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
+                        <.li(seriesPot.renderReady(s => {<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times")}))
+                      )
+                      ,
+                      <.div(^.className := "tab-content",
+                        <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
+                          heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
+                        <.div(^.id := "workloads", ^.className := "tab-pane fade",
+                          heatmapOfWorkloads(props.terminalName)),
+                        <.div(^.id := "paxloads", ^.className := "tab-pane fade",
+                          heatmapOfPaxloads(props.terminalName)),
+                        <.div(^.id := "waits", ^.className := "tab-pane fade",
+                          heatmapOfWaittimes(props.terminalName))
+                      ))
+                })
+              })
               ,
               <.ul(^.className := "nav nav-tabs",
                 <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
@@ -164,11 +165,11 @@ object TerminalPage {
                     }))
                   })
                 }),
-                <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
-                  TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
-                )
-              ))
-          }))
+              <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+                TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
+              )
+            ))
+          })})
       })
       <.div(liveSummaryBoxes, simulationResultComponent)
 
@@ -177,7 +178,7 @@ object TerminalPage {
 
   def apply(terminalName: TerminalName, ctl: RouterCtl[Loc]): VdomElement = component(Props(terminalName, ctl))
 
-  private val component = ScalaComponent.builder[Props]("Product")
+  private val component = ScalaComponent.builder[Props]("Terminal")
     .renderBackend[Backend]
     .componentDidMount((p) => Callback.log(s"terminalPage didMount $p"))
     .build
