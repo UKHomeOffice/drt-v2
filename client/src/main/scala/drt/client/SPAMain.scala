@@ -23,17 +23,15 @@ import scalacss.Defaults._
 
 object TableViewUtils {
 
-  val eeadesk: QueueName = "eeaDesk"
-  val noneeadesk: QueueName = "nonEeaDesk"
-  val fasttrack: QueueName = "fastTrack"
-  val egate: QueueName = "eGate"
 
   /**
     * Fixme: remove this line once we've removed the old terminal page
     */
-  def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
+  def queueNameMappingOrder = Queues.EeaDesk :: Queues.NonEeaDesk :: Queues.EGate :: Nil
 
-  val queueDisplayNames = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
+  val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
+    Queues.FastTrack -> "Fast Track",
+    Queues.Transfer -> "Tran")
 
   def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
 
