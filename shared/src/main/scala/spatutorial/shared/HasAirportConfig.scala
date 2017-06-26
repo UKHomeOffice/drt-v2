@@ -168,10 +168,11 @@ object AirportConfigs {
         nonVisaNationalToDesk -> 64d / 60
       ),
       "A2" -> Map(
-        eeaMachineReadableToDesk -> 30d / 60,
+        eeaMachineReadableToDesk -> 16d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
         eeaNonMachineReadableToDesk -> 50d / 60,
-        visaNationalToDesk -> 120d / 60,
-        nonVisaNationalToDesk -> 120d / 60
+        visaNationalToDesk -> 75d / 60,
+        nonVisaNationalToDesk -> 64d / 60
       )),
     minMaxDesksByTerminalQueue = Map(
       "A1" -> Map(
