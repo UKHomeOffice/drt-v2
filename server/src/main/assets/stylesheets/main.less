@@ -223,6 +223,7 @@ rect.bordered {
 @nonEeaDeskUserDeskColor: #cce0d6;
 @eGateUserDeskColor: #f7f0e2;
 @fastTrackUserDeskColor: #e7cee6;
+@transferUserDeskColor: #8F23B3; // this is from the BF style guidelines, the HAL transfer colour, and the BF colour, are coincidentally very similar
 @totalDeployedColor: #eeeff0;
 @amberColor: #FFEEBB;
 @redColor: #FFCCCC;
@@ -277,6 +278,14 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
 
 .fastTrack-user-desk-rec {
   background-color: @fastTrackUserDeskColor;
+}
+
+.transfer-user-desk-rec {
+  background-color: @transferUserDeskColor;
+}
+
+tr:nth-child(even) > td.transfer-user-desk-rec{
+  background-color: lighten(@transferUserDeskColor, 5%);
 }
 
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
@@ -510,12 +519,12 @@ th h2 {
 }
 
 .splits .graph .bar.eeaDesk {
-  background-color: orange;
+  background-color: deepskyblue;
 
 }
 
 .splits .graph .bar.eGate {
-  background-color: deepskyblue;
+  background-color: orange;
 }
 
 .splits .graph .bar.nonEeaDesk {

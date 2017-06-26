@@ -4,7 +4,7 @@ import diode.data.{Pot, Ready}
 import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.{TableHeaderCell, TableRow}
+import org.scalajs.dom.html.{TableCell, TableHeaderCell, TableRow}
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
@@ -14,7 +14,7 @@ import drt.shared._
 import drt.client.actions.Actions.UpdateDeskRecsTime
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js.Date
@@ -24,15 +24,23 @@ object TerminalDeploymentsTable {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class QueueDeploymentsRow(
-                                  timestamp: Long,
-                                  pax: Double,
-                                  crunchDeskRec: Int,
-                                  userDeskRec: DeskRecTimeslot,
-                                  waitTimeWithCrunchDeskRec: Int,
-                                  waitTimeWithUserDeskRec: Int,
-                                  queueName: QueueName
-                                )
+  sealed trait QueueDeploymentsRow {
+    def queueName: QueueName
+
+    def timestamp: Long
+  }
+
+  case class QueuePaxRowEntry(timestamp: Long, queueName: QueueName, pax: Double) extends QueueDeploymentsRow
+
+  case class QueueDeploymentsRowEntry(
+                                       timestamp: Long,
+                                       pax: Double,
+                                       crunchDeskRec: Int,
+                                       userDeskRec: DeskRecTimeslot,
+                                       waitTimeWithCrunchDeskRec: Int,
+                                       waitTimeWithUserDeskRec: Int,
+                                       queueName: QueueName
+                                     ) extends QueueDeploymentsRow
 
   case class TerminalDeploymentsRow(time: Long, queueDetails: Seq[QueueDeploymentsRow])
 
@@ -121,7 +129,6 @@ object TerminalDeploymentsTable {
               log.info(s"rowLen ${rowsPot.map(_.length)}")
               log.info(s"rowsAre $rowsPot")
               <.div(
-                "RowsState:" + rowsPot.state,
                 rowsPot.renderReady(rows =>
                   airportConfigPotRCP(airportConfigPotMP => {
                     <.div(
@@ -147,7 +154,7 @@ object TerminalDeploymentsTable {
   def renderRow(props: RowProps): TagOf[TableRow] = {
     val item = props.item
     val index = props.index
-    log.info(s"rendering terminalDeploymentsRow $index")
+    //    log.info(s"rendering terminalDeploymentsRow $index")
     val time = item.time
     val windowSize = 60000 * 15
     val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
@@ -157,29 +164,36 @@ object TerminalDeploymentsTable {
     val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
     val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
-    val queueRowCells = item.queueDetails.flatMap(
-      (q: QueueDeploymentsRow) => {
+    val queueRowCells: Seq[TagMod] = item.queueDetails.flatMap {
+      case (q: QueueDeploymentsRowEntry) => {
         val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
 
-        def qtd(xs: TagMod*) = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+        def qtd(xs: TagMod*): TagMod =  <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
 
         Seq(
           qtd(q.pax),
           qtd(q.userDeskRec.deskRec),
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
-    ).toList
-    val totalRequired = item.queueDetails.map(_.crunchDeskRec).sum
-    val totalDeployed = item.queueDetails.map(_.userDeskRec.deskRec).sum
+      case q: QueuePaxRowEntry => {
+        def qtd(xs: TagMod*): TagMod =  <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+
+        Seq(qtd(q.pax))
+      }
+    }.toList
+
+    val staffRequiredQueues: Seq[QueueDeploymentsRowEntry] = item.queueDetails.collect { case q: QueueDeploymentsRowEntry => q }
+    val totalRequired: Int = staffRequiredQueues.map(_.crunchDeskRec).sum
+    val totalDeployed: Int = staffRequiredQueues.map(_.userDeskRec.deskRec).sum
     val ragClass = totalRequired.toDouble / totalDeployed match {
       case diff if diff >= 1 => "red"
       case diff if diff >= 0.75 => "amber"
       case _ => ""
     }
-    val queueRowCellsWithTotal = queueRowCells :+
-      <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
-      <.td(^.className := s"total-deployed $ragClass", totalDeployed)
+    val queueRowCellsWithTotal: List[html_<^.TagMod] = (queueRowCells :+
+      <.td(^.className := s"totl-deployed $ragClass", totalRequired) :+
+      <.td(^.className := s"total-deployed $ragClass", totalDeployed)).toList
     <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
   }
 
@@ -195,10 +209,9 @@ object TerminalDeploymentsTable {
 
         def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-        log.info(s"here1")
         val headings = props.airportConfig.queues(props.terminalName).map {
-          case (queueName) =>
-            qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+          case (queueName@Queues.Transfer) => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 1)
+          case (queueName) => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
         }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
         val defaultNumberOfQueues = 3
@@ -235,14 +248,10 @@ object TerminalDeploymentsTable {
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
     private def subHeadingLevel2(queueNames: List[QueueName]) = {
-      val subHeadingLevel2 = queueNames.flatMap(queueName => {
-        val depls: List[VdomTagOf[TableHeaderCell]] = List(
-          <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
-          <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
-        )
-
-        <.th(^.className := queueColour(queueName), "Pax") :: depls
-      })
+      val subHeadingLevel2 = queueNames.flatMap {
+        case Queues.Transfer => <.th(^.className := queueColour(Queues.Transfer), "Pax") :: Nil
+        case queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)
+      }
       subHeadingLevel2 :+
         <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks") :+
         <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on assignments entered")
@@ -251,6 +260,14 @@ object TerminalDeploymentsTable {
     private def thHeaderGroupStart(title: String, xs: TagMod*): VdomTagOf[TableHeaderCell] = {
       <.th(headerGroupStart, title, xs.toTagMod)
     }
+  }
+
+  private def staffDeploymentSubheadings(queueName: QueueName) = {
+    val depls: List[VdomTagOf[TableHeaderCell]] = List(
+      <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
+      <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
+    )
+    depls
   }
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")

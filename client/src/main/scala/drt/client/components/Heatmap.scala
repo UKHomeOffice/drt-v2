@@ -177,8 +177,8 @@ object TerminalHeatmaps {
 
   def waitTimes(simulationResult: Map[QueueName, Pot[SimulationResult]], terminalName: String): Pot[List[Series]] = {
     val result: Iterable[Series] = for {
-      queueName <- simulationResult.keys
-      simResult <- simulationResult(queueName)
+      (queueName, simResultPot) <- simulationResult
+      simResult <- simResultPot
       waitTimes = simResult.waitTimes
     } yield {
       Series(terminalName + "/" + queueName,

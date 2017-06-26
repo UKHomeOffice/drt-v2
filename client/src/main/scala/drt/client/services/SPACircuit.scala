@@ -148,8 +148,8 @@ case class RootModel(
             TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
           } recover {
             case f =>
-              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads)
-              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint")
+              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
+              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
               Nil
           }
           tried.get
@@ -213,7 +213,8 @@ case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
   */
 class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeployments]]) extends LoggingActionHandler(modelRW) {
   override def handle = {
-    case UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
+    case udrt@UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
+      log.info(s"updating $udrt")
       val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeSlot))
       val desks = newDesksPot.get.items.map(_.deskRec).toList
       updated(
@@ -276,6 +277,13 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
             NoAction
         }))
     case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
+      val terminalQueues = terminalQueueWorkloads.flatMap {
+        case (tn, qn2wl) =>
+          qn2wl.keys.map(qn => (tn, qn))
+      }
+
+      log.info(s"received tqwl $terminalQueues")
+
       val paxLoadsByTerminalAndQueue: Map[TerminalName, Map[QueueName, Seq[Pax]]] = terminalQueueWorkloads.mapValues(_.mapValues(_._2))
       for {(t, tl) <- paxLoadsByTerminalAndQueue
            loadAtTerminal = tl.map(_._2.map(_.pax).sum)

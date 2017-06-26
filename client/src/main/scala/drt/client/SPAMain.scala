@@ -2,7 +2,7 @@ package drt.client
 
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, TerminalDeploymentsRow}
+import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, TerminalDeploymentsRow}
 import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
@@ -34,6 +34,7 @@ object TableViewUtils {
   def queueNameMappingOrder = eeadesk :: noneeadesk :: egate :: Nil
 
   val queueDisplayNames = Map(eeadesk -> "EEA", noneeadesk -> "Non-EEA", egate -> "e-Gates", fasttrack -> "Fast Track")
+
   def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
 
   def terminalDeploymentsRows(
@@ -47,9 +48,10 @@ object TableViewUtils {
                              ): List[TerminalDeploymentsRow] = {
     airportConfigPot match {
       case Ready(airportConfig) =>
-        val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map(queueName => {
-          processQueue(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
-        }).toList
+        val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
+          case Queues.Transfer => processTransfers(timestamps, paxload)
+          case queueName => processQueue(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+        }.toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
 
@@ -61,7 +63,26 @@ object TableViewUtils {
     }
   }
 
-  def processQueue(timestamps: Seq[Long], paxload: Map[String, List[Double]], queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]], simulationResult: Map[QueueName, Pot[SimulationResult]], userDeskRec: QueueStaffDeployments, queueName: QueueName) = {
+  def processTransfers(timestamps: Seq[Long], paxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
+    log.info(s"processing transfers rows")
+    val sampledTs = sampleTimestampsForRows(timestamps)
+    log.info(s"looking for paxload in ${paxload.keys}")
+    val sampledPaxload = samplePaxLoad(paxload, Queues.Transfer)
+    log.info(s"sampled paxload")
+    val zippedTsAndPaxload = sampledTs.zip(sampledPaxload)
+    val res = zippedTsAndPaxload.map {
+      case (ts, paxload) => (ts, Queues.Transfer) -> QueueDeploymentsRowEntry(ts, paxload, 0, DeskRecTimeslot(ts, 0), 0, 0, Queues.Transfer)
+    }
+    log.info(s"returning transfers rows")
+    res
+  }
+
+  def processQueue(timestamps: Seq[Long],
+                   paxload: Map[String, List[Double]],
+                   queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
+                   simulationResult: Map[QueueName, Pot[SimulationResult]],
+                   userDeskRec: QueueStaffDeployments,
+                   queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
     simulationResult.get(queueName) match {
       case Some(Ready(sr)) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
@@ -78,10 +99,10 @@ object TableViewUtils {
     }
   }
 
-  def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRow)] = {
+  def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
     queueNos.toList.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
-        (timestamp, qn) -> QueueDeploymentsRow(
+        (timestamp, qn) -> QueueDeploymentsRowEntry(
           timestamp = timestamp,
           pax = pax.toDouble,
           crunchDeskRec = crunchDeskRec.toInt,
@@ -95,12 +116,24 @@ object TableViewUtils {
 
   private val numberOf15MinuteSlots = 96
 
+  /**
+    * Stitch these sequences of metrics over time into a seq of seq of metrics that will then be
+    * converted into a QueueDeploymentsRow
+    *
+    * @param timestamps
+    * @param paxload
+    * @param queueCrunchResultsForTerminal
+    * @param userDeskRec
+    * @param simulationResult
+    * @param qn
+    * @return
+    */
   def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: QueueCrunchResults,
                                    userDeskRec: QueueStaffDeployments,
                                    simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
                                   ): Seq[List[Long]] = {
-    val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
+    val ts = sampleTimestampsForRows(timestamps)
 
     log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
     log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
@@ -112,7 +145,7 @@ object TableViewUtils {
 
     Seq(
       ts,
-      paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
+      samplePaxLoad(paxload, qn),
       paddedRecDesks,
       queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
       getSafeUserDeskRecs(userDeskRec, qn, ts),
@@ -122,7 +155,18 @@ object TableViewUtils {
   }
 
 
-  private def padSimResult(simulationResultWaitTimes: List[Long], numberOf15MinuteSlots: Int): List[Long] = {
+  def samplePaxLoad(paxload: Map[String, List[Double]], qn: QueueName): List[Long] = {
+    paxload.get(qn) match {
+      case Some(qns) => qns.grouped(15).map(paxes => paxes.sum.toLong).toList
+      case None => List.fill(numberOf15MinuteSlots)(0L)
+    }
+  }
+
+  def sampleTimestampsForRows(timestamps: Seq[Long]) = {
+    takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
+  }
+
+  def padSimResult(simulationResultWaitTimes: List[Long], numberOf15MinuteSlots: Int): List[Long] = {
     if (simulationResultWaitTimes.isEmpty) List.fill(numberOf15MinuteSlots)(0) else simulationResultWaitTimes
   }
 
@@ -130,11 +174,11 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
-    val ts = takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList
+    val ts = sampleTimestampsForRows(timestamps)
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
     Seq(
-      takeEveryNth(15)(timestamps).take(numberOf15MinuteSlots).toList,
+      ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
       List.range(0, queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.length, 15).map(_.toLong),
       queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
