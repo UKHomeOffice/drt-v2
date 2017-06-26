@@ -89,7 +89,7 @@ object FlightsView {
   import scala.language.existentials
 
   case class Props(
-                    flightsModelProxy: Pot[FlightsWithSplits],
+                    flightsWithSplitsPot: Pot[FlightsWithSplits],
                     airportInfoProxy: Map[String, Pot[AirportInfo]],
                     activeCols: List[String] = List(
                       "IATA",

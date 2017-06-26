@@ -32,7 +32,7 @@ object FlightsWithSplitsTable {
   implicit val bestPaxReuse = Reusability.byRefOr_==[BestPaxForArrivalF]
   implicit val propsReuse = Reusability.caseClassDebug[Props]
 
-  def ArrivalsTable[C](timelineComponent: Option[(Arrival) => VdomNode] = None,
+  def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
                        paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
                        splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
