@@ -2,7 +2,7 @@ package drt.client
 
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, TerminalDeploymentsRow}
+import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
 import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
@@ -63,15 +63,15 @@ object TableViewUtils {
     }
   }
 
-  def processTransfers(timestamps: Seq[Long], paxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
+  def processTransfers(timestamps: Seq[Long], queuePaxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
     log.info(s"processing transfers rows")
     val sampledTs = sampleTimestampsForRows(timestamps)
-    log.info(s"looking for paxload in ${paxload.keys}")
-    val sampledPaxload = samplePaxLoad(paxload, Queues.Transfer)
+    log.info(s"looking for paxload in ${queuePaxload.keys}")
+    val sampledPaxload = samplePaxLoad(queuePaxload, Queues.Transfer)
     log.info(s"sampled paxload")
     val zippedTsAndPaxload = sampledTs.zip(sampledPaxload)
     val res = zippedTsAndPaxload.map {
-      case (ts, paxload) => (ts, Queues.Transfer) -> QueueDeploymentsRowEntry(ts, paxload, 0, DeskRecTimeslot(ts, 0), 0, 0, Queues.Transfer)
+      case (ts, paxLoad) => (ts, Queues.Transfer) -> QueuePaxRowEntry(ts, Queues.Transfer, paxLoad)
     }
     log.info(s"returning transfers rows")
     res

@@ -126,8 +126,8 @@ object TerminalDeploymentsTable {
           rowsOptMP() match {
             case None => <.div("No rows yet")
             case Some(rowsPot) =>
-              log.info(s"rowLen ${rowsPot.map(_.length)}")
-              log.info(s"rowsAre $rowsPot")
+              log.debug(s"rowLen ${rowsPot.map(_.length)}")
+              log.debug(s"rowsAre $rowsPot")
               <.div(
                 rowsPot.renderReady(rows =>
                   airportConfigPotRCP(airportConfigPotMP => {
@@ -192,7 +192,7 @@ object TerminalDeploymentsTable {
       case _ => ""
     }
     val queueRowCellsWithTotal: List[html_<^.TagMod] = (queueRowCells :+
-      <.td(^.className := s"totl-deployed $ragClass", totalRequired) :+
+      <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
       <.td(^.className := s"total-deployed $ragClass", totalDeployed)).toList
     <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
   }
