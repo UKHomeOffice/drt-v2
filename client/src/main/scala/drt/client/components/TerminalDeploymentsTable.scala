@@ -150,8 +150,8 @@ object TerminalDeploymentsTable {
 
             Seq(
               qtd(q.pax),
-              <.td((^.className := queueColour(q.queueName)), ^.title:=s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
-              <.td((^.className := queueColour(q.queueName)), ^.cls :=  dangerWait + " " + warningClasses, ^.title:=s"Rec: ${q.waitTimeWithCrunchDeskRec}", q.waitTimeWithUserDeskRec))
+              <.td((^.className := queueColour(q.queueName)), ^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
+              <.td((^.className := queueColour(q.queueName)), ^.cls := dangerWait + " " + warningClasses, ^.title := s"Rec: ${q.waitTimeWithCrunchDeskRec}", q.waitTimeWithUserDeskRec))
           }
         )
         val totalRequired = row.queueDetails.map(_.crunchDeskRec).sum
@@ -227,7 +227,7 @@ object TerminalDeploymentsTable {
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .renderP((_$, props) => Backend(props))
-//    .configure(Reusability.shouldComponentUpdate)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(terminalName: String, rows: List[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],

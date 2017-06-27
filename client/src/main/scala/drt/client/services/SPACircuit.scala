@@ -274,7 +274,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       } {
         val firstTimeSDate = firstTime.map(d => SDate(MilliDate(d)))
         val lastTime = lastTimeOpt.map(d => SDate(MilliDate(d)))
-        log.info(s"received workloads: paxLoads:  firstTime: $firstTime (${firstTimeSDate}) lastTime $lastTime $t/$q $loadAtQueue / $loadAtTerminal")// from $ql")
+        log.debug(s"received workloads: paxLoads:  firstTime: $firstTime (${firstTimeSDate}) lastTime $lastTime $t/$q $loadAtQueue / $loadAtTerminal")
       }
 
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
