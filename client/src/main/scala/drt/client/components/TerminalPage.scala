@@ -125,6 +125,7 @@ object TerminalPage {
                       <.ul(^.className := "nav nav-tabs",
                         <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
                         <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
+                        <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Paxloads")),
                         <.li(seriesPot.renderReady(s => {<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times")}))
                       )
                       ,
