@@ -111,7 +111,6 @@ object TerminalPage {
 
       val simulationResultComponent = airportConfigRCP((airportConfigMP: ModelProxy[Pot[AirportConfig]]) => {
         val airportConfigPot = airportConfigMP()
-        val seriesPot: Pot[List[Series]] = waitTimes(simResAndAirportConfigMP()._1.getOrElse(props.terminalName, Map()), props.terminalName)
 
         <.div({
           airportConfigPot.renderReady(airportConfig => {

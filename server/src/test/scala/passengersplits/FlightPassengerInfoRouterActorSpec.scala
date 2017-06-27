@@ -27,7 +27,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
       val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
 
       val civm = VoyageManifest(EventCodes.CheckIn, "LHR", "JFK", "0123", "BA", "2017-01-01", "00:00:00", List(
-        PassengerInfoJson(None, "GB", "", None)
+        PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
       ))
 
       flightPassengerSplitReporter ! civm
@@ -51,7 +51,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
       val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
 
       val dcvm = VoyageManifest(EventCodes.DoorsClosed, "LHR", "JFK", "0123", "BA", "2017-01-01", "00:00:00", List(
-        PassengerInfoJson(None, "GB", "", None)
+        PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
       ))
 
       flightPassengerSplitReporter ! dcvm
@@ -104,8 +104,8 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
     val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
 
-    val ciPax = List.fill(ciPaxCount)(PassengerInfoJson(None, "GB", "", None))
-    val diPax = List.fill(diPaxCount)(PassengerInfoJson(None, "GB", "", None))
+    val ciPax = List.fill(ciPaxCount)(PassengerInfoJson(None, "GB", "", None, None, "N", None, None))
+    val diPax = List.fill(diPaxCount)(PassengerInfoJson(None, "GB", "", None, None, "N", None, None))
     val civm = VoyageManifest(EventCodes.CheckIn, portCode, "JFK", flightNumber, carrierCode, schDate, schTime, ciPax)
     val dcvm = VoyageManifest(EventCodes.DoorsClosed, portCode, "JFK", flightNumber, carrierCode, schDate, schTime, diPax)
 

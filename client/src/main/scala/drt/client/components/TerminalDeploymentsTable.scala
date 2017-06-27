@@ -2,21 +2,6 @@ package drt.client.components
 
 import diode.data.Pot
 import diode.react._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.{TableCell, TableHeaderCell, TableRow}
-import drt.client.TableViewUtils._
-import drt.client.logger._
-import drt.client.services.HandyStuff.QueueStaffDeployments
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.RootModel.QueueCrunchResults
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
-import scala.collection.immutable.{Map, Seq}
-import scala.scalajs.js.Date
-import scala.util.Try
-import diode.data.Pot
-import diode.react._
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
@@ -28,7 +13,12 @@ import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.TableHeaderCell
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import org.scalajs.dom.html.{TableHeaderCell, TableRow}
+
+import scala.collection.immutable.{Map, Seq}
+import scala.scalajs.js.Date
+import scala.util.Try
 
 object TerminalDeploymentsTable {
   // shorthand for styles
@@ -56,7 +46,7 @@ object TerminalDeploymentsTable {
 
   case class Props(
                     terminalName: String,
-                    rows: List[TerminalDeploymentsRow],
+                    items: List[TerminalDeploymentsRow],
                     flights: Pot[FlightsWithSplits],
                     airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
@@ -82,6 +72,18 @@ object TerminalDeploymentsTable {
       case "eGate" => "Banks"
       case _ => "Desks"
     }
+  }
+
+  def renderTerminalUserTable(terminalName: TerminalName, airportInfoConnectProxy: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
+    <.div(
+      TerminalDeploymentsTable(
+        terminalName,
+        rows,
+        peMP().flights,
+        airportConfig,
+        airportInfoConnectProxy
+      ))
   }
 
   case class PracticallyEverything(
@@ -128,15 +130,8 @@ object TerminalDeploymentsTable {
                   airportConfigPotRCP(airportConfigPotMP => {
                     <.div(
                       airportConfigPotMP().renderReady(airportConfig =>
-
-                        TerminalDeploymentsTable(
-                          props.terminalName,
-                          rows,
-                          peMP().flights,
-                          airportConfig,
-                          airportWrapper
-                        )
-                      ))
+                        renderTerminalUserTable(props.terminalName, airportWrapper, peMP, rows, airportConfig))
+                    )
                   })))
           }
         }),
@@ -154,24 +149,24 @@ object TerminalDeploymentsTable {
     .build
 
   def renderRow(props: RowProps): TagOf[TableRow] = {
-    val row = props.item
-    val rowIndex = props.index
+    val item = props.item
+    val index = props.index
     //    log.info(s"rendering terminalDeploymentsRow $index")
-    val time = row.time
+    val time = item.time
     val windowSize = 60000 * 15
     val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
       flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
 
-    val formattedDate: String = SDate(MilliDate(row.time)).toLocalDateTimeString()
+    val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
     val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
     val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
-    val queueRowCells: Seq[TagMod] = row.queueDetails.flatMap {
+    val queueRowCells: Seq[TagMod] = item.queueDetails.flatMap {
       case (q: QueueDeploymentsRowEntry) => {
         val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
 
-        def qtd(xs: TagMod*): TagMod =  <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+        def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
 
         Seq(
           qtd(q.pax),
@@ -179,7 +174,7 @@ object TerminalDeploymentsTable {
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
       case q: QueuePaxRowEntry => {
-        def qtd(xs: TagMod*): TagMod =  <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+        def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
 
         Seq(qtd(q.pax))
       }
@@ -217,27 +212,27 @@ object TerminalDeploymentsTable {
         }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
 
         val defaultNumberOfQueues = 3
-        val headOption = props.rows.headOption
+        val headOption = props.items.headOption
         val numQueues = headOption match {
           case Some(item) => item.queueDetails.length
           case None =>
             defaultNumberOfQueues
         }
 
-      <.div(
-        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
-          <.thead(
-            ^.display := "block",
-            <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList): _*)),
-          <.tbody(
-            ^.display := "block",
-            ^.overflow := "scroll",
-            ^.height := "500px",
-            props.rows.zipWithIndex.map{
+        <.div(
+          <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
+            <.thead(
+              ^.display := "block",
+              <.tr(<.th("") :: headings: _*),
+              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList): _*)),
+            <.tbody(
+              ^.display := "block",
+              ^.overflow := "scroll",
+              ^.height := "500px",
+              props.items.zipWithIndex.map {
                 case (item, index) => renderRow(RowProps(item, index, props.flights, props.airportConfig, props.airportInfos))
-              }.toTagMod
-    )))}recover {
+              }.toTagMod)))
+      } recover {
         case t =>
           log.error(s"Failed to render deployment table $t", t.asInstanceOf[Exception])
           <.div(s"Can't render bcause $t")
@@ -275,8 +270,14 @@ object TerminalDeploymentsTable {
 
   implicit val deskRecTimeslotReuse = Reusability.caseClass[DeskRecTimeslot]
   implicit val doubleReuse = Reusability.double(1)
-  implicit val queueRowReuse = Reusability.caseClassExcept[QueueDeploymentsRow]('timestamp, 'crunchDeskRec, 'waitTimeWithCrunchDeskRec, 'queueName)
-  implicit val terminalReuse = Reusability.caseClassExcept[TerminalDeploymentsRow]('time)
+  implicit val queueRowEntryReuse = Reusability.caseClass[QueueDeploymentsRowEntry]
+  implicit val queuePaxRowEntryReuse = Reusability.caseClass[QueuePaxRowEntry]
+  implicit val queueRowEntryBaseReuse = Reusability[QueueDeploymentsRow] {
+    case (a: QueuePaxRowEntry, b: QueuePaxRowEntry) => queuePaxRowEntryReuse.test(a, b)
+    case (a: QueueDeploymentsRowEntry, b: QueueDeploymentsRowEntry) => queueRowEntryReuse.test(a, b)
+    case _ => false
+  }
+  implicit val terminalReuse = Reusability.caseClass[TerminalDeploymentsRow]
   implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos)
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
