@@ -150,10 +150,10 @@ object TerminalDeploymentsTable {
 
             Seq(
               qtd(q.pax),
-              qtd(q.userDeskRec.deskRec),
-              qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
+              <.td((^.className := queueColour(q.queueName)), ^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
+              <.td((^.className := queueColour(q.queueName)), ^.cls := dangerWait + " " + warningClasses, ^.title := s"Rec: ${q.waitTimeWithCrunchDeskRec}", q.waitTimeWithUserDeskRec))
           }
-        ).toList
+        )
         val totalRequired = row.queueDetails.map(_.crunchDeskRec).sum
         val totalDeployed = row.queueDetails.map(_.userDeskRec.deskRec).sum
         val ragClass = totalRequired.toDouble / totalDeployed match {
