@@ -135,17 +135,24 @@ case class RootModel(
     val crv = queueCrunchResults.getOrElse(terminalName, Map())
     val srv = simulationResult.getOrElse(terminalName, Map())
     val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
-    log.info(s"tud: ${terminalName}")
     val terminalDeploymentRows: Pot[List[TerminalDeploymentsRow]] = workloadPot.map(workloads => {
       workloads.workloads.get(terminalName) match {
         case Some(terminalWorkloads) =>
-          val timestamps = workloads.timeStamps()
-          val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-          val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+          val tried: Try[List[TerminalDeploymentsRow]] = Try {
+            val timestamps = workloads.timeStamps()
+            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
 
-          val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
 
-          TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
+            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
+          } recover {
+            case f =>
+              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
+              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
+              Nil
+          }
+          tried.get
         case None =>
           Nil
       }
@@ -206,7 +213,8 @@ case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
   */
 class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeployments]]) extends LoggingActionHandler(modelRW) {
   override def handle = {
-    case UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
+    case udrt@UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
+      log.info(s"updating $udrt")
       val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeSlot))
       val desks = newDesksPot.get.items.map(_.deskRec).toList
       updated(
@@ -262,8 +270,20 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
   protected def handle = {
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
-      updated(Pending(), Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads)))
+      updated(Pending(),
+        Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads).recover {
+          case f =>
+            log.error(s"failure getting workloads $f")
+            NoAction
+        }))
     case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
+      val terminalQueues = terminalQueueWorkloads.flatMap {
+        case (tn, qn2wl) =>
+          qn2wl.keys.map(qn => (tn, qn))
+      }
+
+      log.info(s"received tqwl $terminalQueues")
+
       val paxLoadsByTerminalAndQueue: Map[TerminalName, Map[QueueName, Seq[Pax]]] = terminalQueueWorkloads.mapValues(_.mapValues(_._2))
       for {(t, tl) <- paxLoadsByTerminalAndQueue
            loadAtTerminal = tl.map(_._2.map(_.pax).sum)
@@ -379,7 +399,6 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
   protected def handle = {
     case RequestFlights(from, to) =>
-      log.info(s"client requesting flights $from $to")
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
       val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
       effectOnly(fe + flightsEffect)
@@ -397,8 +416,10 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
           val getWorkloads = {
             //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
-            log.info("flights Have changed - will re-request workloads")
-            Effect(Future(GetWorkloads("", "")))
+            Effect(Future {
+              log.info("flights Have changed - re-requesting workloads")
+              GetWorkloads("", "")
+            })
           }
 
           val allEffects = airportInfos //>> getWorkloads
@@ -434,7 +455,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
         case Right(crunchResultWithTimeAndInterval) =>
           UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
         case Left(ncr) =>
-          log.info(s"Failed to fetch crunch - has a crunch run yet? $ncr")
+          log.debug(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
           NoAction
       }
       effectOnly(Effect(fe) + crunchEffect)

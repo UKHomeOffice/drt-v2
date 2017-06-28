@@ -117,7 +117,7 @@ table.user-desk-recs > tbody > tr > td.date-field {
   text-align: left;
 }
 
-table.user-desk-recs.cols-2, table.user-desk-recs.cols-3, table.user-desk-recs.cols-4 {
+table.user-desk-recs.cols-2, table.user-desk-recs.cols-3, table.user-desk-recs.cols-4, table.user-desk-recs.cols-5 {
   thead th:nth-child(1) {
     width: 180px;
   }
@@ -126,6 +126,17 @@ table.user-desk-recs.cols-2, table.user-desk-recs.cols-3, table.user-desk-recs.c
     width: 180px;
   }
 }
+
+table.user-desk-recs.cols-5 {
+  thead th:nth-last-child(-n+3) {
+    width: 66px;
+  }
+
+  tbody td:nth-last-child(-n+3) {
+    width: 66px;
+  }
+}
+
 
 table.user-desk-recs.cols-4 {
   thead th:nth-last-child(-n+2) {
@@ -136,6 +147,7 @@ table.user-desk-recs.cols-4 {
     width: 66px;
   }
 }
+
 
 table.user-desk-recs.cols-3 {
   thead th:nth-last-child(1) {
@@ -153,6 +165,10 @@ table.user-desk-recs.cols-3 {
   tbody td:nth-last-child(2) {
     width: 89px;
   }
+}
+
+table.user-desk-recs.cols-5 tbody td, table.user-desk-recs.cols-5 thead th {
+  width: 69px;
 }
 
 table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
@@ -223,6 +239,7 @@ rect.bordered {
 @nonEeaDeskUserDeskColor: #cce0d6;
 @eGateUserDeskColor: #f7f0e2;
 @fastTrackUserDeskColor: #e7cee6;
+@transferUserDeskColor: #705975;
 @totalDeployedColor: #eeeff0;
 @amberColor: #FFEEBB;
 @redColor: #FFCCCC;
@@ -277,6 +294,16 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
 
 .fastTrack-user-desk-rec {
   background-color: @fastTrackUserDeskColor;
+}
+
+.transfer-user-desk-rec {
+  background-color: @transferUserDeskColor;
+  color: #ffffff;
+}
+
+tr:nth-child(even) > td.transfer-user-desk-rec{
+  background-color: lighten(@transferUserDeskColor, 5%);
+  color: #ffffff;
 }
 
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
@@ -510,12 +537,12 @@ th h2 {
 }
 
 .splits .graph .bar.eeaDesk {
-  background-color: orange;
+  background-color: deepskyblue;
 
 }
 
 .splits .graph .bar.eGate {
-  background-color: deepskyblue;
+  background-color: orange;
 }
 
 .splits .graph .bar.nonEeaDesk {

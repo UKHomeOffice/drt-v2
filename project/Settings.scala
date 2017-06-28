@@ -95,6 +95,7 @@ object Settings {
     "com.mfglabs" %% "commons-aws" % "0.10.0",
     "org.apache.commons" % "commons-csv" % "1.4",
     "com.vmunier" %% "scalajs-scripts" % "1.0.0",
+    "com.lihaoyi" %% "pprint" % "0.4.3",
     "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
 
   "joda-time" % "joda-time" % "2.9.4") :::
@@ -116,6 +117,7 @@ object Settings {
     //    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
     "io.suzaku" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
+    "com.lihaoyi" %%% "pprint" % "0.4.3",
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
   ))
 

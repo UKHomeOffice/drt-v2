@@ -72,9 +72,9 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       val arrivals = List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
       setFlightsAndStopActors(arrivals)
 
-      val result = getFlightsAsSet
-      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
+      val result = getFlightsAsSet()
 
+      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
       result === expected
     }
 
@@ -85,12 +85,12 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       )
       setFlightsStopAndSleep(flightsSet)
 
-      val result = getFlightsAsSet
+      val result = getFlightsAsSet()
+
       val expected = Set(
         apiFlight(flightId = 1, iata = "SA0123", airportId = "JFK", actPax = 100, schDt = "2017-10-02T20:00:00Z"),
         apiFlight(flightId = 2, iata = "BA0001", airportId = "JFK", actPax = 150, schDt = "2017-10-02T21:55:00Z")
       )
-
       result === expected
     }
 
@@ -183,7 +183,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     Thread.sleep(100L)
   }
 
-  def getFlightsAsSet = {
+  def getFlightsAsSet() = {
     val (flightsActorRef2, crunchActorRef2) = flightsAndCrunchActors(system)
     val futureResult = flightsActorRef2 ? GetFlights
 

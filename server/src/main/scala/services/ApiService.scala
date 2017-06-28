@@ -23,7 +23,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.Codec
 import scala.language.postfixOps
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 trait AirportToCountryLike {
   lazy val airportInfo: Map[String, AirportInfo] = {
@@ -124,6 +124,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
   }
 
   override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
+    log.info("getting workloads")
     val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
 
     val bestPax: (Arrival) => Int = BestPax(airportConfig.portCode)
@@ -145,9 +146,11 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
     val qlByT = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
 
-    qlByT.onComplete(
-      r => log.debug(s"qlByT ${qlByT} $r")
-    )
+    qlByT.onComplete {
+      case Success(s) => log.info(s"qlByT ${qlByT} $s")
+      case Failure(r) => log.error(s"qlByT ${qlByT} $r")
+    }
+    log.info(s"returning workloads future")
     qlByT
   }
 
@@ -157,7 +160,13 @@ abstract class ApiService(val airportConfig: AirportConfig)
   }
 
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads, desks)
+    Try{
+      WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads, desks)
+    }.recover{
+      case f =>
+        log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
+        SimulationResult(Vector.empty, Nil)
+    }.get
   }
 
   override def airportConfiguration() = airportConfig
@@ -202,7 +211,7 @@ trait ActorBackedCrunchService {
     val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
     result.recover {
       case e: Throwable =>
-        log.error("Crunch not ready ", e)
+        log.info("Crunch not ready in time ", e)
         Left(NoCrunchAvailable())
     }.map {
       case cr: CrunchResult =>

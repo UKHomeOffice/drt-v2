@@ -60,7 +60,14 @@ class FlightPassengerSplitsPerformanceSpec extends
     dicc <- Gen.oneOf(PassengerTypeCalculator.EEACountries.toSeq)
     eeaFlag = "EEA"
     age <- Gen.chooseNum(1, 99)
-  } yield PassengerInfoJson(Some(dt), dicc, eeaFlag, Some(age.toString))
+    disembarkation <- Gen.oneOf(Some("LHR"), Some("COL"))
+    inTransit <- Gen.oneOf("Y", "N")
+    disCc <- Gen.oneOf(Some("GBR"), Some("MNP"))
+    natCc <- Gen.oneOf(Some("GBR"), None)
+  } yield PassengerInfoJson(Some(dt), dicc, eeaFlag, Some(age.toString), DisembarkationPortCode = disembarkation,
+    InTransitFlag = inTransit,
+    DisembarkationPortCountryCode = disCc,
+    NationalityCountryCode = natCc)
 
   // todo figure out scala check Gen.parameters
   def flightGen(dateTime: DateTime): Gen[VoyageManifest] = for {

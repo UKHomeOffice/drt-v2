@@ -137,6 +137,7 @@ object PaxLoadCalculator {
     val pcpStartTimeMillis = MilliDate(flight.PcpTime).millisSinceEpoch
     //TODO fix this get
     val splits = splitsRatioProvider(flight).get.splits
+    log.info(s"voyagePaxSplits $splits")
     val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpStartTimeMillis, 1)
       .zip(paxDeparturesPerMinutes(bestPax(flight), paxOffFlowRate))
       .flatMap {

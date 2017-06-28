@@ -154,6 +154,8 @@ trait SDateLike {
 
   def addHours(hoursToAdd: Int): SDateLike
 
+  def addMinutes(minutesToAdd: Int): SDateLike
+
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
@@ -163,6 +165,7 @@ trait SDateLike {
 object CrunchResult {
   def empty = CrunchResult(0, 0, Vector[Int](), Nil)
 }
+
 
 case class CrunchResult(
                          firstTimeMillis: Long,
@@ -203,7 +206,7 @@ trait WorkloadsHelpers {
   def queueWorkloadsForPeriod(workloads: Map[String, Seq[WL]], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
     workloads.mapValues((qwl: Seq[WL]) => {
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, workloadToWorkLoadByTime(qwl))
-      queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
+      queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
     })
   }
 
@@ -225,7 +228,7 @@ trait WorkloadsHelpers {
     workloads.mapValues(qwl => {
       val allPaxloadByMinuteForThisQueue: Map[Long, Double] = loadByMillis(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, allPaxloadByMinuteForThisQueue)
-      queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
+      queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
     })
   }
 
@@ -236,7 +239,7 @@ trait WorkloadsHelpers {
   def workloadsByPeriod(workloadsByMinute: Seq[WL], n: Int): scala.Seq[WL] =
     workloadsByMinute.grouped(n).toSeq.map((g: Seq[WL]) => WL(g.head.time, g.map(_.workload).sum))
 
-  def queuesWorkloadByMinuteAsFullyPopulatedWorkloadSeq(res: Map[Long, Double]): List[Double] = {
+  def queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(res: Map[Long, Double]): List[Double] = {
     res.toSeq.sortBy(_._1).map(_._2).toList
   }
 

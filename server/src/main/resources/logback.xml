@@ -13,4 +13,7 @@
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
+    <logger level="DEBUG" name="services">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 </configuration>

@@ -24,13 +24,13 @@ object FlightsWithSplitsTable {
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
   implicit val doubleReuse = Reusability.double(0.001)
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
-  implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
-  implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
-  implicit val flightReuse = Reusability.caseClassDebug[Arrival]
-  implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
-  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
+  implicit val paxtypeandQueueReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
+  implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
+  implicit val flightReuse = Reusability.caseClass[Arrival]
+  implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
+  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
   implicit val bestPaxReuse = Reusability.byRefOr_==[BestPaxForArrivalF]
-  implicit val propsReuse = Reusability.caseClassDebug[Props]
+  implicit val propsReuse = Reusability.caseClass[Props]
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
@@ -39,13 +39,10 @@ object FlightsWithSplitsTable {
                       ) = ScalaComponent.builder[Props]("ArrivalsTable")
 
     .renderP((_$, props) => {
-      log.info(s"sorting flights")
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
-
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime) //todo move this closer to the model
-      log.info(s"sorted flights")
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {
@@ -83,16 +80,12 @@ object FlightsWithSplitsTable {
         else
           <.div("No flights in this time period")
       } match {
-        case Success(s) =>
-          log.info(s"table rendered!!")
-          s
-
+        case Success(s) => s
         case Failure(f) =>
           log.error(s"failure in table render $f")
           <.div(s"render failure ${f}")
       }
     })
-    .componentDidMount((props) => Callback.log(s"componentDidMount! $props"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -119,17 +112,17 @@ object FlightTableRow {
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
   implicit val doubleReuse = Reusability.double(0.01)
-  implicit val paxtypeandQueueReuse = Reusability.caseClassDebug[ApiPaxTypeAndQueueCount]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[ApiPaxTypeAndQueueCount]]
-  //  implicit val flightReuse = Reusability.caseClassDebug[List[Arrival]]
-  implicit val SplitsReuse = Reusability.caseClassDebug[ApiSplits]
-  implicit val flightReuse = Reusability.caseClassDebug[Arrival]
-  implicit val apiflightsWithSplitsReuse = Reusability.caseClassDebug[ApiFlightWithSplits]
-  implicit val flightsWithSplitsReuse = Reusability.caseClassDebug[FlightsWithSplits]
+  implicit val paxtypeandQueueReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
+  //  implicit val flightReuse = Reusability.caseClass[List[ApiPaxTypeAndQueueCount]]
+  //  implicit val flightReuse = Reusability.caseClass[List[Arrival]]
+  implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
+  implicit val flightReuse = Reusability.caseClass[Arrival]
+  implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
+  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
 
   implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
   implicit val arrivalToPax = Reusability.byRefOr_==[BestPaxForArrivalF]
-  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
+  implicit val propsReuse = Reusability.caseClassExcept[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
 
   case class RowState(hasChanged: Boolean)
 
@@ -144,7 +137,7 @@ object FlightTableRow {
       val flight = flightWithSplits.apiFlight
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
-      log.info(s"rendering flight row $idx ${flight.toString}")
+      log.debug(s"rendering flight row $idx ${flight.toString}")
       Try {
         val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
 
@@ -223,7 +216,6 @@ object FlightTableRow {
         log.info(s"row ${i.nextProps} changed")
       i.setState(RowState(i.nextProps != i.currentProps))
     })
-    .componentDidMount(p => Callback.log(s"row didMount $p"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

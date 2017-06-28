@@ -111,6 +111,7 @@ object TerminalPage {
 
       val simulationResultComponent = airportConfigRCP((airportConfigMP: ModelProxy[Pot[AirportConfig]]) => {
         val airportConfigPot = airportConfigMP()
+
         <.div({
           airportConfigPot.renderReady(airportConfig => {
             val bestPax = BestPax(airportConfig.portCode)
@@ -124,6 +125,7 @@ object TerminalPage {
                       <.ul(^.className := "nav nav-tabs",
                         <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
                         <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
+                        <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Paxloads")),
                         <.li(seriesPot.renderReady(s => {<.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times")}))
                       )
                       ,
@@ -132,6 +134,8 @@ object TerminalPage {
                           heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
                         <.div(^.id := "workloads", ^.className := "tab-pane fade",
                           heatmapOfWorkloads(props.terminalName)),
+                        <.div(^.id := "paxloads", ^.className := "tab-pane fade",
+                          heatmapOfPaxloads(props.terminalName)),
                         <.div(^.id := "waits", ^.className := "tab-pane fade",
                           heatmapOfWaittimes(props.terminalName))
                       ))
@@ -153,7 +157,6 @@ object TerminalPage {
                       val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
                       val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
 
-                      //                      "flight here"
                       FlightsWithSplitsTable.ArrivalsTable(
                         timelineComp,
                         originMapper,
@@ -162,12 +165,11 @@ object TerminalPage {
                     }))
                   })
                 }),
-                <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
-                  TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
-                )
-              ))
-          })
-        })
+              <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+                TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
+              )
+            ))
+          })})
       })
       <.div(liveSummaryBoxes, simulationResultComponent)
 

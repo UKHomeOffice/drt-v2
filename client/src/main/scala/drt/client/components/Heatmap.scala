@@ -40,6 +40,26 @@ object TerminalHeatmaps {
         }))
     })
   }
+  def heatmapOfPaxloads(terminalName: TerminalName) = {
+    val workloadsRCP = SPACircuit.connect(_.workloadPot)
+    workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
+      <.div(
+        workloadsMP().renderReady(wl => {
+          wl.workloads.get(terminalName) match {
+            case Some(terminalWorkload) =>
+              val heatMapSeries = paxloads(terminalWorkload, terminalName)
+              val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
+              log.info(s"Got max paxLoad of ${maxAcrossAllSeries}")
+              log.info(s"heatmap terminalWorkloas ${terminalWorkload.keys}")
+              <.div(
+                Heatmap.heatmap(Heatmap.Props(series = heatMapSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+              )
+            case None =>
+              <.div(s"No paxloads for ${terminalName}")
+          }
+        }))
+    })
+  }
 
   def emptySafeMax(data: Seq[Double]): Double = {
     data match {
@@ -122,10 +142,12 @@ object TerminalHeatmaps {
     })
   }
 
-  def chartDataFromWorkloads(workloads: Map[String, QueuePaxAndWorkLoads], minutesPerGroup: Int = 15): Map[String, List[Double]] = {
+  def chartDataFromWorkloads(workloads: Map[String, (Seq[WL], Seq[Pax])], minutesPerGroup: Int = 15,
+                             paxloadWorkloadSelector: ((Seq[WL], Seq[Pax])) => Map[Long, Double]): Map[String, List[Double]] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
+//    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
+    val queueWorkloadsByMinute =  WorkloadsHelpers.loadPeriodByQueue(workloads, minutesRangeInMillis, paxloadWorkloadSelector)
     val by15Minutes = queueWorkloadsByMinute.mapValues(
       (v) => v.grouped(minutesPerGroup).map(_.sum).toList
     )
@@ -134,7 +156,17 @@ object TerminalHeatmaps {
 
   def workloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
     log.info(s"!!!!looking up $terminalName in wls")
-    val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60)
+    val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60, WorkloadsHelpers.workloadByMillis)
+    val result: Iterable[Series] = for {
+      (queue, work) <- queueWorkloads
+    } yield {
+      Series(terminalName + "/" + queue, work.toVector)
+    }
+    result.toList
+  }
+  def paxloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
+    log.info(s"!!!!looking up $terminalName in wls")
+    val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60, WorkloadsHelpers.paxloadByMillis)
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
     } yield {
@@ -145,8 +177,8 @@ object TerminalHeatmaps {
 
   def waitTimes(simulationResult: Map[QueueName, Pot[SimulationResult]], terminalName: String): Pot[List[Series]] = {
     val result: Iterable[Series] = for {
-      queueName <- simulationResult.keys
-      simResult <- simulationResult(queueName)
+      (queueName, simResultPot) <- simulationResult
+      simResult <- simResultPot
       waitTimes = simResult.waitTimes
     } yield {
       Series(terminalName + "/" + queueName,
@@ -234,7 +266,6 @@ object Heatmap {
     ).build
 
   def getRects(serie: Series, numberofblocks: Int, gridSize: Int, props: Props, sIndex: Int): TagOf[G] = {
-    log.info(s"Rendering rects for $serie")
     Try {
       val rects = serie.data.zipWithIndex.map {
         case (periodValue, idx) => {

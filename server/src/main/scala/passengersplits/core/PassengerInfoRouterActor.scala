@@ -70,6 +70,7 @@ class PassengerSplitsInfoByPortRouter extends
   Actor with PassengerQueueCalculator with ActorLogging
   with SimpleRouterActor[PassengerInfoRouterActor] {
 
+  var latestFileName: Option[String] = None
   def childProps = Props[PassengerInfoRouterActor]
 
   def receive: PartialFunction[Any, Unit] = LoggingReceive {
@@ -99,9 +100,10 @@ class PassengerSplitsInfoByPortRouter extends
       log.info(s"top level router asked to ${report}")
       val child = getRCActor(childName(report.destinationPort))
       child.tell(report, sender)
-    case VoyageManifestZipFileComplete(zipfilename, completionMonitor) =>
+    case VoyageManifestZipFileComplete(zipFilename, completionMonitor) =>
       log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
-      completionMonitor ! VoyageManifestZipFileCompleteAck(zipfilename)
+      latestFileName = Some(zipFilename)
+      completionMonitor ! VoyageManifestZipFileCompleteAck(zipFilename)
     case report: ReportFlightCode =>
       childActorMap.values.foreach(_.tell(report, sender))
     case LogStatus =>
@@ -163,6 +165,11 @@ class SingleFlightActor
   override def postRestart(reason: Throwable): Unit = {
     log.info(s"SingleFlightActor restarting ${self} ")
     super.postRestart(reason)
+  }
+
+  override def postStop(): Unit = {
+    log.info(s"SingleFlightActor for ${latestMessage.map(_.summary)} stopped")
+    super.postStop()
   }
 
   def receive = LoggingReceive {
