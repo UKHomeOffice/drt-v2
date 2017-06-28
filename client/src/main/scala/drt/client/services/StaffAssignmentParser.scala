@@ -24,6 +24,7 @@ object JSDateConversions {
   implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(date)
 
   object SDate {
+
     case class JSSDate(date: Date) extends SDateLike {
 
       def getFullYear(): Int = date.getFullYear()
@@ -49,6 +50,12 @@ object JSDateConversions {
         newDate
       }
 
+      def addMinutes(minutesToAdd: Int): SDateLike = {
+        val newDate = new Date(millisSinceEpoch)
+        newDate.setMinutes(newDate.getMinutes() + minutesToAdd)
+        newDate
+      }
+
       def millisSinceEpoch: Long = date.getTime().toLong
 
 
@@ -56,12 +63,12 @@ object JSDateConversions {
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
-    /****
+    /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
       */
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
 
-    /***
+    /** *
       * dateString is an ISO parseable datetime representation, with optional timezone
       *
       * @param dateString
@@ -82,6 +89,7 @@ object JSDateConversions {
       JSSDate(d)
     }
   }
+
 }
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
@@ -156,6 +164,7 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
 case class StaffAssignmentService(assignments: Seq[StaffAssignment]) {
   def staffAt(date: MilliDate): Int = assignments.filter(assignment =>
     assignment.startDt <= date && date <= assignment.endDt).map(_.numberOfStaff).sum
+
   def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
     assignment.startDt <= date && date <= assignment.endDt && assignment.terminalName == terminalName
   }).map(_.numberOfStaff).sum
