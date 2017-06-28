@@ -422,7 +422,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
             })
           }
 
-          val allEffects = airportInfos >> getWorkloads
+          val allEffects = airportInfos // >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
