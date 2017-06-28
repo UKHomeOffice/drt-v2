@@ -107,7 +107,8 @@ object BigSummaryBoxes {
       <.h3(
         nbsp,
         <.span(
-          <.div(^.className := "split-graph-container splitsource-" + source,
+          // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
+          <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
             splitsGraphComponentColoure(splitTotal, orderedSplitCounts), sourceDisplay))
       )
     }
@@ -120,7 +121,8 @@ object BigSummaryBoxes {
 
   val SummaryBox = ScalaComponent.builder[Props]("SummaryBox")
     .render_P((p) => {
-      <.div(^.className := "summary-boxes",
+
+      <.div(^.className := "summary-boxes ",
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d "), <.span(^.className := "sub", "Flights"))),
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count best-pax-count", f"${p.bestPaxCount}%,d "), <.span(^.className := "sub", "Best Pax"))),
         <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)))
