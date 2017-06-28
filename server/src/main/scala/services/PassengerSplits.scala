@@ -71,7 +71,7 @@ object AdvPaxSplitsProvider {
             val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(voyagePaxSplits, egatePercentage)
             val fastTrackPercentages = fastTrackPercentageProvider(flight)
             val withFastTrack = fastTrackPercentages match {
-              case Some(fastTrackPercentages) => CSVPassengerSplitsProvider.applyFastTrack (voyagePaxSplits, fastTrackPercentages = fastTrackPercentages)
+              case Some(fastTrackPercentages) => CSVPassengerSplitsProvider.applyFastTrack (voyagePaxSplitsWithEgatePercentage, fastTrackPercentages = fastTrackPercentages)
               case None => voyagePaxSplitsWithEgatePercentage
             }
             logSr(s"applying egate percentage $egatePercentage to $voyagePaxSplits")

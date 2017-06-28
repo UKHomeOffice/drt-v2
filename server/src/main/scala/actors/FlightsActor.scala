@@ -125,7 +125,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       val lastMidnight = LocalDate.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd"))
 
       onFlightUpdates(flightsWithLastKnownPax, lastMidnight, domesticPorts)
-      log.info(s"flight state now contains ${flightState.values.toList}")
+      log.debug(s"flight state now contains ${flightState.values.toList}")
       val flightsMessage = FlightsMessage(flightState.values.toList.map(apiFlightToFlightMessage))
 
       persist(flightsMessage) { (event: FlightsMessage) =>

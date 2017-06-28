@@ -414,12 +414,12 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
           val airportCodes = flights.map(_.Origin).toSet
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
 
-//          val getWorkloads = {
-//            //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
-//            Effect.action(log.info("flights Have changed - will re-request workloads")) >> Effect(Future(GetWorkloads("", "")))
-//          }
+          val getWorkloads = {
+            //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
+            Effect(Future(GetWorkloads("", "")))
+          }
 
-          val allEffects = airportInfos //>> getWorkloads
+          val allEffects = airportInfos >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
