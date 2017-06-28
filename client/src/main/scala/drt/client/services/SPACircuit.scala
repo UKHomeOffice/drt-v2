@@ -294,7 +294,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       } {
         val firstTimeSDate = firstTime.map(d => SDate(MilliDate(d)))
         val lastTime = lastTimeOpt.map(d => SDate(MilliDate(d)))
-        log.info(s"received workloads: paxLoads:  firstTime: $firstTime (${firstTimeSDate}) lastTime $lastTime $t/$q $loadAtQueue / $loadAtTerminal from $ql")
+        log.debug(s"received workloads: paxLoads:  firstTime: $firstTime (${firstTimeSDate}) lastTime $lastTime $t/$q $loadAtQueue / $loadAtTerminal")
       }
 
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
@@ -419,7 +419,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 //            Effect.action(log.info("flights Have changed - will re-request workloads")) >> Effect(Future(GetWorkloads("", "")))
 //          }
 
-          val allEffects = airportInfos //>> getWorkloads
+          val allEffects = airportInfos >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")

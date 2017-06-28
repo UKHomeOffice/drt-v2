@@ -171,11 +171,11 @@ object TerminalDeploymentsTable {
         Seq(
           qtd(q.pax),
           qtd(q.userDeskRec.deskRec),
+          qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
       case q: QueuePaxRowEntry => {
         def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
-
         Seq(qtd(q.pax))
       }
     }.toList
