@@ -55,12 +55,6 @@ object JSDateConversions {
         newDate
       }
 
-      def addMinutes(minutesToAdd: Int): SDateLike = {
-        val newDate = new Date(millisSinceEpoch)
-        newDate.setMinutes(newDate.getMinutes() + minutesToAdd)
-        newDate
-      }
-
       def millisSinceEpoch: Long = date.getTime().toLong
 
 

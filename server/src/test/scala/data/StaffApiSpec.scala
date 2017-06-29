@@ -6,9 +6,9 @@ class StaffApiSpec extends SpecificationLike {
 
   import drt.staff.ImportStaff._
 
-  "Given a json string containing 1 hour of 5 staff numbers in 15 minute periods" >> {
+  "Given a json string containing 1 hour of 5 staff numbers in 15 minute periods UTC time blocks" >> {
     "When we parse the json" >> {
-      "Then we should see 4 15 minute shifts strings each with 5 staff members in them" >> {
+      "Then we should see 4 15 minute shifts strings each with 5 staff members in them Europe/London time blocks" >> {
 
         val staffJson =
           """
@@ -34,9 +34,9 @@ class StaffApiSpec extends SpecificationLike {
     }
   }
 
-  "Given a json string containing 1 hour of 0 staff numbers in 15 minute periods" >> {
+  "Given a json string containing 1 hour of 0 staff numbers in 15 minute periods with UTC time blocks" >> {
     "When we parse the json" >> {
-      "Then we should see 4 15 minute shifts strings each with 0 staff members in them" >> {
+      "Then we should see 4 15 minute shifts strings each with 0 staff members in them in Europe/London time blocks" >> {
 
         val staffJson =
           """

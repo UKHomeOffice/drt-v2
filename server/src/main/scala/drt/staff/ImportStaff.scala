@@ -1,5 +1,6 @@
 package drt.staff
 
+import org.joda.time.{DateTime, DateTimeZone}
 import services.SDate
 import services.SDate.implicits._
 
@@ -12,7 +13,9 @@ object ImportStaff
       case Some(s: List[Map[String, Any]]) =>
         s.zipWithIndex.map{
           case (shift, index) =>
-            val shiftStartDate = SDate.parseString(shift("dateTime").toString)
+            //The client deals in local time, and these shifts are sent to the client as strings with no timezone for now.
+            //TODO: store shifts not as strings.
+            val shiftStartDate = new DateTime(shift("dateTime").toString).withZone(DateTimeZone.forID("Europe/London"))
             val shiftsEndDate = shiftStartDate.addMinutes(15)
             f"shift$index, ${shift("name")}, ${shiftStartDate.ddMMyyString}, ${shiftStartDate.getHours()}%02d:${shiftStartDate.getMinutes()}%02d, ${shiftsEndDate.getHours()}%02d:${shiftsEndDate.getMinutes()}%02d, ${shift("staff")}"
         }
