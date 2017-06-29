@@ -1,20 +1,20 @@
 package passengersplits.core
 
-import akka.event.LoggingAdapter
-import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
-import drt.shared.{PassengerQueueTypes, PaxType}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
+import drt.shared.PaxType
 import drt.shared.PaxTypes._
 import org.slf4j.LoggerFactory
+import passengersplits.core.TransitAwarePassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
+import passengersplits.parsing.VoyageManifestParser
+import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 
-import scala.collection.immutable.Iterable
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{Iterable, Seq}
 
 trait PassengerQueueCalculator {
 
-  import drt.shared.Queues._
   import drt.shared.PaxType
+  import drt.shared.Queues._
 
   def calculateQueuePaxCounts(paxTypeCounts: Map[PaxType, Int], egatePercentage: Double): PaxTypeAndQueueCounts = {
     val queues: Iterable[SplitsPaxTypeAndQueueCount] = paxTypeCounts flatMap (ptaq =>
@@ -58,28 +58,7 @@ trait PassengerQueueCalculator {
 
 }
 
-object PassengerQueueCalculator extends PassengerQueueCalculator {
-  val log = LoggerFactory.getLogger(getClass)
-  def convertPassengerInfoToPaxQueueCounts(ps: Seq[PassengerInfoJson], egatePercentage: Double): PassengerQueueTypes.PaxTypeAndQueueCounts = {
-    val paxTypes = PassengerTypeCalculator.paxTypes(ps)
-    val paxTypeCounts = countPassengerTypes(paxTypes)
-    log.info(s"paxTypes: $paxTypeCounts")
-    val queuePaxCounts = calculateQueuePaxCounts(paxTypeCounts, egatePercentage)
-    queuePaxCounts
-  }
-}
-
-
-object PassengerTypeCalculator {
-  type PassengerType = PaxType
-
-  def paxTypes(passengerInfos: Seq[PassengerInfoJson]) = {
-    passengerInfos.map {
-      (pi) =>
-        if (pi.InTransitFlag == "Y") Transit else
-          paxType(pi.EEAFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
-    }
-  }
+object PassengerTypeCalculatorValues {
 
 
   object CountryCodes {
@@ -136,14 +115,60 @@ object PassengerTypeCalculator {
   }
 
   val EEA = "EEA"
+}
 
-  def paxType(eeaFlag: String, documentCountry: String, documentType: Option[String]): PassengerType = {
-    (eeaFlag, documentCountry, documentType) match {
-      case (EEA, country, _) if nonMachineReadableCountries contains (country) => EeaNonMachineReadable
-      case (EEA, country, _) if (EEACountries contains country) => EeaMachineReadable
-      case ("", country, Some(DocType.Visa)) if !(EEACountries contains country) => VisaNational
-      case ("", country, Some(DocType.Passport)) if !(EEACountries contains country) => NonVisaNational
-      case _ => VisaNational
+object PassengerQueueCalculator extends PassengerQueueCalculator {
+  val log = LoggerFactory.getLogger(getClass)
+
+  def convertVoyageManifestIntoPaxTypeAndQueueCounts(flight: VoyageManifestParser.VoyageManifest): List[SplitsPaxTypeAndQueueCount] = {
+    val paxTypeFn = flight.ArrivalPortCode match {
+      case "LHR" => whenTransitMatters
+      case _ => mostAirports
     }
+    val paxTypes = flight.PassengerList.map(passengerInfoFields).map(paxTypeFn)
+    distributeToQueues(paxTypes)
   }
+
+  private def distributeToQueues(paxTypes: Seq[PaxType]) = {
+    val paxTypeCounts = countPassengerTypes(paxTypes)
+    log.info(s"paxTypes: $paxTypeCounts")
+    val disabledEgatePercentage = 0d
+
+    calculateQueuePaxCounts(paxTypeCounts, disabledEgatePercentage)
+  }
+
+}
+
+
+object TransitAwarePassengerTypeCalculator {
+
+  import PassengerTypeCalculatorValues._
+
+  case class PaxTypeInfo(inTransitFlag: String, eeaFlag: String, documentCountry: String, documentType: Option[String])
+
+  def isEea(country: String) = EEACountries contains country
+  def isNonMachineReadable(country: String) = nonMachineReadableCountries contains country
+
+  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
+
+  val transitMatters: PartialFunction[PaxTypeInfo, PaxType] = {
+    case PaxTypeInfo("Y", _, _, _) => Transit
+  }
+
+  val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
+      case PaxTypeInfo(_, EEA, country, _) if isNonMachineReadable(country) => EeaNonMachineReadable
+      case PaxTypeInfo(_, EEA, country, _) if isEea(country) => EeaMachineReadable
+      case PaxTypeInfo(_, "", country, Some(DocType.Visa)) if !isEea(country) => VisaNational
+      case PaxTypeInfo(_, "", country, Some(DocType.Passport)) if !isEea(country) => NonVisaNational
+  }
+
+
+  val defaultToVisaNational: PartialFunction[PaxTypeInfo, PaxType] = {
+    case _ => VisaNational
+  }
+
+  val mostAirports = countryAndDocumentTypes orElse defaultToVisaNational
+
+  val whenTransitMatters = transitMatters orElse mostAirports
+
 }

@@ -170,19 +170,14 @@ object TerminalDeploymentsTable {
 
         Seq(
           qtd(q.pax),
-          qtd(q.userDeskRec.deskRec),
           qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
     }.flatten
 
     val transferCells: TagMod = item.queueDetails.collect {
-      case q: QueuePaxRowEntry => {
-        def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
-
-        Seq(qtd(q.pax))
-      }
-    }.flatten.toTagMod
+      case q: QueuePaxRowEntry => <.td(^.className := queueColour(q.queueName), q.pax)
+    }.toTagMod
 
     val staffRequiredQueues: Seq[QueueDeploymentsRowEntry] = item.queueDetails.collect { case q: QueueDeploymentsRowEntry => q }
     val totalRequired: Int = staffRequiredQueues.map(_.crunchDeskRec).sum
