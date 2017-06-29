@@ -257,8 +257,7 @@ class SingleFlightActor
                             scheduledArrivalDateTime: SDateLike,
                             flight: VoyageManifest, flightEgatePercentage: Double = 0.6d): VoyagePaxSplits = {
     log.info(s"$self calculating splits $port $carrierCode $voyageNumber ${scheduledArrivalDateTime.toString}")
-    val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
-      convertPassengerInfoToPaxQueueCounts(flight.PassengerList, flightEgatePercentage)
+    val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(flight)
     VoyagePaxSplits(
       port,
       carrierCode, voyageNumber, flight.PassengerList.length, scheduledArrivalDateTime,
