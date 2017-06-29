@@ -5,7 +5,7 @@ import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.PaxType
 import drt.shared.PaxTypes._
 import org.slf4j.LoggerFactory
-import passengersplits.core.TransitAwarePassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
+import passengersplits.core.PassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 
@@ -140,7 +140,7 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
 }
 
 
-object TransitAwarePassengerTypeCalculator {
+object PassengerTypeCalculator {
 
   import PassengerTypeCalculatorValues._
 

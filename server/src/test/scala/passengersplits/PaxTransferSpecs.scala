@@ -56,18 +56,15 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
   def splitsByQueue = calculatedSplits.groupBy(_.queueType).mapValues(v => v.map(_.paxCount).sum)
 
   def createLHRFlight = step {
-    println(s"create a flight")
     currentFlight = Some(VoyageManifest(EventCodes.CheckIn, "LHR", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
   }
 
   def createNonLHRFlight = step {
-    println(s"create a non LHR flight")
     currentFlight = Some(VoyageManifest(EventCodes.CheckIn, "EDI", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
   }
 
   def addPassenger = step(threeStrings) {
     case (countryCode: String, transferState: String, disembarkation: String) => {
-      println(s"passenger is $countryCode $transferState")
 
       val inTransit = transferState match {
         case "InTransit" => "Y"
@@ -76,7 +73,6 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
 
       val newPassenger = PassengerInfoJson(Some("P"), countryCode, EEAFlag = "EEA", None, Some(disembarkation), inTransit)
       currentFlight = currentFlight.map(f => f.copy(PassengerList = newPassenger :: f.PassengerList))
-      println(s"flight is now $currentFlight")
     }
   }
 
@@ -87,19 +83,11 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
   }
 
   def assertSplits = example(twoInts) {
-    case (eea: Int, transfer: Int) => {
-      println(s"expected splits are $eea $transfer")
-      println(s"actualSplits are $splitsByQueue")
-      (Map(Queues.EeaDesk -> eea, Queues.Transfer -> transfer) must_== splitsByQueue)
-    }
-  }
-  def assertSplitsWithNoTransfers = example(anInt) {
-    case (eea: Int) => {
-      println(s"expected splits are eea: $eea")
-      println(s"actualSplits are $splitsByQueue")
-      (Map(Queues.EeaDesk -> eea) must_== splitsByQueue)
-    }
+    case (eea: Int, transfer: Int) => Map(Queues.EeaDesk -> eea, Queues.Transfer -> transfer) must_== splitsByQueue
   }
 
-  def transferPaxCanBeRetrievedIndependently = pending("tbd")
+  def assertSplitsWithNoTransfers = example(anInt) {
+    case (eea: Int) => Map(Queues.EeaDesk -> eea) must_== splitsByQueue
+  }
+
 }

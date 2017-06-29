@@ -10,7 +10,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.PassengerInfoBatchActor
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.{PassengerSplitsInfoByPortRouter, PassengerTypeCalculatorValues, TransitAwarePassengerTypeCalculator}
+import passengersplits.core.{PassengerSplitsInfoByPortRouter, PassengerTypeCalculatorValues, PassengerTypeCalculator}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import spray.http.DateTime
 import spray.routing.Directives
