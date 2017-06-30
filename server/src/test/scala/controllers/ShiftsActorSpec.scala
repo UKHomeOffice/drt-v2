@@ -28,13 +28,14 @@ object PersistenceCleanup {
   }
 }
 
+
 abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
   "akka.persistence.journal.leveldb.dir" -> dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
   "akka.persistence.snapshot-store.local.dir" -> s"$dbLocation/snapshot"
-)).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString))))
+))/*.withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString))*/))
   with After
   with ImplicitSender {
 

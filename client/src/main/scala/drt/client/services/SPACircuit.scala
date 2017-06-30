@@ -87,7 +87,8 @@ case class RootModel(
                       fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
                       slotsInADay: Int = 96,
-                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
+                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map(),
+                      actualDesks: Map[TerminalName, Map[QueueName, Map[Long, Option[Int]]]] = Map()
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -638,7 +639,12 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def timeProvider() = new Date().getTime.toLong
 
   // initial application model
-  override protected def initialModel = RootModel()
+  override protected def initialModel = RootModel(actualDesks = Map("T2" -> Map(Queues.EeaDesk -> Map(
+    1559815200000L -> Option(5), // 2017-06-30 10:00 UTC
+    1559816100000L -> Option(7), // 2017-06-30 10:15 UTC
+    1559817000000L -> Option(10), // 2017-06-30 10:30 UTC
+    1559817900000L -> Option(2)  // 2017-06-30 10:45 UTC
+  ))))
 
   // combine all handlers into one
   override val actionHandler = {

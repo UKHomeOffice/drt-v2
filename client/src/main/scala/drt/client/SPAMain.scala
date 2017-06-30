@@ -48,7 +48,9 @@ object TableViewUtils {
       case Ready(airportConfig) =>
         val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
           case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
-          case queueName => queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+          case queueName =>
+            val rows: List[((Long, String), QueueDeploymentsRow)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+            rows
         }.toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
@@ -91,17 +93,17 @@ object TableViewUtils {
     }
   }
 
-  def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
+  def queueDeploymentsRowsFromNos(queueName: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
     queueNos.toList.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
-        (timestamp, qn) -> QueueDeploymentsRowEntry(
+        (timestamp, queueName) -> QueueDeploymentsRowEntry(
           timestamp = timestamp,
           pax = pax.toDouble,
           crunchDeskRec = crunchDeskRec.toInt,
           userDeskRec = DeskRecTimeslot(timestamp, userDeskRec.toInt),
           waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
           waitTimeWithUserDeskRec = waitTimeUser.toInt,
-          qn
+          queueName = queueName
         )
     }
   }

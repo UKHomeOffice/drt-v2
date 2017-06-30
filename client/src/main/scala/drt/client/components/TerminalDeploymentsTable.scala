@@ -37,8 +37,10 @@ object TerminalDeploymentsTable {
                                        pax: Double,
                                        crunchDeskRec: Int,
                                        userDeskRec: DeskRecTimeslot,
+                                       actualDeskRec: Option[Int] = None,
                                        waitTimeWithCrunchDeskRec: Int,
                                        waitTimeWithUserDeskRec: Int,
+                                       actualWaitTime: Option[Int] = None,
                                        queueName: QueueName
                                      ) extends QueueDeploymentsRow
 
