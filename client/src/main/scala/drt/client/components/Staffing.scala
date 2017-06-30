@@ -195,7 +195,6 @@ object Staffing {
     .build
 }
 
-
 object MovementDisplay {
   def toCsv(movement: StaffMovement) = {
     s"${movement.terminalName}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"

@@ -14,3 +14,7 @@ POST    /api/*path                        controllers.Application.autowireApi(pa
 
 # Logging
 POST /logging                             controllers.Application.logging
+
+
+POST /data/staff                          controllers.Data.saveStaff
+
