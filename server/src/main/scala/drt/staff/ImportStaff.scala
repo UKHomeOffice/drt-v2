@@ -15,9 +15,9 @@ object ImportStaff
           case (shift, index) =>
             //The client deals in local time, and these shifts are sent to the client as strings with no timezone for now.
             //TODO: store shifts not as strings.
-            val shiftStartDate = new DateTime(shift("dateTime").toString).withZone(DateTimeZone.forID("Europe/London"))
+            val shiftStartDate = new DateTime(shift("shift_start").toString).withZone(DateTimeZone.forID("Europe/London"))
             val shiftsEndDate = shiftStartDate.addMinutes(15)
-            f"shift$index, ${shift("name")}, ${shiftStartDate.ddMMyyString}, ${shiftStartDate.getHours()}%02d:${shiftStartDate.getMinutes()}%02d, ${shiftsEndDate.getHours()}%02d:${shiftsEndDate.getMinutes()}%02d, ${shift("staff")}"
+            f"shift$index, ${shift("terminal")}, ${shiftStartDate.ddMMyyString}, ${shiftStartDate.getHours()}%02d:${shiftStartDate.getMinutes()}%02d, ${shiftsEndDate.getHours()}%02d:${shiftsEndDate.getMinutes()}%02d, ${shift("staff")}"
         }
       case error =>
         println(s"got some bollocks: $error, $staffJson")

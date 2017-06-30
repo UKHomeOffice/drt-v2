@@ -13,10 +13,10 @@ class StaffApiSpec extends SpecificationLike {
         val staffJson =
           """
             |[
-            |  {"code":"LHR","name":"T1","staff":"5","dateTime":"2017-06-28T00:00:00.00Z"},
-            |  {"code":"LHR","name":"T1","staff":"5","dateTime":"2017-06-28T00:15:00.00Z"},
-            |  {"code":"LHR","name":"T1","staff":"5","dateTime":"2017-06-28T00:30:00.00Z"},
-            |  {"code":"LHR","name":"T1","staff":"5","dateTime":"2017-06-28T00:45:00.00Z"}
+            |  {"port_code":"LHR","terminal":"T1","staff":"5","shift_start":"2017-06-28T00:00:00.00Z"},
+            |  {"port_code":"LHR","terminal":"T1","staff":"5","shift_start":"2017-06-28T00:15:00.00Z"},
+            |  {"port_code":"LHR","terminal":"T1","staff":"5","shift_start":"2017-06-28T00:30:00.00Z"},
+            |  {"port_code":"LHR","terminal":"T1","staff":"5","shift_start":"2017-06-28T00:45:00.00Z"}
             |]
             |""".stripMargin
         ""
@@ -41,10 +41,10 @@ class StaffApiSpec extends SpecificationLike {
         val staffJson =
           """
             |[
-            |  {"code":"LHR","name":"T1","staff":"0","dateTime":"2017-06-28T00:00:00.00Z"},
-            |  {"code":"LHR","name":"T1","staff":"0","dateTime":"2017-06-28T00:15:00.00Z"},
-            |  {"code":"LHR","name":"T1","staff":"0","dateTime":"2017-06-28T00:30:00.00Z"},
-            |  {"code":"LHR","name":"T1","staff":"0","dateTime":"2017-06-28T00:45:00.00Z"}
+            |  {"port_code":"LHR","terminal":"T1","staff":"0","shift_start":"2017-06-28T00:00:00.00Z"},
+            |  {"port_code":"LHR","terminal":"T1","staff":"0","shift_start":"2017-06-28T00:15:00.00Z"},
+            |  {"port_code":"LHR","terminal":"T1","staff":"0","shift_start":"2017-06-28T00:30:00.00Z"},
+            |  {"port_code":"LHR","terminal":"T1","staff":"0","shift_start":"2017-06-28T00:45:00.00Z"}
             |]
             |""".stripMargin
 
