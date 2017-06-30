@@ -17,9 +17,9 @@ class Data @Inject()(override val actorSystem: ActorSystem) extends Controller w
     implicit request =>
       def shiftsActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsActor]))
 
-      request.body.asJson.map(_.toString()) match {
+      request.body.asJson.flatMap(ImportStaff.staffJsonToShifts) match {
         case Some(shiftsString) =>
-          shiftsActor ! ImportStaff.staffJsonToShifts(shiftsString)
+          shiftsActor ! shiftsString
           Created
         case _ =>
           BadRequest("{\"error\": \"Unable to parse data\"}")
