@@ -1,22 +1,12 @@
 package drt.client.services
 
 
+import drt.client.DeskStats
 import drt.client.components.TerminalDeploymentsTable.QueueDeploymentsRowEntry
-import drt.shared.FlightsApi.QueueName
 import drt.shared.Queues
 import utest._
 
 import scala.collection.immutable.Map
-
-
-object DeskStats {
-  def withActDesks(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, Option[Int]]]) = {
-    queueRows.map {
-      case qdr: QueueDeploymentsRowEntry =>
-        qdr.copy(actualDeskRec = actDeskNos(qdr.queueName).get(qdr.timestamp).flatten)
-    }
-  }
-}
 
 object DeskstatsTests extends TestSuite {
 

@@ -11,8 +11,6 @@ import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.WebpackRequire
-import japgolly.scalajs.react.component.Js
-import japgolly.scalajs.react.component.Scala.MountedImpure
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 
@@ -42,14 +40,16 @@ object TableViewUtils {
                                paxload: Map[String, List[Double]],
                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
                                simulationResult: Map[QueueName, Pot[SimulationResult]],
-                               userDeskRec: QueueStaffDeployments
+                               userDeskRec: QueueStaffDeployments,
+                               actualDesks: Map[QueueName, Map[Long, Option[Int]]]
                              ): List[TerminalDeploymentsRow] = {
     airportConfigPot match {
       case Ready(airportConfig) =>
         val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
           case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
           case queueName =>
-            val rows: List[((Long, String), QueueDeploymentsRow)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+            val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+            DeskStats.withActDesks(rows.map(_._2), actualDesks).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
             rows
         }.toList
 
@@ -297,4 +297,13 @@ object WebpackBootstrapRequire {
   @js.native
   object Bootstrap extends js.Any
 
+}
+
+object DeskStats {
+  def withActDesks(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, Option[Int]]]) = {
+    queueRows.map {
+      case qdr: QueueDeploymentsRowEntry =>
+        qdr.copy(actualDeskRec = actDeskNos.getOrElse(qdr.queueName, Map()).getOrElse(qdr.timestamp, None).flatten)
+    }
+  }
 }

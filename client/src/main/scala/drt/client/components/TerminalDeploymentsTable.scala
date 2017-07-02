@@ -3,6 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react._
 import drt.client.TableViewUtils._
+import drt.client.components.TerminalDeploymentsTable.QueueDeploymentsRowEntry
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
@@ -172,7 +173,7 @@ object TerminalDeploymentsTable {
 
         Seq(
           qtd(q.pax),
-          qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
+          qtd(^.title := s"Rec: ${q.crunchDeskRec}, Act: ${q.actualWaitTime.getOrElse("n/a")}", q.userDeskRec.deskRec),
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
     }.flatten
