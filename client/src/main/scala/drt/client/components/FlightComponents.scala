@@ -14,18 +14,19 @@ object FlightComponents {
 
     val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
-    val apiPax: Int = apiSplits.splits.map(_.paxCount.toInt).sum
+    val apiPax: Int = ApiSplits.totalPax(apiSplits.splits).toInt
+    val apiExTransPax: Int = ApiSplits.totalExcludingTransferPax(apiSplits.splits).toInt
 
     airportConfigRCP(acPot => {
       <.div(
         acPot().renderReady(ac => {
-          val paxToDisplay = if (apiPax > 0) apiPax else BestPax(ac.portCode)(flight)
+          val paxToDisplay = if (apiExTransPax > 0) apiExTransPax else BestPax(ac.portCode)(flight)
           val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
           val paxClass = paxDisplayClass(flight, apiPax, paxToDisplay)
           val maxCapLine = maxCapacityLine(maxFlightPax, flight)
 
           <.div(
-            ^.title := paxComponentTitle(flight, apiPax),
+            ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
             ^.className := "pax-cell",
             maxCapLine,
             <.div(^.className := paxClass, ^.width := paxWidth),
@@ -45,15 +46,15 @@ object FlightComponents {
     }
   }
 
-  def paxComponentTitle(flight: Arrival, apiPax: Int): String = {
+  def paxComponentTitle(flight: Arrival, apiPax: Int, apiIncTrans: Int): String = {
     val api: String = if (apiPax > 0) apiPax.toString else "n/a"
     val port: String = if (flight.ActPax > 0) flight.ActPax.toString else "n/a"
     val last: String = flight.LastKnownPax.getOrElse("n/a").toString
     val max: String = if (flight.MaxPax > 0) flight.MaxPax.toString else "n/a"
 
     s"""
-       |API: ${api}
-       |Port: ${port}
+       |API: ${api} = (${apiIncTrans} - ${apiIncTrans - apiPax} transfer)
+       |Port: ${port} (Port transfer ${flight.TranPax}
        |Previous: ${last}
        |Max: ${max}
                   """.stripMargin
@@ -70,43 +71,35 @@ object FlightComponents {
     s"${apiPax.toDouble / maxFlightPax * 100}%"
   }
 
-  def splitsGraphComponent(splitTotal: Int, splits: Seq[(String, Int)]): TagOf[Div] = {
-    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits),
-      <.div(^.className := "graph",
-        splits.map {
-          case (label, paxCount) =>
-            val percentage: Double = paxCount.toDouble / splitTotal * 100
-            <.div(
-              ^.className := "bar",
-              ^.height := s"${percentage}%",
-              ^.title := s"$paxCount $label")
-        }.toTagMod
-      ))
-  }
 
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.passengerType} > ${ptqc.queueType}"
 
-  def splitsGraphComponentColoure(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)]): TagOf[Div] = {
-    <.div(^.className := "splits", ^.title := splitsSummaryTooltip(splitTotal, splits.map { case (k, v) => (paxTypeAndQueueString(k), v) }),
-      <.div(^.className := "graph",
-        splits.map {
-          case (paxTypeAndQueue, paxCount) =>
-            val percentage: Double = paxCount.toDouble / splitTotal * 100
-            val label = paxTypeAndQueueString(paxTypeAndQueue)
-            <.div(
-              ^.className := "bar " + paxTypeAndQueue.queueType,
-              ^.height := s"${percentage}%",
-              ^.title := s"$paxCount $label")
-        }.toTagMod
-      ))
+  object SplitsGraph {
+    def tt(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)]) = splitsSummaryTooltip(splitTotal, splits.map { case (k, v) => (paxTypeAndQueueString(k), v) })
+    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)], tooltip: TagMod)
+    def splitsGraphComponentColoure(props: Props): TagOf[Div] = {
+      import props._
+      <.div(^.className := "splits",
+        <.div(^.className := "splits-tooltip", <.p(tooltip)),
+        <.div(^.className := "graph",
+          splits.map {
+            case (paxTypeAndQueue, paxCount) =>
+              val percentage: Double = paxCount.toDouble / splitTotal * 100
+              val label = paxTypeAndQueueString(paxTypeAndQueue)
+              <.div(
+                ^.className := "bar " + paxTypeAndQueue.queueType,
+                ^.height := s"${percentage}%",
+                ^.title := s"$paxCount $label")
+          }.toTagMod
+        ))
+    }
   }
 
-  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): String = {
-    val totalLine = s"Total: ${splits.map(_._2).sum}\n"
-    val splitLines = splits.map {
-      case (label, paxCount) =>
-        s"$paxCount $label"
-    }.mkString("\n")
-    totalLine + splitLines
+  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): TagMod = {
+    <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+      <.tbody(
+        splits.map {
+      case (label, paxCount) => <.tr(<.td(s"$paxCount $label"))
+    }.toTagMod))
   }
 }

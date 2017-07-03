@@ -519,8 +519,42 @@ th h2 {
   display: inline-block;
 }
 
+.splits .splits-tooltip {
+  display: none;
+}
+
+.splits:hover .splits-tooltip {
+  display: block;
+  font-size: medium;
+  /* position relative to container div.tooltip */
+  position: absolute;
+
+  /* prettify */
+  padding: 0.5em;
+  color: #000000;
+  opacity: 0.9;
+  background: #ebf4fb;
+  border: 0.1em solid #b7ddf2;
+  /* round the corners */
+  border-radius: 0.5em;
+  /* prevent too wide tooltip */
+  max-width: 80em;
+  z-index: 1000;
+  .below {
+    top: 1em;
+  }
+
+  .left {
+    top: 1em;
+    right: 1em;
+  }
+
+}
+
+
+
 .splits .graph {
-  width: 106px;
+  width: 136px;
   height: 28px;
   position: absolute;
   bottom: -5px;

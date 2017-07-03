@@ -1,5 +1,7 @@
 package drt.client.components
 
+import drt.client.components.FlightComponents.SplitsGraph
+import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
@@ -35,7 +37,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                        originMapper: (String) => VdomNode = (portCode) => portCode,
                        paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                       splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
+                       splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                       ) = ScalaComponent.builder[Props]("ArrivalsTable")
 
     .renderP((_$, props) => {
@@ -99,13 +101,15 @@ object FlightTableRow {
   type OriginMapperF = (String) => VdomNode
   type BestPaxForArrivalF = (Arrival) => Int
 
+  type SplitsGraphComponentFn = (SplitsGraph.Props) => TagOf[Div]
+
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShares: Set[Arrival],
                    idx: Int,
                    timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div(),
+                   splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    bestPax: (Arrival) => Int
                   )
 
@@ -146,13 +150,13 @@ object FlightTableRow {
           SplitSources.Historical -> "Historical"
         ).getOrElse(name, name)
 
-        def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
+        def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
           val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-          val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-            case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-          }
+          val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}$splitStyleUnitLabel"), <.td( s._1.passengerType.name), <.td( s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
-            props.splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplay)
+            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
+            sourceDisplay)
         }
 
         //todo - we need to lift this splitsComponent code out somewhere more useful

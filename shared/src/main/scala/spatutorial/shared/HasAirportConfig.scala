@@ -82,7 +82,7 @@ object BestPax {
 
     flight match {
       case f if f.ActPax > 0 && f.ActPax != defaultPax =>
-        f.ActPax
+        f.ActPax - f.TranPax
       case f if f.LastKnownPax.isDefined && f.LastKnownPax.get != defaultPax =>
         f.LastKnownPax.get
       case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
@@ -118,7 +118,7 @@ object PaxTypesAndQueues {
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
   /*todo - we should move the usages of this to airportConfig */
-  val inOrder = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
+  val inOrder = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
 
   val inOrderWithFastTrack = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk,
     eeaNonMachineReadableToDesk, visaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToDesk, nonVisaNationalToFastTrack)

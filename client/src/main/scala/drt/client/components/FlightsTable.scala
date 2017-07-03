@@ -65,7 +65,7 @@ object FlightsTable {
         props.flightsWithSplitsPot.renderPending((t) => ViewTools.spinner),
         props.flightsWithSplitsPot.renderEmpty(ViewTools.spinner),
         props.flightsWithSplitsPot.renderReady(flights => {
-            FlightsWithSplitsTable.ArrivalsTable()(FlightsWithSplitsTable.Props(flights, BestPax.bestPax))
+            FlightsWithSplitsTable.ArrivalsTable()(FlightsWithSplitsTable.Props(flights, props.bestPax))
         })
       )
     }).build

@@ -252,6 +252,22 @@ object BigSummaryBoxTests extends TestSuite {
           }
           "Given a flight " - {
             "AND it has no splits " - {
+              "AND it has 100 act pax AND it has 60 tranprax" - {
+                "Then we use get pcpPax of 40 " - {
+                  val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, TranPax = 60, PcpTime = mkMillis("2017-05-01T12:05Z"))
+                  val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
+
+                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+
+                  val expectedPax = 40
+
+                  assert(pax == expectedPax)
+                }
+              }
+            }
+          }
+          "Given a flight " - {
+            "AND it has no splits " - {
               "AND it has not got act pax " - {
                 "Then we use max pax from the flight" - {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 0, MaxPax = 134, PcpTime = mkMillis("2017-05-01T12:05Z"))

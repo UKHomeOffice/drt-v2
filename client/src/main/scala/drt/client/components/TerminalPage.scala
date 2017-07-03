@@ -8,7 +8,8 @@ import drt.client.logger._
 import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
 import drt.shared._
-import FlightComponents.{paxComp, splitsGraphComponent}
+import FlightComponents.{paxComp}
+import FlightComponents.SplitsGraph._
 import japgolly.scalajs.react.{BackendScope, CtorType, _}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -161,7 +162,7 @@ object TerminalPage {
                         timelineComp,
                         originMapper,
                         paxComp(maxFlightPax),
-                        splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
+                        splitsGraphComponentColoure)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
                     }))
                   })
                 }),

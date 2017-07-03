@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain
 import drt.client.components.FlightComponents._
+import drt.client.components.FlightComponents.SplitsGraph._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared._
@@ -20,10 +21,10 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax else f.MaxPax
+  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax - f.TranPax else f.MaxPax
 
   def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
-    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalPax
+    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalExcludingTransferPax
     case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
   }
 
@@ -94,7 +95,6 @@ object BigSummaryBoxes {
   def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
 
 
-
   def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
@@ -103,13 +103,19 @@ object BigSummaryBoxes {
   def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
     val value = Try {
       val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val tt: TagMod = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+        <.tbody(
+          orderedSplitCounts.map { s =>
+            <.tr(<.td(s._1.passengerType.name), <.td(s._1.queueType), <.td(s._2))
+          }.toTagMod))
+
       val nbsp = "\u00a0"
       <.h3(
         nbsp,
         <.span(
           // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
           <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
-            splitsGraphComponentColoure(splitTotal, orderedSplitCounts), sourceDisplay))
+            splitsGraphComponentColoure(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)), sourceDisplay))
       )
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {
