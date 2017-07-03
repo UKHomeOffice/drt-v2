@@ -161,7 +161,7 @@ object TerminalDeploymentsTable {
     val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
     val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
-    val queueRowCells: Seq[TagMod] = item.queueDetails.flatMap {
+    val queueRowCells: Seq[TagMod] = item.queueDetails.collect {
       case (q: QueueDeploymentsRowEntry) => {
         val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
@@ -170,15 +170,14 @@ object TerminalDeploymentsTable {
 
         Seq(
           qtd(q.pax),
-          qtd(q.userDeskRec.deskRec),
+          qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
-      case q: QueuePaxRowEntry => {
-        def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+    }.flatten
 
-        Seq(qtd(q.pax))
-      }
-    }.toList
+    val transferCells: TagMod = item.queueDetails.collect {
+      case q: QueuePaxRowEntry => <.td(^.className := queueColour(q.queueName), q.pax)
+    }.toTagMod
 
     val staffRequiredQueues: Seq[QueueDeploymentsRowEntry] = item.queueDetails.collect { case q: QueueDeploymentsRowEntry => q }
     val totalRequired: Int = staffRequiredQueues.map(_.crunchDeskRec).sum
@@ -190,7 +189,8 @@ object TerminalDeploymentsTable {
     }
     val queueRowCellsWithTotal: List[html_<^.TagMod] = (queueRowCells :+
       <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
-      <.td(^.className := s"total-deployed $ragClass", totalDeployed)).toList
+      <.td(^.className := s"total-deployed $ragClass", totalDeployed) :+ transferCells
+      ).toList
     <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
   }
 
@@ -200,16 +200,21 @@ object TerminalDeploymentsTable {
 
     def render(props: Props) = {
       val t = Try {
-        log.info("%%%%%%%rendering terminal deployments table...")
+        log.debug("%%%%%%%rendering terminal deployments table...")
 
         val style = bss.listGroup
 
         def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-        val headings = props.airportConfig.queues(props.terminalName).map {
+        val queueHeadings: List[TagMod] = props.airportConfig.queues(props.terminalName).collect{
+          case queueName if queueName != Queues.Transfer => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+        }.toList
+
+        val transferHeading: TagMod = props.airportConfig.queues(props.terminalName).collect{
           case (queueName@Queues.Transfer) => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 1)
-          case (queueName) => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
-        }.toList :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals"))
+        }.toList.toTagMod
+
+        val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals")) :+ transferHeading
 
         val defaultNumberOfQueues = 3
         val headOption = props.items.headOption
@@ -244,14 +249,21 @@ object TerminalDeploymentsTable {
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2(queueNames: List[QueueName]) = {
-      val subHeadingLevel2 = queueNames.flatMap {
+    private def subHeadingLevel2(queueNames: List[QueueName]): List[TagMod] = {
+      val queueSubHeadings: List[TagMod] = queueNames.collect {
+        case queueName if queueName != Queues.Transfer => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)
+      }.flatten
+
+      val transferSubHeadings: TagMod = queueNames.collect {
         case Queues.Transfer => <.th(^.className := queueColour(Queues.Transfer), "Pax") :: Nil
-        case queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)
-      }
-      subHeadingLevel2 :+
+      }.flatten.toTagMod
+
+      val list: List[TagMod] = queueSubHeadings :+
         <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks") :+
-        <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on assignments entered")
+        <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on assignments entered") :+
+        transferSubHeadings
+
+      list
     }
 
     private def thHeaderGroupStart(title: String, xs: TagMod*): VdomTagOf[TableHeaderCell] = {

@@ -10,7 +10,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.PassengerInfoBatchActor
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.{FlatPassengerSplitsInfoByPortRouter, PassengerSplitsInfoByPortRouter, PassengerTypeCalculator}
+import passengersplits.core.{FlatPassengerSplitsInfoByPortRouter, PassengerSplitsInfoByPortRouter, PassengerTypeCalculatorValues, PassengerTypeCalculator}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import spray.http.DateTime
 import spray.routing.Directives
@@ -57,7 +57,7 @@ class FlightPassengerSplitsPerformanceSpec extends
 
   def passengerInfoGen: Gen[PassengerInfoJson] = for {
     dt <- Gen.oneOf("P", "V")
-    dicc <- Gen.oneOf(PassengerTypeCalculator.EEACountries.toSeq)
+    dicc <- Gen.oneOf(PassengerTypeCalculatorValues.EEACountries.toSeq)
     eeaFlag = "EEA"
     age <- Gen.chooseNum(1, 99)
     disembarkation <- Gen.oneOf(Some("LHR"), Some("COL"))

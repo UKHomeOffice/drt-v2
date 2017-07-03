@@ -140,12 +140,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
       qn <- airportConfig.queues(tn).filterNot(_ == Queues.Transfer)
     } {
       val crunch: Future[CrunchResult] = performCrunch(tn, qn)
-      //      crunchCache.get(cacheKey(tn, qn)) match {
-      //        case None => crunchCache(cacheKey(tn, qn)) {
-      //          crunch
-      //        }
-      //        case _ =>
-      //      }
       crunch.onSuccess {
         case crunchResult =>
           self ! SaveCrunchResult(tn, qn, crunchResult)

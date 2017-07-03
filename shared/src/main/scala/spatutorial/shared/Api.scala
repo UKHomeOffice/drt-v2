@@ -154,6 +154,8 @@ trait SDateLike {
 
   def addHours(hoursToAdd: Int): SDateLike
 
+  def addMinutes(minutesToAdd: Int): SDateLike
+
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"

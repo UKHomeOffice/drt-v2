@@ -28,6 +28,8 @@ object SDate {
 
     def addHours(hoursToAdd: Int): SDateLike = dateTime.plusHours(hoursToAdd)
 
+    def addMinutes(mins: Int): SDateLike = dateTime.plusMinutes(mins)
+
     def millisSinceEpoch: Long = dateTime.getMillis
 
 

@@ -24,12 +24,12 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
         |TransferQueue
         | - $transferPaxGoToATransferQueue
         |
-        |
+        | - $transferPaxOnANonLHRFlightDoNOTGoToATransferQueue
     """
 
   def transferPaxGoToATransferQueue =
     s2"""
-    - Given A Flight $createFlight
+    - Given A Flight to LHR $createLHRFlight
      And the flight has passengers
      And a Passenger is from {DEU} {InTransit} disembarking {BCN} $addPassenger
      And a Passenger is from {DEU} {NotInTransit} disembarking {LHR} $addPassenger
@@ -38,19 +38,33 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
     SplitCounts are eeaDesk {1} transfers {1} $assertSplits
     """
 
+  def transferPaxOnANonLHRFlightDoNOTGoToATransferQueue =
+    s2"""
+    - We only want this feature enabled for LHR
+    - Given A Flight $createNonLHRFlight
+     And the flight has passengers
+     And a Passenger is from {DEU} {InTransit} disembarking {BCN} $addPassenger
+     And a Passenger is from {DEU} {NotInTransit} disembarking {EDI} $addPassenger
+    When we calculate the splits $calcSplits
+    Then we do NOT see them in the split counts
+    SplitCounts are eeaDesk {2} and no transfers  $assertSplitsWithNoTransfers
+    """
+
   var currentFlight: Option[VoyageManifest] = None
   var calculatedSplits: List[SplitsPaxTypeAndQueueCount] = Nil
 
   def splitsByQueue = calculatedSplits.groupBy(_.queueType).mapValues(v => v.map(_.paxCount).sum)
 
-  def createFlight = step {
-    println(s"create a flight")
+  def createLHRFlight = step {
     currentFlight = Some(VoyageManifest(EventCodes.CheckIn, "LHR", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
+  }
+
+  def createNonLHRFlight = step {
+    currentFlight = Some(VoyageManifest(EventCodes.CheckIn, "EDI", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
   }
 
   def addPassenger = step(threeStrings) {
     case (countryCode: String, transferState: String, disembarkation: String) => {
-      println(s"passenger is $countryCode $transferState")
 
       val inTransit = transferState match {
         case "InTransit" => "Y"
@@ -59,23 +73,21 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
 
       val newPassenger = PassengerInfoJson(Some("P"), countryCode, EEAFlag = "EEA", None, Some(disembarkation), inTransit)
       currentFlight = currentFlight.map(f => f.copy(PassengerList = newPassenger :: f.PassengerList))
-      println(s"flight is now $currentFlight")
     }
   }
 
   def calcSplits = step {
     for (flight <- currentFlight) {
-      calculatedSplits = PassengerQueueCalculator.convertPassengerInfoToPaxQueueCounts(flight.PassengerList, 0).toList
+      calculatedSplits = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(flight)
     }
   }
 
   def assertSplits = example(twoInts) {
-    case (eea: Int, transfer: Int) => {
-      println(s"expected splits are $eea $transfer")
-      println(s"actualSplits are $splitsByQueue")
-      (Map(Queues.EeaDesk -> eea, Queues.Transfer -> transfer) must_== splitsByQueue)
-    }
+    case (eea: Int, transfer: Int) => Map(Queues.EeaDesk -> eea, Queues.Transfer -> transfer) must_== splitsByQueue
   }
 
-  def transferPaxCanBeRetrievedIndependently = pending("tbd")
+  def assertSplitsWithNoTransfers = example(anInt) {
+    case (eea: Int) => Map(Queues.EeaDesk -> eea) must_== splitsByQueue
+  }
+
 }

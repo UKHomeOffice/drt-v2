@@ -47,8 +47,8 @@ object TableViewUtils {
     airportConfigPot match {
       case Ready(airportConfig) =>
         val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
-          case Queues.Transfer => processTransfers(timestamps, paxload)
-          case queueName => processQueue(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+          case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
+          case queueName => queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
         }.toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
@@ -61,31 +61,25 @@ object TableViewUtils {
     }
   }
 
-  def processTransfers(timestamps: Seq[Long], queuePaxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
-    log.info(s"processing transfers rows")
+  def transferPaxRowsPerMinute(timestamps: Seq[Long], queuePaxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
     val sampledTs = sampleTimestampsForRows(timestamps)
-    log.info(s"looking for paxload in ${queuePaxload.keys}")
     val sampledPaxload = samplePaxLoad(queuePaxload, Queues.Transfer)
-    log.info(s"sampled paxload")
     val zippedTsAndPaxload = sampledTs.zip(sampledPaxload)
     val res = zippedTsAndPaxload.map {
       case (ts, paxLoad) => (ts, Queues.Transfer) -> QueuePaxRowEntry(ts, Queues.Transfer, paxLoad)
     }
-    log.info(s"returning transfers rows")
     res
   }
 
-  def processQueue(timestamps: Seq[Long],
-                   paxload: Map[String, List[Double]],
-                   queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                   simulationResult: Map[QueueName, Pot[SimulationResult]],
-                   userDeskRec: QueueStaffDeployments,
-                   queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
+  def queueDeploymentRowsPerMinute(timestamps: Seq[Long],
+                                   paxload: Map[String, List[Double]],
+                                   queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
+                                   simulationResult: Map[QueueName, Pot[SimulationResult]],
+                                   userDeskRec: QueueStaffDeployments,
+                                   queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
     simulationResult.get(queueName) match {
       case Some(Ready(sr)) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
-        log.info(s"before transpose it is ${result}")
-        log.info(s"before transpose it is ${result.map(_.length)}")
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
         queueCrunchResultsForTerminal.get(queueName) match {
