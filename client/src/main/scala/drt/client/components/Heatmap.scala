@@ -48,7 +48,7 @@ object TerminalHeatmaps {
           wl.workloads.get(terminalName) match {
             case Some(terminalWorkload) =>
               val heatMapSeries = paxloads(terminalWorkload, terminalName)
-              val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
+              val maxAcrossAllSeries = emptySafeMax(heatMapSeries.map(x => emptySafeMax(x.data)))
               log.info(s"Got max paxLoad of ${maxAcrossAllSeries}")
               log.info(s"heatmap terminalWorkloas ${terminalWorkload.keys}")
               <.div(

@@ -80,6 +80,7 @@ object TableViewUtils {
     simulationResult.get(queueName) match {
       case Some(Ready(sr)) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
+        log.info(s"before transpose it is ${result}")
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
         queueCrunchResultsForTerminal.get(queueName) match {
@@ -92,7 +93,10 @@ object TableViewUtils {
   }
 
   def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
-    queueNos.toList.transpose.zipWithIndex.map {
+    val toTranspose = queueNos.toList
+    log.info(s"toTranspose lengths ${toTranspose.map(_.length)}")
+    log.info(s"toTranspose $toTranspose")
+    toTranspose.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, qn) -> QueueDeploymentsRowEntry(
           timestamp = timestamp,
@@ -216,17 +220,18 @@ object SPAMain extends js.JSApp {
 
   case object StaffingLoc extends Loc
 
-  val initActions = Seq(
-    GetAirportConfig(),
-    GetWorkloads("", ""),
-    RequestFlights(0, 0),
-    GetShifts(),
-    GetFixedPoints(),
-    GetStaffMovements()
-  )
+  def requestInitialActions() = {
+    val initActions = Seq(
+      GetAirportConfig(),
+      GetWorkloads("", ""),
+      RequestFlights(0, 0),
+      GetShifts(),
+      GetFixedPoints(),
+      GetStaffMovements()
+    )
 
-  initActions.foreach(SPACircuit.dispatch(_))
-
+    initActions.foreach(SPACircuit.dispatch(_))
+  }
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
@@ -267,6 +272,7 @@ object SPAMain extends js.JSApp {
 
     //    Perf.start()
     //    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
+    log.info(s"think the port is ${pathToThisApp.split("/")}")
     log.warn("Application starting")
     // send log messages also to the server
     log.enableServerLogging(pathToThisApp + "/logging")
@@ -278,6 +284,9 @@ object SPAMain extends js.JSApp {
     //    ReactTable.DefaultStyle.addToDocument()
     //    Spinner.Style.addToDocument()
     GlobalStyles.addToDocument()
+
+    requestInitialActions()
+
     // create the router
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     // tell React to render the router in the document body

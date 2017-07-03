@@ -13,7 +13,12 @@ import scala.scalajs.js.typedarray._
 
 object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
 
-  override def doCall(req: Request): Future[ByteBuffer] = {
+  override def doCall(req: Request): Future[ByteBuffer] = doCallImpl(req)
+  /*
+  temporary seam for testing - move to higher level injection/de-objectify the AjaxClient
+   */
+  def doCallProd(req: Request): Future[ByteBuffer] = {
+    println(s"doCall $req")
     dom.ext.Ajax.post(
       url = SPAMain.pathToThisApp + "/api/" + req.path.mkString("/"),
       data = Pickle.intoBytes(req.args),
@@ -22,6 +27,12 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
     ).map(r => TypedArrayBuffer.wrap(r.response.asInstanceOf[ArrayBuffer]))
   }
 
+  var doCallImpl: (AjaxClient.Request) => Future[ByteBuffer] = doCallProd _
+  def monkeyPatchDoCallImpl(impl: (AjaxClient.Request) => Future[ByteBuffer]) = {
+    println(s"mocking ajax impl")
+    doCallImpl = impl
+  }
   override def read[Result: Pickler](p: ByteBuffer) = Unpickle[Result].fromBytes(p)
+
   override def write[Result: Pickler](r: Result) = Pickle.intoBytes(r)
 }

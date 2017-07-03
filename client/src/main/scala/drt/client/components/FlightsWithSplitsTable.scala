@@ -33,11 +33,10 @@ object FlightsWithSplitsTable {
   implicit val propsReuse = Reusability.caseClass[Props]
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
-                       originMapper: (String) => VdomNode = (portCode) => portCode,
-                       paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                       splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
-                      ) = ScalaComponent.builder[Props]("ArrivalsTable")
-
+                    originMapper: (String) => VdomNode = (portCode) => portCode,
+                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                    splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
+                   ) = ScalaComponent.builder[Props]("ArrivalsTable")
     .renderP((_$, props) => {
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
@@ -86,6 +85,7 @@ object FlightsWithSplitsTable {
           <.div(s"render failure ${f}")
       }
     })
+    .componentDidMount((p) => Callback.log(s"terminal table didMount $p"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

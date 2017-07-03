@@ -20,7 +20,7 @@ TerminalsDashboardPage {
     .render_P(p => {
       val now = SDate.now()
       val nowPlusNHours = now.addHours(p.hours)
-
+      println(s"terminalsPage now is $now")
       def interestingflight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))

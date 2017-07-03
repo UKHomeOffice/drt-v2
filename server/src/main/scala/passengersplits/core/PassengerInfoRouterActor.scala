@@ -156,8 +156,7 @@ class FlatPassengerSplitsInfoByPortRouter extends
         val manifest = state.flightManifests.get(key)
         manifest match {
           case Some(m) =>
-            val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.
-              convertPassengerInfoToPaxQueueCounts(m.PassengerList, 0)
+            val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(m)
             VoyagePaxSplits(
               report.destinationPort,
               report.carrierCode, report.voyageNumber, m.PassengerList.length, m.scheduleArrivalDateTime.get,

@@ -1,6 +1,8 @@
 package drt.client.services
 
 
+import java.nio.ByteBuffer
+
 import autowire._
 import diode.Implicits.runAfterImpl
 import diode._
@@ -86,8 +88,7 @@ case class RootModel(
                       shiftsRaw: Pot[String] = Empty,
                       fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
-                      slotsInADay: Int = 96,
-                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map()
+                      slotsInADay: Int = 96
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -170,7 +171,6 @@ case class RootModel(
        |simulationResult: $simulationResult
        |flights: $flightsWithSplitsPot
        |airportInfos: $airportInfos
-       |flightPaxSplits: $flightSplits
        |)
      """.stripMargin
 }
@@ -223,11 +223,16 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeploy
   }
 }
 
+//trait RequestingActionHandler {
+//  def AjaxClient[A]: autowire.Client[ByteBuffer, Pickler, Pickler]
+//  def apply[Trait] = ClientProxy[Trait, PickleType, Pickler, Pickler](this)
+//}
+
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action")
+        log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action", f.asInstanceOf[Exception])
         val cause = f.getCause()
         cause match {
           case null => log.error(s"no cause")
@@ -249,8 +254,8 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
     case UpdateAirportConfig(configHolder) =>
       log.info(s"Received AirportConfig $configHolder")
       log.info("Subscribing to crunches for terminal/queues")
-      val effects: Effect = createCrunchRequestEffects(configHolder)
-      updated(Ready(configHolder), effects)
+//      val effects: Effect = Effect(Future()) //createCrunchRequestEffects(configHolder)
+      updated(Ready(configHolder))//, effects)
   }
 
   def createCrunchRequestEffects(configHolder: AirportConfig): Effect = {
@@ -454,9 +459,13 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
         case Right(crunchResultWithTimeAndInterval) =>
+          log.info(s"right crunch results $crunchResultWithTimeAndInterval")
           UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
         case Left(ncr) =>
-          log.debug(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
+          log.info(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
+          NoAction
+        case other =>
+          log.error(s"arghother $other")
           NoAction
       }
       effectOnly(Effect(fe) + crunchEffect)
@@ -496,6 +505,7 @@ object StaffDeploymentCalculator {
         /*
          Fixme: This transpose loses the queue name and thus certainty of order
          */
+        log.info(s"transpose qcr ${queueCrunchResult}")
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
           case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
         }
