@@ -173,7 +173,7 @@ object TerminalDeploymentsTable {
 
         Seq(
           qtd(q.pax),
-          qtd(^.title := s"Rec: ${q.crunchDeskRec}, Act: ${q.actualWaitTime.getOrElse("n/a")}", q.userDeskRec.deskRec),
+          qtd(^.title := s"Rec: ${q.crunchDeskRec}, Act: ${q.actualDeskRec.getOrElse("n/a")}", q.userDeskRec.deskRec),
           qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
       }
     }.flatten

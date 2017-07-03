@@ -3,6 +3,7 @@ package drt.client.services
 
 import drt.client.DeskStats
 import drt.client.components.TerminalDeploymentsTable.QueueDeploymentsRowEntry
+import drt.shared.FlightsApi.QueueName
 import drt.shared.Queues
 import utest._
 
@@ -12,6 +13,28 @@ object DeskstatsTests extends TestSuite {
 
   def tests = TestSuite {
     "Given a list of 1 QueueDeploymentsRowEntry " +
+      "When we ask for it withActDesks and we don't have any act desk data" +
+      "Then we should see the the QueueDeploymentsRowEntry untouched" - {
+      val desk = Queues.EeaDesk
+      val ten00 = 1559815200000L // 2017-06-30 10:00 UTC
+      val queueRows: List[QueueDeploymentsRowEntry] = List(
+        QueueDeploymentsRowEntry(ten00, 10, 1, DeskRecTimeslot(ten00, 2), None, 1, 2, None, desk)
+      )
+
+      val actDeskNos = Map[QueueName, Map[Long, Option[Int]]]()
+
+      val queueRowsWithActs = {
+        DeskStats.withActDesks(queueRows, actDeskNos)
+      }
+
+      val expected: List[QueueDeploymentsRowEntry] = List(
+        QueueDeploymentsRowEntry(ten00, 10, 1, DeskRecTimeslot(ten00, 2), None, 1, 2, None, desk)
+      )
+
+      assert(queueRowsWithActs == expected)
+    }
+
+    "Given a list of 1 QueueDeploymentsRowEntry " +
       "When we ask for it withActDesks " +
       "Then we should see the act desk option added to it" - {
       val desk = Queues.EeaDesk
@@ -20,11 +43,10 @@ object DeskstatsTests extends TestSuite {
         QueueDeploymentsRowEntry(ten00, 10, 1, DeskRecTimeslot(ten00, 2), None, 1, 2, None, desk)
       )
 
-      val terminal = "T2"
-      val actDeskNos = Map(terminal -> Map(desk -> Map(ten00 -> Option(5))))
+      val actDeskNos = Map(desk -> Map(ten00 -> Option(5)))
 
       val queueRowsWithActs = {
-        DeskStats.withActDesks(queueRows, actDeskNos(terminal))
+        DeskStats.withActDesks(queueRows, actDeskNos)
       }
 
       val expected: List[QueueDeploymentsRowEntry] = List(
@@ -45,14 +67,13 @@ object DeskstatsTests extends TestSuite {
         QueueDeploymentsRowEntry(ten00, 10, 1, DeskRecTimeslot(ten00, 2), None, 1, 2, None, egate)
       )
 
-      val terminal = "T2"
-      val actDeskNos = Map(terminal -> Map(
+      val actDeskNos = Map(
         eea -> Map(ten00 -> Option(5)),
         egate -> Map(ten00 -> Option(2))
-      ))
+      )
 
       val queueRowsWithActs = {
-        DeskStats.withActDesks(queueRows, actDeskNos(terminal))
+        DeskStats.withActDesks(queueRows, actDeskNos)
       }
 
       val expected: List[QueueDeploymentsRowEntry] = List(
@@ -77,14 +98,13 @@ object DeskstatsTests extends TestSuite {
         QueueDeploymentsRowEntry(ten15, 10, 1, DeskRecTimeslot(ten15, 2), None, 1, 2, None, egate)
       )
 
-      val terminal = "T2"
-      val actDeskNos = Map(terminal -> Map(
+      val actDeskNos = Map(
         eea -> Map(ten00 -> Option(5), ten15 -> Option(6)),
         egate -> Map(ten00 -> Option(2), ten15 -> Option(3))
-      ))
+      )
 
       val result = {
-        DeskStats.withActDesks(queueRows, actDeskNos(terminal))
+        DeskStats.withActDesks(queueRows, actDeskNos)
       }
 
       val expected: List[QueueDeploymentsRowEntry] = List(
@@ -111,14 +131,13 @@ object DeskstatsTests extends TestSuite {
         QueueDeploymentsRowEntry(ten15, 10, 1, DeskRecTimeslot(ten15, 2), None, 1, 2, None, egate)
       )
 
-      val terminal = "T2"
-      val actDeskNos = Map(terminal -> Map(
+      val actDeskNos = Map(
         eea -> Map(ten00 -> Option(5)),
         egate -> Map(ten15 -> Option(3))
-      ))
+      )
 
       val result = {
-        DeskStats.withActDesks(queueRows, actDeskNos(terminal))
+        DeskStats.withActDesks(queueRows, actDeskNos)
       }
 
       val expected: List[QueueDeploymentsRowEntry] = List(

@@ -1,16 +1,14 @@
 package controllers
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import akka.event.LoggingReceive
-import akka.stream.ActorMaterializer
+import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
+import drt.shared.Queues
 import org.specs2.mutable.SpecificationLike
+import services.SDate
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable
-import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 //class DeskstatsActor extends Actor with ActorLogging {
 //  def receive: PartialFunction[Any, Unit] = LoggingReceive {
@@ -61,12 +59,9 @@ class DeskstatsActorSpec extends TestKit(ActorSystem("testActorSystem", TestActo
 
       val expected = Map(
         "T2" -> Map(
-          "2017-06-29T21:45" -> Map(
-            "EEA" -> Map("desks" -> Some(2), "wait" -> Some(9)),
-            "Non EEA" -> Map("desks" -> Some(16), "wait" -> None),
-            "Fast Track" -> Map("desks" -> Some(2), "wait" -> Some(0)),
-            "Int/Dom" -> Map("desks" -> Some(0), "wait" -> Some(0))
-          )
+          Queues.EeaDesk -> Map(1498771800000L -> Some(2)),
+          Queues.NonEeaDesk -> Map(1498771800000L -> Some(16)),
+          Queues.FastTrack -> Map(1498771800000L -> Some(2))
         )
       )
 
@@ -78,8 +73,63 @@ class DeskstatsActorSpec extends TestKit(ActorSystem("testActorSystem", TestActo
     parseCsvLine(deskstatsContent.split("\n").head)
   }
 
+  private def desksForQueueByMillis(queueName: String, dateIndex: Int, timeIndex: Int, deskIndex: Int, rows: Seq[Seq[String]]): Map[Long, Option[Int]] = {
+    rows.filter(_.length == 11).map {
+      case columnData: Seq[String] =>
+        val desks = Try {
+          columnData(deskIndex).toInt
+        } match {
+          case Success(d) => Option(d)
+          case Failure(f) => None
+        }
+        val timeString = columnData(timeIndex).take(5)
+        val dateString = {
+          val Array(day, month, year) = columnData(dateIndex).split("/")
+          s"$year-$month-$day"
+        }
+        val millis = SDate(s"${dateString}T$timeString").millisSinceEpoch
+        (millis -> desks)
+    }.toMap
+  }
+
   private def csvData(deskstatsContent: String) = {
-    parseCsvLine(deskstatsContent.split("\n").head)
+    val headings = csvHeadings(deskstatsContent)
+    val columnIndices = Map(
+      "terminal" -> headings.indexOf("device"),
+      "date" -> headings.indexOf("Date"),
+      "time" -> headings.indexOf("Time")
+    )
+    val queueColumns = queueColumnIndexes(headings)
+    val rows = deskstatsContent.split("\n").drop(1).toList
+    val parsedRows = rows.map(parseCsvLine).filter(_.length == 11)
+    val dataByTerminal = parsedRows.groupBy(_ (columnIndices("terminal")))
+    val dataByTerminalAndQueue =
+      dataByTerminal.map {
+        case (terminal, rows) =>
+          terminal -> queueColumns.map {
+            case (queueName, desksAndWaitIndexes) =>
+              queueName -> desksForQueueByMillis(queueName, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), rows)
+          }
+      }
+
+    dataByTerminalAndQueue
+  }
+
+  private def queueColumnIndexes(headings: Seq[String]) = {
+    Map(
+      Queues.EeaDesk -> Map(
+        "desks" -> headings.indexOf("EEA desks open"),
+        "wait" -> headings.indexOf("Queue time EEA")
+      ),
+      Queues.NonEeaDesk -> Map(
+        "desks" -> headings.indexOf("Non EEA desks open"),
+        "wait" -> headings.indexOf("Queue time Non EEA")
+      ),
+      Queues.FastTrack -> Map(
+        "desks" -> headings.indexOf("Fast Track desks open"),
+        "wait" -> headings.indexOf("Queue time Fast Track")
+      )
+    )
   }
 
   private def parseCsvLine(line: String): Seq[String] = {

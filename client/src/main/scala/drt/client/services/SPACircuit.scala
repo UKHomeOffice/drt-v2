@@ -145,9 +145,9 @@ case class RootModel(
             val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
 
             val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
-            val actDesks = actualDesks.getOrElse(terminalName, Map())
+            val actDesksForTerminal = actualDesks.getOrElse(terminalName, Map())
 
-            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr, actDesks)
+            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
           } recover {
             case f =>
               val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
@@ -641,10 +641,10 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   // initial application model
   override protected def initialModel = RootModel(actualDesks = Map("T2" -> Map(Queues.EeaDesk -> Map(
-    1498989600000L -> Option(5), // 2017-07-02 10:00 UTC
-    1498990500000L -> Option(7), // 2017-07-02 10:15 UTC
-    1498991400000L -> Option(10), // 2017-07-02 10:30 UTC
-    1498992300000L -> Option(2)  // 2017-07-02Te 10:45 UTC
+    1499076000000L -> Option(5), // 2017-07-03 10:00 UTC
+    1499076900000L -> Option(7), // 2017-07-03 10:15 UTC
+    1499077800000L -> Option(10), // 2017-07-03 10:30 UTC
+    1499078700000L -> Option(2) // 2017-07-03T 10:45 UTC
   ))))
 
   // combine all handlers into one

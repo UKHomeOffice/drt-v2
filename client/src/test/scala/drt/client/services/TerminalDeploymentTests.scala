@@ -44,7 +44,7 @@ object TerminalDeploymentTests extends TestSuite  {
           Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5)))
       )
 
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = Seq(TerminalDeploymentsRow(0L, List(
         QueueDeploymentsRowEntry(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, queueName = "eeaDesk"))))
@@ -66,7 +66,7 @@ object TerminalDeploymentTests extends TestSuite  {
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
         "eGate" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 4)), Seq(10))))
 
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = Seq(TerminalDeploymentsRow(0L, List(
         QueueDeploymentsRowEntry(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, queueName = "eeaDesk"),
@@ -96,7 +96,7 @@ object TerminalDeploymentTests extends TestSuite  {
         "nonEeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
         "eGate" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 4)), Seq(10))))
 
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = Seq(TerminalDeploymentsRow(0L, List(
         QueueDeploymentsRowEntry(0, pax = 5, crunchDeskRec = 1, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 10, waitTimeWithUserDeskRec = 5, queueName = "eeaDesk"),
@@ -119,7 +119,7 @@ object TerminalDeploymentTests extends TestSuite  {
       val simulationResult = Map(
         "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))))
 
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = List(TerminalDeploymentsRow(0L, List(
         QueueDeploymentsRowEntry(0, pax = 5, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, queueName = "eeaDesk")
@@ -148,7 +148,7 @@ object TerminalDeploymentTests extends TestSuite  {
         "eGate" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 5), DeskRec(1, 7)), Seq(15, 25))),
         "nonEeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 11), DeskRec(1, 8)), Seq(30, 14))))
 
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = Seq(TerminalDeploymentsRow(0L, List(
         QueueDeploymentsRowEntry(0, pax = 6, crunchDeskRec = 2, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 20, waitTimeWithUserDeskRec = 10, queueName = "eeaDesk"),
@@ -181,7 +181,7 @@ object TerminalDeploymentTests extends TestSuite  {
         ), Seq(1, 1, 1, 1, 1, 12, 1, 1, 1, 1, 15, 1, 1, 1, 1, 9))))
 
       val timestamps = 0L to (60000 * 16) by 60000L
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, userDeskRec = Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, userDeskRec = Map(), actualDesks = Map())
 
       val expected = Seq(
         TerminalDeploymentsRow(0L, List(QueueDeploymentsRowEntry(0L, pax = 75, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, queueName = "eeaDesk"))),
@@ -239,7 +239,7 @@ object TerminalDeploymentTests extends TestSuite  {
         ), Seq(1, 1, 1, 1, 1, 12, 1, 1, 1, 1, 15, 1, 1, 1, 1, 9, 1, 1, 1, 1, 1, 12, 1, 1, 1, 1, 14, 1, 1, 1, 1, 9))))
 
       val timestamps = 0L to (60000 * 32) by 60000L
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = Seq(
         TerminalDeploymentsRow(0L, List(QueueDeploymentsRowEntry(0L, pax = 71, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, queueName = "eeaDesk"))),
@@ -303,7 +303,7 @@ object TerminalDeploymentTests extends TestSuite  {
       )
 
       val timestamps = 0L to (60000 * 16) by 60000L
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, Map(), Map())
 
       val expected = Seq(
         TerminalDeploymentsRow(0L, List(
