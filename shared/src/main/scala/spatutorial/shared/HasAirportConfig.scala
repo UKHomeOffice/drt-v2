@@ -75,20 +75,19 @@ object BestPax {
         f.LastKnownPax.get
       case f =>
         f.MaxPax
-    }  }
+    }
+  }
 
   def lhrBestPax = (flight: Arrival) => {
-    val defaultPax = 200
-
-    flight match {
-      case f if f.ActPax > 0 && f.ActPax != defaultPax =>
-        f.ActPax - f.TranPax
-      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get != defaultPax =>
-        f.LastKnownPax.get
-      case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
-        f.MaxPax
-      case _ =>
-        defaultPax
+    val DefaultPax = 200
+    (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
+      case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (DefaultPax, _, None, _) => DefaultPax
+      case (DefaultPax, _, Some(lastPax), _) => lastPax
+      case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
+      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
+      case (actPax, tranPax, _, _) => actPax - tranPax
+      case _ => DefaultPax
     }
   }
 }

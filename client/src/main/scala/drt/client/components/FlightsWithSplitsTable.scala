@@ -153,7 +153,7 @@ object FlightTableRow {
         def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
           val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
           val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
-            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}$splitStyleUnitLabel"), <.td( s._1.passengerType.name), <.td( s._1.queueType))).toTagMod))
+            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2} $splitStyleUnitLabel"), <.td( s._1.passengerType.name), <.td( s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
             props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
             sourceDisplay)

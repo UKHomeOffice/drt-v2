@@ -54,7 +54,7 @@ object FlightComponents {
 
     s"""
        |API: ${api} = (${apiIncTrans} - ${apiIncTrans - apiPax} transfer)
-       |Port: ${port} (Port transfer ${flight.TranPax}
+       |Port: ${port} (Port transfer: ${flight.TranPax})
        |Previous: ${last}
        |Max: ${max}
                   """.stripMargin
