@@ -634,18 +634,29 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
   }
 }
 
+class ActualDesksHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Map[Long, Option[Int]]]]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetActualDesks() =>
+      val nextRequest = Effect(Future(GetActualDesks())).after(15 seconds)
+      val response = Effect(AjaxClient[Api].getActualDesks().call().map {
+        case ActualDesks(desks) =>
+          log.info(s"Received ActualDesks($desks) from Api")
+          SetActualDesks(desks)
+      })
+      effectOnly(response + nextRequest)
+    case SetActualDesks(desks) =>
+      log.info(s"SetActualDesks($desks)")
+      updated(desks)
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
   def timeProvider() = new Date().getTime.toLong
 
   // initial application model
-  override protected def initialModel = RootModel(actualDesks = Map("T2" -> Map(Queues.EeaDesk -> Map(
-    1499076000000L -> Option(5), // 2017-07-03 10:00 UTC
-    1499076900000L -> Option(7), // 2017-07-03 10:15 UTC
-    1499077800000L -> Option(10), // 2017-07-03 10:30 UTC
-    1499078700000L -> Option(2) // 2017-07-03T 10:45 UTC
-  ))))
+  override protected def initialModel = RootModel()
 
   // combine all handlers into one
   override val actionHandler = {
@@ -661,7 +672,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new FixedPointsHandler(zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
-      new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v)))
+      new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
+      new ActualDesksHandler(zoomRW(_.actualDesks)((m, v) => m.copy(actualDesks = v)))
     )
 
     val loggedhandlers: HandlerFunction = (model, update) => {

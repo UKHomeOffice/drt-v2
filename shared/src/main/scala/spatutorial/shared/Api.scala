@@ -325,6 +325,8 @@ trait WorkloadsApi {
   def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]
 }
 
+case class ActualDesks(desks: Map[String, Map[String, Map[Long, Option[Int]]]])
+
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi with WorkloadsApi {
 
@@ -353,4 +355,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
   def getStaffMovements(): Future[Seq[StaffMovement]]
+
+  def getActualDesks(): Future[ActualDesks]
 }

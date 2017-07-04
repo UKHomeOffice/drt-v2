@@ -123,6 +123,7 @@ trait SystemActors extends Core {
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
+  val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
   def csvSplitsProvider: SplitsProvider
 
@@ -206,12 +207,21 @@ class Application @Inject()(
   log.info(s"System.getProperty(user.timezone): ${systemTimeZone}")
   assert(systemTimeZone == "UTC")
 
-
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
   }
 
   log.info(s"Application using airportConfig $airportConfig")
+
+  system.scheduler.schedule(
+    1 * 1000 milliseconds,
+    3 * 60 * 1000 milliseconds)
+  {
+    log.info(s"actDesks: requesting")
+    val actDesks = Deskstats.blackjackDeskstats("https://hal.abm.com/admin/csv/index", SDate("2017-07-03").millisSinceEpoch)
+    log.info(s"actDesks: $actDesks")
+    actualDesksActor ! ActualDesks(actDesks)
+  }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
     override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
@@ -224,6 +234,10 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
+    override def getActualDesks(): Future[ActualDesks] = {
+      val futureDesks = actualDesksActor ? GetActualDesks()
+      futureDesks.map(_.asInstanceOf[ActualDesks])
+    }
   }
 
   trait CrunchFromCache {

@@ -223,7 +223,8 @@ object SPAMain extends js.JSApp {
     RequestFlights(0, 0),
     GetShifts(),
     GetFixedPoints(),
-    GetStaffMovements()
+    GetStaffMovements(),
+    GetActualDesks()
   )
 
   initActions.foreach(SPACircuit.dispatch(_))
