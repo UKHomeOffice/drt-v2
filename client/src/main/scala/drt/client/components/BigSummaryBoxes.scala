@@ -21,8 +21,6 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-//  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax - f.TranPax else f.MaxPax
-
   def bestFlightSplitPax(bestFlightPax: (Arrival) => Int): PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalExcludingTransferPax
     case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
