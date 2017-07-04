@@ -5,7 +5,7 @@ import diode.react.ReactConnectProps
 import drt.client.SPAMain.Loc
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.ApiFlightWithSplits
+import drt.shared.{ApiFlightWithSplits, BestPax}
 import japgolly.scalajs.react.component.Generic
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -24,15 +24,19 @@ TerminalsDashboardPage {
       def interestingflight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
+      val portCodeC = SPACircuit.connect(_.airportConfig.map(_.portCode))
       val flightsByTerminalC = SPACircuit.connect(_.flightsWithSplitsPot.map(_.flights.filter(interestingflight).groupBy(_.apiFlight.Terminal)))
 
 
       val hours = p.hours
-      <.div(terminalsC {
-        terminalsPotMP =>
-          <.div(terminalsPotMP().renderReady { terminals =>
-            flightsByTerminalC {
-              flightsB =>
+      portCodeC { portCodeMP =>
+        <.div(
+          portCodeMP().renderReady(portCode => {
+          val bestPaxFN = BestPax(portCode)
+          val bestSplitPaxFn = BigSummaryBoxes.bestFlightSplitPax(bestPaxFN)
+          <.div(terminalsC { terminalsPotMP =>
+            <.div(terminalsPotMP().renderReady { terminals =>
+              flightsByTerminalC { flightsB =>
                 <.div(
                   <.h2(s"In the next $hours hours"), {
                     terminals.map { t =>
@@ -42,10 +46,9 @@ TerminalsDashboardPage {
                         flightsInTerminal.renderReady(flightsAtTerminal => {
 
                           val flightCount = flightsAtTerminal.length
-
                           val actPax = BigSummaryBoxes.sumActPax(flightsAtTerminal)
-                          val bestPax = BigSummaryBoxes.sumBestPax(flightsAtTerminal).toInt
-                          val aggSplits = BigSummaryBoxes.aggregateSplits(flightsAtTerminal)
+                          val bestPax = BigSummaryBoxes.sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
+                          val aggSplits = BigSummaryBoxes.aggregateSplits(bestPaxFN)(flightsAtTerminal)
 
                           val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
                           summaryBoxes
@@ -54,9 +57,11 @@ TerminalsDashboardPage {
                       )
                     }.toTagMod
                   })
-            }
+              }
+            })
           })
-      })
+        }))
+      }
     }
     ).build
 

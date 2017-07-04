@@ -154,7 +154,7 @@ object BigSummaryBoxTests extends TestSuite {
                 ApiFlightWithSplits(apiFlight1, List(splits1)) ::
                   ApiFlightWithSplits(apiFlight2, List(splits2)) :: Nil)
 
-              val aggSplits = aggregateSplits(flights.flights)
+              val aggSplits = aggregateSplits(BestPax.bestPax)(flights.flights)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (41 + 11),
@@ -183,7 +183,7 @@ object BigSummaryBoxTests extends TestSuite {
                       ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 60) :: Nil
                     , SplitSources.ApiSplitsWithCsvPercentage, Percentage))) :: Nil
 
-              val aggSplits = aggregateSplits(flights)
+              val aggSplits = aggregateSplits(BestPax.bestPax)(flights)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (30 + 40),
@@ -206,7 +206,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                 val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, List(splits1))
 
-                val pax = bestFlightSplitPax(apiFlightWithSplits)
+                val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                 val expectedPax = 23 + 41
 
@@ -225,7 +225,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, List(splits1))
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                  val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                   val expectedPax = 100
 
@@ -241,7 +241,7 @@ object BigSummaryBoxTests extends TestSuite {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, PcpTime = mkMillis("2017-05-01T12:05Z"))
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                  val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                   val expectedPax = 100
 
@@ -250,18 +250,21 @@ object BigSummaryBoxTests extends TestSuite {
               }
             }
           }
-          "Given a flight " - {
-            "AND it has no splits " - {
-              "AND it has 100 act pax AND it has 60 tranprax" - {
-                "Then we use get pcpPax of 40 " - {
-                  val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, TranPax = 60, PcpTime = mkMillis("2017-05-01T12:05Z"))
-                  val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
+          "DRT-4632 Given we're running for LHR" - {
+            val bestPaxFn = BestPax("LHR")
+            "AND we have a flight " - {
+              "AND it has no splits " - {
+                "AND it has 100 act pax AND it has 60 tranprax" - {
+                  "Then we get pcpPax of 40 " - {
+                    val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, TranPax = 60, PcpTime = mkMillis("2017-05-01T12:05Z"))
+                    val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                    val pax = bestFlightSplitPax(bestPaxFn)(apiFlightWithSplits)
 
-                  val expectedPax = 40
+                    val expectedPax = 40
 
-                  assert(pax == expectedPax)
+                    assert(pax == expectedPax)
+                  }
                 }
               }
             }
@@ -273,7 +276,7 @@ object BigSummaryBoxTests extends TestSuite {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 0, MaxPax = 134, PcpTime = mkMillis("2017-05-01T12:05Z"))
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                  val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                   val expectedPax = 134
 

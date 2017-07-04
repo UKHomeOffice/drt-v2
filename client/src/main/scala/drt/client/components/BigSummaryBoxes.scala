@@ -21,9 +21,9 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax - f.TranPax else f.MaxPax
+//  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax - f.TranPax else f.MaxPax
 
-  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
+  def bestFlightSplitPax(bestFlightPax: (Arrival) => Int): PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalExcludingTransferPax
     case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
   }
@@ -53,7 +53,7 @@ object BigSummaryBoxes {
   }
 
 
-  def aggregateSplits(flights: Seq[ApiFlightWithSplits]) = {
+  def aggregateSplits(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
     val newSplits = Map[PaxTypeAndQueue, Int]()
     val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap {
       case ApiFlightWithSplits(_, Nil) => Nil
@@ -94,8 +94,7 @@ object BigSummaryBoxes {
 
   def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
 
-
-  def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
+  def sumBestPax(bestFlightSplitPax: (ApiFlightWithSplits) => Double)(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
 
