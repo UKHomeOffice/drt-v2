@@ -21,8 +21,8 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
+import org.joda.time.DateTime
 import org.joda.time.chrono.ISOChronology
-import org.joda.time.{DateTime, DateTimeZone}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
@@ -220,7 +220,7 @@ class Application @Inject()(
     log.info(s"actDesks: requesting")
     val actDesks = Deskstats.blackjackDeskstats("https://hal.abm.com/admin/csv/index", SDate("2017-07-03").millisSinceEpoch)
     log.info(s"actDesks: $actDesks")
-    actualDesksActor ! ActualDesks(actDesks)
+    actualDesksActor ! ActualDeskStats(actDesks)
   }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
@@ -234,9 +234,9 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
-    override def getActualDesks(): Future[ActualDesks] = {
-      val futureDesks = actualDesksActor ? GetActualDesks()
-      futureDesks.map(_.asInstanceOf[ActualDesks])
+    override def getActualDeskStats(): Future[ActualDeskStats] = {
+      val futureDesks = actualDesksActor ? GetActualDeskStats()
+      futureDesks.map(_.asInstanceOf[ActualDeskStats])
     }
   }
 

@@ -57,6 +57,6 @@ object Actions {
 
   case class GetActualDesks() extends Action
 
-  case class SetActualDesks(desks: Map[String, Map[String, Map[Long, Option[Int]]]]) extends Action
+  case class SetActualDesks(desks: Map[String, Map[String, Map[Long, DeskStat]]]) extends Action
 
 }

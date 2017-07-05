@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react._
 import drt.client.TableViewUtils._
-import drt.client.components.TerminalDeploymentsTable.QueueDeploymentsRowEntry
+import drt.client.components.StaffMovementsPopover.StaffMovementPopoverState
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
@@ -12,6 +12,7 @@ import drt.client.services._
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.component.builder.{Builder, Lifecycle}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
@@ -54,6 +55,8 @@ object TerminalDeploymentsTable {
                     airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
                   )
+
+  case class State(showActuals: Boolean = false)
 
   object jsDateFormat {
 
@@ -145,7 +148,8 @@ object TerminalDeploymentsTable {
   case class RowProps(item: TerminalDeploymentsRow, index: Int,
                       flights: Pot[FlightsWithSplits],
                       airportConfig: AirportConfig,
-                      airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]])
+                      airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
+                      showActuals: Boolean)
 
   val itemRow = ScalaComponent.builder[RowProps]("deploymentRow")
     .render_P((p) => renderRow(p))
@@ -160,7 +164,7 @@ object TerminalDeploymentsTable {
     val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
       flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
 
-    val formattedDate: String = SDate(MilliDate(item.time)).toLocalDateTimeString()
+    val formattedDate: String = SDate(MilliDate(item.time)).toHoursAndMinutes()
     val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
     val airportInfoPopover = FlightsPopover(formattedDate, flights, airportInfo)
 
@@ -170,11 +174,23 @@ object TerminalDeploymentsTable {
         val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
 
         def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+        def qtdActuals(xs: TagMod*): TagMod = <.td((^.className := queueActualsColour(q.queueName)) :: xs.toList: _*)
 
-        Seq(
-          qtd(q.pax),
-          qtd(^.title := s"Rec: ${q.crunchDeskRec}, Act: ${q.actualDeskRec.getOrElse("n/a")}", q.userDeskRec.deskRec),
-          qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec + " mins"))
+        if (props.showActuals) {
+          val actDesks: String = q.actualDeskRec.map(act => s"$act").getOrElse("-")
+          val actWaits: String = q.actualWaitTime.map(act => s"$act").getOrElse("-")
+          Seq(
+            qtd(q.pax),
+            qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
+            qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec),
+            qtdActuals(actDesks),
+            qtdActuals(^.cls := dangerWait + " " + warningClasses, actWaits))
+        }
+        else
+          Seq(
+            qtd(q.pax),
+            qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
+            qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec))
       }
     }.flatten
 
@@ -198,47 +214,51 @@ object TerminalDeploymentsTable {
   }
 
   def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+  def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
-  class Backend($: BackendScope[Props, Unit]) {
-
-    def render(props: Props) = {
+  object Backend {
+    def apply(scope: Builder.Step3[Props, State, Unit]#$, props: Props, state: State) = {
       val t = Try {
-        log.debug("%%%%%%%rendering terminal deployments table...")
-
-        val style = bss.listGroup
-
         def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-        val queueHeadings: List[TagMod] = props.airportConfig.queues(props.terminalName).collect{
-          case queueName if queueName != Queues.Transfer => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 3)
+        val queueHeadings: List[TagMod] = props.airportConfig.queues(props.terminalName).collect {
+          case queueName if queueName != Queues.Transfer =>
+            val colsToSpan = if (state.showActuals) 5 else 3
+            qth(queueName, queueDisplayName(queueName), ^.colSpan := colsToSpan, ^.className := "top-heading")
         }.toList
 
-        val transferHeading: TagMod = props.airportConfig.queues(props.terminalName).collect{
-          case (queueName@Queues.Transfer) => qth(queueName, <.h3(queueDisplayName(queueName)), ^.colSpan := 1)
+        val transferHeading: TagMod = props.airportConfig.queues(props.terminalName).collect {
+          case (queueName@Queues.Transfer) => qth(queueName, queueDisplayName(queueName), ^.colSpan := 1)
         }.toList.toTagMod
 
-        val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 2, <.h3("Totals")) :+ transferHeading
+        val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 2, "PCP") :+ transferHeading
 
         val defaultNumberOfQueues = 3
         val headOption = props.items.headOption
         val numQueues = headOption match {
           case Some(item) => item.queueDetails.length
-          case None =>
-            defaultNumberOfQueues
+          case None => defaultNumberOfQueues
         }
+        val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
+        val colsClass = s"cols-$numQueues$showActsClassSuffix"
 
+        val function = (e: ReactEventFromInput) => {
+          val newValue: Boolean = e.target.checked
+          scope.modState(_.copy(showActuals = newValue))
+        }
         <.div(
-          <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs cols-${numQueues}",
+          <.input.checkbox(^.value := "yeah", "Show acts", ^.onChange ==> function),
+          <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
             <.thead(
               ^.display := "block",
               <.tr(<.th("") :: headings: _*),
-              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList): _*)),
+              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(props.airportConfig.queues(props.terminalName).toList, state): _*)),
             <.tbody(
               ^.display := "block",
               ^.overflow := "scroll",
               ^.height := "500px",
               props.items.zipWithIndex.map {
-                case (item, index) => renderRow(RowProps(item, index, props.flights, props.airportConfig, props.airportInfos))
+                case (item, index) => renderRow(RowProps(item, index, props.flights, props.airportConfig, props.airportInfos, state.showActuals))
               }.toTagMod)))
       } recover {
         case t =>
@@ -252,9 +272,9 @@ object TerminalDeploymentsTable {
 
     val headerGroupStart = ^.borderLeft := "solid 1px #fff"
 
-    private def subHeadingLevel2(queueNames: List[QueueName]): List[TagMod] = {
+    private def subHeadingLevel2(queueNames: List[QueueName], state: State): List[TagMod] = {
       val queueSubHeadings: List[TagMod] = queueNames.collect {
-        case queueName if queueName != Queues.Transfer => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)
+        case queueName if queueName != Queues.Transfer => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, state)
       }.flatten
 
       val transferSubHeadings: TagMod = queueNames.collect {
@@ -263,7 +283,7 @@ object TerminalDeploymentsTable {
 
       val list: List[TagMod] = queueSubHeadings :+
         <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks") :+
-        <.th(^.className := "total-deployed", "Deployed", ^.title := "Total staff deployed based on assignments entered") :+
+        <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered") :+
         transferSubHeadings
 
       list
@@ -274,13 +294,23 @@ object TerminalDeploymentsTable {
     }
   }
 
-  private def staffDeploymentSubheadings(queueName: QueueName) = {
-    val depls: List[VdomTagOf[TableHeaderCell]] = List(
-      <.th(^.title := "Suggested deployment given available staff", deskUnitLabel(queueName), ^.className := queueColour(queueName)),
-      <.th(^.title := "Suggested deployment given available staff", "Wait times", ^.className := queueColour(queueName))
-    )
+  private def staffDeploymentSubheadings(queueName: QueueName, state: State) = {
+    val queueColumnClass = queueColour(queueName)
+    val queueColumnActualsClass = queueActualsColour(queueName)
+    val depls: List[VdomTagOf[TableHeaderCell]] = if (state.showActuals)
+      List(
+        <.th(^.title := "Suggested deployment given available staff", s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
+        <.th(^.title := "Suggested deployment given available staff", "Est wait", ^.className := queueColumnClass),
+        <.th(^.title := "Suggested deployment given available staff", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
+        <.th(^.title := "Suggested deployment given available staff", "Act wait", ^.className := queueColumnActualsClass))
+    else
+      List(
+        <.th(^.title := "Suggested deployment given available staff", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
+        <.th(^.title := "Suggested deployment given available staff", "Est wait", ^.className := queueColumnClass))
     depls
   }
+
+  def initState() = false
 
 
   implicit val deskRecTimeslotReuse = Reusability.caseClass[DeskRecTimeslot]
@@ -294,9 +324,11 @@ object TerminalDeploymentsTable {
   }
   implicit val terminalReuse = Reusability.caseClass[TerminalDeploymentsRow]
   implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos)
+  implicit val stateReuse = Reusability.caseClassExcept[State]('showActuals)
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
-    .renderBackend[Backend]
+    .initialState[State](State(false))
+    .renderPS((sc, p, s) => Backend(sc, p, s))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -304,4 +336,5 @@ object TerminalDeploymentsTable {
             airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) =
     component(Props(terminalName, rows, flights, airportConfig, airportInfos))
+
 }

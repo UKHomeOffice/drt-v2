@@ -181,7 +181,7 @@ object TerminalDeploymentTests extends TestSuite  {
         ), Seq(1, 1, 1, 1, 1, 12, 1, 1, 1, 1, 15, 1, 1, 1, 1, 9))))
 
       val timestamps = 0L to (60000 * 16) by 60000L
-      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, userDeskRec = Map(), actualDesks = Map())
+      val result = terminalDeploymentsRows("T1", Ready(airportConfig), timestamps, workload, queueCrunchResults, simulationResult, userDeskRec = Map(), actualDeskStats = Map())
 
       val expected = Seq(
         TerminalDeploymentsRow(0L, List(QueueDeploymentsRowEntry(0L, pax = 75, crunchDeskRec = 7, userDeskRec = DeskRecTimeslot(0, 0), waitTimeWithCrunchDeskRec = 8, waitTimeWithUserDeskRec = 15, queueName = "eeaDesk"))),

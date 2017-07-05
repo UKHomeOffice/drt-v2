@@ -29,7 +29,7 @@ object TableViewUtils {
 
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
     Queues.FastTrack -> "Fast Track",
-    Queues.Transfer -> "Tran")
+    Queues.Transfer -> "Tx")
 
   def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
 
@@ -41,7 +41,7 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
                                simulationResult: Map[QueueName, Pot[SimulationResult]],
                                userDeskRec: QueueStaffDeployments,
-                               actualDesks: Map[QueueName, Map[Long, Option[Int]]]
+                               actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
                              ): List[TerminalDeploymentsRow] = {
     airportConfigPot match {
       case Ready(airportConfig) =>
@@ -49,7 +49,7 @@ object TableViewUtils {
           case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
           case queueName =>
             val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
-            DeskStats.withActDesks(rows.map(_._2), actualDesks).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
+            DeskStats.withActDesks(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
         }.toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
@@ -300,12 +300,12 @@ object WebpackBootstrapRequire {
 }
 
 object DeskStats {
-  def withActDesks(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, Option[Int]]]) = {
+  def withActDesks(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, DeskStat]]) = {
     queueRows.map {
       case qdr: QueueDeploymentsRowEntry => {
-        val timeToDesks: Map[Long, Option[Int]] = actDeskNos.getOrElse(qdr.queueName, Map[Long, Option[Int]]())
-        val maybeActDesk: Option[Int] = timeToDesks.getOrElse(qdr.timestamp, Option.empty[Int])
-        qdr.copy(actualDeskRec = maybeActDesk)
+        val timeToDesks: Map[Long, DeskStat] = actDeskNos.getOrElse(qdr.queueName, Map[Long, DeskStat]())
+        val deskStat: DeskStat = timeToDesks.getOrElse(qdr.timestamp, DeskStat(Option.empty[Int], Option.empty[Int]))
+        qdr.copy(actualDeskRec = deskStat.desks, actualWaitTime = deskStat.waitTime)
       }
     }
   }

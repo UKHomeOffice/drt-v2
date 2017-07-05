@@ -5,28 +5,32 @@ import java.security.cert.X509Certificate
 import javax.net.ssl._
 
 import akka.actor.{Actor, ActorLogging}
-import drt.shared.{ActualDesks, Queues}
+import drt.shared.{ActualDeskStats, DeskStat, Queues}
+import org.slf4j.LoggerFactory
+import services.PcpArrival.getClass
 import services.SDate
 
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Success, Try}
 
-case class GetActualDesks()
+case class GetActualDeskStats()
 
 class DeskstatsActor extends Actor with ActorLogging {
-  var actualDesks = Map[String, Map[String, Map[Long, Option[Int]]]]()
+  var actualDeskStats = Map[String, Map[String, Map[Long, DeskStat]]]()
 
   override def receive: Receive = {
-    case ActualDesks(desks) =>
-      log.info(s"Received ActualDesks($desks)")
-      actualDesks = desks
-    case GetActualDesks() =>
-      log.info(s"Sending ActualDesks($actualDesks) to sender")
-      sender ! ActualDesks(actualDesks)
+    case ActualDeskStats(deskStats) =>
+      log.info(s"Received ActualDeskStats")
+      actualDeskStats = deskStats
+    case GetActualDeskStats() =>
+      log.info(s"Sending ActualDeskStats($actualDeskStats) to sender")
+      sender ! ActualDeskStats(actualDeskStats)
   }
 }
 
 object Deskstats {
+  val log = LoggerFactory.getLogger(getClass)
+
   class NaiveTrustManager extends X509TrustManager {
     override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}
     override def checkServerTrusted(cert: Array[X509Certificate], authType: String) {}
@@ -42,7 +46,7 @@ object Deskstats {
     }
   }
 
-  def blackjackDeskstats(blackjackUrl: String, parseSinceMillis: Long): Map[String, Map[String, Map[Long, Option[Int]]]] = {
+  def blackjackDeskstats(blackjackUrl: String, parseSinceMillis: Long): Map[String, Map[String, Map[Long, DeskStat]]] = {
     val sc = SSLContext.getInstance("SSL")
     sc.init(null, Array(new NaiveTrustManager), new java.security.SecureRandom())
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
@@ -74,11 +78,19 @@ object Deskstats {
     parseCsvLine(deskstatsContent.split("\n").head)
   }
 
-  def desksForQueueByMillis(queueName: String, dateIndex: Int, timeIndex: Int, deskIndex: Int, rows: Seq[Seq[String]]): Map[Long, Option[Int]] = {
-    rows.filter(_.length == 11).map {
+  def desksForQueueByMillis(queueName: String, dateIndex: Int, timeIndex: Int, deskIndex: Int, waitTimeIndex: Int, rows: Seq[Seq[String]]): Map[Long, DeskStat] = {
+    rows.map {
       case columnData: Seq[String] =>
-        val desks = Try {
+        val desksOption = Try {
           columnData(deskIndex).toInt
+        } match {
+          case Success(d) => Option(d)
+          case Failure(f) => None
+        }
+        val waitTimeOption = Try {
+          log.info(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: ${columnData}")
+          val Array(hours, minutes) = columnData(waitTimeIndex).split(":").map(_.toInt)
+          (hours * 60) + minutes
         } match {
           case Success(d) => Option(d)
           case Failure(f) => None
@@ -89,11 +101,12 @@ object Deskstats {
           s"$year-$month-$day"
         }
         val millis = SDate(s"${dateString}T$timeString").millisSinceEpoch
-        (millis -> desks)
+        millis -> DeskStat(desksOption, waitTimeOption)
     }.toMap
   }
 
-  def csvData(deskstatsContent: String): Map[String, Map[String, Map[Long, Option[Int]]]] = {
+
+  def csvData(deskstatsContent: String): Map[String, Map[String, Map[Long, DeskStat]]] = {
     val headings = csvHeadings(deskstatsContent)
     val columnIndices = Map(
       "terminal" -> headings.indexOf("device"),
@@ -109,7 +122,7 @@ object Deskstats {
         case (terminal, rows) =>
           terminal -> queueColumns.map {
             case (queueName, desksAndWaitIndexes) =>
-              queueName -> desksForQueueByMillis(queueName, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), rows)
+              queueName -> desksForQueueByMillis(queueName, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rows)
           }
       }
 

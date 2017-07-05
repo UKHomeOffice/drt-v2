@@ -10,30 +10,12 @@ import controllers.Deskstats._
 
 import scala.collection.JavaConversions._
 
-//class DeskstatsActor extends Actor with ActorLogging {
-//  def receive: PartialFunction[Any, Unit] = LoggingReceive {
-//    case something => Unit
-//  }
-//}
-
 
 object TestActorSystemConfig {
   def apply() = ConfigFactory.parseMap(Map("PORT_CODE" -> "LHR"))
 }
 
 class DeskstatsSpec extends TestKit(ActorSystem("testActorSystem", TestActorSystemConfig())) with SpecificationLike {
-
-  //  implicit val materializer = ActorMaterializer()
-  //  implicit val timeout = Timeout(1 second)
-  //
-  //  val deskstatsActorRef = system.actorOf(Props[DeskstatsActor], name = "desk-stats-reporter")
-
-  "Fetching the CSV" >> {
-    val data = blackjackDeskstats("https://hal.abm.com/admin/csv/index", SDate("2017-07-03").millisSinceEpoch)
-
-    println(s"data: $data")
-    1 == 1
-  }
 
   "DeskstatsActor " >> {
     "Can parse headings from blackjack CSV content " >> {
