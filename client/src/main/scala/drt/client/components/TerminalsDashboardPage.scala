@@ -56,7 +56,8 @@ TerminalsDashboardPage {
                   })
             }
           })
-      })
+
+      }, <.div(Debug()))
     }
     ).build
 
