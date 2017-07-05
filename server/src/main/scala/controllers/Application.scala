@@ -13,6 +13,7 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
+import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.http.ProdSendAndReceive
@@ -213,14 +214,18 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  system.scheduler.schedule(
-    1 * 1000 milliseconds,
-    3 * 60 * 1000 milliseconds)
-  {
-    log.info(s"actDesks: requesting")
-    val actDesks = Deskstats.blackjackDeskstats("https://hal.abm.com/admin/csv/index", SDate("2017-07-03").millisSinceEpoch)
-    log.info(s"actDesks: $actDesks")
-    actualDesksActor ! ActualDeskStats(actDesks)
+  if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
+    val threeMinutes = 3 * 60 * 1000
+
+    import SDate.implicits._
+
+    Deskstats.startBlackjack(csvUrl, actualDesksActor, threeMinutes milliseconds, previousDay(SDate.now()))
+  })
+
+  def previousDay(date: MilliDate): SDateLike = {
+    val oneDayInMillis = 60 * 60 * 24 * 1000L
+    val previousDay = SDate(date.millisSinceEpoch - oneDayInMillis)
+    SDate(f"${previousDay.getFullYear()}${previousDay.getMonth()}%02d${previousDay.getDate()}%02d")
   }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
@@ -345,6 +350,10 @@ class Application @Inject()(
       }
       Ok("")
   }
+}
+
+trait DeskStatsProvider {
+
 }
 
 

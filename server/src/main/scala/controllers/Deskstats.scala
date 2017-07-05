@@ -4,14 +4,16 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl._
 
-import akka.actor.{Actor, ActorLogging}
-import drt.shared.{ActualDeskStats, DeskStat, Queues}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import drt.shared._
 import org.slf4j.LoggerFactory
-import services.PcpArrival.getClass
 import services.SDate
 
+import scala.concurrent.ExecutionContext
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class GetActualDeskStats()
 
@@ -46,7 +48,19 @@ object Deskstats {
     }
   }
 
-  def blackjackDeskstats(blackjackUrl: String, parseSinceMillis: Long): Map[String, Map[String, Map[Long, DeskStat]]] = {
+  def startBlackjack(csvUrl: String, actualDesksActor: ActorRef, interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
+    val initialDelay1Second = 1 * 1000
+
+    actorSystem.scheduler.schedule(
+      initialDelay1Second milliseconds,
+      interval) {
+      log.info(s"actDesks: requesting")
+      val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
+      actualDesksActor ! ActualDeskStats(actDesks)
+    }
+  }
+
+  def blackjackDeskstats(blackjackUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
     val sc = SSLContext.getInstance("SSL")
     sc.init(null, Array(new NaiveTrustManager), new java.security.SecureRandom())
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
@@ -56,7 +70,7 @@ object Deskstats {
 
     HttpsURLConnection.setDefaultSSLSocketFactory(backupSslSocketFactory)
 
-    val relevantData = csvLinesUntil(bufferedCsvContent, parseSinceMillis)
+    val relevantData = csvLinesUntil(bufferedCsvContent, parseSince.millisSinceEpoch)
     csvData(relevantData)
   }
 

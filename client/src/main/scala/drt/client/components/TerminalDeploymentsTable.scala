@@ -157,8 +157,6 @@ object TerminalDeploymentsTable {
 
   def renderRow(props: RowProps): TagOf[TableRow] = {
     val item = props.item
-    val index = props.index
-    //    log.info(s"rendering terminalDeploymentsRow $index")
     val time = item.time
     val windowSize = 60000 * 15
     val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
@@ -247,7 +245,7 @@ object TerminalDeploymentsTable {
           scope.modState(_.copy(showActuals = newValue))
         }
         <.div(
-          <.input.checkbox(^.value := "yeah", "Show acts", ^.onChange ==> function),
+          <.div(<.input.checkbox(^.checked := state.showActuals, ^.onChange ==> function), "Show actual desks & wait times"),
           <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
             <.thead(
               ^.display := "block",
@@ -324,7 +322,7 @@ object TerminalDeploymentsTable {
   }
   implicit val terminalReuse = Reusability.caseClass[TerminalDeploymentsRow]
   implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos)
-  implicit val stateReuse = Reusability.caseClassExcept[State]('showActuals)
+  implicit val stateReuse = Reusability.caseClass[State]
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .initialState[State](State(false))
