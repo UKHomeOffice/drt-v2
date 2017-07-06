@@ -300,7 +300,7 @@ object WebpackBootstrapRequire {
 }
 
 object DeskStats {
-  def withActuals(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, DeskStat]]) = {
+  def withActuals(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, DeskStat]]) =
     queueRows.map {
       case qdr: QueueDeploymentsRowEntry => {
         val timeToDesks: Map[Long, DeskStat] = actDeskNos.getOrElse(qdr.queueName, Map[Long, DeskStat]())
@@ -308,5 +308,4 @@ object DeskStats {
         qdr.copy(actualDeskRec = deskStat.desks, actualWaitTime = deskStat.waitTime)
       }
     }
-  }
 }

@@ -175,21 +175,18 @@ object TerminalDeploymentsTable {
 
         def qtdActuals(xs: TagMod*): TagMod = <.td((^.className := queueActualsColour(q.queueName)) :: xs.toList: _*)
 
+        val queueCells = Seq(
+          qtd(q.pax),
+          qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
+          qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec))
+
         if (props.showActuals) {
           val actDesks: String = q.actualDeskRec.map(act => s"$act").getOrElse("-")
           val actWaits: String = q.actualWaitTime.map(act => s"$act").getOrElse("-")
-          Seq(
-            qtd(q.pax),
-            qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
-            qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec),
-            qtdActuals(actDesks),
-            qtdActuals(actWaits))
+
+          queueCells ++ Seq(qtdActuals(actDesks), qtdActuals(actWaits))
         }
-        else
-          Seq(
-            qtd(q.pax),
-            qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
-            qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec))
+        else queueCells
       }
     }.flatten
 
@@ -300,17 +297,15 @@ object TerminalDeploymentsTable {
   private def staffDeploymentSubheadings(queueName: QueueName, state: State) = {
     val queueColumnClass = queueColour(queueName)
     val queueColumnActualsClass = queueActualsColour(queueName)
-    val depls: List[VdomTagOf[TableHeaderCell]] = if (state.showActuals)
-      List(
-        <.th(^.title := "Suggested deployment given available staff", s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
-        <.th(^.title := "Suggested deployment given available staff", "Est wait", ^.className := queueColumnClass),
-        <.th(^.title := "Suggested deployment given available staff", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
-        <.th(^.title := "Suggested deployment given available staff", "Act wait", ^.className := queueColumnActualsClass))
-    else
-      List(
-        <.th(^.title := "Suggested deployment given available staff", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
-        <.th(^.title := "Suggested deployment given available staff", "Est wait", ^.className := queueColumnClass))
-    depls
+    val headings = List(
+      <.th(^.title := "Suggested deployment given available staff", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
+      <.th(^.title := "Wait times with suggested deployments", "Est wait", ^.className := queueColumnClass))
+
+    if (state.showActuals)
+      headings ++ List(
+        <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
+        <.th(^.title := "Actual wait times", "Act wait", ^.className := queueColumnActualsClass))
+    else headings
   }
 
   def initState() = false
