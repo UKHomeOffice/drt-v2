@@ -51,17 +51,16 @@ TerminalsDashboardPage {
                             val bestPax = BigSummaryBoxes.sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
                             val aggSplits = BigSummaryBoxes.aggregateSplits(bestPaxFN)(flightsAtTerminal)
 
-                            val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, queueOrder))
-                            summaryBoxes
-                          }),
-                          flightsInTerminal.renderPending((n) => <.span(s"Waiting for flights for $t"))
-                        )
-                      }.toTagMod
-                    })
-                }
-              })
-            })
-          }))
+                          val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, queueOrder))
+                          summaryBoxes
+                        }),
+                        flightsInTerminal.renderPending((n) => <.span(s"Waiting for flights for $t"))
+                      )
+                    }.toTagMod
+                  })
+            }
+          })
+      }, <.div(Debug()))}))
       }
     }
     ).build
