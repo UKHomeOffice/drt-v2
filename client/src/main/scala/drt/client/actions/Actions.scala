@@ -55,4 +55,8 @@ object Actions {
 
   case class GetStaffMovements() extends Action
 
+  case class GetActualDeskStats() extends Action
+
+  case class SetActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]]) extends Action
+
 }

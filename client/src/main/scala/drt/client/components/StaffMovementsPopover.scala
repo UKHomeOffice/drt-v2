@@ -13,6 +13,7 @@ import drt.shared.SDateLike
 import drt.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
 import japgolly.scalajs.react.CtorType.ChildArg
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
+import japgolly.scalajs.react.component.builder.{Builder, Lifecycle}
 import japgolly.scalajs.react.vdom.TagOf
 
 import scala.util.{Failure, Success}
@@ -42,7 +43,7 @@ object StaffMovementsPopover {
   }
 
   def apply(terminalNames: Seq[TerminalName], page: Loc, trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String) = ScalaComponent.builder[Unit]("staffMovementPopover")
-    .initialStateFromProps((p) => {
+    .initialState(
       StaffMovementPopoverState(
         reason = reason,
         terminalName = defaultTerminal(terminalNames, page),
@@ -51,7 +52,7 @@ object StaffMovementsPopover {
         startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
         endTimeHours = endDate.getHours(),
         endTimeMinutes = roundToNearest(5)(endDate.getMinutes()))
-    }).renderS((scope, state) => {
+    ).renderS((scope, state) => {
 
     def selectTerminal(defaultValue: String) = {
       <.select(

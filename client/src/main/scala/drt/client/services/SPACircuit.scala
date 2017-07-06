@@ -88,7 +88,9 @@ case class RootModel(
                       shiftsRaw: Pot[String] = Empty,
                       fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
-                      slotsInADay: Int = 96
+                      slotsInADay: Int = 96,
+                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map(),
+                      actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map()
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -145,8 +147,9 @@ case class RootModel(
             val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
 
             val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+            val actDesksForTerminal = actualDeskStats.getOrElse(terminalName, Map())
 
-            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr)
+            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
           } recover {
             case f =>
               val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
@@ -643,6 +646,22 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
   }
 }
 
+class ActualDesksHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetActualDeskStats() =>
+      val nextRequest = Effect(Future(GetActualDeskStats())).after(15 seconds)
+      val response = Effect(AjaxClient[Api].getActualDeskStats().call().map {
+        case ActualDeskStats(deskStats) =>
+          log.info(s"Received ActualDeskStats from Api")
+          SetActualDeskStats(deskStats)
+      })
+      effectOnly(response + nextRequest)
+    case SetActualDeskStats(deskStats) =>
+      log.info(s"SetActualDesks")
+      updated(deskStats)
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -665,7 +684,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new FixedPointsHandler(zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
-      new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v)))
+      new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
+      new ActualDesksHandler(zoomRW(_.actualDeskStats)((m, v) => m.copy(actualDeskStats = v)))
     )
 
     val loggedhandlers: HandlerFunction = (model, update) => {
