@@ -67,7 +67,7 @@ object Deskstats {
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
     val backupSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory
 
-    log.info("DeskStats: requesting blackjack CSV")
+    log.info(s"DeskStats: requesting blackjack CSV from $blackjackUrl")
     val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackUrl)
     log.info("DeskStats: received blackjack CSV")
 
