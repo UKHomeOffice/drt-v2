@@ -56,7 +56,6 @@ object Deskstats {
     actorSystem.scheduler.schedule(
       initialDelay1Second milliseconds,
       interval) {
-      log.info(s"actDesks: requesting")
       val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
       actualDesksActor ! ActualDeskStats(actDesks)
     }
@@ -68,7 +67,9 @@ object Deskstats {
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
     val backupSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory
 
+    log.info(s"DeskStats: requesting blackjack CSV from $blackjackUrl")
     val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackUrl)
+    log.info("DeskStats: received blackjack CSV")
 
     HttpsURLConnection.setDefaultSSLSocketFactory(backupSslSocketFactory)
 
