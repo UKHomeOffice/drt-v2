@@ -4,8 +4,10 @@ import com.typesafe.config.ConfigFactory
 import controllers.Deskstats._
 import drt.shared.{DeskStat, Queues}
 import org.specs2.mutable.Specification
+import services.SDate
 
 import scala.collection.JavaConversions._
+import scala.io.Source
 
 
 object TestActorSystemConfig {
@@ -71,6 +73,21 @@ class DeskstatsSpec extends Specification {
 
         data === expected
       }
+    }
+
+    "We can get only the lines with a date after a threshold date" >> {
+      val since = SDate("2017-01-01T12:00:00").millisSinceEpoch
+
+      val allCsvLines =
+        Source.fromString(""""device","Date","Time","EEA desks open","Queue time EEA","Non EEA desks open","Queue time Non EEA","Fast Track desks open","Queue time Fast Track","Int/Dom desks open","Queue time Int/Dom","Comments"
+          |"T2","01/01/2017","21:30 - 21:45","2","00:09","16","","2","00:00","0","00:00",""
+          |"T2","01/01/2017","09:30 - 09:45","2","00:09","16","","2","00:00","0","00:00",""
+        """.stripMargin)
+
+      val result = Deskstats.csvLinesUntil(allCsvLines, since)
+
+      result === """"device","Date","Time","EEA desks open","Queue time EEA","Non EEA desks open","Queue time Non EEA","Fast Track desks open","Queue time Fast Track","Int/Dom desks open","Queue time Int/Dom","Comments"
+                   |"T2","01/01/2017","21:30 - 21:45","2","00:09","16","","2","00:00","0","00:00",""""".stripMargin
     }
   }
 
