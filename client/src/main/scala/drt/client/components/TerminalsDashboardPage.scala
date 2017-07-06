@@ -14,7 +14,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 object
 TerminalsDashboardPage {
 
-  case class Props(hours: Int, ctl: RouterCtl[Loc])
+  case class Props(hours: Int)
 
   val component = ScalaComponent.builder[Props]("TerminalsDashboard")
     .render_P(p => {
@@ -65,6 +65,6 @@ TerminalsDashboardPage {
     }
     ).build
 
-  def apply(hours: Int, ctl: RouterCtl[Loc]): VdomElement = component(Props(hours, ctl))
+  def apply(hours: Int): VdomElement = component(Props(hours))
 
 }

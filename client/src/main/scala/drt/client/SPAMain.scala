@@ -234,18 +234,19 @@ object SPAMain extends js.JSApp {
     import dsl._
 
     val renderStaffing = renderR(_ => Staffing())
-    val home = staticRoute(root, StaffingLoc) ~> renderStaffing
-    val staffing = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
-    val terminal = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => {
-      TerminalPage(page.id, ctl)
-    })
-    val terminalsDashboard = dynamicRouteCT("#terminalsDashboard" / int
-      .caseClass[TerminalsDashboardLoc]) ~> dynRenderR((page: TerminalsDashboardLoc, ctl) => {
-      TerminalsDashboardPage(page.hours, ctl)
-    })
+    val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
+//    val staffing: dsl.Rule = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
+    val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
+      dynRenderR((page: TerminalsDashboardLoc, ctl) => {
+        TerminalsDashboardPage(page.hours)
+      })
+    val terminal: dsl.Rule = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+").caseClass[TerminalDepsLoc]) ~>
+      dynRenderR((page: TerminalDepsLoc, ctl) => {
+        TerminalPage(page.id, ctl)
+      })
 
-    val rule = home | terminal | staffing | terminalsDashboard
+//    val rule = terminalsDashboard | terminal
+    val rule = home | terminal | terminalsDashboard
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 

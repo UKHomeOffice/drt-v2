@@ -31,6 +31,7 @@ object TerminalStaffing {
           case _ => ""
         }
         val rawFixedPoints = staffingMP() match {
+//          case (_, Ready(fixedPoints), _) => fixedPoints
           case (_, Ready(fixedPoints), _) =>
             fixedPoints.split("\n").filter(line => {
               val cells = line.split(",").map(cell => cell.trim())
@@ -46,7 +47,6 @@ object TerminalStaffing {
         val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
         <.div(
           <.div(^.className := "container",
-            <.h1("Staffing"),
             <.div(^.className := "col-md-3", fixedPointsEditor(rawFixedPoints, staffingMP)),
             <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP))
           ),
@@ -124,8 +124,8 @@ object TerminalStaffing {
       }),
       <.textarea(^.value := rawShifts,
         ^.className := "staffing-editor",
-        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatch(SetShifts(e.target.value)))),
-      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(SaveShifts(rawShifts))))
+        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatchCB(SetShifts(e.target.value)))),
+      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatchCB(SaveShifts(rawShifts))))
     )
   }
 
@@ -156,8 +156,8 @@ object TerminalStaffing {
       }),
       <.textarea(^.value := rawFixedPoints,
         ^.className := "staffing-editor",
-        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatch(SetFixedPoints(e.target.value)))),
-      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(SaveFixedPoints(rawFixedPoints))))
+        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatchCB(SetFixedPoints(e.target.value)))),
+      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatchCB(SaveFixedPoints(rawFixedPoints))))
     )
   }
 
@@ -194,7 +194,7 @@ object TerminalStaffing {
   def apply(props: Props): VdomElement =
     component(props)
 
-  private val component = ScalaComponent.builder[Props]("Staffing")
+  private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
     .build
 }
