@@ -102,10 +102,23 @@ table.user-desk-recs > tbody > tr > td > input {
   text-align: right;
 }
 
-table.user-desk-recs thead tr th h3 {
+table.user-desk-recs thead tr:nth-child(1) th {
+  font-size: 24px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+table.user-desk-recs thead tr:nth-child(2) th {
+  font-size: 14px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+table.user-desk-recs thead tr th {
   text-align: center;
   margin-top: 5px;
   margin-bottom: 5px;
+  padding: 0px;
 }
 
 table.user-desk-recs thead tr {
@@ -117,7 +130,7 @@ table.user-desk-recs > tbody > tr > td.date-field {
   text-align: left;
 }
 
-table.user-desk-recs.cols-2, table.user-desk-recs.cols-3, table.user-desk-recs.cols-4, table.user-desk-recs.cols-5 {
+table.user-desk-recs.cols-2, table.user-desk-recs.cols-4 {
   thead th:nth-child(1) {
     width: 180px;
   }
@@ -127,13 +140,34 @@ table.user-desk-recs.cols-2, table.user-desk-recs.cols-3, table.user-desk-recs.c
   }
 }
 
+
 table.user-desk-recs.cols-5 {
-  thead th:nth-last-child(-n+3) {
-    width: 66px;
+  thead th:nth-last-child(1) {
+    width: 75px;
   }
 
-  tbody td:nth-last-child(-n+3) {
-    width: 66px;
+  tbody td:nth-last-child(1) {
+    width: 75px;
+  }
+}
+
+
+
+table.user-desk-recs.cols-5-with-actuals tbody td, table.user-desk-recs.cols-5-with-actuals thead th {
+  width: 47px;
+}
+
+table.user-desk-recs.cols-5-with-actuals thead th {
+  font-size: 11px
+}
+
+table.user-desk-recs.cols-5-with-actuals {
+  thead th:nth-child(1) {
+    width: 60px;
+  }
+
+  tbody td:nth-child(1) {
+    width: 60px;
   }
 }
 
@@ -148,27 +182,8 @@ table.user-desk-recs.cols-4 {
   }
 }
 
-
-table.user-desk-recs.cols-3 {
-  thead th:nth-last-child(1) {
-    width: 88px;
-  }
-
-  tbody td:nth-last-child(1) {
-    width: 88px;
-  }
-
-  thead th:nth-last-child(2) {
-    width: 89px;
-  }
-
-  tbody td:nth-last-child(2) {
-    width: 89px;
-  }
-}
-
 table.user-desk-recs.cols-5 tbody td, table.user-desk-recs.cols-5 thead th {
-  width: 69px;
+  width: 71px;
 }
 
 table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
@@ -176,7 +191,7 @@ table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
 }
 
 table.user-desk-recs.cols-3 tbody td, table.user-desk-recs.cols-3 thead th {
-  width: 87px;
+  width: 95px;
 }
 
 table.user-desk-recs.cols-2 tbody td, table.user-desk-recs.cols-2 thead th {
@@ -284,6 +299,14 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
   background-color: darken(@eeaDeskUserDeskColor, 2%);
 }
 
+.eeaDesk-user-desk-rec.actuals {
+  background-color: darken(@eeaDeskUserDeskColor, 8%);
+}
+
+tr:nth-child(odd) > td.eeaDesk-user-desk-rec.actuals {
+  background-color: darken(@eeaDeskUserDeskColor, 16%);
+}
+
 .eeaDesk-user-desk-rec.table-info {
   background-color: lighten(@eeaDeskUserDeskColor, 6%);
 }
@@ -292,8 +315,24 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.table-info {
   background-color: @nonEeaDeskUserDeskColor;
 }
 
-.fastTrack-user-desk-rec {
-  background-color: @fastTrackUserDeskColor;
+tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
+  background-color: darken(@nonEeaDeskUserDeskColor, 8%);
+}
+
+.nonEeaDesk-user-desk-rec.actuals {
+  background-color: darken(@nonEeaDeskUserDeskColor, 8%);
+}
+
+tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.actuals {
+  background-color: darken(@nonEeaDeskUserDeskColor, 16%);
+}
+
+tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
+  background-color: darken(@nonEeaDeskUserDeskColor, 2%);
+}
+
+.nonEeaDesk-user-desk-rec.table-info {
+  background-color: lighten(@nonEeaDeskUserDeskColor, 6%);
 }
 
 .transfer-user-desk-rec {
@@ -306,22 +345,6 @@ tr:nth-child(even) > td.transfer-user-desk-rec{
   color: #ffffff;
 }
 
-tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
-  background-color: darken(@nonEeaDeskUserDeskColor, 8%);
-}
-
-tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
-  background-color: darken(@nonEeaDeskUserDeskColor, 2%);
-}
-
-.nonEeaDesk-user-desk-rec.table-info {
-  background-color: lighten(@nonEeaDeskUserDeskColor, 6%);
-}
-
-.fastTrack-user-desk-rec.table-info {
-  background-color: lighten(@fastTrackUserDeskColor, 6%);
-}
-
 .eGate-user-desk-rec {
   background-color: @eGateUserDeskColor;
 }
@@ -330,12 +353,36 @@ tr:nth-child(odd) > td.eGate-user-desk-rec {
   background-color: darken(@eGateUserDeskColor, 8%);
 }
 
+.eGate-user-desk-rec.actuals {
+  background-color: darken(@eGateUserDeskColor, 8%);
+}
+
+tr:nth-child(odd) > td.eGate-user-desk-rec.actuals {
+  background-color: darken(@eGateUserDeskColor, 16%);
+}
+
 tr:nth-child(odd) > td.eGate-user-desk-rec.table-info {
   background-color: darken(@eGateUserDeskColor, 2%);
 }
 
+.fastTrack-user-desk-rec {
+  background-color: @fastTrackUserDeskColor;
+}
+
 tr:nth-child(odd) > td.fastTrack-user-desk-rec {
   background-color: darken(@fastTrackUserDeskColor, 8%);
+}
+
+.fastTrack-user-desk-rec.actuals {
+  background-color: darken(@fastTrackUserDeskColor, 8%);
+}
+
+tr:nth-child(odd) > td.fastTrack-user-desk-rec.actuals {
+  background-color: darken(@fastTrackUserDeskColor, 16%);
+}
+
+.fastTrack-user-desk-rec.table-info {
+  background-color: lighten(@fastTrackUserDeskColor, 6%);
 }
 
 tr:nth-child(odd) > td.fastTrack-user-desk-rec.table-info {

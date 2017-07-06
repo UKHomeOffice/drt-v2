@@ -54,11 +54,15 @@ object SDate {
 
 
   def parseString(dateTime: String) = {
-    MilliDate(apply(dateTime).millisSinceEpoch)
+    MilliDate(apply(dateTime, DateTimeZone.UTC).millisSinceEpoch)
   }
 
   def apply(dateTime: String): SDateLike = {
     JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
+  }
+
+  def apply(dateTime: String, timeZone: DateTimeZone): SDateLike = {
+    JodaSDate(new DateTime(dateTime, timeZone))
   }
 
   def apply(millis: Long): SDateLike = {

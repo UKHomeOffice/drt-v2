@@ -13,6 +13,7 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
+//import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.http.ProdSendAndReceive
@@ -21,8 +22,8 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
-import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.chrono.ISOChronology
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
@@ -123,6 +124,7 @@ trait SystemActors extends Core {
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
+  val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
   def csvSplitsProvider: SplitsProvider
 
@@ -206,12 +208,25 @@ class Application @Inject()(
   log.info(s"System.getProperty(user.timezone): ${systemTimeZone}")
   assert(systemTimeZone == "UTC")
 
-
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
   }
 
   log.info(s"Application using airportConfig $airportConfig")
+
+  if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
+    val threeMinutesInterval = 3 * 60 * 1000
+
+    import SDate.implicits._
+
+    Deskstats.startBlackjack(csvUrl, actualDesksActor, threeMinutesInterval milliseconds, previousDay(SDate.now()))
+  })
+
+  def previousDay(date: MilliDate): SDateLike = {
+    val oneDayInMillis = 60 * 60 * 24 * 1000L
+    val previousDay = SDate(date.millisSinceEpoch - oneDayInMillis)
+    SDate(f"${previousDay.getFullYear()}${previousDay.getMonth()}%02d${previousDay.getDate()}%02d", DateTimeZone.UTC)
+  }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
     override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
@@ -224,6 +239,10 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
+    override def getActualDeskStats(): Future[ActualDeskStats] = {
+      val futureDesks = actualDesksActor ? GetActualDeskStats()
+      futureDesks.map(_.asInstanceOf[ActualDeskStats])
+    }
   }
 
   trait CrunchFromCache {

@@ -11,8 +11,6 @@ import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.WebpackRequire
-import japgolly.scalajs.react.component.Js
-import japgolly.scalajs.react.component.Scala.MountedImpure
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 
@@ -31,7 +29,7 @@ object TableViewUtils {
 
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
     Queues.FastTrack -> "Fast Track",
-    Queues.Transfer -> "Tran")
+    Queues.Transfer -> "Tx")
 
   def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
 
@@ -42,13 +40,16 @@ object TableViewUtils {
                                paxload: Map[String, List[Double]],
                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
                                simulationResult: Map[QueueName, Pot[SimulationResult]],
-                               userDeskRec: QueueStaffDeployments
+                               userDeskRec: QueueStaffDeployments,
+                               actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
                              ): List[TerminalDeploymentsRow] = {
     airportConfigPot match {
       case Ready(airportConfig) =>
         val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
           case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
-          case queueName => queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+          case queueName =>
+            val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+            DeskStats.withActuals(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
         }.toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
@@ -91,17 +92,17 @@ object TableViewUtils {
     }
   }
 
-  def queueDeploymentsRowsFromNos(qn: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
+  def queueDeploymentsRowsFromNos(queueName: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
     queueNos.toList.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
-        (timestamp, qn) -> QueueDeploymentsRowEntry(
+        (timestamp, queueName) -> QueueDeploymentsRowEntry(
           timestamp = timestamp,
           pax = pax.toDouble,
           crunchDeskRec = crunchDeskRec.toInt,
           userDeskRec = DeskRecTimeslot(timestamp, userDeskRec.toInt),
           waitTimeWithCrunchDeskRec = waitTimeCrunch.toInt,
           waitTimeWithUserDeskRec = waitTimeUser.toInt,
-          qn
+          queueName = queueName
         )
     }
   }
@@ -222,7 +223,8 @@ object SPAMain extends js.JSApp {
     RequestFlights(0, 0),
     GetShifts(),
     GetFixedPoints(),
-    GetStaffMovements()
+    GetStaffMovements(),
+    GetActualDeskStats()
   )
 
   initActions.foreach(SPACircuit.dispatch(_))
@@ -295,4 +297,15 @@ object WebpackBootstrapRequire {
   @js.native
   object Bootstrap extends js.Any
 
+}
+
+object DeskStats {
+  def withActuals(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, DeskStat]]) =
+    queueRows.map {
+      case qdr: QueueDeploymentsRowEntry => {
+        val timeToDesks: Map[Long, DeskStat] = actDeskNos.getOrElse(qdr.queueName, Map[Long, DeskStat]())
+        val deskStat: DeskStat = timeToDesks.getOrElse(qdr.timestamp, DeskStat(Option.empty[Int], Option.empty[Int]))
+        qdr.copy(actualDeskRec = deskStat.desks, actualWaitTime = deskStat.waitTime)
+      }
+    }
 }

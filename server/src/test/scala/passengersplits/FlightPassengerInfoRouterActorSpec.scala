@@ -5,6 +5,7 @@ import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.shared.PassengerSplits.VoyagePaxSplits
+import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import passengersplits.core.PassengerSplitsInfoByPortRouter
@@ -34,7 +35,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       Thread.sleep(100L)
 
-      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplit("LHR", "BA", "0123", SDate("2017-01-01T00:00:00Z"))
+      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplit("LHR", "BA", "0123", SDate("2017-01-01T00:00:00Z", DateTimeZone.UTC))
 
       val paxCount = Await.result(future, 1 second) match {
         case vm@VoyagePaxSplits(_, _, _, totalPaxCount, _, _) => totalPaxCount
@@ -58,7 +59,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       Thread.sleep(100L)
 
-      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplit("LHR", "BA", "0123", SDate("2017-01-01T00:00:00Z"))
+      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplit("LHR", "BA", "0123", SDate("2017-01-01T00:00:00Z", DateTimeZone.UTC))
 
       val paxCount = Await.result(future, 1 second) match {
         case vm@VoyagePaxSplits(_, _, _, totalPaxCount, _, _) => totalPaxCount
@@ -115,7 +116,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
     flightPassengerSplitReporter ! dcvm
     Thread.sleep(100L)
 
-    val future: Future[Any] = flightPassengerSplitReporter ? ReportVoyagePaxSplit(portCode, carrierCode, flightNumber, SDate(s"${schDate}T${schTime}Z"))
+    val future: Future[Any] = flightPassengerSplitReporter ? ReportVoyagePaxSplit(portCode, carrierCode, flightNumber, SDate(s"${schDate}T${schTime}Z", DateTimeZone.UTC))
 
     Await.result(future, 1 second).asInstanceOf[VoyagePaxSplits].totalPaxCount
   }
