@@ -224,8 +224,7 @@ class Application @Inject()(
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
-    val previousDay = SDate(date.millisSinceEpoch - oneDayInMillis)
-    SDate(f"${previousDay.getFullYear()}${previousDay.getMonth()}%02d${previousDay.getDate()}%02d", DateTimeZone.UTC)
+    SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {

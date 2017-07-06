@@ -37,7 +37,9 @@ object Deskstats {
 
   class NaiveTrustManager extends X509TrustManager {
     override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}
+
     override def checkServerTrusted(cert: Array[X509Certificate], authType: String) {}
+
     override def getAcceptedIssuers = null
   }
 
@@ -73,12 +75,13 @@ object Deskstats {
 
     HttpsURLConnection.setDefaultSSLSocketFactory(backupSslSocketFactory)
 
+    log.info(s"Asking for blackjack entries since $parseSince")
     val relevantData = csvLinesUntil(bufferedCsvContent, parseSince.millisSinceEpoch)
     csvData(relevantData)
   }
 
   def csvLinesUntil(csvContent: BufferedSource, until: Long): String = {
-    csvContent.getLines().takeWhile(line => {
+    val relevantLines = csvContent.getLines().takeWhile(line => {
       val cells: Seq[String] = parseCsvLine(line)
       cells(0) match {
         case "device" => true
@@ -86,7 +89,11 @@ object Deskstats {
           val statsDate: SDateLike = parseSDate(cells)
           statsDate.millisSinceEpoch > until
       }
-    }).mkString("\n")
+    })
+
+    log.info(s"DeskStats: found ${relevantLines.length} lines in CSV since $until")
+
+    relevantLines.mkString("\n")
   }
 
   private def parseSDate(cells: Seq[String]) = {
