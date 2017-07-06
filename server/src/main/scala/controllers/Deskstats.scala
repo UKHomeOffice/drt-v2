@@ -115,7 +115,7 @@ object Deskstats {
           case Failure(f) => None
         }
         val waitTimeOption = Try {
-          log.info(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: ${columnData}")
+          log.debug(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: ${columnData}")
           val Array(hours, minutes) = columnData(waitTimeIndex).split(":").map(_.toInt)
           (hours * 60) + minutes
         } match {
