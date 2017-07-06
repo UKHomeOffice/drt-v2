@@ -636,15 +636,15 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
 
 class ActualDesksHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetActualDesks() =>
-      val nextRequest = Effect(Future(GetActualDesks())).after(15 seconds)
+    case GetActualDeskStats() =>
+      val nextRequest = Effect(Future(GetActualDeskStats())).after(15 seconds)
       val response = Effect(AjaxClient[Api].getActualDeskStats().call().map {
         case ActualDeskStats(deskStats) =>
           log.info(s"Received ActualDeskStats from Api")
-          SetActualDesks(deskStats)
+          SetActualDeskStats(deskStats)
       })
       effectOnly(response + nextRequest)
-    case SetActualDesks(deskStats) =>
+    case SetActualDeskStats(deskStats) =>
       log.info(s"SetActualDesks")
       updated(deskStats)
   }
