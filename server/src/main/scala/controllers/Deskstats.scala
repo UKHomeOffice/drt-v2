@@ -2,10 +2,12 @@ package controllers
 
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.TimeZone
 import javax.net.ssl._
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
 import drt.shared._
+import org.joda.time.DateTimeZone
 import org.slf4j.LoggerFactory
 import services.SDate
 
@@ -80,12 +82,17 @@ object Deskstats {
       cells(0) match {
         case "device" => true
         case _ =>
-          val (date, time) = (cells(1), cells(2).take(5))
-          val Array(day, month, year) = date.split("/")
-          val statsDate = SDate(s"$year-$month-${day}T$time:00Z")
+          val statsDate: SDateLike = parseSDate(cells)
           statsDate.millisSinceEpoch > until
       }
     }).mkString("\n")
+  }
+
+  private def parseSDate(cells: Seq[String]) = {
+    val (date, time) = (cells(1), cells(2).take(5))
+    val Array(day, month, year) = date.split("/")
+    val statsDate = SDate(s"$year-$month-${day}T$time:00", DateTimeZone.forTimeZone(TimeZone.getTimeZone("Europe/London")))
+    statsDate
   }
 
   def csvHeadings(deskstatsContent: String): Seq[String] = {
@@ -109,13 +116,7 @@ object Deskstats {
           case Success(d) => Option(d)
           case Failure(f) => None
         }
-        val timeString = columnData(timeIndex).take(5)
-        val dateString = {
-          val Array(day, month, year) = columnData(dateIndex).split("/")
-          s"$year-$month-$day"
-        }
-        val millis = SDate(s"${dateString}T$timeString").millisSinceEpoch
-        millis -> DeskStat(desksOption, waitTimeOption)
+        parseSDate(columnData).millisSinceEpoch -> DeskStat(desksOption, waitTimeOption)
     }.toMap
   }
 

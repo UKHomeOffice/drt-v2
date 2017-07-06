@@ -13,7 +13,7 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import controllers.Deskstats.log
+//import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.http.ProdSendAndReceive
@@ -22,7 +22,7 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.chrono.ISOChronology
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.s3.SimpleAtmosReader
@@ -215,17 +215,17 @@ class Application @Inject()(
   log.info(s"Application using airportConfig $airportConfig")
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
-    val threeMinutes = 3 * 60 * 1000
+    val threeMinutesInterval = 3 * 60 * 1000
 
     import SDate.implicits._
 
-    Deskstats.startBlackjack(csvUrl, actualDesksActor, threeMinutes milliseconds, previousDay(SDate.now()))
+    Deskstats.startBlackjack(csvUrl, actualDesksActor, threeMinutesInterval milliseconds, previousDay(SDate.now()))
   })
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     val previousDay = SDate(date.millisSinceEpoch - oneDayInMillis)
-    SDate(f"${previousDay.getFullYear()}${previousDay.getMonth()}%02d${previousDay.getDate()}%02d")
+    SDate(f"${previousDay.getFullYear()}${previousDay.getMonth()}%02d${previousDay.getDate()}%02d", DateTimeZone.UTC)
   }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
@@ -350,10 +350,6 @@ class Application @Inject()(
       }
       Ok("")
   }
-}
-
-trait DeskStatsProvider {
-
 }
 
 

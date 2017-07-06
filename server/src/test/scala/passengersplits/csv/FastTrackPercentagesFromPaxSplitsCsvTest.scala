@@ -18,6 +18,7 @@ import services.AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages
 import services.SDate.implicits._
 import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate}
 import controllers.ArrivalGenerator.apiFlight
+import org.joda.time.DateTimeZone
 
 import scala.concurrent.duration._
 
@@ -135,7 +136,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
       " when we call the splitRatioProvider, we get egate splits for EeaMachineReadable" >> {
       val scheduledArrivalTimeStr = "2017-06-04T16:15:00"
 
-      val passengerInfoRouterActor: AskableActorRef = MockSplitsActor(SplitsMocks.defaultSplits(SDate(scheduledArrivalTimeStr)))
+      val passengerInfoRouterActor: AskableActorRef = MockSplitsActor(SplitsMocks.defaultSplits(SDate(scheduledArrivalTimeStr, DateTimeZone.UTC)))
       val egatePercentageProvider = (flight: Arrival) => 0.9d
       val fastTrackPercentageProvider = (flight: Arrival) => None
 
@@ -156,7 +157,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
       " AND dqAPI splits for VisaNationals" +
         " when we call the splitRatioProvider, we get fasttrack splits on top" >> {
         val scheduledArrivalTimeStr = "2017-06-04T16:15:00"
-        val scheduledArrivalDateTime = SDate(scheduledArrivalTimeStr)
+        val scheduledArrivalDateTime = SDate(scheduledArrivalTimeStr, DateTimeZone.UTC)
 
         val splitsFromDqApi = testVoyagePaxSplits(scheduledArrivalDateTime, List(
           SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 100)
@@ -188,7 +189,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
       " AND dqAPI splits for NonVisaNationals" +
         " when we call the splitRatioProvider, we get fasttrack splits on top" >> {
         val scheduledArrivalTimeStr = "2017-06-04T16:15:00"
-        val scheduledArrivalDateTime = SDate(scheduledArrivalTimeStr)
+        val scheduledArrivalDateTime = SDate(scheduledArrivalTimeStr, DateTimeZone.UTC)
 
         val splitsFromDqApi = testVoyagePaxSplits(scheduledArrivalDateTime, List(
           //          SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 100)
@@ -220,7 +221,7 @@ class FastTrackAndEgateCompositionTests extends TestKit(ActorSystem("Workloadwit
       " AND dqAPI splits for NonVisaNationals and NonVisaNationals" +
         " when we call the splitRatioProvider, we get fasttrack splits on top" >> {
         val scheduledArrivalTimeStr = "2017-06-04T16:15:00"
-        val scheduledArrivalDateTime = SDate(scheduledArrivalTimeStr)
+        val scheduledArrivalDateTime = SDate(scheduledArrivalTimeStr, DateTimeZone.UTC)
 
         val splitsFromDqApi = testVoyagePaxSplits(scheduledArrivalDateTime, List(
           SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 100),

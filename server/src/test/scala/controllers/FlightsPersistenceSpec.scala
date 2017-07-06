@@ -8,7 +8,7 @@ import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
 import drt.shared.{AirportConfig, ApiFlight, BestPax, _}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable.{BeforeAfter, SpecificationLike}
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SplitsProvider.SplitProvider
@@ -29,7 +29,7 @@ class FlightsTestActor(crunchActorRef: ActorRef,
                        dqApiSplitsActorRef: AskableActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
-                       pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT).millisSinceEpoch))
+                       pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch))
   extends FlightsActor(crunchActorRef,
     dqApiSplitsActorRef,
     csvSplitsProvider,
@@ -228,7 +228,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       Actor.noSender,
       testSplitsProvider,
       BestPax(airportCode),
-      (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
+      (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch)
     ), "FlightsActor")
   }
 
@@ -246,7 +246,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       Actor.noSender,
       testSplitsProvider,
       BestPax.bestPax,
-      (a: Arrival) => MilliDate(SDate(a.ActChoxDT).millisSinceEpoch)
+      (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch)
     ), "FlightsActor")
   }
 
@@ -325,6 +325,6 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       AirportID = airportId,
       rawICAO = "",
       rawIATA = iata,
-      PcpTime = if (schDt != "") SDate(schDt).millisSinceEpoch else 0
+      PcpTime = if (schDt != "") SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0
     )
 }

@@ -17,7 +17,7 @@ import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, TerminalQueuePax
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
@@ -417,7 +417,7 @@ class StreamFlightCrunchTests
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       val flightsActor = context.system.actorOf(Props(
-        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI"), (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
+        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI"), (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch)
       ), "flightsActor")
       val flights = Flights(
         List(apiFlight(flightId = 0, iata = "BA123", actPax = 200, schDt = "2016-09-01T10:31")))
