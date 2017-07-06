@@ -35,7 +35,7 @@ abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) ex
   "akka.persistence.journal.leveldb.dir" -> dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
   "akka.persistence.snapshot-store.local.dir" -> s"$dbLocation/snapshot"
-))/*.withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString))*/))
+))))
   with After
   with ImplicitSender {
 

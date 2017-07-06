@@ -239,13 +239,13 @@ object TerminalDeploymentsTable {
         val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
         val colsClass = s"cols-$numQueues$showActsClassSuffix"
 
-        val function = (e: ReactEventFromInput) => {
+        val toggleShowActuals = (e: ReactEventFromInput) => {
           val newValue: Boolean = e.target.checked
           scope.modState(_.copy(showActuals = newValue))
         }
         <.div(
           if (props.airportConfig.hasActualDeskStats) {
-            <.div(<.input.checkbox(^.checked := state.showActuals, ^.onChange ==> function, ^.id := "show-actuals"),
+            <.div(<.input.checkbox(^.checked := state.showActuals, ^.onChange ==> toggleShowActuals, ^.id := "show-actuals"),
               <.label(^.`for` := "show-actuals", "Show actual desks & wait times"))
           } else "",
           <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
