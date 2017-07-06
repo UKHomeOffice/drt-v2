@@ -6,7 +6,6 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.Div
 
-import scala.collection.immutable.Seq
 
 object FlightComponents {
 
@@ -75,9 +74,8 @@ object FlightComponents {
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.passengerType} > ${ptqc.queueType}"
 
   object SplitsGraph {
-    def tt(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)]) = splitsSummaryTooltip(splitTotal, splits.map { case (k, v) => (paxTypeAndQueueString(k), v) })
     case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)], tooltip: TagMod)
-    def splitsGraphComponentColoure(props: Props): TagOf[Div] = {
+    def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._
       <.div(^.className := "splits",
         <.div(^.className := "splits-tooltip", <.p(tooltip)),

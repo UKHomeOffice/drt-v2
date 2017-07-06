@@ -55,13 +55,15 @@ object TerminalPage {
     def render(props: Props) = {
 
       val flightsWithSplitsPotRCP = SPACircuit.connect(_.flightsWithSplitsPot)
-      val aiportPortRcp = SPACircuit.connect(_.airportConfig.map(_.portCode))
+      val portCodeAndQueueOrderRcp = SPACircuit.connect(_.airportConfig.map(ac => (ac.portCode, ac.queueOrder)))
 
-      val liveSummaryBoxes = aiportPortRcp((airportConfigMp: ModelProxy[Pot[String]]) => {
+      val liveSummaryBoxes = portCodeAndQueueOrderRcp(airportConfigMp => {
         flightsWithSplitsPotRCP((flightsWithSplitsPot) => {
           <.div(
-            airportConfigMp().renderReady(portCode => {
-              val bestPaxFn = BestPax(portCode)
+            airportConfigMp().renderReady(portCodeAndQueueOrder => {
+              val (portCode, queueOrder) = (portCodeAndQueueOrder)
+              val bestPaxLessTransfersFn = BestPax(portCode)
+              val bestPaxIncTransfersFn = BestPax.chooseBestPaxBigBox(portCode)
               val now = SDate.now()
               val hoursToAdd = 3
               val nowplus3 = now.addHours(hoursToAdd)
@@ -74,12 +76,12 @@ object TerminalPage {
                     val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
                     val flightCount = flightsAtTerminal.length
                     val actPax = sumActPax(flightsAtTerminal)
-                    val bestSplitPaxFn = bestFlightSplitPax(bestPaxFn)
+                    val bestSplitPaxFn = bestFlightSplitPax(bestPaxLessTransfersFn)
                     val bestPax = sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
+                    println(s"aggBestSplitPax: $bestPax")
+                    val aggSplits = aggregateSplits(bestPaxIncTransfersFn)(flightsAtTerminal)
 
-                    val aggSplits = aggregateSplits(bestPaxFn)(flightsAtTerminal)
-
-                    val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
+                    val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
 
                     <.div(summaryBoxes)
                   }
@@ -103,6 +105,7 @@ object TerminalPage {
         <.div({
           airportConfigPot.renderReady(airportConfig => {
             val bestPax = BestPax(airportConfig.portCode)
+            val queueOrder = airportConfig.queueOrder
             val terminalProps = TerminalDeploymentsTable.TerminalProps(props.terminalName)
             <.div(
               <.div({
@@ -151,7 +154,7 @@ object TerminalPage {
                         timelineComp,
                         originMapper,
                         paxComp(maxFlightPax),
-                        splitsGraphComponentColoure)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
+                        splitsGraphComponentColoured)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder.toList))
                     }))
                   })
                 }),

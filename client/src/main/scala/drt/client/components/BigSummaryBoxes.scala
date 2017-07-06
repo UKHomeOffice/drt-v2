@@ -94,12 +94,12 @@ object BigSummaryBoxes {
 
   def sumBestPax(bestFlightSplitPax: (ApiFlightWithSplits) => Double)(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
 
-  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
+  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue])
 
 
-  def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
+  def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) = {
     val value = Try {
-      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
       val tt: TagMod = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
         <.tbody(
           orderedSplitCounts.map { s =>
@@ -112,7 +112,7 @@ object BigSummaryBoxes {
         <.span(
           // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
           <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
-            splitsGraphComponentColoure(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)), sourceDisplay))
+            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)), sourceDisplay))
       )
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {
@@ -128,7 +128,7 @@ object BigSummaryBoxes {
       <.div(^.className := "summary-boxes ",
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d "), <.span(^.className := "sub", "Flights"))),
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count best-pax-count", f"${p.bestPaxCount}%,d "), <.span(^.className := "sub", "Best Pax"))),
-        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)))
+        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits, p.paxQueueOrder)))
     })
     .build
 }
