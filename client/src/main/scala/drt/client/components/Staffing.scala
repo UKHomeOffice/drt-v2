@@ -26,7 +26,7 @@ object Staffing {
       val staffingRCP = SPACircuit.connect(m => (m.shiftsRaw, m.fixedPointsRaw, m.staffMovements))
       staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]) => {
         val rawShifts = staffingMP() match {
-          case (Ready(shifts),_ , _) => shifts
+          case (Ready(shifts), _, _) => shifts
           case _ => ""
         }
         val rawFixedPoints = staffingMP() match {
@@ -34,20 +34,19 @@ object Staffing {
           case _ => ""
         }
         val movements = staffingMP() match {
-          case (_,_, sm) => sm
+          case (_, _, sm) => sm
         }
 
         val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
         val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
         <.div(
-        <.div(^.className := "container",
-        <.h1("Staffing"),
-        <.div(^.className := "col-md-3", shiftsEditor(rawShifts, staffingMP)),
-        <.div(^.className := "col-md-3", fixedPointsEditor(rawFixedPoints, staffingMP)),
-        <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP))
-        ),
-        <.div(^.className := "container",
-        <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints)))
+          <.div(^.className := "container",
+            <.h1("Staffing"),
+            <.div(^.className := "col-md-3", fixedPointsEditor(rawFixedPoints, staffingMP)),
+            <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP))
+          ),
+          <.div(^.className := "container",
+            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints)))
         )
       })
     }
@@ -194,7 +193,6 @@ object Staffing {
     .renderBackend[Backend]
     .build
 }
-
 
 object MovementDisplay {
   def toCsv(movement: StaffMovement) = {

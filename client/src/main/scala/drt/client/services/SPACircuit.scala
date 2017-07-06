@@ -634,7 +634,7 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
       val updatedValue = value.filter(_.uUID != uUID)
       updated(updatedValue, Effect(Future(SaveStaffMovements())))
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      updated(staffMovements, Effect(Future(RunAllSimulations())))
+      updated(staffMovements, Effect(Future(RunAllSimulations())).after(30 seconds))
     case GetStaffMovements() =>
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
     case SaveStaffMovements() =>

@@ -87,6 +87,7 @@ class ProdCrunchActor(hours: Int,
                       _bestPax: (Arrival) => Int
                      ) extends CrunchActor(hours, airportConfig, timeProvider) {
   override def bestPax(a: Arrival): Int = _bestPax(a)
+
   override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
     log.debug(s"Looking for defaultProcessingTime($terminalName)($paxTypeAndQueue) in ${airportConfig.defaultProcessingTimes}")
     airportConfig.defaultProcessingTimes(terminalName).getOrElse(paxTypeAndQueue, 0)
@@ -173,6 +174,14 @@ trait ProdPassengerSplitProviders {
   override val splitsProviders = List(apiSplitsProvider, csvSplitsProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
+trait ProdWalkTimesProvider {
+  self: AirportConfProvider =>
+  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
+  def flightWalkTimeProvider(flight: Arrival): Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
+}
+
 trait ImplicitTimeoutProvider {
   implicit val timeout = Timeout(5 seconds)
 }
@@ -187,7 +196,8 @@ class Application @Inject()(
   extends Controller with Core
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with SystemActors with ImplicitTimeoutProvider {
+    with SystemActors with ImplicitTimeoutProvider
+    with ProdWalkTimesProvider {
   ctrl =>
   val log = system.log
 
@@ -196,10 +206,6 @@ class Application @Inject()(
   log.info(s"System.getProperty(user.timezone): ${systemTimeZone}")
   assert(systemTimeZone == "UTC")
 
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-
-  override def flightWalkTimeProvider(flight: Arrival): Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
 
   val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
     implicit val system: ActorSystem = ctrl.system
