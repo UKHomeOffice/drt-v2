@@ -49,7 +49,7 @@ object TableViewUtils {
           case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
           case queueName =>
             val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
-            DeskStats.withActDesks(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
+            DeskStats.withActuals(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
         }.toList
 
         val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
@@ -300,7 +300,7 @@ object WebpackBootstrapRequire {
 }
 
 object DeskStats {
-  def withActDesks(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, DeskStat]]) = {
+  def withActuals(queueRows: List[QueueDeploymentsRowEntry], actDeskNos: Map[QueueName, Map[Long, DeskStat]]) = {
     queueRows.map {
       case qdr: QueueDeploymentsRowEntry => {
         val timeToDesks: Map[Long, DeskStat] = actDeskNos.getOrElse(qdr.queueName, Map[Long, DeskStat]())

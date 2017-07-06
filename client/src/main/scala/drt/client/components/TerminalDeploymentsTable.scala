@@ -172,6 +172,7 @@ object TerminalDeploymentsTable {
         val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
 
         def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
+
         def qtdActuals(xs: TagMod*): TagMod = <.td((^.className := queueActualsColour(q.queueName)) :: xs.toList: _*)
 
         if (props.showActuals) {
@@ -182,7 +183,7 @@ object TerminalDeploymentsTable {
             qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
             qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec),
             qtdActuals(actDesks),
-            qtdActuals(^.cls := dangerWait + " " + warningClasses, actWaits))
+            qtdActuals(actWaits))
         }
         else
           Seq(
@@ -212,6 +213,7 @@ object TerminalDeploymentsTable {
   }
 
   def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+
   def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
   object Backend {
@@ -245,7 +247,10 @@ object TerminalDeploymentsTable {
           scope.modState(_.copy(showActuals = newValue))
         }
         <.div(
-          <.div(<.input.checkbox(^.checked := state.showActuals, ^.onChange ==> function), "Show actual desks & wait times"),
+          if (props.airportConfig.hasActualDeskStats) {
+            <.div(<.input.checkbox(^.checked := state.showActuals, ^.onChange ==> function, ^.id := "show-actuals"),
+              <.label(^.`for` := "show-actuals", "Show actual desks & wait times"))
+          } else "",
           <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
             <.thead(
               ^.display := "block",
