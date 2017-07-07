@@ -31,7 +31,7 @@ object TerminalStaffing {
           case _ => ""
         }
         val rawFixedPoints = staffingMP() match {
-//          case (_, Ready(fixedPoints), _) => fixedPoints
+          //          case (_, Ready(fixedPoints), _) => fixedPoints
           case (_, Ready(fixedPoints), _) =>
             fixedPoints.split("\n").filter(line => {
               val cells = line.split(",").map(cell => cell.trim())
@@ -47,17 +47,17 @@ object TerminalStaffing {
         val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
         <.div(
           <.div(^.className := "container",
-            <.div(^.className := "col-md-3", fixedPointsEditor(rawFixedPoints, staffingMP)),
-            <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP))
+            <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
+            <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
           ),
           <.div(^.className := "container",
-            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints)))
+            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
         )
       })
     }
   }
 
-  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], fixedPoints: List[Try[StaffAssignment]]): VdomTagOf[Div] = {
+  def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], fixedPoints: List[Try[StaffAssignment]], terminalName: TerminalName): VdomTagOf[Div] = {
     val didParseFixedPointsFail = fixedPoints exists (s => s.isFailure)
     val didParseShiftsFail = shifts exists (s => s.isFailure)
     <.div(
@@ -71,20 +71,23 @@ object TerminalStaffing {
       }
       else {
         val successfulShifts: List[StaffAssignment] = shifts.collect { case Success(s) => s }
+        val successfulTerminalShifts = successfulShifts.filter(_.terminalName == terminalName)
         val successfulFixedPoints: List[StaffAssignment] = fixedPoints.collect { case Success(s) => s }
-        val ss = StaffAssignmentService(successfulShifts)
-        val fps = StaffAssignmentService(successfulFixedPoints)
-        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss, fps)(movements) _
+        val successfulTerminalFixedPoints = successfulFixedPoints.filter(_.terminalName == terminalName)
+        val ss = StaffAssignmentService(successfulTerminalShifts)
+        val fps = StaffAssignmentService(successfulTerminalFixedPoints)
+        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss, fps)(movements.filter(_.terminalName == terminalName)) _
         staffingTableHourPerColumn(daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
       }
     )
   }
 
-  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]): VdomTagOf[Div] = {
+  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])], terminalName: TerminalName): VdomTagOf[Div] = {
+    val terminalMovements = movements.filter(_.terminalName == terminalName)
     <.div(
       <.h2("Movements"),
-      if (movements.nonEmpty)
-        <.ul(^.className := "list-unstyled", movements.map(movement => {
+      if (terminalMovements.nonEmpty)
+        <.ul(^.className := "list-unstyled", terminalMovements.map(movement => {
           val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
           <.li(remove, " ", MovementDisplay.toCsv(movement))
         }).toTagMod)
@@ -93,72 +96,49 @@ object TerminalStaffing {
     )
   }
 
-  def shiftsEditor(rawShifts: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]): VdomTagOf[html.Div] = {
+  case class FixedPointsProps(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])], terminalName: TerminalName)
 
-    val today: SDateLike = SDate.today
-    val todayString = today.ddMMyyString
+  case class FixedPointsState(rawFixedPoints: String)
 
-    val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
+  object FixedPointsEditor {
+    val component = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
+      .initialStateFromProps(props => FixedPointsState(props.rawFixedPoints))
+      .renderPS((scope, props, state) => {
+        val today: SDateLike = SDate.today
+        val todayString = today.ddMMyyString
 
-    val defaultExamples = Seq(
-      "Midnight shift,T1,{date},00:00,00:59,14",
-      "Night shift,T1,{date},01:00,06:59,6",
-      "Morning shift,T1,{date},07:00,13:59,25",
-      "Afternoon shift,T1,{date},14:00,16:59,13",
-      "Evening shift,T1,{date},17:00,23:59,20"
-    )
+        val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
 
-    <.div(
-      <.h2("Shifts"),
-      <.p("One entry per line with values separated by commas, e.g.:"),
-      airportConfigRCP(airportConfigMP => {
-        <.pre(
-          airportConfigMP().renderReady(airportConfig => {
-            val examples = if (airportConfig.shiftExamples.nonEmpty)
-              airportConfig.shiftExamples
-            else
-              defaultExamples
-            <.div(examples.map(line => <.div(line.replace("{date}", todayString))).toTagMod)
-          })
+        val defaultExamples = Seq(
+          "Roving Officer,any,{date},00:00,23:59,1"
         )
-      }),
-      <.textarea(^.value := rawShifts,
-        ^.className := "staffing-editor",
-        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatchCB(SetShifts(e.target.value)))),
-      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatchCB(SaveShifts(rawShifts))))
-    )
-  }
 
-  def fixedPointsEditor(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]): VdomTagOf[html.Div] = {
-
-    val today: SDateLike = SDate.today
-    val todayString = today.ddMMyyString
-
-    val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
-
-    val defaultExamples = Seq(
-      "Roving Officer,any,{date},00:00,23:59,1"
-    )
-
-    <.div(
-      <.h2("Fixed Points"),
-      <.p("One entry per line with values separated by commas, e.g.:"),
-      airportConfigRCP(airportConfigMP => {
-        <.pre(
-          airportConfigMP().renderReady(airportConfig => {
-            val examples = if (airportConfig.fixedPointExamples.nonEmpty)
-              airportConfig.fixedPointExamples
-            else
-              defaultExamples
-            <.div(examples.map(line => <.div(line.replace("{date}", todayString))).toTagMod)
-          })
+        <.div(
+          <.h2("Fixed Points"),
+          <.p("One entry per line with values separated by commas, e.g.:"),
+          airportConfigRCP(airportConfigMP => {
+            <.pre(
+              airportConfigMP().renderReady(airportConfig => {
+                val examples = if (airportConfig.fixedPointExamples.nonEmpty)
+                  airportConfig.fixedPointExamples
+                else
+                  defaultExamples
+                <.div(examples.map(line => <.div(line.replace("{date}", todayString))).toTagMod)
+              })
+            )
+          }),
+          <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
+          ^.onChange ==> ((e: ReactEventFromInput) => {
+            val newRawFixedPoints = e.target.value
+            scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
+          }),
+          <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
+            props.mp.dispatchCB(SaveFixedPoints(state.rawFixedPoints, props.terminalName))
+          }))
         )
-      }),
-      <.textarea(^.value := rawFixedPoints,
-        ^.className := "staffing-editor",
-        ^.onChange ==> ((e: ReactEventFromInput) => mp.dispatchCB(SetFixedPoints(e.target.value)))),
-      <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatchCB(SaveFixedPoints(rawFixedPoints))))
-    )
+      }).build
+
+    def apply(props: FixedPointsProps) = component(props)
   }
 
   def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
@@ -197,4 +177,20 @@ object TerminalStaffing {
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
     .build
+}
+
+object MovementDisplay {
+  def toCsv(movement: StaffMovement) = {
+    s"${movement.terminalName}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
+  }
+
+  def displayTime(time: MilliDate): String = {
+    val startDate: SDateLike = SDate(time)
+    f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+  }
+
+  def displayDate(time: MilliDate): String = {
+    val startDate: SDateLike = SDate(time)
+    f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
+  }
 }

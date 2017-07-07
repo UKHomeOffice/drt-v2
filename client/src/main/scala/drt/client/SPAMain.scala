@@ -3,7 +3,7 @@ package drt.client
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
-import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import drt.client.services.RootModel.QueueCrunchResults
@@ -233,7 +233,7 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-    val renderStaffing = renderR(_ => Staffing())
+//    val renderStaffing = renderR(_ => Staffing())
     val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
 //    val staffing: dsl.Rule = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
     val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
