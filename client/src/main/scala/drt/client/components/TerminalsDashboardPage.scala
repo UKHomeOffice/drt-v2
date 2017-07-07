@@ -5,7 +5,7 @@ import diode.react.ReactConnectProps
 import drt.client.SPAMain.Loc
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.ApiFlightWithSplits
+import drt.shared.{ApiFlightWithSplits, BestPax}
 import japgolly.scalajs.react.component.Generic
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -24,30 +24,34 @@ TerminalsDashboardPage {
       def interestingflight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
+      val portCodeAndQueueOrder = SPACircuit.connect(_.airportConfig.map(ac => (ac.portCode, ac.queueOrder)))
       val flightsByTerminalC = SPACircuit.connect(_.flightsWithSplitsPot.map(_.flights.filter(interestingflight).groupBy(_.apiFlight.Terminal)))
 
 
       val hours = p.hours
-      <.div(terminalsC {
-        terminalsPotMP =>
-          <.div(terminalsPotMP().renderReady { terminals =>
-            flightsByTerminalC {
-              flightsB =>
-                <.div(
-                  <.h2(s"In the next $hours hours"), {
-                    terminals.map { t =>
-                      val flightsInTerminal: Pot[List[ApiFlightWithSplits]] = flightsB().map(_ (t))
-                      <.div(
-                        <.h3(s"Terminal $t"),
-                        flightsInTerminal.renderReady(flightsAtTerminal => {
+      portCodeAndQueueOrder { portCodeMP =>
+        <.div(
+          portCodeMP().renderReady(portCodeAndQueue => {
+            val (portCode, queueOrder) = portCodeAndQueue
+            val bestPaxFN = BestPax(portCode)
+            val bestSplitPaxFn = BigSummaryBoxes.bestFlightSplitPax(bestPaxFN)
+            <.div(terminalsC { terminalsPotMP =>
+              <.div(terminalsPotMP().renderReady { terminals =>
+                flightsByTerminalC { flightsB =>
+                  <.div(
+                    <.h2(s"In the next $hours hours"), {
+                      terminals.map { t =>
+                        val flightsInTerminal: Pot[List[ApiFlightWithSplits]] = flightsB().map(_ (t))
+                        <.div(
+                          <.h3(s"Terminal $t"),
+                          flightsInTerminal.renderReady(flightsAtTerminal => {
 
-                          val flightCount = flightsAtTerminal.length
+                            val flightCount = flightsAtTerminal.length
+                            val actPax = BigSummaryBoxes.sumActPax(flightsAtTerminal)
+                            val bestPax = BigSummaryBoxes.sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
+                            val aggSplits = BigSummaryBoxes.aggregateSplits(bestPaxFN)(flightsAtTerminal)
 
-                          val actPax = BigSummaryBoxes.sumActPax(flightsAtTerminal)
-                          val bestPax = BigSummaryBoxes.sumBestPax(flightsAtTerminal).toInt
-                          val aggSplits = BigSummaryBoxes.aggregateSplits(flightsAtTerminal)
-
-                          val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits))
+                          val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, queueOrder))
                           summaryBoxes
                         }),
                         flightsInTerminal.renderPending((n) => <.span(s"Waiting for flights for $t"))
@@ -56,8 +60,8 @@ TerminalsDashboardPage {
                   })
             }
           })
-
-      }, <.div(Debug()))
+      }, <.div(Debug()))}))
+      }
     }
     ).build
 

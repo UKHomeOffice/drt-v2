@@ -139,10 +139,11 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         result === expected
       }
 
+
     "Restore from a v1 snapshot using legacy ApiFlight" in
       new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
         createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2017-10-02T20:00")))
-        val result = startNewActorSystemAndRetrieveFlights
+        val result = startNewActorSystemAndRetrieveFlights()
 
         Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-10-02T20:00"))) === result
       }
@@ -153,7 +154,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
           flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
           lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
         ))
-        val result = startNewActorSystemAndRetrieveFlights
+        val result = startNewActorSystemAndRetrieveFlights()
 
         result === Flights(List(Arrival("", "", "", "", "", "", "", "", 0, 0, 0, "", "", 0, "", "", "", "SA324", "", "", 0, None)))
       }
@@ -164,7 +165,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
           flightMessages = Seq(FlightMessage(iATA = Option("SA324"))),
           lastKnownPax = Seq(FlightLastKnownPaxMessage(Option("SA324"), Option(300)))
         ))
-        val result = startNewActorSystemAndRetrieveLastKnownPax
+        val result = startNewActorSystemAndRetrieveLastKnownPax()
 
         result === Map("SA324" -> 300)
       }

@@ -55,6 +55,7 @@ case class AirportConfig(
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
                           minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                           shiftExamples: Seq[String] = Seq(),
+                          queueOrder: Seq[PaxTypeAndQueue] = PaxTypesAndQueues.inOrderSansFastTrack,
                           fixedPointExamples: Seq[String] = Seq(),
                           hasActualDeskStats: Boolean = false
                         ) extends AirportConfigLike {
@@ -68,6 +69,11 @@ object BestPax {
     case _ => bestPax
   }
 
+  def chooseBestPaxBigBox(portCode: String) = portCode.toUpperCase match {
+    case "LHR" => bestPax
+    case _ => bestPax
+  }
+
   def bestPax = (flight: Arrival) => {
     flight match {
       case f if f.ActPax > 0 =>
@@ -76,20 +82,32 @@ object BestPax {
         f.LastKnownPax.get
       case f =>
         f.MaxPax
-    }  }
+    }
+  }
 
   def lhrBestPax = (flight: Arrival) => {
-    val defaultPax = 200
+    val DefaultPax = 200
+    (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
+      case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (DefaultPax, _, None, _) => DefaultPax
+      case (DefaultPax, _, Some(lastPax), _) => lastPax
+      case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
+      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
+      case (actPax, tranPax, _, _) => actPax - tranPax
+      case _ => DefaultPax
+    }
+  }
 
-    flight match {
-      case f if f.ActPax > 0 && f.ActPax != defaultPax =>
-        f.ActPax
-      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get != defaultPax =>
-        f.LastKnownPax.get
-      case f if f.MaxPax > 0 && f.ActPax != defaultPax =>
-        f.MaxPax
-      case _ =>
-        defaultPax
+  def lhrBestPaxIncludingTransfer = (flight: Arrival) => {
+    val DefaultPax = 200
+    (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
+      case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (DefaultPax, _, None, _) => DefaultPax
+      case (DefaultPax, _, Some(lastPax), _) => lastPax
+      case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
+      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
+      case (actPax, _, _, _) => actPax
+      case _ => DefaultPax
     }
   }
 }
@@ -119,10 +137,11 @@ object PaxTypesAndQueues {
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
   /*todo - we should move the usages of this to airportConfig */
-  val inOrder = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
+  val inOrderSansFastTrack = Seq(
+    eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
 
-  val inOrderWithFastTrack = Seq(eeaMachineReadableToEGate, eeaMachineReadableToDesk,
-    eeaNonMachineReadableToDesk, visaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToDesk, nonVisaNationalToFastTrack)
+  val inOrderWithFastTrack = Seq(
+    eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
 }
 
 object AirportConfigs {
@@ -344,6 +363,7 @@ object AirportConfigs {
       "Afternoon shift, T2, {date}, 14:00, 16:59, 18",
       "Evening shift, T2, {date}, 17:00, 23:59, 22"
     ),
+    queueOrder = PaxTypesAndQueues.inOrderWithFastTrack,
     hasActualDeskStats = true
   )
   val ltn = AirportConfig(

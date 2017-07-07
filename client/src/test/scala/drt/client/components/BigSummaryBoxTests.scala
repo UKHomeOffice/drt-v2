@@ -154,7 +154,7 @@ object BigSummaryBoxTests extends TestSuite {
                 ApiFlightWithSplits(apiFlight1, List(splits1)) ::
                   ApiFlightWithSplits(apiFlight2, List(splits2)) :: Nil)
 
-              val aggSplits = aggregateSplits(flights.flights)
+              val aggSplits = aggregateSplits(BestPax.bestPax)(flights.flights)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (41 + 11),
@@ -176,20 +176,49 @@ object BigSummaryBoxTests extends TestSuite {
                 List(ApiSplits(
                   ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 30) ::
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 70) :: Nil,
-                  SplitSources.ApiSplitsWithCsvPercentage, Percentage))) ::
+                  SplitSources.Historical, Percentage))) ::
                 ApiFlightWithSplits(apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = 3, ActPax = 100, PcpTime = mkMillis("2017-05-01T13:15Z")),
                   List(ApiSplits(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 40) ::
                       ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 60) :: Nil
-                    , SplitSources.ApiSplitsWithCsvPercentage, Percentage))) :: Nil
+                    , SplitSources.Historical, Percentage))) :: Nil
 
-              val aggSplits = aggregateSplits(flights)
+              val aggSplits = aggregateSplits(BestPax.bestPax)(flights)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (30 + 40),
                 PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> (70 + 60))
 
               assert(aggSplits == expectedAggSplits)
+            }
+          }
+        }
+        "Given 2 flights " - {
+          "And we're using the LHR tranPax aware bestpax" - {
+            "And they have API PaxNo splits including a transfer split" - {
+              "And they have tranpax" - {
+                "Then we can aggregate the splits by adding them up - we also filter out the transfer split" - {
+
+                  import ApiFlightGenerator._
+
+                  def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+
+                  val flights = ApiFlightWithSplits(apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 300, TranPax=100, PcpTime = mkMillis("2017-05-01T12:05Z")),
+                    List(ApiSplits(
+                      ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 60) ::
+                        ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 120) ::
+                        ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 20) :: Nil,
+                      SplitSources.Historical, PaxNumbers))) :: Nil
+
+                  val aggSplits = aggregateSplits(BestPax.lhrBestPax)(flights)
+
+                  val expectedAggSplits = Map(
+                    PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (60),
+                    PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> (120))
+
+                  assert(aggSplits == expectedAggSplits)
+                }
+              }
             }
           }
         }
@@ -206,7 +235,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                 val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, List(splits1))
 
-                val pax = bestFlightSplitPax(apiFlightWithSplits)
+                val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                 val expectedPax = 23 + 41
 
@@ -225,7 +254,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, List(splits1))
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                  val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                   val expectedPax = 100
 
@@ -241,11 +270,30 @@ object BigSummaryBoxTests extends TestSuite {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, PcpTime = mkMillis("2017-05-01T12:05Z"))
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                  val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                   val expectedPax = 100
 
                   assert(pax == expectedPax)
+                }
+              }
+            }
+          }
+          "DRT-4632 Given we're running for LHR" - {
+            val bestPaxFn = BestPax("LHR")
+            "AND we have a flight " - {
+              "AND it has no splits " - {
+                "AND it has 100 act pax AND it has 60 tranprax" - {
+                  "Then we get pcpPax of 40 " - {
+                    val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, TranPax = 60, PcpTime = mkMillis("2017-05-01T12:05Z"))
+                    val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
+
+                    val pax = bestFlightSplitPax(bestPaxFn)(apiFlightWithSplits)
+
+                    val expectedPax = 40
+
+                    assert(pax == expectedPax)
+                  }
                 }
               }
             }
@@ -257,7 +305,7 @@ object BigSummaryBoxTests extends TestSuite {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 0, MaxPax = 134, PcpTime = mkMillis("2017-05-01T12:05Z"))
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Nil)
 
-                  val pax = bestFlightSplitPax(apiFlightWithSplits)
+                  val pax = bestFlightSplitPax(BestPax.bestPax)(apiFlightWithSplits)
 
                   val expectedPax = 134
 

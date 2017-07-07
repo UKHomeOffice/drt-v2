@@ -128,8 +128,8 @@ object TableViewUtils {
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 
-    log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
-    log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
+    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
+    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
     val simulationResultWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
     val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)

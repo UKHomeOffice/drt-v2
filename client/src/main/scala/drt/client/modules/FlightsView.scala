@@ -5,7 +5,7 @@ import diode.react.ReactConnectProxy
 import drt.client.components.Bootstrap.Panel
 import drt.client.components._
 import drt.client.modules.GriddleComponentWrapper.ColumnMeta
-import drt.shared.{AirportConfig, AirportInfo}
+import drt.shared._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -105,7 +105,8 @@ object FlightsView {
                       "MaxPax",
                       "ActPax",
                       "Terminal"
-                    )
+                    ),
+                    bestPax: (Arrival) => Int = BestPax.bestPax
                   )
 
   case class State(
