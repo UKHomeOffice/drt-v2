@@ -68,8 +68,9 @@ object BigSummaryBoxes {
           }
         }
     }
+    val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
     //    //todo import cats - it makes short, efficient work of this sort of aggregation.
-    val aggSplits: Map[PaxTypeAndQueue, Int] = allSplits.foldLeft(newSplits) {
+    val aggSplits: Map[PaxTypeAndQueue, Int] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>
         val g = agg.getOrElse(k, 0)
         agg.updated(k, v.toInt + g)
