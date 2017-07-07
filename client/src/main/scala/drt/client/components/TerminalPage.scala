@@ -141,7 +141,8 @@ object TerminalPage {
               ,
               <.ul(^.className := "nav nav-tabs",
                 <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
-                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues"))
+                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues")),
+                <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#staffing", "Staffing"))
               )
               ,
               <.div(^.className := "tab-content",
@@ -162,12 +163,13 @@ object TerminalPage {
                     }))
                   })
                 }),
-                <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
-                  TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
-                )
-              ))
-          })
-        })
+              <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+                TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
+              ),
+            <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
+                TerminalStaffing(TerminalStaffing.Props(terminalProps.terminalName))
+              )))
+          })})
       })
       <.div(liveSummaryBoxes, simulationResultComponent)
 

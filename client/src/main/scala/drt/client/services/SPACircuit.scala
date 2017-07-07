@@ -593,7 +593,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
       updated(Ready(shifts), Effect(Future(RunAllSimulations())))
     case SaveShifts(shifts: String) =>
       AjaxClient[Api].saveShifts(shifts).call()
-      noChange
+      effectOnly(Effect(Future(SetShifts(shifts))))
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
     case GetShifts() =>
@@ -605,13 +605,25 @@ class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingAct
   protected def handle = {
     case SetFixedPoints(fixedPoints: String) =>
       updated(Ready(fixedPoints), Effect(Future(RunAllSimulations())))
-    case SaveFixedPoints(fixedPoints: String) =>
-      AjaxClient[Api].saveFixedPoints(fixedPoints).call()
-      noChange
+    case SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) =>
+      val otherTerminalFixedPoints = removeTerminal(terminalName, value.getOrElse(""))
+      val newRawFixedPoints = otherTerminalFixedPoints + "\n" + fixedPoints
+      AjaxClient[Api].saveFixedPoints(newRawFixedPoints).call()
+      effectOnly(Effect(Future(SetFixedPoints(fixedPoints))))
     case AddShift(fixedPoints) =>
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
     case GetFixedPoints() =>
+
       effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res))))
+  }
+
+  def removeTerminal(terminalName: TerminalName, rawFixedPoints: String): String = {
+    rawFixedPoints.split("\n").toList.filter(line => {
+      val terminal = line.split(",").toList.map(_.trim) match {
+        case _ :: t :: _ => t
+      }
+      terminal != terminalName
+    }).mkString("\n")
   }
 }
 
@@ -630,7 +642,7 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends 
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
     case SaveStaffMovements() =>
       AjaxClient[Api].saveStaffMovements(value).call()
-      noChange
+      effectOnly(Effect(Future(RunAllSimulations())))
   }
 }
 

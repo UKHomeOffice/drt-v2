@@ -33,7 +33,7 @@ object Actions {
 
   case class SetFixedPoints(fixedPoints: String) extends Action
 
-  case class SaveFixedPoints(fixedPoints: String) extends Action
+  case class SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) extends Action
 
   case class GetFixedPoints() extends Action
 
