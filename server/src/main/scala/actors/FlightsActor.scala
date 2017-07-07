@@ -31,12 +31,14 @@ class FlightsActor(crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
                    csvSplitsProvider: SplitProvider,
                    _bestPax: (Arrival) => Int,
-                   pcpArrivalTimeForFlight: (Arrival) => MilliDate)
+                   pcpArrivalTimeForFlight: (Arrival) => MilliDate,
+                   airportConfig: AirportConfig)
   extends PersistentActor
     with ActorLogging
     with FlightState
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
+  log.info(s"flightsActorSplits: ${airportConfig.defaultPaxSplits} ${pprint.stringify(airportConfig)}")
 
   override def bestPax(a: Arrival): Int = _bestPax(a)
 
@@ -160,8 +162,9 @@ class FlightsActor(crunchActorRef: ActorRef,
         futureResp
       case None =>
         log.info(s"couldnot parse IATA for ${flight}")
-        //todo this was supposed to be an Either!
-        Future.successful(ApiFlightWithSplits(flight, Nil))
+        val portSplits = airportConfig.defaultPaxSplits
+        val httpApiPortSplits = splitRatiosToApiSplits(portSplits)
+        Future.successful(ApiFlightWithSplits(flight, httpApiPortSplits :: Nil))
     }
   }
 
@@ -195,12 +198,21 @@ class FlightsActor(crunchActorRef: ActorRef,
     )
   }
 
-  private def calcCsvApiSplits(flight: Arrival): List[ApiSplits] = {
-    val csvSplits: Option[SplitRatiosNs.SplitRatios] = csvSplitsProvider(flight)
+  val defaultSplits  = splitRatiosToApiSplits(airportConfig.defaultPaxSplits)
 
-    val apiPaxAndQueueRatios: Option[List[ApiPaxTypeAndQueueCount]] = csvSplits.map(s => s.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100)))
-    val toList: List[ApiPaxTypeAndQueueCount] = apiPaxAndQueueRatios.toList.flatten
-    csvSplits.map(csvSplit => ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)).toList
+  private def calcCsvApiSplits(flight: Arrival): List[ApiSplits] = {
+    val splits = csvSplitsProvider(flight).map(csvSplit => {
+      splitRatiosToApiSplits(csvSplit)
+    }).toList ::: defaultSplits :: Nil
+    if (flight.IATA.contains("138") || flight.ICAO.contains("138")) {
+      log.info(s"flightlook: $defaultSplits ${Arrival.summaryString(flight)} splits: $splits ")
+    }
+    splits
+  }
+
+  def splitRatiosToApiSplits(csvSplit: SplitRatiosNs.SplitRatios) = {
+    val toList: List[ApiPaxTypeAndQueueCount] = csvSplit.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100))
+    ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)
   }
 
   private def requestCrunch(newFlights: List[Arrival]) = {

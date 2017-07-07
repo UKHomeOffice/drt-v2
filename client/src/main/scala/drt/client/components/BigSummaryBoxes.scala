@@ -67,18 +67,36 @@ object BigSummaryBoxes {
       }
   }
 
+  def aggregateSplitsWtf(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
+    val flightSplits = bestFlightSplits(bestFlightPax)
+    val allFlightsBestPaxAndSplitsExTx = flights.map(f => {(f.apiFlight, bestFlightPax(f.apiFlight), flightSplits(f).filter(_._1.queueType != Queues.Transfer))})
+    val notAgreeing  = allFlightsBestPaxAndSplitsExTx.filter(f => f._2 != f._3.map(_._2).sum.toInt)
+    val allDiffs = notAgreeing.map(f => {
+      val splitSum =  f._3.map(_._2).sum.toInt
+      (Arrival.summaryString(f._1), f._2 - splitSum, f._2, splitSum)
+    })
+    val totalDiff = allDiffs.map(f => f._2).sum
+    println(s"flightPax: arr: ${allFlightsBestPaxAndSplitsExTx.map(_._2).sum} splExTx: ${allFlightsBestPaxAndSplitsExTx.map(_._3.map(_._2).sum).sum}")
+
+    println(s"notAgreeing totalDiff: ${totalDiff} over ${allDiffs.length} ${pprint.stringify(allDiffs)}")
+//    println(s"notAgreeing: ${pprint.stringify(notAgreeing)}")
+  }
+
   def aggregateSplits(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
-    val newSplits = Map[PaxTypeAndQueue, Int]()
+    val newSplits = Map[PaxTypeAndQueue, Double]()
     val flightSplits = bestFlightSplits(bestFlightPax)
     val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap {flightSplits}
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
+    val splitsSum = splitsExcludingTransfers.map(_._2).sum
     //    //todo import cats - it makes short, efficient work of this sort of aggregation.
-    val aggSplits: Map[PaxTypeAndQueue, Int] = splitsExcludingTransfers.foldLeft(newSplits) {
+    val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>
-        val g = agg.getOrElse(k, 0)
-        agg.updated(k, v.toInt + g)
+        val g = agg.getOrElse(k, 0d)
+        agg.updated(k, v + g)
     }
-    aggSplits
+    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.mapValues(Math.round(_).toInt)
+
+    aggSplitsInts
   }
 
   def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = ApiSplits(

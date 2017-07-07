@@ -117,10 +117,10 @@ trait SystemActors extends Core {
   val crunchActorProps = Props(
     classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
   val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
-
   val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
   private val flightsActorProps = Props(
-    classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode), pcpArrivalTimeCalculator)
+    classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode),
+    pcpArrivalTimeCalculator, airportConfig)
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor

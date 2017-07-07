@@ -78,11 +78,12 @@ object TerminalPage {
                     val actPax = sumActPax(flightsAtTerminal)
                     val bestSplitPaxFn = bestFlightSplitPax(bestPaxLessTransfersFn)
                     val bestPax = sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
-//                    println(s"aggBestSplitPax: $bestPax")
+                    println(s"aggBestSplitPax: $bestPax")
+                    aggregateSplitsWtf(bestPaxIncTransfersFn)(flightsAtTerminal)
                     val aggSplits = aggregateSplits(bestPaxIncTransfersFn)(flightsAtTerminal)
                     val aggSplitsSum = aggSplits.values.sum
-//                    println(s"aggSplitsSum: $aggSplitsSum")
-//                    println(s"aggSplits: ${pprint.stringify(aggSplits)}")
+                    println(s"aggSplitsSum: $aggSplitsSum")
+                    println(s"aggSplits: ${pprint.stringify(aggSplits)}")
 
                     val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
 

@@ -70,7 +70,7 @@ object BestPax {
   }
 
   def chooseBestPaxBigBox(portCode: String) = portCode.toUpperCase match {
-    case "LHR" => bestPax
+    case "LHR" => lhrBestPax
     case _ => bestPax
   }
 
