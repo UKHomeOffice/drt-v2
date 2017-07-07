@@ -204,9 +204,6 @@ class FlightsActor(crunchActorRef: ActorRef,
     val splits = csvSplitsProvider(flight).map(csvSplit => {
       splitRatiosToApiSplits(csvSplit)
     }).toList ::: defaultSplits :: Nil
-    if (flight.IATA.contains("138") || flight.ICAO.contains("138")) {
-      log.info(s"flightlook: $defaultSplits ${Arrival.summaryString(flight)} splits: $splits ")
-    }
     splits
   }
 

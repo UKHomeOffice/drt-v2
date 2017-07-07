@@ -69,11 +69,6 @@ object BestPax {
     case _ => bestPax
   }
 
-  def chooseBestPaxBigBox(portCode: String) = portCode.toUpperCase match {
-    case "LHR" => lhrBestPax
-    case _ => bestPax
-  }
-
   def bestPax = (flight: Arrival) => {
     flight match {
       case f if f.ActPax > 0 =>
