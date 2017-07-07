@@ -233,9 +233,7 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-//    val renderStaffing = renderR(_ => Staffing())
     val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
-//    val staffing: dsl.Rule = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
     val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
       dynRenderR((page: TerminalsDashboardLoc, ctl) => {
         TerminalsDashboardPage(page.hours)
@@ -245,15 +243,12 @@ object SPAMain extends js.JSApp {
         TerminalPage(page.id, ctl)
       })
 
-//    val rule = terminalsDashboard | terminal
     val rule = home | terminal | terminalsDashboard
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   // base layout for all pages
-  def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
-    Layout(c, r)
-  }
+  def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
 

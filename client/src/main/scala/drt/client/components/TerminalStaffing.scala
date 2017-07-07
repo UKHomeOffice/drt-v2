@@ -26,35 +26,35 @@ object TerminalStaffing {
     def render(props: Props) = {
       val staffingRCP = SPACircuit.connect(m => (m.shiftsRaw, m.fixedPointsRaw, m.staffMovements))
       staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]) => {
-        val rawShifts = staffingMP() match {
-          case (Ready(shifts), _, _) => shifts
-          case _ => ""
-        }
-        val rawFixedPoints = staffingMP() match {
-          //          case (_, Ready(fixedPoints), _) => fixedPoints
-          case (_, Ready(fixedPoints), _) =>
-            fixedPoints.split("\n").filter(line => {
-              val cells = line.split(",").map(cell => cell.trim())
-              cells(1) == props.terminalName
-            }).mkString("\n")
-          case _ => ""
-        }
-        val movements = staffingMP() match {
-          case (_, _, sm) => sm
-        }
-
-        val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
-        val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
         <.div(
-          <.div(^.className := "container",
-            <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
-            <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
-          ),
-          <.div(^.className := "container",
-            <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
+          staffingMP()._1.renderReady((rawShifts: String) => {
+            staffingMP()._2.renderReady((rawFixedPoints: String) => {
+              val movements = staffingMP() match {
+                case (_, _, sm) => sm
+              }
+
+              val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
+              val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
+              <.div(
+                <.div(^.className := "container",
+                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
+                  <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
+                ),
+                <.div(^.className := "container",
+                  <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
+              )
+            })
+          })
         )
       })
     }
+  }
+
+  def filterByTerminal(fixedPoints: String, terminalName: String) = {
+    fixedPoints.split("\n").filter(line => {
+      val cells = line.split(",").map(cell => cell.trim())
+      cells(1) == terminalName
+    }).mkString("\n")
   }
 
   def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], fixedPoints: List[Try[StaffAssignment]], terminalName: TerminalName): VdomTagOf[Div] = {

@@ -35,7 +35,6 @@ object MainMenu {
   }
 
   val staticMenuItems = List(
-//    MenuItem(0, _ => "Staffing", Icon.dashboard, StaffingLoc),
     MenuItem(0, _ => "Terminals Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
   )
 
