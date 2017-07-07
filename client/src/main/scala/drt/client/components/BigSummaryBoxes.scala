@@ -67,19 +67,57 @@ object BigSummaryBoxes {
       }
   }
 
+  def aggregateSplitsLogging(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
+    val flightSplits = bestFlightSplits(bestFlightPax)
 
-  def aggregateSplits(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
+    def excludeTrans(s: ((PaxTypeAndQueue), Double)): Boolean = {
+      s._1.queueType != Queues.Transfer
+    }
+
+    def identity(s: ((PaxTypeAndQueue), Double)): Boolean = true
+
+    def inner(filter: String, sfilter: ((PaxTypeAndQueue, Double)) => Boolean) = {
+      val allFlightsBestPaxAndSplitsExTx = flights.map(f => {
+        val filter = flightSplits(f).filter(sfilter)
+        val splitSum = filter.map(_._2).sum
+        (f.apiFlight, bestFlightPax(f.apiFlight), filter, splitSum)
+      })
+      val notAgreeing = allFlightsBestPaxAndSplitsExTx.filter(f => f._2 != f._3.map(_._2).sum.toInt)
+      val allDiffs = notAgreeing.map(f => {
+        val splitSum = f._3.map(_._2).sum.toInt
+        (Arrival.summaryString(f._1), f._2 - splitSum, f._2, splitSum)
+      })
+      val totalDiff = allDiffs.map(f => f._2).sum
+      println(s"$filter flightPax: arr: ${allFlightsBestPaxAndSplitsExTx.map(_._2).sum} splExTx: ${allFlightsBestPaxAndSplitsExTx.map(_._3.map(_._2).sum).sum}")
+
+      println(s"$filter notAgreeing totalDiff: ${totalDiff} over ${allDiffs.length} ${pprint.stringify(allDiffs)}")
+      println(s"notAgreeing: ${pprint.stringify(notAgreeing)}")
+
+    }
+
+    inner("exTx", excludeTrans)
+    inner("inTx", identity)
+
+  }
+
+  def aggregateSplits(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
     val newSplits = Map[PaxTypeAndQueue, Double]()
     val flightSplits = bestFlightSplits(bestFlightPax)
-    val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap {flightSplits}
+    val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap(flightSplits)
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
+//    val splitsSum = splitsExcludingTransfers.map(_._2).sum
+//    println(s"aggregateSplits.splitsSum $splitsSum")
     //    //todo import cats - it makes short, efficient work of this sort of aggregation.
     val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>
         val g = agg.getOrElse(k, 0d)
         agg.updated(k, v + g)
     }
-    aggSplits.mapValues(Math.round(_).toInt)
+//    println(s"aggregateSplits.splitsSumSum ${aggSplits.values.sum}")
+    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.mapValues(Math.round(_).toInt)
+//    println(s"aggregateSplits.splitsSumSumInt ${aggSplitsInts.values.sum}")
+
+    aggSplitsInts
   }
 
   def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = ApiSplits(

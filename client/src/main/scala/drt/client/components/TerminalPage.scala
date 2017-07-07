@@ -77,7 +77,9 @@ object TerminalPage {
                     val actPax = sumActPax(flightsAtTerminal)
                     val bestSplitPaxFn = bestFlightSplitPax(bestPaxFn)
                     val bestPax = sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
+//                    aggregateSplitsLogging(bestPaxFn)(flightsAtTerminal)
                     val aggSplits = aggregateSplits(bestPaxFn)(flightsAtTerminal)
+//                    val aggSplitsSum = aggSplits.values.sum
 
                     val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
 
