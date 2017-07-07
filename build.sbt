@@ -40,7 +40,8 @@ lazy val client: Project = (project in file("client"))
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
     requiresDOM := true,
-    scalaJSStage in Test := FastOptStage,
+    enableReloadWorkflow := true,
+      scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
