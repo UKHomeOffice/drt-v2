@@ -35,8 +35,7 @@ object MainMenu {
   }
 
   val staticMenuItems = List(
-    MenuItem(0, _ => "Staffing", Icon.dashboard, StaffingLoc),
-    MenuItem(1, _ => "Terminals Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
+    MenuItem(0, _ => "Terminals Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
   )
 
   def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
