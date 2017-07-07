@@ -601,12 +601,58 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
   }
 }
 
+object FixedPoints {
+  def filterTerminal(terminalName: TerminalName, rawFixedPoints: String): String = {
+    rawFixedPoints.split("\n").toList.filter(line => {
+      val terminal = line.split(",").toList.map(_.trim) match {
+        case _ :: t :: _ => t
+        case _ => Nil
+      }
+      terminal == terminalName
+    }).mkString("\n")
+  }
+
+  def filterOtherTerminals(terminalName: TerminalName, rawFixedPoints: String): String = {
+    rawFixedPoints.split("\n").toList.filter(line => {
+      val terminal = line.split(",").toList.map(_.trim) match {
+        case _ :: t :: _ => t
+        case _ => Nil
+      }
+      terminal != terminalName
+    }).mkString("\n")
+  }
+
+  def removeTerminalName(rawFixedPoints: String) = {
+    val lines = rawFixedPoints.split("\n").toList.map(line => {
+      val withTerminal = line.split(",").toList.map(_.trim)
+      val withOutTerminal = withTerminal match {
+        case fpName :: _ :: tail => fpName.toString :: tail
+        case _ => Nil
+      }
+      withOutTerminal.mkString(", ")
+    })
+    lines.mkString("\n")
+  }
+
+  def addTerminalName(rawFixedPoints: String, terminalName: String) = {
+    val lines = rawFixedPoints.split("\n").toList.map(line => {
+      val withoutTerminal = line.split(",").toList.map(_.trim)
+      val withTerminal = withoutTerminal match {
+        case fpName :: tail => fpName.toString :: terminalName :: tail
+        case _ => Nil
+      }
+      withTerminal.mkString(", ")
+    })
+    lines.mkString("\n")
+  }
+}
+
 class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetFixedPoints(fixedPoints: String) =>
       updated(Ready(fixedPoints), Effect(Future(RunAllSimulations())))
     case SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) =>
-      val otherTerminalFixedPoints = removeTerminal(terminalName, value.getOrElse(""))
+      val otherTerminalFixedPoints = FixedPoints.filterOtherTerminals(terminalName, value.getOrElse(""))
       val newRawFixedPoints = otherTerminalFixedPoints + "\n" + fixedPoints
       AjaxClient[Api].saveFixedPoints(newRawFixedPoints).call()
       effectOnly(Effect(Future(SetFixedPoints(fixedPoints))))
@@ -615,15 +661,6 @@ class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingAct
     case GetFixedPoints() =>
 
       effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res))))
-  }
-
-  def removeTerminal(terminalName: TerminalName, rawFixedPoints: String): String = {
-    rawFixedPoints.split("\n").toList.filter(line => {
-      val terminal = line.split(",").toList.map(_.trim) match {
-        case _ :: t :: _ => t
-      }
-      terminal != terminalName
-    }).mkString("\n")
   }
 }
 

@@ -1,5 +1,7 @@
 package drt.client.components
 
+import java.io
+
 import diode.data.{Empty, Pot, Ready}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.html_<^._
@@ -12,6 +14,7 @@ import drt.client.services._
 import drt.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
 import drt.client.actions.Actions._
 import drt.shared.FlightsApi.TerminalName
+import drt.client.services.FixedPoints._
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -102,7 +105,11 @@ object TerminalStaffing {
 
   object FixedPointsEditor {
     val component = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
-      .initialStateFromProps(props => FixedPointsState(props.rawFixedPoints))
+      .initialStateFromProps(props => {
+        val onlyOurTerminal = filterTerminal(props.terminalName, props.rawFixedPoints)
+        val withoutTerminalName = removeTerminalName(onlyOurTerminal)
+        FixedPointsState(withoutTerminalName)
+      })
       .renderPS((scope, props, state) => {
         val today: SDateLike = SDate.today
         val todayString = today.ddMMyyString
@@ -133,7 +140,8 @@ object TerminalStaffing {
             scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
           }),
           <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
-            props.mp.dispatchCB(SaveFixedPoints(state.rawFixedPoints, props.terminalName))
+            val withTerminalName = addTerminalName(state.rawFixedPoints, props.terminalName)
+            props.mp.dispatchCB(SaveFixedPoints(withTerminalName, props.terminalName))
           }))
         )
       }).build
