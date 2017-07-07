@@ -56,7 +56,9 @@ case class AirportConfig(
                           minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                           shiftExamples: Seq[String] = Seq(),
                           fixedPointExamples: Seq[String] = Seq(),
-                          queueOrder: Seq[PaxTypeAndQueue] = PaxTypesAndQueues.inOrderSansFastTrack
+                          queueOrder: Seq[PaxTypeAndQueue] = PaxTypesAndQueues.inOrderSansFastTrack,
+                          fixedPointExamples: Seq[String] = Seq(),
+                          hasActualDeskStats: Boolean = false
                         ) extends AirportConfigLike {
 
 }
@@ -362,7 +364,8 @@ object AirportConfigs {
       "Afternoon shift, T2, {date}, 14:00, 16:59, 18",
       "Evening shift, T2, {date}, 17:00, 23:59, 22"
     ),
-    queueOrder = PaxTypesAndQueues.inOrderWithFastTrack
+    queueOrder = PaxTypesAndQueues.inOrderWithFastTrack,
+    hasActualDeskStats = true
   )
   val ltn = AirportConfig(
     portCode = "LTN",

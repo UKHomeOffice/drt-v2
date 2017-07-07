@@ -6,6 +6,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{AirportConfig, Arrival, FlightParsing, PaxTypeAndQueue}
+import org.joda.time.DateTimeZone
 import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 
@@ -22,7 +23,7 @@ object AdvPaxSplitsProvider {
     log.debug(s"${flight.IATA} splitRatioProvider")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
       case Some((cc, number)) =>
-        val splitRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT))
+        val splitRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT, DateTimeZone.UTC))
 
         def logSr(mm: => String) = log.info(s"$splitRequest $mm")
 
@@ -58,7 +59,7 @@ object AdvPaxSplitsProvider {
     log.debug(s"${flight.IATA} splitRatioProviderWithCsvEgatepercentage")
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
       case Some((cc, number)) =>
-        val splitRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT))
+        val splitRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, number, SDate(flight.SchDT, DateTimeZone.UTC))
 
         def logSr(mm: => String) = log.debug(s"$splitRequest $mm")
 

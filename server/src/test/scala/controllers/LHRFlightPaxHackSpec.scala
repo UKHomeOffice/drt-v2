@@ -6,6 +6,7 @@ import org.mockito.Mockito.mock
 import org.specs2.mutable.Specification
 import services.SDate
 import ArrivalGenerator.apiFlight
+import org.joda.time.DateTimeZone
 
 class LHRFlightPaxHackSpec extends Specification {
   isolated
@@ -196,7 +197,7 @@ object ArrivalGenerator {
       RunwayID = runwayId,
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
-      PcpTime = if (schDt != "") SDate(schDt).millisSinceEpoch else 0,
+      PcpTime = if (schDt != "") SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0,
       LastKnownPax = lastKnownPax
     )
 }

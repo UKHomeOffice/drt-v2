@@ -10,7 +10,7 @@ import controllers.FlightState
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.{Arrival, _}
-import org.joda.time.LocalDate
+import org.joda.time.{DateTimeZone, LocalDate}
 import org.joda.time.format.DateTimeFormat
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightStateSnapshotMessage, FlightsMessage}
@@ -147,7 +147,7 @@ class FlightsActor(crunchActorRef: ActorRef,
   def addSplitsToArrival(flight: Arrival): Future[ApiFlightWithSplits] = {
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {
       case Some((_, voyageNumber)) =>
-        val scheduledDate = SDate(flight.SchDT)
+        val scheduledDate = SDate(flight.SchDT, DateTimeZone.UTC)
         val splitsRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, voyageNumber, scheduledDate)
         val future = dqApiSplitsActorRef ? splitsRequest
         val futureResp = future map {

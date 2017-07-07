@@ -164,6 +164,8 @@ trait SDateLike {
 
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
+  def toHoursAndMinutes(): String = f"${getHours()}%02d:${getMinutes()}%02d"
+
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }
 
@@ -331,6 +333,9 @@ trait WorkloadsApi {
   def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]
 }
 
+case class DeskStat(desks: Option[Int], waitTime: Option[Int])
+case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
+
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi with WorkloadsApi {
 
@@ -359,4 +364,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
   def getStaffMovements(): Future[Seq[StaffMovement]]
+
+  def getActualDeskStats(): Future[ActualDeskStats]
 }
