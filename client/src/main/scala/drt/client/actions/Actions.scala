@@ -51,7 +51,7 @@ object Actions {
 
   case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action
 
-  case class SaveStaffMovements() extends Action
+  case class SaveStaffMovements(terminalName: TerminalName) extends Action
 
   case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 

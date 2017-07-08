@@ -303,7 +303,7 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
         (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),
           plWl._2.map(pl => Pax(timeFromMillisToNearestSecond(pl.time), pl.pax)))))
 
-      updated(Ready(Workloads(roundedTimesToMinutes)))
+      updated(Ready(Workloads(roundedTimesToMinutes)), Effect(Future(RunAllSimulations())))
   }
 
   private def timeFromMillisToNearestSecond(time: Long) = {
@@ -330,7 +330,8 @@ object HandyStuff {
   }
 }
 
-class SimulationHandler[M](rawShifts: ModelR[M, Pot[String]],
+class SimulationHandler[M](allQueueCrunchesReceived: () => Boolean,
+                           rawShifts: ModelR[M, Pot[String]],
                            rawFixedPoints: ModelR[M, Pot[String]],
                            movements: ModelR[M, Pot[Seq[StaffMovement]]],
                            staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
@@ -362,12 +363,12 @@ class SimulationHandler[M](rawShifts: ModelR[M, Pot[String]],
       log.debug(s"RunTerminalSimulations effects ${actions}")
       effectOnly(seqOfEffectsToEffectSeq(actions))
     case rs@RunSimulation(terminalName, queueName, desks) =>
-      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady) {
+      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady && allQueueCrunchesReceived()) {
         log.info(s"Requesting simulation for $terminalName, $queueName")
         val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
         val firstNonZeroIndex = queueWorkload.indexWhere(_ != 0)
-        log.info(s"run sim first != 0 workload $firstNonZeroIndex")
-        log.info(s"run sum $rs workload $queueWorkload")
+        log.debug(s"run sim first != 0 workload $firstNonZeroIndex")
+        log.debug(s"run sum $rs workload $queueWorkload")
         val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
         effectOnly(
           Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
@@ -378,8 +379,8 @@ class SimulationHandler[M](rawShifts: ModelR[M, Pot[String]],
       }
     case sr@UpdateSimulationResult(terminalName, queueName, simResult) =>
       val firstNonZeroIndex = simResult.waitTimes.indexWhere(_ != 0)
-      log.info(s"run sim simResult $sr")
-      log.info(s"$terminalName/$queueName updateSimResult ${firstNonZeroIndex}")
+      log.debug(s"run sim simResult $sr")
+      log.debug(s"$terminalName/$queueName updateSimResult ${firstNonZeroIndex}")
       updated(mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(simResult)))))
   }
 
@@ -461,7 +462,9 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]])
+class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]],
+                       staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
+                       airportConfig: ModelR[M, Pot[AirportConfig]])
   extends LoggingActionHandler(modelRW) {
 
   def modelQueueCrunchResults = value
@@ -481,8 +484,20 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
       log.info(s"UpdateCrunchResult $queueName. firstTimeMillis: ${crunchResultWithTimeAndInterval.firstTimeMillis}")
       val firstNonZeroIndex = crunchResultWithTimeAndInterval.waitTimes.indexWhere(_ != 0)
       log.info(s"$terminalName/$queueName crunchResult: $firstNonZeroIndex")
+
+      val totalPortQueues = airportConfig.value.get.queues.foldLeft(0)((acc: Int, tq) => acc + tq._2.count(_ != Queues.Transfer))
+
+      val queuesBefore = value.foldLeft(0)((acc, tq) => acc + tq._2.size)
       val crunchResultsByQueue = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(Ready(crunchResultWithTimeAndInterval)))))
-      if (modelQueueCrunchResults != crunchResultsByQueue) updated(crunchResultsByQueue)
+      val queuesAfter = crunchResultsByQueue.foldLeft(0)((acc, tq) => acc + tq._2.size)
+
+      if (queuesBefore < totalPortQueues && queuesAfter == totalPortQueues) {
+        log.info(s"Received $queuesAfter of $totalPortQueues queue crunch results. Kicking off a RunAllSimulation")
+        updated(crunchResultsByQueue, Effect(Future(RunAllSimulations())))
+      } else if (modelQueueCrunchResults != crunchResultsByQueue) {
+        log.info(s"Received $queuesAfter of $totalPortQueues queue crunch results")
+        updated(crunchResultsByQueue)
+      }
       else noChange
   }
 }
@@ -695,17 +710,20 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) ext
       } else noChange
     case RemoveStaffMovement(idx, uUID) =>
       if (value.isReady) {
-        val updatedValue = value.get.filter(_.uUID != uUID)
-        updated(Ready(updatedValue), Effect(Future(SaveStaffMovements())))
+        val terminalAffectedOption = value.get.find(_.uUID == uUID).map(_.terminalName)
+        if (terminalAffectedOption.isDefined) {
+          val updatedValue = value.get.filter(_.uUID != uUID)
+          updated(Ready(updatedValue), Effect(Future(SaveStaffMovements(terminalAffectedOption.get))))
+        } else noChange
       } else noChange
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      updated(Ready(staffMovements), Effect(Future(RunAllSimulations())).after(30 seconds))
+      updated(Ready(staffMovements), Effect(Future(RunAllSimulations())) /*.after(30 seconds)*/)
     case GetStaffMovements() =>
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
-    case SaveStaffMovements() =>
+    case SaveStaffMovements(terminalName) =>
       if (value.isReady) {
         AjaxClient[Api].saveStaffMovements(value.get).call()
-        effectOnly(Effect(Future(RunAllSimulations())))
+        effectOnly(Effect(Future(RunTerminalSimulations(terminalName))))
       } else noChange
   }
 }
@@ -734,6 +752,23 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   // initial application model
   override protected def initialModel = RootModel()
 
+  def gotAllQueueCrunches() = {
+    val queueCrunchResults = zoom(_.queueCrunchResults)
+
+    val queueCrunchCount = queueCrunchResults.value.foldLeft(0)((acc, tq) => acc + tq._2.size)
+
+    queueCrunchCount == totalQueues
+  }
+
+  def totalQueues() = {
+    val airportConfig = zoom(_.airportConfig)
+    val totalPortQueues = if (airportConfig.value.isReady) {
+      airportConfig.value.get.queues.foldLeft(0)((acc: Int, tq) => acc + tq._2.count(_ != Queues.Transfer))
+    } else -1
+    log.info(s"totalPortQueues: $totalPortQueues")
+    totalPortQueues
+  }
+
   // combine all handlers into one
   override val actionHandler = {
     println("composing handlers")
@@ -741,8 +776,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
       })),
-      new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v))),
-      new SimulationHandler(zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
+      new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
+      new SimulationHandler(gotAllQueueCrunches, zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
