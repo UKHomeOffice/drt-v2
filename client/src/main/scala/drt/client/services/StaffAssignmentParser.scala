@@ -167,7 +167,7 @@ case class StaffAssignmentService(assignments: Seq[StaffAssignment]) {
     assignment.startDt <= date && date <= assignment.endDt).map(_.numberOfStaff).sum
 
   def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
-    assignment.startDt <= date && date <= assignment.endDt && assignment.terminalName == terminalName
+    assignment.terminalName == terminalName
   }).map(_.numberOfStaff).sum
 }
 

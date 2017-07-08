@@ -105,18 +105,13 @@ object TerminalStaffing {
     val component = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
       .initialStateFromProps(props => {
         val onlyOurTerminal = filterTerminal(props.terminalName, props.rawFixedPoints)
-        val withoutTerminalName = removeTerminalName(onlyOurTerminal)
+        val withoutTerminalName = removeTerminalNameAndDate(onlyOurTerminal)
         FixedPointsState(withoutTerminalName)
       })
       .renderPS((scope, props, state) => {
-        val today: SDateLike = SDate.today
-        val todayString = today.ddMMyyString
-
         val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
 
-        val defaultExamples = Seq(
-          "Roving Officer,any,{date},00:00,23:59,1"
-        )
+        val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
 
         <.div(
           <.h2("Fixed Points"),
@@ -128,7 +123,7 @@ object TerminalStaffing {
                   airportConfig.fixedPointExamples
                 else
                   defaultExamples
-                <.div(examples.map(line => <.div(line.replace("{date}", todayString))).toTagMod)
+                <.div(examples.map(line => <.div(line)).toTagMod)
               })
             )
           }),
@@ -138,7 +133,7 @@ object TerminalStaffing {
             scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
           }),
           <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
-            val withTerminalName = addTerminalName(state.rawFixedPoints, props.terminalName)
+            val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
             props.mp.dispatchCB(SaveFixedPoints(withTerminalName, props.terminalName))
           }))
         )

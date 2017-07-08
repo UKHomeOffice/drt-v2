@@ -638,11 +638,11 @@ object FixedPoints {
     }).mkString("\n")
   }
 
-  def removeTerminalName(rawFixedPoints: String) = {
+  def removeTerminalNameAndDate(rawFixedPoints: String) = {
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withTerminal = line.split(",").toList.map(_.trim)
       val withOutTerminal = withTerminal match {
-        case fpName :: _ :: tail => fpName.toString :: tail
+        case fpName :: terminal :: date :: tail => fpName.toString :: tail
         case _ => Nil
       }
       withOutTerminal.mkString(", ")
@@ -650,11 +650,14 @@ object FixedPoints {
     lines.mkString("\n")
   }
 
-  def addTerminalName(rawFixedPoints: String, terminalName: String) = {
+  def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String) = {
+    val today: SDateLike = SDate.today
+    val todayString = today.ddMMyyString
+
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withoutTerminal = line.split(",").toList.map(_.trim)
       val withTerminal = withoutTerminal match {
-        case fpName :: tail => fpName.toString :: terminalName :: tail
+        case fpName :: tail => fpName.toString :: terminalName :: todayString :: tail
         case _ => Nil
       }
       withTerminal.mkString(", ")
