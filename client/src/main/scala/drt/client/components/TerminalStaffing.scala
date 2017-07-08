@@ -28,24 +28,22 @@ object TerminalStaffing {
 
     def render(props: Props) = {
       val staffingRCP = SPACircuit.connect(m => (m.shiftsRaw, m.fixedPointsRaw, m.staffMovements))
-      staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]) => {
+      staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Pot[Seq[StaffMovement]])]) => {
         <.div(
           staffingMP()._1.renderReady((rawShifts: String) => {
             staffingMP()._2.renderReady((rawFixedPoints: String) => {
-              val movements = staffingMP() match {
-                case (_, _, sm) => sm
-              }
-
-              val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
-              val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
-              <.div(
-                <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
-                  <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
-                ),
-                <.div(^.className := "container",
-                  <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
-              )
+              staffingMP()._3.renderReady((movements: Seq[StaffMovement]) => {
+                val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
+                val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
+                <.div(
+                  <.div(^.className := "container",
+                    <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
+                    <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
+                  ),
+                  <.div(^.className := "container",
+                    <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
+                )
+              })
             })
           })
         )
@@ -85,7 +83,7 @@ object TerminalStaffing {
     )
   }
 
-  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])], terminalName: TerminalName): VdomTagOf[Div] = {
+  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Pot[String], Pot[Seq[StaffMovement]])], terminalName: TerminalName): VdomTagOf[Div] = {
     val terminalMovements = movements.filter(_.terminalName == terminalName)
     <.div(
       <.h2("Movements"),
@@ -99,7 +97,7 @@ object TerminalStaffing {
     )
   }
 
-  case class FixedPointsProps(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])], terminalName: TerminalName)
+  case class FixedPointsProps(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Pot[Seq[StaffMovement]])], terminalName: TerminalName)
 
   case class FixedPointsState(rawFixedPoints: String)
 

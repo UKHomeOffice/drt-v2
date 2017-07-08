@@ -2,6 +2,8 @@ package drt.client.services
 
 import java.util.UUID
 
+import diode.data.Pot
+
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
@@ -196,9 +198,12 @@ object StaffMovements {
     baseStaff - fixedPoints + adjustmentsAt(movements)(dateTime)
   }
 
-  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
+  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentService)(movements: Pot[Seq[StaffMovement]])(terminalName: TerminalName, dateTime: MilliDate) = {
     val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
     val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTime)
-    baseStaff - fixedPointStaff + adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
+    val movementAdjustments = if (movements.isReady) {
+      adjustmentsAt(movements.get.filter(_.terminalName == terminalName))(dateTime)
+    } else 0
+    baseStaff - fixedPointStaff + movementAdjustments
   }
 }

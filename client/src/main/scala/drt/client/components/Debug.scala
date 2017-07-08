@@ -39,7 +39,7 @@ object Debug {
       staffingRCP((staffingMP: ModelProxy[(
         Pot[String],
           Pot[String],
-          Seq[StaffMovement],
+          Pot[Seq[StaffMovement]],
           Pot[Workloads],
           RootModel.TerminalQueueCrunchResults,
           RootModel.TerminalQueueSimulationResults,

@@ -85,7 +85,7 @@ case class RootModel(
                       minutesInASlot: Int = 15,
                       shiftsRaw: Pot[String] = Empty,
                       fixedPointsRaw: Pot[String] = Empty,
-                      staffMovements: Seq[StaffMovement] = Seq(),
+                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
                       slotsInADay: Int = 96,
                       flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map(),
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map()
@@ -330,36 +330,52 @@ object HandyStuff {
   }
 }
 
-class SimulationHandler[M](staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
+class SimulationHandler[M](rawShifts: ModelR[M, Pot[String]],
+                           rawFixedPoints: ModelR[M, Pot[String]],
+                           movements: ModelR[M, Pot[Seq[StaffMovement]]],
+                           staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
                            modelR: ModelR[M, Pot[Workloads]],
                            modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[SimulationResult]]]])
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunAllSimulations() =>
-      log.info(s"run simulation for ${staffDeployments.value}")
+      log.info(s"RunAllSimulations")
       val actions = staffDeployments.value.flatMap {
         case (terminalName, queueMapPot) => {
           queueMapPot.map {
             case (queueName, deployedDesks) =>
-              //              val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
               val desks = deployedDesks.get.items.map(_.deskRec)
               val desksList = desks.toList
               Effect(Future(RunSimulation(terminalName, queueName, desksList)))
           }
         }
       }.toList
-      log.info(s"runAllSimulations effects ${actions}")
+      effectOnly(seqOfEffectsToEffectSeq(actions))
+    case RunTerminalSimulations(terminalName) =>
+      log.info(s"RunTerminalSimulation for $terminalName")
+      val actions = staffDeployments.value.getOrElse(terminalName, Map()).map {
+        case (queueName, deployedDesks) =>
+          val desks = deployedDesks.get.items.map(_.deskRec)
+          val desksList = desks.toList
+          Effect(Future(RunSimulation(terminalName, queueName, desksList)))
+      }.toList
+      log.debug(s"RunTerminalSimulations effects ${actions}")
       effectOnly(seqOfEffectsToEffectSeq(actions))
     case rs@RunSimulation(terminalName, queueName, desks) =>
-      log.info(s"Requesting simulation for $terminalName, $queueName")
-      val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
-      val firstNonZeroIndex = queueWorkload.indexWhere(_ != 0)
-      log.info(s"run sim first != 0 workload $firstNonZeroIndex")
-      log.info(s"run sum $rs workload $queueWorkload")
-      val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
-      effectOnly(
-        Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
-      )
+      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady) {
+        log.info(s"Requesting simulation for $terminalName, $queueName")
+        val queueWorkload = getTerminalQueueWorkload(terminalName, queueName)
+        val firstNonZeroIndex = queueWorkload.indexWhere(_ != 0)
+        log.info(s"run sim first != 0 workload $firstNonZeroIndex")
+        log.info(s"run sum $rs workload $queueWorkload")
+        val simulationResult: Future[SimulationResult] = AjaxClient[Api].processWork(terminalName, queueName, queueWorkload, desks).call()
+        effectOnly(
+          Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
+        )
+      } else {
+        log.info(s"Not running simulation for $terminalName/$queueName. Shifts, Fixed points & movements not all ready yet")
+        noChange
+      }
     case sr@UpdateSimulationResult(terminalName, queueName, simResult) =>
       val firstNonZeroIndex = simResult.waitTimes.indexWhere(_ != 0)
       log.info(s"run sim simResult $sr")
@@ -649,37 +665,45 @@ object FixedPoints {
 
 class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case SetFixedPoints(fixedPoints: String) =>
-      updated(Ready(fixedPoints), Effect(Future(RunAllSimulations())))
+    case SetFixedPoints(fixedPoints: String, terminalName: Option[String]) =>
+      if (terminalName.isDefined)
+        updated(Ready(fixedPoints), Effect(Future(RunTerminalSimulations(terminalName.get))))
+      else
+        updated(Ready(fixedPoints), Effect(Future(RunAllSimulations())))
     case SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) =>
       val otherTerminalFixedPoints = FixedPoints.filterOtherTerminals(terminalName, value.getOrElse(""))
       val newRawFixedPoints = otherTerminalFixedPoints + "\n" + fixedPoints
       AjaxClient[Api].saveFixedPoints(newRawFixedPoints).call()
-      effectOnly(Effect(Future(SetFixedPoints(fixedPoints))))
+      effectOnly(Effect(Future(SetFixedPoints(newRawFixedPoints, Option(terminalName)))))
     case AddShift(fixedPoints) =>
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
     case GetFixedPoints() =>
-
-      effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res))))
+      effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res, None))))
   }
 }
 
-class StaffMovementsHandler[M](modelRW: ModelRW[M, Seq[StaffMovement]]) extends LoggingActionHandler(modelRW) {
+class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
-      val v: Seq[StaffMovement] = value
-      val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
-      updated(updatedValue)
+      if (value.isReady) {
+        val v: Seq[StaffMovement] = value.get
+        val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
+        updated(Ready(updatedValue))
+      } else noChange
     case RemoveStaffMovement(idx, uUID) =>
-      val updatedValue = value.filter(_.uUID != uUID)
-      updated(updatedValue, Effect(Future(SaveStaffMovements())))
+      if (value.isReady) {
+        val updatedValue = value.get.filter(_.uUID != uUID)
+        updated(Ready(updatedValue), Effect(Future(SaveStaffMovements())))
+      } else noChange
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      updated(staffMovements, Effect(Future(RunAllSimulations())).after(30 seconds))
+      updated(Ready(staffMovements), Effect(Future(RunAllSimulations())).after(30 seconds))
     case GetStaffMovements() =>
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
     case SaveStaffMovements() =>
-      AjaxClient[Api].saveStaffMovements(value).call()
-      effectOnly(Effect(Future(RunAllSimulations())))
+      if (value.isReady) {
+        AjaxClient[Api].saveStaffMovements(value.get).call()
+        effectOnly(Effect(Future(RunAllSimulations())))
+      } else noChange
   }
 }
 
@@ -715,7 +739,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
         m.copy(workloadPot = v)
       })),
       new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v))),
-      new SimulationHandler(zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
+      new SimulationHandler(zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),

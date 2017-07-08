@@ -29,9 +29,11 @@ object Actions {
 
   case class RunAllSimulations() extends Action
 
+  case class RunTerminalSimulations(terminalName: TerminalName) extends Action
+
   case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
 
-  case class SetFixedPoints(fixedPoints: String) extends Action
+  case class SetFixedPoints(fixedPoints: String, terminalName: Option[String]) extends Action
 
   case class SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) extends Action
 
