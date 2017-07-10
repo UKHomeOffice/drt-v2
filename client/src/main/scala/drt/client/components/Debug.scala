@@ -32,8 +32,7 @@ object Debug {
           m.workloadPot,
           m.queueCrunchResults,
           m.simulationResult,
-          m.flightsWithSplitsPot,
-          m.flightSplits
+          m.flightsWithSplitsPot
         )
       )
       staffingRCP((staffingMP: ModelProxy[(
@@ -43,10 +42,9 @@ object Debug {
           Pot[Workloads],
           RootModel.TerminalQueueCrunchResults,
           RootModel.TerminalQueueSimulationResults,
-          Pot[FlightsWithSplits],
-          Map[FlightCode, Map[MilliDate, VoyagePaxSplits]]
+          Pot[FlightsWithSplits]
         )]) => {
-        val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, potFlights, flightSplits) = staffingMP()
+        val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, potFlights) = staffingMP()
 
         if (dom.window.hasOwnProperty("debug")) {
           <.table(

@@ -89,7 +89,6 @@ case class RootModel(
                       fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Seq[StaffMovement] = Seq(),
                       slotsInADay: Int = 96,
-                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map(),
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map()
                     ) {
 
@@ -163,6 +162,8 @@ case class RootModel(
     })
     terminalName -> terminalDeploymentRows
   }
+
+
 
   override def toString: String =
     s"""

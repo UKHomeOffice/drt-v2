@@ -21,7 +21,11 @@ import utest._
 import drt.client.logger.log
 import drt.client.services.RootModel.TerminalQueueCrunchResults
 import japgolly.scalajs.react.internal.Effect.Id
+import org.scalajs.dom.{DOMList, Element, Node}
+import org.w3c.dom.{Comment, Text}
 
+import scala.annotation.tailrec
+import scala.collection.JavaConverters._
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -417,8 +421,12 @@ object TerminalPageTests extends TestSuite {
 
             withRenderedComponents(rc = realPage, expected = staticExpected) {
               (real, simple) => {
+
+                val html: Id[Element] = real.getDOMNode
+                val prettyHtml = prettyPrintXml(html.outerHTML)
+                println(s"the whole page was.. ${prettyHtml}")
                 assertComponentsAreSame(real, simple, ".summary-boxes")
-                assertComponentsAreSame(real, simple, ".summary-boxes")
+                //                assertComponentsAreSame(real, simple, ".summary-boxes")
               }
             }
         }
@@ -428,6 +436,66 @@ object TerminalPageTests extends TestSuite {
       def date(dt: String) = <.td(flightDate(dt))
 
       def flightDate(dt: String) = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
+    }
+  }
+
+  implicit class NodeListSeq[T <: Node](nodes: DOMList[T]) extends IndexedSeq[T] {
+    override def foreach[U](f: (T) => U): Unit = {
+      for (i <- 0 until nodes.length) {
+        f(nodes(i))
+      }
+    }
+
+    override def length: Int = nodes.length
+
+    override def apply(idx: Int): T = nodes(idx)
+  }
+
+
+
+  def prettyPrintXml(s: String, depth: Int = 0): String = {
+    val closing = "></"
+    val open = "<"
+
+    var i = 0
+    var acc = ""
+    var d = 0
+    while (i < s.length) {
+      val curr = s.slice(i, i+4)
+      if (curr.startsWith(closing)) {
+        val ind = Seq.fill(d)(" ")
+        acc += s">\n$ind</"
+        i += 3
+        d -= 1
+      } else if (curr.startsWith(open)) {
+        d += 1
+        val ind = Seq.fill(d)(" ")
+        acc += s"\n$ind"
+      } else {
+        acc += curr.charAt(0)
+        i += 1
+      }
+    }
+    acc
+  }
+
+
+  def prettyPrint(node: Element, depth: Int = 0): String = {
+    val tabs = Seq.fill(depth)(' ').mkString
+    val leader = "\n" + tabs
+    if (node.hasChildNodes()) {
+      val children = node.childNodes
+      val cs = children.map {
+        case c: Element => prettyPrint(c, depth + 1)
+        case c => ""
+      }
+      leader + cs.mkString
+    } else {
+      val s = node match {
+        case e: Element => "e: " + e.outerHTML
+        case c => ""
+      }
+      leader + s
     }
   }
 
