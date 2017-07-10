@@ -279,7 +279,8 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
   protected def handle = {
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
-      updated(Pending(),
+      val newWorkloads = if (value.isEmpty) Pending() else value
+      updated(newWorkloads,
         Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads).recover {
           case f =>
             log.error(s"failure getting workloads $f")
@@ -453,7 +454,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
             })
           }
 
-          val allEffects = airportInfos // >> getWorkloads
+          val allEffects = airportInfos  >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")

@@ -40,6 +40,7 @@ object TerminalHeatmaps {
         }))
     })
   }
+
   def heatmapOfPaxloads(terminalName: TerminalName) = {
     val workloadsRCP = SPACircuit.connect(_.workloadPot)
     workloadsRCP((workloadsMP: ModelProxy[Pot[Workloads]]) => {
@@ -146,8 +147,8 @@ object TerminalHeatmaps {
                              paxloadWorkloadSelector: ((Seq[WL], Seq[Pax])) => Map[Long, Double]): Map[String, List[Double]] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-//    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
-    val queueWorkloadsByMinute =  WorkloadsHelpers.loadPeriodByQueue(workloads, minutesRangeInMillis, paxloadWorkloadSelector)
+    //    val queueWorkloadsByMinute = WorkloadsHelpers.workloadPeriodByQueue(workloads, minutesRangeInMillis)
+    val queueWorkloadsByMinute = WorkloadsHelpers.loadPeriodByQueue(workloads, minutesRangeInMillis, paxloadWorkloadSelector)
     val by15Minutes = queueWorkloadsByMinute.mapValues(
       (v) => v.grouped(minutesPerGroup).map(_.sum).toList
     )
@@ -164,6 +165,7 @@ object TerminalHeatmaps {
     }
     result.toList
   }
+
   def paxloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
     log.info(s"!!!!looking up $terminalName in wls")
     val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60, WorkloadsHelpers.paxloadByMillis)
@@ -237,6 +239,7 @@ object Heatmap {
   implicit val doubleSeqReuse = Reusability.indexedSeq[IndexedSeq, Double]
   implicit val seriesReuse = Reusability.caseClass[Series]
   implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('valueDisplayFormatter, 'scaleFunction)
+  implicit val rectPropsReuse = Reusability.caseClass[RectProps]
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
     "#E0C54B", "#DD983A", "#DA6429", "#D72A18")
@@ -263,7 +266,9 @@ object Heatmap {
     .render_P(props =>
       s.g(^.key := props.serie.name + "-" + props.sIndex,
         getRects(props.serie, props.numberofblocks, props.gridSize, props.props, props.sIndex))
-    ).build
+    )
+    .configure(Reusability.shouldComponentUpdate)
+    .build
 
   def getRects(serie: Series, numberofblocks: Int, gridSize: Int, props: Props, sIndex: Int): TagOf[G] = {
     Try {
