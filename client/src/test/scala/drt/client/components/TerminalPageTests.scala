@@ -422,7 +422,7 @@ object TerminalPageTests extends TestSuite {
               (real, simple) => {
 
                 val html: Id[Element] = real.getDOMNode
-                val prettyHtml = prettyPrintXml(html.outerHTML)
+                val prettyHtml = html.outerHTML
                 println(s"the whole page was.. ${prettyHtml}")
                 assertComponentsAreSame(real, simple, ".summary-boxes")
                 //                assertComponentsAreSame(real, simple, ".summary-boxes")
