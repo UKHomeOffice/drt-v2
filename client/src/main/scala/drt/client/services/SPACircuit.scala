@@ -717,7 +717,7 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) ext
         } else noChange
       } else noChange
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      updated(Ready(staffMovements), Effect(Future(RunAllSimulations())) /*.after(30 seconds)*/)
+      updated(Ready(staffMovements), Effect(Future(RunAllSimulations())))
     case GetStaffMovements() =>
       effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
     case SaveStaffMovements(terminalName) =>
