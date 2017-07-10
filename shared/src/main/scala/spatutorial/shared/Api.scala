@@ -42,7 +42,13 @@ case object PaxNumbers extends SplitStyle
 case object Percentage extends SplitStyle
 
 case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
-  lazy val totalPax = splits.map(_.paxCount).sum
+  lazy val totalExcludingTransferPax = ApiSplits.totalExcludingTransferPax(splits)
+  lazy val totalPax = ApiSplits.totalPax(splits)
+}
+
+object ApiSplits {
+  def totalExcludingTransferPax(splits: List[ApiPaxTypeAndQueueCount]) = splits.filter(s => s.queueType != Queues.Transfer).map(_.paxCount).sum
+  def totalPax(splits: List[ApiPaxTypeAndQueueCount]) = splits.map(_.paxCount).sum
 }
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: List[ApiSplits])

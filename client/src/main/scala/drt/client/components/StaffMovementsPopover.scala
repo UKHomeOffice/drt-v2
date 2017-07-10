@@ -85,7 +85,7 @@ object StaffMovementsPopover {
             SPACircuit.dispatch(AddStaffMovement(movement))
             log.info(s"Dispatched AddStaffMovement($movement")
           }
-          SPACircuit.dispatch(SaveStaffMovements())
+          SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
           scope.modState(_.copy(hovered = false))
         case Failure(error) =>
           log.info("Invalid shift")

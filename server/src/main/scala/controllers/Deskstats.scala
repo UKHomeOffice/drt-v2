@@ -37,7 +37,9 @@ object Deskstats {
 
   class NaiveTrustManager extends X509TrustManager {
     override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}
+
     override def checkServerTrusted(cert: Array[X509Certificate], authType: String) {}
+
     override def getAcceptedIssuers = null
   }
 
@@ -56,7 +58,6 @@ object Deskstats {
     actorSystem.scheduler.schedule(
       initialDelay1Second milliseconds,
       interval) {
-      log.info(s"actDesks: requesting")
       val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
       actualDesksActor ! ActualDeskStats(actDesks)
     }
@@ -68,15 +69,18 @@ object Deskstats {
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
     val backupSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory
 
+    log.info(s"DeskStats: requesting blackjack CSV from $blackjackUrl")
     val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackUrl)
+    log.info("DeskStats: received blackjack CSV")
 
     HttpsURLConnection.setDefaultSSLSocketFactory(backupSslSocketFactory)
 
+    log.info(s"Asking for blackjack entries since $parseSince")
     val relevantData = csvLinesUntil(bufferedCsvContent, parseSince.millisSinceEpoch)
     csvData(relevantData)
   }
 
-  def csvLinesUntil(csvContent: BufferedSource, until: Long): String = {
+  def csvLinesUntil(csvContent: Source, until: Long): String = {
     csvContent.getLines().takeWhile(line => {
       val cells: Seq[String] = parseCsvLine(line)
       cells(0) match {
@@ -96,7 +100,9 @@ object Deskstats {
   }
 
   def csvHeadings(deskstatsContent: String): Seq[String] = {
-    parseCsvLine(deskstatsContent.split("\n").head)
+    val firstLine = deskstatsContent.split("\n").head
+    log.info(s"Looking for heading from $firstLine\n whole csv: $deskstatsContent")
+    parseCsvLine(firstLine)
   }
 
   def desksForQueueByMillis(queueName: String, dateIndex: Int, timeIndex: Int, deskIndex: Int, waitTimeIndex: Int, rows: Seq[Seq[String]]): Map[Long, DeskStat] = {
@@ -109,7 +115,7 @@ object Deskstats {
           case Failure(f) => None
         }
         val waitTimeOption = Try {
-          log.info(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: ${columnData}")
+          log.debug(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: ${columnData}")
           val Array(hours, minutes) = columnData(waitTimeIndex).split(":").map(_.toInt)
           (hours * 60) + minutes
         } match {
@@ -123,13 +129,16 @@ object Deskstats {
 
   def csvData(deskstatsContent: String): Map[String, Map[String, Map[Long, DeskStat]]] = {
     val headings = csvHeadings(deskstatsContent)
+    log.debug(s"DeskStats: headings: $headings")
     val columnIndices = Map(
       "terminal" -> headings.indexOf("device"),
       "date" -> headings.indexOf("Date"),
       "time" -> headings.indexOf("Time")
     )
     val queueColumns = queueColumnIndexes(headings)
+
     val rows = deskstatsContent.split("\n").drop(1).toList
+    log.debug(s"DeskStats: Got ${rows.length} relevant rows")
     val parsedRows = rows.map(parseCsvLine).filter(_.length == 11)
     val dataByTerminal = parsedRows.groupBy(_ (columnIndices("terminal")))
     val dataByTerminalAndQueue =

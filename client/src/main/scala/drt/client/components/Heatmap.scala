@@ -29,7 +29,7 @@ object TerminalHeatmaps {
           wl.workloads.get(terminalName) match {
             case Some(terminalWorkload) =>
               val heatMapSeries = workloads(terminalWorkload, terminalName)
-              val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
+              val maxAcrossAllSeries = emptySafeMax(heatMapSeries.map(x => emptySafeMax(x.data)))
               log.info(s"Got max workload of ${maxAcrossAllSeries}")
               <.div(
                 Heatmap.heatmap(Heatmap.Props(series = heatMapSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
@@ -78,7 +78,7 @@ object TerminalHeatmaps {
       val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(terminalName, Map()), terminalName)
       <.div(
         seriesPot.renderReady(queueSeries => {
-          val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => x.data.max))
+          val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => emptySafeMax(x.data)))
           log.info(s"Got max waittime of ${maxAcrossAllSeries}")
           <.div(
             Heatmap.heatmap(Heatmap.Props(series = queueSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))

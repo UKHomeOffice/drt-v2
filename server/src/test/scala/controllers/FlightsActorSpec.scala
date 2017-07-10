@@ -26,7 +26,7 @@ class FlightsActorSpec extends Specification {
   isolated
 
   val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
-  val testPcpArrival = (a: Arrival) => MilliDate(SDate.parseString(a.SchDT).millisSinceEpoch)
+  val testPcpArrival: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate.parseString(a.SchDT).millisSinceEpoch)
 
   private def flightsActor(system: ActorSystem, airportCode: String = "EDI") = {
     system.actorOf(Props(
@@ -35,7 +35,8 @@ class FlightsActorSpec extends Specification {
       Actor.noSender,
       testSplitsProvider,
       BestPax(airportCode),
-      testPcpArrival
+      testPcpArrival,
+      AirportConfigs.edi
     ), "FlightsActor")
   }
 

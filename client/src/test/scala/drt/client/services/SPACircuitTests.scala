@@ -1,7 +1,7 @@
 package drt.client.services
 
 import diode.ActionResult._
-import diode.{ActionResult, ModelR, RootModelRW}
+import diode._
 import diode.data._
 import drt.client.UserDeskRecFixtures._
 import drt.client.actions.Actions.{UpdateCrunchResult, UpdateDeskRecsTime, UpdateSimulationResult, UpdateWorkloads}
@@ -11,6 +11,7 @@ import drt.shared._
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
+import scala.concurrent.Future
 
 object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
@@ -165,10 +166,10 @@ object SPACircuitTests extends TestSuite {
           workloadPot = Ready(Workloads(Map("T1" -> Map("eeaGate" -> (Seq(WL(0, 1.2)), Seq(Pax(0, 1.0))))))))
 
         res match {
-          case Some(ModelUpdate(newValue)) =>
+          case Some(ModelUpdateEffect(newValue, _)) =>
             assert(newValue == expected)
           case default =>
-            println("Was " + default.toString())
+            println(s"Was $default\nExpected $expected")
             assert(false)
         }
       }

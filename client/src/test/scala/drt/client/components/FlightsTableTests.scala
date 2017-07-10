@@ -141,7 +141,7 @@ object FlightsTableTests extends TestSuite {
                   <.td()))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax)),
+            ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
@@ -176,13 +176,13 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.ActChoxDT),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
                   <.td(testFlight.ActPax),
-                    <.td()))))
+                  <.td()))))
 
           //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
           val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax)),
+            ArrivalsTable(Some(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
 
@@ -228,7 +228,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = (port) => originMapperComponent(port)
-            )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax))
+            )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -297,7 +297,8 @@ object FlightsTableTests extends TestSuite {
           def paxComponent(f: Arrival, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
 
           assertRenderedComponentsAreEqual(
-            FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), BestPax.bestPax)),
+            FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
 
           //          val className: TagMod = ^.className := s"pax-${origin}"

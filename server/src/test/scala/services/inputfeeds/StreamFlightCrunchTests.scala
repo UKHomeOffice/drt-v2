@@ -114,6 +114,7 @@ object CrunchTests {
     implicit val timeout: Timeout = Timeout(5 seconds)
 
     def sendToCrunch[T](o: T) = crunchActor ! o
+
     def askCrunchAndWaitForReply[T](o: T) = Await.result(crunchActor ? o, 1 second)
 
     lazy val crunchActor = createCrunchActor
@@ -412,12 +413,16 @@ class StreamFlightCrunchTests
   val log = LoggerFactory.getLogger(getClass)
 
   val testSplitsProvider: SplitsProvider = SplitsProvider.emptyProvider
+
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       val flightsActor = context.system.actorOf(Props(
-        classOf[FlightsActor], context.testActor, Actor.noSender, testSplitsProvider, BestPax("EDI"), (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch)
+        classOf[FlightsActor], context.testActor, Actor.noSender,
+        testSplitsProvider, BestPax("EDI"),
+        (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
+        AirportConfigs.lhr
       ), "flightsActor")
       val flights = Flights(
         List(apiFlight(flightId = 0, iata = "BA123", actPax = 200, schDt = "2016-09-01T10:31")))

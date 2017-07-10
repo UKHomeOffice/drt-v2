@@ -1,5 +1,7 @@
 package drt.client.components
 
+import drt.client.components.FlightComponents.SplitsGraph
+import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
@@ -12,14 +14,13 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import org.scalajs.dom.html.Div
 
-import scala.collection.immutable.Seq
 import scala.util.{Failure, Success, Try}
 
 object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = (Arrival) => Int
 
-  case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int)
+  case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
 
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
   implicit val doubleReuse = Reusability.double(0.001)
@@ -29,14 +30,16 @@ object FlightsWithSplitsTable {
   implicit val flightReuse = Reusability.caseClass[Arrival]
   implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
   implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
+  implicit val paxTypeAndQueueReuse = Reusability.caseClass[PaxTypeAndQueue]
   implicit val bestPaxReuse = Reusability.byRefOr_==[BestPaxForArrivalF]
   implicit val propsReuse = Reusability.caseClass[Props]
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
-                    originMapper: (String) => VdomNode = (portCode) => portCode,
-                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                    splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div()
-                   ) = ScalaComponent.builder[Props]("ArrivalsTable")
+                       originMapper: (String) => VdomNode = (portCode) => portCode,
+                       paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                       splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
+                      ) = ScalaComponent.builder[Props]("ArrivalsTable")
+
     .renderP((_$, props) => {
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
@@ -72,7 +75,8 @@ object FlightsWithSplitsTable {
                       originMapper = originMapper,
                       paxComponent = paxComponent,
                       splitsGraphComponent = splitsGraphComponent,
-                      bestPax = bestPax
+                      bestPax = bestPax,
+                      splitsQueueOrder = props.queueOrder
                     ))
                   }
                 }.toTagMod)))
@@ -99,20 +103,24 @@ object FlightTableRow {
   type OriginMapperF = (String) => VdomNode
   type BestPaxForArrivalF = (Arrival) => Int
 
+  type SplitsGraphComponentFn = (SplitsGraph.Props) => TagOf[Div]
+
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShares: Set[Arrival],
                    idx: Int,
                    timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                   splitsGraphComponent: (Int, Seq[(String, Int)]) => TagOf[Div] = (splitTotal: Int, splits: Seq[(String, Int)]) => <.div(),
+                   splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
+                   splitsQueueOrder: List[PaxTypeAndQueue],
                    bestPax: (Arrival) => Int
                   )
 
   implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
   implicit val paxTypeReuse = Reusability.byRef[PaxType]
   implicit val doubleReuse = Reusability.double(0.01)
-  implicit val paxtypeandQueueReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
+  implicit val paxTypeAndQueueCountReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
+  implicit val paxTypeAndQueueReuse = Reusability.caseClass[PaxTypeAndQueue]
   //  implicit val flightReuse = Reusability.caseClass[List[ApiPaxTypeAndQueueCount]]
   //  implicit val flightReuse = Reusability.caseClass[List[Arrival]]
   implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
@@ -146,13 +154,14 @@ object FlightTableRow {
           SplitSources.Historical -> "Historical"
         ).getOrElse(name, name)
 
-        def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
-          val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-          val splitsAndLabels: Seq[(String, Int)] = orderedSplitCounts.map {
-            case (ptqc, paxCount) => (s"$splitStyleUnitLabe ${ptqc.passengerType} > ${ptqc.queueType}", paxCount)
-          }
+        def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
+          val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+          val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+            <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
+            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td( s._1.passengerType.name), <.td( s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
-            props.splitsGraphComponent(splitTotal, splitsAndLabels), sourceDisplay)
+            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
+            sourceDisplay)
         }
 
         //todo - we need to lift this splitsComponent code out somewhere more useful
@@ -168,7 +177,7 @@ object FlightTableRow {
                 val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
                   case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
                 }).toMap
-                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax)
+                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
               }
               case Percentage => {
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
@@ -177,7 +186,7 @@ object FlightTableRow {
                 val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
                   case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
                 }).toMap
-                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax)
+                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
               }
             }
             vdomElement

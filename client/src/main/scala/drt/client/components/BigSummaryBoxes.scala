@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain
 import drt.client.components.FlightComponents._
+import drt.client.components.FlightComponents.SplitsGraph._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared._
@@ -20,10 +21,8 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-  def bestFlightPax(f: Arrival) = if (f.ActPax > 0) f.ActPax else f.MaxPax
-
-  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
-    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalPax
+  def bestFlightSplitPax(bestFlightPax: (Arrival) => Int): PartialFunction[ApiFlightWithSplits, Double] = {
+    case ApiFlightWithSplits(_, (h@ApiSplits(_, _, PaxNumbers)) :: _) => h.totalExcludingTransferPax
     case ApiFlightWithSplits(flight, _) => bestFlightPax(flight)
   }
 
@@ -52,30 +51,73 @@ object BigSummaryBoxes {
   }
 
 
-  def aggregateSplits(flights: Seq[ApiFlightWithSplits]) = {
-    val newSplits = Map[PaxTypeAndQueue, Int]()
-    val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap {
-      case ApiFlightWithSplits(_, Nil) => Nil
-      case ApiFlightWithSplits(_, headSplit :: _) if headSplit.splitStyle == PaxNumbers =>
-        headSplit.splits.map {
-          s =>
-            (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount)
+  def bestFlightSplits(bestFlightPax: (Arrival) => Int): Function[ApiFlightWithSplits, Seq[(PaxTypeAndQueue, Double)]] = {
+    case ApiFlightWithSplits(_, Nil) => Nil
+    case ApiFlightWithSplits(_, headSplit :: _) if headSplit.splitStyle == PaxNumbers =>
+      headSplit.splits.map {
+        s =>
+          (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount)
+      }
+    case ApiFlightWithSplits(f, headSplit :: _) if headSplit.splitStyle == Percentage =>
+      val splits = headSplit.splits
+      splits.map {
+        s => {
+          (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * bestFlightPax(f))
         }
-      case ApiFlightWithSplits(f, headSplit :: _) if headSplit.splitStyle == Percentage =>
-        val splits = headSplit.splits
-        splits.map {
-          s => {
-            (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * bestFlightPax(f))
-          }
-        }
+      }
+  }
+
+  def aggregateSplitsLogging(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
+    val flightSplits = bestFlightSplits(bestFlightPax)
+
+    def excludeTrans(s: ((PaxTypeAndQueue), Double)): Boolean = {
+      s._1.queueType != Queues.Transfer
     }
+
+    def identity(s: ((PaxTypeAndQueue), Double)): Boolean = true
+
+    def inner(filter: String, sfilter: ((PaxTypeAndQueue, Double)) => Boolean) = {
+      val allFlightsBestPaxAndSplitsExTx = flights.map(f => {
+        val filter = flightSplits(f).filter(sfilter)
+        val splitSum = filter.map(_._2).sum
+        (f.apiFlight, bestFlightPax(f.apiFlight), filter, splitSum)
+      })
+      val notAgreeing = allFlightsBestPaxAndSplitsExTx.filter(f => f._2 != f._3.map(_._2).sum.toInt)
+      val allDiffs = notAgreeing.map(f => {
+        val splitSum = f._3.map(_._2).sum.toInt
+        (Arrival.summaryString(f._1), f._2 - splitSum, f._2, splitSum)
+      })
+      val totalDiff = allDiffs.map(f => f._2).sum
+      println(s"$filter flightPax: arr: ${allFlightsBestPaxAndSplitsExTx.map(_._2).sum} splExTx: ${allFlightsBestPaxAndSplitsExTx.map(_._3.map(_._2).sum).sum}")
+
+      println(s"$filter notAgreeing totalDiff: ${totalDiff} over ${allDiffs.length} ${pprint.stringify(allDiffs)}")
+      println(s"notAgreeing: ${pprint.stringify(notAgreeing)}")
+
+    }
+
+    inner("exTx", excludeTrans)
+    inner("inTx", identity)
+
+  }
+
+  def aggregateSplits(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
+    val newSplits = Map[PaxTypeAndQueue, Double]()
+    val flightSplits = bestFlightSplits(bestFlightPax)
+    val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap(flightSplits)
+    val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
+//    val splitsSum = splitsExcludingTransfers.map(_._2).sum
+//    println(s"aggregateSplits.splitsSum $splitsSum")
     //    //todo import cats - it makes short, efficient work of this sort of aggregation.
-    val aggSplits: Map[PaxTypeAndQueue, Int] = allSplits.foldLeft(newSplits) {
+    val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>
-        val g = agg.getOrElse(k, 0)
-        agg.updated(k, v.toInt + g)
+        val g = agg.getOrElse(k, 0d)
+        agg.updated(k, v + g)
     }
-    aggSplits
+//    println(s"aggregateSplits.splitsSumSum ${aggSplits.values.sum}")
+    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.mapValues(Math.round(_).toInt)
+//    println(s"aggregateSplits.splitsSumSumInt ${aggSplitsInts.values.sum}")
+
+    aggSplitsInts
   }
 
   def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = ApiSplits(
@@ -93,23 +135,27 @@ object BigSummaryBoxes {
 
   def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.map(_.apiFlight.ActPax).sum
 
+  def sumBestPax(bestFlightSplitPax: (ApiFlightWithSplits) => Double)(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
+
+  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue])
 
 
-  def sumBestPax(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
-
-  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int])
-
-
-  def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int]) = {
+  def GraphComponent(source: String, splitStyleUnitLabe: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) = {
     val value = Try {
-      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = PaxTypesAndQueues.inOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val tt: TagMod = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+        <.tbody(
+          orderedSplitCounts.map { s =>
+            <.tr(<.td(s._1.passengerType.name), <.td(s._1.queueType), <.td(s._2))
+          }.toTagMod))
+
       val nbsp = "\u00a0"
       <.h3(
         nbsp,
         <.span(
           // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
           <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
-            splitsGraphComponentColoure(splitTotal, orderedSplitCounts), sourceDisplay))
+            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)), sourceDisplay))
       )
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {
@@ -125,7 +171,7 @@ object BigSummaryBoxes {
       <.div(^.className := "summary-boxes ",
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d "), <.span(^.className := "sub", "Flights"))),
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count best-pax-count", f"${p.bestPaxCount}%,d "), <.span(^.className := "sub", "Best Pax"))),
-        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits)))
+        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "pax", "", p.aggSplits.values.sum, p.aggSplits, p.paxQueueOrder)))
     })
     .build
 }

@@ -3,7 +3,7 @@ package drt.client
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
-import drt.client.components.{GlobalStyles, Layout, Staffing, TerminalPage, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import drt.client.services.RootModel.QueueCrunchResults
@@ -132,8 +132,8 @@ object TableViewUtils {
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 
-    log.info(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
-    log.info(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
+    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
+    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
     val simulationResultWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
     val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)
@@ -236,26 +236,22 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-    val renderStaffing = renderR(_ => Staffing())
-    val home = staticRoute(root, StaffingLoc) ~> renderStaffing
-    val staffing = staticRoute("#staffing", StaffingLoc) ~> renderStaffing
-    val terminal = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+")
-      .caseClass[TerminalDepsLoc]) ~> dynRenderR((page: TerminalDepsLoc, ctl) => {
-      TerminalPage(page.id, ctl)
-    })
-    val terminalsDashboard = dynamicRouteCT("#terminalsDashboard" / int
-      .caseClass[TerminalsDashboardLoc]) ~> dynRenderR((page: TerminalsDashboardLoc, ctl) => {
-      TerminalsDashboardPage(page.hours, ctl)
-    })
+    val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
+    val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
+      dynRenderR((page: TerminalsDashboardLoc, ctl) => {
+        TerminalsDashboardPage(page.hours)
+      })
+    val terminal: dsl.Rule = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+").caseClass[TerminalDepsLoc]) ~>
+      dynRenderR((page: TerminalDepsLoc, ctl) => {
+        TerminalPage(page.id, ctl)
+      })
 
-    val rule = home | terminal | staffing | terminalsDashboard
+    val rule = home | terminal | terminalsDashboard
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
   // base layout for all pages
-  def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
-    Layout(c, r)
-  }
+  def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
 
@@ -275,7 +271,7 @@ object SPAMain extends js.JSApp {
     log.info(s"think the port is ${pathToThisApp.split("/")}")
     log.warn("Application starting")
     // send log messages also to the server
-    log.enableServerLogging(pathToThisApp + "/logging")
+//    log.enableServerLogging(pathToThisApp + "/logging")
     log.info("This message goes to server as well")
 
     // create stylesheet

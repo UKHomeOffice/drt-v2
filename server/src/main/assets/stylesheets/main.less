@@ -63,6 +63,8 @@
 }
 
 @actDotColor: #2854f2;
+@tdpadding: -8px;
+
 
 .act-dot.early {
   background-color: @actDotColor;
@@ -170,7 +172,6 @@ table.user-desk-recs.cols-5-with-actuals {
     width: 60px;
   }
 }
-
 
 table.user-desk-recs.cols-4 {
   thead th:nth-last-child(-n+2) {
@@ -313,6 +314,20 @@ tr:nth-child(odd) > td.eeaDesk-user-desk-rec.actuals {
 
 .nonEeaDesk-user-desk-rec {
   background-color: @nonEeaDeskUserDeskColor;
+}
+
+.fastTrack-user-desk-rec {
+  background-color: @fastTrackUserDeskColor;
+}
+
+.transfer-user-desk-rec {
+  background-color: @transferUserDeskColor;
+  color: #ffffff;
+}
+
+tr:nth-child(even) > td.transfer-user-desk-rec {
+  background-color: lighten(@transferUserDeskColor, 5%);
+  color: #ffffff;
 }
 
 tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec {
@@ -483,15 +498,15 @@ th h2 {
   display: inline-block;
   color: black;
   font-weight: 400;
-  text-shadow: 0px 0px 4px white;
+  //text-shadow: 0px 0px 4px white;
 
 }
 
 @pax-bar-height: 20px;
 
 @reliability-low: #ff9999;
-@reliability-medium: #ffeeaa;
-@reliability-high: rgba(119, 255, 119, 0.5);
+@reliability-medium: #efc626;
+@reliability-high: rgba(13, 182, 36, 0.7);
 
 .pax-bar {
   height: @pax-bar-height;
@@ -533,8 +548,8 @@ th h2 {
 }
 
 .summary-box-container {
-  display: inline-block;bet
-  height: 80px;
+  display: inline-block;
+  bet height: 80px;
   background-color: #dddddd;
   padding: 5px 5px 5px 5px;
   margin: 5px 5px 5px 5px;
@@ -551,12 +566,23 @@ th h2 {
   top: -5px;
 }
 
+
+.splitsource-airportconfig {
+  border-right: solid 5px dodgerblue;
+  border-bottom: solid 4px dodgerblue;
+  margin-bottom: @tdpadding;
+}
+
 .splitsource-historical {
-  background: @reliability-medium;
+  border-right: solid 5px @reliability-medium;
+  border-bottom: solid 4px @reliability-medium;
+  margin-bottom: @tdpadding;
 }
 
 .splitsource-apisplitswithhistoricalegatepercentage {
-  background: @reliability-high;
+  border-right: solid 5px @reliability-high;
+  border-bottom: solid 4px @reliability-high;
+  margin-bottom: @tdpadding;
 }
 
 .splits {
@@ -566,8 +592,40 @@ th h2 {
   display: inline-block;
 }
 
+.splits .splits-tooltip {
+  display: none;
+}
+
+.splits:hover .splits-tooltip {
+  display: block;
+  font-size: medium;
+  /* position relative to container div.tooltip */
+  position: absolute;
+
+  /* prettify */
+  padding: 0.5em;
+  color: #000000;
+  opacity: 0.9;
+  background: #ebf4fb;
+  border: 0.1em solid #b7ddf2;
+  /* round the corners */
+  border-radius: 0.5em;
+  /* prevent too wide tooltip */
+  max-width: 80em;
+  z-index: 1000;
+  .below {
+    top: 1em;
+  }
+
+  .left {
+    top: 1em;
+    right: 1em;
+  }
+
+}
+
 .splits .graph {
-  width: 106px;
+  width: 136px;
   height: 28px;
   position: absolute;
   bottom: -5px;

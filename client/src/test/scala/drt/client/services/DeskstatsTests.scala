@@ -1,6 +1,5 @@
 package drt.client.services
 
-
 import drt.client.DeskStats
 import drt.client.components.TerminalDeploymentsTable.QueueDeploymentsRowEntry
 import drt.shared.FlightsApi.QueueName
