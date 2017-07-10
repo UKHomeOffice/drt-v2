@@ -222,19 +222,11 @@ object AirportConfigs {
     terminalNames = Seq("T1"),
     defaultPaxSplits = SplitRatios(
       AirportConfigOrigin,
-<<<<<<< Updated upstream
-      SplitRatio(eeaMachineReadableToDesk, 0.4875 * 1.10),
-      SplitRatio(eeaMachineReadableToEGate, 0.1625 * 1.1),
-      SplitRatio(eeaNonMachineReadableToDesk, 0.1625 * 1.1),
-      SplitRatio(visaNationalToDesk, 0.05 * 1.1),
-      SplitRatio(nonVisaNationalToDesk, 0.05 * 1.1)
-=======
       SplitRatio(eeaMachineReadableToDesk, 0.7425),
       SplitRatio(eeaMachineReadableToEGate, 0.2475),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
->>>>>>> Stashed changes
     ),
     defaultProcessingTimes = Map("T1" -> Map(
       eeaMachineReadableToDesk -> 20d / 60,
