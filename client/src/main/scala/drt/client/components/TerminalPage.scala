@@ -71,7 +71,7 @@ object TerminalPage {
               <.div(
                 <.h2(s"In the next $hoursToAdd hours"),
                 flightsWithSplitsPot().renderReady(flightsWithSplits => {
-                  <.div(safeRenderWithException {
+                  val tried: Try[VdomElement] = Try {
                     val filteredFlights = flightsInPeriod(flightsWithSplits.flights, now, nowplus3)
                     val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
                     val flightCount = flightsAtTerminal.length
@@ -85,7 +85,11 @@ object TerminalPage {
                     val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
 
                     <.div(summaryBoxes)
-                  })
+                  }
+                  val recovered = tried recoverWith {
+                    case f => Try(<.div(f.toString))
+                  }
+                  <.span(recovered.get)
                 }),
                 flightsWithSplitsPot().renderPending((t) => s"Waiting for flights $t")
               )

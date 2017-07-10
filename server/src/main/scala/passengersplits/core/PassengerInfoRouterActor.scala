@@ -270,8 +270,7 @@ class SingleFlightActor
           (dateTime) =>
             dateTime >= report.scheduledArrivalDateTimeFrom && dateTime <= report.scheduledArrivalDateTimeTo
         }
-      }
-      )
+      })
       matchingFlights match {
         case Some(f) =>
           calculateAndSendPaxSplits(sender, f.ArrivalPortCode, f.CarrierCode, padTo4Digits(f.VoyageNumber),

@@ -258,8 +258,8 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
     case UpdateAirportConfig(configHolder) =>
       log.info(s"Received AirportConfig $configHolder")
       log.info("Subscribing to crunches for terminal/queues")
-//      val effects: Effect = Effect(Future()) //createCrunchRequestEffects(configHolder)
-      updated(Ready(configHolder))//, effects)
+      val effects: Effect = createCrunchRequestEffects(configHolder)
+      updated(Ready(configHolder), effects)
   }
 
   def createCrunchRequestEffects(configHolder: AirportConfig): Effect = {
@@ -453,7 +453,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
             })
           }
 
-          val allEffects = airportInfos >> getWorkloads
+          val allEffects = airportInfos // >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
