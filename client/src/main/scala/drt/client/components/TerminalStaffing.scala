@@ -1,5 +1,7 @@
 package drt.client.components
 
+import java.io
+
 import diode.data.{Empty, Pot, Ready}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.vdom.html_<^._
@@ -12,6 +14,7 @@ import drt.client.services._
 import drt.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
 import drt.client.actions.Actions._
 import drt.shared.FlightsApi.TerminalName
+import drt.client.services.FixedPoints._
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -25,24 +28,22 @@ object TerminalStaffing {
 
     def render(props: Props) = {
       val staffingRCP = SPACircuit.connect(m => (m.shiftsRaw, m.fixedPointsRaw, m.staffMovements))
-      staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])]) => {
+      staffingRCP((staffingMP: ModelProxy[(Pot[String], Pot[String], Pot[Seq[StaffMovement]])]) => {
         <.div(
           staffingMP()._1.renderReady((rawShifts: String) => {
             staffingMP()._2.renderReady((rawFixedPoints: String) => {
-              val movements = staffingMP() match {
-                case (_, _, sm) => sm
-              }
-
-              val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
-              val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
-              <.div(
-                <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
-                  <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
-                ),
-                <.div(^.className := "container",
-                  <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
-              )
+              staffingMP()._3.renderReady((movements: Seq[StaffMovement]) => {
+                val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
+                val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
+                <.div(
+                  <.div(^.className := "container",
+                    <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
+                    <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
+                  ),
+                  <.div(^.className := "container",
+                    <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
+                )
+              })
             })
           })
         )
@@ -82,7 +83,7 @@ object TerminalStaffing {
     )
   }
 
-  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])], terminalName: TerminalName): VdomTagOf[Div] = {
+  def movementsEditor(movements: Seq[StaffMovement], mp: ModelProxy[(Pot[String], Pot[String], Pot[Seq[StaffMovement]])], terminalName: TerminalName): VdomTagOf[Div] = {
     val terminalMovements = movements.filter(_.terminalName == terminalName)
     <.div(
       <.h2("Movements"),
@@ -96,22 +97,21 @@ object TerminalStaffing {
     )
   }
 
-  case class FixedPointsProps(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Seq[StaffMovement])], terminalName: TerminalName)
+  case class FixedPointsProps(rawFixedPoints: String, mp: ModelProxy[(Pot[String], Pot[String], Pot[Seq[StaffMovement]])], terminalName: TerminalName)
 
   case class FixedPointsState(rawFixedPoints: String)
 
   object FixedPointsEditor {
     val component = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
-      .initialStateFromProps(props => FixedPointsState(props.rawFixedPoints))
+      .initialStateFromProps(props => {
+        val onlyOurTerminal = filterTerminal(props.terminalName, props.rawFixedPoints)
+        val withoutTerminalName = removeTerminalNameAndDate(onlyOurTerminal)
+        FixedPointsState(withoutTerminalName)
+      })
       .renderPS((scope, props, state) => {
-        val today: SDateLike = SDate.today
-        val todayString = today.ddMMyyString
-
         val airportConfigRCP = SPACircuit.connect(model => model.airportConfig)
 
-        val defaultExamples = Seq(
-          "Roving Officer,any,{date},00:00,23:59,1"
-        )
+        val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
 
         <.div(
           <.h2("Fixed Points"),
@@ -123,7 +123,7 @@ object TerminalStaffing {
                   airportConfig.fixedPointExamples
                 else
                   defaultExamples
-                <.div(examples.map(line => <.div(line.replace("{date}", todayString))).toTagMod)
+                <.div(examples.map(line => <.div(line)).toTagMod)
               })
             )
           }),
@@ -133,7 +133,8 @@ object TerminalStaffing {
             scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
           }),
           <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
-            props.mp.dispatchCB(SaveFixedPoints(state.rawFixedPoints, props.terminalName))
+            val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
+            props.mp.dispatchCB(SaveFixedPoints(withTerminalName, props.terminalName))
           }))
         )
       }).build
