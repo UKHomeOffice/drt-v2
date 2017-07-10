@@ -223,12 +223,7 @@ class SingleFlightActor
     log.info(s"SingleFlightActor restarting ${self} ")
     super.postRestart(reason)
   }
-
-  override def postStop(): Unit = {
-    //    log.info(s"SingleFlightActor for ${latestMessage.map(_.summary)} stopped")
-    super.postStop()
-  }
-
+  
   def receive = LoggingReceive {
     case newManifest: VoyageManifest =>
       log.info(s"${self} SingleFlightActor received ${newManifest.summary}")
@@ -370,11 +365,7 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
   }
 
   def checkIfDoneAndDie() = {
-    log.info(s"Have ${
-      responseCount
-    }/${
-      childActors.length
-    } responses")
+    log.debug(s"Have $responseCount/${childActors.length} responses")
     if (responseCount >= childActors.length) {
       responseRequestedBy ! VoyagesPaxSplits(responses)
       self ! PoisonPill
