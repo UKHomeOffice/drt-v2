@@ -487,7 +487,6 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
         case Right(crunchResultWithTimeAndInterval) =>
-          log.info(s"right crunch results $crunchResultWithTimeAndInterval")
           UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
         case Left(ncr) =>
           log.info(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")

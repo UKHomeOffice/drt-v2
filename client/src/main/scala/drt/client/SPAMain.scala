@@ -81,7 +81,6 @@ object TableViewUtils {
     simulationResult.get(queueName) match {
       case Some(Ready(sr)) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
-        log.info(s"before transpose it is ${result}")
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
         queueCrunchResultsForTerminal.get(queueName) match {
@@ -95,8 +94,6 @@ object TableViewUtils {
 
   def queueDeploymentsRowsFromNos(queueName: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
     val toTranspose = queueNos.toList
-    log.info(s"toTranspose lengths ${toTranspose.map(_.length)}")
-    log.info(s"toTranspose $toTranspose")
     toTranspose.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, queueName) -> QueueDeploymentsRowEntry(
