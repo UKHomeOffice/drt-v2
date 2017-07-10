@@ -37,7 +37,7 @@ trait AirportToCountryLike {
         AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
       }
       t.getOrElse({
-        println(s"boo ${l}");
+//        println(s"boo ${l}");
         AirportInfo("failed on", l, "boo", "ya")
       })
     }.map(ai => (ai.code, ai)).toMap

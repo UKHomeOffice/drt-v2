@@ -89,6 +89,7 @@ object FlightsWithSplitsTable {
           <.div(s"render failure ${f}")
       }
     })
+    .componentDidMount((p) => Callback.log(s"terminal table didMount $p"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

@@ -203,7 +203,7 @@ abstract class CrunchActor(crunchPeriodHours: Int,
           val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
 
           val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, minDesksByMinute, maxDesksByMinute)
-          if (queueName == "eGate")
+          if (queueName == Queues.EGate)
             crunchRes.map(crunchResSuccess => {
               EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
             })

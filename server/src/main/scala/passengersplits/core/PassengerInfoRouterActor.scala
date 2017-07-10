@@ -1,7 +1,7 @@
 package passengersplits.core
 
 import akka.actor._
-import akka.event.LoggingReceive
+import akka.event.{LoggingAdapter, LoggingReceive}
 import passengersplits.core
 import core.PassengerInfoRouterActor._
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, VoyageManifest}
@@ -9,6 +9,10 @@ import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.SDateLike
 import services.SDate.implicits._
 import drt.shared.PassengerSplits.{FlightNotFound, FlightsNotFound, VoyagePaxSplits}
+import services.SDate
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object PassengerInfoRouterActor {
 
@@ -71,6 +75,7 @@ class PassengerSplitsInfoByPortRouter extends
   with SimpleRouterActor[PassengerInfoRouterActor] {
 
   var latestFileName: Option[String] = None
+
   def childProps = Props[PassengerInfoRouterActor]
 
   def receive: PartialFunction[Any, Unit] = LoggingReceive {
@@ -117,6 +122,55 @@ class PassengerSplitsInfoByPortRouter extends
   }
 }
 
+
+/**
+  * attempt to use a single map to see what it performs like - rather than our current implicit map of trees of actors.
+  */
+class FlatPassengerSplitsInfoByPortRouter extends
+  Actor with PassengerQueueCalculator with ActorLogging {
+
+  case class State(latestFileName: Option[String],
+                   flightManifests: Map[String, VoyageManifest])
+
+  var state = State(None, Map.empty)
+
+  def manifestKey(vm: VoyageManifest) = s"${vm.ArrivalPortCode}-${vm.CarrierCode}${padTo4Digits(vm.VoyageNumber)}@${SDate.jodaSDateToIsoString(vm.scheduleArrivalDateTime.get)}}"
+
+  def receive: PartialFunction[Any, Unit] = LoggingReceive {
+    case ManifestZipFileInit =>
+      log.info(s"PassengerSplitsInfoByPortRouter received FlightPaxSplitBatchInit")
+      sender ! PassengerSplitsAck
+    case info: VoyageManifest =>
+      log.info(s"saving ${info.summary}")
+      val key = manifestKey(info)
+      log.info(s"saving $key")
+      val newManifests = state.flightManifests.updated(key, info)
+      state = state.copy(flightManifests = newManifests)
+      sender ! PassengerSplitsAck
+
+    case report: ReportVoyagePaxSplit =>
+      val replyTo = sender
+      Future {
+        val key = s"${report.destinationPort}-${report.carrierCode}${padTo4Digits(report.voyageNumber)}@${SDate.jodaSDateToIsoString(report.scheduledArrivalDateTime)}"
+        log.info(s"retrieving $key")
+        val manifest = state.flightManifests.get(key)
+        manifest match {
+          case Some(m) =>
+            val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(m)
+            VoyagePaxSplits(
+              report.destinationPort,
+              report.carrierCode, report.voyageNumber, m.PassengerList.length, m.scheduleArrivalDateTime.get,
+              paxTypeAndQueueCount)
+          case None =>
+            replyTo ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
+        }
+      }
+    case default =>
+      log.error(s"$self got an unhandled message ${default}")
+  }
+
+}
+
 class PassengerInfoRouterActor extends Actor with ActorLogging
   with SimpleRouterActor[SingleFlightActor] {
 
@@ -152,6 +206,9 @@ class PassengerInfoRouterActor extends Actor with ActorLogging
 
 class SingleFlightActor
   extends Actor with PassengerQueueCalculator with ActorLogging {
+
+  import SingleFlightActor._
+  implicit def implLog = log
   val dcPaxIncPercentThreshold = 50
   var latestMessage: Option[VoyageManifest] = None
 
@@ -168,7 +225,7 @@ class SingleFlightActor
   }
 
   override def postStop(): Unit = {
-    log.info(s"SingleFlightActor for ${latestMessage.map(_.summary)} stopped")
+    //    log.info(s"SingleFlightActor for ${latestMessage.map(_.summary)} stopped")
     super.postStop()
   }
 
@@ -231,17 +288,6 @@ class SingleFlightActor
       log.error(s"Got unhandled $default")
   }
 
-  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest, dcPaxIncPercentThreshold: Int): Boolean = {
-    val existingPax = existing.PassengerList.length
-    val candidatePax = candidate.PassengerList.length
-    val percentageDiff = (100 * (Math.abs(existingPax - candidatePax).toDouble / existingPax)).toInt
-    log.info(s"${existing.flightCode} ${existing.EventCode} had $existingPax pax. ${candidate.EventCode} has $candidatePax pax. $percentageDiff% difference")
-
-    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && percentageDiff > dcPaxIncPercentThreshold) {
-      log.info(s"${existing.flightCode} DC message with $percentageDiff% difference in pax. Not trusting it")
-      false
-    } else true
-  }
 
   def calculateAndSendPaxSplits(replyTo: ActorRef,
                                 port: String, carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike, flight: VoyageManifest): Unit = {
@@ -300,13 +346,16 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
       if (childActors.isEmpty) {
         log.info(s"No children to get responses for")
         checkIfDoneAndDie()
-      } else {
+      }
+      else {
         childActors.foreach(ref => {
           log.info(s"Telling ${ref} to send me a report ${report}")
           ref ! report
-        })
+        }
+        )
         log.info("Sent requests")
       }
+
     case vpi: VoyagePaxSplits =>
       log.info(s"Got a response! $vpi")
       responseCount += 1
@@ -321,11 +370,30 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
   }
 
   def checkIfDoneAndDie() = {
-    log.info(s"Have ${responseCount}/${childActors.length} responses")
+    log.info(s"Have ${
+      responseCount
+    }/${
+      childActors.length
+    } responses")
     if (responseCount >= childActors.length) {
       responseRequestedBy ! VoyagesPaxSplits(responses)
       self ! PoisonPill
     }
+  }
+}
+
+object SingleFlightActor {
+  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest, dcPaxIncPercentThreshold: Int)(implicit log: LoggingAdapter): Boolean = {
+    val existingPax = existing.PassengerList.length
+    val candidatePax = candidate.PassengerList.length
+    val percentageDiff = (100 * (Math.abs(existingPax - candidatePax).toDouble / existingPax)).toInt
+    log.info(s"${existing.flightCode} ${existing.EventCode} had $existingPax pax. ${candidate.EventCode} has $candidatePax pax. $percentageDiff% difference")
+
+    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && percentageDiff > dcPaxIncPercentThreshold) {
+      log.info(s"${existing.flightCode} DC message with $percentageDiff% difference in pax. Not trusting it")
+      false
+    }
+    else true
   }
 }
 

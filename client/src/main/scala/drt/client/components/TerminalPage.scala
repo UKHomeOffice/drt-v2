@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.{Pending, Pot}
-import diode.react.ModelProxy
+import diode.react.{ModelProxy, ReactConnectProps, ReactConnectProxy}
 import drt.client.SPAMain.Loc
 import drt.client.components.Heatmap.Series
 import drt.client.logger._
@@ -17,6 +17,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray, html_<^}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.TerminalQueueSimulationResults
+import japgolly.scalajs.react.component.Generic
 
 import scala.collection.immutable
 import scala.util.Try
@@ -77,9 +78,9 @@ object TerminalPage {
                     val actPax = sumActPax(flightsAtTerminal)
                     val bestSplitPaxFn = bestFlightSplitPax(bestPaxFn)
                     val bestPax = sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
-//                    aggregateSplitsLogging(bestPaxFn)(flightsAtTerminal)
+                    //                    aggregateSplitsLogging(bestPaxFn)(flightsAtTerminal)
                     val aggSplits = aggregateSplits(bestPaxFn)(flightsAtTerminal)
-//                    val aggSplitsSum = aggSplits.values.sum
+                    //                    val aggSplitsSum = aggSplits.values.sum
 
                     val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
 
@@ -159,12 +160,12 @@ object TerminalPage {
                     }))
                   })
                 }),
-              <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
-                TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
-              ),
-            <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
-                TerminalStaffing(TerminalStaffing.Props(terminalProps.terminalName))
-              )))
+                <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+                  TerminalDeploymentsTable.terminalDeploymentsComponent(terminalProps)
+                ),
+                <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
+                  TerminalStaffing(TerminalStaffing.Props(terminalProps.terminalName))
+                )))
           })})
       })
       <.div(liveSummaryBoxes, simulationResultComponent)
@@ -172,6 +173,44 @@ object TerminalPage {
     }
 
   }
+
+  def safeRenderWithException(element: => VdomElement): TagMod = {
+    val t = Try {
+      element
+    } recover {
+      case t =>
+        log.error(s"arender failure ", t.asInstanceOf[Exception])
+        <.div(s"aFailed to render $t")
+      case f: Exception =>
+        log.error(s"render failure ", f)
+        <.div(s"Failed to render $f")
+    }
+    t.get
+  }
+
+//  private def renderFlightsTableComponent(bestPax: (Arrival) => Int, terminalName: String, flightsWrapper: ReactConnectProxy[Pot[FlightsWithSplits]]): Generic.UnmountedWithRoot[ReactConnectProps[Pot[FlightsWithSplits]], _, _, _] = {
+//    flightsWrapper(proxy => {
+//      log.info(s"should be rendering flights")
+//      val flightsWithSplits = proxy.value
+//      val flights: Pot[FlightsWithSplits] = flightsWithSplits
+//      log.info(s"should be rendering flights $flights")
+//      <.div(
+//        flights.renderPending((t) => <.span(s"whereareyou $t")),
+//        flights.renderEmpty(<.span(s"whereareyou noflights")),
+//        flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
+//          val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
+//          val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == terminalName))
+//
+//          FlightsWithSplitsTable.ArrivalsTable(
+//            timelineComp,
+//            originMapper,
+//            paxComp(maxFlightPax),
+//            splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
+//        }))
+//    })
+//  }
+//
+//}
 
   private def debugTable(bestPaxFn: (Arrival) => Int, flightsAtTerminal: immutable.Seq[ApiFlightWithSplits]) = {
     val debugTable = <.table(

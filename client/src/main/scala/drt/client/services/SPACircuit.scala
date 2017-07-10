@@ -1,6 +1,8 @@
 package drt.client.services
 
 
+import java.nio.ByteBuffer
+
 import autowire._
 import diode.Implicits.runAfterImpl
 import diode._
@@ -87,7 +89,6 @@ case class RootModel(
                       fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Pot[Seq[StaffMovement]] = Empty,
                       slotsInADay: Int = 96,
-                      flightSplits: Map[FlightCode, Map[MilliDate, VoyagePaxSplits]] = Map(),
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map()
                     ) {
 
@@ -162,6 +163,8 @@ case class RootModel(
     terminalName -> terminalDeploymentRows
   }
 
+
+
   override def toString: String =
     s"""
        |RootModel(
@@ -172,7 +175,6 @@ case class RootModel(
        |simulationResult: $simulationResult
        |flights: $flightsWithSplitsPot
        |airportInfos: $airportInfos
-       |flightPaxSplits: $flightSplits
        |)
      """.stripMargin
 }
@@ -225,11 +227,16 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeploy
   }
 }
 
+//trait RequestingActionHandler {
+//  def AjaxClient[A]: autowire.Client[ByteBuffer, Pickler, Pickler]
+//  def apply[Trait] = ClientProxy[Trait, PickleType, Pickler, Pickler](this)
+//}
+
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action")
+        log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action", f.asInstanceOf[Exception])
         val cause = f.getCause()
         cause match {
           case null => log.error(s"no cause")
@@ -272,7 +279,8 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
   protected def handle = {
     case action: GetWorkloads =>
       log.info("requesting workloadsWrapper from server")
-      updated(Pending(),
+      val newWorkloads = if (value.isEmpty) Pending() else value
+      updated(newWorkloads,
         Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads).recover {
           case f =>
             log.error(s"failure getting workloads $f")
@@ -437,6 +445,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
           val airportCodes = flights.map(_.Origin).toSet
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
 
+
           val getWorkloads = {
             //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
             Effect(Future {
@@ -445,7 +454,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
             })
           }
 
-          val allEffects = airportInfos //>> getWorkloads
+          val allEffects = airportInfos  >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
@@ -478,9 +487,13 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
         case Right(crunchResultWithTimeAndInterval) =>
+          log.info(s"right crunch results $crunchResultWithTimeAndInterval")
           UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
         case Left(ncr) =>
-          log.debug(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
+          log.info(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
+          NoAction
+        case other =>
+          log.error(s"arghother $other")
           NoAction
       }
       effectOnly(Effect(fe) + crunchEffect)
@@ -532,6 +545,7 @@ object StaffDeploymentCalculator {
         /*
          Fixme: This transpose loses the queue name and thus certainty of order
          */
+        log.info(s"transpose qcr ${queueCrunchResult}")
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
           case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
         }
@@ -773,7 +787,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   // combine all handlers into one
   override val actionHandler = {
-    println("composing handlers")
+//    println("composing handlers")
     val composedhandlers: HandlerFunction = composeHandlers(
       new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
