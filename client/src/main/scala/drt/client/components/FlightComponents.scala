@@ -78,7 +78,7 @@ object FlightComponents {
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._
       <.div(^.className := "splits",
-        <.div(^.className := "splits-tooltip", <.p(tooltip)),
+        <.div(^.className := "splits-tooltip", <.div(tooltip)),
         <.div(^.className := "graph",
           splits.map {
             case (paxTypeAndQueue, paxCount) =>
