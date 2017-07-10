@@ -345,9 +345,11 @@ class SimulationHandler[M](allQueueCrunchesReceived: () => Boolean,
         case (terminalName, queueMapPot) => {
           queueMapPot.map {
             case (queueName, deployedDesks) =>
-              val desks = deployedDesks.get.items.map(_.deskRec)
-              val desksList = desks.toList
-              Effect(Future(RunSimulation(terminalName, queueName, desksList)))
+              if (deployedDesks.isReady) {
+                val desks = deployedDesks.get.items.map(_.deskRec)
+                val desksList = desks.toList
+                Effect(Future(RunSimulation(terminalName, queueName, desksList)))
+              } else Effect(Future.successful(NoAction))
           }
         }
       }.toList
@@ -356,9 +358,11 @@ class SimulationHandler[M](allQueueCrunchesReceived: () => Boolean,
       log.info(s"RunTerminalSimulation for $terminalName")
       val actions = staffDeployments.value.getOrElse(terminalName, Map()).map {
         case (queueName, deployedDesks) =>
-          val desks = deployedDesks.get.items.map(_.deskRec)
-          val desksList = desks.toList
-          Effect(Future(RunSimulation(terminalName, queueName, desksList)))
+          if (deployedDesks.isReady) {
+            val desks = deployedDesks.get.items.map(_.deskRec)
+            val desksList = desks.toList
+            Effect(Future(RunSimulation(terminalName, queueName, desksList)))
+          } else Effect(Future.successful(NoAction))
       }.toList
       log.debug(s"RunTerminalSimulations effects ${actions}")
       effectOnly(seqOfEffectsToEffectSeq(actions))
@@ -462,7 +466,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
 }
 
-class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]],
+class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]],
                        staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
                        airportConfig: ModelR[M, Pot[AirportConfig]])
   extends LoggingActionHandler(modelRW) {
@@ -485,7 +489,7 @@ class CrunchHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[
       val firstNonZeroIndex = crunchResultWithTimeAndInterval.waitTimes.indexWhere(_ != 0)
       log.info(s"$terminalName/$queueName crunchResult: $firstNonZeroIndex")
 
-      val totalPortQueues = airportConfig.value.get.queues.foldLeft(0)((acc: Int, tq) => acc + tq._2.count(_ != Queues.Transfer))
+      val totalPortQueues = totalQueues()
 
       val queuesBefore = value.foldLeft(0)((acc, tq) => acc + tq._2.size)
       val crunchResultsByQueue = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(Ready(crunchResultWithTimeAndInterval)))))
@@ -762,11 +766,9 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   def totalQueues() = {
     val airportConfig = zoom(_.airportConfig)
-    val totalPortQueues = if (airportConfig.value.isReady) {
+    if (airportConfig.value.isReady) {
       airportConfig.value.get.queues.foldLeft(0)((acc: Int, tq) => acc + tq._2.count(_ != Queues.Transfer))
     } else -1
-    log.info(s"totalPortQueues: $totalPortQueues")
-    totalPortQueues
   }
 
   // combine all handlers into one
@@ -776,7 +778,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
       })),
-      new CrunchHandler(zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
+      new CrunchHandler(totalQueues, zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
       new SimulationHandler(gotAllQueueCrunches, zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
