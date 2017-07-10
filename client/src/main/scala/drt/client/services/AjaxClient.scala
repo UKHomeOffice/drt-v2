@@ -20,7 +20,7 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
   temporary seam for testing - move to higher level injection/de-objectify the AjaxClient
    */
   def doCallProd(req: Request): Future[ByteBuffer] = {
-    println(s"doCall $req")
+//    println(s"doCall $req")
     dom.ext.Ajax.post(
       url = SPAMain.pathToThisApp + "/api/" + req.path.mkString("/"),
       data = Pickle.intoBytes(req.args),

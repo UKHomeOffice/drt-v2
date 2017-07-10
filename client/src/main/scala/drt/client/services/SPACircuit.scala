@@ -787,7 +787,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   // combine all handlers into one
   override val actionHandler = {
-    println("composing handlers")
+//    println("composing handlers")
     val composedhandlers: HandlerFunction = composeHandlers(
       new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
