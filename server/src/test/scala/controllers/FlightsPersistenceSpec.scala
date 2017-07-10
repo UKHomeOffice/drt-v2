@@ -29,12 +29,15 @@ class FlightsTestActor(crunchActorRef: ActorRef,
                        dqApiSplitsActorRef: AskableActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
-                       pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch))
+                       pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
+                       airportConfig: AirportConfig )
   extends FlightsActor(crunchActorRef,
     dqApiSplitsActorRef,
     csvSplitsProvider,
     bestPax,
-    pcpArrivalTimeForFlight) {
+    pcpArrivalTimeForFlight,
+    airportConfig
+  ) {
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -229,7 +232,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       Actor.noSender,
       testSplitsProvider,
       BestPax(airportCode),
-      (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch)
+      (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
+      AirportConfigs.lhr
     ), "FlightsActor")
   }
 
@@ -247,7 +251,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       Actor.noSender,
       testSplitsProvider,
       BestPax.bestPax,
-      (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch)
+      (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
+      AirportConfigs.lhr
     ), "FlightsActor")
   }
 

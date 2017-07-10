@@ -35,7 +35,8 @@ class FlightsActorSpec extends Specification {
       Actor.noSender,
       testSplitsProvider,
       BestPax(airportCode),
-      testPcpArrival
+      testPcpArrival,
+      AirportConfigs.edi
     ), "FlightsActor")
   }
 
