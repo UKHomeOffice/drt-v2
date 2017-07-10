@@ -71,7 +71,7 @@ object TerminalPage {
               <.div(
                 <.h2(s"In the next $hoursToAdd hours"),
                 flightsWithSplitsPot().renderReady(flightsWithSplits => {
-                  val tried: Try[VdomElement] = Try {
+                  <.div(safeRenderWithException {
                     val filteredFlights = flightsInPeriod(flightsWithSplits.flights, now, nowplus3)
                     val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
                     val flightCount = flightsAtTerminal.length
@@ -85,11 +85,7 @@ object TerminalPage {
                     val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
 
                     <.div(summaryBoxes)
-                  }
-                  val recovered = tried recoverWith {
-                    case f => Try(<.div(f.toString))
-                  }
-                  <.span(recovered.get)
+                  })
                 }),
                 flightsWithSplitsPot().renderPending((t) => s"Waiting for flights $t")
               )
@@ -188,29 +184,29 @@ object TerminalPage {
     t.get
   }
 
-  private def renderFlightsTableComponent(bestPax: (Arrival) => Int, terminalName: String, flightsWrapper: ReactConnectProxy[Pot[FlightsWithSplits]]): Generic.UnmountedWithRoot[ReactConnectProps[Pot[FlightsWithSplits]], _, _, _] = {
-    flightsWrapper(proxy => {
-      log.info(s"should be rendering flights")
-      val flightsWithSplits = proxy.value
-      val flights: Pot[FlightsWithSplits] = flightsWithSplits
-      log.info(s"should be rendering flights $flights")
-      <.div(
-        flights.renderPending((t) => <.span(s"whereareyou $t")),
-        flights.renderEmpty(<.span(s"whereareyou noflights")),
-        flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-          val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
-          val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == terminalName))
-
-          FlightsWithSplitsTable.ArrivalsTable(
-            timelineComp,
-            originMapper,
-            paxComp(maxFlightPax),
-            splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
-        }))
-    })
-  }
-
-}
+//  private def renderFlightsTableComponent(bestPax: (Arrival) => Int, terminalName: String, flightsWrapper: ReactConnectProxy[Pot[FlightsWithSplits]]): Generic.UnmountedWithRoot[ReactConnectProps[Pot[FlightsWithSplits]], _, _, _] = {
+//    flightsWrapper(proxy => {
+//      log.info(s"should be rendering flights")
+//      val flightsWithSplits = proxy.value
+//      val flights: Pot[FlightsWithSplits] = flightsWithSplits
+//      log.info(s"should be rendering flights $flights")
+//      <.div(
+//        flights.renderPending((t) => <.span(s"whereareyou $t")),
+//        flights.renderEmpty(<.span(s"whereareyou noflights")),
+//        flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
+//          val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
+//          val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == terminalName))
+//
+//          FlightsWithSplitsTable.ArrivalsTable(
+//            timelineComp,
+//            originMapper,
+//            paxComp(maxFlightPax),
+//            splitsGraphComponent)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax))
+//        }))
+//    })
+//  }
+//
+//}
 
   private def debugTable(bestPaxFn: (Arrival) => Int, flightsAtTerminal: immutable.Seq[ApiFlightWithSplits]) = {
     val debugTable = <.table(

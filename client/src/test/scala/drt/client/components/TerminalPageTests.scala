@@ -124,7 +124,6 @@ object TerminalPageTests extends TestSuite {
         val expected = <.div()
 
         val page = staticComponent(TerminalPage(terminalName = "T2", MockRouterCtl()))()
-        val static = staticComponent(expected)()
 
         ReactTestUtils.withRenderedIntoDocument(page) {
           real =>
