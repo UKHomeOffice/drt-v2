@@ -22,7 +22,7 @@ object ShiftsServiceTests extends TestSuite {
 
         "Given a shift of 10 people, if we ask how many staff are available" - {
           val shifts = StaffAssignment("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10)
-          val shiftService = StaffAssignmentService(shifts :: Nil)
+          val shiftService = StaffAssignmentServiceWithoutDates(shifts :: Nil)
           "at its first bound, then we get 10" - {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 10, 0)) == 10)
           }
@@ -46,7 +46,7 @@ object ShiftsServiceTests extends TestSuite {
         "Given two overlapping assignments" - {
           val shifts = StaffAssignment("alpha", "any", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10) ::
             StaffAssignment("beta", "any", SDate(2016, 12, 10, 18, 0), SDate(2016, 12, 10, 23, 0), 5) :: Nil
-          val shiftService = StaffAssignmentService(shifts)
+          val shiftService = StaffAssignmentServiceWithoutDates(shifts)
           "on the overlap the staff is the sum of both" - {
             assert(shiftService.staffAt(SDate(2016, 12, 10, 18, 30)) == 15)
           }
@@ -303,8 +303,8 @@ object ShiftsServiceTests extends TestSuite {
 
           "Staff movements" - {
             import StaffMovements._
-            val shiftService = StaffAssignmentService(parsedShifts.toList).get
-            val fixedPointService = StaffAssignmentService(parseRawTsv("").toList).get
+            val shiftService = StaffAssignmentServiceWithoutDates(parsedShifts.toList).get
+            val fixedPointService = StaffAssignmentServiceWithoutDates(parseRawTsv("").toList).get
 
 
             "Shifts can be represented as staff movements" - {
@@ -331,7 +331,7 @@ object ShiftsServiceTests extends TestSuite {
 
             }
             "Two movements at the same time as a shift entry are all taken into account" - {
-              val shiftServiceWithOneShift = StaffAssignmentService(List(StaffAssignment("blah", "any", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
+              val shiftServiceWithOneShift = StaffAssignmentServiceWithoutDates(List(StaffAssignment("blah", "any", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
               val movements = (
                 StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
                   StaffMovement("T1", "IS81", SDate(2016, 12, 11, 1, 0), 1, UUID.randomUUID) ::
@@ -369,8 +369,8 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
 
-            val shiftService = StaffAssignmentService(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
-            val fixedPointService = StaffAssignmentService(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
+            val shiftService = StaffAssignmentServiceWithoutDates(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
+            val fixedPointService = StaffAssignmentServiceWithoutDates(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
 
 
             "Fixed Points should be subracted from available staff" - {
@@ -401,8 +401,8 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
 
-            val shiftService = StaffAssignmentService(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
-            val fixedPointService = StaffAssignmentService(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
+            val shiftService = StaffAssignmentServiceWithoutDates(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
+            val fixedPointService = StaffAssignmentServiceWithoutDates(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
 
 
             "Contain staff for a terminal shift" - {
