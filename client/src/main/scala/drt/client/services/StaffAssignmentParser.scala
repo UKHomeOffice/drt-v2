@@ -87,12 +87,16 @@ object JSDateConversions {
 
     private var nowImpl: () => SDateLike = realNow
 
-    def now(): SDateLike = nowImpl()
-
-    val realNow = () => {
+    def now(): SDateLike = {
       val d = new Date()
       JSSDate(d)
     }
+//      nowImpl()
+//
+//    val realNow = () => {
+//      val d = new Date()
+//      JSSDate(d)
+//    }
 
     // a temporary hack for testing - till we've done something smarter
     def monkeyPatchNow(sdate: () => SDateLike) = nowImpl = sdate
