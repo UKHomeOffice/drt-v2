@@ -26,10 +26,10 @@ class StaffApiSpec extends SpecificationLike {
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
         val expected =
-          """ |shift0, T1, 28/06/17, 01:00, 01:15, 5
-            |shift1, T1, 28/06/17, 01:15, 01:30, 5
-            |shift2, T1, 28/06/17, 01:30, 01:45, 5
-            |shift3, T1, 28/06/17, 01:45, 02:00, 5""".stripMargin
+          """ |shift0, T1, 28/06/17, 01:00, 01:14, 5
+            |shift1, T1, 28/06/17, 01:15, 01:29, 5
+            |shift2, T1, 28/06/17, 01:30, 01:44, 5
+            |shift3, T1, 28/06/17, 01:45, 01:59, 5""".stripMargin
 
         shifts === Some(expected)
       }
@@ -55,10 +55,10 @@ class StaffApiSpec extends SpecificationLike {
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
         val expected =
-          """ |shift0, T1, 28/06/17, 01:00, 01:15, 0
-            |shift1, T1, 28/06/17, 01:15, 01:30, 0
-            |shift2, T1, 28/06/17, 01:30, 01:45, 0
-            |shift3, T1, 28/06/17, 01:45, 02:00, 0""".stripMargin
+          """ |shift0, T1, 28/06/17, 01:00, 01:14, 0
+            |shift1, T1, 28/06/17, 01:15, 01:29, 0
+            |shift2, T1, 28/06/17, 01:30, 01:44, 0
+            |shift3, T1, 28/06/17, 01:45, 01:59, 0""".stripMargin
 
         shifts === Some(expected)
       }
