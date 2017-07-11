@@ -426,7 +426,7 @@ case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
 case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
 
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
-  val flightsRequestFrequency = 10L seconds
+  val flightsRequestFrequency = 60L seconds
 
   protected def handle = {
     case RequestFlights(from, to) =>
@@ -484,7 +484,7 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
 
   override def handle = {
     case GetLatestCrunch(terminalName, queueName) =>
-      val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(10L seconds)
+      val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(60L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
         case Right(crunchResultWithTimeAndInterval) =>
           UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
@@ -748,7 +748,7 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) ext
 class ActualDesksHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetActualDeskStats() =>
-      val nextRequest = Effect(Future(GetActualDeskStats())).after(15 seconds)
+      val nextRequest = Effect(Future(GetActualDeskStats())).after(60 seconds)
       val response = Effect(AjaxClient[Api].getActualDeskStats().call().map {
         case ActualDeskStats(deskStats) =>
           log.info(s"Received ActualDeskStats from Api")
