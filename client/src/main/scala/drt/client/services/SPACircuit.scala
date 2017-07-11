@@ -109,10 +109,10 @@ case class RootModel(
       (t: TerminalName, m: MilliDate) => 0
     } else {
       val successfulShifts = shifts.collect { case Success(s) => s }
-      val ss = StaffAssignmentService(successfulShifts)
+      val ss = StaffAssignmentServiceWithDates(successfulShifts)
 
       val successfulFixedPoints = fixedPoints.collect { case Success(s) => s }
-      val fps = StaffAssignmentService(successfulFixedPoints)
+      val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
       StaffMovements.terminalStaffAt(ss, fps)(staffMovements) _
     }
 

@@ -169,7 +169,12 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
     }
 }
 
-case class StaffAssignmentService(assignments: Seq[StaffAssignment]) {
+trait StaffAssignmentService {
+  def staffAt(date: MilliDate): Int
+  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int
+}
+
+case class StaffAssignmentServiceWithoutDates(assignments: Seq[StaffAssignment]) extends StaffAssignmentService {
   def staffAt(date: MilliDate): Int = assignments.filter(assignment =>
     assignment.startDt <= date && date <= assignment.endDt).map(_.numberOfStaff).sum
 
@@ -178,12 +183,31 @@ case class StaffAssignmentService(assignments: Seq[StaffAssignment]) {
   }).map(_.numberOfStaff).sum
 }
 
-object StaffAssignmentService {
-  def apply(assignments: Seq[Try[StaffAssignment]]): Try[StaffAssignmentService] = {
+case class StaffAssignmentServiceWithDates(assignments: Seq[StaffAssignment]) extends StaffAssignmentService {
+  def staffAt(date: MilliDate): Int = assignments.filter(assignment =>
+    assignment.startDt <= date && date <= assignment.endDt).map(_.numberOfStaff).sum
+
+  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
+    assignment.startDt <= date && date <= assignment.endDt && assignment.terminalName == terminalName
+  }).map(_.numberOfStaff).sum
+}
+
+object StaffAssignmentServiceWithoutDates {
+  def apply(assignments: Seq[Try[StaffAssignment]]): Try[StaffAssignmentServiceWithoutDates] = {
     if (assignments.exists(_.isFailure))
       Failure(new Exception("Couldn't parse assignments"))
     else {
-      Success(StaffAssignmentService(assignments.map { case Success(s) => s }))
+      Success(StaffAssignmentServiceWithoutDates(assignments.map { case Success(s) => s }))
+    }
+  }
+}
+
+object StaffAssignmentServiceWithDates {
+  def apply(assignments: Seq[Try[StaffAssignment]]): Try[StaffAssignmentServiceWithDates] = {
+    if (assignments.exists(_.isFailure))
+      Failure(new Exception("Couldn't parse assignments"))
+    else {
+      Success(StaffAssignmentServiceWithDates(assignments.map { case Success(s) => s }))
     }
   }
 }
