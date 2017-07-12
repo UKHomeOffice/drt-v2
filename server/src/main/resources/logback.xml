@@ -16,4 +16,7 @@
     <logger level="INFO" name="services">
         <appender-ref ref="STDOUT"/>
     </logger>
+    <logger level="ERROR" name="p.core.SingleFlightActor">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 </configuration>

@@ -172,15 +172,15 @@ class FlightsActor(crunchActorRef: ActorRef,
     log.info(s"didgot splits ${vps} for ${flight}")
 
     val csvSplits = csvSplitsProvider(flight)
-    log.info(s"flight: $flight csvSplits are $csvSplits")
+    log.debug(s"flight: $flight csvSplits are $csvSplits")
 
     val egatePercentage = CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplits, 0.6)
     val fastTrackPercentages: FastTrackPercentages = CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
     val voyagePaxSplitsWithEgatePercentage = CSVPassengerSplitsProvider.applyEgates(vps, egatePercentage)
     val withFastTrackPercentages = CSVPassengerSplitsProvider.applyFastTrack(voyagePaxSplitsWithEgatePercentage, fastTrackPercentages)
 
-    log.info(s"applied egate percentage $egatePercentage toget $voyagePaxSplitsWithEgatePercentage")
-    log.info(s"applied fasttrack percentage $fastTrackPercentages toget $withFastTrackPercentages")
+    log.debug(s"applied egate percentage $egatePercentage toget $voyagePaxSplitsWithEgatePercentage")
+    log.debug(s"applied fasttrack percentage $fastTrackPercentages toget $withFastTrackPercentages")
 
     val apiSplits: List[ApiSplits] = List(
       ApiSplits(

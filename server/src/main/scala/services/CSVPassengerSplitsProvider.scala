@@ -109,7 +109,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
 
     val splitOpt = getFlightSplitRatios(iata, dayOfWeek, month)
     splitOpt match {
-      case Some(sr) => log.info(s"Found SplitRatio for $flight as $sr")
+      case Some(sr) => log.debug(s"Found SplitRatio for $flight as $sr")
       case None => log.info(s"Failed to find split for $flight")
     }
     splitOpt
