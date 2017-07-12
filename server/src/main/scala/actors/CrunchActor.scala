@@ -195,7 +195,6 @@ abstract class CrunchActor(crunchPeriodHours: Int,
         (terminalWorkloads: Map[String, List[Double]]) =>
           log.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
           val workloads: List[Double] = terminalWorkloads(queueName)
-          log.info(s"$tq Crunching on terminal workloads: ${workloads.take(50)}")
           val queueSla = airportConfig.slaByQueue(queueName)
 
           val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)

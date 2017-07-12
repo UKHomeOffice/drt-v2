@@ -147,8 +147,8 @@ abstract class ApiService(val airportConfig: AirportConfig)
     val qlByT = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
 
     qlByT.onComplete {
-      case Success(s) => log.info(s"qlByT ${qlByT} $s")
-      case Failure(r) => log.error(s"qlByT ${qlByT} $r")
+      case Success(s) => log.debug(s"qlByT $s")
+      case Failure(r) => log.error(s"qlByT $r")
     }
     log.info(s"returning workloads future")
     qlByT
@@ -176,7 +176,7 @@ trait LoggingCrunchCalculator extends CrunchCalculator {
   def log: DiagnosticLoggingAdapter
 
   def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
-    log.info(s"Crunch requested for $terminalName, $queueName, Workloads: ${workloads.take(15).mkString("(", ",", ")")}...")
+    log.info(s"Crunch requested for $terminalName, $queueName")
     val mdc = log.getMDC
     val newMdc = Map("terminalQueue" -> s"$terminalName/$queueName")
     log.setMDC(newMdc)
