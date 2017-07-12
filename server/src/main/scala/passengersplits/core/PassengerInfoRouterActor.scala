@@ -223,7 +223,7 @@ class SingleFlightActor
     log.info(s"SingleFlightActor restarting ${self} ")
     super.postRestart(reason)
   }
-  
+
   def receive = LoggingReceive {
     case newManifest: VoyageManifest =>
       log.info(s"${self} SingleFlightActor received ${newManifest.summary}")
@@ -352,7 +352,7 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
       }
 
     case vpi: VoyagePaxSplits =>
-      log.info(s"Got a response! $vpi")
+      log.debug(s"Got a response! $vpi")
       responseCount += 1
       responses = vpi :: responses
       checkIfDoneAndDie()

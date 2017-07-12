@@ -93,9 +93,6 @@ object PaxLoadCalculator {
                                     , procTimeProvider: (PaxTypeAndQueue) => ProcTime)(flights: List[Arrival]): Map[QueueName, QueuePaxAndWorkLoads] = {
     val queuePaxLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumPaxLoads)(flights)
     val queueWorkLoads = queueLoadCalculator(calcPaxTypeAndQueueCountForAFlightOverTime, calcAndSumWorkLoads(procTimeProvider))(flights)
-    val summedQueuePaxLoads = queuePaxLoads.flatMap(_._2.map(_._2)).sum
-    val summedFlightPax = flights.map(f => BestPax(f.AirportID)(f)).sum
-    log.info(s"queueWorkAndPaxLoadCalculator flightsPax $summedFlightPax vs $summedQueuePaxLoads from ${flights} ===> $queuePaxLoads ")
     queuePaxLoads.keys.map(queueName => {
       (queueName, (
         queueWorkLoads(queueName).map(tuple => WL(tuple._1, tuple._2)),
@@ -137,7 +134,6 @@ object PaxLoadCalculator {
     val pcpStartTimeMillis = MilliDate(flight.PcpTime).millisSinceEpoch
     //TODO fix this get
     val splits = splitsRatioProvider(flight).get.splits
-    log.info(s"voyagePaxSplits $splits")
     val splitsOverTime: IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = minutesForHours(pcpStartTimeMillis, 1)
       .zip(paxDeparturesPerMinutes(bestPax(flight), paxOffFlowRate))
       .flatMap {
