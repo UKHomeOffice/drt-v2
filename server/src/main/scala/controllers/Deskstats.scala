@@ -101,7 +101,6 @@ object Deskstats {
 
   def csvHeadings(deskstatsContent: String): Seq[String] = {
     val firstLine = deskstatsContent.split("\n").head
-    log.info(s"Looking for heading from $firstLine\n whole csv: $deskstatsContent")
     parseCsvLine(firstLine)
   }
 

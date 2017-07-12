@@ -256,7 +256,6 @@ object Heatmap {
   }
 
   def bucketScale(maxValue: Double)(bucketValue: Double): Int = {
-    //    log.info(s"bucketScale: ($bucketValue * ${bucketScaleDev(colors.length - 1, maxValue.toInt)}")
     (bucketValue * bucketScaleDev(colors.length - 1, maxValue.toInt)).toInt
   }
 
