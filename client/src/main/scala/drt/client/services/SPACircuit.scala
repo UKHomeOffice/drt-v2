@@ -527,6 +527,22 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
   def modelQueueCrunchResults = value
 
   override def handle = {
+    case GetTerminalCrunch(terminalName) =>
+      val fe = AjaxClient[Api].getTerminalCrunchResult(terminalName).call().map {
+        case queueCrunch => queueCrunch.map {
+          case (queueName, futureCrunch) => futureCrunch.map {
+            case Right(crunchResultWithTimeAndInterval) =>
+              UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
+            case Left(ncr) =>
+              log.info(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
+              NoAction
+            case other =>
+              log.error(s"arghother $other")
+              NoAction
+          }
+        }
+      }
+      noChange
     case GetLatestCrunch(terminalName, queueName) =>
       val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(60L seconds)
       val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
@@ -869,4 +885,6 @@ case class UpdateAirportInfos(infos: Map[String, AirportInfo]) extends Action
 case class RunTerminalSimulation(terminalName: TerminalName) extends Action
 
 case class UpdateTerminalSimulation(terminalName: TerminalName, terminalSimulationResultsFull: TerminalSimulationResultsFull) extends Action
+
+case class GetTerminalCrunch(terminalName: TerminalName) extends Action
 

@@ -13,6 +13,8 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
+
+import scala.collection.immutable.Map
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
@@ -251,6 +253,12 @@ class Application @Inject()(
 
     def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
       tryCrunch(terminalName, queueName)
+    }
+
+    def getTerminalCrunchResult(terminalName: TerminalName): Map[QueueName, Future[Either[NoCrunchAvailable, CrunchResult]]] = {
+      airportConfig.queues.getOrElse(terminalName, Seq()).map(queueName => {
+        queueName -> tryCrunch(terminalName, queueName)
+      }).toMap
     }
   }
 
