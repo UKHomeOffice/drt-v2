@@ -131,19 +131,21 @@ object TableViewUtils {
 
     log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
     log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
-    val simulationResultWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    val queueSimRes = simulationResult(qn).get
+    val simulationResultWaitTimes = queueSimRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
     val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)
-    val simResultRecDesks = simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
+    val simResultRecDesks = queueSimRes.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
     val paddedRecDesks: List[Long] = padSimResult(simResultRecDesks, numberOf15MinuteSlots)
+    val queueCrunchRes = queueCrunchResultsForTerminal(qn).get.get
 
     Seq(
       ts,
       samplePaxLoad(paxload, qn),
       paddedRecDesks,
-      queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchRes.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
       getSafeUserDeskRecs(userDeskRec, qn, ts),
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
       paddedSimulationResultWaitTimes
     )
   }
@@ -171,17 +173,17 @@ object TableViewUtils {
     val ts = sampleTimestampsForRows(timestamps)
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
-    val queueData = queueCrunchResultsForTerminal(qn).get.get
-    val waitTimes = queueData.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-    val recDesks = queueData.recommendedDesks
+    val queueCrunchRes = queueCrunchResultsForTerminal(qn).get.get
+    val groupedWaitTimes = queueCrunchRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    val queueDeskRecs = queueCrunchRes.recommendedDesks
     Seq(
       ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      List.range(0, recDesks.length, 15).map(_.toLong),
-      recDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      List.range(0, queueDeskRecs.length, 15).map(_.toLong),
+      queueDeskRecs.map(_.toLong).grouped(15).map(_.max).toList,
       userDeskRecsSample,
-      waitTimes,
-      waitTimes
+      groupedWaitTimes,
+      groupedWaitTimes
     )
   }
 
@@ -221,17 +223,19 @@ object SPAMain extends js.JSApp {
 
   case object StaffingLoc extends Loc
 
-  def requestInitialActions() = {val initActions = Seq(
-    GetAirportConfig(),
-    GetWorkloads("", ""),
-    RequestFlights(0, 0),
-    GetShifts(),
-    GetFixedPoints(),
-    GetStaffMovements(),
-  GetActualDeskStats())
+  def requestInitialActions() = {
+    val initActions = Seq(
+      GetAirportConfig(),
+      GetWorkloads("", ""),
+      RequestFlights(0, 0),
+      GetShifts(),
+      GetFixedPoints(),
+      GetStaffMovements(),
+      GetActualDeskStats())
 
     initActions.foreach(SPACircuit.dispatch(_))
   }
+
   // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
@@ -271,7 +275,7 @@ object SPAMain extends js.JSApp {
     log.info(s"think the port is ${pathToThisApp.split("/")}")
     log.warn("Application starting")
     // send log messages also to the server
-//    log.enableServerLogging(pathToThisApp + "/logging")
+    //    log.enableServerLogging(pathToThisApp + "/logging")
     log.info("This message goes to server as well")
 
     // create stylesheet
