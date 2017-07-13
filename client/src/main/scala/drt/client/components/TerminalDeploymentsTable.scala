@@ -146,6 +146,7 @@ object TerminalDeploymentsTable {
   }
 
   case class RowProps(item: TerminalDeploymentsRow, index: Int,
+                      terminalName: TerminalName,
                       flights: Pot[FlightsWithSplits],
                       airportConfig: AirportConfig,
                       airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
@@ -202,9 +203,12 @@ object TerminalDeploymentsTable {
       case diff if diff >= 0.75 => "amber"
       case _ => ""
     }
+    import JSDateConversions._
+    val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, props.terminalName, "-", "Staff decrease...", SDate(item.time), SDate(item.time).addHours(1), "left", "-")()
+    val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, props.terminalName, "+", "Staff increase...", SDate(item.time), SDate(item.time).addHours(1), "left", "+")()
     val queueRowCellsWithTotal: List[html_<^.TagMod] = (queueRowCells :+
       <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
-      <.td(^.className := s"total-deployed $ragClass", totalDeployed) :+ transferCells
+      <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className:="deployed",totalDeployed), upMovementPopup)) :+ transferCells
       ).toList
     <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
   }
@@ -258,7 +262,7 @@ object TerminalDeploymentsTable {
               ^.overflow := "scroll",
               ^.height := "500px",
               props.items.zipWithIndex.map {
-                case (item, index) => renderRow(RowProps(item, index, props.flights, props.airportConfig, props.airportInfos, state.showActuals))
+                case (item, index) => renderRow(RowProps(item, index, props.terminalName, props.flights, props.airportConfig, props.airportInfos, state.showActuals))
               }.toTagMod)))
       } recover {
         case t =>
