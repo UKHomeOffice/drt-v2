@@ -64,7 +64,7 @@
 
 @actDotColor: #2854f2;
 @tdpadding: -8px;
-
+@slaBreach: #A81B1E;
 
 .act-dot.early {
   background-color: @actDotColor;
@@ -472,11 +472,12 @@ p {
 }
 
 table.user-desk-recs tbody tr td.table-danger {
-  background-color: @alert-danger-bg;
+  background-color: @slaBreach;
+  color: #ffffff;
 }
 
 table.user-desk-recs tbody tr:nth-child(odd) > td.table-danger {
-  background-color: darken(@alert-danger-bg, 1%);
+  background-color: lighten(@slaBreach, 5%);
 }
 
 .minutes {
