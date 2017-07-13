@@ -544,7 +544,7 @@ object StaffDeploymentCalculator {
         /*
          Fixme: This transpose loses the queue name and thus certainty of order
          */
-        log.info(s"transpose qcr ${queueCrunchResult}")
+//        log.info(s"transpose qcr ${queueCrunchResult}")
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
           case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
         }

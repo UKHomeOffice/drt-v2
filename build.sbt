@@ -121,10 +121,10 @@ lazy val server = (project in file("server"))
 lazy val ReleaseCmd = Command.command("release") {
   state =>
     "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
-      "client/clean" ::
-      "client/test" ::
-      "server/clean" ::
-      "server/test" ::
+//      "client/clean" ::
+//      "server/clean" ::
+//      "client/test" ::
+//      "server/test" ::
       "server/dist" ::
       "set elideOptions in client := Seq()" ::
       state

@@ -171,14 +171,17 @@ object TableViewUtils {
     val ts = sampleTimestampsForRows(timestamps)
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
+    val queueData = queueCrunchResultsForTerminal(qn).get.get
+    val waitTimes = queueData.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    val recDesks = queueData.recommendedDesks
     Seq(
       ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      List.range(0, queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.length, 15).map(_.toLong),
-      queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      List.range(0, recDesks.length, 15).map(_.toLong),
+      recDesks.map(_.toLong).grouped(15).map(_.max).toList,
       userDeskRecsSample,
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+      waitTimes,
+      waitTimes
     )
   }
 
