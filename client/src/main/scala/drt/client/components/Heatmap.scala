@@ -14,6 +14,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.FlightsApi._
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 
@@ -177,7 +178,7 @@ object TerminalHeatmaps {
     result.toList
   }
 
-  def waitTimes(simulationResult: Map[QueueName, Pot[SimulationResult]], terminalName: String): Pot[List[Series]] = {
+  def waitTimes(simulationResult: Map[QueueName, Pot[QueueSimulationResult]], terminalName: String): Pot[List[Series]] = {
     val result: Iterable[Series] = for {
       (queueName, simResultPot) <- simulationResult
       simResult <- simResultPot

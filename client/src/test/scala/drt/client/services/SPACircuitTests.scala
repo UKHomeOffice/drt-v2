@@ -227,10 +227,10 @@ object SPACircuitTests extends TestSuite {
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateSimulationResult("A1", "eGates", SimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
+          UpdateSimulationResult("A1", "eGates", QueueSimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
 
         val expected = RootModel().copy(
-          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(100, 10)), List(23)))))
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(QueueSimulationResult(Vector(DeskRec(100, 10)), List(23)))))
         )
         res match {
           case Some(ModelUpdate(newValue)) =>
@@ -242,15 +242,15 @@ object SPACircuitTests extends TestSuite {
       }
       "Given a model with an existing simulation, when we run a simulation, then the new results should be in the model" - {
         val model = RootModel().copy(
-          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))))
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(QueueSimulationResult(Vector(DeskRec(200, 30)), List(44)))))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateSimulationResult("A1", "eGates", SimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
+          UpdateSimulationResult("A1", "eGates", QueueSimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
 
         val expected = RootModel().copy(
-          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(100, 10)), List(23)))))
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(QueueSimulationResult(Vector(DeskRec(100, 10)), List(23)))))
         )
         res match {
           case Some(ModelUpdate(newValue)) =>
@@ -263,17 +263,17 @@ object SPACircuitTests extends TestSuite {
       "Given a model with an existing simulation desk, when we run a simulation on a different desk," +
         " then both desks should be in the model" - {
         val model = RootModel().copy(
-          simulationResult = Map("A1" -> Map("eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44)))))
+          simulationResult = Map("A1" -> Map("eGates" -> Ready(QueueSimulationResult(Vector(DeskRec(200, 30)), List(44)))))
         )
         val handler: SPACircuit.HandlerFunction = SPACircuit.actionHandler
         val res = handler.apply(
           model,
-          UpdateSimulationResult("A1", "EEA", SimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
+          UpdateSimulationResult("A1", "EEA", QueueSimulationResult(IndexedSeq(DeskRec(100, 10)), Seq(23))))
 
         val expected = RootModel().copy(
           simulationResult = Map("A1" -> Map(
-            "eGates" -> Ready(SimulationResult(Vector(DeskRec(200, 30)), List(44))),
-            "EEA" -> Ready(SimulationResult(Vector(DeskRec(100, 10)), List(23))))
+            "eGates" -> Ready(QueueSimulationResult(Vector(DeskRec(200, 30)), List(44))),
+            "EEA" -> Ready(QueueSimulationResult(Vector(DeskRec(100, 10)), List(23))))
           ))
         res match {
           case Some(ModelUpdate(newValue)) =>

@@ -101,7 +101,7 @@ object EGateBanksTests extends TestSuite with AirportConfigHelpers {
       )
 
       val result = WorkloadSimulation.processWork(airportConfig)("T1", "eeaDesk", workload, eGateBanks)
-      val expected = SimulationResult(Vector(
+      val expected = QueueSimulationResult(Vector(
         DeskRec(0, 1), DeskRec(1, 1), DeskRec(2, 1), DeskRec(3, 1), DeskRec(4, 1),
         DeskRec(5, 1), DeskRec(6, 1), DeskRec(7, 1), DeskRec(8, 1), DeskRec(9, 1),
         DeskRec(10, 1), DeskRec(11, 1), DeskRec(12, 1), DeskRec(13, 1), DeskRec(14, 1)
@@ -130,7 +130,7 @@ object EGateBanksTests extends TestSuite with AirportConfigHelpers {
       )
 
       val result = WorkloadSimulation.processWork(airportConfig)("T1", "eGate", workload, eGateBanks)
-      val expected = SimulationResult(Vector(
+      val expected = QueueSimulationResult(Vector(
         DeskRec(0, 1), DeskRec(1, 1), DeskRec(2, 1), DeskRec(3, 1), DeskRec(4, 1),
         DeskRec(5, 1), DeskRec(6, 1), DeskRec(7, 1), DeskRec(8, 1), DeskRec(9, 1),
         DeskRec(10, 1), DeskRec(11, 1), DeskRec(12, 1), DeskRec(13, 1), DeskRec(14, 1)

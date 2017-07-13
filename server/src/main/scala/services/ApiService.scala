@@ -10,6 +10,7 @@ import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
+import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.query.FlightPassengerSplitsReportingService
@@ -19,6 +20,7 @@ import services.workloadcalculator.WorkloadCalculator
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.{NumericRange, Seq}
+import scala.collection.immutable.{List, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -38,7 +40,7 @@ trait AirportToCountryLike {
         AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
       }
       t.getOrElse({
-//        println(s"boo ${l}");
+        //        println(s"boo ${l}");
         AirportInfo("failed on", l, "boo", "ya")
       })
     }.map(ai => (ai.code, ai)).toMap
@@ -68,7 +70,7 @@ object AirportToCountry extends AirportToCountryLike {
 }
 
 object WorkloadSimulation {
-  def processWork(airportConfig: AirportConfig)(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
+  def processWork(airportConfig: AirportConfig)(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
     val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
 
     if (queueName == "eGate")
@@ -80,12 +82,12 @@ object WorkloadSimulation {
   val blockSize = 15
   val fillByBlockSize = List.fill[Int](blockSize)_
 
-  def simulationResultForDesksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): SimulationResult = {
+  def simulationResultForDesksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
     val desksPerMinute: List[Int] = desks.flatMap(x => fillByBlockSize(x))
 
     TryRenjin.runSimulationOfWork(workloads, desksPerMinute, optimizerConfig)
   }
-  def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desksPerBlock: List[Int]): SimulationResult = {
+  def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desksPerBlock: List[Int]): QueueSimulationResult = {
     val egatesPerMinute: List[Int] = desksPerBlock.flatMap(d => fillByBlockSize(d * gatesPerBank))
     val simulationResult = TryRenjin.runSimulationOfWork(workloads, egatesPerMinute, optimizerConfig)
     val crunchRecBanksPerMinute = simulationResult.recommendedDesks.map(d => DeskRec(d.time, d.desks / gatesPerBank))
@@ -161,14 +163,28 @@ abstract class ApiService(val airportConfig: AirportConfig)
     s"Welcome to SPA, $name! Time is now ${new Date}"
   }
 
-  override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    Try{
+  override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
+    Try {
       WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads, desks)
-    }.recover{
+    }.recover {
       case f =>
         log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
-        SimulationResult(Vector.empty, Nil)
+        QueueSimulationResult(Vector.empty, Nil)
     }.get
+  }
+
+  def getTerminalSimulations(terminalName: TerminalName, workloads: Map[QueueName, List[Double]], desks: Map[QueueName, List[Int]]): TerminalSimulationResultsFull = {
+    airportConfig.queues.getOrElse(terminalName, Seq()).collect {
+      case queueName if queueName != Queues.Transfer =>
+        val queueSimResults = Try {
+          WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads.getOrElse(queueName, List()), desks.getOrElse(queueName, List()))
+        }.recover {
+          case f =>
+            log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
+            QueueSimulationResult(Vector.empty, Nil)
+        }.get
+        queueName -> queueSimResults
+    }.toMap
   }
 
   override def airportConfiguration() = airportConfig

@@ -123,7 +123,7 @@ HeatmapDataTests extends TestSuite {
     "Given a map of queuename to ready simulation result" +
       "When I call waitTimes, " +
       "Then I should get a ready back" - {
-      val potSimulationResult = Map("eeaDesk" -> Ready(SimulationResult(IndexedSeq(), Seq())))
+      val potSimulationResult = Map("eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(), Seq())))
 
       val result: Pot[List[Series]] = TerminalHeatmaps.waitTimes(potSimulationResult, "T1")
 

@@ -9,6 +9,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.builder.Builder
@@ -94,7 +95,7 @@ object TerminalDeploymentsTable {
   case class PracticallyEverything(
                                     airportInfos: Map[String, Pot[AirportInfo]],
                                     flights: Pot[FlightsWithSplits],
-                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
+                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[QueueSimulationResult]]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
                                     userDeskRec: Map[TerminalName, QueueStaffDeployments],

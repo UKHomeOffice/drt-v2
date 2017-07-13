@@ -9,6 +9,7 @@ import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import japgolly.scalajs.react.WebpackRequire
 import japgolly.scalajs.react.extra.router._
@@ -39,7 +40,7 @@ object TableViewUtils {
                                timestamps: Seq[Long],
                                paxload: Map[String, List[Double]],
                                queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                               simulationResult: Map[QueueName, Pot[SimulationResult]],
+                               simulationResult: Map[QueueName, Pot[QueueSimulationResult]],
                                userDeskRec: QueueStaffDeployments,
                                actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
                              ): List[TerminalDeploymentsRow] = {
@@ -75,7 +76,7 @@ object TableViewUtils {
   def queueDeploymentRowsPerMinute(timestamps: Seq[Long],
                                    paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                                   simulationResult: Map[QueueName, Pot[SimulationResult]],
+                                   simulationResult: Map[QueueName, Pot[QueueSimulationResult]],
                                    userDeskRec: QueueStaffDeployments,
                                    queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
     simulationResult.get(queueName) match {
@@ -125,7 +126,7 @@ object TableViewUtils {
   def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: QueueCrunchResults,
                                    userDeskRec: QueueStaffDeployments,
-                                   simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
+                                   simulationResult: Map[QueueName, Pot[QueueSimulationResult]], qn: QueueName
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 

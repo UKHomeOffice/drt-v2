@@ -3,9 +3,8 @@ package drt.shared
 import java.util.Date
 
 import drt.shared.FlightsApi._
-import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
-import drt.shared.SplitRatiosNs.SplitRatio
+import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 
 import scala.collection.immutable._
 import scala.concurrent.Future
@@ -185,7 +184,10 @@ case class CrunchResult(
 
 case class NoCrunchAvailable()
 
-case class SimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
+object Simulations {
+  case class QueueSimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
+  type TerminalSimulationResultsFull = Map[QueueName, QueueSimulationResult]
+}
 
 object FlightsApi {
 
@@ -226,15 +228,15 @@ trait WorkloadsHelpers {
     }
   }
 
-  def workloadPeriodByQueue(workloads: Map[String, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def workloadPeriodByQueue(workloads: Map[QueueName, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[QueueName, List[Double]] = {
     loadPeriodByQueue(workloads, periodMinutes, workloadByMillis)
   }
 
-  def paxloadPeriodByQueue(workloads: Map[String, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def paxloadPeriodByQueue(workloads: Map[QueueName, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long]): Map[QueueName, List[Double]] = {
     loadPeriodByQueue(workloads, periodMinutes, paxloadByMillis)
   }
 
-  def loadPeriodByQueue(workloads: Map[String, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long], loadByMillis: QueuePaxAndWorkLoads => Map[Long, Double]): Map[String, List[Double]] = {
+  def loadPeriodByQueue(workloads: Map[QueueName, QueuePaxAndWorkLoads], periodMinutes: NumericRange[Long], loadByMillis: QueuePaxAndWorkLoads => Map[Long, Double]): Map[QueueName, List[Double]] = {
     workloads.mapValues(qwl => {
       val allPaxloadByMinuteForThisQueue: Map[Long, Double] = loadByMillis(qwl)
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, allPaxloadByMinuteForThisQueue)
@@ -351,7 +353,9 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
-  def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): SimulationResult
+  def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult
+
+  def getTerminalSimulations(terminalName: TerminalName, workloads: Map[QueueName, List[Double]], desks: Map[QueueName, List[Int]]): TerminalSimulationResultsFull
 
   def airportConfiguration(): AirportConfig
 

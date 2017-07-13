@@ -16,7 +16,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray, html_<^}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.RootModel.TerminalQueueSimulationResults
+import drt.client.services.RootModel.PortSimulationResults
 import japgolly.scalajs.react.component.Generic
 
 import scala.collection.immutable

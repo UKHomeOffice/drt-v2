@@ -41,7 +41,7 @@ object TerminalDeploymentTests extends TestSuite  {
       )
       val simulationResult = Map(
         "eeaDesk" ->
-          Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5)))
+          Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5)))
       )
 
       val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map(), Map())
@@ -63,8 +63,8 @@ object TerminalDeploymentTests extends TestSuite  {
         "eGate" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2), Seq(20)))))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
-        "eGate" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 4)), Seq(10))))
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
+        "eGate" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 4)), Seq(10))))
 
       val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
@@ -92,9 +92,9 @@ object TerminalDeploymentTests extends TestSuite  {
           Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2), Seq(20)))))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
-        "nonEeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
-        "eGate" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 4)), Seq(10))))
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
+        "nonEeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 2)), Seq(5))),
+        "eGate" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 4)), Seq(10))))
 
       val result = terminalDeploymentsRows("T1", Ready(airportConfig), Seq(0L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
@@ -117,7 +117,7 @@ object TerminalDeploymentTests extends TestSuite  {
           Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 1), Seq(10, 20)))))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))))
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))))
 
       val result = terminalDeploymentsRows("T1", Ready(airportConfig), List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
@@ -144,9 +144,9 @@ object TerminalDeploymentTests extends TestSuite  {
           Ready(Ready(CrunchResult(0, 60000, IndexedSeq(15, 21), Seq(34, 23)))))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))),
-        "eGate" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 5), DeskRec(1, 7)), Seq(15, 25))),
-        "nonEeaDesk" -> Ready(SimulationResult(IndexedSeq(DeskRec(0, 11), DeskRec(1, 8)), Seq(30, 14))))
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 2), DeskRec(1, 1)), Seq(5, 10))),
+        "eGate" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 5), DeskRec(1, 7)), Seq(15, 25))),
+        "nonEeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(DeskRec(0, 11), DeskRec(1, 8)), Seq(30, 14))))
 
       val result = terminalDeploymentsRows("T1", Ready(airportConfig), List(0L, 60000L), workload, queueCrunchResults, simulationResult, Map(), Map())
 
@@ -169,7 +169,7 @@ object TerminalDeploymentTests extends TestSuite  {
           Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 1, 3), Seq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4)))))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(
           DeskRec(0, 1), DeskRec(1, 2),
           DeskRec(2, 1), DeskRec(3, 2),
           DeskRec(4, 8), DeskRec(5, 2),
@@ -219,7 +219,7 @@ object TerminalDeploymentTests extends TestSuite  {
           )))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(
           DeskRec(0, 1), DeskRec(1, 2),
           DeskRec(2, 1), DeskRec(3, 2),
           DeskRec(4, 8), DeskRec(5, 2),
@@ -280,7 +280,7 @@ object TerminalDeploymentTests extends TestSuite  {
           Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 5, 1, 1, 1, 1, 4), Seq(1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 5, 1, 1, 1, 1, 5)))))
 
       val simulationResult = Map(
-        "eeaDesk" -> Ready(SimulationResult(IndexedSeq(
+        "eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(
           DeskRec(0, 1), DeskRec(1, 2),
           DeskRec(2, 1), DeskRec(3, 2),
           DeskRec(4, 8), DeskRec(5, 2),
@@ -290,7 +290,7 @@ object TerminalDeploymentTests extends TestSuite  {
           DeskRec(12, 1), DeskRec(13, 2),
           DeskRec(14, 1), DeskRec(15, 5)
         ), Seq(1, 1, 1, 1, 1, 12, 1, 1, 1, 1, 15, 1, 1, 1, 1, 9))),
-        "nonEeaDesk" -> Ready(SimulationResult(IndexedSeq(
+        "nonEeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(
           DeskRec(0, 1), DeskRec(1, 2),
           DeskRec(2, 1), DeskRec(3, 2),
           DeskRec(4, 8), DeskRec(5, 2),
