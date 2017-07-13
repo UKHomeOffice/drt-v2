@@ -32,6 +32,7 @@ class CanFindASplitForAnApiFlightSpec extends
     parseIataToCarrierCodeVoyageNumber("FR836") === Some(("FR", "836"))
     parseIataToCarrierCodeVoyageNumber("FR836F") === Some(("FR", "836"))
     parseIataToCarrierCodeVoyageNumber("U2836F") === Some(("U2", "836"))
+    parseIataToCarrierCodeVoyageNumber("0B836F") === Some(("0B", "836"))
   }
 
   "Can parse an ICAO to carrier code and voyage number" >> {

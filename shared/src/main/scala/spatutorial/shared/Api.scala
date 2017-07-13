@@ -24,7 +24,7 @@ case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
 }
 
 object FlightParsing {
-  val iataRe = """([A-Z][A-Z0-9])(\d{1,4})(\w)?""".r
+  val iataRe = """([A-Z0-9]{2})(\d{1,4})(\w)?""".r
   val icaoRe = """([A-Z]{2,3})(\d{1,4})(\w)?""".r
 
   def parseIataToCarrierCodeVoyageNumber(iata: String): Option[(String, String)] = {
