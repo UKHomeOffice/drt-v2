@@ -168,7 +168,6 @@ object TerminalDeploymentsTable {
 
     val queueRowCells: Seq[TagMod] = item.queueDetails.collect {
       case (q: QueueDeploymentsRowEntry) => {
-        val warningClasses = if (q.waitTimeWithCrunchDeskRec < q.waitTimeWithUserDeskRec) "table-warning" else ""
         val dangerWait = if (q.waitTimeWithUserDeskRec > props.airportConfig.slaByQueue.getOrElse(q.queueName, 0)) "table-danger" else ""
 
         def qtd(xs: TagMod*): TagMod = <.td((^.className := queueColour(q.queueName)) :: xs.toList: _*)
@@ -178,7 +177,7 @@ object TerminalDeploymentsTable {
         val queueCells = Seq(
           qtd(q.pax),
           qtd(^.title := s"Rec: ${q.crunchDeskRec}", q.userDeskRec.deskRec),
-          qtd(^.cls := dangerWait + " " + warningClasses, q.waitTimeWithUserDeskRec))
+          qtd(^.cls := dangerWait, q.waitTimeWithUserDeskRec))
 
         if (props.showActuals) {
           val actDesks: String = q.actualDeskRec.map(act => s"$act").getOrElse("-")
