@@ -29,8 +29,16 @@ class CanFindASplitForAnApiFlightSpec extends
   "Can parse an IATA to carrier code and voyage number" >> {
     import drt.shared.FlightParsing._
     parseIataToCarrierCodeVoyageNumber("FR8364") === Some(("FR", "8364"))
-    parseIataToCarrierCodeVoyageNumber("RY836") === Some(("RY", "836"))
-    parseIataToCarrierCodeVoyageNumber("RY836F") === Some(("RY", "836"))
+    parseIataToCarrierCodeVoyageNumber("FR836") === Some(("FR", "836"))
+    parseIataToCarrierCodeVoyageNumber("FR836F") === Some(("FR", "836"))
+    parseIataToCarrierCodeVoyageNumber("U2836F") === Some(("U2", "836"))
+  }
+
+  "Can parse an ICAO to carrier code and voyage number" >> {
+    import drt.shared.FlightParsing._
+    parseIataToCarrierCodeVoyageNumber("RYR8364") === Some(("RYR", "8364"))
+    parseIataToCarrierCodeVoyageNumber("RYR836") === Some(("RYR", "836"))
+    parseIataToCarrierCodeVoyageNumber("RYR836F") === Some(("RYR", "836"))
   }
 
   "Should be able to find a flight" >> {
