@@ -48,7 +48,8 @@ lazy val client: Project = (project in file("client"))
 //    enableReloadWorkflow := true,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
-    // yes, we want to package JS dependencies                                                      ~
+    useYarn := true,
+    // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
     //    scalaJSUseMainModuleInitializer := true,
