@@ -9,6 +9,7 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared.SDateLike
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom
 import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
 
@@ -27,15 +28,10 @@ object StaffDeploymentsAdjustmentPopover {
                                                     endTimeHours: Int = 0,
                                                     endTimeMinutes: Int = 0,
                                                     numberOfStaff: String = "1"
-                                      )
+                                                  )
 
   def roundToNearest(nearest: Int)(x: Int): Int = {
     (x.toDouble / nearest).round.toInt * nearest
-  }
-
-  def defaultTerminal(terminalNames: Seq[TerminalName], page: Loc): TerminalName = page match {
-    case p: TerminalDepsLoc => p.id
-    case _ => terminalNames.headOption.getOrElse("")
   }
 
   def selectTerminal(defaultValue: String, callback: (ReactEventFromInput) => Callback, terminalNames: Seq[String]) = {
@@ -45,11 +41,11 @@ object StaffDeploymentsAdjustmentPopover {
       terminalNames.map(x => <.option(^.value := x, x)).toTagMod)
   }
 
-  def apply(terminalNames: Seq[TerminalName], terminal: TerminalName, trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-") = ScalaComponent.builder[Unit]("staffMovementPopover")
+  def apply(terminalNames: Seq[TerminalName], terminal: Option[TerminalName], trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-") = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(
       StaffDeploymentAdjustmentPopoverState(
         reason = reason,
-        terminalName = terminal,
+        terminalName = terminal.getOrElse(terminalNames.head),
         date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
         startTimeHours = startDate.getHours(),
         startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
@@ -117,6 +113,11 @@ object StaffDeploymentsAdjustmentPopover {
     def hoveredComponent: TagMod = if (state.active) {
       val popoverChildren = <.div(^.className := "container", ^.key := "StaffAdjustments",
         labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
+        terminal match {
+          case None => popoverFormRow ("Terminal", selectTerminal (state.terminalName, (e: ReactEventFromInput) =>
+        scope.modState (_.copy (terminalName = e.target.value) ), terminalNames) )
+          case _ => ""
+        },
         timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
           (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeHours = v.toInt),
           (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeMinutes = v.toInt)),
@@ -125,7 +126,7 @@ object StaffDeploymentsAdjustmentPopover {
           (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeMinutes = v.toInt)),
         popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
           val newValue = e.target.value
-          scope.modState((s: StaffDeploymentAdjustmentPopoverState) =>  s.copy(numberOfStaff = newValue))
+          scope.modState((s: StaffDeploymentAdjustmentPopoverState) => s.copy(numberOfStaff = newValue))
         }))),
         <.div(^.className := "form-group-row",
           <.div(^.className := "col-sm-4"),
