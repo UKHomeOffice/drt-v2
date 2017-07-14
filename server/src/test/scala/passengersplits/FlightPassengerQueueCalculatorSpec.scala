@@ -18,17 +18,6 @@ import org.specs2.matcher.Matchers
 import org.specs2.specification.Tables
 
 
-
-//import PassengerInfoParser.PassengerInfoJson
-class InvestigateLatviaVisaNationalMisClassification extends Specification with Matchers with Tables {
-  "Read the RYR2634 flight" >> {
-    val parsed = File("/home/lance/dev/data/apisplits/huntfor2643/")
-  }
-  import Queues._
-  import PassengerQueueCalculator._
-
-}
-
 //import PassengerInfoParser.PassengerInfoJson
 class FlightPassengerQueueCalculatorSpec extends Specification with Matchers with Tables {
   "Information about a passenger and their document type tells us what passenger type they are" >> {
