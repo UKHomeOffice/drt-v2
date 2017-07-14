@@ -13,20 +13,20 @@ import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
 
 import scala.collection.immutable.Seq
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object StaffDeploymentsAdjustmentPopover {
 
-  case class StaffMovementPopoverState(
-                                        hovered: Boolean = false,
-                                        reason: String = "",
-                                        terminalName: TerminalName,
-                                        date: String = "",
-                                        startTimeHours: Int = 0,
-                                        startTimeMinutes: Int = 0,
-                                        endTimeHours: Int = 0,
-                                        endTimeMinutes: Int = 0,
-                                        numberOfStaff: Int = 1
+  case class StaffDeploymentAdjustmentPopoverState(
+                                                    active: Boolean = false,
+                                                    reason: String = "",
+                                                    terminalName: TerminalName,
+                                                    date: String = "",
+                                                    startTimeHours: Int = 0,
+                                                    startTimeMinutes: Int = 0,
+                                                    endTimeHours: Int = 0,
+                                                    endTimeMinutes: Int = 0,
+                                                    numberOfStaff: String = "1"
                                       )
 
   def roundToNearest(nearest: Int)(x: Int): Int = {
@@ -47,7 +47,7 @@ object StaffDeploymentsAdjustmentPopover {
 
   def apply(terminalNames: Seq[TerminalName], terminal: TerminalName, trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-") = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(
-      StaffMovementPopoverState(
+      StaffDeploymentAdjustmentPopoverState(
         reason = reason,
         terminalName = terminal,
         date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
@@ -58,7 +58,7 @@ object StaffDeploymentsAdjustmentPopover {
     ).renderS((scope, state) => {
 
 
-    def selectFromRange(range: Range, defaultValue: Int, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState, applyRounding: Int => Int) = {
+    def selectFromRange(range: Range, defaultValue: Int, callback: (String) => (StaffDeploymentAdjustmentPopoverState) => StaffDeploymentAdjustmentPopoverState, applyRounding: Int => Int) = {
       <.select(
         ^.defaultValue := applyRounding(defaultValue),
         ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))
@@ -78,14 +78,14 @@ object StaffDeploymentsAdjustmentPopover {
             log.info(s"Dispatched AddStaffMovement($movement")
           }
           SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
-          scope.modState(_.copy(hovered = false))
+          scope.modState(_.copy(active = false))
         case Failure(error) =>
           log.info("Invalid shift")
-          scope.modState(_.copy(hovered = true))
+          scope.modState(_.copy(active = true))
       }
     }
 
-    def labelledInput(labelText: String, value: String, callback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState): VdomTagOf[html.Div] = {
+    def labelledInput(labelText: String, value: String, callback: (String) => (StaffDeploymentAdjustmentPopoverState) => StaffDeploymentAdjustmentPopoverState): VdomTagOf[html.Div] = {
       popoverFormRow(labelText, <.input.text(^.value := value, ^.onChange ==> ((e: ReactEventFromInput) => {
         val newValue: String = e.target.value
         scope.modState(callback(newValue))
@@ -101,8 +101,8 @@ object StaffDeploymentsAdjustmentPopover {
     def timeSelector(label: String,
                      hourDefault: Int,
                      minuteDefault: Int,
-                     hourCallback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState,
-                     minuteCallback: (String) => (StaffMovementPopoverState) => StaffMovementPopoverState
+                     hourCallback: (String) => (StaffDeploymentAdjustmentPopoverState) => StaffDeploymentAdjustmentPopoverState,
+                     minuteCallback: (String) => (StaffDeploymentAdjustmentPopoverState) => StaffDeploymentAdjustmentPopoverState
                     ): VdomTagOf[Div] = {
       popoverFormRow(label,
         selectFromRange(
@@ -114,32 +114,32 @@ object StaffDeploymentsAdjustmentPopover {
       )
     }
 
-    def hoveredComponent: TagMod = if (state.hovered) {
+    def hoveredComponent: TagMod = if (state.active) {
       val popoverChildren = <.div(^.className := "container", ^.key := "StaffAdjustments",
-        labelledInput("Reason", state.reason, (v: String) => (s: StaffMovementPopoverState) => s.copy(reason = v)),
+        labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
         timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
-          (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeHours = v.toInt),
-          (v: String) => (s: StaffMovementPopoverState) => s.copy(startTimeMinutes = v.toInt)),
+          (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeHours = v.toInt),
+          (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeMinutes = v.toInt)),
         timeSelector("End time", state.endTimeHours, state.endTimeMinutes,
-          (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeHours = v.toInt),
-          (v: String) => (s: StaffMovementPopoverState) => s.copy(endTimeMinutes = v.toInt)),
-        popoverFormRow("Number of staff", <.input.number(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
-          val newValue: String = e.target.value
-          scope.modState((s: StaffMovementPopoverState) => s.copy(numberOfStaff = newValue.toInt))
+          (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeHours = v.toInt),
+          (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeMinutes = v.toInt)),
+        popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
+          val newValue = e.target.value
+          scope.modState((s: StaffDeploymentAdjustmentPopoverState) =>  s.copy(numberOfStaff = newValue))
         }))),
         <.div(^.className := "form-group-row",
           <.div(^.className := "col-sm-4"),
           <.div(^.className := "col-sm-6 btn-toolbar",
             <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> trySaveMovement),
             <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> ((e: ReactEventFromInput) => {
-              scope.modState(_.copy(hovered = false))
+              scope.modState(_.copy(active = false))
             })))))
       popoverChildren
     } else {
       ""
     }
 
-    val popover = <.div(^.className := "staff-deployment-adjustment-container", hoveredComponent, <.div(^.className := "popover-trigger", ^.onClick ==> ((e: ReactEvent) => scope.modState(_.copy(hovered = true))), trigger))
+    val popover = <.div(^.className := "staff-deployment-adjustment-container", hoveredComponent, <.div(^.className := "popover-trigger", ^.onClick ==> ((e: ReactEvent) => scope.modState(_.copy(active = true))), trigger))
     popover
   }).build
 }
