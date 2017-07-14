@@ -1,31 +1,24 @@
 package passengersplits
 
-import core.{PassengerQueueCalculator, PassengerTypeCalculator, PassengerTypeCalculatorValues}
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.PaxTypes._
-import drt.shared.{PaxType, PaxTypeAndQueue, Queues}
-import org.specs2.matcher.Matchers
-import org.specs2.mutable.Specification
-import org.specs2.specification.Tables
+import drt.shared.{PaxType, Queues}
 import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
-import passengersplits.parsing.VoyageManifestParser
+import passengersplits.core.{PassengerQueueCalculator, PassengerTypeCalculator, PassengerTypeCalculatorValues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
-//import core.PassengerQueueTypes.PaxTypeAndQueueCount
-import core.PassengerTypeCalculatorValues.CountryCodes
-import org.specs2.mutable.Specification
 import org.specs2.matcher.Matchers
+import org.specs2.mutable.Specification
 import org.specs2.specification.Tables
+import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
 
 
-//import PassengerInfoParser.PassengerInfoJson
 class FlightPassengerQueueCalculatorSpec extends Specification with Matchers with Tables {
   "Information about a passenger and their document type tells us what passenger type they are" >> {
     s2"""$passengerType"""
   }
 
-  import Queues._
   import PassengerQueueCalculator._
+  import Queues._
 
   val UK = "UK"
   "Information about a passenger type is used to inform what queue we think they'll go to." >> {
