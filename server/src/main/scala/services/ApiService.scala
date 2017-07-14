@@ -280,6 +280,8 @@ trait CrunchCalculator {
 
 trait CrunchResultProvider {
   def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
+
+  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 }
 
 trait ActorBackedCrunchService {
@@ -292,6 +294,22 @@ trait ActorBackedCrunchService {
     log.info("Starting crunch latest request")
     val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
     result.recover {
+      case e: Throwable =>
+        log.info("Crunch not ready in time ", e)
+        Left(NoCrunchAvailable())
+    }.map {
+      case cr: CrunchResult =>
+        Right(cr)
+      case _ =>
+        Left(NoCrunchAvailable())
+    }
+  }
+
+  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
+    log.info("Starting crunch latest request")
+    val crunchFuture: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
+
+    crunchFuture.recover {
       case e: Throwable =>
         log.info("Crunch not ready in time ", e)
         Left(NoCrunchAvailable())

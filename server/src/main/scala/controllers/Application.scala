@@ -14,6 +14,7 @@ import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 
+import scala.collection.immutable
 import scala.collection.immutable.Map
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
@@ -255,10 +256,11 @@ class Application @Inject()(
       tryCrunch(terminalName, queueName)
     }
 
-    def getTerminalCrunchResult(terminalName: TerminalName): Map[QueueName, Future[Either[NoCrunchAvailable, CrunchResult]]] = {
-      airportConfig.queues.getOrElse(terminalName, Seq()).map(queueName => {
-        queueName -> tryCrunch(terminalName, queueName)
-      }).toMap
+    def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
+      Future.sequence(
+        airportConfig.queues.getOrElse(terminalName, List()).map(queueName => {
+          tryTQCrunch(terminalName, queueName).map(cr => (queueName, cr))
+        }).toList)
     }
   }
 

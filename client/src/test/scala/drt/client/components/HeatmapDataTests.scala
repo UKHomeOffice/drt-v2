@@ -5,8 +5,9 @@ import diode.RootModelRW
 import diode.data._
 import drt.client.components.Heatmap.Series
 import drt.client.UserDeskRecFixtures._
-import drt.client.services.{RootModel, DeskRecTimeSlots, DeskRecTimeslot}
+import drt.client.services.{DeskRecTimeSlots, DeskRecTimeslot, RootModel}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import utest._
 

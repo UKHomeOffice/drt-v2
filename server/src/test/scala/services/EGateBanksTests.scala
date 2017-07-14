@@ -2,6 +2,7 @@ package services
 
 import actors.EGateBankCrunchTransformations
 import drt.services.AirportConfigHelpers
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared._
 import utest._

@@ -2,6 +2,7 @@ package drt.client.services
 
 import diode.data._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRowEntry, TerminalDeploymentsRow}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import utest._

@@ -49,6 +49,7 @@ case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, spli
 
 object ApiSplits {
   def totalExcludingTransferPax(splits: List[ApiPaxTypeAndQueueCount]) = splits.filter(s => s.queueType != Queues.Transfer).map(_.paxCount).sum
+
   def totalPax(splits: List[ApiPaxTypeAndQueueCount]) = splits.map(_.paxCount).sum
 }
 
@@ -140,7 +141,6 @@ object ApiFlight {
 }
 
 
-
 trait SDateLike {
 
   def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
@@ -185,7 +185,9 @@ case class CrunchResult(
 case class NoCrunchAvailable()
 
 object Simulations {
+
   case class QueueSimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
+
   type TerminalSimulationResultsFull = Map[QueueName, QueueSimulationResult]
 }
 
@@ -338,6 +340,7 @@ trait WorkloadsApi {
 }
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
+
 case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
@@ -353,7 +356,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
-  def getTerminalCrunchResult(terminalName: TerminalName): Map[QueueName, Future[Either[NoCrunchAvailable, CrunchResult]]]
+  def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult
 
