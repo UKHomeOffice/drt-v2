@@ -78,7 +78,7 @@ object PassengerTypeCalculatorValues {
     val Hungary = "HUN"
     val Ireland = "IRL"
     val Italy = "ITA"
-    val Latvia = "LCA"
+    val Latvia = "LVA"
     val Lithuania = "LTU"
     val Luxembourg = "LUX"
     val Malta = "MLT"

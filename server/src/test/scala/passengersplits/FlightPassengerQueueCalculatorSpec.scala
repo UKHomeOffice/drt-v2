@@ -17,6 +17,18 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.Matchers
 import org.specs2.specification.Tables
 
+
+
+//import PassengerInfoParser.PassengerInfoJson
+class InvestigateLatviaVisaNationalMisClassification extends Specification with Matchers with Tables {
+  "Read the RYR2634 flight" >> {
+    val parsed = File("/home/lance/dev/data/apisplits/huntfor2643/")
+  }
+  import Queues._
+  import PassengerQueueCalculator._
+
+}
+
 //import PassengerInfoParser.PassengerInfoJson
 class FlightPassengerQueueCalculatorSpec extends Specification with Matchers with Tables {
   "Information about a passenger and their document type tells us what passenger type they are" >> {
@@ -118,16 +130,20 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
   def passengerType = {
     import CountryCodes._
     import PassengerTypeCalculatorValues.EEA
+    val passport = "P"
+    val Visa = "V"
     s2"""${
       "NationalityCountryEEAFlag" | "DocumentIssuingCountryCode" | "DocumentType" | "PassengerType" |>
-        "EEA" ! Germany ! "P" ! EeaMachineReadable |
-        "" ! "NZL" ! "P" ! NonVisaNational |
-        "" ! "NZL" ! "V" ! VisaNational |
-        "" ! "AUS" ! "V" ! VisaNational |
-        EEA ! Greece ! "P" ! EeaNonMachineReadable |
-        EEA ! Italy ! "P" ! EeaNonMachineReadable |
-        EEA ! Portugal ! "P" ! EeaNonMachineReadable |
-        EEA ! Slovakia ! "P" ! EeaNonMachineReadable | {
+        "EEA" ! Germany ! passport ! EeaMachineReadable |
+        "" ! "NZL" ! passport ! NonVisaNational |
+        "" ! "NZL" ! Visa ! VisaNational |
+        "" ! "AUS" ! Visa ! VisaNational |
+        EEA ! Greece ! passport ! EeaNonMachineReadable |
+        EEA ! Italy ! passport ! EeaNonMachineReadable |
+        EEA ! Portugal ! passport ! EeaNonMachineReadable |
+        EEA ! Latvia ! passport ! EeaMachineReadable |
+        EEA ! Latvia ! passport ! EeaMachineReadable |
+        EEA ! Slovakia ! passport ! EeaNonMachineReadable | {
         (countryFlag, documentCountry, documentType, passengerType) =>
           PassengerTypeCalculator.mostAirports(PaxTypeInfo("N", countryFlag, documentCountry, Option(documentType))) must_== passengerType
       }
