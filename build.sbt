@@ -45,7 +45,7 @@ lazy val client: Project = (project in file("client"))
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
-//    enableReloadWorkflow := true,
+    enableReloadWorkflow := true,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
     useYarn := true,

@@ -9,6 +9,52 @@
   color: #000;
 }
 
+
+.staff-deployment-adjustment-container {
+  position: relative;
+  display: inline-block;
+}
+.staff-deployment-adjustment-container .popover-trigger {
+  display: inline-block;
+  padding: 4px;
+  font-size: 12px;
+}
+.nav .staff-deployment-adjustment-container .container {
+  left: -19em;
+  top: 2.2em;
+}
+.nav .popover-trigger{
+  padding: 6px 12px;
+  font-size: 14px;
+}
+.staff-deployment-adjustment-container .container {
+  display: block;
+  font-size: medium;
+  position: absolute;
+
+  /* prettify */
+  padding: 0.5em;
+  color: #000000;
+  opacity: 0.9;
+  background: #ebf4fb;
+  border: 0.1em solid #b7ddf2;
+  /* round the corners */
+  border-radius: 0.5em;
+  width: 23em;
+  z-index: 1000;
+  .below {
+    top: 1em;
+  }
+
+  .left {
+    top: 1em;
+    right: 1em;
+  }
+  left: -24em;
+  top: 58%;
+
+}
+
 .table-xcondensed {
   > thead,
   > tbody,
@@ -183,6 +229,7 @@ table.user-desk-recs.cols-4 {
   }
 }
 
+
 table.user-desk-recs.cols-5 tbody td, table.user-desk-recs.cols-5 thead th {
   width: 71px;
 }
@@ -194,6 +241,7 @@ table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
 table.user-desk-recs.cols-3 tbody td, table.user-desk-recs.cols-3 thead th {
   width: 95px;
 }
+
 
 table.user-desk-recs.cols-2 tbody td, table.user-desk-recs.cols-2 thead th {
   width: 120px;
@@ -286,6 +334,12 @@ tr:nth-child(odd) > td.total-deployed.red {
 
 tr:nth-child(odd) > td.total-deployed {
   background-color: darken(@totalDeployedColor, 8%);
+}
+
+td.total-deployed span.deployed {
+  width: 25px;
+  display: inline-block;
+  text-align: center;
 }
 
 .eeaDesk-user-desk-rec {
@@ -624,6 +678,7 @@ th h2 {
   }
 
 }
+
 
 .splits .graph {
   width: 136px;
