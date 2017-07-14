@@ -141,10 +141,5 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
 
   val Passport = Some("P")
 
-  //  val EeaNonMachineReadable = "eea-non-machine-readable"
-  //  val VisaNational = "national-visa"
-  //  val EeaMachineReadable = "eea-machine-readable"
-  //  val NonVisaNational = "national-non-visa"
-
 
 }
