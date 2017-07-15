@@ -1,0 +1,251 @@
+Country or Area Name,ISO ALPHA-3 Code,Requires Visa
+Afghanistan,AFG,x
+Aland Islands,ALA,
+Albania,ALB,x
+Algeria,DZA,x
+American Samoa,ASM,
+Andorra,AND,
+Angola,AGO,x
+Anguilla,AIA,
+Antarctica,ATA,
+Antigua and Barbuda,ATG,
+Argentina,ARG,
+Armenia,ARM,x
+Aruba,ABW,
+Australia,AUS,
+Austria,AUT,
+Azerbaijan,AZE,x
+Bahamas,BHS,
+Bahrain,BHR,x
+Bangladesh,BGD,x
+Barbados,BRB,
+Belarus,BLR,x
+Belgium,BEL,
+Belize,BLZ,
+Benin,BEN,x
+Bermuda,BMU,
+Bhutan,BTN,x
+Bolivia,BOL,x
+Bosnia and Herzegovina,BIH,x
+Botswana,BWA,
+Bouvet Island,BVT,
+Brazil,BRA,
+British Indian Ocean Territory,IOT,
+British Virgin Islands,VGB,
+Brunei Darussalam,BRN,
+Bulgaria,BGR,
+Burkina Faso,BFA,x
+Burundi,BDI,x
+Burma - Myanmar,MMR,x
+Cambodia,KHM,x
+Cameroon,CMR,x
+Canada,CAN,
+Cape Verde,CPV,x
+Cayman Islands,CYM,
+Central African Republic,CAF,x
+Chad,TCD,x
+Chile,CHL,
+China,CHN,x
+Christmas Island,CXR,
+Cocos (Keeling) Islands,CCK,
+Colombia,COL,x
+Comoros,COM,x
+Congo (Brazzaville),COG,x
+Congo (Kinshasa),COD,x
+Cook Islands,COK,
+Costa Rica,CRI,
+Côte d'Ivoire,CIV,
+Croatia,HRV,
+Cuba,CUB,x
+Cyprus,CYP,x
+Czech Republic,CZE,
+Denmark,DNK,
+Djibouti,DJI,x
+Dominica,DMA,
+Dominican Republic,DOM,x
+Ecuador,ECU,x
+Egypt,EGY,x
+El Salvador,SLV,
+Equatorial Guinea,GNQ,x
+Eritrea,ERI,x
+Estonia,EST,
+Ethiopia,ETH,x
+Falkland Islands (Malvinas),FLK,
+Faroe Islands,FRO,
+Fiji,FJI,x
+Finland,FIN,
+France,FRA,
+French Guiana,GUF,
+French Polynesia,PYF,
+French Southern Territories,ATF,
+Gabon,GAB,x
+Gambia,GMB,x
+Georgia,GEO,x
+Germany,DEU,
+Ghana,GHA,x
+Gibraltar,GIB,
+Greece,GRC,
+Greenland,GRL,
+Grenada,GRD,
+Guadeloupe,GLP,
+Guam,GUM,
+Guatemala,GTM,
+Guernsey,GGY,
+Guinea,GIN,x
+Guinea-Bissau,GNB,x
+Guyana,GUY,x
+Haiti,HTI,x
+Heard and Mcdonald Islands,HMD,
+Holy See (Vatican City State),VAT,
+Honduras,HND,
+Hong Kong,HKG,
+Hungary,HUN,
+Iceland,ISL,
+India,IND,x
+Indonesia,IDN,x
+Iran,IRN,x
+Iraq,IRQ,x
+Ireland,IRL,
+Isle of Man,IMN,
+Israel,ISR,
+Italy,ITA,
+Ivory Coast,CIV,x
+Jamaica,JAM,x
+Japan,JPN,
+Jersey,JEY,
+Jordan,JOR,x
+Kazakhstan,KAZ,x
+Kenya,KEN,x
+Kiribati,KIR,
+Korea (North),PRK,x
+Korea (South),KOR,
+Kosovo,UNK,x
+Kuwait,KWT,x
+Kyrgyzstan,KGZ,x
+Lao PDR,LAO,x
+Latvia,LVA,
+Lebanon,LBN,x
+Lesotho,LSO,x
+Liberia,LBR,x
+Libya,LBY,x
+Liechtenstein,LIE,
+Lithuania,LTU,
+Luxembourg,LUX,
+Macao,MAC,
+Macedonia,MKD,x
+Madagascar,MDG,x
+Malawi,MWI,x
+Malaysia,MYS,
+Maldives,MDV,
+Mali,MLI,x
+Malta,MLT,
+Marshall Islands,MHL,
+Martinique,MTQ,
+Mauritania,MRT,x
+Mauritius,MUS,
+Mayotte,MYT,
+Mexico,MEX,
+Micronesia,FSM,
+Moldova,MDA,x
+Monaco,MCO,
+Mongolia,MNG,x
+Montenegro,MNE,x
+Montserrat,MSR,
+Morocco,MAR,x
+Mozambique,MOZ,x
+Namibia,NAM,
+Nauru,NRU,
+Nepal,NPL,x
+Netherlands,NLD,
+Netherlands Antilles,ANT,
+New Caledonia,NCL,
+New Zealand,NZL,
+Nicaragua,NIC,
+Niger,NER,x
+Nigeria,NGA,x
+Niue,NIU,
+Norfolk Island,NFK,
+Northern Mariana Islands,MNP,
+Norway,NOR,
+Oman,OMN,x
+Pakistan,PAK,x
+Palau,PLW,
+Palestinian Territory,PSE,x
+Panama,PAN,
+Papua New Guinea,PNG,
+Paraguay,PRY,
+Peru,PER,x
+Philippines,PHL,x
+Pitcairn,PCN,
+Poland,POL,
+Portugal,PRT,
+Puerto Rico,PRI,
+Qatar,QAT,x
+Réunion,REU,
+Romania,ROU,
+Russian Federation,RUS,x
+Rwanda,RWA,x
+Saint Helena,SHN,
+Saint Kitts and Nevis,KNA,
+Saint Lucia,LCA,
+Saint Pierre and Miquelon,SPM,
+Saint Vincent and Grenadines,VCT,
+Saint-Barthélemy,BLM,
+Saint-Martin (French part),MAF,
+Samoa,WSM,
+San Marino,SMR,
+Sao Tome and Principe,STP,x
+Saudi Arabia,SAU,x
+Senegal,SEN,x
+Serbia,SRB,x
+Seychelles,SYC,
+Sierra Leone,SLE,x
+Singapore,SGP,
+Slovakia,SVK,
+Slovenia,SVN,
+Solomon Islands,SLB,
+Somalia,SOM,x
+South Africa,ZAF,x
+South Georgia and the South Sandwich Islands,SGS,
+South Sudan,SSD,x
+Spain,ESP,
+Sri Lanka,LKA,x
+Sudan,SDN,x
+Suriname,SUR,x
+Svalbard and Jan Mayen Islands,SJM,
+Swaziland,SWZ,x
+Sweden,SWE,
+Switzerland,CHE,
+Syria,SYR,x
+Taiwan,TWN,x
+Tajikistan,TJK,x
+Tanzania,TZA,x
+Thailand,THA,x
+Timor-Leste,TLS,
+Togo,TGO,x
+Tokelau,TKL,
+Tonga,TON,
+Trinidad and Tobago,TTO,
+Tunisia,TUN,x
+Turkey,TUR,x
+Turkmenistan,TKM,x
+Turks and Caicos Islands,TCA,
+Tuvalu,TUV,
+Uganda,UGA,x
+Ukraine,UKR,x
+United Arab Emirates,ARE,x
+United Kingdom,GBR,
+United States of America,USA,
+Uruguay,URY,
+US Minor Outlying Islands,UMI,
+Uzbekistan,UZB,x
+Vanuatu,VUT,
+Venezuela (Bolivarian Republic),VEN,x
+Viet Nam,VNM,x
+Virgin Islands,VIR,
+Wallis and Futuna Islands,WLF,
+Western Sahara,ESH,
+Yemen,YEM,x
+Zambia,ZMB,x
+Zimbabwe,ZWE,x
+,,112

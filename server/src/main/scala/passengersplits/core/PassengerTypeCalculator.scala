@@ -144,24 +144,25 @@ object PassengerTypeCalculator {
 
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(inTransitFlag: String, eeaFlag: String, documentCountry: String, documentType: Option[String])
+  case class PaxTypeInfo(inTransitFlag: String, eeaFlag: String, documentCountry: String)
 
   def isEea(country: String) = EEACountries contains country
   def isNonMachineReadable(country: String) = nonMachineReadableCountries contains country
 
-  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
+  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode)
 
   val transitMatters: PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo("Y", _, _, _) => Transit
+    case PaxTypeInfo("Y", _, _) => Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-      case PaxTypeInfo(_, EEA, country, _) if isNonMachineReadable(country) => EeaNonMachineReadable
-      case PaxTypeInfo(_, EEA, country, _) if isEea(country) => EeaMachineReadable
-      case PaxTypeInfo(_, "", country, Some(DocType.Visa)) if !isEea(country) => VisaNational
-      case PaxTypeInfo(_, "", country, Some(DocType.Passport)) if !isEea(country) => NonVisaNational
+      case PaxTypeInfo(_, EEA, country) if isNonMachineReadable(country) => EeaNonMachineReadable
+      case PaxTypeInfo(_, EEA, country) if isEea(country) => EeaMachineReadable
+      case PaxTypeInfo(_, "", country) if !isEea(country) && isVisaNational(country) => VisaNational
+      case PaxTypeInfo(_, "", country) if !isEea(country) => NonVisaNational
   }
 
+  def isVisaNational(countryCode: String) = visaCountyCodes.contains(countryCode)
 
   val defaultToVisaNational: PartialFunction[PaxTypeInfo, PaxType] = {
     case _ => VisaNational
@@ -171,4 +172,30 @@ object PassengerTypeCalculator {
 
   val whenTransitMatters = transitMatters orElse mostAirports
 
+  case class Country(name: String, code3Letter: String, isVisaRequired: Boolean)
+
+  lazy val loadedCountries = loadCountries()
+  lazy val countries = loadedCountries.collect{case Right(c) => c}
+  lazy val visaCountries = countries.filter(_.isVisaRequired)
+  lazy val visaCountyCodes = visaCountries.map(_.code3Letter).toSet
+
+  def loadCountries(): Seq[Either[String, Country]] = {
+    val countryInfoStream = getClass.getClassLoader.getResourceAsStream("countrycodes.csv")
+    val asScala = scala.io.Source.fromInputStream(countryInfoStream).getLines().drop(1)
+    println(s"loading visa countries")
+    val visaCountries: Iterator[Either[String, Country]] = for {
+      (l, idx) <- asScala.zipWithIndex
+    } yield {
+      l.split(",", -1) match {
+        case Array(name, threeLetterCode, "x") =>
+          Right(Country(name, threeLetterCode, true))
+        case Array(name, threeLetterCode, _) =>
+          Right(Country(name, threeLetterCode, false))
+        case e =>
+          Left(s"error in $idx ${e.toList}")
+      }
+    }
+    val countriesList = visaCountries.toList
+    countriesList
+  }
 }
