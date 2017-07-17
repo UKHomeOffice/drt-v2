@@ -89,7 +89,7 @@ object PassengerTypeCalculatorValues {
     val Slovakia = "SVK"
     val Slovenia = "SVN"
     val Spain = "ESP"
-    val Sweden = "SWI"
+    val Sweden = "SWE"
     val UK = "GBR"
   }
 
