@@ -14,6 +14,7 @@ import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
 
 import scala.collection.immutable.Seq
+import scala.scalajs.js
 import scala.util.{Failure, Success, Try}
 
 object StaffDeploymentsAdjustmentPopover {
@@ -41,10 +42,10 @@ object StaffDeploymentsAdjustmentPopover {
       terminalNames.map(x => <.option(^.value := x, x)).toTagMod)
   }
 
-  def apply(terminalNames: Seq[TerminalName], terminal: Option[TerminalName], trigger: String, reason: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-") = ScalaComponent.builder[Unit]("staffMovementPopover")
+  def apply(terminalNames: Seq[TerminalName], terminal: Option[TerminalName], trigger: String, reasonPlaceholder: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-") = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(
       StaffDeploymentAdjustmentPopoverState(
-        reason = reason,
+        reason = "",
         terminalName = terminal.getOrElse(terminalNames.head),
         date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
         startTimeHours = startDate.getHours(),
@@ -81,8 +82,8 @@ object StaffDeploymentsAdjustmentPopover {
       }
     }
 
-    def labelledInput(labelText: String, value: String, callback: (String) => (StaffDeploymentAdjustmentPopoverState) => StaffDeploymentAdjustmentPopoverState): VdomTagOf[html.Div] = {
-      popoverFormRow(labelText, <.input.text(^.value := value, ^.onChange ==> ((e: ReactEventFromInput) => {
+    def labelledInput(labelText: String, value: String, callback: (String) => (StaffDeploymentAdjustmentPopoverState) => StaffDeploymentAdjustmentPopoverState, placeHolder: String = ""): VdomTagOf[html.Div] = {
+      popoverFormRow(labelText, <.input.text(^.value := value, ^.placeholder := reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
         val newValue: String = e.target.value
         scope.modState(callback(newValue))
       })))
@@ -111,7 +112,8 @@ object StaffDeploymentsAdjustmentPopover {
     }
 
     def hoveredComponent: TagMod = if (state.active) {
-      val popoverChildren = <.div(^.className := "container", ^.key := "StaffAdjustments",
+      val popoverChildren = <.div(<.div(^.className:="popover-overlay", ^.onClick ==> showPopover(false)),
+        <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
         labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
         terminal match {
           case None => popoverFormRow ("Terminal", selectTerminal (state.terminalName, (e: ReactEventFromInput) =>
@@ -132,15 +134,16 @@ object StaffDeploymentsAdjustmentPopover {
           <.div(^.className := "col-sm-4"),
           <.div(^.className := "col-sm-6 btn-toolbar",
             <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> trySaveMovement),
-            <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> ((e: ReactEventFromInput) => {
-              scope.modState(_.copy(active = false))
-            })))))
+            <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> showPopover(false))))))
+
       popoverChildren
     } else {
       ""
     }
+    def showPopover(show: Boolean) = (e: ReactEventFromInput) => scope.modState(_.copy(active = show))
 
-    val popover = <.div(^.className := "staff-deployment-adjustment-container", hoveredComponent, <.div(^.className := "popover-trigger", ^.onClick ==> ((e: ReactEvent) => scope.modState(_.copy(active = true))), trigger))
+    val popover = <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container",
+      <.div(^.className := "popover-trigger", ^.onClick ==> showPopover(true), trigger))
     popover
   }).build
 }
