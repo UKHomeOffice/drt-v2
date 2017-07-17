@@ -196,7 +196,6 @@ object FlightTableComponents {
         Math.abs(dm) + s"mins ${deltaMessage(delta)}"
       }
       val actPct = schPct + asOffset(delta, 150.0)
-      println(s"sch: $sch act: $act $delta $actPct")
 
       val deltaClass: String = deltaMessage(delta)
       (deltaTooltip, actPct, deltaClass)
