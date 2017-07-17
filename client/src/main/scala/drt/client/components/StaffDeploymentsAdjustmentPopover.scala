@@ -112,10 +112,7 @@ object StaffDeploymentsAdjustmentPopover {
     }
 
     def hoveredComponent: TagMod = if (state.active) {
-      val popoverChildren = <.div(<.div(^.className:="popover-overlay", ^.onClick ==> ((e: ReactEvent) => {
-        e.stopPropagation()
-        scope.modState(_.copy(active=false))
-      })),
+      val popoverChildren = <.div(<.div(^.className:="popover-overlay", ^.onClick ==> showPopover(false)),
         <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
         labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
         terminal match {
@@ -137,16 +134,16 @@ object StaffDeploymentsAdjustmentPopover {
           <.div(^.className := "col-sm-4"),
           <.div(^.className := "col-sm-6 btn-toolbar",
             <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> trySaveMovement),
-            <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> ((e: ReactEventFromInput) => {
-              scope.modState(_.copy(active = false))
-            }))))))
+            <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> showPopover(false))))))
+
       popoverChildren
     } else {
       ""
     }
+    def showPopover(show: Boolean) = (e: ReactEventFromInput) => scope.modState(_.copy(active = show))
 
     val popover = <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container",
-      <.div(^.className := "popover-trigger", ^.onClick ==> ((e: ReactEvent) => scope.modState(_.copy(active = true))), trigger))
+      <.div(^.className := "popover-trigger", ^.onClick ==> showPopover(true), trigger))
     popover
   }).build
 }
