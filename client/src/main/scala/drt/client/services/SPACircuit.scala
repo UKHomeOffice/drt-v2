@@ -295,18 +295,6 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
       log.info(s"received tqwl $terminalQueues")
 
       val paxLoadsByTerminalAndQueue: Map[TerminalName, Map[QueueName, Seq[Pax]]] = terminalQueueWorkloads.mapValues(_.mapValues(_._2))
-      for {(t, tl) <- paxLoadsByTerminalAndQueue
-           loadAtTerminal = tl.map(_._2.map(_.pax).sum)
-           (q, ql) <- tl
-           loadAtQueue = ql.map(_.pax).sum
-           firstTime = ql.headOption.map(_.time)
-           lastTimeOpt = ql.lastOption.map(_.time)
-      } {
-        val firstTimeSDate = firstTime.map(d => SDate(MilliDate(d)))
-        val lastTime = lastTimeOpt.map(d => SDate(MilliDate(d)))
-//        log.debug(s"received workloads: paxLoads:  firstTime: $firstTime (${firstTimeSDate}) lastTime $lastTime $t/$q $loadAtQueue / $loadAtTerminal")
-      }
-
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
         (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),
           plWl._2.map(pl => Pax(timeFromMillisToNearestSecond(pl.time), pl.pax)))))
@@ -392,11 +380,11 @@ class SimulationHandler[M](
           Effect(simulationResult.map(resp => UpdateSimulationResult(terminalName, queueName, resp)))
         )
       } else {
-        log.info(s"Not running simulation for $terminalName/$queueName. Shifts, Fixed points & movements not all ready yet")
+        log.info(s"****Not running simulation for $terminalName/$queueName. Shifts, Fixed points & movements not all ready yet")
         noChange
       }
     case RunTerminalSimulation(terminalName) =>
-      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady && allQueueCrunchesReceived() && airportConfig.value.isReady) {
+      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady /*&& allQueueCrunchesReceived() */&& airportConfig.value.isReady) {
         log.info(s"Requesting full simulation for $terminalName")
         val terminalDeskRecs = staffDeployments.value.getOrElse(terminalName, Map()).map {
           case (queueName, drtsPot) => queueName -> drtsPot.map(_.items.map(_.deskRec)).getOrElse(List()).toList
@@ -579,8 +567,12 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
       val newTC = Map(terminalName -> map)
 
       if (newTC != oldTC) {
+        log.info(s"crunch for $terminalName has updated. requesting simulation result")
         updated(value ++ newTC, Effect(Future(RunTerminalSimulation(terminalName))))
-      } else noChange
+      } else {
+        log.info(s"crunch for $terminalName has not updated")
+        noChange
+      }
   }
 }
 
