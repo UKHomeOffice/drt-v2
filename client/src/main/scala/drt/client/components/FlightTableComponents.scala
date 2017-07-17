@@ -102,15 +102,17 @@ object FlightTableComponents {
 
 
   def asOffset(delta: Long, range: Double) = {
-    val aggression = 1.0019
-    val deltaTranslate = 1700
-    val scaledDelta = 1.0 * delta / 1000
-    val isLate = delta < 0
-    if (isLate) {
-      (range / (1 + Math.pow(aggression, (scaledDelta + deltaTranslate))))
-    }
-    else {
-      -(range / (1 + Math.pow(aggression, -1.0 * (scaledDelta - deltaTranslate))))
+    if (delta == 0) 0d else {
+      val aggression = 1.0019
+      val deltaTranslate = 1700
+      val scaledDelta = 1.0 * delta / 1000
+      val isLate = delta < 0
+      if (isLate) {
+        (range / (1 + Math.pow(aggression, (scaledDelta + deltaTranslate))))
+      }
+      else {
+        -(range / (1 + Math.pow(aggression, -1.0 * (scaledDelta - deltaTranslate))))
+      }
     }
   }
 
@@ -121,7 +123,7 @@ object FlightTableComponents {
 
   def timelineCompFunc(flight: Arrival): VdomElement = {
     Try {
-      timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT)
+      timelineFunc(150 - 24, flight.SchDT, flight.ActDT, flight.ActChoxDT, flight.EstDT, flight.EstChoxDT)
     }.recover {
       case e =>
         log.error(s"couldn't render timeline of $flight with $e")
@@ -130,8 +132,10 @@ object FlightTableComponents {
     }.get
   }
 
-  def timelineFunc(schPct: Int, sch: String, act: String, actChox: String): VdomElement = {
+  def timelineFunc(schPct: Int, sch: String, act: String, actChox: String, estDt: String, estChoxDt: String): VdomElement = {
     val (actDeltaTooltip: String, actPct: Double, actClass: String) = pctAndClass(sch, act, schPct)
+    val (estDeltaTooltip: String, estPct: Double, estClass: String) = pctAndClass(sch, estDt, schPct)
+    val (estChoxDeltaTooltip: String, estChoxPct: Double, estChoxClass: String) = pctAndClass(sch, estChoxDt, schPct)
     val (actChoxToolTip: String, actChoxPct: Double, actChoxClass: String) = pctAndClass(sch, actChox, schPct)
 
 
@@ -139,6 +143,8 @@ object FlightTableComponents {
       s"""Sch: ${dateStringAsLocalDisplay(sch)}
          |Act: ${dateStringAsLocalDisplay(act)} $actDeltaTooltip
          |ActChox: ${dateStringAsLocalDisplay(actChox)} $actChoxToolTip
+         |Est: ${dateStringAsLocalDisplay(estDt)}
+         |EstChox: ${dateStringAsLocalDisplay(estChoxDt)}
         """.stripMargin
 
     val actChoxDot = if (!actChox.isEmpty)
@@ -153,8 +159,8 @@ object FlightTableComponents {
 
     val schDot = <.i(^.className := "dot sch-dot",
       ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
-    val
-    actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot "
+
+    val actDot = if (!act.isEmpty) <.i(^.className := "dot act-dot "
       + actClass,
       ^.title
         := s"Actual: ${dateStringAsLocalDisplay(act)}",
@@ -162,22 +168,39 @@ object FlightTableComponents {
       ^.left := s"${actPct}px")
     else <.span()
 
-    val dots = schDot :: actDot ::
-      actChoxDot :: Nil
+    val estDot = if (!estDt.isEmpty) <.i(^.className := "dot est-dot "
+      + estClass,
+      ^.title
+        := s"Est: ${dateStringAsLocalDisplay(estDt)}",
+      ^.left := s"${estPct}px")
+    else <.span()
 
-    <.div(schDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
+    val estChoxDot = if (!estChoxDt.isEmpty) <.i(^.className := "dot est-chox-dot "
+      + estClass,
+      ^.title
+        := s"Est: ${dateStringAsLocalDisplay(estChoxDt)}",
+      ^.left := s"${estChoxPct}px")
+    else <.span()
+
+    <.div(schDot, estDot, estChoxDot, actDot, actChoxDot, ^.className := "timeline-container", ^.title := longToolTip)
 
   }
 
   private def pctAndClass(sch: String, act: String, schPct: Int) = {
-    val actDelta = millisDelta(sch, act)
-    val actDeltaTooltip = {
-      val dm = (actDelta / 60000)
-      Math.abs(dm) + s"mins ${deltaMessage(actDelta)}"
+    if (act.isEmpty) {
+      ("", schPct.toDouble, "")
+    } else {
+      val delta = millisDelta(sch, act)
+      val deltaTooltip = {
+        val dm = (delta / 60000)
+        Math.abs(dm) + s"mins ${deltaMessage(delta)}"
+      }
+      val actPct = schPct + asOffset(delta, 150.0)
+      println(s"sch: $sch act: $act $delta $actPct")
+
+      val deltaClass: String = deltaMessage(delta)
+      (deltaTooltip, actPct, deltaClass)
     }
-    val actPct = schPct + asOffset(actDelta, 150.0)
-    val actClass: String = deltaMessage(actDelta)
-    (actDeltaTooltip, actPct, actClass)
   }
 
   def deltaMessage(actDelta: Long) = {
