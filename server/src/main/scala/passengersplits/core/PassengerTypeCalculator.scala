@@ -76,9 +76,12 @@ object PassengerTypeCalculatorValues {
     val Germany = "DEU"
     val Greece = "GRC"
     val Hungary = "HUN"
+    val Iceland = "ISL"
     val Ireland = "IRL"
     val Italy = "ITA"
     val Latvia = "LVA"
+    val Liechtenstein = "LIE"
+    val Norway = "NOR"
     val Lithuania = "LTU"
     val Luxembourg = "LUX"
     val Malta = "MLT"
@@ -90,11 +93,12 @@ object PassengerTypeCalculatorValues {
     val Slovenia = "SVN"
     val Spain = "ESP"
     val Sweden = "SWE"
+    val Switzerland = "CHE"
     val UK = "GBR"
   }
+  import CountryCodes._
 
-  val EEACountries = {
-    import CountryCodes._
+  lazy val EUCountries = {
     Set(
       Austria, Belgium, Bulgaria, Croatia, Cyprus, Czech,
       Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland,
@@ -104,15 +108,17 @@ object PassengerTypeCalculatorValues {
     )
   }
 
+  lazy val EEACountries = {
+    val extras = Set(Iceland, Norway, Liechtenstein, Switzerland)
+    EUCountries ++ extras
+  }
+
   object DocType {
     val Visa = "V"
     val Passport = "P"
   }
 
-  val nonMachineReadableCountries = {
-    import CountryCodes._
-    Set(Italy, Greece, Slovakia, Portugal)
-  }
+  val nonMachineReadableCountries = Set(Italy, Greece, Slovakia, Portugal)
 
   val EEA = "EEA"
 }
