@@ -141,7 +141,7 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
 
 
 object PassengerTypeCalculator {
-
+  val log = LoggerFactory.getLogger(getClass)
   import PassengerTypeCalculatorValues._
 
   case class PaxTypeInfo(inTransitFlag: String, eeaFlag: String, documentCountry: String)
@@ -180,14 +180,14 @@ object PassengerTypeCalculator {
   lazy val visaCountyCodes = visaCountries.map(_.code3Letter).toSet
 
   def loadCountries(): Seq[Either[String, Country]] = {
+    log.info(s"Loading countries for passengerTypeCalculator")
     val countryInfoStream = getClass.getClassLoader.getResourceAsStream("countrycodes.csv")
     val asScala = scala.io.Source.fromInputStream(countryInfoStream).getLines().drop(1)
-    println(s"loading visa countries")
     val visaCountries: Iterator[Either[String, Country]] = for {
       (l, idx) <- asScala.zipWithIndex
     } yield {
       l.split(",", -1) match {
-        case Array(name, threeLetterCode, "x") =>
+        case Array(name, threeLetterCode, "visa") =>
           Right(Country(name, threeLetterCode, true))
         case Array(name, threeLetterCode, _) =>
           Right(Country(name, threeLetterCode, false))
@@ -195,7 +195,6 @@ object PassengerTypeCalculator {
           Left(s"error in $idx ${e.toList}")
       }
     }
-    val countriesList = visaCountries.toList
-    countriesList
+    visaCountries.toList
   }
 }
