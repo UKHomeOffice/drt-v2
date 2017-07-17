@@ -1,0 +1,250 @@
+Country or Area Name,ISO ALPHA-3 Code,Requires Visa
+Afghanistan,AFG,visa
+Aland Islands,ALA,nonvisa
+Albania,ALB,visa
+Algeria,DZA,visa
+American Samoa,ASM,nonvisa
+Andorra,AND,nonvisa
+Angola,AGO,visa
+Anguilla,AIA,nonvisa
+Antarctica,ATA,nonvisa
+Antigua and Barbuda,ATG,nonvisa
+Argentina,ARG,nonvisa
+Armenia,ARM,visa
+Aruba,ABW,nonvisa
+Australia,AUS,nonvisa
+Austria,AUT,nonvisa
+Azerbaijan,AZE,visa
+Bahamas,BHS,nonvisa
+Bahrain,BHR,visa
+Bangladesh,BGD,visa
+Barbados,BRB,nonvisa
+Belarus,BLR,visa
+Belgium,BEL,nonvisa
+Belize,BLZ,nonvisa
+Benin,BEN,visa
+Bermuda,BMU,nonvisa
+Bhutan,BTN,visa
+Bolivia,BOL,visa
+Bosnia and Herzegovina,BIH,visa
+Botswana,BWA,nonvisa
+Bouvet Island,BVT,nonvisa
+Brazil,BRA,nonvisa
+British Indian Ocean Territory,IOT,nonvisa
+British Virgin Islands,VGB,nonvisa
+Brunei Darussalam,BRN,nonvisa
+Bulgaria,BGR,nonvisa
+Burkina Faso,BFA,visa
+Burundi,BDI,visa
+Burma - Myanmar,MMR,visa
+Cambodia,KHM,visa
+Cameroon,CMR,visa
+Canada,CAN,nonvisa
+Cape Verde,CPV,visa
+Cayman Islands,CYM,nonvisa
+Central African Republic,CAF,visa
+Chad,TCD,visa
+Chile,CHL,nonvisa
+China,CHN,visa
+Christmas Island,CXR,nonvisa
+Cocos (Keeling) Islands,CCK,nonvisa
+Colombia,COL,visa
+Comoros,COM,visa
+Congo (Brazzaville),COG,visa
+Congo (Kinshasa),COD,visa
+Cook Islands,COK,nonvisa
+Costa Rica,CRI,nonvisa
+Côte d'Ivoire,CIV,nonvisa
+Croatia,HRV,nonvisa
+Cuba,CUB,visa
+Cyprus,CYP,visa
+Czech Republic,CZE,nonvisa
+Denmark,DNK,nonvisa
+Djibouti,DJI,visa
+Dominica,DMA,nonvisa
+Dominican Republic,DOM,visa
+Ecuador,ECU,visa
+Egypt,EGY,visa
+El Salvador,SLV,nonvisa
+Equatorial Guinea,GNQ,visa
+Eritrea,ERI,visa
+Estonia,EST,nonvisa
+Ethiopia,ETH,visa
+Falkland Islands (Malvinas),FLK,nonvisa
+Faroe Islands,FRO,nonvisa
+Fiji,FJI,visa
+Finland,FIN,nonvisa
+France,FRA,nonvisa
+French Guiana,GUF,nonvisa
+French Polynesia,PYF,nonvisa
+French Southern Territories,ATF,nonvisa
+Gabon,GAB,visa
+Gambia,GMB,visa
+Georgia,GEO,visa
+Germany,DEU,nonvisa
+Ghana,GHA,visa
+Gibraltar,GIB,nonvisa
+Greece,GRC,nonvisa
+Greenland,GRL,nonvisa
+Grenada,GRD,nonvisa
+Guadeloupe,GLP,nonvisa
+Guam,GUM,nonvisa
+Guatemala,GTM,nonvisa
+Guernsey,GGY,nonvisa
+Guinea,GIN,visa
+Guinea-Bissau,GNB,visa
+Guyana,GUY,visa
+Haiti,HTI,visa
+Heard and Mcdonald Islands,HMD,nonvisa
+Holy See (Vatican City State),VAT,nonvisa
+Honduras,HND,nonvisa
+Hong Kong,HKG,nonvisa
+Hungary,HUN,nonvisa
+Iceland,ISL,nonvisa
+India,IND,visa
+Indonesia,IDN,visa
+Iran,IRN,visa
+Iraq,IRQ,visa
+Ireland,IRL,nonvisa
+Isle of Man,IMN,nonvisa
+Israel,ISR,nonvisa
+Italy,ITA,nonvisa
+Ivory Coast,CIV,visa
+Jamaica,JAM,visa
+Japan,JPN,nonvisa
+Jersey,JEY,nonvisa
+Jordan,JOR,visa
+Kazakhstan,KAZ,visa
+Kenya,KEN,visa
+Kiribati,KIR,nonvisa
+Korea (North),PRK,visa
+Korea (South),KOR,nonvisa
+Kosovo,UNK,visa
+Kuwait,KWT,visa
+Kyrgyzstan,KGZ,visa
+Lao PDR,LAO,visa
+Latvia,LVA,nonvisa
+Lebanon,LBN,visa
+Lesotho,LSO,visa
+Liberia,LBR,visa
+Libya,LBY,visa
+Liechtenstein,LIE,nonvisa
+Lithuania,LTU,nonvisa
+Luxembourg,LUX,nonvisa
+Macao,MAC,nonvisa
+Macedonia,MKD,visa
+Madagascar,MDG,visa
+Malawi,MWI,visa
+Malaysia,MYS,nonvisa
+Maldives,MDV,nonvisa
+Mali,MLI,visa
+Malta,MLT,nonvisa
+Marshall Islands,MHL,nonvisa
+Martinique,MTQ,nonvisa
+Mauritania,MRT,visa
+Mauritius,MUS,nonvisa
+Mayotte,MYT,nonvisa
+Mexico,MEX,nonvisa
+Micronesia,FSM,nonvisa
+Moldova,MDA,visa
+Monaco,MCO,nonvisa
+Mongolia,MNG,visa
+Montenegro,MNE,visa
+Montserrat,MSR,nonvisa
+Morocco,MAR,visa
+Mozambique,MOZ,visa
+Namibia,NAM,nonvisa
+Nauru,NRU,nonvisa
+Nepal,NPL,visa
+Netherlands,NLD,nonvisa
+Netherlands Antilles,ANT,nonvisa
+New Caledonia,NCL,nonvisa
+New Zealand,NZL,nonvisa
+Nicaragua,NIC,nonvisa
+Niger,NER,visa
+Nigeria,NGA,visa
+Niue,NIU,nonvisa
+Norfolk Island,NFK,nonvisa
+Northern Mariana Islands,MNP,nonvisa
+Norway,NOR,nonvisa
+Oman,OMN,visa
+Pakistan,PAK,visa
+Palau,PLW,nonvisa
+Palestinian Territory,PSE,visa
+Panama,PAN,nonvisa
+Papua New Guinea,PNG,nonvisa
+Paraguay,PRY,nonvisa
+Peru,PER,visa
+Philippines,PHL,visa
+Pitcairn,PCN,nonvisa
+Poland,POL,nonvisa
+Portugal,PRT,nonvisa
+Puerto Rico,PRI,nonvisa
+Qatar,QAT,visa
+Réunion,REU,nonvisa
+Romania,ROU,nonvisa
+Russian Federation,RUS,visa
+Rwanda,RWA,visa
+Saint Helena,SHN,nonvisa
+Saint Kitts and Nevis,KNA,nonvisa
+Saint Lucia,LCA,nonvisa
+Saint Pierre and Miquelon,SPM,nonvisa
+Saint Vincent and Grenadines,VCT,nonvisa
+Saint-Barthélemy,BLM,nonvisa
+Saint-Martin (French part),MAF,nonvisa
+Samoa,WSM,nonvisa
+San Marino,SMR,nonvisa
+Sao Tome and Principe,STP,visa
+Saudi Arabia,SAU,visa
+Senegal,SEN,visa
+Serbia,SRB,visa
+Seychelles,SYC,nonvisa
+Sierra Leone,SLE,visa
+Singapore,SGP,nonvisa
+Slovakia,SVK,nonvisa
+Slovenia,SVN,nonvisa
+Solomon Islands,SLB,nonvisa
+Somalia,SOM,visa
+South Africa,ZAF,visa
+South Georgia and the South Sandwich Islands,SGS,nonvisa
+South Sudan,SSD,visa
+Spain,ESP,nonvisa
+Sri Lanka,LKA,visa
+Sudan,SDN,visa
+Suriname,SUR,visa
+Svalbard and Jan Mayen Islands,SJM,nonvisa
+Swaziland,SWZ,visa
+Sweden,SWE,nonvisa
+Switzerland,CHE,nonvisa
+Syria,SYR,visa
+Taiwan,TWN,visa
+Tajikistan,TJK,visa
+Tanzania,TZA,visa
+Thailand,THA,visa
+Timor-Leste,TLS,nonvisa
+Togo,TGO,visa
+Tokelau,TKL,nonvisa
+Tonga,TON,nonvisa
+Trinidad and Tobago,TTO,nonvisa
+Tunisia,TUN,visa
+Turkey,TUR,visa
+Turkmenistan,TKM,visa
+Turks and Caicos Islands,TCA,nonvisa
+Tuvalu,TUV,nonvisa
+Uganda,UGA,visa
+Ukraine,UKR,visa
+United Arab Emirates,ARE,visa
+United Kingdom,GBR,nonvisa
+United States of America,USA,nonvisa
+Uruguay,URY,nonvisa
+US Minor Outlying Islands,UMI,nonvisa
+Uzbekistan,UZB,visa
+Vanuatu,VUT,nonvisa
+Venezuela (Bolivarian Republic),VEN,visa
+Viet Nam,VNM,visa
+Virgin Islands,VIR,nonvisa
+Wallis and Futuna Islands,WLF,nonvisa
+Western Sahara,ESH,nonvisa
+Yemen,YEM,visa
+Zambia,ZMB,visa
+Zimbabwe,ZWE,visa

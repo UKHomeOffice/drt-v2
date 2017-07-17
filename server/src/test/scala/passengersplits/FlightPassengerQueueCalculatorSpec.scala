@@ -3,13 +3,16 @@ package passengersplits
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.PaxTypes._
 import drt.shared.{PaxType, Queues}
-import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
+import passengersplits.core.PassengerTypeCalculator.{Country, PaxTypeInfo}
 import passengersplits.core.{PassengerQueueCalculator, PassengerTypeCalculator, PassengerTypeCalculatorValues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
 import org.specs2.specification.Tables
 import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
+
+import scala.collection.immutable
+import scala.reflect.io.File
 
 
 class FlightPassengerQueueCalculatorSpec extends Specification with Matchers with Tables {
@@ -109,25 +112,57 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
   }
 
 
+  "Visa Countries" in {
+    "can load from csv " in {
+      val countriesList: immutable.Seq[Either[String, Product with Serializable with Object]] = PassengerTypeCalculator.loadCountries()
+      val errors = countriesList.collect { case Left(e) => e }
+
+      "with no errors" in {
+        errors should beEmpty
+      }
+      "classifying visaCountries" in {
+        val visaRequiredCountryCode = PassengerTypeCalculator.visaCountries.head.code3Letter
+        "given a non eu passenger if their country is visa nat then they're a visa-national to the nonEeaDesk" in {
+          val passengerInfos = PassengerInfoJson(Passport, visaRequiredCountryCode, "EEA", None, None, "N", None, Some(visaRequiredCountryCode)) :: Nil
+          val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
+          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(voyageManifest) should beEqualTo(List(
+            SplitsPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1)))
+
+        }
+        "Number of visaCountries is 113" in {
+          PassengerTypeCalculator.visaCountyCodes.size == 113
+        }
+        "All country codes are 3 characters" in {
+          PassengerTypeCalculator.countries.forall(_.code3Letter.length == 3)
+        }
+      }
+    }
+
+  }
+
+
   def passengerType = {
     import CountryCodes._
     import PassengerTypeCalculatorValues.EEA
-    val passport = "P"
-    val Visa = "V"
+    val lebanon = "LBN"
+    val israel = "ISR"
+    val haiti = "HTI"
     s2"""${
-      "NationalityCountryEEAFlag" | "DocumentIssuingCountryCode" | "DocumentType" | "PassengerType" |>
-        "EEA" ! Germany ! passport ! EeaMachineReadable |
-        "" ! "NZL" ! passport ! NonVisaNational |
-        "" ! "NZL" ! Visa ! VisaNational |
-        "" ! "AUS" ! Visa ! VisaNational |
-        EEA ! Greece ! passport ! EeaNonMachineReadable |
-        EEA ! Italy ! passport ! EeaNonMachineReadable |
-        EEA ! Portugal ! passport ! EeaNonMachineReadable |
-        EEA ! Latvia ! passport ! EeaMachineReadable |
-        EEA ! Latvia ! passport ! EeaMachineReadable |
-        EEA ! Slovakia ! passport ! EeaNonMachineReadable | {
-        (countryFlag, documentCountry, documentType, passengerType) =>
-          PassengerTypeCalculator.mostAirports(PaxTypeInfo("N", countryFlag, documentCountry, Option(documentType))) must_== passengerType
+      "NationalityCountryEEAFlag" | "DocumentIssuingCountryCode" | "PassengerType" |>
+        "EEA" ! Germany ! EeaMachineReadable |
+        "" ! "NZL" ! NonVisaNational |
+        "" ! "AUS" ! NonVisaNational |
+        "" ! lebanon ! VisaNational |
+        "" ! israel ! NonVisaNational |
+        "" ! haiti ! VisaNational |
+        EEA ! Greece ! EeaNonMachineReadable |
+        EEA ! Italy ! EeaNonMachineReadable |
+        EEA ! Portugal ! EeaNonMachineReadable |
+        EEA ! Latvia ! EeaMachineReadable |
+        EEA ! Latvia ! EeaMachineReadable |
+        EEA ! Slovakia ! EeaNonMachineReadable | {
+        (countryFlag, documentCountry, passengerType) =>
+          PassengerTypeCalculator.mostAirports(PaxTypeInfo("N", countryFlag, documentCountry)) must_== passengerType
       }
     }"""
   }
