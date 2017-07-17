@@ -9,24 +9,39 @@
   color: #000;
 }
 
-
 .staff-deployment-adjustment-container {
   position: relative;
   display: inline-block;
 }
+
 .staff-deployment-adjustment-container .popover-trigger {
   display: inline-block;
   padding: 4px;
   font-size: 12px;
 }
+
 .nav .staff-deployment-adjustment-container .container {
   left: -19em;
   top: 2.2em;
 }
-.nav .popover-trigger{
+
+.nav .popover-trigger {
   padding: 6px 12px;
   font-size: 14px;
 }
+
+.popover-overlay {
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.0);
+  z-index: 1;
+}
+
 .staff-deployment-adjustment-container .container {
   display: block;
   font-size: medium;
@@ -110,7 +125,6 @@
 
 @actDotColor: #2854f2;
 @tdpadding: -8px;
-@slaBreach: #A81B1E;
 
 .act-dot.early {
   background-color: @actDotColor;
@@ -188,7 +202,6 @@ table.user-desk-recs.cols-2, table.user-desk-recs.cols-4 {
   }
 }
 
-
 table.user-desk-recs.cols-5 {
   thead th:nth-last-child(1) {
     width: 75px;
@@ -198,8 +211,6 @@ table.user-desk-recs.cols-5 {
     width: 75px;
   }
 }
-
-
 
 table.user-desk-recs.cols-5-with-actuals tbody td, table.user-desk-recs.cols-5-with-actuals thead th {
   width: 47px;
@@ -229,7 +240,6 @@ table.user-desk-recs.cols-4 {
   }
 }
 
-
 table.user-desk-recs.cols-5 tbody td, table.user-desk-recs.cols-5 thead th {
   width: 71px;
 }
@@ -241,7 +251,6 @@ table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
 table.user-desk-recs.cols-3 tbody td, table.user-desk-recs.cols-3 thead th {
   width: 95px;
 }
-
 
 table.user-desk-recs.cols-2 tbody td, table.user-desk-recs.cols-2 thead th {
   width: 120px;
@@ -409,7 +418,7 @@ tr:nth-child(odd) > td.nonEeaDesk-user-desk-rec.table-info {
   color: #ffffff;
 }
 
-tr:nth-child(even) > td.transfer-user-desk-rec{
+tr:nth-child(even) > td.transfer-user-desk-rec {
   background-color: lighten(@transferUserDeskColor, 5%);
   color: #ffffff;
 }
@@ -621,7 +630,6 @@ th h2 {
   top: -5px;
 }
 
-
 .splitsource-airportconfig {
   border-right: solid 5px dodgerblue;
   border-bottom: solid 4px dodgerblue;
@@ -678,7 +686,6 @@ th h2 {
   }
 
 }
-
 
 .splits .graph {
   width: 136px;
