@@ -9,15 +9,10 @@ import drt.client.logger._
 import scala.collection.immutable.{IndexedSeq, Iterable, Map, Seq}
 
 object PortDeployment {
-  def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]): List[(Long, List[(Int, TerminalName)])] = {
+  def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, CrunchResult]]): List[(Long, List[(Int, TerminalName)])] = {
     val portRecsByTerminal: List[List[(Int, TerminalName)]] = portRecs.map {
       case (terminalName, queueRecs: Map[TerminalName, Seq[Int]]) =>
-        val deskRecsByMinute: Iterable[IndexedSeq[Int]] = queueRecs.values.transpose((deskRecs: Pot[Pot[CrunchResult]]) => {
-          for {
-            crunchResultPot: Pot[CrunchResult] <- deskRecs
-            crunchResult: CrunchResult <- crunchResultPot
-          } yield crunchResult.recommendedDesks
-        }).toList.flatten
+        val deskRecsByMinute: Seq[List[Int]] = queueRecs.values.toList.transpose(_.recommendedDesks)
         deskRecsByMinute.transpose.map((x: Iterable[Int]) => x.sum).map((_, terminalName)).toList
       case _ => List()
     }.toList
@@ -29,13 +24,11 @@ object PortDeployment {
     portRecsByTimeInMillis
   }
 
-  def secondsRangeFromPortCrunchResult(terminalRecs: List[Map[QueueName, Pot[PotCrunchResult]]]): Range = {
+  def secondsRangeFromPortCrunchResult(terminalRecs: List[Map[QueueName, CrunchResult]]): Range = {
     val startMillis = for {
-      queueRecs: Map[QueueName, Pot[PotCrunchResult]] <- terminalRecs
+      queueRecs: Map[QueueName, CrunchResult] <- terminalRecs
       firstQueueRecs = queueRecs.values
-      crunchResultPotPot: Pot[PotCrunchResult] <- firstQueueRecs
-      crunchResultPot: PotCrunchResult <- crunchResultPotPot
-      crunchResult <- crunchResultPot
+      crunchResult <- firstQueueRecs
     } yield crunchResult.firstTimeMillis
     val firstSec = startMillis.headOption.getOrElse(0L) / 1000
     Range(firstSec.toInt, firstSec.toInt + (60 * 60 * 24), 60)

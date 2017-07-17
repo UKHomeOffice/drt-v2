@@ -92,7 +92,7 @@ object TerminalHeatmaps {
 
   def heatmapOfCrunchDeskRecs(terminalName: TerminalName) = {
     val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).collect {
-      case (queueName, Ready((Ready(crunchResult)))) =>
+      case (queueName, crunchResult) =>
         val series = Heatmap.seriesFromCrunchResult(crunchResult)
         Series(terminalName + "/" + queueName, series.map(_.toDouble))
     }.toList.sortBy(_.name))
@@ -197,11 +197,12 @@ object TerminalHeatmaps {
     log.info(s"deskRecsVsActualDesks")
     val result: Iterable[Series] = for {
       queueName: QueueName <- queueCrunchResults.keys
-      queueCrunchPot: Pot[Pot[CrunchResult]] <- queueCrunchResults.get(queueName)
-      queueCrunch: Pot[CrunchResult] <- queueCrunchPot.toOption
+      crunchResultsOption = queueCrunchResults.get(queueName)
+//      queueCrunchPot: Pot[Pot[CrunchResult]] <- queueCrunchResults.get(queueName)
+//      queueCrunch: Pot[CrunchResult] <- queueCrunchPot.toOption
       userDesksPot: Pot[DeskRecTimeSlots] <- userDeskRecs.get(queueName)
       userDesks: DeskRecTimeSlots <- userDesksPot.toOption
-      crunchDeskRecsPair: CrunchResult <- queueCrunch.toOption
+      crunchDeskRecsPair: CrunchResult <- crunchResultsOption
       crunchDeskRecs: IndexedSeq[Int] = crunchDeskRecsPair.recommendedDesks
       userDesksVals: Seq[Int] = userDesks.items.map(_.deskRec)
     } yield {

@@ -183,11 +183,11 @@ object RootModel {
   type QueueSimulationResultPot = Pot[QueueSimulationResult]
   type TerminalSimulationResults = Map[QueueName, QueueSimulationResultPot]
   type PortSimulationResults = Map[TerminalName, TerminalSimulationResults]
-  type PortCrunchResults = Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]
+  type PortCrunchResults = Map[TerminalName, Map[QueueName, CrunchResult]]
 
   type FlightCode = String
 
-  type QueueCrunchResults = Map[QueueName, Pot[PotCrunchResult]]
+  type QueueCrunchResults = Map[QueueName, CrunchResult]
 
   def mergeTerminalQueues[A](m1: Map[QueueName, Map[QueueName, A]], m2: Map[QueueName, Map[QueueName, A]]): Map[String, Map[String, A]] = {
     val merged = m1.toSeq ++ m2.toSeq
@@ -506,7 +506,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
 }
 
-class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Pot[PotCrunchResult]]]],
+class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
                        staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
                        airportConfig: ModelR[M, Pot[AirportConfig]])
   extends LoggingActionHandler(modelRW) {
@@ -558,13 +558,13 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
 //      }
 //      else noChange
     case UpdateTerminalCrunchResult(terminalName, tqr) =>
-      value
-      val map: Map[QueueName, Ready[Ready[CrunchResult]]] = tqr.mapValues(cr => {
-        val c = Ready(Ready(cr))
-        c
-      })
+//      value
+//      val map: Map[QueueName, Ready[Ready[CrunchResult]]] = tqr.mapValues(cr => {
+//        val c = cr)
+//        c
+//      })
       val oldTC = value.getOrElse(terminalName, Map())
-      val newTC = Map(terminalName -> map)
+      val newTC = Map(terminalName -> tqr)
 
       if (newTC != oldTC) {
         log.info(s"crunch for $terminalName has updated. requesting simulation result")
@@ -588,7 +588,7 @@ object StaffDeploymentCalculator {
 
     val terminalQueueCrunchResults = terminalQueueCrunchResultsModel
     val firstTerminalName = terminalQueueCrunchResults.keys.headOption.getOrElse("")
-    val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(firstTerminalName).head._2.get.get)
+    val crunchResultWithTimeAndIntervalTry = Try(terminalQueueCrunchResults(firstTerminalName).head._2)
 
     crunchResultWithTimeAndIntervalTry.map(crunchResultWithTimeAndInterval => {
 
@@ -604,7 +604,7 @@ object StaffDeploymentCalculator {
          */
         //        log.info(s"transpose qcr ${queueCrunchResult}")
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
-          case (_, Ready(Ready(cr))) => calculateDeskRecTimeSlots(cr).items
+          case (_, cr) => calculateDeskRecTimeSlots(cr).items
         }
         val timeslotsToInts = (deskRecTimeSlots: Iterable[DeskRecTimeslot]) => {
           val timeInMillis = MilliDate(deskRecTimeSlots.headOption.map(_.timeInMillis).getOrElse(0L))

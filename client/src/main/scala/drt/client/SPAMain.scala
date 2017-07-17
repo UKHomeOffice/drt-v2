@@ -5,7 +5,7 @@ import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
 import drt.client.components.{GlobalStyles, Layout, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
-import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
+import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
@@ -39,7 +39,7 @@ object TableViewUtils {
                                airportConfigPot: Pot[AirportConfig],
                                timestamps: Seq[Long],
                                paxload: Map[String, List[Double]],
-                               queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
+                               queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
                                simulationResult: Map[QueueName, Pot[QueueSimulationResult]],
                                userDeskRec: QueueStaffDeployments,
                                actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
@@ -75,7 +75,7 @@ object TableViewUtils {
 
   def queueDeploymentRowsPerMinute(timestamps: Seq[Long],
                                    paxload: Map[String, List[Double]],
-                                   queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
+                                   queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
                                    simulationResult: Map[QueueName, Pot[QueueSimulationResult]],
                                    userDeskRec: QueueStaffDeployments,
                                    queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
@@ -85,7 +85,7 @@ object TableViewUtils {
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
         queueCrunchResultsForTerminal.get(queueName) match {
-          case Some(Ready(cr)) =>
+          case Some(cr) =>
             queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
           case _ =>
             List()
@@ -138,7 +138,7 @@ object TableViewUtils {
     val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)
     val simResultRecDesks = queueSimRes.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
     val paddedRecDesks: List[Long] = padSimResult(simResultRecDesks, numberOf15MinuteSlots)
-    val queueCrunchRes = queueCrunchResultsForTerminal(qn).get.get
+    val queueCrunchRes = queueCrunchResultsForTerminal(qn)
 
     Seq(
       ts,
@@ -174,7 +174,7 @@ object TableViewUtils {
     val ts = sampleTimestampsForRows(timestamps)
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
-    val queueCrunchRes = queueCrunchResultsForTerminal(qn).get.get
+    val queueCrunchRes = queueCrunchResultsForTerminal(qn)
     val groupedWaitTimes = queueCrunchRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     val queueDeskRecs = queueCrunchRes.recommendedDesks
     Seq(
