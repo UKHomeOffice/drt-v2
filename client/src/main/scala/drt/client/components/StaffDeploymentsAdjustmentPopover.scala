@@ -72,12 +72,12 @@ object StaffDeploymentsAdjustmentPopover {
         case Success(shift) =>
           for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {
             SPACircuit.dispatch(AddStaffMovement(movement))
-            log.info(s"Dispatched AddStaffMovement($movement")
+//            log.info(s"Dispatched AddStaffMovement($movement")
           }
           SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
           scope.modState(_.copy(active = false))
         case Failure(error) =>
-          log.info("Invalid shift")
+//          log.info("Invalid shift")
           scope.modState(_.copy(active = true))
       }
     }

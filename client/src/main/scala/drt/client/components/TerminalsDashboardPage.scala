@@ -20,7 +20,8 @@ TerminalsDashboardPage {
     .render_P(p => {
       val now = SDate.now()
       val nowPlusNHours = now.addHours(p.hours)
-//      println(s"terminalsPage now is $now")
+
+      //      println(s"terminalsPage now is $now")
       def interestingflight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
@@ -51,16 +52,17 @@ TerminalsDashboardPage {
                             val bestPax = BigSummaryBoxes.sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
                             val aggSplits = BigSummaryBoxes.aggregateSplits(bestPaxFN)(flightsAtTerminal)
 
-                          val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, queueOrder))
-                          summaryBoxes
-                        }),
-                        flightsInTerminal.renderPending((n) => <.span(s"Waiting for flights for $t"))
-                      )
-                    }.toTagMod
-                  })
-            }
-          })
-      }, <.div(Debug()))}))
+                            val summaryBoxes = BigSummaryBoxes.SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, queueOrder))
+                            summaryBoxes
+                          }),
+                          flightsInTerminal.renderPending((n) => <.span(s"Waiting for flights for $t"))
+                        )
+                      }.toTagMod
+                    })
+                }
+              })
+            })
+          }))
       }
     }
     ).build

@@ -31,7 +31,7 @@ object TerminalHeatmaps {
             case Some(terminalWorkload) =>
               val heatMapSeries = workloads(terminalWorkload, terminalName)
               val maxAcrossAllSeries = emptySafeMax(heatMapSeries.map(x => emptySafeMax(x.data)))
-              log.info(s"Got max workload of ${maxAcrossAllSeries}")
+//              log.info(s"Got max workload of ${maxAcrossAllSeries}")
               <.div(
                 Heatmap.heatmap(Heatmap.Props(series = heatMapSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
               )
@@ -51,8 +51,8 @@ object TerminalHeatmaps {
             case Some(terminalWorkload) =>
               val heatMapSeries = paxloads(terminalWorkload, terminalName)
               val maxAcrossAllSeries = heatMapSeries.map(x => emptySafeMax(x.data)).max
-              log.info(s"Got max paxLoad of ${maxAcrossAllSeries}")
-              log.info(s"heatmap terminalWorkloas ${terminalWorkload.keys}")
+//              log.info(s"Got max paxLoad of ${maxAcrossAllSeries}")
+//              log.info(s"heatmap terminalWorkloas ${terminalWorkload.keys}")
               <.div(
                 Heatmap.heatmap(Heatmap.Props(series = heatMapSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
               )
@@ -72,22 +72,17 @@ object TerminalHeatmaps {
     }
   }
 
-  def heatmapOfWaittimes(terminalName: TerminalName) = {
-    val simulationResultRCP = SPACircuit.connect(_.simulationResult)
-    simulationResultRCP(simulationResultMP => {
-
-      log.info(s"simulation result keys ${simulationResultMP().keys}")
-      val seriesPot: Pot[List[Series]] = waitTimes(simulationResultMP().getOrElse(terminalName, Map()), terminalName)
-      <.div(
-        seriesPot.renderReady(queueSeries => {
-          val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => emptySafeMax(x.data)))
-          log.info(s"Got max waittime of ${maxAcrossAllSeries}")
-          <.div(
-            Heatmap.heatmap(Heatmap.Props(series = queueSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
-          )
-        }))
-    })
-
+  def heatmapOfWaittimes(terminalName: TerminalName, simulationResults: Map[QueueName, QueueSimulationResult]) = {
+//    log.info(s"simulation result keys ${simulationResults.keys}")
+    val seriesPot: Pot[List[Series]] = waitTimes(simulationResults, terminalName)
+    <.div(
+      seriesPot.renderReady(queueSeries => {
+        val maxAcrossAllSeries = emptySafeMax(queueSeries.map(x => emptySafeMax(x.data)))
+//        log.info(s"Got max waittime of ${maxAcrossAllSeries}")
+        <.div(
+          Heatmap.heatmap(Heatmap.Props(series = queueSeries.sortBy(_.name), scaleFunction = Heatmap.bucketScale(maxAcrossAllSeries)))
+        )
+      }))
   }
 
   def heatmapOfCrunchDeskRecs(terminalName: TerminalName) = {
@@ -157,7 +152,7 @@ object TerminalHeatmaps {
   }
 
   def workloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
-    log.info(s"!!!!looking up $terminalName in wls")
+//    log.info(s"!!!!looking up $terminalName in wls")
     val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60, WorkloadsHelpers.workloadByMillis)
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
@@ -168,7 +163,7 @@ object TerminalHeatmaps {
   }
 
   def paxloads(terminalWorkloads: Map[QueueName, (Seq[WL], Seq[Pax])], terminalName: String): List[Series] = {
-    log.info(s"!!!!looking up $terminalName in wls")
+//    log.info(s"!!!!looking up $terminalName in wls")
     val queueWorkloads: Predef.Map[String, List[Double]] = chartDataFromWorkloads(terminalWorkloads, 60, WorkloadsHelpers.paxloadByMillis)
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
@@ -178,10 +173,9 @@ object TerminalHeatmaps {
     result.toList
   }
 
-  def waitTimes(simulationResult: Map[QueueName, Pot[QueueSimulationResult]], terminalName: String): Pot[List[Series]] = {
+  def waitTimes(simulationResult: Map[QueueName, QueueSimulationResult], terminalName: TerminalName): Pot[List[Series]] = {
     val result: Iterable[Series] = for {
-      (queueName, simResultPot) <- simulationResult
-      simResult <- simResultPot
+      (queueName, simResult) <- simulationResult
       waitTimes = simResult.waitTimes
     } yield {
       Series(terminalName + "/" + queueName,
@@ -194,12 +188,12 @@ object TerminalHeatmaps {
   }
 
   def deskRecsVsActualDesks(queueCrunchResults: QueueCrunchResults, userDeskRecs: QueueStaffDeployments, terminalName: TerminalName): Pot[List[Series]] = {
-    log.info(s"deskRecsVsActualDesks")
+//    log.info(s"deskRecsVsActualDesks")
     val result: Iterable[Series] = for {
       queueName: QueueName <- queueCrunchResults.keys
       crunchResultsOption = queueCrunchResults.get(queueName)
-//      queueCrunchPot: Pot[Pot[CrunchResult]] <- queueCrunchResults.get(queueName)
-//      queueCrunch: Pot[CrunchResult] <- queueCrunchPot.toOption
+      //      queueCrunchPot: Pot[Pot[CrunchResult]] <- queueCrunchResults.get(queueName)
+      //      queueCrunch: Pot[CrunchResult] <- queueCrunchPot.toOption
       userDesksPot: Pot[DeskRecTimeSlots] <- userDeskRecs.get(queueName)
       userDesks: DeskRecTimeSlots <- userDesksPot.toOption
       crunchDeskRecsPair: CrunchResult <- crunchResultsOption
@@ -213,10 +207,10 @@ object TerminalHeatmaps {
           y._1.toDouble / y._2
         }).sum / 4
       )
-      log.info(s"-----deskRecsVsActualDesks: ${queueName}")
+//      log.info(s"-----deskRecsVsActualDesks: ${queueName}")
       Series(terminalName + "/" + queueName, ratioCrunchToUserRecsPerHour.toVector)
     }
-    log.info(s"gotDeskRecsvsAct, ${result.toList.length}")
+//    log.info(s"gotDeskRecsvsAct, ${result.toList.length}")
     result.toList match {
       case Nil => Pending()
       case _ => Ready(result.toList)
@@ -325,7 +319,7 @@ object Heatmap {
   val heatmap = ScalaComponent.builder[Props]("Heatmap")
     .renderP((_, props) => {
       try {
-        log.info(s"!!!! rendering heatmap")
+//        log.info(s"!!!! rendering heatmap")
         val margin = 200
         val componentWidth = props.width + margin
         val mult = 1

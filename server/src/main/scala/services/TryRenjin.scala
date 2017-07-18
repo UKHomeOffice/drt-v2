@@ -59,7 +59,7 @@ object TryRenjin {
       loadOptimiserScript
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
-      QueueSimulationResult(desks.zipWithIndex.map(t => DeskRec(t._2, t._1)).toIndexedSeq, runSimulation(desks, "desks", config).toVector)
+      QueueSimulationResult(desks.zipWithIndex.map(t => DeskRec(t._2, t._1)).toList, runSimulation(desks, "desks", config).toList)
     }
 
     def runSimulation(deskRecsScala: Seq[Int], desks: String, config: OptimizerConfig): Seq[Int] = {

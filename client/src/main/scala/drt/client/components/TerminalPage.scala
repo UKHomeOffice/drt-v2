@@ -137,7 +137,7 @@ object TerminalPage {
                       <.div(^.id := "paxloads", ^.className := "tab-pane fade",
                         heatmapOfPaxloads(props.terminalName)),
                       <.div(^.id := "waits", ^.className := "tab-pane fade",
-                        heatmapOfWaittimes(props.terminalName))
+                        "")//heatmapOfWaittimes(props.terminalName))
                     ))
                 })
               })
@@ -243,7 +243,7 @@ object TerminalPage {
 
   private val component = ScalaComponent.builder[Props]("Terminal")
     .renderBackend[Backend]
-    .componentDidMount((p) => Callback.log(s"terminalPage didMount $p"))
+    .componentDidMount((p) => Callback.log(s"terminalPage didMount"))
     .build
 }
 

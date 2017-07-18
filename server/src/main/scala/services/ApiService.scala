@@ -169,7 +169,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
     }.recover {
       case f =>
         log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
-        QueueSimulationResult(Vector.empty, Nil)
+        QueueSimulationResult(List(), Nil)
     }.get
   }
 
@@ -181,7 +181,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
         }.recover {
           case f =>
             log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
-            QueueSimulationResult(Vector.empty, Nil)
+            QueueSimulationResult(List(), Nil)
         }.get
         queueName -> queueSimResults
     }.toMap

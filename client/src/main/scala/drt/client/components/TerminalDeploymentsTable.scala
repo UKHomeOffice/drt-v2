@@ -95,7 +95,7 @@ object TerminalDeploymentsTable {
   case class PracticallyEverything(
                                     airportInfos: Map[String, Pot[AirportInfo]],
                                     flights: Pot[FlightsWithSplits],
-                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[QueueSimulationResult]]],
+                                    simulationResult: Map[TerminalName, Map[QueueName, QueueSimulationResult]],
                                     workload: Pot[Workloads],
                                     queueCrunchResults: Map[TerminalName, QueueCrunchResults],
                                     userDeskRec: Map[TerminalName, QueueStaffDeployments],
@@ -129,8 +129,8 @@ object TerminalDeploymentsTable {
           rowsOptMP() match {
             case None => <.div("No rows yet")
             case Some(rowsPot) =>
-              log.debug(s"rowLen ${rowsPot.map(_.length)}")
-              log.debug(s"rowsAre $rowsPot")
+//              log.debug(s"rowLen ${rowsPot.map(_.length)}")
+//              log.debug(s"rowsAre $rowsPot")
               <.div(
                 rowsPot.renderReady(rows =>
                   airportConfigPotRCP(airportConfigPotMP => {

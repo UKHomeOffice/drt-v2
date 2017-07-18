@@ -186,7 +186,7 @@ case class NoCrunchAvailable()
 
 object Simulations {
 
-  case class QueueSimulationResult(recommendedDesks: IndexedSeq[DeskRec], waitTimes: Seq[Int])
+  case class QueueSimulationResult(recommendedDesks: List[DeskRec], waitTimes: List[Int])
 
   type TerminalSimulationResultsFull = Map[QueueName, QueueSimulationResult]
 }

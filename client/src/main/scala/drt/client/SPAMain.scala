@@ -1,13 +1,14 @@
 package drt.client
 
 import diode.data.{Pot, Ready}
+import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
-import drt.client.components.{GlobalStyles, Layout, TerminalPage, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPage, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.RootModel.QueueCrunchResults
-import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
+import drt.client.services.{DeskRecTimeslot, RequestFlights, RootModel, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
@@ -40,7 +41,7 @@ object TableViewUtils {
                                timestamps: Seq[Long],
                                paxload: Map[String, List[Double]],
                                queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
-                               simulationResult: Map[QueueName, Pot[QueueSimulationResult]],
+                               simulationResult: Map[QueueName, QueueSimulationResult],
                                userDeskRec: QueueStaffDeployments,
                                actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
                              ): List[TerminalDeploymentsRow] = {
@@ -76,11 +77,11 @@ object TableViewUtils {
   def queueDeploymentRowsPerMinute(timestamps: Seq[Long],
                                    paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
-                                   simulationResult: Map[QueueName, Pot[QueueSimulationResult]],
+                                   simulationResult: Map[QueueName, QueueSimulationResult],
                                    userDeskRec: QueueStaffDeployments,
                                    queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
     simulationResult.get(queueName) match {
-      case Some(Ready(sr)) =>
+      case Some(sr) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
@@ -126,13 +127,13 @@ object TableViewUtils {
   def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: QueueCrunchResults,
                                    userDeskRec: QueueStaffDeployments,
-                                   simulationResult: Map[QueueName, Pot[QueueSimulationResult]], qn: QueueName
+                                   simulationResult: Map[QueueName, QueueSimulationResult], qn: QueueName
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 
-    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
-    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
-    val queueSimRes = simulationResult(qn).get
+//    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
+//    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
+    val queueSimRes = simulationResult(qn)
     val simulationResultWaitTimes = queueSimRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
     val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)
@@ -241,17 +242,19 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-    val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
+//    val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
     val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
       dynRenderR((page: TerminalsDashboardLoc, ctl) => {
         TerminalsDashboardPage(page.hours)
       })
     val terminal: dsl.Rule = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+").caseClass[TerminalDepsLoc]) ~>
-      dynRenderR((page: TerminalDepsLoc, ctl) => {
-        TerminalPage(page.id, ctl)
+      dynRenderR((page: TerminalDepsLoc, _) => {
+        val props = TerminalComponent.Props(terminalName = page.id)
+        TerminalComponent(props)
       })
 
-    val rule = home | terminal | terminalsDashboard
+//    val rule = home | terminal // | terminalsDashboard
+    val rule = terminal
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
@@ -261,7 +264,7 @@ object SPAMain extends js.JSApp {
   def pathToThisApp: String = dom.document.location.pathname
 
   def require(): Unit = {
-    log.info(s"app main require()")
+//    log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
     ()
@@ -277,7 +280,7 @@ object SPAMain extends js.JSApp {
     log.warn("Application starting")
     // send log messages also to the server
     //    log.enableServerLogging(pathToThisApp + "/logging")
-    log.info("This message goes to server as well")
+//    log.info("This message goes to server as well")
 
     // create stylesheet
     import scalacss.ScalaCssReact._
