@@ -14,9 +14,7 @@ import scala.util.{Success, Try}
 
 class CrunchCalculatorSpec extends Specification with Mockito {
 
-  def bankSize = {
-    5
-  }
+  def bankSize = 5
 
   override def is =
     s2"""
