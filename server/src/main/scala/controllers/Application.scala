@@ -82,7 +82,7 @@ object PaxFlow {
 }
 
 class ProdCrunchActor(hours: Int,
-                      val airportConfig: AirportConfig,
+                      override val airportConfig: AirportConfig,
                       val _flightPaxTypeAndQueueCountsFlow: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
                       timeProvider: () => DateTime,
                       _bestPax: (Arrival) => Int

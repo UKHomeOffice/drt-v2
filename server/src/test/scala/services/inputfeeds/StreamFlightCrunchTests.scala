@@ -384,7 +384,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
   }
 }
 
-class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
+class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
   extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
 
   override def bestPax(f: Arrival): Int = BestPax.bestPax(f)

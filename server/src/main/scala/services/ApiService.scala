@@ -2,7 +2,7 @@ package services
 
 import java.util.Date
 
-import actors.GetLatestCrunch
+import actors.{EGateBankCrunchTransformations, GetLatestCrunch}
 import akka.actor.ActorRef
 import akka.event.DiagnosticLoggingAdapter
 import akka.pattern.AskableActorRef
@@ -18,6 +18,7 @@ import services.workloadcalculator.PaxLoadCalculator.queueWorkAndPaxLoadCalculat
 import services.workloadcalculator.WorkloadCalculator
 
 import scala.collection.JavaConversions._
+import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -75,19 +76,20 @@ object WorkloadSimulation {
     else
       simulationResultForDesksAndWorkload(optimizerConfig, workloads, desks)
   }
+  val gatesPerBank = 5
+  val blockSize = 15
+  val fillByBlockSize = List.fill[Int](blockSize)_
 
   def simulationResultForDesksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x))
+    val desksPerMinute: List[Int] = desks.flatMap(x => fillByBlockSize(x))
 
-    TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
+    TryRenjin.runSimulationOfWork(workloads, desksPerMinute, optimizerConfig)
   }
-
-  def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): SimulationResult = {
-    val fulldesks: List[Int] = desks.flatMap(x => List.fill(15)(x * 5))
-
-    val simulationResult = TryRenjin.processWork(workloads, fulldesks, optimizerConfig)
-
-    simulationResult.copy(recommendedDesks = simulationResult.recommendedDesks.map(d => DeskRec(d.time, d.desks / 5)))
+  def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desksPerBlock: List[Int]): SimulationResult = {
+    val egatesPerMinute: List[Int] = desksPerBlock.flatMap(d => fillByBlockSize(d * gatesPerBank))
+    val simulationResult = TryRenjin.runSimulationOfWork(workloads, egatesPerMinute, optimizerConfig)
+    val crunchRecBanksPerMinute = simulationResult.recommendedDesks.map(d => DeskRec(d.time, d.desks / gatesPerBank))
+    simulationResult.copy(recommendedDesks = crunchRecBanksPerMinute)
   }
 }
 
@@ -172,8 +174,72 @@ abstract class ApiService(val airportConfig: AirportConfig)
   override def airportConfiguration() = airportConfig
 }
 
-trait LoggingCrunchCalculator extends CrunchCalculator {
+trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTransformations {
+  def airportConfig: AirportConfig
+  def crunchPeriodHours: Int
   def log: DiagnosticLoggingAdapter
+
+  def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
+    val tq: QueueName = terminalName + "/" + queueName
+    for (wl <- workloads) yield {
+      val triedWl: Try[Map[String, List[Double]]] = Try {
+        log.info(s"$tq lookup wl ")
+        val terminalWorkloads = wl.get(terminalName)
+        terminalWorkloads match {
+          case Some(twl: Map[QueueName, Seq[WL]]) =>
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchWindowStartTimeMillis, crunchPeriodHours)
+            log.info(s"$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
+            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
+            log.info(s"$tq crunchWindowStartTimeMillis: $crunchWindowStartTimeMillis, crunchPeriod: $crunchPeriodHours")
+            workloadsByQueue
+          case None =>
+            Map()
+        }
+      }
+
+      val r: Try[OptimizerCrunchResult] = triedWl.flatMap {
+        (terminalWorkloads: Map[String, List[Double]]) =>
+          log.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
+          val workloads: List[Double] = terminalWorkloads(queueName)
+          val queueSla = airportConfig.slaByQueue(queueName)
+
+          val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
+          val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
+          val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
+
+          val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
+          val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
+
+          val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
+          if (queueName == Queues.EGate)
+            crunchRes.map(crunchResSuccess => {
+              groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
+            })
+          else
+            crunchRes
+      }
+      val asFuture = r match {
+        case Success(s) =>
+          log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
+          val res = CrunchResult(crunchWindowStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
+          log.info(s"$tq Crunch complete")
+          res
+        case Failure(f) =>
+          log.warning(s"$tq Failed to crunch. ${f.getMessage}")
+          throw f
+      }
+      asFuture
+    }
+  }
+
+
+  private def adjustDesksForEgates(queueName: QueueName, desksByMinute: List[Int]) = {
+    if (queueName == Queues.EGate) {
+      desksByMinute.map(_ * 5)
+    } else {
+      desksByMinute
+    }
+  }
 
   def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
     log.info(s"Crunch requested for $terminalName, $queueName")

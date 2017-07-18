@@ -10,6 +10,7 @@ import services._
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 import spray.caching.{Cache, LruCache}
 
+import scala.collection.immutable
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -25,12 +26,12 @@ case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName)
 
 case class SaveCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResult: CrunchResult)
 
-object EGateBankCrunchTransformations {
+trait EGateBankCrunchTransformations {
 
   def groupEGatesIntoBanksWithSla(desksInBank: Int, sla: Int)(crunchResult: OptimizerCrunchResult, workloads: Seq[Double]): OptimizerCrunchResult = {
     val recommendedDesks = crunchResult.recommendedDesks.map(roundUpToNearestMultipleOf(desksInBank))
     val optimizerConfig = OptimizerConfig(sla)
-    val simulationResult = TryRenjin.processWork(workloads, recommendedDesks, optimizerConfig)
+    val simulationResult = runSimulation(workloads, recommendedDesks, optimizerConfig)
 
     crunchResult.copy(
       recommendedDesks = recommendedDesks.map(recommendedDesk => recommendedDesk / desksInBank),
@@ -38,8 +39,14 @@ object EGateBankCrunchTransformations {
     )
   }
 
+  protected[actors] def runSimulation(workloads: Seq[Double], recommendedDesks: immutable.IndexedSeq[Int], optimizerConfig: OptimizerConfig) = {
+    TryRenjin.runSimulationOfWork(workloads, recommendedDesks, optimizerConfig)
+  }
+
   def roundUpToNearestMultipleOf(multiple: Int)(number: Int) = math.ceil(number.toDouble / multiple).toInt * multiple
 }
+
+object EGateBankCrunchTransformations extends EGateBankCrunchTransformations
 
 object TimeZone {
   def lastLocalMidnightOn(now: DateTime) = now.toLocalDate.toDateTimeAtStartOfDay(localTimeZone)
@@ -47,8 +54,8 @@ object TimeZone {
   def localTimeZone = DateTimeZone.forID("Europe/London")
 }
 
-abstract class CrunchActor(crunchPeriodHours: Int,
-                           airportConfig: AirportConfig,
+abstract class CrunchActor(override val crunchPeriodHours: Int,
+                           override val airportConfig: AirportConfig,
                            timeProvider: () => DateTime
                           ) extends Actor
   with DiagnosticActorLogging
@@ -173,53 +180,4 @@ abstract class CrunchActor(crunchPeriodHours: Int,
     crunchWorkloads(workloads, terminalName, queueName, crunchWindowStartTimeMillis)
   }
 
-  def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
-    val tq: QueueName = terminalName + "/" + queueName
-    for (wl <- workloads) yield {
-      val triedWl: Try[Map[String, List[Double]]] = Try {
-        log.info(s"$tq lookup wl ")
-        val terminalWorkloads = wl.get(terminalName)
-        terminalWorkloads match {
-          case Some(twl: Map[QueueName, Seq[WL]]) =>
-            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchWindowStartTimeMillis, crunchPeriodHours)
-            log.info(s"$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
-            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
-            log.info(s"$tq crunchWindowStartTimeMillis: $crunchWindowStartTimeMillis, crunchPeriod: $crunchPeriodHours")
-            workloadsByQueue
-          case None =>
-            Map()
-        }
-      }
-
-      val r: Try[OptimizerCrunchResult] = triedWl.flatMap {
-        (terminalWorkloads: Map[String, List[Double]]) =>
-          log.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
-          val workloads: List[Double] = terminalWorkloads(queueName)
-          val queueSla = airportConfig.slaByQueue(queueName)
-
-          val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
-          val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
-          val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
-
-          val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, minDesksByMinute, maxDesksByMinute)
-          if (queueName == Queues.EGate)
-            crunchRes.map(crunchResSuccess => {
-              EGateBankCrunchTransformations.groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
-            })
-          else
-            crunchRes
-      }
-      val asFuture = r match {
-        case Success(s) =>
-          log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
-          val res = CrunchResult(crunchWindowStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
-          log.info(s"$tq Crunch complete")
-          res
-        case Failure(f) =>
-          log.warning(s"$tq Failed to crunch. ${f.getMessage}")
-          throw f
-      }
-      asFuture
-    }
-  }
 }

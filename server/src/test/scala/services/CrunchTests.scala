@@ -2,18 +2,28 @@ package services
 
 import actors.CrunchActor
 import akka.actor.{ActorSystem, Props}
+import akka.event.DiagnosticLoggingAdapter
 import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
 import drt.services.AirportConfigHelpers
 import org.joda.time.{DateTime, DateTimeZone}
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.FlightsApi.{TerminalName, TerminalQueuePaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
+import org.mockito.Mock
+import org.specs2.Specification
+import org.specs2.codata.Process.Await
+import org.specs2.specification.core.SpecStructure
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
-
+import org.specs2.mock.Mockito
+import scala.concurrent.duration._
 import scala.collection.immutable.{IndexedSeq, Seq}
 import utest._
+
+import scala.collection.parallel.immutable
+import scala.concurrent.Future
+import scala.util.{Success, Try}
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {
@@ -42,9 +52,10 @@ object CrunchStructureTests extends TestSuite {
 object FlightCrunchInteractionTests extends TestSuite {
   test =>
 
-  class TestCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
+  class TestCrunchActor(hours: Int, override val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
     extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
     override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
+
     def splitRatioProvider: (Arrival => Option[SplitRatios]) =
       _ => Some(SplitRatios(
         TestAirportConfig,
@@ -77,3 +88,5 @@ object FlightCrunchInteractionTests extends TestSuite {
     }
   }
 }
+
+

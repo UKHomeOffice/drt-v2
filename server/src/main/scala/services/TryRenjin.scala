@@ -26,7 +26,7 @@ object TryRenjin {
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
 
-  def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
+  def runSimulationOfWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): SimulationResult = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.processWork(workloads, desks, config)
   }
