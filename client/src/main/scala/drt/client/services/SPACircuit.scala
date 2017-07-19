@@ -102,6 +102,11 @@ case class RootModel(
       case _ => ""
     }
 
+    val movements = staffMovements match {
+      case Ready(mm) => mm
+      case _ => Seq()
+    }
+
     val shifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
     val fixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
     //todo we have essentially this code elsewhere, look for successfulShifts
@@ -113,7 +118,7 @@ case class RootModel(
 
       val successfulFixedPoints = fixedPoints.collect { case Success(s) => s }
       val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
-      StaffMovements.terminalStaffAt(ss, fps)(staffMovements) _
+      StaffMovements.terminalStaffAt(ss, fps)(movements) _
     }
 
     val pdr = PortDeployment.portDeskRecs(queueCrunchResults)

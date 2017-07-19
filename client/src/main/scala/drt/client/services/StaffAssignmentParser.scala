@@ -3,6 +3,7 @@ package drt.client.services
 import java.util.UUID
 
 import diode.data.Pot
+import drt.client.logger._
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
@@ -51,6 +52,7 @@ object JSDateConversions {
         newDate.setHours(newDate.getHours() + hoursToAdd)
         newDate
       }
+
       def addMinutes(minutesToAdd: Int): SDateLike = {
         val newDate = new Date(millisSinceEpoch)
         newDate.setMinutes(newDate.getMinutes() + minutesToAdd)
@@ -58,8 +60,6 @@ object JSDateConversions {
       }
 
       def millisSinceEpoch: Long = date.getTime().toLong
-
-
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
@@ -85,19 +85,11 @@ object JSDateConversions {
       JSSDate(d)
     }
 
-
     def now(): SDateLike = {
       val d = new Date()
       JSSDate(d)
     }
-//
-//    val realNow = () => {
-//      val d = new Date()
-//      JSSDate(d)
-//    }
-
   }
-
 }
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
@@ -171,12 +163,12 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
 
 trait StaffAssignmentService {
   def staffAt(date: MilliDate): Int
+
   def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int
 }
 
 case class StaffAssignmentServiceWithoutDates(assignments: Seq[StaffAssignment]) extends StaffAssignmentService {
-  def staffAt(date: MilliDate): Int = assignments.filter(assignment =>
-    assignment.startDt <= date && date <= assignment.endDt).map(_.numberOfStaff).sum
+  def staffAt(date: MilliDate): Int = assignments.map(_.numberOfStaff).sum
 
   def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
     assignment.terminalName == terminalName
@@ -229,12 +221,10 @@ object StaffMovements {
     baseStaff - fixedPoints + adjustmentsAt(movements)(dateTime)
   }
 
-  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentService)(movements: Pot[Seq[StaffMovement]])(terminalName: TerminalName, dateTime: MilliDate) = {
+  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
     val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
     val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTime)
-    val movementAdjustments = if (movements.isReady) {
-      adjustmentsAt(movements.get.filter(_.terminalName == terminalName))(dateTime)
-    } else 0
+    val movementAdjustments = adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
     baseStaff - fixedPointStaff + movementAdjustments
   }
 }

@@ -1,20 +1,17 @@
 package drt.client.components
 
-import java.io
-
-import diode.data.{Empty, Pot, Ready}
+import diode.data.Pot
 import diode.react.ModelProxy
-import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react._
-import org.scalajs.dom.html
-import org.scalajs.dom.html.Div
+import drt.client.actions.Actions._
 import drt.client.logger._
+import drt.client.services.FixedPoints._
 import drt.client.services.JSDateConversions._
 import drt.client.services._
-import drt.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
-import drt.client.actions.Actions._
 import drt.shared.FlightsApi.TerminalName
-import drt.client.services.FixedPoints._
+import drt.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.html.Div
 
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
@@ -77,8 +74,8 @@ object TerminalStaffing {
         val successfulTerminalFixedPoints = successfulFixedPoints.filter(_.terminalName == terminalName)
         val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
         val fps = StaffAssignmentServiceWithoutDates(successfulTerminalFixedPoints)
-        val staffWithShiftsAndMovementsAt = StaffMovements.staffAt(ss, fps)(movements.filter(_.terminalName == terminalName)) _
-        staffingTableHourPerColumn(daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
+        val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss, fps)(movements) _
+        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
       }
     )
   }
@@ -148,7 +145,7 @@ object TerminalStaffing {
     daysWorthOf15Minutes
   }
 
-  def staffingTableHourPerColumn(daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (MilliDate) => Int) = {
+  def staffingTableHourPerColumn(terminalName: TerminalName, daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (TerminalName, MilliDate) => Int) = {
     <.table(
       ^.className := "table table-striped table-xcondensed table-sm",
       <.tbody(
@@ -164,7 +161,7 @@ object TerminalStaffing {
               }),
               <.tr(^.key := s"vr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}",
                 hoursWorthOf15Minutes.map(t => {
-                  <.td(^.key := t, s"${staffWithShiftsAndMovements(t)}")
+                  <.td(^.key := t, s"${staffWithShiftsAndMovements(terminalName, t)}")
                 }).toTagMod
               ))
         }.toTagMod

@@ -408,7 +408,7 @@ object ShiftsServiceTests extends TestSuite {
             "Contain staff for a terminal shift" - {
 
               val sDate = SDate(2016, 12, 10, 10, 0)
-              val result = terminalStaffAt( shiftService, fixedPointService)(Ready(Nil))("T1", sDate)
+              val result = terminalStaffAt( shiftService, fixedPointService)(Nil)("T1", sDate)
 
               assert(result == 9)
             }
