@@ -36,7 +36,7 @@ object TableViewUtils {
 
   def terminalDeploymentsRows(
                                terminalName: TerminalName,
-                               airportConfigPot: Pot[AirportConfig],
+                               airportConfig: AirportConfig,
                                timestamps: Seq[Long],
                                paxload: Map[String, List[Double]],
                                queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
@@ -44,23 +44,19 @@ object TableViewUtils {
                                userDeskRec: QueueStaffDeployments,
                                actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
                              ): List[TerminalDeploymentsRow] = {
-    airportConfigPot match {
-      case Ready(airportConfig) =>
-        val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
-          case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
-          case queueName =>
-            val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
-            DeskStats.withActuals(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
-        }.toList
+    val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
+      case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
+      case queueName =>
+        val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+        DeskStats.withActuals(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
+    }.toList
 
-        val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
+    val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
 
-        queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDeploymentsRow)])) => {
-          val qr = queueRows._2.map(_._2)
-          TerminalDeploymentsRow(queueRows._1, qr)
-        }).toList.sortWith(_.time < _.time)
-      case _ => List()
-    }
+    queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDeploymentsRow)])) => {
+      val qr = queueRows._2.map(_._2)
+      TerminalDeploymentsRow(queueRows._1, qr)
+    }).toList.sortWith(_.time < _.time)
   }
 
   def transferPaxRowsPerMinute(timestamps: Seq[Long], queuePaxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
@@ -130,8 +126,8 @@ object TableViewUtils {
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 
-//    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
-//    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
+    //    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
+    //    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
     val queueSimRes = simulationResult(qn)
     val simulationResultWaitTimes = queueSimRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
@@ -241,7 +237,7 @@ object SPAMain extends js.JSApp {
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-//    val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
+    //    val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
     val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
       dynRenderR((page: TerminalsDashboardLoc, ctl) => {
         TerminalsDashboardPage(page.hours)
@@ -252,7 +248,7 @@ object SPAMain extends js.JSApp {
         TerminalComponent(props)
       })
 
-//    val rule = home | terminal // | terminalsDashboard
+    //    val rule = home | terminal // | terminalsDashboard
     val rule = terminal
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
@@ -263,7 +259,7 @@ object SPAMain extends js.JSApp {
   def pathToThisApp: String = dom.document.location.pathname
 
   def require(): Unit = {
-//    log.info(s"app main require()")
+    //    log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
     ()
@@ -279,7 +275,7 @@ object SPAMain extends js.JSApp {
     log.warn("Application starting")
     // send log messages also to the server
     //    log.enableServerLogging(pathToThisApp + "/logging")
-//    log.info("This message goes to server as well")
+    //    log.info("This message goes to server as well")
 
     // create stylesheet
     import scalacss.ScalaCssReact._

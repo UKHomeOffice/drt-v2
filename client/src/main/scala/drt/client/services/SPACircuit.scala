@@ -129,42 +129,42 @@ case class RootModel(
     }
   }
 
-  lazy val calculatedDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
-    airportConfig.map(ac => ac.terminalNames.map(terminalName => {
-      calculateTerminalDeploymentRows(terminalName)
-    }).toMap)
-  }
+//  lazy val calculatedDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
+//    airportConfig.map(ac => ac.terminalNames.map(terminalName => {
+//      calculateTerminalDeploymentRows(terminalName)
+//    }).toMap)
+//  }
 
-  def calculateTerminalDeploymentRows(terminalName: TerminalName): (TerminalName, Pot[List[TerminalDeploymentsRow]]) = {
-    val crv = queueCrunchResults.getOrElse(terminalName, Map())
-    val srv = simulationResult.getOrElse(terminalName, Map())
-    val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
-    val terminalDeploymentRows: Pot[List[TerminalDeploymentsRow]] = workloadPot.map(workloads => {
-      workloads.workloads.get(terminalName) match {
-        case Some(terminalWorkloads) =>
-          val tried: Try[List[TerminalDeploymentsRow]] = Try {
-            val timestamps = workloads.timeStamps()
-            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-
-            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
-            val actDesksForTerminal = actualDeskStats.getOrElse(terminalName, Map())
-
-            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
-          } recover {
-            case f =>
-              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
-              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
-              Nil
-          }
-          tried.get
-        case None =>
-          Nil
-      }
-    })
-    terminalName -> terminalDeploymentRows
-  }
-
+//  def calculateTerminalDeploymentRows(terminalName: TerminalName): Pot[List[TerminalDeploymentsRow]] = {
+//    log.info(s"calculateTerminalDeploymentRows called $terminalName")
+//    val crv = queueCrunchResults.getOrElse(terminalName, Map())
+//    val srv = simulationResult.getOrElse(terminalName, Map())
+//    val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
+//    val terminalDeploymentRows: Pot[List[TerminalDeploymentsRow]] = workloadPot.map(workloads => {
+//      workloads.workloads.get(terminalName) match {
+//        case Some(terminalWorkloads) =>
+//          val tried: Try[List[TerminalDeploymentsRow]] = Try {
+//            val timestamps = workloads.timeStamps()
+//            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+//            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+//
+//            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+//            val actDesksForTerminal = actualDeskStats.getOrElse(terminalName, Map())
+//
+//            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
+//          } recover {
+//            case f =>
+//              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
+//              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
+//              Nil
+//          }
+//          tried.get
+//        case None =>
+//          Nil
+//      }
+//    })
+//    terminalDeploymentRows
+//  }
 
   override def toString: String =
     s"""

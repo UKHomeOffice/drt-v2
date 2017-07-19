@@ -1,7 +1,8 @@
 package drt.client.components
 
-import diode.data.Pot
+import diode.data.{Pot, Ready}
 import diode.react._
+import drt.client.TableViewUtils
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
@@ -18,7 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.{TableHeaderCell, TableRow}
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.{Map, NumericRange, Seq}
 import scala.scalajs.js.Date
 import scala.util.Try
 
@@ -92,30 +93,57 @@ object TerminalDeploymentsTable {
       ))
   }
 
-  case class TerminalProps(terminalName: String, flightsWithSplitsPot: Pot[FlightsWithSplits])
+  case class TerminalProps(
+                            airportConfig: AirportConfig,
+                            terminalName: String,
+                            flightsWithSplitsPot: Pot[FlightsWithSplits],
+                            simulationResult: Map[QueueName, QueueSimulationResult],
+                            crunchResult: Map[QueueName, CrunchResult],
+                            deployments: QueueStaffDeployments,
+                            workloads: Workloads,
+                            actualDesks: Map[QueueName, Map[Long, DeskStat]]
+                          )
 
   def terminalDeploymentsComponent(props: TerminalProps) = {
-    val terminalUserDeskRecsRows = SPACircuit.connect(model =>
-      model.calculatedDeploymentRows.getOrElse(Map()).get(props.terminalName)
-    )
     val airportWrapper = SPACircuit.connect(_.airportInfos)
-    val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
 
     <.div(
-      terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
-        rowsOptMP() match {
-          case None => <.div("No rows yet")
-          case Some(rowsPot) =>
-            <.div(
-              rowsPot.renderReady(rows =>
-                airportConfigPotRCP(airportConfigPotMP => {
-                  <.div(
-                    airportConfigPotMP().renderReady(airportConfig =>
-                      renderTerminalUserTable(props.terminalName, airportWrapper, props.flightsWithSplitsPot, rows, airportConfig))
-                  )
-                })))
-        }
-      }))
+      calculateTerminalDeploymentRows(props) match {
+        case Nil => <.div("No rows yet")
+        case rows =>
+          renderTerminalUserTable(props.terminalName, airportWrapper, props.flightsWithSplitsPot, rows, props.airportConfig)
+      }
+    )
+  }
+
+  def calculateTerminalDeploymentRows(props: TerminalProps): List[TerminalDeploymentsRow] = {
+    log.info(s"calculateTerminalDeploymentRows called ${props.terminalName}")
+    val crv = props.crunchResult
+    val srv = props.simulationResult
+    val udr = props.deployments
+    val terminalDeploymentRows: List[TerminalDeploymentsRow] =
+      props.workloads.workloads.get(props.terminalName) match {
+        case Some(terminalWorkloads) =>
+          val tried: Try[List[TerminalDeploymentsRow]] = Try {
+            val timestamps = props.workloads.timeStamps()
+            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+
+            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+            val actDesksForTerminal = props.actualDesks
+
+            TableViewUtils.terminalDeploymentsRows(props.terminalName, props.airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
+          } recover {
+            case f =>
+              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
+              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
+              Nil
+          }
+          tried.get
+        case None =>
+          Nil
+      }
+    terminalDeploymentRows
   }
 
   case class RowProps(item: TerminalDeploymentsRow, index: Int,

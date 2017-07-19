@@ -7,17 +7,17 @@ import drt.client.components.FlightComponents.paxComp
 import drt.client.components.Heatmap.Series
 import drt.client.components.TerminalHeatmaps._
 import drt.client.logger.log
-import drt.client.services.SPACircuit
-import drt.shared._
+import drt.client.services.HandyStuff.QueueStaffDeployments
+import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
-import japgolly.scalajs.react.component.{Generic, Js, Scala}
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, CtorType, ScalaComponent}
+import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 
+import scala.collection.immutable.Map
 import scala.util.Try
 
 object TerminalComponent {
@@ -28,6 +28,10 @@ object TerminalComponent {
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             simulationResult: Map[QueueName, QueueSimulationResult],
+                            crunchResult: Map[QueueName, CrunchResult],
+                            deployments: QueueStaffDeployments,
+                            workloads: Workloads,
+                            actualDesks: Map[QueueName, Map[Long, DeskStat]],
                             flightsWithSplitsPot: Pot[FlightsWithSplits])
 
   def render(props: Props) = {
@@ -35,6 +39,10 @@ object TerminalComponent {
       model.airportConfig,
       model.airportInfos.getOrElse(props.terminalName, Pending()),
       model.simulationResult.getOrElse(props.terminalName, Map()),
+      model.queueCrunchResults.getOrElse(props.terminalName, Map()),
+      model.staffDeploymentsByTerminalAndQueue.getOrElse(props.terminalName, Map()),
+      model.workloadPot.getOrElse(Workloads(Map())),
+      model.actualDeskStats.getOrElse(props.terminalName, Map()),
       model.flightsWithSplitsPot
     ))
 
@@ -47,11 +55,16 @@ object TerminalComponent {
             model.simulationResult)
 
           val terminalContentProps = TerminalContentComponent.Props(
-            airportConfig.portCode,
+            airportConfig,
             props.terminalName,
-            airportConfig.queueOrder,
             model.airportInfos,
-            model.flightsWithSplitsPot)
+            model.flightsWithSplitsPot,
+            model.simulationResult,
+            model.crunchResult,
+            model.deployments,
+            model.workloads,
+            model.actualDesks
+          )
 
           <.div(
             HeatmapComponent(heatmapProps),
@@ -77,41 +90,49 @@ object HeatmapComponent {
   case class Props(
                     terminalName: TerminalName,
                     simulationResults: Map[QueueName, QueueSimulationResult]
-                  )
-
-  def render(props: Props) = {
-    <.div({
-      val seriesPot: Pot[List[Series]] = waitTimes(props.simulationResults, props.terminalName)
-      <.div(
-        <.ul(^.className := "nav nav-tabs",
-          <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations")),
-          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads")),
-          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Paxloads")),
-          <.li(seriesPot.renderReady(s => {
-            <.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times")
-          }))
-        )
-        ,
-        <.div(^.className := "tab-content",
-          <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
-            heatmapOfStaffDeploymentDeskRecs(props.terminalName)),
-          <.div(^.id := "workloads", ^.className := "tab-pane fade",
-            heatmapOfWorkloads(props.terminalName)),
-          <.div(^.id := "paxloads", ^.className := "tab-pane fade",
-            heatmapOfPaxloads(props.terminalName)),
-          <.div(^.id := "waits", ^.className := "tab-pane fade",
-            heatmapOfWaittimes(props.terminalName, props.simulationResults))
-        ))
-    })
+                  ) {
+    lazy val hash = simulationResults.values.map(_.hashCode).hashCode()
   }
 
-  implicit val deskRecReuse = Reusability.caseClass[DeskRec]
-  implicit val queueSimulationResultReuse = Reusability.caseClass[QueueSimulationResult]
-  implicit val queueNameToQueueSimulationResultReuse = Reusability.map[QueueName, QueueSimulationResult]
-  implicit val propsReuse = Reusability.caseClass[Props]
+  case class State(activeTab: String)
+
+  implicit val propsReuse = Reusability.by((_: Props).hash)
+  implicit val stateReuse = Reusability.caseClass[State]
 
   val component = ScalaComponent.builder[Props]("Heatmaps")
-    .render_P(render)
+    .initialState(State("deskrecs"))
+    .renderPS((scope, props, state) =>
+      <.div({
+        val seriesPot: Pot[List[Series]] = waitTimes(props.simulationResults, props.terminalName)
+        <.div(
+          <.ul(^.className := "nav nav-tabs",
+            <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations"), ^.onClick --> scope.modState(_ => State("deskrecs"))),
+            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads"), ^.onClick --> scope.modState(_ => State("workloads"))),
+            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Paxloads"), ^.onClick --> scope.modState(_ => State("paxloads"))),
+            <.li(seriesPot.renderReady(s => {
+              <.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times", ^.onClick --> scope.modState(_ => State("waits")))
+            }))
+          )
+          ,
+          <.div(^.className := "tab-content",
+            <.div(^.id := "deskrecs", ^.className := "tab-pane fade in active",
+              if (state.activeTab == "deskrecs") {
+                heatmapOfStaffDeploymentDeskRecs(props.terminalName)
+              } else ""),
+            <.div(^.id := "workloads", ^.className := "tab-pane fade",
+              if (state.activeTab == "workloads") {
+                heatmapOfWorkloads(props.terminalName)
+              } else ""),
+            <.div(^.id := "paxloads", ^.className := "tab-pane fade",
+              if (state.activeTab == "paxloads") {
+                heatmapOfPaxloads(props.terminalName)
+              } else ""),
+            <.div(^.id := "waits", ^.className := "tab-pane fade",
+              if (state.activeTab == "waits") {
+                heatmapOfWaittimes(props.terminalName, props.simulationResults)
+              } else "")
+          ))
+      }))
     .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
 
@@ -121,12 +142,31 @@ object HeatmapComponent {
 object TerminalContentComponent {
 
   case class Props(
-                    portCode: String,
+                    airportConfig: AirportConfig,
                     terminalName: TerminalName,
-                    queueOrder: List[PaxTypeAndQueue],
                     airportInfoPot: Pot[AirportInfo],
-                    flightsWithSplitsPot: Pot[FlightsWithSplits]
-                  )
+                    flightsWithSplitsPot: Pot[FlightsWithSplits],
+                    simulationResult: Map[QueueName, QueueSimulationResult],
+                    crunchResult: Map[QueueName, CrunchResult],
+                    deployments: QueueStaffDeployments,
+                    workloads: Workloads,
+                    actualDesks: Map[QueueName, Map[Long, DeskStat]]
+                  ) {
+    lazy val hash = flightsWithSplitsPot.toOption.map(_.flights.map(f => {
+      (f.splits.hashCode,
+        f.apiFlight.Status,
+        f.apiFlight.Gate,
+        f.apiFlight.Stand,
+        f.apiFlight.SchDT,
+        f.apiFlight.EstDT,
+        f.apiFlight.ActDT,
+        f.apiFlight.EstChoxDT,
+        f.apiFlight.ActChoxDT,
+        f.apiFlight.PcpTime,
+        f.apiFlight.ActPax
+      )
+    }))
+  }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
@@ -150,15 +190,15 @@ object TerminalContentComponent {
   case class State(activeTab: String)
 
   class Backend(t: BackendScope[Props, State]) {
-    val x = FlightsWithSplitsTable.ArrivalsTable(
+    val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
       timelineComp,
       originMapper,
       splitsGraphComponentColoured)(paxComp(843))
 
 
     def render(props: Props, state: State) = {
-      val bestPax = BestPax(props.portCode)
-      val queueOrder = props.queueOrder
+      val bestPax = BestPax(props.airportConfig.portCode)
+      val queueOrder = props.airportConfig.queueOrder
 
       <.div(
         <.ul(^.className := "nav nav-tabs",
@@ -172,15 +212,24 @@ object TerminalContentComponent {
               val flights: Pot[FlightsApi.FlightsWithSplits] = props.flightsWithSplitsPot
 
               <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-                val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
                 val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
-                x(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
+                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
               }))
             } else ""
           }),
           <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
             if (state.activeTab == "queues") {
-              TerminalDeploymentsTable.terminalDeploymentsComponent(TerminalDeploymentsTable.TerminalProps(props.terminalName, props.flightsWithSplitsPot))
+              val deploymentProps = TerminalDeploymentsTable.TerminalProps(
+                props.airportConfig,
+                props.terminalName,
+                props.flightsWithSplitsPot,
+                props.simulationResult,
+                props.crunchResult,
+                props.deployments,
+                props.workloads,
+                props.actualDesks
+              )
+              TerminalDeploymentsTable.terminalDeploymentsComponent(deploymentProps)
             } else ""
           ),
           <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
@@ -192,27 +241,8 @@ object TerminalContentComponent {
     }
   }
 
-  implicit val airportInfoReuse = Reusability.always[Pot[AirportInfo]]
-  implicit val flightsWithSplitsReuse =
-    Reusability.by((flightsPot: Pot[FlightsWithSplits]) => {
-      flightsPot.toOption.map(_.flights.map(f => {
-        (f.splits.hashCode(),
-          f.apiFlight.Status,
-          f.apiFlight.Gate,
-          f.apiFlight.Stand,
-          f.apiFlight.SchDT,
-          f.apiFlight.EstDT,
-          f.apiFlight.ActDT,
-          f.apiFlight.EstChoxDT,
-          f.apiFlight.ActChoxDT,
-          f.apiFlight.PcpTime,
-          f.apiFlight.ActPax
-        )
-      }))
-    })
-  implicit val paxTypeAndQueueReuse = Reusability.always[PaxTypeAndQueue]
-  implicit val propsReuse = Reusability.caseClass[Props]
-  implicit val stateReuse  = Reusability.caseClass[State]
+  implicit val propsReuse = Reusability.by((_: Props).hash)
+  implicit val stateReuse = Reusability.caseClass[State]
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialState(State("arrivals"))
