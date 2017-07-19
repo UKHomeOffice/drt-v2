@@ -81,68 +81,41 @@ object TerminalDeploymentsTable {
   }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportInfoConnectProxy: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
+                              flightsWithSplitsPot: Pot[FlightsWithSplits], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
     <.div(
       TerminalDeploymentsTable(
         terminalName,
         rows,
-        peMP().flights,
+        flightsWithSplitsPot,
         airportConfig,
         airportInfoConnectProxy
       ))
   }
 
-  case class PracticallyEverything(
-                                    airportInfos: Map[String, Pot[AirportInfo]],
-                                    flights: Pot[FlightsWithSplits],
-                                    simulationResult: Map[TerminalName, Map[QueueName, QueueSimulationResult]],
-                                    workload: Pot[Workloads],
-                                    queueCrunchResults: Map[TerminalName, QueueCrunchResults],
-                                    userDeskRec: Map[TerminalName, QueueStaffDeployments],
-                                    shiftsRaw: Pot[String]
-                                  )
-
-  case class TerminalProps(terminalName: String)
+  case class TerminalProps(terminalName: String, flightsWithSplitsPot: Pot[FlightsWithSplits])
 
   def terminalDeploymentsComponent(props: TerminalProps) = {
-    val practicallyEverything = SPACircuit.connect(model => {
-      PracticallyEverything(
-        model.airportInfos,
-        model.flightsWithSplitsPot,
-        model.simulationResult,
-        model.workloadPot,
-        model.queueCrunchResults,
-        model.staffDeploymentsByTerminalAndQueue,
-        model.shiftsRaw
-      )
-    })
-
     val terminalUserDeskRecsRows = SPACircuit.connect(model =>
       model.calculatedDeploymentRows.getOrElse(Map()).get(props.terminalName)
     )
     val airportWrapper = SPACircuit.connect(_.airportInfos)
     val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
 
-    practicallyEverything(peMP => {
-      <.div(
-        terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
-          rowsOptMP() match {
-            case None => <.div("No rows yet")
-            case Some(rowsPot) =>
-//              log.debug(s"rowLen ${rowsPot.map(_.length)}")
-//              log.debug(s"rowsAre $rowsPot")
-              <.div(
-                rowsPot.renderReady(rows =>
-                  airportConfigPotRCP(airportConfigPotMP => {
-                    <.div(
-                      airportConfigPotMP().renderReady(airportConfig =>
-                        renderTerminalUserTable(props.terminalName, airportWrapper, peMP, rows, airportConfig))
-                    )
-                  })))
-          }
-        }),
-        peMP().workload.renderPending(_ => <.div("Waiting for workloads")))
-    })
+    <.div(
+      terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
+        rowsOptMP() match {
+          case None => <.div("No rows yet")
+          case Some(rowsPot) =>
+            <.div(
+              rowsPot.renderReady(rows =>
+                airportConfigPotRCP(airportConfigPotMP => {
+                  <.div(
+                    airportConfigPotMP().renderReady(airportConfig =>
+                      renderTerminalUserTable(props.terminalName, airportWrapper, props.flightsWithSplitsPot, rows, airportConfig))
+                  )
+                })))
+        }
+      }))
   }
 
   case class RowProps(item: TerminalDeploymentsRow, index: Int,
@@ -207,7 +180,7 @@ object TerminalDeploymentsTable {
     val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(item.time), SDate(item.time).addHours(1), "left", "+")()
     val queueRowCellsWithTotal: List[html_<^.TagMod] = (queueRowCells :+
       <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
-      <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className:="deployed",totalDeployed), upMovementPopup)) :+ transferCells
+      <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", totalDeployed), upMovementPopup)) :+ transferCells
       ).toList
     <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
   }
@@ -314,23 +287,21 @@ object TerminalDeploymentsTable {
   def initState() = false
 
 
-  implicit val deskRecTimeslotReuse = Reusability.caseClass[DeskRecTimeslot]
-  implicit val doubleReuse = Reusability.double(1)
-  implicit val queueRowEntryReuse = Reusability.caseClass[QueueDeploymentsRowEntry]
-  implicit val queuePaxRowEntryReuse = Reusability.caseClass[QueuePaxRowEntry]
-  implicit val queueRowEntryBaseReuse = Reusability[QueueDeploymentsRow] {
-    case (a: QueuePaxRowEntry, b: QueuePaxRowEntry) => queuePaxRowEntryReuse.test(a, b)
-    case (a: QueueDeploymentsRowEntry, b: QueueDeploymentsRowEntry) => queueRowEntryReuse.test(a, b)
-    case _ => false
-  }
-  implicit val terminalReuse = Reusability.caseClass[TerminalDeploymentsRow]
-  implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos)
+  implicit val reuse = Reusability.by((props: Props) => {
+    props.items.map(tdr => {
+      tdr.queueDetails.collect {
+        case qdre: QueueDeploymentsRowEntry => qdre.hashCode()
+      }
+    })
+  })
+
   implicit val stateReuse = Reusability.caseClass[State]
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .initialState[State](State(false))
     .renderPS((sc, p, s) => Backend(sc, p, s))
-    .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount((p) => Callback.log(s"terminal deployments component didMount"))
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
 
   def apply(terminalName: String, rows: List[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],

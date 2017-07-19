@@ -22,30 +22,20 @@ object FlightsWithSplitsTable {
 
   case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
 
-  //  implicit val paxTypeReuse = Reusability.byRef[PaxType]
-  //  implicit val doubleReuse = Reusability.double(0.001)
-  //  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
-  //  implicit val paxtypeandQueueReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
-  //  implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
-  //  implicit val flightReuse = Reusability.caseClass[Arrival]
-  //  implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
-  //  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
-  //  implicit val paxTypeAndQueueReuse = Reusability.caseClass[PaxTypeAndQueue]
-  //  implicit val bestPaxReuse = Reusability.byRefOr_==[BestPaxForArrivalF]
-
-  //  implicit val flightReuse = Reusability.caseClassExcept[Arrival]('Operator, 'MaxPax, 'RunwayID, 'BaggageReclaimId, 'FlightID, 'AirportID)
-  //  implicit val apiflightsWithSplitsReuse = Reusability.caseClassExcept[ApiFlightWithSplits]('splits)
-  //  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
-  //  implicit val propsReuse = Reusability.caseClassExcept[Props]('queueOrder, 'bestPax)
-
-  //  implicit val apiFlightWithSplitsReuse = Reusability.by((fp: ApiFlightWithSplits) => {
-  //    fp.map(f => f.flights.map(af => {
-  //      (af.apiFlight.PcpTime, af.splits.map(_.hashCode()))
-  //    }))
-  //  })
   implicit val propsReuse = Reusability.by((props: Props) => {
     props.flightsWithSplits.flights.map(af => {
-      (af.splits.hashCode(), af.apiFlight.PcpTime, af.apiFlight.Status, af.apiFlight.Gate, af.apiFlight.Stand, af.apiFlight.ActChoxDT)
+      (af.splits.hashCode(),
+        af.apiFlight.Status,
+        af.apiFlight.Gate,
+        af.apiFlight.Stand,
+        af.apiFlight.SchDT,
+        af.apiFlight.EstDT,
+        af.apiFlight.ActDT,
+        af.apiFlight.EstChoxDT,
+        af.apiFlight.ActChoxDT,
+        af.apiFlight.PcpTime,
+        af.apiFlight.ActPax
+      )
     })
   })
 
@@ -131,36 +121,22 @@ object FlightTableRow {
                    bestPax: (Arrival) => Int
                   )
 
-  //  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
-  //  implicit val paxTypeReuse = Reusability.byRef[PaxType]
-  //  implicit val doubleReuse = Reusability.double(0.01)
-  //  implicit val paxTypeAndQueueCountReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
-  //  implicit val paxTypeAndQueueReuse = Reusability.caseClass[PaxTypeAndQueue]
-  ////    implicit val flightReuse = Reusability.caseClass[List[ApiPaxTypeAndQueueCount]]
-  ////    implicit val flightReuse = Reusability.caseClass[List[Arrival]]
-  //  implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
-  //  implicit val flightReuse = Reusability.caseClass[Arrival]
-  //  implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
-  //  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
-  //
-  //  implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
-  //  implicit val arrivalToPax = Reusability.byRefOr_==[BestPaxForArrivalF]
-
-//  implicit val flightReuse = Reusability.caseClassExcept[Arrival]('Operator, 'MaxPax, 'RunwayID, 'BaggageReclaimId, 'FlightID,
-//    'AirportID, 'LastKnownPax, 'Terminal, 'PcpTime, 'rawIATA, 'rawICAO)
-//  implicit val apiflightsWithSplitsReuse = Reusability.caseClassExcept[ApiFlightWithSplits]('splits)
-//  implicit val propsReuse = Reusability.caseClassExcept[Props]('codeShares, 'idx, 'timelineComponent, 'originMapper, 'paxComponent, 'splitsGraphComponent, 'splitsQueueOrder, 'bestPax)
-
   implicit val propsReuse = Reusability.by((props: Props) => {
-    (props.flightWithSplits.splits.hashCode(), props.flightWithSplits.apiFlight.PcpTime)
+    (props.flightWithSplits.splits.hashCode(),
+      props.flightWithSplits.apiFlight.Status,
+      props.flightWithSplits.apiFlight.Gate,
+      props.flightWithSplits.apiFlight.Stand,
+      props.flightWithSplits.apiFlight.SchDT,
+      props.flightWithSplits.apiFlight.EstDT,
+      props.flightWithSplits.apiFlight.ActDT,
+      props.flightWithSplits.apiFlight.EstChoxDT,
+      props.flightWithSplits.apiFlight.ActChoxDT,
+      props.flightWithSplits.apiFlight.PcpTime,
+      props.flightWithSplits.apiFlight.ActPax
+    )
   })
 
-  //  case class RowState(hasChanged: Boolean)
-
-  //  implicit val stateReuse = Reusability.caseClass[RowState]
-
   val tableRow = ScalaComponent.builder[Props]("TableRow")
-    //    .initialState[RowState](RowState(false))
     .renderPS(($, props, state) => {
 
     val idx = props.idx
@@ -170,7 +146,6 @@ object FlightTableRow {
     val flight = flightWithSplits.apiFlight
     val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
-    //      log.debug(s"rendering flight row $idx ${flight.toString}")
     Try {
       val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
 
@@ -250,8 +225,6 @@ object FlightTableRow {
     .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
     .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
-
-
 }
 
 
