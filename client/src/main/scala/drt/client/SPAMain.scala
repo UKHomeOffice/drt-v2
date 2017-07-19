@@ -1,14 +1,13 @@
 package drt.client
 
 import diode.data.{Pot, Ready}
-import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
-import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPage, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.RootModel.QueueCrunchResults
-import drt.client.services.{DeskRecTimeslot, RequestFlights, RootModel, SPACircuit}
+import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._

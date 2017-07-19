@@ -51,11 +51,10 @@ object FlightsWithSplitsTable {
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                     originMapper: (String) => VdomNode = (portCode) => portCode,
-                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   ) = ScalaComponent.builder[Props]("ArrivalsTable")
+                   )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
 
-    .renderP((_$, props) => {
+    .renderPS((_$, props, state) => {
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
@@ -162,7 +161,7 @@ object FlightTableRow {
 
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     //    .initialState[RowState](RowState(false))
-    .render_P(props => {
+    .renderPS(($, props, state) => {
 
     val idx = props.idx
     val codeShares = props.codeShares

@@ -6,6 +6,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.components.Heatmap.Series
 import drt.client.components.TerminalComponent.{Props, render}
+import drt.client.components.TerminalContentComponent.render
 import drt.client.components.TerminalHeatmaps._
 import drt.client.logger.log
 import drt.client.services.SPACircuit
@@ -36,7 +37,7 @@ object TerminalComponent {
       //      model.simulationResult.getOrElse(props.terminalName, Map()),
       model.flightsWithSplitsPot
     ))
-    
+
     modelRCP(modelMP => {
       val model = modelMP.value
       <.div(
@@ -65,7 +66,7 @@ object TerminalComponent {
   implicit val propsReuse = Reusability.caseClass[Props]
 
   val component = ScalaComponent.builder[Props]("Terminal")
-    .render_P(render)
+    .renderPS(($, props, state) => render(props))
     .build
 
   def apply(props: Props): VdomElement = component(props)
@@ -146,6 +147,12 @@ object TerminalContentComponent {
     val bestPax = BestPax(props.portCode)
     val queueOrder = props.queueOrder
 
+    val flightsComponent = FlightsWithSplitsTable.ArrivalsTable(
+      timelineComp,
+      originMapper(props.airportInfoPot),
+      splitsGraphComponentColoured) _
+
+
     <.div(
       <.ul(^.className := "nav nav-tabs",
         <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
@@ -160,12 +167,7 @@ object TerminalContentComponent {
           <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
             val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
             val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
-
-            FlightsWithSplitsTable.ArrivalsTable(
-              timelineComp,
-              originMapper(props.airportInfoPot),
-              paxComp(maxFlightPax),
-              splitsGraphComponentColoured)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
+            flightsComponent(paxComp(maxFlightPax))(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
           }))
         }),
         <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
@@ -177,13 +179,16 @@ object TerminalContentComponent {
   }
 
   implicit val airportInfoReuse = Reusability.always[Pot[AirportInfo]]
-//  implicit val flightsWithSplitsReuse = Reusability.never[Pot[FlightsWithSplits]]
-  implicit val flightsWithSplitsReuse = Reusability.by((_: Pot[FlightsWithSplits]).isReady)
+  implicit val flightsWithSplitsReuse = Reusability.by((flightsPot: Pot[FlightsWithSplits]) => {
+    flightsPot.toOption.map(_.flights.map(f => {
+      (f.splits.hashCode(), f.apiFlight.PcpTime)
+    }))
+  })
   implicit val paxTypeAndQueueReuse = Reusability.always[PaxTypeAndQueue]
   implicit val propsReuse = Reusability.caseClass[Props]
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
-    .render_P(render)
+    .renderPS(($, props, state) => render(props))
     .componentDidMount((p) => Callback.log(s"terminal component didMount"))
     .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
