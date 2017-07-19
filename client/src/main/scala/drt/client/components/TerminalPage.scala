@@ -53,6 +53,12 @@ object TerminalPage {
 
     val maxFlightPax = 853 // todo this should come from state update
 
+    val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
+      timelineComp,
+      originMapper,
+      paxComp(maxFlightPax),
+      splitsGraphComponentColoured)
+
     def render(props: Props) = {
 
       val flightsWithSplitsPotRCP = SPACircuit.connect(_.flightsWithSplitsPot)
@@ -152,11 +158,8 @@ object TerminalPage {
                       val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
                       val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
 
-                      FlightsWithSplitsTable.ArrivalsTable(
-                        timelineComp,
-                        originMapper,
-                        paxComp(maxFlightPax),
-                        splitsGraphComponentColoured)(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder.toList))
+
+                      arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder.toList))
                     }))
                   })
                 }),

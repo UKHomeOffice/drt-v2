@@ -89,8 +89,8 @@ object FlightsWithSplitsTable {
           <.div(s"render failure ${f}")
       }
     })
-    .componentDidMount((p) => Callback.log(s"terminal table didMount $p"))
-    .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount((p) => Callback.log(s"arrivals table didMount"))
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
 
 }
@@ -225,7 +225,8 @@ object FlightTableRow {
         log.info(s"row ${i.nextProps} changed")
       i.setState(RowState(i.nextProps != i.currentProps))
     })
-    .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
+    .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
 
 
