@@ -5,15 +5,15 @@ import diode.react.ModelProxy
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
 import drt.client.components.Heatmap.Series
-import drt.client.components.TerminalComponent.{Props, render}
-import drt.client.components.TerminalContentComponent.render
 import drt.client.components.TerminalHeatmaps._
 import drt.client.logger.log
 import drt.client.services.SPACircuit
 import drt.shared._
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.component.{Generic, Js, Scala}
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, CtorType, ScalaComponent}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
@@ -130,12 +130,16 @@ object TerminalContentComponent {
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
-  def originMapper(airportInfoPot: Pot[AirportInfo])(portCode: String): VdomElement = {
+  def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
+
+  def originMapper(portCode: String): VdomElement = {
     Try {
-      vdomElementFromTag(<.span(
-        airportInfoPot.render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
-        airportInfoPot.renderEmpty(<.span(portCode)),
-        airportInfoPot.renderPending((n) => <.span(portCode))))
+      vdomElementFromComponent(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
+        <.span(
+          proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
+          proxy().renderEmpty(<.span(portCode)),
+          proxy().renderPending((n) => <.span(portCode)))
+      })
     }.recover {
       case e =>
         log.error(s"origin mapper error $e")
@@ -143,39 +147,42 @@ object TerminalContentComponent {
     }.get
   }
 
-  def render(props: Props) = {
-    val bestPax = BestPax(props.portCode)
-    val queueOrder = props.queueOrder
-
-    val flightsComponent = FlightsWithSplitsTable.ArrivalsTable(
+  class Backend(t: BackendScope[Props, _]) {
+    val x = FlightsWithSplitsTable.ArrivalsTable(
       timelineComp,
-      originMapper(props.airportInfoPot),
-      splitsGraphComponentColoured) _
+      originMapper,
+      splitsGraphComponentColoured)(paxComp(843))
 
 
-    <.div(
-      <.ul(^.className := "nav nav-tabs",
-        <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
-        <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues")),
-        <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#staffing", "Staffing"))
-      )
-      ,
-      <.div(^.className := "tab-content",
-        <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
-          val flights: Pot[FlightsApi.FlightsWithSplits] = props.flightsWithSplitsPot
+    def render(props: Props) = {
+      val bestPax = BestPax(props.portCode)
+      val queueOrder = props.queueOrder
 
-          <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-            val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
-            val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
-            flightsComponent(paxComp(maxFlightPax))(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
-          }))
-        }),
-        <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
-          "" //TerminalDeploymentsTable.terminalDeploymentsComponent(TerminalDeploymentsTable.TerminalProps(props.terminalName))
-        ),
-        <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
-          "" //TerminalStaffing(TerminalStaffing.Props(props.terminalName))
-        )))
+      <.div(
+        <.ul(^.className := "nav nav-tabs",
+          <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals")),
+          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues")),
+          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#staffing", "Staffing"))
+        )
+        ,
+        <.div(^.className := "tab-content",
+          <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
+            val flights: Pot[FlightsApi.FlightsWithSplits] = props.flightsWithSplitsPot
+
+            <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
+              val maxFlightPax = flightsWithSplits.flights.map(_.apiFlight.MaxPax).max
+              val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
+              x(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
+            }))
+          }),
+          <.div(^.id := "queues", ^.className := "tab-pane fade terminal-desk-recs-container",
+            "" //TerminalDeploymentsTable.terminalDeploymentsComponent(TerminalDeploymentsTable.TerminalProps(props.terminalName))
+          ),
+          <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
+            "" //TerminalStaffing(TerminalStaffing.Props(props.terminalName))
+          )))
+
+    }
   }
 
   implicit val airportInfoReuse = Reusability.always[Pot[AirportInfo]]
@@ -188,10 +195,13 @@ object TerminalContentComponent {
   implicit val propsReuse = Reusability.caseClass[Props]
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
-    .renderPS(($, props, state) => render(props))
+    .renderBackend[TerminalContentComponent.Backend]
+    //    .renderPS(($, props, state) => render(props, state))
     .componentDidMount((p) => Callback.log(s"terminal component didMount"))
     .configure(Reusability.shouldComponentUpdateWithOverlay)
     .build
 
-  def apply(props: Props): VdomElement = component(props)
+  def apply(props: Props): VdomElement = {
+    component(props)
+  }
 }
