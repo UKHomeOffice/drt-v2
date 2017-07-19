@@ -13,6 +13,8 @@ import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
+import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -331,6 +333,33 @@ class Application @Inject()(
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))
   }
+
+  def splits(fromDate: String, toDate: String) = Action.async {
+    implicit request =>
+//
+//      VoyageManifest(EventCode: String,
+//        ArrivalPortCode: String,
+//        DeparturePortCode: String,
+//        VoyageNumber: String,
+//        CarrierCode: String,
+//        ScheduledDateOfArrival: String,
+//        ScheduledTimeOfArrival: String,
+//        PassengerList: List[PassengerInfoJson])
+
+      val resultFut = ctrl.flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(fromDate), SDate(toDate))
+      resultFut.map{
+        case result: List[VoyageManifest] =>
+          Ok(result.map( m => {
+            m.PassengerList.map (p =>
+
+              s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode},"${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}"""".stripMargin
+            ).mkString("\n")
+          }).mkString("\n"))
+      }
+
+
+  }
+
 
   def autowireApi(path: String) = Action.async(parse.raw) {
     implicit request =>

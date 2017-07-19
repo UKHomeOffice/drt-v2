@@ -32,11 +32,11 @@ object FlightPassengerSplitsReportingService {
     }
   }
 
-  def calculateSplitsFromTimeRange(aggregator: AskableActorRef)
-                                  (destPort: String, arrivalTimeFrom: DateTime, arrivalTimeTo: DateTime)
-                                  (implicit timeout: Timeout, ec: ExecutionContext) = {
-    aggregator ? ReportVoyagePaxSplitBetween(destPort, arrivalTimeFrom, arrivalTimeTo)
-  }
+//  def calculateSplitsFromTimeRange(aggregator: AskableActorRef)
+//                                  (destPort: String, arrivalTimeFrom: DateTime, arrivalTimeTo: DateTime)
+//                                  (implicit timeout: Timeout, ec: ExecutionContext) = {
+//    aggregator ? ReportVoyagePaxSplitBetween(destPort, arrivalTimeFrom, arrivalTimeTo)
+//  }
 
   val flightCodeRe = """(\w{2})(\d{1,5})""".r("carrierCode", "voyageNumber")
 
