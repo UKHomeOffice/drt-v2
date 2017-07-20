@@ -381,7 +381,7 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
 
   override def handle = {
     case GetTerminalCrunch(terminalName) =>
-      val nextCrunch = Effect(Future(GetTerminalCrunch(terminalName))).after(25L seconds)
+      val nextCrunch = Effect(Future(GetTerminalCrunch(terminalName))).after(60 seconds)
       val callResultFuture: Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = AjaxClient[Api].getTerminalCrunchResult(terminalName).call()
 
       val updateTerminalAction = callResultFuture.map {
