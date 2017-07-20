@@ -6,6 +6,7 @@ import diode.Action
 import drt.client.services.{DeskRecTimeslot, StaffAssignment}
 import drt.shared._
 import drt.shared.FlightsApi._
+import drt.shared.Simulations.QueueSimulationResult
 
 import scala.collection.immutable.{Map, Seq}
 
@@ -17,7 +18,7 @@ object Actions {
 
   case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResultWithTimeAndInterval: CrunchResult) extends Action
 
-  case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: SimulationResult) extends Action
+  case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: QueueSimulationResult) extends Action
 
   case class UpdateWorkloads(workloads: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]) extends Action
 

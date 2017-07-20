@@ -40,8 +40,8 @@ object Debug {
           Pot[String],
           Pot[Seq[StaffMovement]],
           Pot[Workloads],
-          RootModel.TerminalQueueCrunchResults,
-          RootModel.TerminalQueueSimulationResults,
+          RootModel.PortCrunchResults,
+          RootModel.PortSimulationResults,
           Pot[FlightsWithSplits]
         )]) => {
         val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, potFlights) = staffingMP()

@@ -1,7 +1,8 @@
 package drt.client.components
 
-import diode.data.Pot
+import diode.data.{Pot, Ready}
 import diode.react._
+import drt.client.TableViewUtils
 import drt.client.TableViewUtils._
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
@@ -9,6 +10,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.builder.Builder
@@ -17,7 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.{TableHeaderCell, TableRow}
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.{Map, NumericRange, Seq}
 import scala.scalajs.js.Date
 import scala.util.Try
 
@@ -80,68 +82,68 @@ object TerminalDeploymentsTable {
   }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportInfoConnectProxy: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              peMP: ModelProxy[PracticallyEverything], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
+                              flightsWithSplitsPot: Pot[FlightsWithSplits], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
     <.div(
       TerminalDeploymentsTable(
         terminalName,
         rows,
-        peMP().flights,
+        flightsWithSplitsPot,
         airportConfig,
         airportInfoConnectProxy
       ))
   }
 
-  case class PracticallyEverything(
-                                    airportInfos: Map[String, Pot[AirportInfo]],
-                                    flights: Pot[FlightsWithSplits],
-                                    simulationResult: Map[TerminalName, Map[QueueName, Pot[SimulationResult]]],
-                                    workload: Pot[Workloads],
-                                    queueCrunchResults: Map[TerminalName, QueueCrunchResults],
-                                    userDeskRec: Map[TerminalName, QueueStaffDeployments],
-                                    shiftsRaw: Pot[String]
-                                  )
-
-  case class TerminalProps(terminalName: String)
+  case class TerminalProps(
+                            airportConfig: AirportConfig,
+                            terminalName: String,
+                            flightsWithSplitsPot: Pot[FlightsWithSplits],
+                            simulationResult: Map[QueueName, QueueSimulationResult],
+                            crunchResult: Map[QueueName, CrunchResult],
+                            deployments: QueueStaffDeployments,
+                            workloads: Workloads,
+                            actualDesks: Map[QueueName, Map[Long, DeskStat]]
+                          )
 
   def terminalDeploymentsComponent(props: TerminalProps) = {
-    val practicallyEverything = SPACircuit.connect(model => {
-      PracticallyEverything(
-        model.airportInfos,
-        model.flightsWithSplitsPot,
-        model.simulationResult,
-        model.workloadPot,
-        model.queueCrunchResults,
-        model.staffDeploymentsByTerminalAndQueue,
-        model.shiftsRaw
-      )
-    })
-
-    val terminalUserDeskRecsRows = SPACircuit.connect(model =>
-      model.calculatedDeploymentRows.getOrElse(Map()).get(props.terminalName)
-    )
     val airportWrapper = SPACircuit.connect(_.airportInfos)
-    val airportConfigPotRCP = SPACircuit.connect(_.airportConfig)
 
-    practicallyEverything(peMP => {
-      <.div(
-        terminalUserDeskRecsRows((rowsOptMP: ModelProxy[Option[Pot[List[TerminalDeploymentsRow]]]]) => {
-          rowsOptMP() match {
-            case None => <.div("No rows yet")
-            case Some(rowsPot) =>
-              log.debug(s"rowLen ${rowsPot.map(_.length)}")
-              log.debug(s"rowsAre $rowsPot")
-              <.div(
-                rowsPot.renderReady(rows =>
-                  airportConfigPotRCP(airportConfigPotMP => {
-                    <.div(
-                      airportConfigPotMP().renderReady(airportConfig =>
-                        renderTerminalUserTable(props.terminalName, airportWrapper, peMP, rows, airportConfig))
-                    )
-                  })))
+    <.div(
+      calculateTerminalDeploymentRows(props) match {
+        case Nil => <.div("No rows yet")
+        case rows =>
+          renderTerminalUserTable(props.terminalName, airportWrapper, props.flightsWithSplitsPot, rows, props.airportConfig)
+      }
+    )
+  }
+
+  def calculateTerminalDeploymentRows(props: TerminalProps): List[TerminalDeploymentsRow] = {
+    log.info(s"calculateTerminalDeploymentRows called ${props.terminalName}")
+    val crv = props.crunchResult
+    val srv = props.simulationResult
+    val udr = props.deployments
+    val terminalDeploymentRows: List[TerminalDeploymentsRow] =
+      props.workloads.workloads.get(props.terminalName) match {
+        case Some(terminalWorkloads) =>
+          val tried: Try[List[TerminalDeploymentsRow]] = Try {
+            val timestamps = props.workloads.timeStamps()
+            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
+            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
+
+            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
+            val actDesksForTerminal = props.actualDesks
+
+            TableViewUtils.terminalDeploymentsRows(props.terminalName, props.airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
+          } recover {
+            case f =>
+              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
+              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
+              Nil
           }
-        }),
-        peMP().workload.renderPending(_ => <.div("Waiting for workloads")))
-    })
+          tried.get
+        case None =>
+          Nil
+      }
+    terminalDeploymentRows
   }
 
   case class RowProps(item: TerminalDeploymentsRow, index: Int,
@@ -206,7 +208,7 @@ object TerminalDeploymentsTable {
     val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(item.time), SDate(item.time).addHours(1), "left", "+")()
     val queueRowCellsWithTotal: List[html_<^.TagMod] = (queueRowCells :+
       <.td(^.className := s"total-deployed $ragClass", totalRequired) :+
-      <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className:="deployed",totalDeployed), upMovementPopup)) :+ transferCells
+      <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", totalDeployed), upMovementPopup)) :+ transferCells
       ).toList
     <.tr(<.td(^.cls := "date-field", airportInfoPopover()) :: queueRowCellsWithTotal: _*)
   }
@@ -313,26 +315,26 @@ object TerminalDeploymentsTable {
   def initState() = false
 
 
-  implicit val deskRecTimeslotReuse = Reusability.caseClass[DeskRecTimeslot]
-  implicit val doubleReuse = Reusability.double(1)
-  implicit val queueRowEntryReuse = Reusability.caseClass[QueueDeploymentsRowEntry]
-  implicit val queuePaxRowEntryReuse = Reusability.caseClass[QueuePaxRowEntry]
-  implicit val queueRowEntryBaseReuse = Reusability[QueueDeploymentsRow] {
-    case (a: QueuePaxRowEntry, b: QueuePaxRowEntry) => queuePaxRowEntryReuse.test(a, b)
-    case (a: QueueDeploymentsRowEntry, b: QueueDeploymentsRowEntry) => queueRowEntryReuse.test(a, b)
-    case _ => false
-  }
-  implicit val terminalReuse = Reusability.caseClass[TerminalDeploymentsRow]
-  implicit val propsReuse = Reusability.caseClassExcept[Props]('terminalName, 'flights, 'airportConfig, 'airportInfos)
+  implicit val reuse = Reusability.by((props: Props) => {
+    props.items.map(tdr => {
+      tdr.queueDetails.collect {
+        case qdre: QueueDeploymentsRowEntry => qdre.hashCode()
+      }
+    })
+  })
+
   implicit val stateReuse = Reusability.caseClass[State]
 
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .initialState[State](State(false))
     .renderPS((sc, p, s) => Backend(sc, p, s))
+    .componentDidMount((p) => Callback.log(s"terminal deployments component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminalName: String, rows: List[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],
+  def apply(terminalName: String,
+            rows: List[TerminalDeploymentsRow],
+            flights: Pot[FlightsWithSplits],
             airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) =
     component(Props(terminalName, rows, flights, airportConfig, airportInfos))

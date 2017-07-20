@@ -55,7 +55,7 @@ case class AirportConfig(
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
                           minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                           shiftExamples: Seq[String] = Seq(),
-                          queueOrder: Seq[PaxTypeAndQueue] = PaxTypesAndQueues.inOrderSansFastTrack,
+                          queueOrder: List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrderSansFastTrack,
                           fixedPointExamples: Seq[String] = Seq(),
                           hasActualDeskStats: Boolean = false
                         ) extends AirportConfigLike {
@@ -132,10 +132,10 @@ object PaxTypesAndQueues {
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
   /*todo - we should move the usages of this to airportConfig */
-  val inOrderSansFastTrack = Seq(
+  val inOrderSansFastTrack = List(
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
 
-  val inOrderWithFastTrack = Seq(
+  val inOrderWithFastTrack = List(
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
 }
 

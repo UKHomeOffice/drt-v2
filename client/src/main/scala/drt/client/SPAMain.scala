@@ -3,12 +3,13 @@ package drt.client
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRow, QueueDeploymentsRowEntry, QueuePaxRowEntry, TerminalDeploymentsRow}
-import drt.client.components.{GlobalStyles, Layout, TerminalPage, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalsDashboardPage}
 import drt.client.logger._
-import drt.client.services.HandyStuff.{PotCrunchResult, QueueStaffDeployments}
+import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import japgolly.scalajs.react.WebpackRequire
 import japgolly.scalajs.react.extra.router._
@@ -20,13 +21,6 @@ import scala.scalajs.js.annotation.{JSExport, JSImport}
 import scalacss.Defaults._
 
 object TableViewUtils {
-
-
-  /**
-    * Fixme: remove this line once we've removed the old terminal page
-    */
-  def queueNameMappingOrder = Queues.EeaDesk :: Queues.NonEeaDesk :: Queues.EGate :: Nil
-
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
     Queues.FastTrack -> "Fast Track",
     Queues.Transfer -> "Tx")
@@ -35,31 +29,27 @@ object TableViewUtils {
 
   def terminalDeploymentsRows(
                                terminalName: TerminalName,
-                               airportConfigPot: Pot[AirportConfig],
+                               airportConfig: AirportConfig,
                                timestamps: Seq[Long],
                                paxload: Map[String, List[Double]],
-                               queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                               simulationResult: Map[QueueName, Pot[SimulationResult]],
+                               queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
+                               simulationResult: Map[QueueName, QueueSimulationResult],
                                userDeskRec: QueueStaffDeployments,
                                actualDeskStats: Map[QueueName, Map[Long, DeskStat]]
                              ): List[TerminalDeploymentsRow] = {
-    airportConfigPot match {
-      case Ready(airportConfig) =>
-        val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
-          case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
-          case queueName =>
-            val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
-            DeskStats.withActuals(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
-        }.toList
+    val queueRows: List[List[((Long, QueueName), QueueDeploymentsRow)]] = airportConfig.queues(terminalName).map {
+      case Queues.Transfer => transferPaxRowsPerMinute(timestamps, paxload)
+      case queueName =>
+        val rows: List[((Long, String), QueueDeploymentsRowEntry)] = queueDeploymentRowsPerMinute(timestamps, paxload, queueCrunchResultsForTerminal, simulationResult, userDeskRec, queueName)
+        DeskStats.withActuals(rows.map(_._2), actualDeskStats).map(qdre => ((qdre.timestamp, qdre.queueName), qdre))
+    }.toList
 
-        val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
+    val queueRowsByTime = queueRows.flatten.groupBy(tqr => tqr._1._1)
 
-        queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDeploymentsRow)])) => {
-          val qr = queueRows._2.map(_._2)
-          TerminalDeploymentsRow(queueRows._1, qr)
-        }).toList.sortWith(_.time < _.time)
-      case _ => List()
-    }
+    queueRowsByTime.map((queueRows: (Long, List[((Long, QueueName), QueueDeploymentsRow)])) => {
+      val qr = queueRows._2.map(_._2)
+      TerminalDeploymentsRow(queueRows._1, qr)
+    }).toList.sortWith(_.time < _.time)
   }
 
   def transferPaxRowsPerMinute(timestamps: Seq[Long], queuePaxload: Map[String, List[Double]]): List[((Long, QueueName), QueueDeploymentsRow)] = {
@@ -74,17 +64,17 @@ object TableViewUtils {
 
   def queueDeploymentRowsPerMinute(timestamps: Seq[Long],
                                    paxload: Map[String, List[Double]],
-                                   queueCrunchResultsForTerminal: Map[QueueName, Pot[PotCrunchResult]],
-                                   simulationResult: Map[QueueName, Pot[SimulationResult]],
+                                   queueCrunchResultsForTerminal: Map[QueueName, CrunchResult],
+                                   simulationResult: Map[QueueName, QueueSimulationResult],
                                    userDeskRec: QueueStaffDeployments,
                                    queueName: QueueName): List[((Long, String), QueueDeploymentsRowEntry)] = {
     simulationResult.get(queueName) match {
-      case Some(Ready(sr)) =>
+      case Some(sr) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
         queueCrunchResultsForTerminal.get(queueName) match {
-          case Some(Ready(cr)) =>
+          case Some(cr) =>
             queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
           case _ =>
             List()
@@ -125,25 +115,25 @@ object TableViewUtils {
   def queueNosFromSimulationResult(timestamps: Seq[Long], paxload: Map[String, List[Double]],
                                    queueCrunchResultsForTerminal: QueueCrunchResults,
                                    userDeskRec: QueueStaffDeployments,
-                                   simulationResult: Map[QueueName, Pot[SimulationResult]], qn: QueueName
+                                   simulationResult: Map[QueueName, QueueSimulationResult], qn: QueueName
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 
-    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
-    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
-    val simulationResultWaitTimes = simulationResult(qn).get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    val queueSimRes = simulationResult(qn)
+    val simulationResultWaitTimes = queueSimRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
     val paddedSimulationResultWaitTimes: List[Long] = padSimResult(simulationResultWaitTimes, numberOf15MinuteSlots)
-    val simResultRecDesks = simulationResult(qn).get.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
+    val simResultRecDesks = queueSimRes.recommendedDesks.map(rec => rec.time).grouped(15).map(_.min).toList
     val paddedRecDesks: List[Long] = padSimResult(simResultRecDesks, numberOf15MinuteSlots)
+    val queueCrunchRes = queueCrunchResultsForTerminal(qn)
 
     Seq(
       ts,
       samplePaxLoad(paxload, qn),
       paddedRecDesks,
-      queueCrunchResultsForTerminal(qn).get.get.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchRes.recommendedDesks.map(_.toLong).grouped(15).map(_.max).toList,
       getSafeUserDeskRecs(userDeskRec, qn, ts),
-      queueCrunchResultsForTerminal(qn).get.get.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
+      queueCrunchRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList,
       paddedSimulationResultWaitTimes
     )
   }
@@ -171,17 +161,17 @@ object TableViewUtils {
     val ts = sampleTimestampsForRows(timestamps)
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
-    val queueData = queueCrunchResultsForTerminal(qn).get.get
-    val waitTimes = queueData.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
-    val recDesks = queueData.recommendedDesks
+    val queueCrunchRes = queueCrunchResultsForTerminal(qn)
+    val groupedWaitTimes = queueCrunchRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
+    val queueDeskRecs = queueCrunchRes.recommendedDesks
     Seq(
       ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,
-      List.range(0, recDesks.length, 15).map(_.toLong),
-      recDesks.map(_.toLong).grouped(15).map(_.max).toList,
+      List.range(0, queueDeskRecs.length, 15).map(_.toLong),
+      queueDeskRecs.map(_.toLong).grouped(15).map(_.max).toList,
       userDeskRecsSample,
-      waitTimes,
-      waitTimes
+      groupedWaitTimes,
+      groupedWaitTimes
     )
   }
 
@@ -202,7 +192,6 @@ object TableViewUtils {
 @JSExport("SPAMain")
 object SPAMain extends js.JSApp {
 
-  // Define the locations (pages) used in this application
   sealed trait Loc
 
   case object DashboardLoc extends Loc
@@ -221,18 +210,19 @@ object SPAMain extends js.JSApp {
 
   case object StaffingLoc extends Loc
 
-  def requestInitialActions() = {val initActions = Seq(
-    GetAirportConfig(),
-    GetWorkloads("", ""),
-    RequestFlights(0, 0),
-    GetShifts(),
-    GetFixedPoints(),
-    GetStaffMovements(),
-  GetActualDeskStats())
+  def requestInitialActions() = {
+    val initActions = Seq(
+      GetAirportConfig(),
+      GetWorkloads("", ""),
+      RequestFlights(0, 0),
+      GetShifts(),
+      GetFixedPoints(),
+      GetStaffMovements(),
+      GetActualDeskStats())
 
     initActions.foreach(SPACircuit.dispatch(_))
   }
-  // configure the router
+
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
@@ -242,21 +232,20 @@ object SPAMain extends js.JSApp {
         TerminalsDashboardPage(page.hours)
       })
     val terminal: dsl.Rule = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+").caseClass[TerminalDepsLoc]) ~>
-      dynRenderR((page: TerminalDepsLoc, ctl) => {
-        TerminalPage(page.id, ctl)
+      dynRenderR((page: TerminalDepsLoc, _) => {
+        val props = TerminalComponent.Props(terminalName = page.id)
+        TerminalComponent(props)
       })
 
     val rule = home | terminal | terminalsDashboard
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
-  // base layout for all pages
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
 
   def require(): Unit = {
-    log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
     ()
@@ -266,26 +255,16 @@ object SPAMain extends js.JSApp {
   def main(): Unit = {
     require()
 
-    //    Perf.start()
-    //    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
     log.info(s"think the port is ${pathToThisApp.split("/")}")
     log.warn("Application starting")
-    // send log messages also to the server
-//    log.enableServerLogging(pathToThisApp + "/logging")
-    log.info("This message goes to server as well")
 
-    // create stylesheet
     import scalacss.ScalaCssReact._
 
-    //    ReactTable.DefaultStyle.addToDocument()
-    //    Spinner.Style.addToDocument()
     GlobalStyles.addToDocument()
 
     requestInitialActions()
 
-    // create the router
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
-    // tell React to render the router in the document body
     router().renderIntoDOM(dom.document.getElementById("root"))
   }
 }

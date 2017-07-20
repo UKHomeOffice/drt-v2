@@ -141,7 +141,7 @@ object FlightsTableTests extends TestSuite {
                   <.td()))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
@@ -182,7 +182,7 @@ object FlightsTableTests extends TestSuite {
           //            .renderStatic(<.span("herebecallback")).build
           val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
 
@@ -228,7 +228,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = (port) => originMapperComponent(port)
-            )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList))
+            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -297,8 +297,8 @@ object FlightsTableTests extends TestSuite {
           def paxComponent(f: Arrival, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
 
           assertRenderedComponentsAreEqual(
-            FlightsWithSplitsTable.ArrivalsTable(None, (s) => s, paxComponent)(
-              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = (s) => s)(paxComponent)(
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack)),
             staticComponent(expected)())
 
           //          val className: TagMod = ^.className := s"pax-${origin}"

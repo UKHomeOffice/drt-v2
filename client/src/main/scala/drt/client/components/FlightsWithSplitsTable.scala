@@ -22,25 +22,29 @@ object FlightsWithSplitsTable {
 
   case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
 
-  implicit val paxTypeReuse = Reusability.byRef[PaxType]
-  implicit val doubleReuse = Reusability.double(0.001)
-  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
-  implicit val paxtypeandQueueReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
-  implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
-  implicit val flightReuse = Reusability.caseClass[Arrival]
-  implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
-  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
-  implicit val paxTypeAndQueueReuse = Reusability.caseClass[PaxTypeAndQueue]
-  implicit val bestPaxReuse = Reusability.byRefOr_==[BestPaxForArrivalF]
-  implicit val propsReuse = Reusability.caseClass[Props]
+  implicit val propsReuse = Reusability.by((props: Props) => {
+    props.flightsWithSplits.flights.map(af => {
+      (af.splits.hashCode(),
+        af.apiFlight.Status,
+        af.apiFlight.Gate,
+        af.apiFlight.Stand,
+        af.apiFlight.SchDT,
+        af.apiFlight.EstDT,
+        af.apiFlight.ActDT,
+        af.apiFlight.EstChoxDT,
+        af.apiFlight.ActChoxDT,
+        af.apiFlight.PcpTime,
+        af.apiFlight.ActPax
+      )
+    })
+  })
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
-                       originMapper: (String) => VdomNode = (portCode) => portCode,
-                       paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
-                       splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                      ) = ScalaComponent.builder[Props]("ArrivalsTable")
+                    originMapper: (String) => VdomNode = (portCode) => portCode,
+                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
+                   )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
 
-    .renderP((_$, props) => {
+    .renderPS((_$, props, state) => {
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
@@ -116,36 +120,34 @@ object FlightTableRow {
                    bestPax: (Arrival) => Int
                   )
 
-  implicit val splitStyleReuse = Reusability.byRef[SplitStyle]
-  implicit val paxTypeReuse = Reusability.byRef[PaxType]
-  implicit val doubleReuse = Reusability.double(0.01)
-  implicit val paxTypeAndQueueCountReuse = Reusability.caseClass[ApiPaxTypeAndQueueCount]
-  implicit val paxTypeAndQueueReuse = Reusability.caseClass[PaxTypeAndQueue]
-  //  implicit val flightReuse = Reusability.caseClass[List[ApiPaxTypeAndQueueCount]]
-  //  implicit val flightReuse = Reusability.caseClass[List[Arrival]]
-  implicit val SplitsReuse = Reusability.caseClass[ApiSplits]
-  implicit val flightReuse = Reusability.caseClass[Arrival]
-  implicit val apiflightsWithSplitsReuse = Reusability.caseClass[ApiFlightWithSplits]
-  implicit val flightsWithSplitsReuse = Reusability.caseClass[FlightsWithSplits]
-
-  implicit val originMapperReuse = Reusability.byRefOr_==[OriginMapperF]
-  implicit val arrivalToPax = Reusability.byRefOr_==[BestPaxForArrivalF]
-  implicit val propsReuse = Reusability.caseClassExcept[Props]('timelineComponent, 'paxComponent, 'splitsGraphComponent)
+  implicit val propsReuse = Reusability.by((props: Props) => {
+    (props.flightWithSplits.splits.hashCode(),
+      props.flightWithSplits.apiFlight.Status,
+      props.flightWithSplits.apiFlight.Gate,
+      props.flightWithSplits.apiFlight.Stand,
+      props.flightWithSplits.apiFlight.SchDT,
+      props.flightWithSplits.apiFlight.EstDT,
+      props.flightWithSplits.apiFlight.ActDT,
+      props.flightWithSplits.apiFlight.EstChoxDT,
+      props.flightWithSplits.apiFlight.ActChoxDT,
+      props.flightWithSplits.apiFlight.PcpTime,
+      props.flightWithSplits.apiFlight.ActPax
+    )
+  })
+  implicit val stateReuse = Reusability.caseClass[RowState]
 
   case class RowState(hasChanged: Boolean)
 
-  implicit val stateReuse = Reusability.caseClass[RowState]
-
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
-    .renderPS((_$, props, state) => {
+    .renderPS(($, props, state) => {
+
       val idx = props.idx
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
-      log.debug(s"rendering flight row $idx ${flight.toString}")
       Try {
         val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
 
@@ -158,7 +160,7 @@ object FlightTableRow {
           val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
           val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
             <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
-            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td( s._1.passengerType.name), <.td( s._1.queueType))).toTagMod))
+            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
             props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
             sourceDisplay)
@@ -220,16 +222,10 @@ object FlightTableRow {
     }
 
     )
-    .componentWillReceiveProps(i => {
-      if (i.nextProps != i.currentProps)
-        log.info(s"row ${i.nextProps} changed")
-      i.setState(RowState(i.nextProps != i.currentProps))
-    })
+    .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
-
-
 }
 
 
