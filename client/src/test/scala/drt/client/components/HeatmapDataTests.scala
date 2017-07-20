@@ -24,7 +24,7 @@ HeatmapDataTests extends TestSuite {
         val userDeskRecs: Map[QueueName, Ready[DeskRecTimeSlots]] = makeUserDeskRecs(queueName, userDesks)
         val recommendedDesks = Vector.fill(60)(2)
         val waitTimes = Vector.fill(60)(2)
-        val terminalQueueCrunchResult = Map(queueName -> Ready(Ready(CrunchResult(0, 60000, recommendedDesks, waitTimes))))
+        val terminalQueueCrunchResult = Map(queueName -> CrunchResult(0, 60000, recommendedDesks, waitTimes))
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
         val expected = Ready(List(Series("T1/eeaDesk", Vector(2))))
@@ -39,7 +39,7 @@ HeatmapDataTests extends TestSuite {
         val recommendedDesks = Vector.fill(60)(10)
         val terminalQueueCrunchResult = Map(
           queueName ->
-            Ready(Ready(CrunchResult(0, 60000, recommendedDesks, Nil)))
+            CrunchResult(0, 60000, recommendedDesks, Nil)
         )
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
@@ -66,8 +66,8 @@ HeatmapDataTests extends TestSuite {
         val recommendedDesksEea = Vector.fill(60)(10)
 
         val terminalQueueCrunchResult = Map(
-          nonEeaDesk -> Ready(Ready(CrunchResult(0, 60000, recommendedDesksEeaNon, Nil))),
-          eeaDesk -> Ready(Ready(CrunchResult(0, 60000, recommendedDesksEea, Nil)))
+          nonEeaDesk -> CrunchResult(0, 60000, recommendedDesksEeaNon, Nil),
+          eeaDesk -> CrunchResult(0, 60000, recommendedDesksEea, Nil)
         )
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
@@ -93,8 +93,8 @@ HeatmapDataTests extends TestSuite {
         val userDeskRecs = nonEea ++ eea
 
         val terminalQueueCrunchResult = Map(
-          nonEeaDesk -> Ready(Ready(CrunchResult(0, 60000, (oneHourOfMinutes(6) ::: oneHourOfMinutes(4)).toVector, Nil))),
-          eeaDesk -> Ready(Ready(CrunchResult(0, 60000, (oneHourOfMinutes(10) ::: oneHourOfMinutes(4)).toVector, Nil)))
+          nonEeaDesk -> CrunchResult(0, 60000, (oneHourOfMinutes(6) ::: oneHourOfMinutes(4)).toVector, Nil),
+          eeaDesk -> CrunchResult(0, 60000, (oneHourOfMinutes(10) ::: oneHourOfMinutes(4)).toVector, Nil)
         )
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
@@ -110,25 +110,6 @@ HeatmapDataTests extends TestSuite {
 
         assert(result == expected)
       }
-    }
-
-    "Given a map of queuename to pending simulation result" +
-      "When I call waitTimes, " +
-      "Then I should get a Pending back" - {
-      val potSimulationResult = Map("eeaDesk" -> Pending())
-
-      val result: Pot[List[Series]] = TerminalHeatmaps.waitTimes(potSimulationResult, "T1")
-
-      assert(result.isPending)
-    }
-    "Given a map of queuename to ready simulation result" +
-      "When I call waitTimes, " +
-      "Then I should get a ready back" - {
-      val potSimulationResult = Map("eeaDesk" -> Ready(QueueSimulationResult(IndexedSeq(), Seq())))
-
-      val result: Pot[List[Series]] = TerminalHeatmaps.waitTimes(potSimulationResult, "T1")
-
-      assert(result.isReady)
     }
   }
 

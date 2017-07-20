@@ -21,19 +21,19 @@ object StaffDeploymentCalculatorTests extends TestSuite {
 
       val portCrunchResult = Map(
         "T1" -> Map(
-          "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)))),
-          "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)))),
-          "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1))))
+          "Q1" -> CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)),
+          "Q2" -> CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1)),
+          "Q3" -> CrunchResult(0, 60000, IndexedSeq(1, 2, 3), Seq(1, 1, 1))
         ),
         "T2" -> Map(
-          "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)))),
-          "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)))),
-          "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1))))
+          "Q1" -> CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)),
+          "Q2" -> CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1)),
+          "Q3" -> CrunchResult(0, 60000, IndexedSeq(2, 3, 4), Seq(1, 1, 1))
         ),
         "T3" -> Map(
-          "Q1" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)))),
-          "Q2" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)))),
-          "Q3" -> Ready(Ready(CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1))))
+          "Q1" -> CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)),
+          "Q2" -> CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1)),
+          "Q3" -> CrunchResult(0, 60000, IndexedSeq(3, 4, 5), Seq(1, 1, 1))
         )
       )
 
@@ -98,7 +98,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val deskRecs = List.fill(60)(2).toIndexedSeq
       val waitTimes = List.fill(60)(10)
       val terminalQueueCrunchResults = Map(
-        "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
+        "T1" -> Map("eeaDesk" -> CrunchResult(startTime, oneHour, deskRecs, waitTimes))
       )
       val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(60)(0), List.fill(60)(100))))
       val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
@@ -133,8 +133,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
 
       val terminalQueueCrunchResults = Map(
       "T1" -> Map(
-      "eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes))),
-      "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
+      "eeaDesk" -> CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes),
+      "nonEea" -> CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))
       )
 
       val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
@@ -161,7 +161,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val deskRecs = List.fill(60)(0).toIndexedSeq
       val waitTimes = List.fill(60)(0)
       val terminalQueueCrunchResults = Map(
-        "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
+        "T1" -> Map("eeaDesk" -> CrunchResult(startTime, oneHour, deskRecs, waitTimes))
       )
       val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(24)(0), List.fill(24)(2))))
 
@@ -186,7 +186,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val deskRecs = List.fill(60)(5).toIndexedSeq
       val waitTimes = List.fill(60)(0)
       val terminalQueueCrunchResults = Map(
-        "T1" -> Map("eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, deskRecs, waitTimes))))
+        "T1" -> Map("eeaDesk" -> CrunchResult(startTime, oneHour, deskRecs, waitTimes))
       )
       val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(24)(0), List.fill(24)(2))))
 
@@ -220,8 +220,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
 
       val terminalQueueCrunchResults = Map(
         "T1" -> Map(
-          "eeaDesk" -> Ready(Ready(CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes))),
-          "nonEea" -> Ready(Ready(CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))))
+          "eeaDesk" -> CrunchResult(startTime, oneHour, eeaDeskRecs, waitTimes),
+          "nonEea" -> CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))
       )
 
       val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 100

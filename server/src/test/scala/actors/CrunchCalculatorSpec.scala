@@ -2,6 +2,7 @@ package actors
 
 import akka.event.DiagnosticLoggingAdapter
 import drt.shared.FlightsApi.{TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import org.specs2.Specification
 import org.specs2.mock.Mockito
@@ -77,9 +78,8 @@ class CrunchCalculatorSpec extends Specification with Mockito {
 
     override def airportConfig: AirportConfig = lhrConfigWithSimpleMinMaxDesks
 
-
-    override protected[actors] def runSimulation(workloads: Seq[Double], recommendedDesks: IndexedSeq[Int], optimizerConfig: OptimizerConfig): SimulationResult =
-      SimulationResult(Vector.empty[DeskRec], Nil)
+    override protected[actors] def runSimulation(workloads: Seq[Double], recommendedDesks: IndexedSeq[Int], optimizerConfig: OptimizerConfig): QueueSimulationResult =
+      QueueSimulationResult(List(), Nil)
   }
 
 }
