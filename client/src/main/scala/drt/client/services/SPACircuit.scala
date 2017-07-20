@@ -327,7 +327,7 @@ case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
 case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
 
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
-  val flightsRequestFrequency = 20L seconds
+  val flightsRequestFrequency = 60L seconds
 
   protected def handle = {
     case RequestFlights(from, to) =>
