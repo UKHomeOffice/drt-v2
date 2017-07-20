@@ -94,7 +94,6 @@ case class RootModel(
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
-    log.info(s"staffDeploymentsByTerminalAndQueue called")
     val rawShiftsString = shiftsRaw match {
       case Ready(rawShifts) => rawShifts
       case _ => ""
@@ -144,7 +143,6 @@ case class RootModel(
 }
 
 object RootModel {
-  //  type QueueSimulationResultPot = Pot[QueueSimulationResult]
   type TerminalSimulationResults = Map[QueueName, QueueSimulationResult]
   type PortSimulationResults = Map[TerminalName, TerminalSimulationResults]
   type PortCrunchResults = Map[TerminalName, Map[QueueName, CrunchResult]]
@@ -163,14 +161,9 @@ object RootModel {
 
 case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
   def updated(newItem: DeskRecTimeslot): DeskRecTimeSlots = {
-    //    log.info(s"will update ${newItem} into ${items.take(5)}...")
     items.indexWhere(_.timeInMillis == newItem.timeInMillis) match {
-      case -1 =>
-        //        log.info("add new")
-        DeskRecTimeSlots(items :+ newItem)
-      case idx =>
-        //        log.info(s"add old: idx: $idx, newItem: $newItem, ${items(idx)}")
-        DeskRecTimeSlots(items.updated(idx, newItem))
+      case -1 => DeskRecTimeSlots(items :+ newItem)
+      case idx => DeskRecTimeSlots(items.updated(idx, newItem))
     }
   }
 }
@@ -183,7 +176,6 @@ case class DeskRecTimeSlots(items: Seq[DeskRecTimeslot]) {
 class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeployments]]) extends LoggingActionHandler(modelRW) {
   override def handle = {
     case udrt@UpdateDeskRecsTime(terminalName, queueName, deskRecTimeSlot) =>
-      //      log.info(s"updating $udrt")
       val newDesksPot: Pot[DeskRecTimeSlots] = value(terminalName)(queueName).map(_.updated(deskRecTimeSlot))
       val desks = newDesksPot.get.items.map(_.deskRec).toList
       updated(
@@ -192,20 +184,13 @@ class DeskTimesHandler[M](modelRW: ModelRW[M, Map[TerminalName, QueueStaffDeploy
   }
 }
 
-//trait RequestingActionHandler {
-//  def AjaxClient[A]: autowire.Client[ByteBuffer, Pickler, Pickler]
-//  def apply[Trait] = ClientProxy[Trait, PickleType, Pickler, Pickler](this)
-//}
-
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        //        log.error(s"Exception from ${getClass}  ${f.getMessage()} while handling $action", f.asInstanceOf[Exception])
-        val cause = f.getCause()
-        cause match {
+        f.getCause() match {
           case null => log.error(s"no cause")
-          case c => log.error(s"Exception from ${getClass}  ${c.getMessage()}")
+          case c => log.error(s"Exception from $getClass  ${c.getMessage}")
         }
 
         throw f
@@ -217,12 +202,9 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
 
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case action: GetAirportConfig =>
-      //      log.info("Requesting AirportConfig from server")
+    case _: GetAirportConfig =>
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
-      //      log.info(s"Received AirportConfig $configHolder")
-      //      log.info("Subscribing to crunches for terminal/queues")
       val effects: Effect = createCrunchRequestEffects(configHolder)
       updated(Ready(configHolder), effects)
   }
@@ -241,8 +223,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 
 class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case action: GetWorkloads =>
-      //      log.info("requesting workloadsWrapper from server")
+    case _: GetWorkloads =>
       val newWorkloads = if (value.isEmpty) Pending() else value
       updated(newWorkloads,
         Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads).recover {
@@ -251,11 +232,6 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
             NoAction
         }))
     case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
-      val terminalQueues = terminalQueueWorkloads.flatMap {
-        case (tn, qn2wl) =>
-          qn2wl.keys.map(qn => (tn, qn))
-      }
-      val paxLoadsByTerminalAndQueue: Map[TerminalName, Map[QueueName, Seq[Pax]]] = terminalQueueWorkloads.mapValues(_.mapValues(_._2))
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
         (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),
           plWl._2.map(pl => Pax(timeFromMillisToNearestSecond(pl.time), pl.pax)))))
@@ -299,26 +275,13 @@ class SimulationHandler[M](
   extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case RunAllSimulations() =>
-      log.info(s"RunAllSimulations")
       val effects: List[EffectSingle[RunTerminalSimulation]] = if (airportConfig.value.isReady) {
         airportConfig.value.get.terminalNames.map(terminalName => Effect(Future(RunTerminalSimulation(terminalName)))).toList
       } else List()
       effectOnly(seqOfEffectsToEffectSeq(effects))
-    case RunTerminalSimulations(terminalName) =>
-      log.info(s"RunTerminalSimulation for $terminalName")
-      val actions = staffDeployments.value.getOrElse(terminalName, Map()).map {
-        case (queueName, deployedDesks) =>
-          if (deployedDesks.isReady) {
-            val desks = deployedDesks.get.items.map(_.deskRec)
-            val desksList = desks.toList
-            Effect(Future(RunSimulation(terminalName, queueName, desksList)))
-          } else Effect(Future.successful(NoAction))
-      }.toList
-      log.debug(s"RunTerminalSimulations effects ${actions}")
-      effectOnly(seqOfEffectsToEffectSeq(actions))
     case RunTerminalSimulation(terminalName) =>
       if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady && allQueueCrunchesReceived() && airportConfig.value.isReady) {
-        log.info(s"Requesting full simulation for $terminalName")
+        log.info(s"Requesting simulation for $terminalName")
         val terminalDeskRecs = staffDeployments.value.getOrElse(terminalName, Map()).map {
           case (queueName, drtsPot) => queueName -> drtsPot.map(_.items.map(_.deskRec)).getOrElse(List()).toList
         }
@@ -326,34 +289,15 @@ class SimulationHandler[M](
         val simulationResult: Future[TerminalSimulationResultsFull] = AjaxClient[Api].getTerminalSimulations(terminalName, terminalWorkloads, terminalDeskRecs).call()
         effectOnly(Effect(simulationResult.map(resp => UpdateTerminalSimulation(terminalName, resp))))
       } else {
-        log.info(s"Not running simulation for $terminalName. Shifts, Fixed points & movements not all ready yet")
+        log.info(s"Not running simulation for $terminalName. Shifts, Fixed points, movements, crunches & airport config not all ready yet")
         noChange
       }
     case UpdateTerminalSimulation(terminalName, terminalSimulationResultsFull) =>
       updated(value + (terminalName -> terminalSimulationResultsFull))
   }
 
-  private def getTerminalQueueWorkload(terminalName: TerminalName, queueName: QueueName): List[Double] = {
-    val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-    //    log.info(s"startFromMilli: $startFromMilli")
-    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-    val workloadPot = modelR.value
-    workloadPot match {
-      case Ready(workload) =>
-        workload.workloads.get(terminalName) match {
-          case Some(terminalWorkload) =>
-            val queueWorkload: List[Double] = WorkloadsHelpers.workloadPeriodByQueue(terminalWorkload, minutesRangeInMillis)(queueName)
-            queueWorkload
-          case None => Nil
-        }
-      case _ => Nil
-    }
-
-  }
-
   private def getTerminalWorkload(terminalName: TerminalName): Map[QueueName, List[Double]] = {
     val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-    //    log.info(s"startFromMilli: $startFromMilli")
     val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
     val workloadPot = modelR.value
     workloadPot match {
@@ -364,7 +308,6 @@ class SimulationHandler[M](
         }
       case _ => Map()
     }
-
   }
 }
 
@@ -384,7 +327,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
   protected def handle = {
     case RequestFlights(from, to) =>
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
-      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits(_)))
+      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits))
       effectOnly(fe + flightsEffect)
     case UpdateFlightsWithSplits(flightsWithSplits) =>
       log.info(s"client got ${flightsWithSplits.flights.length} flights")
@@ -393,19 +336,15 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
       val result = if (value.isReady) {
         val oldFlights = value.get
         val oldFlightsSet = oldFlights.flights.toSet
-        val newFlightsSet = flights.toSet
+        val newFlightsSet = flightsWithSplits.flights.toSet
         if (oldFlightsSet != newFlightsSet) {
           val airportCodes = flights.map(_.Origin).toSet
           val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
 
-
-          val getWorkloads = {
-            //todo - our heatmap updated too frequently right now if we do this, will require some shouldComponentUpdate finesse
-            Effect(Future {
-              log.info("flights Have changed - re-requesting workloads")
-              GetWorkloads("", "")
-            })
-          }
+          val getWorkloads = Effect(Future {
+            log.info("flights Have changed - re-requesting workloads")
+            GetWorkloads("", "")
+          })
 
           val allEffects = airportInfos >> getWorkloads
           updated(Ready(flightsWithSplits), allEffects)
@@ -487,7 +426,6 @@ object StaffDeploymentCalculator {
         /*
          Fixme: This transpose loses the queue name and thus certainty of order
          */
-        //        log.info(s"transpose qcr ${queueCrunchResult}")
         val queueDeskRecsOverTime: Iterable[Iterable[DeskRecTimeslot]] = queueCrunchResult.transpose {
           case (_, cr) => calculateDeskRecTimeSlots(cr).items
         }
@@ -545,7 +483,7 @@ object StaffDeploymentCalculator {
       case (agg, (deskRec, queue)) if agg.length < queueRecs.length - 1 =>
         val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
         agg :+ deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - agg.sum)
-      case (agg, (deskRec, queue)) =>
+      case (agg, (_, queue)) =>
         val ideal = staffAvailable - agg.sum
         agg :+ deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - agg.sum)
     }
@@ -558,25 +496,20 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
   override def handle = {
     case GetAirportInfos(codes) =>
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
-      //      updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos(_))))
-      noChange
+      updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos)))
     case UpdateAirportInfos(infos) =>
       val infosReady = infos.map(kv => (kv._1, Ready(kv._2)))
-      //      updated(value ++ infosReady)
-      noChange
+      updated(value ++ infosReady)
     case GetAirportInfo(code) =>
       value.get(code) match {
         case None =>
           val stringToObject = value + (code -> Empty)
-          //          log.info(s"sending request for info for ${code}")
-          //          updated(stringToObject, Effect(AjaxClient[Api].airportInfoByAirportCode(code).call().map(res => UpdateAirportInfo(code, res))))
-          noChange
+          updated(stringToObject, Effect(AjaxClient[Api].airportInfoByAirportCode(code).call().map(res => UpdateAirportInfo(code, res))))
         case Some(v) =>
           noChange
       }
     case UpdateAirportInfo(code, Some(airportInfo)) =>
       val newValue = value + (code -> Ready(airportInfo))
-      //      log.info(s"got a new value for $code $airportInfo")
       updated(newValue)
   }
 }
@@ -696,13 +629,10 @@ class ActualDesksHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName,
     case GetActualDeskStats() =>
       val nextRequest = Effect(Future(GetActualDeskStats())).after(60 seconds)
       val response = Effect(AjaxClient[Api].getActualDeskStats().call().map {
-        case ActualDeskStats(deskStats) =>
-          log.info(s"Received ActualDeskStats from Api")
-          SetActualDeskStats(deskStats)
+        case ActualDeskStats(deskStats) => SetActualDeskStats(deskStats)
       })
       effectOnly(response + nextRequest)
     case SetActualDeskStats(deskStats) =>
-      //      log.info(s"SetActualDesks")
       updated(deskStats)
   }
 }
@@ -712,7 +642,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   def timeProvider() = new Date().getTime.toLong
 
-  // initial application model
   override protected def initialModel = RootModel()
 
   def gotAllQueueCrunches() = {

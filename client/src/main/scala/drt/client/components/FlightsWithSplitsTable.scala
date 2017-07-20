@@ -73,7 +73,6 @@ object FlightsWithSplitsTable {
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case ((flightWithSplits, codeShares), idx) => {
-                    log.info(s"looking at rendering flight ${flightWithSplits.apiFlight.IATA}")
                     FlightTableRow.tableRow(FlightTableRow.Props(
                       flightWithSplits, codeShares, idx,
                       timelineComponent = timelineComponent,
@@ -135,92 +134,94 @@ object FlightTableRow {
       props.flightWithSplits.apiFlight.ActPax
     )
   })
+  implicit val stateReuse = Reusability.caseClass[RowState]
+
+  case class RowState(hasChanged: Boolean)
 
   val tableRow = ScalaComponent.builder[Props]("TableRow")
+    .initialState[RowState](RowState(false))
     .renderPS(($, props, state) => {
 
-    val idx = props.idx
-    val codeShares = props.codeShares
-    val flightWithSplits = props.flightWithSplits
-    log.info(s"actually rendering flight ${flightWithSplits.apiFlight.IATA}")
-    val flight = flightWithSplits.apiFlight
-    val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
+      val idx = props.idx
+      val codeShares = props.codeShares
+      val flightWithSplits = props.flightWithSplits
+      val flight = flightWithSplits.apiFlight
+      val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
-    Try {
-      val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+      Try {
+        val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
 
-      def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
-        SplitSources.ApiSplitsWithCsvPercentage -> "Live",
-        SplitSources.Historical -> "Historical"
-      ).getOrElse(name, name)
+        def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
+          SplitSources.ApiSplitsWithCsvPercentage -> "Live",
+          SplitSources.Historical -> "Historical"
+        ).getOrElse(name, name)
 
-      def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
-        val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-        val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
-          <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
-          <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
-        <.div(^.className := "splitsource-" + source,
-          props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
-          sourceDisplay)
-      }
-
-      //todo - we need to lift this splitsComponent code out somewhere more useful
-      val splitsComponents = flightSplitsList.take(1).map {
-        flightSplits => {
-          val splitStyle = flightSplits.splitStyle
-          val source = flightSplits.source.toLowerCase
-          val sourceDisplay = sourceDisplayName(flightSplits.source)
-          val vdomElement: VdomElement = splitStyle match {
-            case PaxNumbers => {
-              val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
-              val splitStyleUnitLabe = "pax"
-              val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
-                case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
-              }).toMap
-              GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
-            }
-            case Percentage => {
-              val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
-              val splitStyle = flightSplits.splitStyle
-              val splitStyleUnitLabe = "%"
-              val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
-                case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
-              }).toMap
-              GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
-            }
-          }
-          vdomElement
+        def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
+          val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+          val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+            <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
+            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
+          <.div(^.className := "splitsource-" + source,
+            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
+            sourceDisplay)
         }
-      }
 
-      //        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-      val hasChangedStyle = ^.outline := ""
-      val apiSplits = flightWithSplits.splits
-        .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
-        .getOrElse(ApiSplits(Nil, "no splits - client"))
+        //todo - we need to lift this splitsComponent code out somewhere more useful
+        val splitsComponents = flightSplitsList.take(1).map {
+          flightSplits => {
+            val splitStyle = flightSplits.splitStyle
+            val source = flightSplits.source.toLowerCase
+            val sourceDisplay = sourceDisplayName(flightSplits.source)
+            val vdomElement: VdomElement = splitStyle match {
+              case PaxNumbers => {
+                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
+                val splitStyleUnitLabe = "pax"
+                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
+                  case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
+                }).toMap
+                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
+              }
+              case Percentage => {
+                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
+                val splitStyle = flightSplits.splitStyle
+                val splitStyleUnitLabe = "%"
+                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
+                  case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
+                }).toMap
+                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
+              }
+            }
+            vdomElement
+          }
+        }
 
-      <.tr(^.key := flight.FlightID.toString,
-        hasChangedStyle,
-        props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-        <.td(^.key := flight.FlightID.toString + "-flightNo", allCodes.mkString(" - ")),
-        <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
-        <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
-        <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
-        <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-        <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
-        <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-        <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
-        <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-        <.td(^.key := flight.FlightID.toString + "-pcptimefrom", pcpTimeRange(flight, props.bestPax)),
-        <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
-        <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
-    }.recover {
-      case e => log.error(s"couldn't make flight row $e")
-        <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace().mkString(",")}")
-    }.get
-  }
+        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+        val apiSplits = flightWithSplits.splits
+          .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
+          .getOrElse(ApiSplits(Nil, "no splits - client"))
 
-  )
+        <.tr(^.key := flight.FlightID.toString,
+          hasChangedStyle,
+          props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+          <.td(^.key := flight.FlightID.toString + "-flightNo", allCodes.mkString(" - ")),
+          <.td(^.key := flight.FlightID.toString + "-origin", props.originMapper(flight.Origin)),
+          <.td(^.key := flight.FlightID.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
+          <.td(^.key := flight.FlightID.toString + "-status", flight.Status),
+          <.td(^.key := flight.FlightID.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
+          <.td(^.key := flight.FlightID.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
+          <.td(^.key := flight.FlightID.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
+          <.td(^.key := flight.FlightID.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
+          <.td(^.key := flight.FlightID.toString + "-pcptimefrom", pcpTimeRange(flight, props.bestPax)),
+          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
+          <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
+      }.recover {
+        case e => log.error(s"couldn't make flight row $e")
+          <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace().mkString(",")}")
+      }.get
+    }
+
+    )
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
     .configure(Reusability.shouldComponentUpdate)

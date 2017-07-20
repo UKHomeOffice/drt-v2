@@ -19,7 +19,6 @@ object FlightTableComponents {
 
   def airportCodeComponentLensed(portInfoPot: Pot[AirportInfo])(port: String): VdomElement = {
     val tt: Option[Pot[String]] = Option(potAirportInfoToTooltip(portInfoPot))
-//    log.info(s"making airport info $port $tt")
     <.span(^.title := airportInfoDefault(tt), port)
   }
 
@@ -33,7 +32,6 @@ object FlightTableComponents {
   }
 
   private def airportInfoDefault(res: Option[Pot[String]]): String = {
-//    log.info(s"airportInfoDefault got one! $res")
     res match {
       case Some(Ready(v)) => v
       case _ => "waiting for info..."

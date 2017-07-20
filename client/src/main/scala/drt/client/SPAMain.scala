@@ -21,13 +21,6 @@ import scala.scalajs.js.annotation.{JSExport, JSImport}
 import scalacss.Defaults._
 
 object TableViewUtils {
-
-
-  /**
-    * Fixme: remove this line once we've removed the old terminal page
-    */
-  def queueNameMappingOrder = Queues.EeaDesk :: Queues.NonEeaDesk :: Queues.EGate :: Nil
-
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
     Queues.FastTrack -> "Fast Track",
     Queues.Transfer -> "Tx")
@@ -126,8 +119,6 @@ object TableViewUtils {
                                   ): Seq[List[Long]] = {
     val ts = sampleTimestampsForRows(timestamps)
 
-    //    log.debug(s"queueNosFromSimulationResult queueCrunch ${queueCrunchResultsForTerminal}")
-    //    log.debug(s"queueNosFromSimulationResult userDeskRec ${userDeskRec}")
     val queueSimRes = simulationResult(qn)
     val simulationResultWaitTimes = queueSimRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     //simulationResults won't exist for some 'queues' (like transfer) so pad it out to the right length with 0s for now
@@ -201,7 +192,6 @@ object TableViewUtils {
 @JSExport("SPAMain")
 object SPAMain extends js.JSApp {
 
-  // Define the locations (pages) used in this application
   sealed trait Loc
 
   case object DashboardLoc extends Loc
@@ -233,7 +223,6 @@ object SPAMain extends js.JSApp {
     initActions.foreach(SPACircuit.dispatch(_))
   }
 
-  // configure the router
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
@@ -252,13 +241,11 @@ object SPAMain extends js.JSApp {
     rule.notFound(redirectToPage(StaffingLoc)(Redirect.Replace))
   }.renderWith(layout)
 
-  // base layout for all pages
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
 
   def require(): Unit = {
-    //    log.info(s"app main require()")
     WebpackRequire.React
     WebpackRequire.ReactDOM
     ()
@@ -268,26 +255,16 @@ object SPAMain extends js.JSApp {
   def main(): Unit = {
     require()
 
-    //    Perf.start()
-    //    scala.scalajs.js.Dynamic.global.window.Perf = Perf;
     log.info(s"think the port is ${pathToThisApp.split("/")}")
     log.warn("Application starting")
-    // send log messages also to the server
-    //    log.enableServerLogging(pathToThisApp + "/logging")
-    //    log.info("This message goes to server as well")
 
-    // create stylesheet
     import scalacss.ScalaCssReact._
 
-    //    ReactTable.DefaultStyle.addToDocument()
-    //    Spinner.Style.addToDocument()
     GlobalStyles.addToDocument()
 
     requestInitialActions()
 
-    // create the router
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
-    // tell React to render the router in the document body
     router().renderIntoDOM(dom.document.getElementById("root"))
   }
 }

@@ -11,8 +11,7 @@ import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
-object
-TerminalsDashboardPage {
+object TerminalsDashboardPage {
 
   case class Props(hours: Int)
 
@@ -21,12 +20,11 @@ TerminalsDashboardPage {
       val now = SDate.now()
       val nowPlusNHours = now.addHours(p.hours)
 
-      //      println(s"terminalsPage now is $now")
-      def interestingflight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
+      def interestingFlight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
       val portCodeAndQueueOrder = SPACircuit.connect(_.airportConfig.map(ac => (ac.portCode, ac.queueOrder)))
-      val flightsByTerminalC = SPACircuit.connect(_.flightsWithSplitsPot.map(_.flights.filter(interestingflight).groupBy(_.apiFlight.Terminal)))
+      val flightsByTerminalC = SPACircuit.connect(_.flightsWithSplitsPot.map(_.flights.filter(interestingFlight).groupBy(_.apiFlight.Terminal)))
 
 
       val hours = p.hours

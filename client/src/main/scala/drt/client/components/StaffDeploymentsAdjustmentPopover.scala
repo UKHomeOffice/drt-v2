@@ -1,21 +1,16 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalDepsLoc}
 import drt.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
-import drt.client.logger._
-import drt.client.modules.PopoverWrapper
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.SDateLike
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom
 import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
 
 import scala.collection.immutable.Seq
-import scala.scalajs.js
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object StaffDeploymentsAdjustmentPopover {
 
@@ -72,12 +67,10 @@ object StaffDeploymentsAdjustmentPopover {
         case Success(shift) =>
           for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {
             SPACircuit.dispatch(AddStaffMovement(movement))
-//            log.info(s"Dispatched AddStaffMovement($movement")
           }
           SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
           scope.modState(_.copy(active = false))
-        case Failure(error) =>
-//          log.info("Invalid shift")
+        case Failure(_) =>
           scope.modState(_.copy(active = true))
       }
     }
