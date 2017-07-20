@@ -129,43 +129,6 @@ case class RootModel(
     }
   }
 
-//  lazy val calculatedDeploymentRows: Pot[Map[TerminalName, Pot[List[TerminalDeploymentsRow]]]] = {
-//    airportConfig.map(ac => ac.terminalNames.map(terminalName => {
-//      calculateTerminalDeploymentRows(terminalName)
-//    }).toMap)
-//  }
-
-//  def calculateTerminalDeploymentRows(terminalName: TerminalName): Pot[List[TerminalDeploymentsRow]] = {
-//    log.info(s"calculateTerminalDeploymentRows called $terminalName")
-//    val crv = queueCrunchResults.getOrElse(terminalName, Map())
-//    val srv = simulationResult.getOrElse(terminalName, Map())
-//    val udr = staffDeploymentsByTerminalAndQueue.getOrElse(terminalName, Map())
-//    val terminalDeploymentRows: Pot[List[TerminalDeploymentsRow]] = workloadPot.map(workloads => {
-//      workloads.workloads.get(terminalName) match {
-//        case Some(terminalWorkloads) =>
-//          val tried: Try[List[TerminalDeploymentsRow]] = Try {
-//            val timestamps = workloads.timeStamps()
-//            val startFromMilli = WorkloadsHelpers.midnightBeforeNow()
-//            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(startFromMilli, 24)
-//
-//            val paxLoad: Map[String, List[Double]] = WorkloadsHelpers.paxloadPeriodByQueue(terminalWorkloads, minutesRangeInMillis)
-//            val actDesksForTerminal = actualDeskStats.getOrElse(terminalName, Map())
-//
-//            TableViewUtils.terminalDeploymentsRows(terminalName, airportConfig, timestamps, paxLoad, crv, srv, udr, actDesksForTerminal)
-//          } recover {
-//            case f =>
-//              val terminalWorkloadsPprint = pprint.stringify(terminalWorkloads).take(1024)
-//              log.error(s"calculateTerminalDeploymentRows $f terminalWorkloads were: $terminalWorkloadsPprint", f.asInstanceOf[Exception])
-//              Nil
-//          }
-//          tried.get
-//        case None =>
-//          Nil
-//      }
-//    })
-//    terminalDeploymentRows
-//  }
-
   override def toString: String =
     s"""
        |RootModel(
@@ -354,7 +317,7 @@ class SimulationHandler[M](
       log.debug(s"RunTerminalSimulations effects ${actions}")
       effectOnly(seqOfEffectsToEffectSeq(actions))
     case RunTerminalSimulation(terminalName) =>
-      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady /*&& allQueueCrunchesReceived() */ && airportConfig.value.isReady) {
+      if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady && allQueueCrunchesReceived() && airportConfig.value.isReady) {
         log.info(s"Requesting full simulation for $terminalName")
         val terminalDeskRecs = staffDeployments.value.getOrElse(terminalName, Map()).map {
           case (queueName, drtsPot) => queueName -> drtsPot.map(_.items.map(_.deskRec)).getOrElse(List()).toList
@@ -484,38 +447,6 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
       }
       effectOnly(Effect(updateTerminalAction) + nextCrunch)
 
-    //    case GetLatestCrunch(terminalName, queueName) =>
-    //      val crunchEffect = Effect(Future(GetLatestCrunch(terminalName, queueName))).after(60L seconds)
-    //      val fe: Future[Action] = AjaxClient[Api].getLatestCrunchResult(terminalName, queueName).call().map {
-    //        case Right(crunchResultWithTimeAndInterval) =>
-    //          UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval)
-    //        case Left(ncr) =>
-    //          log.info(s"$terminalName/$queueName Failed to fetch crunch - has a crunch run yet? $ncr")
-    //          NoAction
-    //        case other =>
-    //          log.error(s"arghother $other")
-    //          NoAction
-    //      }
-    //      effectOnly(Effect(fe) + crunchEffect)
-    //    case UpdateCrunchResult(terminalName, queueName, crunchResultWithTimeAndInterval) =>
-    //      log.info(s"UpdateCrunchResult $queueName. firstTimeMillis: ${crunchResultWithTimeAndInterval.firstTimeMillis}")
-    //      val firstNonZeroIndex = crunchResultWithTimeAndInterval.waitTimes.indexWhere(_ != 0)
-    //      log.info(s"$terminalName/$queueName crunchResult: $firstNonZeroIndex")
-    //
-    //      val totalPortQueues = totalQueues()
-    //
-    //      val queuesBefore = value.foldLeft(0)((acc, tq) => acc + tq._2.size)
-    //      val crunchResultsByQueue = mergeTerminalQueues(value, Map(terminalName -> Map(queueName -> Ready(Ready(crunchResultWithTimeAndInterval)))))
-    //      val queuesAfter = crunchResultsByQueue.foldLeft(0)((acc, tq) => acc + tq._2.size)
-    //
-    //      if (queuesBefore < totalPortQueues && queuesAfter == totalPortQueues) {
-    //        log.info(s"Received $queuesAfter of $totalPortQueues queue crunch results. Kicking off a RunAllSimulation")
-    //        updated(crunchResultsByQueue, Effect(Future(RunAllSimulations())))
-    //      } else if (modelQueueCrunchResults != crunchResultsByQueue) {
-    //        log.info(s"Received $queuesAfter of $totalPortQueues queue crunch results")
-    //        updated(crunchResultsByQueue)
-    //      }
-    //      else noChange
     case UpdateTerminalCrunchResult(terminalName, tqr) =>
       val oldTC = value.getOrElse(terminalName, Map())
       val newTC = Map(terminalName -> tqr)

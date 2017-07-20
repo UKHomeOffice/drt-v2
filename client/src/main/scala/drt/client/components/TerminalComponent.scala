@@ -8,6 +8,7 @@ import drt.client.components.Heatmap.Series
 import drt.client.components.TerminalHeatmaps._
 import drt.client.logger.log
 import drt.client.services.HandyStuff.QueueStaffDeployments
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, Workloads}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
@@ -50,6 +51,11 @@ object TerminalComponent {
       val model = modelMP.value
       <.div(
         model.airportConfig.renderReady(airportConfig => {
+          val summaryBoxesProps = SummaryBoxesComponent.Props(
+            airportConfig,
+            props.terminalName,
+            model.flightsWithSplitsPot
+          )
           val heatmapProps = HeatmapComponent.Props(
             props.terminalName,
             model.simulationResult)
@@ -67,6 +73,7 @@ object TerminalComponent {
           )
 
           <.div(
+            SummaryBoxesComponent(summaryBoxesProps),
             HeatmapComponent(heatmapProps),
             TerminalContentComponent(terminalContentProps)
           )
@@ -80,6 +87,58 @@ object TerminalComponent {
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .renderPS(($, props, state) => render(props))
+    .build
+
+  def apply(props: Props): VdomElement = component(props)
+}
+
+object SummaryBoxesComponent {
+
+  case class Props(
+                    airportConfig: AirportConfig,
+                    terminalName: TerminalName,
+                    flightsWithSplitsPot: Pot[FlightsWithSplits]
+                  ) {
+    lazy val hash = Nil
+  }
+
+  val component = ScalaComponent.builder[Props]("SummaryBoxes")
+    .render_P(props => {
+      val portCode = props.airportConfig.portCode
+      val queueOrder = props.airportConfig.queueOrder
+      val bestPaxFn = BestPax(portCode)
+      val now = SDate.now()
+      val hoursToAdd = 3
+      val nowplus3 = now.addHours(hoursToAdd)
+
+      <.div(
+        <.h2(s"In the next $hoursToAdd hours"),
+        <.div({
+          props.flightsWithSplitsPot.renderReady(flightsWithSplits => {
+            import BigSummaryBoxes._
+            val tried: Try[VdomElement] = Try {
+              val filteredFlights = flightsInPeriod(flightsWithSplits.flights, now, nowplus3)
+              val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
+              val flightCount = flightsAtTerminal.length
+              val actPax = sumActPax(flightsAtTerminal)
+              val bestSplitPaxFn = bestFlightSplitPax(bestPaxFn)
+              val bestPax = sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
+              val aggSplits = aggregateSplits(bestPaxFn)(flightsAtTerminal)
+
+              val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
+
+              <.div(summaryBoxes)
+            }
+            val recovered = tried recoverWith {
+              case f => Try(<.div(f.toString))
+            }
+            <.span(recovered.get)
+          })
+        },
+          props.flightsWithSplitsPot.renderPending(_ => "Waiting for flights")
+        )
+      )
+    })
     .build
 
   def apply(props: Props): VdomElement = component(props)
@@ -133,7 +192,7 @@ object HeatmapComponent {
               } else "")
           ))
       }))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)
@@ -152,20 +211,32 @@ object TerminalContentComponent {
                     workloads: Workloads,
                     actualDesks: Map[QueueName, Map[Long, DeskStat]]
                   ) {
-    lazy val hash = flightsWithSplitsPot.toOption.map(_.flights.map(f => {
-      (f.splits.hashCode,
-        f.apiFlight.Status,
-        f.apiFlight.Gate,
-        f.apiFlight.Stand,
-        f.apiFlight.SchDT,
-        f.apiFlight.EstDT,
-        f.apiFlight.ActDT,
-        f.apiFlight.EstChoxDT,
-        f.apiFlight.ActChoxDT,
-        f.apiFlight.PcpTime,
-        f.apiFlight.ActPax
-      )
-    }))
+    lazy val hash = {
+      val depsHash: List[Option[List[Int]]] = deployments.values.map(drtsPot => {
+        drtsPot.toOption.map(drts => {
+          drts.items.map(drt => {
+            drt.hashCode
+          }).toList
+        })
+      }).toList
+
+      val flightsHash: Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]] = flightsWithSplitsPot.toOption.map(_.flights.map(f => {
+        (f.splits.hashCode,
+          f.apiFlight.Status,
+          f.apiFlight.Gate,
+          f.apiFlight.Stand,
+          f.apiFlight.SchDT,
+          f.apiFlight.EstDT,
+          f.apiFlight.ActDT,
+          f.apiFlight.EstChoxDT,
+          f.apiFlight.ActChoxDT,
+          f.apiFlight.PcpTime,
+          f.apiFlight.ActPax
+        )
+      }))
+
+      (depsHash, flightsHash)
+    }
   }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
@@ -194,7 +265,6 @@ object TerminalContentComponent {
       timelineComp,
       originMapper,
       splitsGraphComponentColoured)(paxComp(843))
-
 
     def render(props: Props, state: State) = {
       val bestPax = BestPax(props.airportConfig.portCode)
@@ -248,7 +318,7 @@ object TerminalContentComponent {
     .initialState(State("arrivals"))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount((p) => Callback.log(s"terminal component didMount"))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = {

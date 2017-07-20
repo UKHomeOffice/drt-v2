@@ -329,10 +329,12 @@ object TerminalDeploymentsTable {
     .initialState[State](State(false))
     .renderPS((sc, p, s) => Backend(sc, p, s))
     .componentDidMount((p) => Callback.log(s"terminal deployments component didMount"))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminalName: String, rows: List[TerminalDeploymentsRow], flights: Pot[FlightsWithSplits],
+  def apply(terminalName: String,
+            rows: List[TerminalDeploymentsRow],
+            flights: Pot[FlightsWithSplits],
             airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) =
     component(Props(terminalName, rows, flights, airportConfig, airportInfos))

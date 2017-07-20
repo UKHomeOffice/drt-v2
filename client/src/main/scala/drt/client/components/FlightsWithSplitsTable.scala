@@ -95,7 +95,7 @@ object FlightsWithSplitsTable {
       }
     })
     .componentDidMount((p) => Callback.log(s"arrivals table didMount"))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
 }
@@ -223,7 +223,7 @@ object FlightTableRow {
   )
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
-    .configure(Reusability.shouldComponentUpdateWithOverlay)
+    .configure(Reusability.shouldComponentUpdate)
     .build
 }
 

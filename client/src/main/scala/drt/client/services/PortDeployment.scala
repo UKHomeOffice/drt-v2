@@ -11,11 +11,14 @@ import scala.collection.immutable.{IndexedSeq, Iterable, Map, Seq}
 object PortDeployment {
   def portDeskRecs(portRecs: Map[TerminalName, Map[QueueName, CrunchResult]]): List[(Long, List[(Int, TerminalName)])] = {
     val portRecsByTerminal: List[List[(Int, TerminalName)]] = portRecs.map {
-      case (terminalName, queueRecs: Map[TerminalName, Seq[Int]]) =>
-        val deskRecsByMinute: Seq[List[Int]] = queueRecs.values.toList.transpose(_.recommendedDesks)
-        deskRecsByMinute.transpose.map((x: Iterable[Int]) => x.sum).map((_, terminalName)).toList
+      case (terminalName, terminalCrunchResults) =>
+        val values: Seq[CrunchResult] = terminalCrunchResults.values.toList
+        val deskRecsByMinute: Seq[Seq[Int]] = values.transpose(_.recommendedDesks)
+
+        deskRecsByMinute.map((x: Iterable[Int]) => x.sum).map((_, terminalName)).toList
       case _ => List()
     }.toList
+
     val seconds: Range = secondsRangeFromPortCrunchResult(portRecs.values.toList)
     val portRecsByTimeInSeconds: List[(Int, List[(Int, TerminalName)])] = seconds.zip(portRecsByTerminal.transpose).toList
     val portRecsByTimeInMillis: List[(Long, List[(Int, TerminalName)])] = portRecsByTimeInSeconds.map {
