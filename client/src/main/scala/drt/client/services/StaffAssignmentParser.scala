@@ -168,13 +168,10 @@ trait StaffAssignmentService {
 
 case class StaffAssignmentServiceWithoutDates(assignments: Seq[StaffAssignment]) extends StaffAssignmentService {
 
-  def timeString(d: MilliDate) = {
-    val sdate = SDate(d)
-    f"${sdate.getHours()}%2d:${sdate.getMinutes()}%2d"
-  }
   def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
-
-    assignment.terminalName == terminalName && timeString(date) >= timeString(assignment.startDt) && timeString(date) <= timeString(assignment.endDt)
+    assignment.terminalName == terminalName &&
+      SDate(date).toHoursAndMinutes() >= SDate(assignment.startDt).toHoursAndMinutes() &&
+      SDate(date).toHoursAndMinutes() <= SDate(assignment.endDt).toHoursAndMinutes()
   }).map(_.numberOfStaff).sum
 }
 
