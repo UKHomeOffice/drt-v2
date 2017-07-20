@@ -17,6 +17,11 @@ import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
 import scala.util.{Success, Try}
 
+object DateRange {
+  val start = SDate.today()
+  val end = start.addDays(1)
+}
+
 object TerminalStaffing {
 
   case class Props(terminalName: TerminalName)
@@ -35,7 +40,7 @@ object TerminalStaffing {
                 <.div(
                   <.div(^.className := "container",
                     <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
-                    <.div(^.className := "col-md-3", movementsEditor(movements, staffingMP, props.terminalName))
+                    <.div(^.className := "col-md-3", movementsEditor(movements.filter(m => m.time > DateRange.start && m.time < DateRange.end), staffingMP, props.terminalName))
                   ),
                   <.div(^.className := "container",
                     <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
