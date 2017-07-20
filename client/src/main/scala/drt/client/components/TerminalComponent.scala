@@ -57,6 +57,7 @@ object TerminalComponent {
             model.flightsWithSplitsPot
           )
           val heatmapProps = HeatmapComponent.Props(
+            airportConfig,
             props.terminalName,
             model.simulationResult)
 
@@ -111,7 +112,7 @@ object SummaryBoxesComponent {
       val hoursToAdd = 3
       val nowplus3 = now.addHours(hoursToAdd)
 
-      <.div(
+      <.div(^.id := "terminal-summary-boxes",
         <.h2(s"In the next $hoursToAdd hours"),
         <.div({
           props.flightsWithSplitsPot.renderReady(flightsWithSplits => {
@@ -147,6 +148,7 @@ object SummaryBoxesComponent {
 object HeatmapComponent {
 
   case class Props(
+                    airportConfig: AirportConfig,
                     terminalName: TerminalName,
                     simulationResults: Map[QueueName, QueueSimulationResult]
                   ) {
@@ -163,7 +165,10 @@ object HeatmapComponent {
     .renderPS((scope, props, state) =>
       <.div({
         val seriesPot: Pot[List[Series]] = waitTimes(props.simulationResults, props.terminalName)
-        <.div(
+        val baseHeight = 120
+        val heatmapQueuesHeight = props.airportConfig.queues(props.terminalName).length * 40
+        val heatmapsContainerHeight = baseHeight + heatmapQueuesHeight
+        <.div(^.height := s"${heatmapsContainerHeight}px",
           <.ul(^.className := "nav nav-tabs",
             <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations"), ^.onClick --> scope.modState(_ => State("deskrecs"))),
             <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads"), ^.onClick --> scope.modState(_ => State("workloads"))),
