@@ -210,23 +210,11 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
     case _: GetAirportConfig =>
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
-      val effects: Effect = createCrunchRequestEffects(configHolder)
-      updated(Ready(configHolder), effects)
-  }
-
-  def createCrunchRequestEffects(configHolder: AirportConfig): Effect = {
-    val crunchRequests: Seq[Effect] = for {
-      tn <- configHolder.terminalNames
-    } yield {
-      Effect(Future(GetTerminalCrunch(tn)))
-    }
-
-    val effects = seqOfEffectsToEffectSeq(crunchRequests.toList)
-    effects
+      updated(Ready(configHolder))
   }
 }
 
-class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
+class WorkloadsHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case _: GetWorkloads =>
       val newWorkloads = if (value.isEmpty) Pending() else value
@@ -237,11 +225,26 @@ class WorkloadHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAct
             NoAction
         }))
     case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
-      val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
-        (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),
-          plWl._2.map(pl => Pax(timeFromMillisToNearestSecond(pl.time), pl.pax)))))
-
-      updated(Ready(Workloads(roundedTimesToMinutes)))
+      val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = {
+        terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
+          (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),
+            plWl._2.map(pl => Pax(timeFromMillisToNearestSecond(pl.time), pl.pax)))))
+      }
+      val changedTerminals = roundedTimesToMinutes.keys.filter(terminalName => {
+        val newTerminalWl = roundedTimesToMinutes(terminalName)
+        val noExistingWorkloads = !value.isReady
+        noExistingWorkloads || newTerminalWl != value.get.workloads(terminalName)
+      })
+      val crunchRequests = changedTerminals
+        .map(terminalName => {
+          log.info(s"$terminalName workloads changed. Requesting crunch")
+          Effect(Future(GetTerminalCrunch(terminalName)))
+        })
+        .toList
+      if (crunchRequests.isEmpty)
+        updated(Ready(Workloads(roundedTimesToMinutes)))
+      else
+        updated(Ready(Workloads(roundedTimesToMinutes)), seqOfEffectsToEffectSeq(crunchRequests))
   }
 
   private def timeFromMillisToNearestSecond(time: Long) = {
@@ -372,7 +375,7 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
 
 }
 
-class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
+class CrunchHandler[M](totalQueues: () => Map[TerminalName, Int], modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
                        staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
                        airportConfig: ModelR[M, Pot[AirportConfig]])
   extends LoggingActionHandler(modelRW) {
@@ -381,26 +384,33 @@ class CrunchHandler[M](totalQueues: () => Int, modelRW: ModelRW[M, Map[TerminalN
 
   override def handle = {
     case GetTerminalCrunch(terminalName) =>
-      val nextCrunch = Effect(Future(GetTerminalCrunch(terminalName))).after(60 seconds)
       val callResultFuture: Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = AjaxClient[Api].getTerminalCrunchResult(terminalName).call()
 
-      val updateTerminalAction = callResultFuture.map {
-        case qncrs => UpdateTerminalCrunchResult(terminalName, qncrs.collect {
-          case (queueName, Right(cr)) => queueName -> cr
-        }.toMap)
+      val updateTerminalAction: Future[UpdateTerminalCrunchResult] = callResultFuture.map {
+        case qncrs =>
+          UpdateTerminalCrunchResult(terminalName, qncrs.collect {
+            case (queueName, Right(cr)) => queueName -> cr
+          }.toMap)
       }
-      effectOnly(Effect(updateTerminalAction) + nextCrunch)
+
+      effectOnly(Effect(updateTerminalAction))
 
     case UpdateTerminalCrunchResult(terminalName, tqr) =>
       val oldTC = value.getOrElse(terminalName, Map())
       val newTC = Map(terminalName -> tqr)
 
+      log.info(s"tqr.size: ${tqr.size} ... totalQueues(): ${totalQueues()}")
+      val terminalQueues = totalQueues().getOrElse(terminalName, -1)
+      val effects = if (tqr.size < terminalQueues) List(Effect(Future(GetTerminalCrunch(terminalName))).after(5 seconds)) else List()
+
       if (newTC != oldTC) {
         log.info(s"crunch for $terminalName has updated. requesting simulation result")
-        updated(value ++ newTC, Effect(Future(RunTerminalSimulation(terminalName))))
+        val runSimulation = Effect(Future(RunTerminalSimulation(terminalName)))
+        val allEffects = seqOfEffectsToEffectSeq(runSimulation :: effects)
+        updated(value ++ newTC, allEffects)
       } else {
         log.info(s"crunch for $terminalName has not updated")
-        noChange
+        effectOnly(seqOfEffectsToEffectSeq(effects))
       }
   }
 }
@@ -657,16 +667,16 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     queueCrunchCount == totalQueues
   }
 
-  def totalQueues() = {
+  def totalQueues(): Map[TerminalName, Int] = {
     val airportConfig = zoom(_.airportConfig)
     if (airportConfig.value.isReady) {
-      airportConfig.value.get.queues.foldLeft(0)((acc: Int, tq) => acc + tq._2.count(_ != Queues.Transfer))
-    } else -1
+      airportConfig.value.get.queues.mapValues(queues => queues.count(_ != Queues.Transfer))
+    } else Map[TerminalName, Int]()
   }
 
   override val actionHandler = {
     val composedhandlers: HandlerFunction = composeHandlers(
-      new WorkloadHandler(zoomRW(_.workloadPot)((m, v) => {
+      new WorkloadsHandler(zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
       })),
       new CrunchHandler(totalQueues, zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
