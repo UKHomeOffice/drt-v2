@@ -399,9 +399,11 @@ class CrunchHandler[M](totalQueues: () => Map[TerminalName, Int], modelRW: Model
       val oldTC = value.getOrElse(terminalName, Map())
       val newTC = Map(terminalName -> tqr)
 
-      log.info(s"tqr.size: ${tqr.size} ... totalQueues(): ${totalQueues()}")
       val terminalQueues = totalQueues().getOrElse(terminalName, -1)
-      val effects = if (tqr.size < terminalQueues) List(Effect(Future(GetTerminalCrunch(terminalName))).after(5 seconds)) else List()
+      val effects = if (tqr.size < terminalQueues) {
+        log.info(s"Only received ${tqr.size} out of ${totalQueues()} queue crunch results. Requesting another terminal crunch in 5 seconds")
+        List(Effect(Future(GetTerminalCrunch(terminalName))).after(5 seconds))
+      } else List()
 
       if (newTC != oldTC) {
         log.info(s"crunch for $terminalName has updated. requesting simulation result")
@@ -664,7 +666,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
     val queueCrunchCount = queueCrunchResults.value.foldLeft(0)((acc, tq) => acc + tq._2.size)
 
-    queueCrunchCount == totalQueues
+    queueCrunchCount == totalQueues.values.sum
   }
 
   def totalQueues(): Map[TerminalName, Int] = {
