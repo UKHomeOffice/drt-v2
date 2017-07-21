@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 
+import scala.util.{Failure, Success, Try}
+
 
 case class FastTrackPercentages(visaNational: Double, nonVisaNational: Double)
 
@@ -63,7 +65,9 @@ object CSVPassengerSplitsProvider {
       case s => s :: Nil
     }
   }
+
   val log = LoggerFactory.getLogger(getClass)
+
   def applyFastTrackSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[SplitsPaxTypeAndQueueCount] = {
     val results = ptaqc.flatMap {
       case s@SplitsPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
@@ -90,7 +94,7 @@ object CSVPassengerSplitsProvider {
 }
 
 case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
-  private val log = LoggerFactory.getLogger(getClass)
+  val log = LoggerFactory.getLogger(getClass)
 
   log.info("Initialising CSV Splits")
   lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = {
@@ -122,7 +126,7 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
         row.month == month
     }
     ).map(matchFlight => {
-      val splitRatiosWith0FastTrackFiltersOut = CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight).filterNot(sr => sr.paxType.queueType == Queues.FastTrack && sr.ratio == 0 )
+      val splitRatiosWith0FastTrackFiltersOut = CsvPassengerSplitsReader.splitRatioFromFlightPaxSplit(matchFlight).filterNot(sr => sr.paxType.queueType == Queues.FastTrack && sr.ratio == 0)
       SplitRatios(splitRatiosWith0FastTrackFiltersOut, origin = SplitSources.Historical)
     })
   }
@@ -131,6 +135,8 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
 }
 
 object CsvPassengerSplitsReader {
+  val log = LoggerFactory.getLogger(getClass)
+
   def calcQueueRatio(categoryPercentage: Int, queuePercentage: Int) = (categoryPercentage.toDouble / 100.0) * (queuePercentage.toDouble / 100.0)
 
   def splitRatioFromFlightPaxSplit(row: FlightPaxSplit): List[SplitRatio] = {
@@ -187,30 +193,37 @@ object CsvPassengerSplitsReader {
                            )
 
   def flightPaxSplitsFromLines(flightPaxSplits: Seq[String]): Seq[FlightPaxSplit] = {
-
     flightPaxSplits.map { l =>
-      val splitRow: Array[String] = l.split(",", -1)
-      FlightPaxSplit(
-        splitRow(0),
-        splitRow(1),
-        splitRow(2).toInt,
-        splitRow(3).toInt,
-        splitRow(4).toInt,
-        splitRow(5).toInt,
-        splitRow(6).toInt,
-        splitRow(7).toInt,
-        splitRow(8).toInt,
-        splitRow(9).toInt,
-        splitRow(10).toInt,
-        splitRow(11).toInt,
-        splitRow(12).toInt,
-        splitRow(13).toInt,
-        splitRow(14),
-        splitRow(15),
-        splitRow(16),
-        splitRow(17),
-        splitRow(18)
-      )
+      val splitRow = l.split(",", -1)
+      Try(
+        FlightPaxSplit(
+          splitRow(0),
+          splitRow(1),
+          splitRow(2).toInt,
+          splitRow(3).toInt,
+          splitRow(4).toInt,
+          splitRow(5).toInt,
+          splitRow(6).toInt,
+          splitRow(7).toInt,
+          splitRow(8).toInt,
+          splitRow(9).toInt,
+          splitRow(10).toInt,
+          splitRow(11).toInt,
+          splitRow(12).toInt,
+          splitRow(13).toInt,
+          splitRow(14),
+          splitRow(15),
+          splitRow(16),
+          splitRow(17),
+          splitRow(18)
+        )) match {
+        case Success(s) => Success(s)
+        case Failure(f) =>
+          log.warn(s"Error parsing CSV Split $f for row: $splitRow")
+          Failure(f)
+      }
+    }.collect {
+      case Success(s) => s
     }
   }
 }
