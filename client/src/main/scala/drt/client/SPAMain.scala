@@ -213,12 +213,12 @@ object SPAMain extends js.JSApp {
   def requestInitialActions() = {
     val initActions = Seq(
       GetAirportConfig(),
-      GetWorkloads("", ""),
       RequestFlights(0, 0),
       GetShifts(),
       GetFixedPoints(),
       GetStaffMovements(),
-      GetActualDeskStats())
+      GetActualDeskStats(),
+      GetWorkloads("", ""))
 
     initActions.foreach(SPACircuit.dispatch(_))
   }
