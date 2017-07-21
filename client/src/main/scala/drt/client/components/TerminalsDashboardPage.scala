@@ -60,7 +60,7 @@ object TerminalsDashboardPage {
                 }
               })
             })
-          }))
+          }), Debug())
       }
     }
     ).build

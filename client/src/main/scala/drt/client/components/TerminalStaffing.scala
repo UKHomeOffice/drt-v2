@@ -40,7 +40,7 @@ object TerminalStaffing {
                 <.div(
                   <.div(^.className := "container",
                     <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
-                    <.div(^.className := "col-md-3", movementsEditor(movements.filter(m => m.time > DateRange.start && m.time < DateRange.end), staffingMP, props.terminalName))
+                    <.div(^.className := "col-md-3", movementsEditor(todaysMovements(movements, DateRange.start, DateRange.end), staffingMP, props.terminalName))
                   ),
                   <.div(^.className := "container",
                     <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
@@ -51,6 +51,10 @@ object TerminalStaffing {
         )
       })
     }
+  }
+
+   def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate) = {
+    movements.filter(m => m.time > start && m.time < end)
   }
 
   def filterByTerminal(fixedPoints: String, terminalName: String) = {
