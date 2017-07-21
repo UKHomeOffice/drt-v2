@@ -111,9 +111,6 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       }
     }
   }
-}
-
-class WTFPaxSplitsFromCSVTests extends Specification {
   "Given a Flight Passenger Split" >> {
     "When we ask for workloads by terminal, then we should see the split applied" >> {
       val today = new DateTime(2017, 1, 1, 14, 0)
@@ -152,7 +149,24 @@ class WTFPaxSplitsFromCSVTests extends Specification {
       (eGateSplit.get._2._2.head.pax, eeaDeskSplit.get._2._2.head.pax) === (0.7, 0.3)
     }
   }
+  "Given a dodgy peice of data in a CSV file" >> {
+    "Then I should get back the splits in the correctly formatted lines anyway" >> {
+      val expected = Seq(
+        FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January", "STN", "T1", "SA")
+      )
+
+      val splitsLines = Seq(
+        "Missing,some,data,0,2,1,70,30,100,0,,0,100,0,Sunday,January,STN,T1,SA",
+        "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Monday,January,STN,T1,SA"
+      )
+
+      val rows = flightPaxSplitsFromLines(splitsLines)
+
+      rows.toList === expected
+    }
+  }
 }
+
 
 
 
