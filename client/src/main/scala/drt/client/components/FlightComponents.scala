@@ -19,7 +19,7 @@ object FlightComponents {
     airportConfigRCP(acPot => {
       <.div(
         acPot().renderReady(ac => {
-          val paxToDisplay = if (apiExTransPax > 0) apiExTransPax else BestPax(ac.portCode)(flight)
+          val paxToDisplay: Int = bestPaxToDisplay(flight, apiExTransPax, ac.portCode)
           val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
           val paxClass = paxDisplayClass(flight, apiPax, paxToDisplay)
           val maxCapLine = maxCapacityLine(maxFlightPax, flight)
@@ -35,7 +35,16 @@ object FlightComponents {
     })
   }
 
-  private def paxDisplayClass(flight: Arrival, apiPax: Int, paxToDisplay: Int) = {
+  def bestPaxToDisplay(flight: Arrival, apiExTransPax: Int, portCode: String) = {
+    val bestNonApiPax = BestPax(portCode)(flight)
+    val apiDiffTrustThreshold = 0.2
+    val absPercentageDifference = Math.abs(apiExTransPax - bestNonApiPax).toDouble / bestNonApiPax
+    val trustApi = absPercentageDifference <= apiDiffTrustThreshold
+    val paxToDisplay = if (apiExTransPax > 0 && trustApi) apiExTransPax else bestNonApiPax
+    paxToDisplay
+  }
+
+  def paxDisplayClass(flight: Arrival, apiPax: Int, paxToDisplay: Int) = {
     if (apiPax > 0) {
       "pax-api"
     } else if (paxToDisplay == flight.ActPax) {
