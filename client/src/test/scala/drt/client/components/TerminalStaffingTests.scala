@@ -1,6 +1,5 @@
 package drt.client.components
 
-
 import java.util.UUID
 
 import drt.client.services.JSDateConversions._
@@ -8,7 +7,6 @@ import drt.shared.StaffMovement
 import utest.{TestSuite, _}
 import TerminalStaffing.todaysMovements
 import scala.collection.immutable._
-
 
 object TerminalStaffingTests extends TestSuite {
 
@@ -30,6 +28,4 @@ object TerminalStaffingTests extends TestSuite {
       }
     }
   }
-
-
 }
