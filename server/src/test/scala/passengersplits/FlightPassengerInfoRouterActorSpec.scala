@@ -7,6 +7,7 @@ import com.typesafe.config.ConfigFactory
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
+import passengersplits.AkkaPersistTestConfig
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfo, PassengerInfoJson, VoyageManifest}
@@ -16,7 +17,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 
-class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
   isolated
   implicit val materializer = ActorMaterializer()
   implicit val timeout = Timeout(1 second)
