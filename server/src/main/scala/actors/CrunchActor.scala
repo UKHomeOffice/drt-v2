@@ -166,7 +166,7 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
   val uniqueArrivalsWithCodeshares = CodeShares.uniqueArrivalsWithCodeshares(identity[Arrival]) _
 
   def performCrunch(terminalName: TerminalName, queueName: QueueName): Future[CrunchResult] = {
-    val tq: QueueName = queueName
+    val tq: QueueName = terminalName + "/" + queueName
     log.info(s"$tq Performing a crunch")
     val flightsForAirportConfigTerminals = flightState.values.filter(flight => flight.Terminal == terminalName).toList
     val uniqueArrivals = uniqueArrivalsWithCodeshares(flightsForAirportConfigTerminals).map(_._1)
