@@ -196,7 +196,7 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
   def log: DiagnosticLoggingAdapter
 
   def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
-    val tq: QueueName = queueName
+    val tq: QueueName = terminalName + "/" + queueName
     for (wl <- workloads) yield {
       val triedWl: Try[Map[String, List[Double]]] = Try {
         log.info(s"$tq lookup wl ")

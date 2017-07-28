@@ -84,7 +84,7 @@ object TerminalHeatmaps {
     val seriiRCP: ReactConnectProxy[List[Series]] = SPACircuit.connect(_.queueCrunchResults.getOrElse(terminalName, Map()).collect {
       case (queueName, crunchResult) =>
         val series = Heatmap.seriesFromCrunchResult(crunchResult)
-        Series(queueName, series.map(_.toDouble))
+        Series(terminalName + "/" + queueName, series.map(_.toDouble))
     }.toList.sortBy(_.name))
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
@@ -99,7 +99,7 @@ object TerminalHeatmaps {
         val queustaffDeploymentItems = queueStaffDeployments.items
         //queueStaffDeployments are in 15 minute chunks
         val series = queustaffDeploymentItems.map(_.deskRec).grouped(4).map(_.max)
-        Series(queueName, series.map(_.toDouble).toIndexedSeq)
+        Series(terminalName + "/" + queueName, series.map(_.toDouble).toIndexedSeq)
     }.toList.sortBy(x => x.name))
     seriiRCP((serMP: ModelProxy[List[Series]]) => {
       <.div(
@@ -150,7 +150,7 @@ object TerminalHeatmaps {
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
     } yield {
-      Series(queue, work.toVector)
+      Series(terminalName + "/" + queue, work.toVector)
     }
     result.toList
   }
@@ -160,7 +160,7 @@ object TerminalHeatmaps {
     val result: Iterable[Series] = for {
       (queue, work) <- queueWorkloads
     } yield {
-      Series(queue, work.toVector)
+      Series(terminalName + "/" + queue, work.toVector)
     }
     result.toList
   }
@@ -170,7 +170,7 @@ object TerminalHeatmaps {
       (queueName, simResult) <- simulationResult
       waitTimes = simResult.waitTimes
     } yield {
-      Series(queueName,
+      Series(terminalName + "/" + queueName,
         waitTimes.grouped(60).map(_.max.toDouble).toVector)
     }
     result.toList match {
@@ -196,7 +196,7 @@ object TerminalHeatmaps {
           y._1.toDouble / y._2
         }).sum / 4
       )
-      Series(queueName, ratioCrunchToUserRecsPerHour.toVector)
+      Series(terminalName + "/" + queueName, ratioCrunchToUserRecsPerHour.toVector)
     }
     result.toList match {
       case Nil => Pending()

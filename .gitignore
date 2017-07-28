@@ -39,4 +39,3 @@ node_modules/
 client/src/main/resources/bundle.js
 project/
 .ensime_cache/
-runsbt.sh

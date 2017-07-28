@@ -172,7 +172,7 @@ object HeatmapComponent {
           <.ul(^.className := "nav nav-tabs",
             <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#deskrecs", "Desk recommendations"), ^.onClick --> scope.modState(_ => State("deskrecs"))),
             <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#workloads", "Workloads"), ^.onClick --> scope.modState(_ => State("workloads"))),
-            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Pax loads"), ^.onClick --> scope.modState(_ => State("paxloads"))),
+            <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#paxloads", "Paxloads"), ^.onClick --> scope.modState(_ => State("paxloads"))),
             <.li(seriesPot.renderReady(s => {
               <.a(VdomAttr("data-toggle") := "tab", ^.href := "#waits", "Wait times", ^.onClick --> scope.modState(_ => State("waits")))
             }))
