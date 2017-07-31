@@ -340,7 +340,7 @@ class WhenUnzippingOnlyProcessAppropriateMessagesAtAHigherScopeSpec extends Test
 }
 
 class WhenUnzippingIfJsonIsBadSpec extends
-  TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty()))
+  TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
   with SpecificationLike with MockLoggingLike {
 
   implicit val materializer = ActorMaterializer()
@@ -412,7 +412,7 @@ class WhenUnzippingIfJsonIsBadSpec extends
 }
 
 class WhenUnzippingIfEntireZipfileIsBad extends
-  TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty()))
+  TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
   with SpecificationLike with MockLoggingLike {
   implicit val materializer = ActorMaterializer()
 
@@ -522,7 +522,7 @@ case class SignallingBatchFileState(initialFilename: String, expectedZipFiles: S
   }
 }
 
-class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
 
   isolated
   sequential
@@ -586,7 +586,7 @@ class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecif
   }
 }
 
-class WhenABatchTimesOut extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+class WhenABatchTimesOut extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
 
   isolated
   sequential
@@ -667,7 +667,7 @@ class WhenABatchTimesOut extends TestKit(ActorSystem("AkkaStreamTestKitSpecifica
 
 }
 
-class AtmosFileUnzipperSingleZipSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+class AtmosFileUnzipperSingleZipSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
 
   isolated
   sequential
@@ -759,7 +759,7 @@ class TestSourceConcat extends TestKit(ActorSystem("AkkaStreamTestKitSpecificati
   //  }
 }
 
-class AtmosFileUnzipperMultipleZipSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
+class AtmosFileUnzipperMultipleZipSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
 
   isolated
   sequential

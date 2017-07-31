@@ -1,0 +1,24 @@
+package server.protobuf.messages;
+
+message VoyageManifestMessage {
+    optional string eventCode = 1;
+    optional string arrivalPortCode = 2;
+    optional string departurePortCode = 3;
+    optional string voyageNumber = 4;
+    optional string carrierCode = 5;
+    optional string scheduledDateOfArrival = 6;
+    optional string scheduledTimeOfArrival = 7;
+    repeated PassengerInfoJsonMessage passengerList = 8;
+
+}
+
+message PassengerInfoJsonMessage {
+    optional string documentType = 1;
+    optional string documentIssuingCountryCode = 2;
+    optional string eeaFlag = 3;
+    optional string age = 4;
+    optional string disembarkationPortCode = 5;
+    optional string inTransitFlag = 6;
+    optional string disembarkationPortCountryCode = 7;
+    optional string nationalityCountryCode = 8;
+}

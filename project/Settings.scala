@@ -97,6 +97,7 @@ object Settings {
     "com.vmunier" %% "scalajs-scripts" % "1.0.0",
     "com.lihaoyi" %% "pprint" % "0.4.3",
     "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
+    "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.4.18.1" % "test",
 
   "joda-time" % "joda-time" % "2.9.4") :::
     List("io.spray" %% "spray-client" % versions.sprayVersion,

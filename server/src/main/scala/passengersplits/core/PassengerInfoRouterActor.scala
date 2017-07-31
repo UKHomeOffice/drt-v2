@@ -2,13 +2,15 @@ package passengersplits.core
 
 import akka.actor._
 import akka.event.{LoggingAdapter, LoggingReceive}
+import akka.persistence.PersistentActor
 import passengersplits.core
 import core.PassengerInfoRouterActor._
-import passengersplits.parsing.VoyageManifestParser.{EventCodes, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfoJson, VoyageManifest}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.SDateLike
 import services.SDate.implicits._
 import drt.shared.PassengerSplits.{FlightNotFound, FlightsNotFound, VoyagePaxSplits}
+import server.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage}
 import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -70,22 +72,25 @@ trait SimpleRouterActor[C <: Actor] {
   }
 }
 
-class PassengerSplitsInfoByPortRouter extends
-  Actor with PassengerQueueCalculator with ActorLogging
+class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueueCalculator with ActorLogging
   with SimpleRouterActor[PassengerInfoRouterActor] {
 
   var latestFileName: Option[String] = None
 
   def childProps = Props[PassengerInfoRouterActor]
 
-  def receive: PartialFunction[Any, Unit] = LoggingReceive {
+  override def receiveCommand = LoggingReceive {
     case ManifestZipFileInit =>
       log.info(s"PassengerSplitsInfoByPortRouter received FlightPaxSplitBatchInit")
       sender ! PassengerSplitsAck
-    case info: VoyageManifest =>
-      log.info(s"telling children about ${info.summary}")
-      val child = getRCActor(childName(info.ArrivalPortCode))
-      child.tell(info, sender)
+
+    case manifest: VoyageManifest =>
+      log.info(s"telling children about ${manifest.summary}")
+      sendToChild(manifest)
+      persist(voyageManifestToMessage(manifest)) { manifestMessage =>
+        log.info(s"API: saving ${manifest.summary}")
+        context.system.eventStream.publish(manifestMessage)
+      }
     case report: ReportVoyagePaxSplit =>
       val replyTo = sender
       val handyName = s"${report.destinationPort}/${report.voyageNumber}@${report.scheduledArrivalDateTime.toString}"
@@ -120,6 +125,53 @@ class PassengerSplitsInfoByPortRouter extends
   def childName(arrivalPortCode: String): String = {
     s"${arrivalPortCode}"
   }
+
+  def voyageManifestToMessage(manifest: VoyageManifest) = VoyageManifestMessage(
+    Option(manifest.EventCode),
+    Option(manifest.ArrivalPortCode),
+    Option(manifest.DeparturePortCode),
+    Option(manifest.VoyageNumber),
+    Option(manifest.CarrierCode),
+    Option(manifest.ScheduledDateOfArrival),
+    Option(manifest.ScheduledTimeOfArrival),
+    manifest.PassengerList.map(m =>
+      PassengerInfoJsonMessage(
+        m.DocumentType,
+        Option(m.DocumentIssuingCountryCode),
+        Option(m.EEAFlag),
+        m.Age,
+        m.DisembarkationPortCode,
+        Option(m.InTransitFlag),
+        m.DisembarkationPortCountryCode,
+        m.NationalityCountryCode
+      )))
+
+  def sendToChild(info: VoyageManifest) = {
+    val child = getRCActor(childName(info.ArrivalPortCode))
+    child.tell(info, sender)
+  }
+
+  override def receiveRecover: Receive = {
+    case VoyageManifestMessage(
+    Some(eventCode),
+    Some(arrivalPortCode),
+    Some(departurePortCode),
+    Some(voyageNumber),
+    Some(carrierCode),
+    Some(scheduledDate),
+    Some(scheduledTime),
+    passengerList) =>
+      val vm = VoyageManifest(eventCode, arrivalPortCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, passengerList.collect {
+        case PassengerInfoJsonMessage(documentType, Some(countryCode), Some(eeaFlag), age, disembarkationPortCode, Some(inTransitFlag), disembarkationCountryCode, nationalityCode) =>
+          PassengerInfoJson(documentType, countryCode, eeaFlag, age, disembarkationPortCode, inTransitFlag, disembarkationCountryCode, nationalityCode)
+      }.toList)
+      log.info(s"API: recovering ${vm.summary}")
+      sendToChild(vm)
+    case other =>
+      log.info(s"API: Failed to recover $other")
+  }
+
+  override def persistenceId: String = "passenger-manifest-store"
 }
 
 
@@ -208,7 +260,9 @@ class SingleFlightActor
   extends Actor with PassengerQueueCalculator with ActorLogging {
 
   import SingleFlightActor._
+
   implicit def implLog = log
+
   val dcPaxIncPercentThreshold = 50
   var latestMessage: Option[VoyageManifest] = None
 
@@ -228,7 +282,8 @@ class SingleFlightActor
     case newManifest: VoyageManifest =>
       log.info(s"${self} SingleFlightActor received ${newManifest.summary}")
 
-      val manifestToUse = if (latestMessage.isEmpty) Option(newManifest)
+      val manifestToUse = if (latestMessage.isEmpty)
+        Option(newManifest)
       else {
         if (shouldAcceptNewManifest(newManifest, latestMessage.get, dcPaxIncPercentThreshold)) Option(newManifest)
         else latestMessage

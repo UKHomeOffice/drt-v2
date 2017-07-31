@@ -14,10 +14,19 @@ import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, V
 import drt.shared.PaxTypes._
 import drt.shared.Queues._
 import drt.shared.{Arrival, PassengerQueueTypes, SDateLike}
+import scala.collection.JavaConversions._
 
 
-class CanFindASplitForAnApiFlightSpec extends
-  TestKit(ActorSystem("CanFindASplitForAnApiFlightSpec", ConfigFactory.empty())) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
+object AkkaPersistTestConfig {
+
+  val inMemoryAkkaPersistConfig = ConfigFactory.parseMap(Map(
+    "akka.persistence.journal.plugin" -> "inmemory-journal",
+    "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
+    "akka.persistence.snapshot-store.plugin" -> "inmemory-snapshot-store"
+  ))
+}
+class CanFindASplitForAnApiFlightSpec extends {
+} with TestKit(ActorSystem("CanFindASplitForAnApiFlightSpec", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with AfterAll with SpecificationLike with ImplicitSender with CoreActors with Core {
   test =>
 
   isolated
