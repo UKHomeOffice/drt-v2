@@ -27,7 +27,7 @@ HeatmapDataTests extends TestSuite {
         val terminalQueueCrunchResult = Map(queueName -> CrunchResult(0, 60000, recommendedDesks, waitTimes))
 
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
-        val expected = Ready(List(Series("T1/eeaDesk", Vector(2))))
+        val expected = Ready(List(Series("eeaDesk", Vector(2))))
 
         assert(result == expected)
       }
@@ -46,7 +46,7 @@ HeatmapDataTests extends TestSuite {
 
         val recDesksRatio = 5
 
-        val expected = Ready(List(Series("T1/eeaDesk", Vector(recDesksRatio))))
+        val expected = Ready(List(Series("eeaDesk", Vector(recDesksRatio))))
 
         assert(result == expected)
       }
@@ -73,10 +73,10 @@ HeatmapDataTests extends TestSuite {
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
 
         val expected = Ready(List(
-          Series("T1/nonEeaDesk",
+          Series("nonEeaDesk",
             Vector(2)
           ),
-          Series("T1/eeaDesk",
+          Series("eeaDesk",
             Vector(5)
           )
         ))
@@ -100,10 +100,10 @@ HeatmapDataTests extends TestSuite {
         val result: Pot[List[Series]] = TerminalHeatmaps.deskRecsVsActualDesks(terminalQueueCrunchResult, userDeskRecs, "T1")
 
         val expected = Ready(List(
-          Series("T1/nonEeaDesk",
+          Series("nonEeaDesk",
             Vector(6 / 3, 4 / 2)
           ),
-          Series("T1/eeaDesk",
+          Series("eeaDesk",
             Vector(10 / 2, 4 / 2)
           )
         ))
