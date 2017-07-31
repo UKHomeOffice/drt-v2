@@ -4,11 +4,13 @@ import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import drt.shared.PassengerSplits.VoyagePaxSplits
+import drt.shared.MilliDate
+import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PaxTypes.NonVisaNational
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
+import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween, VoyagesPaxSplits}
 import passengersplits.core.PassengerSplitsInfoByPortRouter
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfo, PassengerInfoJson, VoyageManifest}
 import services.SDate
@@ -94,6 +96,23 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
       val expectedPaxCount = ciPaxCount
 
       paxCount === expectedPaxCount
+    }
+
+    "When we ask for all splits in a time range at a port " +
+      "Then we should recieve a list of those flights and their splits" >> {
+      val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+
+      val manifest = VoyageManifest(EventCodes.CheckIn, "LHR", "JFK", "0123", "BA", "2017-01-01", "12:00:00", List(
+        PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
+      ))
+
+      flightPassengerSplitReporter ! manifest
+
+      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween("LHR", SDate(2017, 1, 1, 0, 0), SDate(2017, 1, 2, 0, 0))
+
+      val expected = VoyagesPaxSplits(List(VoyagePaxSplits("LHR","BA","0123",1,MilliDate(1483272000000L),List(SplitsPaxTypeAndQueueCount(NonVisaNational,"nonEeaDesk",1)))))
+      val result = Await.result(future, 1 second)
+      expected === result
     }
   }
 
