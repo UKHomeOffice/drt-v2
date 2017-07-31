@@ -10,11 +10,11 @@ import scala.collection.immutable.Seq
 
 
 object Queues {
-  val EeaDesk = "eeaDesk"
+  val EeaDesk = "EEA"
   val EGate = "eGate"
-  val NonEeaDesk = "nonEeaDesk"
-  val FastTrack = "fastTrack"
-  val Transfer = "transfer"
+  val NonEeaDesk = "Non EEA"
+  val FastTrack = "FastTrack"
+  val Transfer = "Transfer"
 }
 
 sealed trait PaxType {
