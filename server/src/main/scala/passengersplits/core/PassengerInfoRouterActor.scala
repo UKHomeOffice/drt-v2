@@ -90,17 +90,12 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
       sender ! PassengerSplitsAck
 
     case manifest: VoyageManifest =>
-      log.info(s"Got a manifest $manifest")
       persist(voyageManifestToMessage(manifest)) { manifestMessage =>
         log.info(s"API: saving ${manifest.summary}")
         context.system.eventStream.publish(manifestMessage)
       }
-      log.info(s"past saving it")
       if (SingleFlightActor.shouldAcceptNewManifest(manifest, state.flightManifests.get(manifestKey(manifest)), dcPaxIncPercentThreshold)) {
-        log.info(s"Adding the manifest")
         addManifest(manifest)
-      } else {
-        log.info(s"not ok manifest")
       }
       sender ! PassengerSplitsAck
 
@@ -108,8 +103,6 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
       val replyTo = sender
       Future {
         val key = s"${report.destinationPort}-${padTo4Digits(report.voyageNumber)}@${SDate.jodaSDateToIsoString(report.scheduledArrivalDateTime)}"
-        log.info(s"retrieving $key")
-        log.info(s"Current state: $state")
         val manifest = state.flightManifests.get(key)
         manifest match {
           case Some(m) =>
@@ -123,7 +116,6 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
         }
       }
     case report: ReportVoyagePaxSplitBetween =>
-      log.info(s"API: Got these splits: ${state.flightManifests}")
       sender ! state.flightManifests.values.filter(m => {
         SDate.parseString(m.ScheduledDateOfArrival).millisSinceEpoch >= report.scheduledArrivalDateTimeFrom.millisSinceEpoch &&
           SDate(m.ScheduledDateOfArrival).millisSinceEpoch <= report.scheduledArrivalDateTimeTo.millisSinceEpoch
@@ -134,7 +126,6 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
       state.copy(latestFileName = Option(zipFilename))
       completionMonitor ! VoyageManifestZipFileCompleteAck(zipFilename)
     case report: ReportFlightCode =>
-      log.info(s"API: Looking for split for ${report.flightCode}")
       sender ! state.flightManifests.values.filter(_.flightCode == report.flightCode)
     case default =>
       log.error(s"$self got an unhandled message ${default}")

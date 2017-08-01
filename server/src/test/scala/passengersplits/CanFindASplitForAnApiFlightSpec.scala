@@ -70,66 +70,66 @@ class CanFindASplitForAnApiFlightSpec extends {
       }
     }
 
-//    "Given a single flight STN EZ789 flight, with just one GBR and one nationals passenger" in {
-//      "When we ask for a report of voyage pax splits" in {
-//        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-02-01", "13:55:00",
-//          paxInfo() ::
-//            PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN")) ::
-//            Nil)
-//
-//        val scheduleArrivalTime = SDate(2015, 2, 1, 13, 55)
-//        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
-//
-//        val expectedPaxSplits = List(
-//          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
-//          SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
-//        )
-//        expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
-//        success
-//      }
-//    }
-//    "Given a single flight STN EZ789 flight where the scheduled date is in British Summer Time (BST) with just one GBR and one nationals passenger" in {
-//      "When we ask for a report of voyage pax splits" in {
-//        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2017-03-27", "12:10:00",
-//          paxInfo() ::
-//            PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN")) ::
-//            Nil)
-//
-//        val scheduleArrivalTime = SDate(2017, 3,27, 12, 10)
-//        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
-//
-//        val expectedPaxSplits = List(
-//          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
-//          SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
-//        )
-//        expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
-//        success
-//      }
-//    }
-//    "Given a single flight STN BA978 flight, with 100 passengers, and a default egate usage of 60% - " in  {
-//      "When we ask for a report of voyage pax splits" in {
-//        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BCN", "978", "BA", "2015-07-12", "10:22:00",
-//          List.tabulate(80)(passengerNumber => PassengerInfoJson(Some("P"), "GBR", "EEA", Some((passengerNumber % 60 + 16).toString), DisembarkationPortCode = Some("STN"))) :::
-//            List.tabulate(20)(_ => PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN"))))
-//
-//        val scheduleArrivalSDate: SDateLike = SDate(2015, 7, 12, 10, 22)
-//        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "BA", "978", scheduleArrivalSDate)
-//        expectMsg(VoyagePaxSplits("STN", "BA", "978", 100, scheduleArrivalSDate, List(
-//          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 32),
-//          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 48),
-//          SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
-//        )))
-//        success
-//      }.pendingUntilFixed("ignore - possibly delete - we have disabled AdvPaxInfo egate")
-//    }
-//
-//    "Given no flights" in {
-//      "When we ask for a report of voyage pax splits of a flight we don't know about then we get FlightNotFound " in {
-//        flightPassengerReporter ! ReportVoyagePaxSplit("NON", "DNE", "999", SDate(2015, 6, 1, 13, 55))
-//        expectMsg(FlightNotFound("DNE", "999", SDate(2015, 6, 1, 13, 55)))
-//        success
-//      }
-//    }
+    "Given a single flight STN EZ789 flight, with just one GBR and one nationals passenger" in {
+      "When we ask for a report of voyage pax splits" in {
+        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2015-02-01", "13:55:00",
+          paxInfo() ::
+            PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN")) ::
+            Nil)
+
+        val scheduleArrivalTime = SDate(2015, 2, 1, 13, 55)
+        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
+
+        val expectedPaxSplits = List(
+          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
+          SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
+        )
+        expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
+        success
+      }
+    }
+    "Given a single flight STN EZ789 flight where the scheduled date is in British Summer Time (BST) with just one GBR and one nationals passenger" in {
+      "When we ask for a report of voyage pax splits" in {
+        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BRG", "789", "EZ", "2017-03-27", "12:10:00",
+          paxInfo() ::
+            PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN")) ::
+            Nil)
+
+        val scheduleArrivalTime = SDate(2017, 3,27, 12, 10)
+        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "EZ", "789", scheduleArrivalTime)
+
+        val expectedPaxSplits = List(
+          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1),
+          SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1)
+        )
+        expectMsg(VoyagePaxSplits("STN", "EZ", "789", 2, scheduleArrivalTime, expectedPaxSplits))
+        success
+      }
+    }
+    "Given a single flight STN BA978 flight, with 100 passengers, and a default egate usage of 60% - " in  {
+      "When we ask for a report of voyage pax splits" in {
+        flightPassengerReporter ! VoyageManifest(EventCodes.DoorsClosed, "STN", "BCN", "978", "BA", "2015-07-12", "10:22:00",
+          List.tabulate(80)(passengerNumber => PassengerInfoJson(Some("P"), "GBR", "EEA", Some((passengerNumber % 60 + 16).toString), DisembarkationPortCode = Some("STN"))) :::
+            List.tabulate(20)(_ => PassengerInfoJson(Some("P"), "NZL", "", None, DisembarkationPortCode = Some("STN"))))
+
+        val scheduleArrivalSDate: SDateLike = SDate(2015, 7, 12, 10, 22)
+        flightPassengerReporter ! ReportVoyagePaxSplit("STN", "BA", "978", scheduleArrivalSDate)
+        expectMsg(VoyagePaxSplits("STN", "BA", "978", 100, scheduleArrivalSDate, List(
+          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 32),
+          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 48),
+          SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
+        )))
+        success
+      }.pendingUntilFixed("ignore - possibly delete - we have disabled AdvPaxInfo egate")
+    }
+
+    "Given no flights" in {
+      "When we ask for a report of voyage pax splits of a flight we don't know about then we get FlightNotFound " in {
+        flightPassengerReporter ! ReportVoyagePaxSplit("NON", "DNE", "999", SDate(2015, 6, 1, 13, 55))
+        expectMsg(FlightNotFound("DNE", "999", SDate(2015, 6, 1, 13, 55)))
+        success
+      }
+    }
   }
 
   def afterAll() = system.terminate()
