@@ -22,9 +22,7 @@ object PassengerInfoRouterActor {
   case class ReportVoyagePaxSplit(destinationPort: String,
                                   carrierCode: String, voyageNumber: String, scheduledArrivalDateTime: SDateLike)
 
-  case class ReportVoyagePaxSplitBetween(destinationPort: String,
-                                         scheduledArrivalDateTimeFrom: SDateLike,
-                                         scheduledArrivalDateTimeTo: SDateLike)
+  case class ReportVoyagePaxSplitBetween(scheduledArrivalDateTimeFrom: SDateLike, scheduledArrivalDateTimeTo: SDateLike)
 
   case class VoyagesPaxSplits(voyageSplits: List[VoyagePaxSplits])
 
