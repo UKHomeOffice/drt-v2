@@ -10,7 +10,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.PassengerInfoBatchActor
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.{FlatPassengerSplitsInfoByPortRouter, PassengerSplitsInfoByPortRouter, PassengerTypeCalculatorValues, PassengerTypeCalculator}
+import passengersplits.core.{AdvancedPassengerInfoActor, PassengerTypeCalculatorValues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import spray.http.DateTime
 import spray.routing.Directives
@@ -25,7 +25,6 @@ import java.lang.System.nanoTime
 trait SimpleProfiler {
   def profile[R](code: => R, t: Long = nanoTime) = (code, nanoTime - t)
 }
-
 
 class FlightPassengerSplitsPerformanceSpec extends
   TestKit(ActorSystem("FlightPassengerSplitsPerformanceSpec", ConfigFactory.empty()))
@@ -106,8 +105,7 @@ class FlightPassengerSplitsPerformanceSpec extends
     (0 to numFlights).flatMap(n => Arbitrary(flightGen(startDateTime)).arbitrary.sample.get :: Nil)
   }
 
-//  val aggregationRef: ActorRef = system.actorOf(Props[PassengerSplitsInfoByPortRouter])
-  val aggregationRef: ActorRef = system.actorOf(Props[FlatPassengerSplitsInfoByPortRouter])
+  val aggregationRef: ActorRef = system.actorOf(Props[AdvancedPassengerInfoActor])
 
   "Given lots of flight events" >> {
     tag("performance")
@@ -186,9 +184,7 @@ class FlightPassengerSplitsPerformanceSpec extends
     }
     log.info(s"Initialise took ${time / 1000000}")
     result
-
   }
-
 
   def afterAll() = system.terminate()
 }

@@ -25,7 +25,7 @@ import org.mockito.Mockito.{mock, verify, when}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerInfoRouterActor.{ManifestZipFileInit, PassengerSplitsAck, VoyageManifestZipFileComplete, VoyageManifestZipFileCompleteAck}
-import passengersplits.core.PassengerSplitsInfoByPortRouter
+import passengersplits.core.AdvancedPassengerInfoActor
 import passengersplits.s3.FileProvider
 
 import scala.collection.mutable
@@ -57,7 +57,7 @@ object Functions {
 
 object SimpleTestRouter {
   /*
-   This defaultReceive is a simple stub implementing the interface of  PassengerSplitsInfoByPortRouter, complete with the
+   This defaultReceive is a simple stub implementing the interface of  AdvancedPassengerInfoActor, complete with the
    individual acks, and batch acks needed for Akka Streams to detect and respond to back-pressure.
    */
   val log = LoggerFactory.getLogger(getClass())
@@ -345,7 +345,7 @@ class WhenUnzippingIfJsonIsBadSpec extends
 
   implicit val materializer = ActorMaterializer()
 
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
   val batchAtMost = 3 seconds
 
   "Given a zip file with a bad json " >> {
@@ -416,7 +416,7 @@ class WhenUnzippingIfEntireZipfileIsBad extends
   with SpecificationLike with MockLoggingLike {
   implicit val materializer = ActorMaterializer()
 
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
   val batchAtMost = 10 seconds
 
 
@@ -529,7 +529,7 @@ class AtmosFileUnzipperSpec extends TestKit(ActorSystem("AkkaStreamTestKitSpecif
 
   implicit val materializer = ActorMaterializer()
 
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
 
   val outerSystem = system
@@ -593,7 +593,7 @@ class WhenABatchTimesOut extends TestKit(ActorSystem("AkkaStreamTestKitSpecifica
 
   implicit val materializer = ActorMaterializer()
 
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
 
   val outerSystem = system
@@ -671,7 +671,7 @@ class AtmosFileUnzipperSingleZipSpec extends TestKit(ActorSystem("AkkaStreamTest
 
   isolated
   sequential
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
   implicit val materializer = ActorMaterializer()
 
@@ -763,7 +763,7 @@ class AtmosFileUnzipperMultipleZipSpec extends TestKit(ActorSystem("AkkaStreamTe
 
   isolated
   sequential
-  val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
   implicit val materializer = ActorMaterializer()
 

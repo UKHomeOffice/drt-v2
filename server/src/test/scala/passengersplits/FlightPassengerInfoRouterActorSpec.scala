@@ -4,12 +4,14 @@ import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import drt.shared.PassengerSplits.VoyagePaxSplits
+import drt.shared.MilliDate
+import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PaxTypes.NonVisaNational
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.PassengerSplitsInfoByPortRouter
+import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween, VoyagesPaxSplits}
+import passengersplits.core.AdvancedPassengerInfoActor
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfo, PassengerInfoJson, VoyageManifest}
 import services.SDate
 
@@ -22,11 +24,11 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
   implicit val materializer = ActorMaterializer()
   implicit val timeout = Timeout(1 second)
 
-  "Given a PassengerSplitsInfoByPortRouter " >> {
+  "Given a AdvancedPassengerInfoActor " >> {
 
     "When we send it a CI VoyageManifest " +
       "Then the pax in the reported splits should match the pax in that CI VoyageManifest" >> {
-      val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+      val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
       val civm = VoyageManifest(EventCodes.CheckIn, "LHR", "JFK", "0123", "BA", "2017-01-01", "00:00:00", List(
         PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
@@ -50,7 +52,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
     "When we send it a DC VoyageManifest " +
       "Then the pax in the reported splits should match the pax in that VoyageManifest" >> {
-      val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+      val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
       val dcvm = VoyageManifest(EventCodes.DoorsClosed, "LHR", "JFK", "0123", "BA", "2017-01-01", "00:00:00", List(
         PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
@@ -95,6 +97,23 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       paxCount === expectedPaxCount
     }
+
+    "When we ask for all splits in a time range at a port " +
+      "Then we should recieve a list of those flights and their splits" >> {
+      val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+
+      val manifest = VoyageManifest(EventCodes.CheckIn, "LHR", "JFK", "0123", "BA", "2017-01-01", "12:00:00", List(
+        PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
+      ))
+
+      flightPassengerSplitReporter ! manifest
+
+      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween("LHR", SDate(2017, 1, 1, 0, 0), SDate(2017, 1, 2, 0, 0))
+
+      val expected = List(VoyageManifest("CI","LHR","JFK","0123","BA","2017-01-01","12:00:00",List(PassengerInfoJson(None,"GB","",None,None,"N",None,None))))
+      val result = Await.result(future, 1 second)
+      result === expected
+    }
   }
 
   private def sendCiThenDcAndReturnSplitsPaxCount(ciPaxCount: Int, diPaxCount: Int): Int = {
@@ -104,7 +123,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
     val schDate = "2017-01-01"
     val schTime = "00:00:00"
 
-    val flightPassengerSplitReporter = system.actorOf(Props[PassengerSplitsInfoByPortRouter], name = "flight-pax-reporter")
+    val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
 
     val ciPax = List.fill(ciPaxCount)(PassengerInfoJson(None, "GB", "", None, None, "N", None, None))
     val diPax = List.fill(diPaxCount)(PassengerInfoJson(None, "GB", "", None, None, "N", None, None))
