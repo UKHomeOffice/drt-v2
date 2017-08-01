@@ -108,7 +108,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
       flightPassengerSplitReporter ! manifest
 
-      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween("LHR", SDate(2017, 1, 1, 0, 0), SDate(2017, 1, 2, 0, 0))
+      val future = flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(2017, 1, 1, 0, 0), SDate(2017, 1, 2, 0, 0))
 
       val expected = List(VoyageManifest("CI","LHR","JFK","0123","BA","2017-01-01","12:00:00",List(PassengerInfoJson(None,"GB","",None,None,"N",None,None))))
       val result = Await.result(future, 1 second)

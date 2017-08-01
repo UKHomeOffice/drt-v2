@@ -336,15 +336,6 @@ class Application @Inject()(
 
   def splits(fromDate: String, toDate: String) = Action.async {
     implicit request =>
-//
-//      VoyageManifest(EventCode: String,
-//        ArrivalPortCode: String,
-//        DeparturePortCode: String,
-//        VoyageNumber: String,
-//        CarrierCode: String,
-//        ScheduledDateOfArrival: String,
-//        ScheduledTimeOfArrival: String,
-//        PassengerList: List[PassengerInfoJson])
 
       val resultFut = ctrl.flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(fromDate), SDate(toDate))
       resultFut.map{
