@@ -342,15 +342,11 @@ class Application @Inject()(
         case result: List[VoyageManifest] =>
           Ok(result.map( m => {
             m.PassengerList.map (p =>
-
               s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode},"${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}"""".stripMargin
             ).mkString("\n")
           }).mkString("\n"))
       }
-
-
   }
-
 
   def autowireApi(path: String) = Action.async(parse.raw) {
     implicit request =>
