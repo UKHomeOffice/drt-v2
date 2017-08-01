@@ -62,7 +62,6 @@ class CanFindASplitForAnApiFlightSpec extends {
 
       "When we ask for a report of voyage pax splits then we should see pax splits of the 1 passenger in eeaDesk queue" in {
         val flightScheduledDateTime = SDate(2017, 4, 2, 15, 33)
-        Thread.sleep(1000L)
         flightPassengerReporter ! ReportVoyagePaxSplit("LGW", "EZ", "12345", flightScheduledDateTime)
         val expectedPaxSplits = List(SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1))
         expectMsg(VoyagePaxSplits("LGW", "EZ", "12345", 1, flightScheduledDateTime, expectedPaxSplits))
