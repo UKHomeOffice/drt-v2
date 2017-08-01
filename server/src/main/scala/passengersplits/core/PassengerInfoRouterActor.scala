@@ -2,7 +2,7 @@ package passengersplits.core
 
 import akka.actor._
 import akka.event.{LoggingAdapter, LoggingReceive}
-import akka.persistence.PersistentActor
+import akka.persistence.{PersistentActor, RecoveryCompleted}
 import passengersplits.core
 import core.PassengerInfoRouterActor._
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfoJson, VoyageManifest}
@@ -72,12 +72,17 @@ trait SimpleRouterActor[C <: Actor] {
   }
 }
 
-class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueueCalculator with ActorLogging
-  with SimpleRouterActor[PassengerInfoRouterActor] {
+class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueueCalculator with ActorLogging {
 
-  var latestFileName: Option[String] = None
+  case class State(latestFileName: Option[String],
+                   flightManifests: Map[String, VoyageManifest])
 
-  def childProps = Props[PassengerInfoRouterActor]
+  var state = State(None, Map.empty)
+  val dcPaxIncPercentThreshold = 50
+
+  implicit def implLog = log
+
+  def manifestKey(vm: VoyageManifest) = s"${vm.ArrivalPortCode}-${padTo4Digits(vm.VoyageNumber)}@${SDate.jodaSDateToIsoString(vm.scheduleArrivalDateTime.get)}"
 
   override def receiveCommand = LoggingReceive {
     case ManifestZipFileInit =>
@@ -85,39 +90,52 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
       sender ! PassengerSplitsAck
 
     case manifest: VoyageManifest =>
-      log.info(s"telling children about ${manifest.summary}")
-      sendToChild(manifest)
+      log.info(s"Got a manifest $manifest")
       persist(voyageManifestToMessage(manifest)) { manifestMessage =>
         log.info(s"API: saving ${manifest.summary}")
         context.system.eventStream.publish(manifestMessage)
       }
+      log.info(s"past saving it")
+      if (SingleFlightActor.shouldAcceptNewManifest(manifest, state.flightManifests.get(manifestKey(manifest)), dcPaxIncPercentThreshold)) {
+        log.info(s"Adding the manifest")
+        addManifest(manifest)
+      } else {
+        log.info(s"not ok manifest")
+      }
+      sender ! PassengerSplitsAck
+
     case report: ReportVoyagePaxSplit =>
       val replyTo = sender
-      val handyName = s"${report.destinationPort}/${report.voyageNumber}@${report.scheduledArrivalDateTime.toString}"
-
-      val name = childName(report.destinationPort)
-      log.info(s"$replyTo asked for us to look for ${report} in $name, $handyName")
-      val child = childActorMap get (name)
-      child match {
-        case Some(c) =>
-          log.debug(s"Child singleflight actor found child $name $handyName ")
-          c.tell(report, replyTo)
-        case None =>
-          log.debug(s"Child singleflight actor doesn't exist yet $name $handyName ")
-          replyTo ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
+      Future {
+        val key = s"${report.destinationPort}-${padTo4Digits(report.voyageNumber)}@${SDate.jodaSDateToIsoString(report.scheduledArrivalDateTime)}"
+        log.info(s"retrieving $key")
+        log.info(s"Current state: $state")
+        val manifest = state.flightManifests.get(key)
+        manifest match {
+          case Some(m) =>
+            val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(m)
+            replyTo ! VoyagePaxSplits(
+              report.destinationPort,
+              report.carrierCode, report.voyageNumber, m.PassengerList.length, m.scheduleArrivalDateTime.get,
+              paxTypeAndQueueCount)
+          case None =>
+            replyTo ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
+        }
       }
     case report: ReportVoyagePaxSplitBetween =>
-      log.info(s"top level router asked to ${report}")
-      val child = getRCActor(childName(report.destinationPort))
-      child.tell(report, sender)
+      log.info(s"API: Got these splits: ${state.flightManifests}")
+      sender ! state.flightManifests.values.filter(m => {
+        SDate.parseString(m.ScheduledDateOfArrival).millisSinceEpoch >= report.scheduledArrivalDateTimeFrom.millisSinceEpoch &&
+          SDate(m.ScheduledDateOfArrival).millisSinceEpoch <= report.scheduledArrivalDateTimeTo.millisSinceEpoch
+      })
+
     case VoyageManifestZipFileComplete(zipFilename, completionMonitor) =>
       log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
-      latestFileName = Some(zipFilename)
+      state.copy(latestFileName = Option(zipFilename))
       completionMonitor ! VoyageManifestZipFileCompleteAck(zipFilename)
     case report: ReportFlightCode =>
-      childActorMap.values.foreach(_.tell(report, sender))
-    case LogStatus =>
-      childActorMap.values.foreach(_ ! LogStatus)
+      log.info(s"API: Looking for split for ${report.flightCode}")
+      sender ! state.flightManifests.values.filter(_.flightCode == report.flightCode)
     case default =>
       log.error(s"$self got an unhandled message ${default}")
   }
@@ -146,9 +164,12 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
         m.NationalityCountryCode
       )))
 
-  def sendToChild(info: VoyageManifest) = {
-    val child = getRCActor(childName(info.ArrivalPortCode))
-    child.tell(info, sender)
+  def addManifest(manifest: VoyageManifest) = {
+
+    val key = manifestKey(manifest)
+    log.info(s"saving $key")
+    val newManifests = state.flightManifests.updated(key, manifest)
+    state = state.copy(flightManifests = newManifests)
   }
 
   override def receiveRecover: Receive = {
@@ -166,7 +187,9 @@ class PassengerSplitsInfoByPortRouter extends PersistentActor with PassengerQueu
           PassengerInfoJson(documentType, countryCode, eeaFlag, age, disembarkationPortCode, inTransitFlag, disembarkationCountryCode, nationalityCode)
       }.toList)
       log.info(s"API: recovering ${vm.summary}")
-      sendToChild(vm)
+      addManifest(vm)
+    case RecoveryCompleted =>
+      log.info(s"Finished recovering flights ${state.flightManifests.values.map(_.flightCode)}")
     case other =>
       log.info(s"API: Failed to recover $other")
   }
@@ -261,7 +284,7 @@ class SingleFlightActor
 
   import SingleFlightActor._
 
-  implicit def implLog = log
+   implicit def implLog = log
 
   val dcPaxIncPercentThreshold = 50
   var latestMessage: Option[VoyageManifest] = None
@@ -285,7 +308,7 @@ class SingleFlightActor
       val manifestToUse = if (latestMessage.isEmpty)
         Option(newManifest)
       else {
-        if (shouldAcceptNewManifest(newManifest, latestMessage.get, dcPaxIncPercentThreshold)) Option(newManifest)
+        if (shouldAcceptNewManifest(newManifest, latestMessage, dcPaxIncPercentThreshold)) Option(newManifest)
         else latestMessage
       }
 
@@ -428,17 +451,21 @@ class ResponseCollationActor(childActors: List[ActorRef], report: ReportVoyagePa
 }
 
 object SingleFlightActor {
-  def shouldAcceptNewManifest(candidate: VoyageManifest, existing: VoyageManifest, dcPaxIncPercentThreshold: Int)(implicit log: LoggingAdapter): Boolean = {
-    val existingPax = existing.PassengerList.length
-    val candidatePax = candidate.PassengerList.length
-    val percentageDiff = (100 * (Math.abs(existingPax - candidatePax).toDouble / existingPax)).toInt
-    log.info(s"${existing.flightCode} ${existing.EventCode} had $existingPax pax. ${candidate.EventCode} has $candidatePax pax. $percentageDiff% difference")
+  def shouldAcceptNewManifest(candidate: VoyageManifest, existingOption: Option[VoyageManifest], dcPaxIncPercentThreshold: Int)(implicit log: LoggingAdapter): Boolean = {
+    existingOption match {
+      case None => true
+      case Some(existing) =>
+        val existingPax = existing.PassengerList.length
+        val candidatePax = candidate.PassengerList.length
+        val percentageDiff = (100 * (Math.abs(existingPax - candidatePax).toDouble / existingPax)).toInt
+        log.info(s"${existing.flightCode} ${existing.EventCode} had $existingPax pax. ${candidate.EventCode} has $candidatePax pax. $percentageDiff% difference")
 
-    if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && percentageDiff > dcPaxIncPercentThreshold) {
-      log.info(s"${existing.flightCode} DC message with $percentageDiff% difference in pax. Not trusting it")
-      false
+        if (existing.EventCode == EventCodes.CheckIn && candidate.EventCode == EventCodes.DoorsClosed && percentageDiff > dcPaxIncPercentThreshold) {
+          log.info(s"${existing.flightCode} DC message with $percentageDiff% difference in pax. Not trusting it")
+          false
+        }
+        else true
     }
-    else true
   }
 }
 
