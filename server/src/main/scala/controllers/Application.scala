@@ -337,8 +337,9 @@ class Application @Inject()(
   def splits(fromDate: String, toDate: String) = Action.async {
     implicit request =>
       def manifestPassengerToCSV(m: VoyageManifest, p: PassengerInfoJson) = {
-        s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode},"${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
+        s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode}","${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
       }
+      def headings = """"Event Code","Arrival Port Code","Departure Port Code","Voyage Number","Carrier Code","Scheduled Date","Scheduled Time","Nationality Country Code","Document Issuing Country Code","Disembarkation Port Code","Disembarkation Country Code","Age""""
 
       def passengerCsvLines(result: List[VoyageManifest]) = {
         for {
@@ -350,7 +351,7 @@ class Application @Inject()(
 
       val voyageManifestsFuture = ctrl.flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(fromDate), SDate(toDate))
       voyageManifestsFuture.map {
-        case result: List[VoyageManifest] => Ok(passengerCsvLines(result).mkString("\n"))
+        case result: List[VoyageManifest] => Ok(headings + "\n" + passengerCsvLines(result).mkString("\n"))
       }
   }
 
