@@ -72,27 +72,27 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   "FlightsActor " should {
 
     "Store a flight and retrieve it after a shutdown" in {
-      val arrivals = List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
+      val arrivals = List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2050-10-02T20:00:00Z"))
       setFlightsAndStopActors(arrivals)
 
       val result = getFlightsAsSet()
 
-      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2017-10-02T20:00:00Z"))
+      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 100, schDt = "2050-10-02T20:00:00Z"))
       result === expected
     }
 
     "Store two sets of flights and retrieve flights from both sets after a shutdown" in {
       val flightsSet = Set(
-        Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "JFK", actPax = 100, schDt = "2017-10-02T20:00:00Z"))),
-        Flights(List(apiFlight(flightId = 2, iata = "BA0001", airportId = "JFK", actPax = 150, schDt = "2017-10-02T21:55:00Z")))
+        Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "JFK", actPax = 100, schDt = "2050-10-02T20:00:00Z"))),
+        Flights(List(apiFlight(flightId = 2, iata = "BA0001", airportId = "JFK", actPax = 150, schDt = "2050-10-02T21:55:00Z")))
       )
       setFlightsStopAndSleep(flightsSet)
 
       val result = getFlightsAsSet()
 
       val expected = Set(
-        apiFlight(flightId = 1, iata = "SA0123", airportId = "JFK", actPax = 100, schDt = "2017-10-02T20:00:00Z"),
-        apiFlight(flightId = 2, iata = "BA0001", airportId = "JFK", actPax = 150, schDt = "2017-10-02T21:55:00Z")
+        apiFlight(flightId = 1, iata = "SA0123", airportId = "JFK", actPax = 100, schDt = "2050-10-02T20:00:00Z"),
+        apiFlight(flightId = 2, iata = "BA0001", airportId = "JFK", actPax = 150, schDt = "2050-10-02T21:55:00Z")
       )
       result === expected
     }
@@ -102,8 +102,10 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         implicit val timeout: Timeout = Timeout(5 seconds)
         val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
 
-        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00")))
-        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2050-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2050-08-02T20:00")))
+
+        Thread.sleep(2500L)
 
         val futureResult: Future[Any] = actor ? GetFlights
         val futureFlights: Future[List[Arrival]] = futureResult.collect {
@@ -113,8 +115,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         val result = Await.result(futureResult, 1 second)
 
         val expected = Flights(List(
-          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00"),
-          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00", lastKnownPax = Option(300))))
+          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2050-08-01T20:00"),
+          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2050-08-02T20:00", lastKnownPax = Option(300))))
 
         result === expected
       }
@@ -124,9 +126,9 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         implicit val timeout: Timeout = Timeout(5 seconds)
         val actor: ActorRef = flightsActor(system = system, airportCode = "LHR")
 
-        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00")))
-        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
-        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2050-08-01T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2050-08-02T20:00")))
+        actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2050-08-02T20:00")))
 
         val futureResult: Future[Any] = actor ? GetFlights
         val futureFlights: Future[List[Arrival]] = futureResult.collect {
@@ -136,8 +138,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         val result = Await.result(futureResult, 1 second)
 
         val expected = Flights(List(
-          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2017-08-01T20:00"),
-          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2017-08-02T20:00", lastKnownPax = Option(300))))
+          apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2050-08-01T20:00"),
+          apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2050-08-02T20:00", lastKnownPax = Option(300))))
 
         result === expected
       }
@@ -145,10 +147,10 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
     "Restore from a v1 snapshot using legacy ApiFlight" in
       new AkkaTestkitSpecs2SupportForPersistence("target/testFlightsActor") {
-        createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2017-10-02T20:00")))
+        createV1SnapshotAndShutdownActorSystem(Map(1 -> legacyApiFlight("SA0123", "STN", 1, "2050-10-02T20:00")))
         val result = startNewActorSystemAndRetrieveFlights()
 
-        Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-10-02T20:00"))) === result
+        Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2050-10-02T20:00"))) === result
       }
 
     "Restore flights from a v2 snapshot using protobuf" in
