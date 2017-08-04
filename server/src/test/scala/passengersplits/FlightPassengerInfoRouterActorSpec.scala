@@ -11,7 +11,7 @@ import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween, VoyagesPaxSplits}
-import passengersplits.core.AdvancedPassengerInfoActor
+import passengersplits.core.AdvancePassengerInfoActor
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfo, PassengerInfoJson, VoyageManifest}
 import services.SDate
 
@@ -24,11 +24,11 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
   implicit val materializer = ActorMaterializer()
   implicit val timeout = Timeout(1 second)
 
-  "Given a AdvancedPassengerInfoActor " >> {
+  "Given an AdvancePassengerInfoActor " >> {
 
     "When we send it a CI VoyageManifest " +
       "Then the pax in the reported splits should match the pax in that CI VoyageManifest" >> {
-      val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+      val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
 
       val civm = VoyageManifest(EventCodes.CheckIn, "LHR", "JFK", "0123", "BA", "2017-01-01", "00:00:00", List(
         PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
@@ -52,7 +52,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
     "When we send it a DC VoyageManifest " +
       "Then the pax in the reported splits should match the pax in that VoyageManifest" >> {
-      val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+      val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
 
       val dcvm = VoyageManifest(EventCodes.DoorsClosed, "LHR", "JFK", "0123", "BA", "2017-01-01", "00:00:00", List(
         PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
@@ -100,7 +100,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
 
     "When we ask for all splits in a time range at a port " +
       "Then we should recieve a list of those flights and their splits" >> {
-      val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+      val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
 
       val manifest = VoyageManifest(EventCodes.CheckIn, "LHR", "JFK", "0123", "BA", "2017-01-01", "12:00:00", List(
         PassengerInfoJson(None, "GB", "", None, None, "N", None, None)
@@ -123,7 +123,7 @@ class WhenReportingVoyageManifestsSpec extends TestKit(ActorSystem("AkkaStreamTe
     val schDate = "2017-01-01"
     val schTime = "00:00:00"
 
-    val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+    val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
 
     val ciPax = List.fill(ciPaxCount)(PassengerInfoJson(None, "GB", "", None, None, "N", None, None))
     val diPax = List.fill(diPaxCount)(PassengerInfoJson(None, "GB", "", None, None, "N", None, None))

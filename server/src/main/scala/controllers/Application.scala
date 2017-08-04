@@ -29,7 +29,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.chrono.ISOChronology
-import passengersplits.core.AdvancedPassengerInfoActor
+import passengersplits.core.AdvancePassengerInfoActor
 import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -122,7 +122,7 @@ trait SystemActors extends Core {
   val crunchActorProps = Props(
     classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
   val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
-  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   private val flightsActorProps = Props(
     classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode),
     pcpArrivalTimeCalculator, airportConfig)

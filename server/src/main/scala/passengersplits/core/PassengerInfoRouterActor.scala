@@ -53,7 +53,7 @@ object PassengerInfoRouterActor {
   }
 }
 
-class AdvancedPassengerInfoActor extends PersistentActor with PassengerQueueCalculator with ActorLogging {
+class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalculator with ActorLogging {
 
   case class State(latestFileName: Option[String],
                    flightManifests: Map[String, VoyageManifest])
@@ -71,7 +71,7 @@ class AdvancedPassengerInfoActor extends PersistentActor with PassengerQueueCalc
 
   override def receiveCommand = LoggingReceive {
     case ManifestZipFileInit =>
-      log.info(s"AdvancedPassengerInfoActor received FlightPaxSplitBatchInit")
+      log.info(s"AdvancePassengerInfoActor received FlightPaxSplitBatchInit")
       sender ! PassengerSplitsAck
 
     case manifest: VoyageManifest =>

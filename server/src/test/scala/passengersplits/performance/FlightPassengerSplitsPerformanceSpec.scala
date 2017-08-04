@@ -10,7 +10,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.PassengerInfoBatchActor
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.{AdvancedPassengerInfoActor, PassengerTypeCalculatorValues}
+import passengersplits.core.{AdvancePassengerInfoActor, PassengerTypeCalculatorValues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import spray.http.DateTime
 import spray.routing.Directives
@@ -105,7 +105,7 @@ class FlightPassengerSplitsPerformanceSpec extends
     (0 to numFlights).flatMap(n => Arbitrary(flightGen(startDateTime)).arbitrary.sample.get :: Nil)
   }
 
-  val aggregationRef: ActorRef = system.actorOf(Props[AdvancedPassengerInfoActor])
+  val aggregationRef: ActorRef = system.actorOf(Props[AdvancePassengerInfoActor])
 
   "Given lots of flight events" >> {
     tag("performance")
