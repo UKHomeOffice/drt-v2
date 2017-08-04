@@ -541,7 +541,9 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHa
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
     case GetShifts() =>
-      effectOnly(Effect(AjaxClient[Api].getShifts().call().map(res => SetShifts(res))))
+      val shiftsEffect = Effect(Future(GetShifts())).after(300 seconds)
+      val apiCallEffect = Effect(AjaxClient[Api].getShifts().call().map(res => SetShifts(res)))
+      effectOnly(apiCallEffect + shiftsEffect)
   }
 }
 
@@ -609,7 +611,9 @@ class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingAct
     case AddShift(fixedPoints) =>
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
     case GetFixedPoints() =>
-      effectOnly(Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res, None))))
+      val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
+      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res, None)))
+      effectOnly(apiCallEffect + fixedPointsEffect)
   }
 }
 
@@ -632,7 +636,9 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) ext
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
       updated(Ready(staffMovements), Effect(Future(RunAllSimulations())))
     case GetStaffMovements() =>
-      effectOnly(Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res))))
+      val movementsEffect = Effect(Future(GetStaffMovements())).after(60 seconds)
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res)))
+      effectOnly(apiCallEffect + movementsEffect)
     case SaveStaffMovements(terminalName) =>
       if (value.isReady) {
         AjaxClient[Api].saveStaffMovements(value.get).call()
