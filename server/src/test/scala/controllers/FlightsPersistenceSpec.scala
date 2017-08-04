@@ -105,8 +105,6 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
         actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0124", airportId = "LHR", actPax = 300, schDt = "2050-08-01T20:00")))
         actor ! Flights(List(apiFlight(flightId = 2, iata = "SA0124", airportId = "LHR", actPax = 200, schDt = "2050-08-02T20:00")))
 
-        Thread.sleep(2500L)
-
         val futureResult: Future[Any] = actor ? GetFlights
         val futureFlights: Future[List[Arrival]] = futureResult.collect {
           case Success(Flights(fs)) => fs

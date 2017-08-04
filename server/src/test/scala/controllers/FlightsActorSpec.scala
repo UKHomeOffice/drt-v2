@@ -53,7 +53,7 @@ class FlightsActorSpec extends Specification {
       implicit val timeout: Timeout = Timeout(5 seconds)
       val actor: ActorRef = flightsActor(system)
 
-      actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-08-02T20:00")))
+      actor ! Flights(List(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2050-08-02T20:00")))
 
       val futureResult: Future[Any] = actor ? GetFlights
       val futureFlights: Future[List[Arrival]] = futureResult.collect {
@@ -64,7 +64,7 @@ class FlightsActorSpec extends Specification {
         case Flights(flights) => flights.toSet
       }
 
-      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2017-08-02T20:00"))
+      val expected = Set(apiFlight(flightId = 1, iata = "SA0123", airportId = "STN", actPax = 1, schDt = "2050-08-02T20:00"))
 
       result === expected
     }
