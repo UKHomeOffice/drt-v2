@@ -2,7 +2,7 @@ package passengersplits.core
 
 import akka.actor._
 import akka.event.{LoggingAdapter, LoggingReceive}
-import akka.persistence.{PersistentActor, RecoveryCompleted}
+import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import passengersplits.core
 import core.PassengerInfoRouterActor._
 import drt.shared.FlightsApi.TerminalName
@@ -11,7 +11,7 @@ import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.SDateLike
 import services.SDate.implicits._
 import drt.shared.PassengerSplits.{FlightNotFound, FlightsNotFound, VoyagePaxSplits}
-import server.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage}
+import server.protobuf.messages.VoyageManifest.{AdvancePassengerInfoStateSnapshotMessage, PassengerInfoJsonMessage, VoyageManifestMessage}
 import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -61,6 +61,8 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
   var state = State(None, Map.empty)
   val dcPaxIncPercentThreshold = 50
 
+  val snapshotInterval = 20
+
   implicit def implLog = log
 
   def manifestKey(vm: VoyageManifest) = voyageKey(vm.ArrivalPortCode, vm.VoyageNumber, vm.scheduleArrivalDateTime.get)
@@ -68,6 +70,9 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
   private def voyageKey(arrivalPortCode: String, voyageNumber: String, scheduledDate: SDateLike) = {
     s"${arrivalPortCode}-${padTo4Digits(voyageNumber)}@${SDate.jodaSDateToIsoString(scheduledDate)}"
   }
+
+  def apiSnapshotMessageFromState: AdvancePassengerInfoStateSnapshotMessage =
+    AdvancePassengerInfoStateSnapshotMessage(state.flightManifests.values.map(voyageManifestToMessage).toList)
 
   override def receiveCommand = LoggingReceive {
     case ManifestZipFileInit =>
@@ -81,6 +86,10 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
       }
       if (APiManifest.shouldAcceptNewManifest(manifest, state.flightManifests.get(manifestKey(manifest)), dcPaxIncPercentThreshold)) {
         addManifest(manifest)
+      }
+      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+        log.info("saving advance passenger info snapshot")
+        saveSnapshot(apiSnapshotMessageFromState)
       }
       sender ! PassengerSplitsAck
 
@@ -146,7 +155,8 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
     state = state.copy(flightManifests = newManifests)
   }
 
-  override def receiveRecover: Receive = {
+  def voyageManifestMessageToVoyageManifest(voyageManifestMessage: VoyageManifestMessage) = voyageManifestMessage match {
+
     case VoyageManifestMessage(
     Some(eventCode),
     Some(arrivalPortCode),
@@ -155,14 +165,25 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
     Some(carrierCode),
     Some(scheduledDate),
     Some(scheduledTime),
-    passengerList) =>
-      val vm = VoyageManifest(eventCode, arrivalPortCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, passengerList.collect {
+    passengerList)
+    =>
+      VoyageManifest(eventCode, arrivalPortCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, passengerList.collect {
         case PassengerInfoJsonMessage(documentType, Some(countryCode), Some(eeaFlag), age, disembarkationPortCode, Some(inTransitFlag), disembarkationCountryCode, nationalityCode) =>
           PassengerInfoJson(documentType, countryCode, eeaFlag, age, disembarkationPortCode, inTransitFlag, disembarkationCountryCode, nationalityCode)
       }.toList)
+  }
+
+  override def receiveRecover: Receive = {
+    case vmm: VoyageManifestMessage =>
+      val vm = voyageManifestMessageToVoyageManifest(vmm)
+      log.info(s"Restoring voyage manifest from message")
       addManifest(vm)
+    case SnapshotOffer(_, snapshot: AdvancePassengerInfoStateSnapshotMessage) =>
+      log.info(s"Restoring snapshot from protobuf message")
+      val flightManifestsFromSnapshot = snapshot.voyageManifestMessages.map(voyageManifestMessageToVoyageManifest)
+      state = state.copy(flightManifests = flightManifestsFromSnapshot.map(manifest => (manifestKey(manifest), manifest)).toMap)
     case RecoveryCompleted =>
-      log.info(s"Finished recovering flights ${state.flightManifests.values.size} flights")
+      log.info(s"Finished recovering ${state.flightManifests.values.size} voyage manifests")
     case other =>
       log.info(s"API: Failed to recover $other")
   }
