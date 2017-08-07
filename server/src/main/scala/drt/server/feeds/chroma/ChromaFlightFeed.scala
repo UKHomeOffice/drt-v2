@@ -38,7 +38,6 @@ case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
 
 case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
   flightFeed =>
-  val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 100 seconds)
 
   object EdiChroma {
     val ArrivalsHall1 = "A1"
@@ -46,14 +45,6 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
     val ediMapTerminals = Map(
       "T1" -> ArrivalsHall1,
       "T2" -> ArrivalsHall2
-    )
-
-    val ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
-      csfs.map(ediBaggageTerminalHack(_)).map(csf => ediMapTerminals.get(csf.Terminal) match {
-        case Some(renamedTerminal) =>
-          csf.copy(Terminal = renamedTerminal)
-        case None => csf
-      })
     )
 
     def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
@@ -90,8 +81,6 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
         )
       }).toList)
   }
-
-  val copiedToApiFlights = apiFlightCopy(EdiChroma.ediMapping).map(Flights(_))
 
   def chromaEdiFlights(): Source[List[Arrival], Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 10 seconds)

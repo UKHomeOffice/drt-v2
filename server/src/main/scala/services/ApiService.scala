@@ -78,15 +78,17 @@ object WorkloadSimulation {
     else
       simulationResultForDesksAndWorkload(optimizerConfig, workloads, desks)
   }
+
   val gatesPerBank = 5
   val blockSize = 15
-  val fillByBlockSize = List.fill[Int](blockSize)_
+  val fillByBlockSize = List.fill[Int](blockSize) _
 
   def simulationResultForDesksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
     val desksPerMinute: List[Int] = desks.flatMap(x => fillByBlockSize(x))
 
     TryRenjin.runSimulationOfWork(workloads, desksPerMinute, optimizerConfig)
   }
+
   def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desksPerBlock: List[Int]): QueueSimulationResult = {
     val egatesPerMinute: List[Int] = desksPerBlock.flatMap(d => fillByBlockSize(d * gatesPerBank))
     val simulationResult = TryRenjin.runSimulationOfWork(workloads, egatesPerMinute, optimizerConfig)
@@ -114,53 +116,39 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
-  override def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]] = {
-    val splits: Future[Any] = splitsCalculator(airportConfig.portCode, "T1", flightCode, scheduledDateTime)
-    splits.map(v => v match {
-      case value: VoyagePaxSplits =>
-        log.info(s"Found flight split for $portCode/$flightCode/${scheduledDateTime}")
-        Right(value)
-      case fnf: FlightNotFound =>
-        Left(fnf)
-      case Failure(f) =>
-        throw f
-    })
-  }
-
-  override def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = {
+  override def getWorkloads(): Future[Either[WorkloadsNotReady, TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
     log.info("getting workloads")
     val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
 
-    val bestPax: (Arrival) => Int = BestPax(airportConfig.portCode)
-
-
-    val flightsForTerminalsWeCareAbout = flightsFut.map { allFlights =>
-      val names: Set[TerminalName] = airportConfig.terminalNames.toSet
-      allFlights.filter(flight => {
-        names.contains(flight.Terminal)
-      })
+    flightsFut.recover {
+      case e: Throwable =>
+        log.info(s"Didn't receive flights: $e")
+        List()
     }
 
-    for {flights <- flightsForTerminalsWeCareAbout
-         flightsByTerminal: Map[String, List[Arrival]] = flights.groupBy(_.Terminal)
-    } {
-      val paxByTerminal = flightsByTerminal.mapValues((arrivals: List[Arrival]) => arrivals.map(bestPax(_)).sum)
-      log.debug(s"paxByTerminal: ${paxByTerminal}")
+    val flightsForTerminalsWeCareAbout = flightsFut.map {
+      case Nil => List()
+      case first :: rest =>
+        val allFlights = first :: rest
+        val names: Set[TerminalName] = airportConfig.terminalNames.toSet
+        allFlights.filter(flight => names.contains(flight.Terminal))
     }
 
-    val qlByT = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
+    val workloadsFuture = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
 
-    qlByT.onComplete {
-      case Success(s) => log.debug(s"qlByT $s")
-      case Failure(r) => log.error(s"qlByT $r")
+    workloadsFuture.recover {
+      case e: Throwable =>
+        log.info(s"Didn't get the workloads: $e")
+        WorkloadsNotReady()
+    }.map {
+      case WorkloadsNotReady() =>
+        log.info(s"Got WorkloadsNotReady")
+        Left(WorkloadsNotReady())
+      case workloads: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads] =>
+        log.info(s"Got the workloads")
+        Right(workloads)
+
     }
-    log.info(s"returning workloads future")
-    qlByT
-  }
-
-  override def welcomeMsg(name: String): String = {
-    println("welcomeMsg")
-    s"Welcome to SPA, $name! Time is now ${new Date}"
   }
 
   override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
@@ -192,7 +180,9 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
 trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTransformations {
   def airportConfig: AirportConfig
+
   def crunchPeriodHours: Int
+
   def log: DiagnosticLoggingAdapter
 
   def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
@@ -216,23 +206,25 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
       val r: Try[OptimizerCrunchResult] = triedWl.flatMap {
         (terminalWorkloads: Map[String, List[Double]]) =>
           log.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
-          val workloads: List[Double] = terminalWorkloads(queueName)
-          val queueSla = airportConfig.slaByQueue(queueName)
+          terminalWorkloads.get(queueName).map {
+            case workloads =>
+              val queueSla = airportConfig.slaByQueue(queueName)
 
-          val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
-          val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
-          val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
+              val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
+              val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
+              val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
 
-          val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
-          val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
+              val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
+              val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
 
-          val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
-          if (queueName == Queues.EGate)
-            crunchRes.map(crunchResSuccess => {
-              groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
-            })
-          else
-            crunchRes
+              val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
+              if (queueName == Queues.EGate)
+                crunchRes.map(crunchResSuccess => {
+                  groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
+                })
+              else
+                crunchRes
+          }.getOrElse(Failure(new Exception(s"No $queueName workloads available")))
       }
       val asFuture = r match {
         case Success(s) =>
@@ -300,7 +292,8 @@ trait ActorBackedCrunchService {
     }.map {
       case cr: CrunchResult =>
         Right(cr)
-      case _ =>
+      case e =>
+        log.info(s"Crunch not available: $e")
         Left(NoCrunchAvailable())
     }
   }

@@ -216,13 +216,12 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 
 class WorkloadsHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
-    case _: GetWorkloads =>
+    case GetWorkloads(_, _) =>
       val newWorkloads = if (value.isEmpty) Pending() else value
       updated(newWorkloads,
-        Effect(AjaxClient[Api].getWorkloads().call().map(UpdateWorkloads).recover {
-          case f =>
-            log.error(s"failure getting workloads $f")
-            NoAction
+        Effect(AjaxClient[Api].getWorkloads().call().map {
+          case Left(WorkloadsNotReady()) => GetWorkloads("", "")
+          case Right(wl) => UpdateWorkloads(wl)
         }))
     case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = {
@@ -335,7 +334,12 @@ class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends Log
   protected def handle = {
     case RequestFlights(from, to) =>
       val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
-      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map(UpdateFlightsWithSplits))
+      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map {
+        case Right(fs) => UpdateFlightsWithSplits(fs)
+        case Left(FlightsNotReady()) =>
+          log.info(s"Flights not ready")
+          NoAction
+      })
       effectOnly(fe + flightsEffect)
     case UpdateFlightsWithSplits(flightsWithSplits) =>
       log.info(s"client got ${flightsWithSplits.flights.length} flights")

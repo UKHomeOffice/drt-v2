@@ -8,8 +8,6 @@ import scala.util.{Success, Try}
 
 object FlightMessageConversion {
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
-    val createdAt = SDate.now().millisSinceEpoch
-
     FlightMessage(
       operator = Some(apiFlight.Operator),
       gate = Some(apiFlight.Gate),
@@ -32,9 +30,7 @@ object FlightMessageConversion {
       estimated = millisOptionFromArrivalDateString(apiFlight.EstDT),
       touchdown = millisOptionFromArrivalDateString(apiFlight.ActDT),
       estimatedChox = millisOptionFromArrivalDateString(apiFlight.EstChoxDT),
-      actualChox = millisOptionFromArrivalDateString(apiFlight.ActChoxDT),
-
-      createdAt = Option(createdAt)
+      actualChox = millisOptionFromArrivalDateString(apiFlight.ActChoxDT)
     )
   }
 

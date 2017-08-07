@@ -2,7 +2,7 @@ package passengersplits.core
 
 import akka.actor._
 import akka.event.{LoggingAdapter, LoggingReceive}
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
+import akka.persistence._
 import passengersplits.core
 import core.PassengerInfoRouterActor._
 import drt.shared.FlightsApi.TerminalName
@@ -61,7 +61,7 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
   var state = State(None, Map.empty)
   val dcPaxIncPercentThreshold = 50
 
-  val snapshotInterval = 20
+  val snapshotInterval = 100
 
   implicit def implLog = log
 
@@ -88,27 +88,28 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
         addManifest(manifest)
       }
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info("saving advance passenger info snapshot")
+        log.info(s"saving advance passenger info snapshot (lastSequenceNr: $lastSequenceNr)")
         saveSnapshot(apiSnapshotMessageFromState)
       }
       sender ! PassengerSplitsAck
 
     case report: ReportVoyagePaxSplit =>
+      log.info(s"Got $report")
       val replyTo = sender
-      Future {
-        val key = voyageKey(report.destinationPort, report.voyageNumber, report.scheduledArrivalDateTime)
-        val manifest = state.flightManifests.get(key)
-        manifest match {
-          case Some(m) =>
-            val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(m)
-            replyTo ! VoyagePaxSplits(
-              report.destinationPort,
-              report.carrierCode, report.voyageNumber, m.PassengerList.length, m.scheduleArrivalDateTime.get,
-              paxTypeAndQueueCount)
-          case None =>
-            replyTo ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
-        }
+      val key = voyageKey(report.destinationPort, report.voyageNumber, report.scheduledArrivalDateTime)
+      val manifest = state.flightManifests.get(key)
+      manifest match {
+        case Some(m) =>
+          val paxTypeAndQueueCount: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(m)
+          val voyagePaxSplits = VoyagePaxSplits(
+            report.destinationPort,
+            report.carrierCode, report.voyageNumber, m.PassengerList.length, m.scheduleArrivalDateTime.get,
+            paxTypeAndQueueCount)
+          replyTo ! voyagePaxSplits
+        case None =>
+          replyTo ! FlightNotFound(report.carrierCode, report.voyageNumber, report.scheduledArrivalDateTime)
       }
+
     case report: ReportVoyagePaxSplitBetween =>
       val filteredManifests = state.flightManifests.values.filter(m => {
         SDate.parseString(m.ScheduledDateOfArrival).millisSinceEpoch >= report.scheduledArrivalDateTimeFrom.millisSinceEpoch &&
@@ -120,6 +121,13 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
       log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
       state.copy(latestFileName = Option(zipFilename))
       completionMonitor ! VoyageManifestZipFileCompleteAck(zipFilename)
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Snapshot success $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Snapshot failed $md\n$cause")
+
     case default =>
       log.error(s"$self got an unhandled message ${default}")
   }
@@ -184,8 +192,8 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
       state = state.copy(flightManifests = flightManifestsFromSnapshot.map(manifest => (manifestKey(manifest), manifest)).toMap)
     case RecoveryCompleted =>
       log.info(s"Finished recovering ${state.flightManifests.values.size} voyage manifests")
-    case other =>
-      log.info(s"API: Failed to recover $other")
+    case unexpected =>
+      log.info(s"Unexpected message: $unexpected")
   }
 
   override def persistenceId: String = "passenger-manifest-store"

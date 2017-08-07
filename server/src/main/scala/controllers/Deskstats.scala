@@ -27,7 +27,7 @@ class DeskstatsActor extends Actor with ActorLogging {
       log.info(s"Received ActualDeskStats")
       actualDeskStats = deskStats
     case GetActualDeskStats() =>
-      log.info(s"Sending ActualDeskStats($actualDeskStats) to sender")
+      log.info(s"Sending ActualDeskStats to sender")
       sender ! ActualDeskStats(actualDeskStats)
   }
 }

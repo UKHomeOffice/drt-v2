@@ -55,6 +55,8 @@ object ApiSplits {
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: List[ApiSplits])
 
+case class FlightsNotReady()
+
 case class Arrival(
                     Operator: String,
                     Status: String,
@@ -209,7 +211,7 @@ object FlightsApi {
 trait FlightsApi {
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights
 
-  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[FlightsWithSplits]
+  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[Either[FlightsNotReady, FlightsWithSplits]]
 }
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
@@ -303,6 +305,8 @@ case class WL(time: Long, workload: Double) extends Time
 
 case class Pax(time: Long, pax: Double) extends Time
 
+case class WorkloadsNotReady()
+
 case class DeskRec(time: Long, desks: Int)
 
 case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
@@ -336,7 +340,7 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]
+  def getWorkloads(): Future[Either[WorkloadsNotReady, TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]]
 }
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
@@ -345,10 +349,6 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi with WorkloadsApi {
-
-  def welcomeMsg(name: String): String
-
-  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]]
 
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
