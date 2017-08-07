@@ -13,7 +13,7 @@ import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.services.AirportConfigHelpers
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, PortPaxAndWorkLoads}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
@@ -400,7 +400,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: 
 
   override def lastLocalMidnightString: String = "2000-01-01"
 
-  override def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
+  override def crunchWorkloads(workloads: Future[PortPaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
     Future.successful(CrunchResult(0L, 0L, IndexedSeq(), Seq()))
   }
 }

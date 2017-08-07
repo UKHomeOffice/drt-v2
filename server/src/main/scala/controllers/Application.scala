@@ -170,7 +170,7 @@ trait ProdPassengerSplitProviders {
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
 
-  private implicit val timeout = Timeout(100 milliseconds)
+  private implicit val timeout = Timeout(101 milliseconds)
 
   def apiSplitsProv(flight: Arrival): Option[SplitRatios] =
     AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
@@ -193,7 +193,7 @@ trait ProdWalkTimesProvider {
 }
 
 trait ImplicitTimeoutProvider {
-  implicit val timeout = Timeout(100 milliseconds)
+  implicit val timeout = Timeout(102 milliseconds)
 }
 
 class Application @Inject()(
@@ -240,7 +240,7 @@ class Application @Inject()(
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 
-    override implicit val timeout: Timeout = Timeout(100 milliseconds)
+    override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
 
@@ -254,12 +254,8 @@ class Application @Inject()(
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>
-    implicit val timeout: Timeout = Timeout(100 milliseconds)
+    implicit val timeout: Timeout = Timeout(103 milliseconds)
     val crunchActor: AskableActorRef = ctrl.crunchActor
-
-    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
-      tryCrunch(terminalName, queueName)
-    }
 
     def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
       Future.sequence(
@@ -271,7 +267,7 @@ class Application @Inject()(
 
   trait GetFlightsFromActor extends FlightsService {
     override def getFlights(start: Long, end: Long): Future[List[Arrival]] = {
-      val flights: Future[Any] = ctrl.flightsActorAskable ? GetFlights
+      val flights: Future[Any] = ctrl.flightsActorAskable.ask(GetFlights)(Timeout(1 second))
       val fsFuture = flights.collect {
         case Flights(fs) => fs
       }

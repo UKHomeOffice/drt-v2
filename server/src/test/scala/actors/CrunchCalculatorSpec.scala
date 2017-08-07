@@ -1,7 +1,7 @@
 package actors
 
 import akka.event.DiagnosticLoggingAdapter
-import drt.shared.FlightsApi.{TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.FlightsApi.{TerminalName, PortPaxAndWorkLoads}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import org.specs2.Specification
@@ -36,12 +36,12 @@ class CrunchCalculatorSpec extends Specification with Mockito {
     )
 
   val wls = Map(T2 -> Map(Queues.EGate -> Seq.fill(60 * 60 * 24)(WL(0, 30))))
-  val workloads: Future[TerminalQueuePaxAndWorkLoads[scala.collection.immutable.Seq[WL]]] = Future.successful(wls)
+  val workloads: Future[PortPaxAndWorkLoads[scala.collection.immutable.Seq[WL]]] = Future.successful(wls)
 
   def multiplyMinDesksByBankSize = {
 
     val crunchCalculator = new TestableCrunchCalculator {
-      override def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
+      override def tryCrunch(workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
         val forAllDesksMultipleOfBankSize = minDesks.forall(x => (x.toDouble % bankSize) == 0)
         assert(forAllDesksMultipleOfBankSize, "minDesks should be a multiple of bankSize")
         Success(OptimizerCrunchResult(Vector.empty[Int], Vector.empty[Int]))
@@ -57,7 +57,7 @@ class CrunchCalculatorSpec extends Specification with Mockito {
   def multiplyMaxDesksByBankSize = {
 
     val crunchCalculator = new TestableCrunchCalculator {
-      override def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
+      override def tryCrunch(workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
         val forAllDesksMultipleOfBankSize = maxDesks.forall(x => (x.toDouble % bankSize) == 0)
         assert(forAllDesksMultipleOfBankSize, "maxDesks should be a multiple of bankSize")
         Success(OptimizerCrunchResult(Vector.empty[Int], Vector.empty[Int]))

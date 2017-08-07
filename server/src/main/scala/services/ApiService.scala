@@ -116,7 +116,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
-  override def getWorkloads(): Future[Either[WorkloadsNotReady, TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
+  override def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
     log.info("getting workloads")
     val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
 
@@ -144,7 +144,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
       case WorkloadsNotReady() =>
         log.info(s"Got WorkloadsNotReady")
         Left(WorkloadsNotReady())
-      case workloads: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads] =>
+      case workloads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads] =>
         log.info(s"Got the workloads")
         Right(workloads)
 
@@ -185,61 +185,44 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
 
   def log: DiagnosticLoggingAdapter
 
-  def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
+  def crunchQueueWorkloads(queueWorkloads: Seq[WL], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): CrunchResult = {
     val tq: QueueName = terminalName + "/" + queueName
-    for (wl <- workloads) yield {
-      val triedWl: Try[Map[String, List[Double]]] = Try {
-        log.info(s"$tq lookup wl ")
-        val terminalWorkloads = wl.get(terminalName)
-        terminalWorkloads match {
-          case Some(twl: Map[QueueName, Seq[WL]]) =>
-            val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchWindowStartTimeMillis, crunchPeriodHours)
-            log.info(s"$tq filtering minutes to: ${minutesRangeInMillis.start} to ${minutesRangeInMillis.end}")
-            val workloadsByQueue: Map[String, List[Double]] = WorkloadsHelpers.queueWorkloadsForPeriod(twl, minutesRangeInMillis)
-            log.info(s"$tq crunchWindowStartTimeMillis: $crunchWindowStartTimeMillis, crunchPeriod: $crunchPeriodHours")
-            workloadsByQueue
-          case None =>
-            Map()
-        }
-      }
 
-      val r: Try[OptimizerCrunchResult] = triedWl.flatMap {
-        (terminalWorkloads: Map[String, List[Double]]) =>
-          log.info(s"$tq terminalWorkloads are ${terminalWorkloads.keys}")
-          terminalWorkloads.get(queueName).map {
-            case workloads =>
-              val queueSla = airportConfig.slaByQueue(queueName)
+    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchWindowStartTimeMillis, crunchPeriodHours)
+    val fullWorkloads: List[Double] = WorkloadsHelpers.queueWorkloadsForPeriod(queueWorkloads, minutesRangeInMillis)
 
-              val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
-              val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
-              val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
 
-              val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
-              val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
+    val queueSla = airportConfig.slaByQueue(queueName)
 
-              val crunchRes = tryCrunch(terminalName, queueName, workloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
-              if (queueName == Queues.EGate)
-                crunchRes.map(crunchResSuccess => {
-                  groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, workloads)
-                })
-              else
-                crunchRes
-          }.getOrElse(Failure(new Exception(s"No $queueName workloads available")))
-      }
-      val asFuture = r match {
-        case Success(s) =>
-          log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
-          val res = CrunchResult(crunchWindowStartTimeMillis, 60000L, s.recommendedDesks, s.waitTimes)
-          log.info(s"$tq Crunch complete")
-          res
-        case Failure(f) =>
-          log.warning(s"$tq Failed to crunch. ${f.getMessage}")
-          throw f
-      }
-      asFuture
+    val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
+    val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
+    val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
+
+    val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
+    val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
+
+    log.info(s"Trying to crunch $terminalName / $queueName")
+
+    val triedCrunchResult = tryCrunch(fullWorkloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
+
+    if (queueName == Queues.EGate)
+      triedCrunchResult.map(crunchResSuccess => {
+        groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, fullWorkloads)
+      })
+    else
+      triedCrunchResult
+
+    triedCrunchResult match {
+      case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
+        log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
+        val res = CrunchResult(crunchWindowStartTimeMillis, 60000L, deskRecs, waitTimes)
+        log.info(s"$tq Crunch complete")
+        res
+      case Failure(f) =>
+        log.warning(s"$tq Failed to crunch. ${f.getMessage}")
+        throw f
     }
   }
-
 
   private def adjustDesksForEgates(queueName: QueueName, desksByMinute: List[Int]) = {
     if (queueName == Queues.EGate) {
@@ -249,21 +232,15 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
     }
   }
 
-  def tryCrunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
-    log.info(s"Crunch requested for $terminalName, $queueName")
-    val mdc = log.getMDC
-    val newMdc = Map("terminalQueue" -> s"$terminalName/$queueName")
-    log.setMDC(newMdc)
+  def tryCrunch(workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
     try {
-      crunch(terminalName, queueName, workloads, sla, minDesks, maxDesks)
-    } finally {
-      log.setMDC(mdc)
+      crunch(workloads, sla, minDesks, maxDesks)
     }
   }
 }
 
 trait CrunchCalculator {
-  def crunch(terminalName: TerminalName, queueName: String, workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
+  def crunch(workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
     val optimizerConfig = OptimizerConfig(sla)
     TryRenjin.crunch(workloads, minDesks, maxDesks, optimizerConfig)
   }
@@ -271,8 +248,6 @@ trait CrunchCalculator {
 
 
 trait CrunchResultProvider {
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
-
   def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 }
 
@@ -280,27 +255,13 @@ trait ActorBackedCrunchService {
   self: CrunchResultProvider =>
   private val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val timeout: akka.util.Timeout
-  val crunchActor: AskableActorRef
+//  implicit val timeout = Timeout(1 second)
 
-  def tryCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
-    log.info("Starting crunch latest request")
-    val result: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
-    result.recover {
-      case e: Throwable =>
-        log.info("Crunch not ready in time ", e)
-        Left(NoCrunchAvailable())
-    }.map {
-      case cr: CrunchResult =>
-        Right(cr)
-      case e =>
-        log.info(s"Crunch not available: $e")
-        Left(NoCrunchAvailable())
-    }
-  }
+  val crunchActor: AskableActorRef
 
   def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
     log.info("Starting crunch latest request")
-    val crunchFuture: Future[Any] = crunchActor ? GetLatestCrunch(terminalName, queueName)
+    val crunchFuture: Future[Any] = crunchActor.ask(GetLatestCrunch(terminalName, queueName))(Timeout(30 seconds))
 
     crunchFuture.recover {
       case e: Throwable =>

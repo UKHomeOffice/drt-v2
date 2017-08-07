@@ -26,8 +26,10 @@ object FlightPassengerSplitsReportingService {
 
   def calculateSplits(aggregator: AskableActorRef)
                      (destPort: String, terminalName: String, flightCode: String, arrivalTime: SDateLike)(implicit timeout: Timeout, ec: ExecutionContext) = {
+    import scala.concurrent.duration._
+
     getCarrierCodeAndFlightNumber(flightCode) match {
-      case Some((cc, fn)) => aggregator ? ReportVoyagePaxSplit(destPort, cc, fn, arrivalTime)
+      case Some((cc, fn)) => aggregator.ask(ReportVoyagePaxSplit(destPort, cc, fn, arrivalTime))(Timeout(500 milliseconds))
       case None => Future.failed(new Exception(s"couldn't get carrier and voyage number from $flightCode"))
     }
   }

@@ -2,7 +2,7 @@ package services.workloadcalculator
 
 import com.typesafe.config.{Config, ConfigFactory}
 import controllers.SystemActors.SplitsProvider
-import drt.shared.FlightsApi.{QueueName, QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{Arrival, _}
 import org.slf4j.LoggerFactory
@@ -27,12 +27,18 @@ trait WorkloadCalculator {
       (PaxTypeAndQueue) => ProcTime
     ) => (List[Arrival]) => Map[QueueName, L]
 
-  def queueLoadsByTerminal[L](flights: Future[List[Arrival]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[TerminalQueuePaxAndWorkLoads[L]] = {
+  def terminalQueueLoads[L](terminalName: TerminalName, flightsFuture: Future[List[Arrival]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[TerminalPaxAndWorkLoads[L]] = {
+    flightsFuture.map((flightsByTerminal: List[Arrival]) => {
+      val arrivalsToTerminalLoads = flightsToQueueLoads(flightPaxTypeAndQueueCountsFlow, procTimesProvider(terminalName))
+      arrivalsToTerminalLoads(flightsByTerminal)
+    })
+  }
+
+  def queueLoadsByTerminal[L](flights: Future[List[Arrival]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[PortPaxAndWorkLoads[L]] = {
     val flightsByTerminalFut: Future[Map[TerminalName, List[Arrival]]] = flights.map(fs => {
       val flightsByTerminal = fs.filterNot(freightOrEngineering).groupBy(_.Terminal)
       flightsByTerminal
     })
-
 
     val workloadByTerminal: Future[Map[TerminalName, Map[QueueName, L]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[Arrival]]) =>
       flightsByTerminal.map((fbt: (TerminalName, List[Arrival])) => {

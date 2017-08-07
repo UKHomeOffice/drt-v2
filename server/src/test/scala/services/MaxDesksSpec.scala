@@ -22,7 +22,7 @@ class MaxDesksSpec extends Specification {
 
     }
 
-    val tryCrunchRes = crunchCalculator.crunch("T1", "EEA", workloads, 25, repeat(2), repeat(2))
+    val tryCrunchRes = crunchCalculator.crunch(workloads, 25, repeat(2), repeat(2))
 
     tryCrunchRes match {
       case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>

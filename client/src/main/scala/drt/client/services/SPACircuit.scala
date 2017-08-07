@@ -223,7 +223,7 @@ class WorkloadsHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAc
           case Left(WorkloadsNotReady()) => GetWorkloads("", "")
           case Right(wl) => UpdateWorkloads(wl)
         }))
-    case UpdateWorkloads(terminalQueueWorkloads: TerminalQueuePaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
+    case UpdateWorkloads(terminalQueueWorkloads: PortPaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = {
         terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
           (plWl._1.map(pl => WL(timeFromMillisToNearestSecond(pl.time), pl.workload)),

@@ -7,7 +7,7 @@ import akka.testkit.TestKit
 import controllers.{AirportConfProvider, Core, SystemActors}
 import drt.services.AirportConfigHelpers
 import org.joda.time.{DateTime, DateTimeZone}
-import drt.shared.FlightsApi.{TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.FlightsApi.{TerminalName, PortPaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import org.mockito.Mock

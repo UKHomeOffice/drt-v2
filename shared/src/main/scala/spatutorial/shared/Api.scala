@@ -201,7 +201,9 @@ object FlightsApi {
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
 
-  type TerminalQueuePaxAndWorkLoads[L] = Map[TerminalName, Map[QueueName, L]]
+  type PortPaxAndWorkLoads[L] = Map[TerminalName, Map[QueueName, L]]
+
+  type TerminalPaxAndWorkLoads[L] = Map[QueueName, L]
 
   type TerminalName = String
 
@@ -219,11 +221,16 @@ case class AirportInfo(airportName: String, city: String, country: String, code:
 trait WorkloadsHelpers {
   val oneMinute = 60000L
 
-  def queueWorkloadsForPeriod(workloads: Map[String, Seq[WL]], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def terminalWorkloadsForPeriod(workloads: Map[String, Seq[WL]], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
     workloads.mapValues((qwl: Seq[WL]) => {
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, workloadToWorkLoadByTime(qwl))
       queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
     })
+  }
+
+  def queueWorkloadsForPeriod(qwl: Seq[WL], periodMinutes: NumericRange[Long]): List[Double] = {
+    val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, workloadToWorkLoadByTime(qwl))
+    queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
   }
 
   def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
@@ -340,7 +347,7 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[Either[WorkloadsNotReady, TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]]
+  def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]]
 }
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
@@ -353,8 +360,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
-
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
   def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]]
 
