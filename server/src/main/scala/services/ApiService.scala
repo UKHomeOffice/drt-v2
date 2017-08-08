@@ -201,7 +201,7 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
     val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
     val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
 
-    log.info(s"Trying to crunch $terminalName / $queueName with workloads: $fullWorkloads")
+    log.info(s"Trying to crunch $terminalName / $queueName")
 
     val triedCrunchResult = tryCrunch(fullWorkloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
 
@@ -215,9 +215,7 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
     triedCrunchResult match {
       case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
         log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
-        val res = CrunchResult(crunchWindowStartTimeMillis, 60000L, deskRecs, waitTimes)
-        log.info(s"$tq Crunch complete")
-        res
+        CrunchResult(crunchWindowStartTimeMillis, 60000L, deskRecs, waitTimes)
       case Failure(f) =>
         log.warning(s"$tq Failed to crunch. ${f.getMessage}")
         throw f
@@ -255,13 +253,12 @@ trait ActorBackedCrunchService {
   self: CrunchResultProvider =>
   private val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val timeout: akka.util.Timeout
-//  implicit val timeout = Timeout(1 second)
 
   val crunchActor: AskableActorRef
 
   def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
     log.info("Starting crunch latest request")
-    val crunchFuture: Future[Any] = crunchActor.ask(GetLatestCrunch(terminalName, queueName))(Timeout(30 seconds))
+    val crunchFuture: Future[Any] = crunchActor.ask(GetLatestCrunch(terminalName, queueName))
 
     crunchFuture.recover {
       case e: Throwable =>

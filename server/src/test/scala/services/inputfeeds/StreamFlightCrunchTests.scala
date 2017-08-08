@@ -213,16 +213,16 @@ class NewStreamFlightCrunchTests extends SpecificationLike {
         assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(0))
       }
 
-//      "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
-//        val hoursToCrunch = 4
-//        val terminalToCrunch = "A1"
-//        val flights = List(
-//          apiFlight(iata = "BA123", icao = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00", flightId = 1))
-//
-//        val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eGate", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
-//        val expectedMidnightLocalTime = 1451606400000L
-//        assertCrunchResult(result, expectedMidnightLocalTime, -1)
-//      }
+      "when we ask for the latest crunch for eGates at terminal A1, we get a crunch result only including flights at that terminal" in {
+        val hoursToCrunch = 4
+        val terminalToCrunch = "A1"
+        val flights = List(
+          apiFlight(iata = "BA123", icao = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00", flightId = 1))
+
+        val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eGate", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
+        val expectedMidnightLocalTime = 1451606400000L
+        assertCrunchResult(result, expectedMidnightLocalTime, -1)
+      }
     }
   }
 }
