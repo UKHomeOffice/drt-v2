@@ -79,13 +79,9 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
         log.error(failure, s"Failure calculating crunch for $key")
         log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}")
       }
-      crunch
-      //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 1 minute)
-      log.info(s"$terminal crunch result in cache: $expensiveCrunchResult")
       expensiveCrunchResult
     }
-
   }
 
   def cacheKey[T](terminal: TerminalName): String = s"$terminal"
@@ -116,21 +112,21 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
           val futCrunch: Future[Option[Map[QueueName, CrunchResult]]] = cacheCrunch(terminalName)
           futCrunch.recover {
             case e: Throwable =>
-              log.info(s"Future crunch failure caught exception: $e")
+              log.warning(s"Future crunch failure caught exception: $e")
               replyTo ! NoCrunchAvailable()
           }.onComplete {
             case Success(optionalCrunchResult) =>
               optionalCrunchResult match {
                 case Some(terminalCrunchResult: Map[QueueName, CrunchResult]) =>
                   val queueCrunchResult = terminalCrunchResult.getOrElse(queueName, NoCrunchAvailable())
-                  log.info(s"Sending crunch result for $terminalName / $queueName: $queueCrunchResult")
+                  log.info(s"Sending crunch result for $terminalName / $queueName")
                   replyTo ! queueCrunchResult
                 case None =>
                   log.info(s"NoCrunchAvailable: Got None for crunch result $terminalName / $queueName")
                   replyTo ! NoCrunchAvailable()
               }
             case Failure(e) =>
-              log.info(s"NoCrunchAvailable: unsuccessful crunch here $terminalName/$queueName: $e")
+              log.info(s"NoCrunchAvailable: unsuccessful crunch here $terminalName / $queueName: $e")
               replyTo ! NoCrunchAvailable()
           }
       }
@@ -154,10 +150,8 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
   }
 
   private def saveTerminalCrunchResult(tn: TerminalName, terminalCrunchResults: Map[QueueName, CrunchResult]) = {
-    log.info(s"saving new crunch result for $tn")
     crunchCache.remove(cacheKey(tn))
     crunchCache(cacheKey(tn)) {
-      log.info(s"returning crunch result for $tn")
       Option(terminalCrunchResults)
     }
   }
@@ -172,8 +166,6 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
       terminalName,
       Future(uniqueArrivals),
       PaxLoadCalculator.queueWorkLoadCalculator)
-
-    log.info(s"lastMidnight: $lastLocalMidnight")
 
     val queuesToCrunch = airportConfig.queues(terminalName).filterNot(_ == Queues.Transfer)
 

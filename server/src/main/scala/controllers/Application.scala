@@ -277,8 +277,7 @@ class Application @Inject()(
     override def getFlightsWithSplits(start: Long, end: Long): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
       val askable = ctrl.flightsActorAskable
       log.info(s"asking $askable for flightsWithSplits")
-      implicit val timeout = 500 milliseconds
-      val flights = askable.ask(GetFlightsWithSplits)(timeout)
+      val flights = askable.ask(GetFlightsWithSplits)(Timeout(500 milliseconds))
 
       flights.recover {
         case e: Throwable =>
