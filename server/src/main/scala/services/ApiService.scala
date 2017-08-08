@@ -201,7 +201,7 @@ trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTrans
     val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
     val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
 
-    log.info(s"Trying to crunch $terminalName / $queueName")
+    log.info(s"Trying to crunch $terminalName / $queueName with workloads: $fullWorkloads")
 
     val triedCrunchResult = tryCrunch(fullWorkloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
 

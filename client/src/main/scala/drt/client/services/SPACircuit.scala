@@ -234,6 +234,7 @@ class WorkloadsHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAc
         val noExistingWorkloads = !value.isReady
         noExistingWorkloads || newTerminalWl != value.get.workloads(terminalName)
       })
+      log.info(s"UpdateWorkloads: changedTerminals: $changedTerminals")
       val crunchRequests = changedTerminals
         .map(terminalName => {
           log.info(s"$terminalName workloads changed. Requesting crunch")

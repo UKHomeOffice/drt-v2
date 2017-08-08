@@ -79,9 +79,10 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
         log.error(failure, s"Failure calculating crunch for $key")
         log.warning(s"Failure in calculating crunch for $key. ${failure.getMessage} ${failure.toString()}")
       }
-
+      crunch
       //todo un-future this mess
       val expensiveCrunchResult = Await.result(crunch, 1 minute)
+      log.info(s"$terminal crunch result in cache: $expensiveCrunchResult")
       expensiveCrunchResult
     }
 
@@ -101,6 +102,7 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
       log.info(s"Should SaveCrunchResult for $tn")
       saveTerminalCrunchResult(tn, crunchResult)
     case GetLatestCrunch(_, Queues.Transfer) =>
+      log.info(s"NoCrunchAvailable: asked for Transfer queue crunch which we don't do")
       sender ! NoCrunchAvailable()
     case GetLatestCrunch(terminalName, queueName) =>
       log.info(s"Received GetLatestCrunch($terminalName, $queueName)")
@@ -108,28 +110,27 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
       log.info(s"Sender is ${sender}")
       flightState.values match {
         case Nil =>
-          log.info("No flights, no crunch")
+          log.info("NoCrunchAvailable: No flights, no crunch")
           replyTo ! NoCrunchAvailable()
         case fs =>
           val futCrunch: Future[Option[Map[QueueName, CrunchResult]]] = cacheCrunch(terminalName)
-          //          log.info(s"got keyed thingy ${futCrunch}")
-          //todo this is NOT right
-          futCrunch.value match {
-            case Some(Success(optionalCrunchResult)) =>
+          futCrunch.recover {
+            case e: Throwable =>
+              log.info(s"Future crunch failure caught exception: $e")
+              replyTo ! NoCrunchAvailable()
+          }.onComplete {
+            case Success(optionalCrunchResult) =>
               optionalCrunchResult match {
                 case Some(terminalCrunchResult: Map[QueueName, CrunchResult]) =>
                   val queueCrunchResult = terminalCrunchResult.getOrElse(queueName, NoCrunchAvailable())
                   log.info(s"Sending crunch result for $terminalName / $queueName: $queueCrunchResult")
                   replyTo ! queueCrunchResult
                 case None =>
-                  log.info(s"Sending crunch result for $terminalName / $queueName: NoCrunchAvailable")
-                  replyTo ! NoCrunchAvailable
+                  log.info(s"NoCrunchAvailable: Got None for crunch result $terminalName / $queueName")
+                  replyTo ! NoCrunchAvailable()
               }
-            case Some(Failure(_)) =>
-              log.info(s"unsuccessful crunch here $terminalName/$queueName")
-              replyTo ! NoCrunchAvailable()
-            case None =>
-              log.info(s"got nothing $terminalName/$queueName")
+            case Failure(e) =>
+              log.info(s"NoCrunchAvailable: unsuccessful crunch here $terminalName/$queueName: $e")
               replyTo ! NoCrunchAvailable()
           }
       }
@@ -176,23 +177,30 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
 
     val queuesToCrunch = airportConfig.queues(terminalName).filterNot(_ == Queues.Transfer)
 
-    val queueCrunchFuture = workloadsFuture.map(twl => {
-      val twlNoTransfers = twl.filterNot {
+    val queueCrunchFuture = workloadsFuture.map((twl: TerminalPaxAndWorkLoads[Seq[WL]]) => {
+      val twlNoTransfers: Map[QueueName, Seq[WL]] = twl.filterNot {
         case (qn, _) => qn == Queues.Transfer
       }
       log.info(s"twl: ${twlNoTransfers.size} vs ${queuesToCrunch.length}")
+
       if (twlNoTransfers.size == queuesToCrunch.length) {
-        Option(twlNoTransfers.map {
+        log.info(s"Attempting to crunch ${twlNoTransfers.keys}")
+        val terminalCrunchResults: Option[List[(QueueName, CrunchResult)]] = Option(twlNoTransfers.map {
           case (qn, qwl) =>
-            crunchQueueWorkloads(qwl, terminalName, qn, crunchWindowStartTimeMillis)
+            val cr = crunchQueueWorkloads(qwl, terminalName, qn, crunchWindowStartTimeMillis)
+            (qn, cr)
         }.toList)
-      } else None
+        terminalCrunchResults
+      } else {
+        log.info(s"We do not have workloads for all queues yet. Not crunching")
+        None
+      }
     })
 
-    val terminalCrunchFuture = queueCrunchFuture.map(optionalQueueCrunches => {
-      optionalQueueCrunches.map(queueCrunches => {
-        val terminalCrunchResult = queuesToCrunch.zip(queueCrunches).toMap
-        self ! SaveTerminalCrunchResult(terminalName, terminalCrunchResult)
+    val terminalCrunchFuture = queueCrunchFuture.map((optionalQueueCrunches: Option[List[(QueueName, CrunchResult)]]) => {
+      optionalQueueCrunches.map((queueCrunches: Seq[(FlightsApi.QueueName, CrunchResult)]) => {
+        val terminalCrunchResult = queueCrunches.toMap
+        saveTerminalCrunchResult(terminalName, terminalCrunchResult)
         terminalCrunchResult
       })
     })

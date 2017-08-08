@@ -35,8 +35,7 @@ class CrunchCalculatorSpec extends Specification with Mockito {
       })
     )
 
-  val wls = Map(T2 -> Map(Queues.EGate -> Seq.fill(60 * 60 * 24)(WL(0, 30))))
-  val workloads: Future[PortPaxAndWorkLoads[scala.collection.immutable.Seq[WL]]] = Future.successful(wls)
+  val workloads = Seq.fill(60 * 60 * 24)(WL(0, 30))
 
   def multiplyMinDesksByBankSize = {
 
@@ -47,10 +46,10 @@ class CrunchCalculatorSpec extends Specification with Mockito {
         Success(OptimizerCrunchResult(Vector.empty[Int], Vector.empty[Int]))
       }
     }
-    val cruncRes = crunchCalculator.crunchWorkloads(workloads, T2, Queues.EGate, 1000 * 60 * 60)
+    val cruncRes = crunchCalculator.crunchQueueWorkloads(workloads, T2, Queues.EGate, 1000 * 60 * 60)
 
-    val res = scala.concurrent.Await.result(cruncRes, 2 seconds)
-    println(res)
+//    val res = scala.concurrent.Await.result(cruncRes, 2 seconds)
+    println(cruncRes)
     ok
   }
 
@@ -63,10 +62,10 @@ class CrunchCalculatorSpec extends Specification with Mockito {
         Success(OptimizerCrunchResult(Vector.empty[Int], Vector.empty[Int]))
       }
     }
-    val cruncRes = crunchCalculator.crunchWorkloads(workloads, T2, Queues.EGate, 1000 * 60 * 60)
+    val cruncRes = crunchCalculator.crunchQueueWorkloads(workloads, T2, Queues.EGate, 1000 * 60 * 60)
 
-    val res = scala.concurrent.Await.result(cruncRes, 2 seconds)
-    println(res)
+//    val res = scala.concurrent.Await.result(cruncRes, 2 seconds)
+    println(cruncRes)
     ok
   }
 

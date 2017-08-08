@@ -8,7 +8,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalacheck.{Arbitrary, Gen}
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
-import passengersplits.PassengerInfoBatchActor
+import passengersplits.{AkkaPersistTestConfig, PassengerInfoBatchActor}
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import passengersplits.core.{AdvancePassengerInfoActor, PassengerTypeCalculatorValues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
@@ -27,7 +27,7 @@ trait SimpleProfiler {
 }
 
 class FlightPassengerSplitsPerformanceSpec extends
-  TestKit(ActorSystem("FlightPassengerSplitsPerformanceSpec", ConfigFactory.empty()))
+  TestKit(ActorSystem("FlightPassengerSplitsPerformanceSpec", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
   with SpecificationLike with AfterAll with Directives
   with ImplicitSender
   with SimpleProfiler {
