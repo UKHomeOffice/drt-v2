@@ -63,7 +63,7 @@ class ShiftsToProtoBufSpec extends Specification {
         Some("shift name"), Some("T1"), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("9")
       )))
 
-      val shiftsString = shiftMessagesToShiftsString(shiftsMessage.shifts.toList).mkString("\n")
+      val shiftsString = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
 
       val expected =
         """
@@ -80,7 +80,7 @@ class ShiftsToProtoBufSpec extends Specification {
         Some("shift name"), Some("T1"), None, None, None, Some("9"), Some(1484906400000L), Some(1484942400000L)
       )))
 
-      val shiftsString = shiftMessagesToShiftsString(shiftsMessage.shifts.toList).mkString("\n")
+      val shiftsString = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
 
       val expected =
         """

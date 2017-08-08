@@ -5,6 +5,7 @@ import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import org.slf4j.LoggerFactory
+import services.SDate
 
 import scala.util.Try
 
@@ -69,7 +70,8 @@ object ShiftsMessageParser {
           terminalName = Some(terminalName),
           startTimestamp = startTimestamp,
           endTimestamp = endTimestamp,
-          numberOfStaff = Some(staffNumberDelta)
+          numberOfStaff = Some(staffNumberDelta),
+          createdAt = Option(SDate.now().millisSinceEpoch)
         ))
       case _ =>
         log.warn(s"Couldn't parse shifts line: '$shift'")
@@ -78,22 +80,20 @@ object ShiftsMessageParser {
   }
 
   def shiftsStringToShiftsMessage(shifts: String): ShiftsMessage = {
-    ShiftsMessage(shiftsStringToShiftsMessages(shifts))
+    ShiftsMessage(shiftsStringToShiftMessages(shifts))
   }
 
-  def shiftsStringToShiftsMessages(shifts: String) = {
-    shifts.split("\n").map(shiftStringToShiftMessage).collect { case Some(x) => x }
+  def shiftsStringToShiftMessages(shifts: String): List[ShiftMessage] = {
+    shifts.split("\n").map(shiftStringToShiftMessage).collect { case Some(x) => x }.toList
   }
 
-  def shiftMessagesToShiftsString(shiftMessages: List[ShiftMessage]) = {
-    shiftMessages.map {
+  def shiftMessagesToShiftsString(shiftMessages: List[ShiftMessage]): String = {
+    shiftMessages.collect {
         case ShiftMessage(Some(name), Some(terminalName), Some(startDay), Some(startTime), Some(endTime), Some(numberOfStaff), None, None, _) =>
           s"$name, $terminalName, $startDay, $startTime, $endTime, $numberOfStaff"
         case ShiftMessage(Some(name), Some(terminalName), None, None, None, Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
           s"$name, $terminalName, ${ShiftsMessageParser.dateString(startTimestamp)}, ${ShiftsMessageParser.timeString(startTimestamp)}, ${ShiftsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
-        case _ =>
-          s""
-    }
+    }.mkString("\n")
   }
 }
 
@@ -106,12 +106,12 @@ class ShiftsActor extends PersistentActor {
   import ShiftsMessageParser._
 
   def updateState(data: String): Unit = {
-    state = state.updated(data)
+    state = state.updated(data = data)
   }
 
   val receiveRecover: Receive = {
-    case shiftsMessage: ShiftsMessage => updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList).mkString("\n"))
-    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) => state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
+    case shiftsMessage: ShiftsMessage => updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList))
+    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) => state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList) :: Nil)
   }
 
   val snapshotInterval = 5
@@ -126,7 +126,7 @@ class ShiftsActor extends PersistentActor {
       }
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
         log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
-        saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftsMessages(state.events.headOption.getOrElse(""))))
+        saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.events.headOption.getOrElse(""))))
       }
   }
 }
