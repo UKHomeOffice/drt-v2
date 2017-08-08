@@ -3,7 +3,7 @@ package actors
 import akka.persistence._
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
-import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
+import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -78,19 +78,22 @@ object ShiftsMessageParser {
   }
 
   def shiftsStringToShiftsMessage(shifts: String): ShiftsMessage = {
-    val shiftMessages = shifts.split("\n").map(shiftStringToShiftMessage).collect { case Some(x) => x }
-    ShiftsMessage(shiftMessages)
+    ShiftsMessage(shiftsStringToShiftsMessages(shifts))
   }
 
-  def shiftsMessageToShiftsString(shiftsMessage: ShiftsMessage): String = {
-    shiftsMessage.shifts.map {
-        case ShiftMessage(Some(name), Some(terminalName), Some(startDay), Some(startTime), Some(endTime), Some(numberOfStaff), None, None) =>
+  def shiftsStringToShiftsMessages(shifts: String) = {
+    shifts.split("\n").map(shiftStringToShiftMessage).collect { case Some(x) => x }
+  }
+
+  def shiftMessagesToShiftsString(shiftMessages: List[ShiftMessage]) = {
+    shiftMessages.map {
+        case ShiftMessage(Some(name), Some(terminalName), Some(startDay), Some(startTime), Some(endTime), Some(numberOfStaff), None, None, _) =>
           s"$name, $terminalName, $startDay, $startTime, $endTime, $numberOfStaff"
-        case ShiftMessage(Some(name), Some(terminalName), None, None, None, Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp)) =>
+        case ShiftMessage(Some(name), Some(terminalName), None, None, None, Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
           s"$name, $terminalName, ${ShiftsMessageParser.dateString(startTimestamp)}, ${ShiftsMessageParser.timeString(startTimestamp)}, ${ShiftsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
         case _ =>
           s""
-    }.mkString("\n")
+    }
   }
 }
 
@@ -107,9 +110,11 @@ class ShiftsActor extends PersistentActor {
   }
 
   val receiveRecover: Receive = {
-    case shiftsMessage: ShiftsMessage => updateState(shiftsMessageToShiftsString(shiftsMessage))
-    case SnapshotOffer(_, snapshot: ShiftsState) => state = snapshot
+    case shiftsMessage: ShiftsMessage => updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList).mkString("\n"))
+    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) => state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
   }
+
+  val snapshotInterval = 5
 
   val receiveCommand: Receive = {
     case GetState =>
@@ -118,6 +123,10 @@ class ShiftsActor extends PersistentActor {
       persist(shiftsStringToShiftsMessage(data)) { shiftsMessage =>
         updateState(data)
         context.system.eventStream.publish(shiftsMessage)
+      }
+      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+        log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
+        saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftsMessages(state.events.headOption.getOrElse(""))))
       }
   }
 }

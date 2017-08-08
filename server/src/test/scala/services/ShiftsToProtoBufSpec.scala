@@ -55,7 +55,7 @@ class ShiftsToProtoBufSpec extends Specification {
     }
   }
 
-  "shiftsMessageToShiftsString" should {
+  "shiftMessagesToShiftsString" should {
     "take a v1 ShiftsMessage and return the multiline string representation" in {
       val shiftsMessage = ShiftsMessage(List(ShiftMessage(
         Some("shift name"), Some("T1"), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("5")
@@ -63,7 +63,7 @@ class ShiftsToProtoBufSpec extends Specification {
         Some("shift name"), Some("T1"), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("9")
       )))
 
-      val shiftsString = shiftsMessageToShiftsString(shiftsMessage)
+      val shiftsString = shiftMessagesToShiftsString(shiftsMessage.shifts.toList).mkString("\n")
 
       val expected =
         """
@@ -80,7 +80,7 @@ class ShiftsToProtoBufSpec extends Specification {
         Some("shift name"), Some("T1"), None, None, None, Some("9"), Some(1484906400000L), Some(1484942400000L)
       )))
 
-      val shiftsString = shiftsMessageToShiftsString(shiftsMessage)
+      val shiftsString = shiftMessagesToShiftsString(shiftsMessage.shifts.toList).mkString("\n")
 
       val expected =
         """

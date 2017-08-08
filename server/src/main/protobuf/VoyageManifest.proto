@@ -13,7 +13,7 @@ message VoyageManifestMessage {
     optional string scheduledDateOfArrival = 6;
     optional string scheduledTimeOfArrival = 7;
     repeated PassengerInfoJsonMessage passengerList = 8;
-
+    optional int64 createdAt = 9;
 }
 
 message PassengerInfoJsonMessage {
