@@ -18,6 +18,8 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
@@ -29,7 +31,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.chrono.ISOChronology
-import passengersplits.core.AdvancedPassengerInfoActor
+import passengersplits.core.AdvancePassengerInfoActor
 import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -122,7 +124,7 @@ trait SystemActors extends Core {
   val crunchActorProps = Props(
     classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
   val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
-  val flightPassengerSplitReporter = system.actorOf(Props[AdvancedPassengerInfoActor], name = "flight-pax-reporter")
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   private val flightsActorProps = Props(
     classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode),
     pcpArrivalTimeCalculator, airportConfig)
@@ -157,7 +159,6 @@ trait AirportConfProvider extends AirportConfiguration {
 
 trait ProdPassengerSplitProviders {
   self: AirportConfiguration with SystemActors =>
-  private implicit val timeout = Timeout(5 seconds)
 
   import scala.concurrent.ExecutionContext.global
 
@@ -168,6 +169,8 @@ trait ProdPassengerSplitProviders {
   }
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
+
+  private implicit val timeout = Timeout(101 milliseconds)
 
   def apiSplitsProv(flight: Arrival): Option[SplitRatios] =
     AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
@@ -190,7 +193,7 @@ trait ProdWalkTimesProvider {
 }
 
 trait ImplicitTimeoutProvider {
-  implicit val timeout = Timeout(5 seconds)
+  implicit val timeout = Timeout(102 milliseconds)
 }
 
 class Application @Inject()(
@@ -251,12 +254,8 @@ class Application @Inject()(
 
   trait CrunchFromCache {
     self: CrunchResultProvider =>
-    implicit val timeout: Timeout = Timeout(5 seconds)
+    implicit val timeout: Timeout = Timeout(103 milliseconds)
     val crunchActor: AskableActorRef = ctrl.crunchActor
-
-    def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
-      tryCrunch(terminalName, queueName)
-    }
 
     def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
       Future.sequence(
@@ -268,22 +267,28 @@ class Application @Inject()(
 
   trait GetFlightsFromActor extends FlightsService {
     override def getFlights(start: Long, end: Long): Future[List[Arrival]] = {
-      val flights: Future[Any] = ctrl.flightsActorAskable ? GetFlights
+      val flights: Future[Any] = ctrl.flightsActorAskable.ask(GetFlights)(Timeout(1 second))
       val fsFuture = flights.collect {
         case Flights(fs) => fs
       }
       fsFuture
     }
 
-    override def getFlightsWithSplits(start: Long, end: Long): Future[FlightsWithSplits] = {
+    override def getFlightsWithSplits(start: Long, end: Long): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
       val askable = ctrl.flightsActorAskable
       log.info(s"asking $askable for flightsWithSplits")
-      implicit val timout = 100 seconds
-      val flights: Future[Any] = askable.ask(GetFlightsWithSplits)(timout)
-      val fsFuture = flights.collect {
-        case flightsWithSplits: FlightsWithSplits => flightsWithSplits
+      val flights = askable.ask(GetFlightsWithSplits)(Timeout(500 milliseconds))
+
+      flights.recover {
+        case e: Throwable =>
+          log.info(s"GetFlightsWithSplits failed: $e")
+          Left(FlightsNotReady())
+      }.map {
+        case fs: FlightsWithSplits => Right(fs)
+        case e =>
+          log.info(s"GetFlightsWithSplits failed: $e")
+          Left(FlightsNotReady())
       }
-      fsFuture
     }
   }
 
@@ -383,8 +388,3 @@ class Application @Inject()(
       Ok("")
   }
 }
-
-
-
-
-

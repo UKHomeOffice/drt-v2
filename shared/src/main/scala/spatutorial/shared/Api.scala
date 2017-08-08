@@ -55,6 +55,8 @@ object ApiSplits {
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: List[ApiSplits])
 
+case class FlightsNotReady()
+
 case class Arrival(
                     Operator: String,
                     Status: String,
@@ -199,7 +201,9 @@ object FlightsApi {
 
   type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
 
-  type TerminalQueuePaxAndWorkLoads[L] = Map[TerminalName, Map[QueueName, L]]
+  type PortPaxAndWorkLoads[L] = Map[TerminalName, Map[QueueName, L]]
+
+  type TerminalPaxAndWorkLoads[L] = Map[QueueName, L]
 
   type TerminalName = String
 
@@ -209,7 +213,7 @@ object FlightsApi {
 trait FlightsApi {
   def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights
 
-  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[FlightsWithSplits]
+  def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[Either[FlightsNotReady, FlightsWithSplits]]
 }
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
@@ -217,11 +221,16 @@ case class AirportInfo(airportName: String, city: String, country: String, code:
 trait WorkloadsHelpers {
   val oneMinute = 60000L
 
-  def queueWorkloadsForPeriod(workloads: Map[String, Seq[WL]], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
+  def terminalWorkloadsForPeriod(workloads: Map[String, Seq[WL]], periodMinutes: NumericRange[Long]): Map[String, List[Double]] = {
     workloads.mapValues((qwl: Seq[WL]) => {
       val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, workloadToWorkLoadByTime(qwl))
       queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
     })
+  }
+
+  def queueWorkloadsForPeriod(qwl: Seq[WL], periodMinutes: NumericRange[Long]): List[Double] = {
+    val queuesMinutesFoldedIntoWholeDay = foldQueuesMinutesIntoDay(periodMinutes, workloadToWorkLoadByTime(qwl))
+    queuesWorkloadSortedByMinuteAsFullyPopulatedWorkloadSeq(queuesMinutesFoldedIntoWholeDay)
   }
 
   def foldQueuesMinutesIntoDay(allMins: NumericRange[Long], workloadsByMinute: Map[Long, Double]): Map[Long, Double] = {
@@ -303,6 +312,8 @@ case class WL(time: Long, workload: Double) extends Time
 
 case class Pax(time: Long, pax: Double) extends Time
 
+case class WorkloadsNotReady()
+
 case class DeskRec(time: Long, desks: Int)
 
 case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
@@ -336,7 +347,7 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]]
+  def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]]
 }
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
@@ -346,15 +357,9 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi with WorkloadsApi {
 
-  def welcomeMsg(name: String): String
-
-  def flightSplits(portCode: String, flightCode: String, scheduledDateTime: MilliDate): Future[Either[FlightNotFound, VoyagePaxSplits]]
-
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
-
-  def getLatestCrunchResult(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
 
   def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]]
 

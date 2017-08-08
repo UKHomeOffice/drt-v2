@@ -1,6 +1,6 @@
 package passengersplits.csv
 
-import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, PortPaxAndWorkLoads}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import org.joda.time.DateTime
@@ -139,9 +139,9 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
         List(apiFlight(flightId = 1, iata = "BA1234", actPax = 1, airportId = "STN", terminal = "1", schDt = today.toString(formatter)))
       }
 
-      val result: Future[TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]] = workloadsCalculator.queueLoadsByTerminal(flights, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
+      val result: Future[PortPaxAndWorkLoads[QueuePaxAndWorkLoads]] = workloadsCalculator.queueLoadsByTerminal(flights, PaxLoadCalculator.queueWorkAndPaxLoadCalculator)
 
-      val act: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads] = Await.result(result, 10 seconds)
+      val act: PortPaxAndWorkLoads[QueuePaxAndWorkLoads] = Await.result(result, 10 seconds)
 
       val actList = act("1").toList
       val eGateSplit = actList.find(split => split._1 == "eGate")

@@ -2,6 +2,7 @@ package server.protobuf.messages;
 
 message FlightsMessage {
     repeated FlightMessage flightMessages = 1;
+    optional int64 CreatedAt = 2;
 }
 
 message FlightStateSnapshotMessage {

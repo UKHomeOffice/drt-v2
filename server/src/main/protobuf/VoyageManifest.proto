@@ -1,5 +1,9 @@
 package server.protobuf.messages;
 
+message AdvancePassengerInfoStateSnapshotMessage {
+    repeated VoyageManifestMessage voyageManifestMessages = 1;
+}
+
 message VoyageManifestMessage {
     optional string eventCode = 1;
     optional string arrivalPortCode = 2;

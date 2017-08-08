@@ -20,7 +20,7 @@ object Actions {
 
   case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: QueueSimulationResult) extends Action
 
-  case class UpdateWorkloads(workloads: TerminalQueuePaxAndWorkLoads[QueuePaxAndWorkLoads]) extends Action
+  case class UpdateWorkloads(workloads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads]) extends Action
 
   case class GetWorkloads(begin: String, end: String) extends Action
 

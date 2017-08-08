@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 trait FixedPointPersistence {
-  implicit val timeout: Timeout = Timeout(5 seconds)
+  implicit val timeout: Timeout = Timeout(100 milliseconds)
 
   def actorSystem: ActorSystem
 

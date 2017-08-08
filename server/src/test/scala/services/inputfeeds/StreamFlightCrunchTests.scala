@@ -13,7 +13,7 @@ import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.services.AirportConfigHelpers
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, TerminalQueuePaxAndWorkLoads}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, PortPaxAndWorkLoads}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
@@ -153,6 +153,7 @@ object CrunchTests {
 
     val result = withContextCustomActor(props, actorSystem = levelDbTestActorSystem("")) { context =>
       context.sendToCrunch(PerformCrunchOnFlights(flights))
+      Thread.sleep(1000)
       context.sendToCrunch(GetLatestCrunch(crunchTerminal, deskToInspect))
       context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
         case cr: CrunchResult => true
@@ -400,8 +401,8 @@ class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: 
 
   override def lastLocalMidnightString: String = "2000-01-01"
 
-  override def crunchWorkloads(workloads: Future[TerminalQueuePaxAndWorkLoads[Seq[WL]]], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): Future[CrunchResult] = {
-    Future.successful(CrunchResult(0L, 0L, IndexedSeq(), Seq()))
+  override def crunchQueueWorkloads(workloads: Seq[WL], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): CrunchResult = {
+    CrunchResult(0L, 0L, IndexedSeq(), Seq())
   }
 }
 
@@ -440,6 +441,7 @@ class StreamFlightCrunchTests
         val flights = Flights(
           List(apiFlight(flightId = 0, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T00:31")))
         crunchActor ! PerformCrunchOnFlights(flights.flights)
+        Thread.sleep(500)
         crunchActor.tell(GetLatestCrunch("A1", "eeaDesk"), context.testActor)
 
         context.fishForMessage(15 seconds, "Looking for CrunchResult") {
