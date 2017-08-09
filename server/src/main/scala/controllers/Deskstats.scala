@@ -5,35 +5,98 @@ import java.security.cert.X509Certificate
 import java.util.TimeZone
 import javax.net.ssl._
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.actor.{ActorLogging, ActorRef, ActorSystem}
+import akka.persistence.{PersistentActor, SnapshotOffer}
+import controllers.Deskstats.{PortDeskStats, QueueDeskStats, TerminalDeskStats}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.LoggerFactory
+import server.protobuf.messages.DeskStatsMessage._
 import services.SDate
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 case class GetActualDeskStats()
 
-class DeskstatsActor extends Actor with ActorLogging {
-  var actualDeskStats = Map[String, Map[String, Map[Long, DeskStat]]]()
+case class DeskStatsState(portDeskStats: PortDeskStats = Map()) {
+  def updated(data: PortDeskStats): DeskStatsState = copy(data)
+}
 
-  override def receive: Receive = {
+class DeskstatsActor extends PersistentActor with ActorLogging {
+  override def persistenceId: String = "deskstats-store"
+
+  var state = DeskStatsState()
+
+  def updateState(data: PortDeskStats): Unit = {
+    state = state.updated(data)
+  }
+
+  val snapshotInterval = 10
+
+  override def receiveCommand: Receive = {
     case ActualDeskStats(deskStats) =>
       log.info(s"Received ActualDeskStats")
-      actualDeskStats = deskStats
+      persist(portDeskStatsToPortDeskStatsMessage(deskStats)) { portDeskStatsMessage: PortDeskStatsMessage =>
+        updateState(deskStats)
+        context.system.eventStream.publish(portDeskStatsMessage)
+        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+          log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
+          saveSnapshot(DeskStatsStateSnapshotMessage(portDeskStatsMessage.terminals))
+        }
+      }
+      state = state.updated(deskStats)
+
     case GetActualDeskStats() =>
       log.info(s"Sending ActualDeskStats to sender")
-      sender ! ActualDeskStats(actualDeskStats)
+      sender ! ActualDeskStats(state.portDeskStats)
   }
+
+  override def receiveRecover: Receive = {
+    case portDeskStatsMessage: PortDeskStatsMessage => updateState(portDeskStatsMessageToPortDeskStats(portDeskStatsMessage))
+    case SnapshotOffer(_, snapshot: PortDeskStatsMessage) => state = state.updated(portDeskStatsMessageToPortDeskStats(snapshot))
+  }
+
+  def portDeskStatsMessageToPortDeskStats(portDeskStatsMessage: PortDeskStatsMessage): PortDeskStats = portDeskStatsMessage.terminals.collect {
+    case TerminalDeskStatsMessage(Some(terminalName), queueMessages) =>
+      (terminalName, terminalDeskStatMessagesToTerminalDeskStats(queueMessages))
+  }.toMap
+
+  def terminalDeskStatMessagesToTerminalDeskStats(queueMessages: Seq[QueueDeskStatsMessage]): TerminalDeskStats = queueMessages.collect {
+    case QueueDeskStatsMessage(Some(queueName), deskstatMessages) =>
+      (queueName, queueDeskStatMessagesToQueueDeskStats(deskstatMessages))
+  }.toMap
+
+  def queueDeskStatMessagesToQueueDeskStats(deskstatMessages: Seq[DeskStatMessage]): QueueDeskStats = deskstatMessages.collect {
+    case DeskStatMessage(Some(timestamp), desksOption, waitTimeOption) =>
+      (timestamp, DeskStat(desksOption, waitTimeOption))
+  }.toMap
+
+  def portDeskStatsToPortDeskStatsMessage(portDeskStats: PortDeskStats) = PortDeskStatsMessage(portDeskStats.map {
+    case (terminalName, queueDeskStats) =>
+      TerminalDeskStatsMessage(Option(terminalName), queueDeskStatsToQueueDeskStatMessages(queueDeskStats))
+  }.toSeq)
+
+  def queueDeskStatsToQueueDeskStatMessages(queueDeskStats: Map[QueueName, Map[Long, DeskStat]]): Seq[QueueDeskStatsMessage] = queueDeskStats.map {
+    case (queueName, deskStats) =>
+      QueueDeskStatsMessage(Option(queueName), deskStatsToDeskStatMessages(deskStats))
+  }.toSeq
+
+  def deskStatsToDeskStatMessages(deskStats: Map[Long, DeskStat]): Seq[DeskStatMessage] = deskStats.map {
+    case (timestamp, deskStat) =>
+      DeskStatMessage(Option(timestamp), deskStat.desks, deskStat.waitTime)
+  }.toSeq
 }
 
 object Deskstats {
   val log = LoggerFactory.getLogger(getClass)
+
+  type PortDeskStats = Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]
+  type QueueDeskStats = Map[Long, DeskStat]
+  type TerminalDeskStats = Map[String, QueueDeskStats]
 
   class NaiveTrustManager extends X509TrustManager {
     override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}

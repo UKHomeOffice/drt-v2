@@ -61,7 +61,8 @@ object FixedPointsMessageParser {
   val log = LoggerFactory.getLogger(getClass)
 
   def fixedPointStringToFixedPointMessage(fixedPoint: String): Option[FixedPointMessage] = {
-    fixedPoint.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim) match {
+    val strings: immutable.Seq[String] = fixedPoint.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
+    strings match {
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
         val (startTimestamp, endTimestamp) = startAndEndTimestamps(startDay, startTime, endTime)
         Some(FixedPointMessage(

@@ -1,7 +1,7 @@
 package actors
 
 import akka.persistence._
-import drt.shared.MilliDate
+import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import org.slf4j.LoggerFactory
@@ -61,7 +61,7 @@ object ShiftsMessageParser {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  def shiftStringToShiftMessage(shift: String): Option[ShiftMessage] = {
+  def shiftStringToShiftMessage(shift: String, createdAt: SDateLike): Option[ShiftMessage] = {
     shift.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim) match {
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
         val (startTimestamp, endTimestamp) = startAndEndTimestamps(startDay, startTime, endTime)
@@ -71,7 +71,7 @@ object ShiftsMessageParser {
           startTimestamp = startTimestamp,
           endTimestamp = endTimestamp,
           numberOfStaff = Some(staffNumberDelta),
-          createdAt = Option(SDate.now().millisSinceEpoch)
+          createdAt = Option(createdAt.millisSinceEpoch)
         ))
       case _ =>
         log.warn(s"Couldn't parse shifts line: '$shift'")
@@ -79,12 +79,12 @@ object ShiftsMessageParser {
     }
   }
 
-  def shiftsStringToShiftsMessage(shifts: String): ShiftsMessage = {
-    ShiftsMessage(shiftsStringToShiftMessages(shifts))
+  def shiftsStringToShiftsMessage(shifts: String, createdAt: SDateLike): ShiftsMessage = {
+    ShiftsMessage(shiftsStringToShiftMessages(shifts, createdAt))
   }
 
-  def shiftsStringToShiftMessages(shifts: String): List[ShiftMessage] = {
-    shifts.split("\n").map(shiftStringToShiftMessage).collect { case Some(x) => x }.toList
+  def shiftsStringToShiftMessages(shifts: String, createdAt: SDateLike): List[ShiftMessage] = {
+    shifts.split("\n").map((shift: String) => shiftStringToShiftMessage(shift, createdAt)).collect { case Some(x) => x }.toList
   }
 
   def shiftMessagesToShiftsString(shiftMessages: List[ShiftMessage]): String = {
@@ -120,13 +120,14 @@ class ShiftsActor extends PersistentActor {
     case GetState =>
       sender() ! state.events.headOption.getOrElse("")
     case data: String =>
-      persist(shiftsStringToShiftsMessage(data)) { shiftsMessage =>
+      val createdAt = SDate.now()
+      persist(shiftsStringToShiftsMessage(data, createdAt)) { shiftsMessage =>
         updateState(data)
         context.system.eventStream.publish(shiftsMessage)
-      }
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
-        saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.events.headOption.getOrElse(""))))
+        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+          log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
+          saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.events.headOption.getOrElse(""), createdAt)))
+        }
       }
   }
 }

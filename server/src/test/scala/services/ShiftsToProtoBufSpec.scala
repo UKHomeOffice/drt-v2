@@ -6,10 +6,12 @@ import actors.ShiftsMessageParser._
 
 class ShiftsToProtoBufSpec extends Specification {
 
+  private val createdAt = SDate.now()
+
   "shiftStringToShiftMessage" should {
     "take a single shift string and return a case class representing it" in {
       val shiftString = "shift name, T1, 20/01/2017, 10:00, 20:00, 9"
-      val shiftMessage = shiftStringToShiftMessage(shiftString)
+      val shiftMessage = shiftStringToShiftMessage(shiftString, createdAt)
 
       val expected = Some(ShiftMessage(
         name = Some("shift name"),
@@ -19,7 +21,8 @@ class ShiftsToProtoBufSpec extends Specification {
         endTimeOLD = None,
         startTimestamp = Some(1484906400000L),
         endTimestamp = Some(1484942400000L),
-        numberOfStaff = Some("9")
+        numberOfStaff = Some("9"),
+        createdAt = Some(createdAt.millisSinceEpoch)
       ))
 
       shiftMessage === expected
@@ -34,7 +37,7 @@ class ShiftsToProtoBufSpec extends Specification {
           |shift name, T1, 20/01/2017, 10:00, 20:00, 9
         """.stripMargin.trim
 
-      val shiftsMessage = shiftsStringToShiftsMessage(shiftsString)
+      val shiftsMessage = shiftsStringToShiftsMessage(shiftsString, createdAt)
 
       val expected = ShiftsMessage(List(
         ShiftMessage(
@@ -42,13 +45,15 @@ class ShiftsToProtoBufSpec extends Specification {
           terminalName = Some("T1"),
           startTimestamp = Some(1484906400000L),
           endTimestamp = Some(1484942400000L),
-          numberOfStaff = Some("5")
+          numberOfStaff = Some("5"),
+          createdAt = Some(createdAt.millisSinceEpoch)
         ), ShiftMessage(
           name = Some("shift name"),
           terminalName = Some("T1"),
           startTimestamp = Some(1484906400000L),
           endTimestamp = Some(1484942400000L),
-          numberOfStaff = Some("9")
+          numberOfStaff = Some("9"),
+          createdAt = Some(createdAt.millisSinceEpoch)
         )))
 
       shiftsMessage === expected
