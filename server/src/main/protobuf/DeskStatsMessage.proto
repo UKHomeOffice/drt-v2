@@ -1,0 +1,26 @@
+package server.protobuf.messages;
+
+message DeskStatsStateSnapshotMessage {
+    repeated TerminalDeskStatsMessage terminals = 1;
+}
+
+message PortDeskStatsMessage {
+    repeated TerminalDeskStatsMessage terminals = 1;
+    optional int64 createdAt = 2;
+}
+
+message TerminalDeskStatsMessage {
+    optional string terminal = 1;
+    repeated QueueDeskStatsMessage queues = 2;
+}
+
+message QueueDeskStatsMessage {
+    optional string queue = 1;
+    repeated DeskStatMessage deskStats = 2;
+}
+
+message DeskStatMessage {
+    optional int64 timestamp = 1;
+    optional int32 desks = 2;
+    optional int32 waitTime = 3;
+}

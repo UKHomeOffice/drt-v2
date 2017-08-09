@@ -4,6 +4,10 @@ message StaffMovementsMessage {
     repeated StaffMovementMessage staffMovements = 1;
 }
 
+message StaffMovementsStateSnapshotMessage {
+    repeated StaffMovementMessage staffMovements = 1;
+}
+
 message StaffMovementMessage {
     optional string terminalName = 1;
     optional string reason = 2;
@@ -11,4 +15,5 @@ message StaffMovementMessage {
     optional int32 delta = 4;
     optional string uUID = 5;
     optional string queueName = 6;
+    optional int64 createdAt = 7;
 }

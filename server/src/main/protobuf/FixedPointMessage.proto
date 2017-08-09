@@ -4,10 +4,15 @@ message FixedPointsMessage {
     repeated FixedPointMessage fixedPoints = 1;
 }
 
+message FixedPointsStateSnapshotMessage {
+    repeated FixedPointMessage fixedPoints = 1;
+}
+
 message FixedPointMessage {
     optional string name = 1;
     optional string terminalName = 2;
     optional string numberOfStaff = 3;
     optional int64 startTimestamp = 4;
     optional int64 endTimestamp = 5;
+    optional int64 createdAt = 6;
 }

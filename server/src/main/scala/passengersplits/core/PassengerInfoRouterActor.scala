@@ -137,14 +137,14 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
   }
 
   def voyageManifestToMessage(manifest: VoyageManifest) = VoyageManifestMessage(
-    Option(manifest.EventCode),
-    Option(manifest.ArrivalPortCode),
-    Option(manifest.DeparturePortCode),
-    Option(manifest.VoyageNumber),
-    Option(manifest.CarrierCode),
-    Option(manifest.ScheduledDateOfArrival),
-    Option(manifest.ScheduledTimeOfArrival),
-    manifest.PassengerList.map(m =>
+    eventCode = Option(manifest.EventCode),
+    arrivalPortCode = Option(manifest.ArrivalPortCode),
+    departurePortCode = Option(manifest.DeparturePortCode),
+    voyageNumber = Option(manifest.VoyageNumber),
+    carrierCode = Option(manifest.CarrierCode),
+    scheduledDateOfArrival = Option(manifest.ScheduledDateOfArrival),
+    scheduledTimeOfArrival = Option(manifest.ScheduledTimeOfArrival),
+    passengerList = manifest.PassengerList.map(m =>
       PassengerInfoJsonMessage(
         m.DocumentType,
         Option(m.DocumentIssuingCountryCode),
@@ -154,7 +154,9 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
         Option(m.InTransitFlag),
         m.DisembarkationPortCountryCode,
         m.NationalityCountryCode
-      )))
+      )),
+    createdAt = Option(SDate.now().millisSinceEpoch)
+  )
 
   def addManifest(manifest: VoyageManifest) = {
     val key = manifestKey(manifest)
@@ -165,20 +167,12 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
 
   def voyageManifestMessageToVoyageManifest(voyageManifestMessage: VoyageManifestMessage) = voyageManifestMessage match {
 
-    case VoyageManifestMessage(
-    Some(eventCode),
-    Some(arrivalPortCode),
-    Some(departurePortCode),
-    Some(voyageNumber),
-    Some(carrierCode),
-    Some(scheduledDate),
-    Some(scheduledTime),
-    passengerList)
-    =>
-      VoyageManifest(eventCode, arrivalPortCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, passengerList.collect {
+    case VoyageManifestMessage(Some(eventCode), Some(arrivalPortCode), Some(departurePortCode), Some(voyageNumber), Some(carrierCode), Some(scheduledDate), Some(scheduledTime), passengerList, _) =>
+      val passengers = passengerList.collect {
         case PassengerInfoJsonMessage(documentType, Some(countryCode), Some(eeaFlag), age, disembarkationPortCode, Some(inTransitFlag), disembarkationCountryCode, nationalityCode) =>
           PassengerInfoJson(documentType, countryCode, eeaFlag, age, disembarkationPortCode, inTransitFlag, disembarkationCountryCode, nationalityCode)
-      }.toList)
+      }.toList
+      VoyageManifest(eventCode, arrivalPortCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, passengers)
   }
 
   override def receiveRecover: Receive = {

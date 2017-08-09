@@ -38,7 +38,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     with FlightState
     with DomesticPortList {
   implicit val timeout = Timeout(5 seconds)
-  log.info(s"flightsActorSplits: ${airportConfig.defaultPaxSplits} ${pprint.stringify(airportConfig)}")
+  log.debug(s"flightsActorSplits: ${airportConfig.defaultPaxSplits} ${pprint.stringify(airportConfig)}")
 
   override def bestPax(a: Arrival): Int = _bestPax(a)
 

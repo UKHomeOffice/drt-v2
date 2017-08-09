@@ -4,6 +4,10 @@ message ShiftsMessage {
     repeated ShiftMessage shifts = 1;
 }
 
+message ShiftStateSnapshotMessage {
+    repeated ShiftMessage shifts = 1;
+}
+
 message ShiftMessage {
     optional string name = 1;
     optional string terminalName = 2;
@@ -13,4 +17,5 @@ message ShiftMessage {
     optional string numberOfStaff = 6;
     optional int64 startTimestamp = 7;
     optional int64 endTimestamp = 8;
+    optional int64 createdAt = 9;
 }
