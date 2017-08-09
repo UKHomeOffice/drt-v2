@@ -159,6 +159,7 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
   val uniqueArrivalsWithCodeshares = CodeShares.uniqueArrivalsWithCodeshares(identity[Arrival]) _
 
   def performTerminalCrunch(terminalName: TerminalName): Future[Option[Map[QueueName, CrunchResult]]] = {
+    val crunchStartTime = SDate.now().millisSinceEpoch
     val flightsForTerminal = flightState.values.filter(flight => flight.Terminal == terminalName).toList
     val uniqueArrivals = uniqueArrivalsWithCodeshares(flightsForTerminal).map(_._1)
     val crunchWindowStartTimeMillis = lastLocalMidnight.getMillis
@@ -193,6 +194,8 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
       optionalQueueCrunches.map((queueCrunches: Seq[(FlightsApi.QueueName, CrunchResult)]) => {
         val terminalCrunchResult = queueCrunches.toMap
         saveTerminalCrunchResult(terminalName, terminalCrunchResult)
+        val crunchTook = SDate.now().millisSinceEpoch - crunchStartTime
+        log.info(s"$terminalName crunch took ${crunchTook}ms")
         terminalCrunchResult
       })
     })

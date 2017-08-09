@@ -42,16 +42,14 @@ class StaffMovementsActor extends PersistentActor
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList) :: Nil)
   }
 
-  def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = {
-    StaffMovement(
-      terminalName = sm.terminalName.getOrElse(""),
-      reason = sm.reason.getOrElse(""),
-      time = MilliDate(sm.time.getOrElse(0)),
-      delta = sm.delta.getOrElse(0),
-      uUID = UUID.fromString(sm.uUID.getOrElse("")),
-      queue = sm.queueName
-    )
-  }
+  def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
+    terminalName = sm.terminalName.getOrElse(""),
+    reason = sm.reason.getOrElse(""),
+    time = MilliDate(sm.time.getOrElse(0)),
+    delta = sm.delta.getOrElse(0),
+    uUID = UUID.fromString(sm.uUID.getOrElse("")),
+    queue = sm.queueName
+  )
 
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
     staffMovements.staffMovements.map(staffMovementToStaffMovementMessage)
@@ -78,15 +76,13 @@ class StaffMovementsActor extends PersistentActor
   def staffMovementsToStaffMovementsMessage(staffMovements: StaffMovements) =
     StaffMovementsMessage(staffMovements.staffMovements.map(staffMovementToStaffMovementMessage))
 
-  def staffMovementToStaffMovementMessage(sm: StaffMovement) = {
-    StaffMovementMessage(
-      terminalName = Some(sm.terminalName),
-      reason = Some(sm.reason),
-      time = Some(sm.time.millisSinceEpoch),
-      delta = Some(sm.delta),
-      uUID = Some(sm.uUID.toString),
-      queueName = sm.queue,
-      createdAt = Option(SDate.now().millisSinceEpoch)
-    )
-  }
+  def staffMovementToStaffMovementMessage(sm: StaffMovement) = StaffMovementMessage(
+    terminalName = Some(sm.terminalName),
+    reason = Some(sm.reason),
+    time = Some(sm.time.millisSinceEpoch),
+    delta = Some(sm.delta),
+    uUID = Some(sm.uUID.toString),
+    queueName = sm.queue,
+    createdAt = Option(SDate.now().millisSinceEpoch)
+  )
 }

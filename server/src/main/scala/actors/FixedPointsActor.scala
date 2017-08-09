@@ -84,21 +84,17 @@ object FixedPointsMessageParser {
     fixedPoints.split("\n").map(fixedPointStringToFixedPointMessage).collect { case Some(x) => x }.toList
   }
 
-  def fixedPointsMessageToFixedPointsString(fixedPointsMessage: FixedPointsMessage): String = {
-    fixedPointsMessage.fixedPoints.collect {
-        case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
-          s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
-    }.mkString("\n")
-  }
-
-  def fixedPointMessagesToFixedPointsString(fixedPointMessages: List[FixedPointMessage]): String = {
-    fixedPointMessages.map {
+  def fixedPointsMessageToFixedPointsString(fixedPointsMessage: FixedPointsMessage): String = fixedPointsMessage.fixedPoints.collect {
       case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
         s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
-      case _ =>
-        s""
-    }.mkString("\n")
-  }
+  }.mkString("\n")
+
+  def fixedPointMessagesToFixedPointsString(fixedPointMessages: List[FixedPointMessage]): String = fixedPointMessages.map {
+    case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
+      s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
+    case _ =>
+      s""
+  }.mkString("\n")
 
 }
 
