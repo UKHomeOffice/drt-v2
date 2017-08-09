@@ -67,7 +67,7 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
   log.info(s"airportConfig is $airportConfig")
   var terminalQueueLatestCrunch: Map[TerminalName, Map[QueueName, CrunchResult]] = Map()
 
-  val crunchCache: Cache[Option[Map[QueueName, CrunchResult]]] = LruCache(50, 16, 30 seconds)
+  val crunchCache: Cache[Option[Map[QueueName, CrunchResult]]] = LruCache()
 
   def cacheCrunch[T](terminal: TerminalName): Future[Option[Map[QueueName, CrunchResult]]] = {
     val key: String = cacheKey(terminal)
