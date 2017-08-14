@@ -30,6 +30,7 @@ object PassengerInfoRouterActor {
 
   case class ReportFlightCode(flightCode: String)
 
+  case class FlushOldVoyageManifests(before: SDateLike)
 
   case object LogStatus
 
@@ -121,6 +122,13 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
       log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
       state.copy(latestFileName = Option(zipFilename))
       completionMonitor ! VoyageManifestZipFileCompleteAck(zipFilename)
+
+    case FlushOldVoyageManifests(before) =>
+      state.copy(flightManifests = state.flightManifests.filterNot {
+        case (_, vm) if vm.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L) < before.millisSinceEpoch =>
+          log.info(s"Dropping voyage manifest ${vm.summary}")
+          true
+      })
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Snapshot success $md")

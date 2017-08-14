@@ -88,7 +88,7 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
 
   def receive = {
     case PerformCrunchOnFlights(newFlights) =>
-      onFlightUpdates(newFlights.toList, lastLocalMidnightString, domesticPorts)
+      onFlightUpdates(newFlights.toList, retentionCutoff, domesticPorts)
 
       newFlights match {
         case Nil => log.info("No crunch, no change")

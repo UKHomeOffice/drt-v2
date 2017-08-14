@@ -12,7 +12,7 @@ import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.{Arrival, _}
 import org.joda.time.{DateTimeZone, LocalDate}
 import org.joda.time.format.DateTimeFormat
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
+import passengersplits.core.PassengerInfoRouterActor.{FlushOldVoyageManifests, ReportVoyagePaxSplit}
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
 import services.SplitsProvider.SplitProvider
 import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate}
@@ -28,7 +28,7 @@ case object GetFlights
 case object GetFlightsWithSplits
 
 class FlightsActor(crunchActorRef: ActorRef,
-                   dqApiSplitsActorRef: AskableActorRef,
+                   dqApiSplitsActorRef: ActorRef,
                    csvSplitsProvider: SplitProvider,
                    _bestPax: (Arrival) => Int,
                    pcpArrivalTimeForFlight: (Arrival) => MilliDate,
@@ -46,6 +46,8 @@ class FlightsActor(crunchActorRef: ActorRef,
 
   val snapshotInterval = 100
 
+  val dqApiSplitsAskableActorRef: AskableActorRef = dqApiSplitsActorRef
+
   override def persistenceId = "flights-store"
 
   override protected def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
@@ -57,7 +59,8 @@ class FlightsActor(crunchActorRef: ActorRef,
   val receiveRecover: Receive = {
     case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length > 0 =>
       log.info(s"Recovering ${recoveredFlights.length} flights")
-      consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, lastMidnight)
+      consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, retentionCutoff)
+      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff)
 
     case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length == 0 =>
       log.info(s"No flight updates")
@@ -90,10 +93,6 @@ class FlightsActor(crunchActorRef: ActorRef,
     case message => log.error(s"unhandled message - $message")
   }
 
-  private def lastMidnight = {
-    LocalDate.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd"))
-  }
-
   val receiveCommand: Receive = LoggingReceive {
     case GetFlights =>
       log.info(s"Being asked for flights and I know about ${flightState.size}")
@@ -123,7 +122,8 @@ class FlightsActor(crunchActorRef: ActorRef,
       }
 
     case Flights(updatedFlights) if updatedFlights.nonEmpty =>
-      val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, lastMidnight)
+      val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, retentionCutoff)
+      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff)
 
       if (flightsWithLastKnownPax.nonEmpty) {
         persistFlights(FlightsMessage(
@@ -146,8 +146,9 @@ class FlightsActor(crunchActorRef: ActorRef,
 
   }
 
-  def consumeFlights(flights: List[Arrival], dropFlightsBefore: String): List[Arrival] = {
+  def consumeFlights(flights: List[Arrival], dropFlightsBefore: SDateLike): List[Arrival] = {
     val flightsWithPcpTime = flights.map(arrival => {
+      log.info(s"flight scheduled: ${arrival.SchDT}, act chox: ${arrival.ActChoxDT}")
       arrival.copy(PcpTime = pcpArrivalTimeForFlight(arrival).millisSinceEpoch)
     })
 
@@ -178,7 +179,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       case Some((_, voyageNumber)) =>
         val scheduledDate = SDate(flight.SchDT, DateTimeZone.UTC)
         val splitsRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, voyageNumber, scheduledDate)
-        val future = dqApiSplitsActorRef ? splitsRequest
+        val future = dqApiSplitsAskableActorRef ? splitsRequest
         val futureResp = future map {
           case vps: VoyagePaxSplits =>
             splitsAndArrivalToApiFlightWithSplits(flight, vps)
