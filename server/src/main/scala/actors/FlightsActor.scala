@@ -60,7 +60,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length > 0 =>
       log.info(s"Recovering ${recoveredFlights.length} flights")
       consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, retentionCutoff)
-      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff)
+      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
 
     case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length == 0 =>
       log.info(s"No flight updates")
@@ -123,7 +123,7 @@ class FlightsActor(crunchActorRef: ActorRef,
 
     case Flights(updatedFlights) if updatedFlights.nonEmpty =>
       val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, retentionCutoff)
-      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff)
+      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
 
       if (flightsWithLastKnownPax.nonEmpty) {
         persistFlights(FlightsMessage(
