@@ -88,7 +88,7 @@ object FlightCrunchInteractionTests extends TestSuite {
     override def retentionCutoff = SDate("2000-01-01T00:00Z")
   }
 
-  class SimpleCrunchActor(
+  class SimpleTestCrunchActor(
                            hours: Int,
                            override val airportConfig: AirportConfig,
                            timeProvider: () => DateTime = () => DateTime.now())
@@ -100,11 +100,11 @@ object FlightCrunchInteractionTests extends TestSuite {
       airportConfig.defaultProcessingTimes(terminalName).getOrElse(paxTypeAndQueue, 0)
     }
 
-    override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+    override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
         BestPax(airportConfig.portCode)
-      )
+      )(flight)
     }
 
     def splitRatioProvider: (Arrival => Option[SplitRatios]) =
@@ -127,8 +127,8 @@ object FlightCrunchInteractionTests extends TestSuite {
 
     //    def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
-    def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
+//    def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
+//      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
 
     override def retentionCutoff = SDate("2000-01-01T00:00Z")
   }

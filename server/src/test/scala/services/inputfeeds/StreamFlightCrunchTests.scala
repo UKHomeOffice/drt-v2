@@ -21,7 +21,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
-import services.FlightCrunchInteractionTests.TestCrunchActor
+import services.FlightCrunchInteractionTests.{SimpleTestCrunchActor, TestCrunchActor}
 import services.WorkloadCalculatorTests._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
@@ -138,7 +138,14 @@ object CrunchTests {
 
     val journalDir = new File(journalDirName)
     journalDir.mkdirs()
-    val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider)
+
+    val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = (flight: Arrival) => {
+      PaxFlow.makeFlightPaxFlowCalculator(
+        PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+        BestPax.bestPax
+      )(flight)
+    }
+    val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider, paxFlowCalculator)
     val context = TestContext(levelDbTestActorSystem(tn), props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
@@ -176,18 +183,29 @@ object CrunchTests {
 
   def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
     result match {
+      case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) if waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime =>
+        true
       case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
-        waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
-      case _ => false
+        println(s"expectedFirstMinuteOfNonZeroWaitTime: $expectedFirstMinuteOfNonZeroWaitTime\nresult: ${waitTimes.indexWhere(_ != 0)}")
+        false
+      case _ =>
+        println(s"unexpected result: $result")
+        false
     }
   }
 
   def assertCrunchResultDeskRecs(result: Any, expectedMidnightLocalTime: Long, expectedDeskRecs: IndexedSeq[Int]): Boolean = {
     result match {
+      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) if recommendedDesks == expectedDeskRecs =>
+        true
+      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) if recommendedDesks == expectedDeskRecs =>
+        println(s"recommendedDesks: $recommendedDesks\nexpectedDeskRecs: $expectedDeskRecs")
+        false
       case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
-        recommendedDesks == expectedDeskRecs
-      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
-        println(s"recommendedDesks: found: $recommendedDesks, expected: $expectedDeskRecs")
+        println(s"recommendedDesks: $recommendedDesks\nexpectedDeskRecs: $expectedDeskRecs")
+        false
+      case _ =>
+        println(s"unexpected result: $result")
         false
     }
   }
@@ -435,7 +453,7 @@ class StreamFlightCrunchTests
     "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
       CrunchTests.withContext("canAskCrunch") { context =>
         val hoursToCrunch = 2
-        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor2], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
+        val crunchActor = context.system.actorOf(Props(classOf[SimpleTestCrunchActor], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
 
         val flights = Flights(
           List(apiFlight(flightId = 0, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T00:31")))

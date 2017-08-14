@@ -27,8 +27,8 @@ object FlightStateTests extends TestSuite {
       "then we should only see the one arriving after" - {
       val startThreshold = SDate("2016-01-01T12:00")
 
-      val invalidFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T11:30", estDt = "2016-01-01T11:30", origin = "JFK"))
-      val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", estDt = "2016-01-01T12:30", origin = "JFK"))
+      val invalidFlights = List(apiFlight(flightId = 1, schDt = "2016-01-01T11:30", actChoxDt = "2016-01-01T11:30", origin = "JFK"))
+      val validFlights = List(apiFlight(flightId = 2, schDt = "2016-01-01T12:30", actChoxDt = "2016-01-01T12:30", origin = "JFK"))
       val newFlights = validFlights ::: invalidFlights
 
       withContext() { context =>
