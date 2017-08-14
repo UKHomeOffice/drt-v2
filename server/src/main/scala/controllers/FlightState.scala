@@ -59,6 +59,7 @@ trait FlightState {
       case (_, flight) if flight.SchDT < before.addDays(-1).toString =>
         log.info(s"Dropping flight ${flight.IATA} SchDT: ${flight.SchDT} before 2nd cutoff ${before.toString}")
         true
+      case _ => false
     }
     val totalFlightsAfterFilter = flights.size
     log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $before")
