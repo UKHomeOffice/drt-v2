@@ -231,7 +231,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     system.actorOf(Props(
       classOf[FlightsActor],
       crunchActorRef,
-      Actor.noSender,
+      TestProbe()(system).ref,
       testSplitsProvider,
       BestPax(airportCode),
       (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -248,7 +248,6 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
 
   def flightsActorWithSnapshotIntervalOf1(system: ActorSystem, airportCode: String = "EDI") = {
     implicit val testSystem = system
-    println(s"When we log out TestProbe() -> ${TestProbe()}")
     system.actorOf(Props(
       classOf[FlightsTestActor],
       crunchActor(system),

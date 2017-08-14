@@ -6,14 +6,14 @@ import actors._
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.stream.testkit.TestSubscriber.Probe
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.services.AirportConfigHelpers
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, PortPaxAndWorkLoads}
+import drt.shared.FlightsApi.{Flights, PortPaxAndWorkLoads, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
@@ -164,13 +164,13 @@ object CrunchTests {
 
   def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
     val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-    val paxFlowCalculator = (flight: Arrival) => {
+    val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = (flight: Arrival) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
         BestPax.bestPax
       )(flight)
     }
-    val props = Props(classOf[TestCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider, BestPax.bestPax)
+    val props = Props(classOf[TestCrunchActor], hoursToCrunch, airportConfig, timeProvider, paxFlowCalculator)
     props
   }
 
@@ -362,11 +362,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
           val timeProvider = () => DateTime.parse("2016-09-01")
           val paxFlowCalculator = (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
             PaxFlow.splitRatioForFlight(splitsProviders), BestPax.bestPax)(flight)
-          val testActorProps = Props(classOf[ProdCrunchActor], 1,
-            airportConfig,
-            paxFlowCalculator,
-            timeProvider,
-            BestPax.bestPax)
+          val testActorProps = Props(classOf[TestCrunchActor], 1, airportConfig, timeProvider, paxFlowCalculator)
           withContextCustomActor(testActorProps, levelDbTestActorSystem("")) {
             context =>
               val flights = Flights(
@@ -420,8 +416,11 @@ class StreamFlightCrunchTests
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       val flightsActor = context.system.actorOf(Props(
-        classOf[FlightsActor], context.testActor, Actor.noSender,
-        testSplitsProvider, BestPax("EDI"),
+        classOf[FlightsActor],
+        context.testActor,
+        TestProbe()(context.system).ref,
+        testSplitsProvider,
+        BestPax("EDI"),
         (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
         AirportConfigs.lhr
       ), "flightsActor")
@@ -436,7 +435,7 @@ class StreamFlightCrunchTests
     "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
       CrunchTests.withContext("canAskCrunch") { context =>
         val hoursToCrunch = 2
-        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
+        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor2], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
 
         val flights = Flights(
           List(apiFlight(flightId = 0, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T00:31")))

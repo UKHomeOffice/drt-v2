@@ -3,6 +3,7 @@ package controllers
 import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
@@ -32,7 +33,7 @@ class FlightsActorSpec extends Specification {
     system.actorOf(Props(
       classOf[FlightsActor],
       crunchActor(system),
-      Actor.noSender,
+      TestProbe()(system).ref,
       testSplitsProvider,
       BestPax(airportCode),
       testPcpArrival,

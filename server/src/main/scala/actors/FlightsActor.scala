@@ -47,9 +47,9 @@ class FlightsActor(crunchActorRef: ActorRef,
   val snapshotInterval = 100
 
   log.info(s"before adding the askable $dqApiSplitsActorRef")
-  val dqApiSplitsAskableActorRef: AskableActorRef = dqApiSplitsActorRef
+//  val dqApiSplitsAskableActorRef: AskableActorRef = dqApiSplitsActorRef
   log.info(s"after adding the askable $dqApiSplitsActorRef")
-  log.info(s"the askable $dqApiSplitsAskableActorRef")
+//  log.info(s"the askable $dqApiSplitsAskableActorRef")
 
   override def persistenceId = "flights-store"
 
@@ -65,7 +65,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, retentionCutoff)
       dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
       log.info(s"Recover: We are sending it to this actor: $dqApiSplitsActorRef")
-      log.info(s"Recover: askable actor: $dqApiSplitsAskableActorRef")
+//      log.info(s"Recover: askable actor: $dqApiSplitsAskableActorRef")
 
     case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length == 0 =>
       log.info(s"No flight updates")
@@ -129,7 +129,7 @@ class FlightsActor(crunchActorRef: ActorRef,
     case Flights(updatedFlights) if updatedFlights.nonEmpty =>
       val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, retentionCutoff)
       log.info(s"We are sending it to this actor: $dqApiSplitsActorRef")
-      log.info(s"askable actor: $dqApiSplitsAskableActorRef")
+//      log.info(s"askable actor: $dqApiSplitsAskableActorRef")
       dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
 
       if (flightsWithLastKnownPax.nonEmpty) {
@@ -186,7 +186,8 @@ class FlightsActor(crunchActorRef: ActorRef,
       case Some((_, voyageNumber)) =>
         val scheduledDate = SDate(flight.SchDT, DateTimeZone.UTC)
         val splitsRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, voyageNumber, scheduledDate)
-        val future = dqApiSplitsAskableActorRef ? splitsRequest
+        val askable: AskableActorRef = dqApiSplitsActorRef
+        val future = askable ? splitsRequest
         val futureResp = future map {
           case vps: VoyagePaxSplits =>
             splitsAndArrivalToApiFlightWithSplits(flight, vps)
