@@ -134,12 +134,6 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
       log.error(s"crunchActor received unhandled ${message}")
   }
 
-  def lastLocalMidnightString: String = {
-    val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-    // todo this function needs more work to make it a sensible cut off time
-    lastLocalMidnight.toString(formatter)
-  }
-
   def lastLocalMidnight: DateTime = {
     val now = timeProvider()
     TimeZone.lastLocalMidnightOn(now)

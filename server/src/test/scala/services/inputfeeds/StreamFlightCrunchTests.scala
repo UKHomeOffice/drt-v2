@@ -170,7 +170,7 @@ object CrunchTests {
         BestPax.bestPax
       )(flight)
     }
-    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider, BestPax.bestPax)
+    val props = Props(classOf[TestCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider, BestPax.bestPax)
     props
   }
 
@@ -399,7 +399,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
 
-  override def lastLocalMidnightString: String = "2000-01-01"
+  override def retentionCutoff = SDate("2000-01-01T00:00Z")
 
   override def crunchQueueWorkloads(workloads: Seq[WL], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): CrunchResult = {
     CrunchResult(0L, 0L, IndexedSeq(), Seq())

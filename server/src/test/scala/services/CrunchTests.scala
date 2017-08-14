@@ -79,7 +79,7 @@ object FlightCrunchInteractionTests extends TestSuite {
     def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
       PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
 
-    override def lastLocalMidnightString: String = "2000-01-01"
+    override def retentionCutoff = SDate("2000-01-01T00:00Z")
   }
 
   def tests = TestSuite {

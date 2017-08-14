@@ -26,7 +26,7 @@ case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
 case object GetLastKnownPax
 
 class FlightsTestActor(crunchActorRef: ActorRef,
-                       dqApiSplitsActorRef: AskableActorRef,
+                       dqApiSplitsActorRef: ActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
