@@ -125,9 +125,12 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
 
     case FlushOldVoyageManifests(before) =>
       state.copy(flightManifests = state.flightManifests.filterNot {
-        case (_, vm) if vm.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L) < before.millisSinceEpoch =>
-          log.info(s"Dropping voyage manifest ${vm.summary}")
-          true
+        case (_, vm) =>
+          val scheduledMillis = vm.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
+          if (scheduledMillis < before.millisSinceEpoch) {
+            log.info(s"Dropping voyage manifest ${vm.summary}. Scheduled ${vm.scheduleArrivalDateTime.getOrElse("")} < $before")
+            true
+          } else false
       })
 
     case SaveSnapshotSuccess(md) =>

@@ -51,19 +51,15 @@ trait FlightState {
   }
 
   def filterOutFlightsBefore(flights: Map[Int, Arrival], before: SDateLike): Map[Int, Arrival] = {
-    val totalFlightsBeforeFilter = flights.size
-    val flightsWithOldDropped = flights.filterNot {
-      case (_, flight) if flight.ActChoxDT != "" && flight.ActChoxDT < before.toString =>
-        log.info(s"Dropping flight ${flight.IATA} ActChoxDT: ${flight.ActChoxDT} before 1st cutoff ${before.toString}")
+    flights.filterNot {
+      case (_, f) if f.ActChoxDT != "" && f.ActChoxDT < before.toString =>
+        log.info(s"Dropping flight ${f.IATA} ActChoxDT: ${f.ActChoxDT} before 1st cutoff ${before.toString}")
         true
-      case (_, flight) if flight.SchDT < before.addDays(-1).toString =>
-        log.info(s"Dropping flight ${flight.IATA} SchDT: ${flight.SchDT} before 2nd cutoff ${before.toString}")
+      case (_, f) if f.SchDT < before.addDays(-1).toString =>
+        log.info(s"Dropping flight ${f.IATA} SchDT: ${f.SchDT} before 2nd cutoff ${before.toString}")
         true
       case _ => false
     }
-    val totalFlightsAfterFilter = flights.size
-    log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $before")
-    flightsWithOldDropped
   }
 
   def filterOutDomesticFlights(flights: Map[Int, Arrival], domesticPorts: Seq[String]) = {

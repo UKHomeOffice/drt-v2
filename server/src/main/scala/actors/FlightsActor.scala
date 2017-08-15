@@ -46,10 +46,7 @@ class FlightsActor(crunchActorRef: ActorRef,
 
   val snapshotInterval = 100
 
-  log.info(s"before adding the askable $dqApiSplitsActorRef")
-//  val dqApiSplitsAskableActorRef: AskableActorRef = dqApiSplitsActorRef
-  log.info(s"after adding the askable $dqApiSplitsActorRef")
-//  log.info(s"the askable $dqApiSplitsAskableActorRef")
+  val dqApiSplitsAskableActorRef: AskableActorRef = dqApiSplitsActorRef
 
   override def persistenceId = "flights-store"
 
@@ -128,8 +125,6 @@ class FlightsActor(crunchActorRef: ActorRef,
 
     case Flights(updatedFlights) if updatedFlights.nonEmpty =>
       val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, retentionCutoff)
-      log.info(s"We are sending it to this actor: $dqApiSplitsActorRef")
-//      log.info(s"askable actor: $dqApiSplitsAskableActorRef")
       dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
 
       if (flightsWithLastKnownPax.nonEmpty) {
@@ -154,11 +149,7 @@ class FlightsActor(crunchActorRef: ActorRef,
   }
 
   def consumeFlights(flights: List[Arrival], dropFlightsBefore: SDateLike): List[Arrival] = {
-    val flightsWithPcpTime = flights.map(arrival => {
-      log.info(s"flight scheduled: ${arrival.SchDT}, act chox: ${arrival.ActChoxDT}")
-      arrival.copy(PcpTime = pcpArrivalTimeForFlight(arrival).millisSinceEpoch)
-    })
-
+    val flightsWithPcpTime = flights.map(f => f.copy(PcpTime = pcpArrivalTimeForFlight(f).millisSinceEpoch))
     val flightsWithLastKnownPax = addLastKnownPaxNos(flightsWithPcpTime)
     storeLastKnownPaxForFlights(flightsWithLastKnownPax)
 
@@ -186,8 +177,7 @@ class FlightsActor(crunchActorRef: ActorRef,
       case Some((_, voyageNumber)) =>
         val scheduledDate = SDate(flight.SchDT, DateTimeZone.UTC)
         val splitsRequest = ReportVoyagePaxSplit(flight.AirportID, flight.Operator, voyageNumber, scheduledDate)
-        val askable: AskableActorRef = dqApiSplitsActorRef
-        val future = askable ? splitsRequest
+        val future = dqApiSplitsAskableActorRef ? splitsRequest
         val futureResp = future map {
           case vps: VoyagePaxSplits =>
             splitsAndArrivalToApiFlightWithSplits(flight, vps)
