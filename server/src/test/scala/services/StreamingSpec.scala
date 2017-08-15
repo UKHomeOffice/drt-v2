@@ -3,9 +3,10 @@ package services
 import actors.TimeZone
 import actors.TimeZone.localTimeZone
 import akka.NotUsed
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
+import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.QueueName
 import drt.shared.PaxTypesAndQueues._
@@ -16,6 +17,7 @@ import org.specs2.mutable.Specification
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable
+import scala.collection.immutable.{Iterable, Seq}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
@@ -43,14 +45,18 @@ class StreamingSpec extends Specification {
       eeaMachineReadableToDesk -> emr2dProcTime,
       eeaMachineReadableToEGate -> emr2eProcTime
     )
-    val flightsWithSplitsSets = Source(List(flightsWithSplits))
+    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
 
-    val queueLoads = flightsToQueueLoadMinutes(flightsWithSplitsSets, procTimes)
-    val result = Await.result(queueLoads.runWith(Sink.seq), 1 second)
+    val probe = TestProbe()
+    val cancellable = flightsToQueueLoadMinutes(sourceUnderTest, procTimes).to(Sink.actorRef(probe.ref, "completed")).run()
 
-    val expected = Vector(List(QueueLoadMinute(Queues.EeaDesk, 1.0, emr2dProcTime, SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch)))
 
-    result === expected
+    val expected = Set(QueueLoadMinute(Queues.EeaDesk, 1.0, emr2dProcTime, SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch))
+
+    probe.expectMsg(expected)
+    cancellable.cancel()
+
+    true
   }
 
   "Given a flight with one passenger and splits to eea desk & egates " +
@@ -73,17 +79,18 @@ class StreamingSpec extends Specification {
       eeaMachineReadableToEGate -> emr2eProcTime
     )
 
-    val flightsWithSplitsSets = Source(List(flightsWithSplits))
-    val queueLoads = flightsToQueueLoadMinutes(flightsWithSplitsSets, procTimes)
+    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
 
-    val result = Await.result(queueLoads.runWith(Sink.seq), 1 second) match {
-      case Vector(queueLoadMinutes) => queueLoadMinutes.toSet
-    }
+    val probe = TestProbe()
+    val cancellable = flightsToQueueLoadMinutes(sourceUnderTest, procTimes).to(Sink.actorRef(probe.ref, "completed")).run()
+
+
     val expected = Set(
       QueueLoadMinute(Queues.EeaDesk, edPax, edPax * emr2dProcTime, scheduledMillis),
       QueueLoadMinute(Queues.EGate, egPax, egPax * emr2eProcTime, scheduledMillis))
 
-    result === expected
+    probe.expectMsg(expected)
+    true
   }
 
   "Given a flight with 21 passengers and splits to eea desk & egates " +
@@ -109,20 +116,20 @@ class StreamingSpec extends Specification {
       eeaMachineReadableToEGate -> emr2eProcTime
     )
 
-    val flightsWithSplitsSets = Source(List(flightsWithSplits))
+    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
 
-    val queueLoads = flightsToQueueLoadMinutes(flightsWithSplitsSets, procTimes)
+    val probe = TestProbe()
+    val cancellable = flightsToQueueLoadMinutes(sourceUnderTest, procTimes).to(Sink.actorRef(probe.ref, "completed")).run()
 
-    val result = Await.result(queueLoads.runWith(Sink.seq), 1 second) match {
-      case Vector(queueLoadMinutes) => queueLoadMinutes.toSet
-    }
+
     val expected = Set(
       QueueLoadMinute(Queues.EeaDesk, 20 * edSplit, 20 * edSplit * emr2dProcTime, scheduledMillis),
       QueueLoadMinute(Queues.EGate, 20 * egSplit, 20 * egSplit * emr2eProcTime, scheduledMillis),
       QueueLoadMinute(Queues.EeaDesk, 1 * edSplit, 1 * edSplit * emr2dProcTime, scheduledMillis + 60000),
       QueueLoadMinute(Queues.EGate, 1 * egSplit, 1 * egSplit * emr2eProcTime, scheduledMillis + 60000))
 
-    result === expected
+    probe.expectMsg(expected)
+    true
   }
 
   "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
@@ -145,36 +152,45 @@ class StreamingSpec extends Specification {
       eeaMachineReadableToDesk -> emr2dProcTime,
       eeaMachineReadableToEGate -> emr2eProcTime
     )
-    val flightsWithSplitsSets = Source(List(flightsWithSplits))
+    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
 
-    val queueLoads = flightsToQueueLoadMinutes(flightsWithSplitsSets, procTimes)
+    val probe = TestProbe()
+    val cancellable = flightsToQueueLoadMinutes(sourceUnderTest, procTimes).to(Sink.actorRef(probe.ref, "completed")).run()
 
-    val result = Await.result(queueLoads.runWith(Sink.seq), 1 second) match {
-      case Vector(queueLoadMinutes) => queueLoadMinutes.toSet
-    }
     val expected = Set(
       QueueLoadMinute(Queues.EeaDesk, 1.0, emr2dProcTime, SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch),
       QueueLoadMinute(Queues.EeaDesk, 1.0, emr2dProcTime, SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + 60000))
 
-    result === expected
+    probe.expectMsg(expected)
+    true
   }
 
-  "Given one queue load minute " +
-    "When I ask for a crunch result " +
-    "Then I should get appropriate desk recs" >> {
-    val scheduled = "2017-01-01T00:00Z"
-    val queueLoadSets = Source(List(Set(
-      QueueLoadMinute(Queues.EeaDesk, 1.0, 0.25, SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch)
-    )))
-    val workloadFor24Hours = queueLoadSets.map {
-      case queueLoads =>
-        val now = new DateTime(SDate(scheduled).millisSinceEpoch)
-        val start = now.toLocalDate.toDateTimeAtStartOfDay(DateTimeZone.forID("Europe/London")).getMillis
-        val minutes = List.range(start, start + (1000 * 60 * 60 * 24))
-    }
+  //  "Given one queue load minute " +
+  //    "When I ask for a crunch result " +
+  //    "Then I should get appropriate desk recs" >> {
+  //    val scheduled = "2017-01-01T00:00Z"
+  //    val queueLoadSets = Source(List(Set(
+  //      QueueLoadMinute(Queues.EeaDesk, 1.0, 0.25, SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch)
+  //    )))
+  //    val workloadFor24Hours = queueLoadSets.map {
+  //      case queueLoads =>
+  //        val now = new DateTime(SDate(scheduled).millisSinceEpoch)
+  //        val start = now.toLocalDate.toDateTimeAtStartOfDay(DateTimeZone.forID("Europe/London")).getMillis
+  //        val minutes = List.range(start, start + (1000 * 60 * 60 * 24))
+  //    }
+  //  }
+
+
+  private def flightsToQueueLoadMinutes(flightsWithSplitsSource: Source[List[ApiFlightWithSplits], Cancellable], procTimes: Map[PaxTypeAndQueue, Double]) = flightsWithSplitsSource.map {
+    case flightsWithSplits =>
+      flightsWithSplits.flatMap {
+        case ApiFlightWithSplits(flight, splits) =>
+          val flightSplitMinutes: immutable.Seq[FlightSplitMinute] = flightToFlightSplitMinutes(flight, splits, procTimes)
+          val queueLoadMinutes: immutable.Iterable[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutes)
+
+          queueLoadMinutes
+      }.toSet
   }
-
-
 
   def lastLocalMidnightString(millis: Long): String = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
@@ -198,18 +214,6 @@ class StreamingSpec extends Specification {
     }
   }
 
-  private def flightsToQueueLoadMinutes(flightsWithSplitsSource: Source[List[ApiFlightWithSplits], NotUsed], procTimes: Map[PaxTypeAndQueue, Double]) = {
-    flightsWithSplitsSource.map {
-      case flightsWithSplits =>
-        flightsWithSplits.flatMap {
-          case ApiFlightWithSplits(flight, splits) =>
-            val flightSplitMinutes: immutable.Seq[FlightSplitMinute] = flightToFlightSplitMinutes(flight, splits, procTimes)
-            val queueLoadMinutes: immutable.Iterable[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutes)
-
-            queueLoadMinutes
-        }
-    }
-  }
 
   private def flightToFlightSplitMinutes(flight: Arrival, splits: List[ApiSplits], procTimes: Map[PaxTypeAndQueue, Double]) = {
     val splitsToUse = splits.head
