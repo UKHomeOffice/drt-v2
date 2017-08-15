@@ -6,14 +6,14 @@ import actors._
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.stream.testkit.TestSubscriber.Probe
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.services.AirportConfigHelpers
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, PortPaxAndWorkLoads}
+import drt.shared.FlightsApi.{Flights, PortPaxAndWorkLoads, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
@@ -21,7 +21,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import org.specs2.execute.Result
 import org.specs2.mutable.{Specification, SpecificationLike}
-import services.FlightCrunchInteractionTests.TestCrunchActor
+import services.FlightCrunchInteractionTests.{SimpleTestCrunchActor, TestCrunchActor}
 import services.WorkloadCalculatorTests._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
@@ -138,7 +138,14 @@ object CrunchTests {
 
     val journalDir = new File(journalDirName)
     journalDir.mkdirs()
-    val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider)
+
+    val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = (flight: Arrival) => {
+      PaxFlow.makeFlightPaxFlowCalculator(
+        PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
+        BestPax.bestPax
+      )(flight)
+    }
+    val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider, paxFlowCalculator)
     val context = TestContext(levelDbTestActorSystem(tn), props)
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
@@ -164,30 +171,41 @@ object CrunchTests {
 
   def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
     val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
-    val paxFlowCalculator = (flight: Arrival) => {
+    val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = (flight: Arrival) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
         BestPax.bestPax
       )(flight)
     }
-    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider, BestPax.bestPax)
+    val props = Props(classOf[TestCrunchActor], hoursToCrunch, airportConfig, timeProvider, paxFlowCalculator)
     props
   }
 
   def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
     result match {
+      case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) if waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime =>
+        true
       case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
-        waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
-      case _ => false
+        println(s"expectedFirstMinuteOfNonZeroWaitTime: $expectedFirstMinuteOfNonZeroWaitTime\nresult: ${waitTimes.indexWhere(_ != 0)}")
+        false
+      case _ =>
+        println(s"unexpected result: $result")
+        false
     }
   }
 
   def assertCrunchResultDeskRecs(result: Any, expectedMidnightLocalTime: Long, expectedDeskRecs: IndexedSeq[Int]): Boolean = {
     result match {
+      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) if recommendedDesks == expectedDeskRecs =>
+        true
+      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) if recommendedDesks == expectedDeskRecs =>
+        println(s"recommendedDesks: $recommendedDesks\nexpectedDeskRecs: $expectedDeskRecs")
+        false
       case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
-        recommendedDesks == expectedDeskRecs
-      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
-        println(s"recommendedDesks: found: $recommendedDesks, expected: $expectedDeskRecs")
+        println(s"recommendedDesks: $recommendedDesks\nexpectedDeskRecs: $expectedDeskRecs")
+        false
+      case _ =>
+        println(s"unexpected result: $result")
         false
     }
   }
@@ -263,24 +281,6 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
       val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
       val expectedMidnightLocalTime = 1451606400000L
       val expectedDeskRecs = IndexedSeq.fill(60)(2)
-
-      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
-    }
-
-    "Given three flights, two of which are code shares with each other " +
-      "When we ask for the latest crunch for eeaDesk at terminal A1, " +
-      "Then we get recommended desks for the single flight and the main code share flight" >> {
-      val hoursToCrunch = 1
-      val terminalToCrunch = "A1"
-      val flights = List(
-        apiFlight(flightId = 1, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
-        apiFlight(flightId = 2, iata = "BA555", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
-        apiFlight(flightId = 3, iata = "EZ456", terminal = "A1", actPax = 100, schDt = "2016-01-01T00:05")
-      )
-
-      val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
-      val expectedMidnightLocalTime = 1451606400000L
-      val expectedDeskRecs = IndexedSeq.fill(15)(4) ++ IndexedSeq.fill(45)(2)
 
       assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
     }
@@ -362,11 +362,7 @@ class UnexpectedTerminalInFlightFeedsWhenCrunching extends SpecificationLike {
           val timeProvider = () => DateTime.parse("2016-09-01")
           val paxFlowCalculator = (flight: Arrival) => PaxFlow.makeFlightPaxFlowCalculator(
             PaxFlow.splitRatioForFlight(splitsProviders), BestPax.bestPax)(flight)
-          val testActorProps = Props(classOf[ProdCrunchActor], 1,
-            airportConfig,
-            paxFlowCalculator,
-            timeProvider,
-            BestPax.bestPax)
+          val testActorProps = Props(classOf[TestCrunchActor], 1, airportConfig, timeProvider, paxFlowCalculator)
           withContextCustomActor(testActorProps, levelDbTestActorSystem("")) {
             context =>
               val flights = Flights(
@@ -399,7 +395,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
 
-  override def lastLocalMidnightString: String = "2000-01-01"
+  override def retentionCutoff = SDate("2000-01-01T00:00Z")
 
   override def crunchQueueWorkloads(workloads: Seq[WL], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): CrunchResult = {
     CrunchResult(0L, 0L, IndexedSeq(), Seq())
@@ -420,8 +416,11 @@ class StreamFlightCrunchTests
   "we tell the crunch actor about flights when they change" in {
     CrunchTests.withContext("tellCrunch") { context =>
       val flightsActor = context.system.actorOf(Props(
-        classOf[FlightsActor], context.testActor, Actor.noSender,
-        testSplitsProvider, BestPax("EDI"),
+        classOf[FlightsActor],
+        context.testActor,
+        TestProbe()(context.system).ref,
+        testSplitsProvider,
+        BestPax("EDI"),
         (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
         AirportConfigs.lhr
       ), "flightsActor")
@@ -436,7 +435,7 @@ class StreamFlightCrunchTests
     "when we ask for the latest crunch, we get a crunch result for the flight we've sent it" in {
       CrunchTests.withContext("canAskCrunch") { context =>
         val hoursToCrunch = 2
-        val crunchActor = context.system.actorOf(Props(classOf[TestCrunchActor], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
+        val crunchActor = context.system.actorOf(Props(classOf[SimpleTestCrunchActor], hoursToCrunch, CrunchTests.airportConfigForHours(hoursToCrunch), () => DateTime.parse("2016-09-01T04:00Z")), "CrunchActor")
 
         val flights = Flights(
           List(apiFlight(flightId = 0, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-09-01T00:31")))

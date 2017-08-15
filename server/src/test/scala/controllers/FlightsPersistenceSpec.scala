@@ -3,6 +3,7 @@ package controllers
 import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
@@ -26,7 +27,7 @@ case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
 case object GetLastKnownPax
 
 class FlightsTestActor(crunchActorRef: ActorRef,
-                       dqApiSplitsActorRef: AskableActorRef,
+                       dqApiSplitsActorRef: ActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -38,6 +39,7 @@ class FlightsTestActor(crunchActorRef: ActorRef,
     pcpArrivalTimeForFlight,
     airportConfig
   ) {
+  log.info(s"On construction we got $dqApiSplitsActorRef")
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -229,7 +231,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     system.actorOf(Props(
       classOf[FlightsActor],
       crunchActorRef,
-      Actor.noSender,
+      TestProbe()(system).ref,
       testSplitsProvider,
       BestPax(airportCode),
       (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -245,10 +247,11 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   }
 
   def flightsActorWithSnapshotIntervalOf1(system: ActorSystem, airportCode: String = "EDI") = {
+    implicit val testSystem = system
     system.actorOf(Props(
       classOf[FlightsTestActor],
       crunchActor(system),
-      Actor.noSender,
+      TestProbe().ref,
       testSplitsProvider,
       BestPax.bestPax,
       (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),

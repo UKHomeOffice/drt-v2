@@ -88,7 +88,7 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
 
   def receive = {
     case PerformCrunchOnFlights(newFlights) =>
-      onFlightUpdates(newFlights.toList, lastLocalMidnightString, domesticPorts)
+      onFlightUpdates(newFlights.toList, retentionCutoff, domesticPorts)
 
       newFlights match {
         case Nil => log.info("No crunch, no change")
@@ -132,12 +132,6 @@ abstract class CrunchActor(override val crunchPeriodHours: Int,
       }
     case message =>
       log.error(s"crunchActor received unhandled ${message}")
-  }
-
-  def lastLocalMidnightString: String = {
-    val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-    // todo this function needs more work to make it a sensible cut off time
-    lastLocalMidnight.toString(formatter)
   }
 
   def lastLocalMidnight: DateTime = {
