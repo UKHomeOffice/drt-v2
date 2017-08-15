@@ -20,7 +20,7 @@ import scala.collection.immutable
 import scala.collection.immutable.{Iterable, Seq}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Success, Try}
 
 case class FlightSplitMinute(flightId: Int, paxType: PaxType, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: Long)
 
@@ -209,7 +209,6 @@ class StreamingSpec extends Specification {
     true
   }
 
-
   "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
     "When crunch queue workloads between two times " +
     "Then I should get a map queue to map of minute to desk rec" >> {
@@ -253,6 +252,57 @@ class StreamingSpec extends Specification {
     true
   }
 
+  "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
+    "When crunch queue workloads between two times " +
+    "Then I should emit workloads and crunch results" >> {
+    val scheduled1 = "2017-01-01T00:00Z"
+    val scheduled2 = "2017-01-01T00:01Z"
+    val flightsWithSplits = List(ApiFlightWithSplits(
+      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled1),
+      List(ApiSplits(
+        List(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1d)), "api", PaxNumbers))
+    ), ApiFlightWithSplits(
+      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled2),
+      List(ApiSplits(
+        List(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1d)), "api", PaxNumbers))
+    ))
+    val emr2dProcTime = 20d / 60
+    val emr2eProcTime = 35d / 60
+    val procTimes: Map[PaxTypeAndQueue, Double] = Map(
+      eeaMachineReadableToDesk -> emr2dProcTime,
+      eeaMachineReadableToEGate -> emr2eProcTime
+    )
+    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
+
+    val probe = TestProbe()
+    val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
+    val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (30 * 60000)
+
+    val indexQueueWorkloadsByMinuteFlow: Flow[Set[QueueLoadMinute], Map[QueueName, Map[MillisSinceEpoch, Load]], NotUsed] = Flow.fromFunction(indexQueueWorkloadsByMinute)
+    val queueMinutesForPeriodFlow: Flow[Map[QueueName, Map[MillisSinceEpoch, Load]], Map[QueueName, List[(MillisSinceEpoch, Load)]], NotUsed] = Flow.fromFunction(queueMinutesForPeriod(startTime, endTime))
+    val queueWorkloadsToCrunchResultsFlow: Flow[Map[QueueName, List[(MillisSinceEpoch, Load)]], Map[QueueName, Try[OptimizerCrunchResult]], NotUsed] = Flow.fromFunction(queueWorkloadsToCrunchResults)
+
+    val queueWorkloadsFromFlights1: Source[Map[QueueName, List[(MillisSinceEpoch, Load)]], (Cancellable, NotUsed)] = flightsToQueueLoadMinutes(sourceUnderTest, procTimes)
+      .via(indexQueueWorkloadsByMinuteFlow)
+      .viaMat(queueMinutesForPeriodFlow)(Keep.both)
+
+    val crunchResults: Source[Map[QueueName, Try[OptimizerCrunchResult]], (Cancellable, NotUsed)] = queueWorkloadsFromFlights1
+      .via(queueWorkloadsToCrunchResultsFlow)
+
+    val cancellable = crunchResults
+      .to(Sink.actorRef(probe.ref, "completed")).run()
+
+    val expected = Map(Queues.EeaDesk -> Success(
+      OptimizerCrunchResult(
+        Vector(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      )
+    ))
+
+    probe.expectMsg(expected)
+    true
+  }
+
   //  "Given one queue load minute " +
   //    "When I ask for a crunch result " +
   //    "Then I should get appropriate desk recs" >> {
@@ -269,20 +319,19 @@ class StreamingSpec extends Specification {
   //  }
 
 
-  def queueWorkloadsToCrunchResults(queuesWorkloads: Map[QueueName, List[(MillisSinceEpoch, Double)]]) =
+  def queueWorkloadsToCrunchResults(queuesWorkloads: Map[QueueName, List[(MillisSinceEpoch, Double)]]): Map[QueueName, Try[OptimizerCrunchResult]] =
     queuesWorkloads.mapValues((workloads) => {
       val workloadMinutes = workloads.map(_._2)
       TryRenjin.crunch(workloadMinutes, Seq.fill(workloadMinutes.length)(0), Seq.fill(workloadMinutes.length)(10), OptimizerConfig(25))
     })
 
 
-  def queueMinutesForPeriod(startTime: Long, endTime: Long)(queue: Map[QueueName, Map[MillisSinceEpoch, Double]]) =
+  def queueMinutesForPeriod(startTime: Long, endTime: Long)(queue: Map[QueueName, Map[MillisSinceEpoch, Double]]): Map[QueueName, List[(MillisSinceEpoch, Load)]] =
     queue.mapValues(
       queueWorkloadMinutes => List.range(startTime, endTime, 60000).map(minute => {
         (minute, queueWorkloadMinutes.getOrElse(minute, 0d))
       })
     )
-
 
   def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[QueueLoadMinute]): Map[QueueName, Map[MillisSinceEpoch, Double]] =
     queueWorkloadMinutes
