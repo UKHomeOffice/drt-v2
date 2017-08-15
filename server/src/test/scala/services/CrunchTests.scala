@@ -115,21 +115,7 @@ object FlightCrunchInteractionTests extends TestSuite {
         SplitRatio(PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk), 0.07),
         SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.03)
       ))
-
-    //    def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double =
-    //      paxTypeAndQueue match {
-    //        case PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) => 16d / 60d
-    //        case PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate) => 25d / 60d
-    //        case PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk) => 50d / 60d
-    //        case PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) => 64d / 60d
-    //        case PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) => 75d / 60d
-    //      }
-
-    //    def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
-
-//    def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-//      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
-
+    
     override def retentionCutoff = SDate("2000-01-01T00:00Z")
   }
 
