@@ -284,24 +284,6 @@ class CodeShareFlightsCrunchTests extends SpecificationLike {
 
       assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
     }
-
-    "Given three flights, two of which are code shares with each other " +
-      "When we ask for the latest crunch for eeaDesk at terminal A1, " +
-      "Then we get recommended desks for the single flight and the main code share flight" >> {
-      val hoursToCrunch = 1
-      val terminalToCrunch = "A1"
-      val flights = List(
-        apiFlight(flightId = 1, iata = "BA123", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
-        apiFlight(flightId = 2, iata = "BA555", terminal = "A1", actPax = 200, schDt = "2016-01-01T00:00"),
-        apiFlight(flightId = 3, iata = "EZ456", terminal = "A1", actPax = 100, schDt = "2016-01-01T00:05")
-      )
-
-      val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = new DateTime(2016, 1, 1, 0, 0))
-      val expectedMidnightLocalTime = 1451606400000L
-      val expectedDeskRecs = IndexedSeq.fill(15)(4) ++ IndexedSeq.fill(45)(2)
-
-      assertCrunchResultDeskRecs(result, expectedMidnightLocalTime, expectedDeskRecs)
-    }
   }
 }
 
