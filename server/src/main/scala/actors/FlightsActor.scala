@@ -61,8 +61,6 @@ class FlightsActor(crunchActorRef: ActorRef,
       log.info(s"Recovering ${recoveredFlights.length} flights")
       consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, retentionCutoff)
       dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
-      log.info(s"Recover: We are sending it to this actor: $dqApiSplitsActorRef")
-//      log.info(s"Recover: askable actor: $dqApiSplitsAskableActorRef")
 
     case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length == 0 =>
       log.info(s"No flight updates")
