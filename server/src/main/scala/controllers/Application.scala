@@ -2,7 +2,7 @@ package controllers
 
 import java.nio.ByteBuffer
 
-import actors.{CrunchActor, FlightsActor, GetFlights, GetFlightsWithSplits}
+import actors._
 import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
@@ -125,8 +125,9 @@ trait SystemActors extends Core {
     classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
   val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
   val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
+  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor]), name = "crunch-state-actor")
   private val flightsActorProps = Props(
-    classOf[FlightsActor], crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode),
+    classOf[FlightsActor], crunchStateActor, crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode),
     pcpArrivalTimeCalculator, airportConfig)
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
@@ -256,12 +257,14 @@ class Application @Inject()(
     self: CrunchResultProvider =>
     implicit val timeout: Timeout = Timeout(103 milliseconds)
     val crunchActor: AskableActorRef = ctrl.crunchActor
+    val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
 
     def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
-      Future.sequence(
-        airportConfig.queues.getOrElse(terminalName, List()).map(queueName => {
-          tryTQCrunch(terminalName, queueName).map(cr => (queueName, cr))
-        }).toList)
+      val terminalCrunchResult = crunchStateActor ? GetTerminalCrunch(terminalName)
+      terminalCrunchResult.map {
+        case Nil => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
+        case qrcs: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] => qrcs
+      }
     }
   }
 
@@ -275,20 +278,27 @@ class Application @Inject()(
     }
 
     override def getFlightsWithSplits(start: Long, end: Long): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
-      val askable = ctrl.flightsActorAskable
+      val askable = ctrl.crunchStateActor
       log.info(s"asking $askable for flightsWithSplits")
-      val flights = askable.ask(GetFlightsWithSplits)(Timeout(500 milliseconds))
-
+      val flights = askable.ask(GetFlights)(Timeout(100 milliseconds))
       flights.recover {
-        case e: Throwable =>
-          log.info(s"GetFlightsWithSplits failed: $e")
-          Left(FlightsNotReady())
+        case e => Left(FlightsNotReady())
       }.map {
-        case fs: FlightsWithSplits => Right(fs)
-        case e =>
-          log.info(s"GetFlightsWithSplits failed: $e")
-          Left(FlightsNotReady())
+        case FlightsNotReady() => Left(FlightsNotReady())
+        case FlightsWithSplits(flights) => Right(FlightsWithSplits(flights))
       }
+
+//
+//      flights.recover {
+//        case e: Throwable =>
+//          log.info(s"GetFlightsWithSplits failed: $e")
+//          Left(FlightsNotReady())
+//      }.map {
+//        case fs: FlightsWithSplits => Right(fs)
+//        case e =>
+//          log.info(s"GetFlightsWithSplits failed: $e")
+//          Left(FlightsNotReady())
+//      }
     }
   }
 
@@ -388,3 +398,5 @@ class Application @Inject()(
       Ok("")
   }
 }
+
+case class GetTerminalCrunch(terminalName: TerminalName)

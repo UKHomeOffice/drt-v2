@@ -1,6 +1,7 @@
 package services
 
-import akka.actor.ActorSystem
+import akka.NotUsed
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.testkit.TestProbe
@@ -239,9 +240,9 @@ class StreamingSpec extends Specification {
 
     val slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20)
     val minMaxDesks = Map("T1" -> Map(
-      "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))))
+      "eeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      "nonEeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      "eGate" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
 
     sourceUnderTest
       .map(flightsToQueueLoadMinutes(procTimes))
@@ -279,24 +280,19 @@ class StreamingSpec extends Specification {
       eeaMachineReadableToDesk -> 20d / 60,
       eeaMachineReadableToEGate -> 35d / 60
     )
-    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
 
     val slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20)
     val minMaxDesks = Map("T1" -> Map(
-      "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))))
+      "eeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      "nonEeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      "eGate" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
 
     val probe = TestProbe()
     val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * 60000)
 
-    val crunchFlow = new CrunchStateFlow(slaByQueue, minMaxDesks, procTimes, startTime, endTime)
-
-    val tickingSource = sourceUnderTest
-      .via(crunchFlow)
-      .to(Sink.actorRef(probe.ref, "completed"))
-      .run()
+    val publisher: Publisher = Publisher(probe.ref, Crunch.Props(probe.ref, slaByQueue, minMaxDesks, procTimes, startTime, endTime))
+    publisher.publish(flightsWithSplits)
 
     val zeroMinutes = (1483228920000L to 1483230540000L by 60000).toList
     val zeroLoads = zeroMinutes.map(minute => (minute, 0.0))
@@ -309,7 +305,7 @@ class StreamingSpec extends Specification {
         Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))))))
 
     probe.expectMsg(expected)
-    tickingSource.cancel()
+
     true
   }
 
@@ -330,27 +326,21 @@ class StreamingSpec extends Specification {
       eeaMachineReadableToDesk -> 20d / 60,
       eeaMachineReadableToEGate -> 35d / 60
     )
-    val sourceUnderTest = Source.tick(0.seconds, 200.millis, flightsWithSplits)
 
     val slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20)
     val minMaxDesks = Map("T1" -> Map(
-      "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))))
+      "eeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      "nonEeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      "eGate" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
 
     val probe = TestProbe()
     val startTime = SDate("2017-01-01T00:00Z", DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate("2017-01-01T23:59Z", DateTimeZone.UTC).millisSinceEpoch
 
-    val crunchFlow = new CrunchStateFlow(slaByQueue, minMaxDesks, procTimes, startTime, endTime)
-
-    val tickingSource = sourceUnderTest
-      .via(crunchFlow)
-      .to(Sink.actorRef(probe.ref, "completed"))
-      .run()
+    val publisher: Publisher = Publisher(probe.ref, Crunch.Props(probe.ref, slaByQueue, minMaxDesks, procTimes, startTime, endTime))
+    publisher.publish(flightsWithSplits)
 
     val result = probe.expectMsgAnyClassOf(classOf[CrunchState])
-    tickingSource.cancel()
 
     val resultSummary = result match {
       case CrunchState(flights, workloads, crunchResult) =>
@@ -373,4 +363,3 @@ class StreamingSpec extends Specification {
     resultSummary === expected
   }
 }
-

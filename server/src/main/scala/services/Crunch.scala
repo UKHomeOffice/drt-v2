@@ -1,6 +1,8 @@
 package services
 
-import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+import akka.actor.{ActorRef, ActorSystem}
+import akka.stream.scaladsl.{Sink, Source}
+import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -19,8 +21,27 @@ object Crunch {
   case class CrunchState(
                           flights: List[ApiFlightWithSplits],
                           workloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]],
-                          crunchResult: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]]
+                          crunchResult: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]],
+                          crunchFirstMinuteMillis: MillisSinceEpoch
                         )
+
+  case class Props(subscriber: ActorRef,
+                   slas: Map[QueueName, Int],
+                   minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+                   procTimes: Map[PaxTypeAndQueue, Double], startTime: Long, endTime: Long)
+
+  implicit val system = ActorSystem("reactive-crunch")
+  implicit val materializer = ActorMaterializer()
+
+  case class Publisher(subscriber: ActorRef, props: Props) {
+    val crunchFlow = new CrunchStateFlow(props.slas, props.minMaxDesks, props.procTimes, props.startTime, props.endTime)
+
+    def publish(flights: List[ApiFlightWithSplits]) =
+      Source(List(flights))
+        .via(crunchFlow)
+        .to(Sink.actorRef(subscriber, "completed"))
+        .run()
+  }
 
   class CrunchStateFlow(slas: Map[QueueName, Int],
                         minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
@@ -51,11 +72,11 @@ object Crunch {
 
         override def onPush(): Unit = {
           val flightsWithSplits = grab(in)
-          val qlm = flightsToQueueLoadMinutes(procTimes)(flightsWithSplits)
+          val qlm: Set[QueueLoadMinute] = flightsToQueueLoadMinutes(procTimes)(flightsWithSplits)
           val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, ProcTime]]] = indexQueueWorkloadsByMinute(qlm)
           val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] = queueMinutesForPeriod(startTime, endTime)(wlByQueue)
           val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(fullWlByQueue, slas, minMaxDesks)
-          val crunchState = CrunchState(flightsWithSplits, fullWlByQueue, crunchResults)
+          val crunchState = CrunchState(flightsWithSplits, fullWlByQueue, crunchResults, startTime)
           crunchStateOption = Option(crunchState)
 
           if (isAvailable(out)) {
