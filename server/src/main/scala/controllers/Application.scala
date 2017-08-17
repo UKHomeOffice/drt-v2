@@ -6,7 +6,7 @@ import actors._
 import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
-import akka.stream.Materializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
@@ -15,7 +15,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.Publisher
+import services.Crunch.{CrunchStateFlow, Publisher}
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -62,11 +62,6 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
 }
 
-trait Core {
-  def system: ActorSystem
-}
-
-
 object PaxFlow {
   def makeFlightPaxFlowCalculator(splitRatioForFlight: (Arrival) => Option[SplitRatios],
                                   bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
@@ -112,8 +107,10 @@ object SystemActors {
 }
 
 
-trait SystemActors extends Core {
+trait SystemActors {
   self: AirportConfProvider =>
+
+  implicit val system: ActorSystem
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -127,16 +124,17 @@ trait SystemActors extends Core {
   val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
   val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor]), name = "crunch-state-actor")
-  private val flightsActorProps = Props(
+
+  val actorMaterialiser = ActorMaterializer()
+
+  implicit val actorSystem = system
+  def crunchFlow = new CrunchStateFlow(airportConfig.slaByQueue, airportConfig.minMaxDesksByTerminalQueue, airportConfig.defaultProcessingTimes.head._2)
+  val flightsActorProps = Props(
     classOf[FlightsActor],
     crunchStateActor,
     crunchActor,
     flightPassengerSplitReporter,
-    Publisher(Crunch.Props(
-      crunchStateActor,
-      airportConfig.slaByQueue,
-      airportConfig.minMaxDesksByTerminalQueue,
-      airportConfig.defaultProcessingTimes.head._2)),
+    Publisher(crunchStateActor, crunchFlow)(actorMaterialiser),
     csvSplitsProvider,
     BestPax(portCode),
     pcpArrivalTimeCalculator, airportConfig
@@ -216,7 +214,7 @@ class Application @Inject()(
                              override val system: ActorSystem,
                              ec: ExecutionContext
                            )
-  extends Controller with Core
+  extends Controller
     with AirportConfProvider
     with ProdPassengerSplitProviders
     with SystemActors with ImplicitTimeoutProvider

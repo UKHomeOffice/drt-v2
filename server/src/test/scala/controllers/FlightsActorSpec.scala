@@ -14,7 +14,7 @@ import org.specs2.mutable.Specification
 import services.Crunch.{CrunchFlights, PublisherLike}
 //import services.WorkloadCalculatorTests.apiFlight
 import ArrivalGenerator.apiFlight
-import services.inputfeeds.CrunchTests
+import services.inputfeeds.TestCrunchConfig
 import services.{SDate, SplitsProvider}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,7 +48,7 @@ class FlightsActorSpec extends Specification {
   }
 
   private def crunchActor(system: ActorSystem) = {
-    val airportConfig: AirportConfig = CrunchTests.airportConfig
+    val airportConfig: AirportConfig = TestCrunchConfig.airportConfig
     val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
     val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
     val crunchActor = system.actorOf(props, "CrunchActor")

@@ -7,6 +7,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import org.joda.time.{DateTime, DateTimeZone}
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable
@@ -26,13 +27,6 @@ object Crunch {
                           crunchFirstMinuteMillis: MillisSinceEpoch
                         )
 
-  case class Props(subscriber: ActorRef,
-                   slas: Map[QueueName, Int],
-                   minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                   procTimes: Map[PaxTypeAndQueue, Double])
-
-  implicit val system = ActorSystem("reactive-crunch")
-  implicit val materializer = ActorMaterializer()
 
   case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch)
 
@@ -40,13 +34,12 @@ object Crunch {
     def publish(crunchFlights: CrunchFlights): NotUsed
   }
 
-  case class Publisher(props: Props) extends PublisherLike{
-    val crunchFlow = new CrunchStateFlow(props.slas, props.minMaxDesks, props.procTimes)
+  case class Publisher(subscriber: ActorRef, crunchFlow: CrunchStateFlow)(implicit val mat: ActorMaterializer) extends PublisherLike{
 
     def publish(crunchFlights: CrunchFlights) =
       Source(List(crunchFlights))
         .via(crunchFlow)
-        .to(Sink.actorRef(props.subscriber, "completed"))
+        .to(Sink.actorRef(subscriber, "completed"))
         .run()
   }
 
@@ -95,6 +88,8 @@ object Crunch {
     }
   }
 
+  val oneMinute = 60000
+
   def queueWorkloadsToCrunchResults(portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Double)]]],
                                     slas: Map[QueueName, Int],
                                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]
@@ -108,8 +103,10 @@ object Crunch {
             val sla = slas.getOrElse(queueName, 0)
             val firstMinuteOfCrunch = SDate(queueWorkloads.head._1).getHours * 60 + SDate(queueWorkloads.head._1).getMinutes
             val queueMinMaxDesks = minMaxDesks.getOrElse(terminalName, Map()).getOrElse(queueName, defaultMinMaxDesks)
-            val minDesks = inflateAndSlice(queueMinMaxDesks._1, firstMinuteOfCrunch, workloadMinutes.length)
-            val maxDesks = inflateAndSlice(queueMinMaxDesks._2, firstMinuteOfCrunch, workloadMinutes.length)
+            val crunchEndTime = firstMinuteOfCrunch + ((workloadMinutes.length * oneMinute) - oneMinute)
+            val crunchMinutes = firstMinuteOfCrunch to crunchEndTime by oneMinute
+            val minDesks =  crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
+            val maxDesks =  crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
             println(s"crunching $terminalName - $queueName")
             println(s"wl: ${workloadMinutes.length}, minDesk: ${minDesks.length}")
             val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
@@ -119,13 +116,18 @@ object Crunch {
     }
   }
 
+  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]) = {
+    val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
+    desks(date.getHourOfDay)
+  }
+
   def inflateAndSlice(desks: Seq[Int], first: Int, length: Int): Seq[Int] =
     desks.flatMap(List.fill(60)(_)).slice(first, first + length)
 
   def queueMinutesForPeriod(startTime: Long, endTime: Long)
                            (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, Double]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] =
     terminal.mapValues(queue => queue.mapValues(queueWorkloadMinutes =>
-      List.range(startTime, endTime + 60000, 60000).map(minute => {
+      List.range(startTime, endTime + oneMinute, oneMinute).map(minute => {
         (minute, queueWorkloadMinutes.getOrElse(minute, 0d))
       })
     ))

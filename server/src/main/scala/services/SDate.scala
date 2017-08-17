@@ -32,7 +32,6 @@ object SDate {
 
     def millisSinceEpoch: Long = dateTime.getMillis
 
-
   }
 
   object implicits {

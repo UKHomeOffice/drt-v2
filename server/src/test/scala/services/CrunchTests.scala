@@ -1,29 +1,16 @@
 package services
 
 import actors.CrunchActor
-import akka.actor.{ActorSystem, Props}
-import akka.event.DiagnosticLoggingAdapter
-import akka.testkit.TestKit
-import controllers.{AirportConfProvider, Core, SystemActors}
 import drt.services.AirportConfigHelpers
-import org.joda.time.{DateTime, DateTimeZone}
-import drt.shared.FlightsApi.{TerminalName, PortPaxAndWorkLoads}
+import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
-import org.mockito.Mock
-import org.specs2.Specification
-import org.specs2.codata.Process.Await
-import org.specs2.specification.core.SpecStructure
+import org.joda.time.DateTime
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
-import org.specs2.mock.Mockito
-import scala.concurrent.duration._
-import scala.collection.immutable.{IndexedSeq, Seq}
 import utest._
 
-import scala.collection.parallel.immutable
-import scala.concurrent.Future
-import scala.util.{Success, Try}
+import scala.collection.immutable.{IndexedSeq, Seq}
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {

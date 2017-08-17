@@ -13,7 +13,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable.{BeforeAfter, SpecificationLike}
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SplitsProvider.SplitProvider
-import services.inputfeeds.CrunchTests
+import services.inputfeeds.TestCrunchConfig
 import services.{SDate, SplitsProvider}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -235,7 +235,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   }
 
   def crunchActor(system: ActorSystem) = {
-    val airportConfig: AirportConfig = CrunchTests.airportConfig
+    val airportConfig: AirportConfig = TestCrunchConfig.airportConfig
     val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
     val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
     system.actorOf(props, "crunchActor")

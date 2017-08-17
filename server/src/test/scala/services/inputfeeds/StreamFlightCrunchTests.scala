@@ -3,37 +3,32 @@ package services.inputfeeds
 import java.io.File
 
 import actors._
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
-import akka.stream.testkit.TestSubscriber.Probe
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator.apiFlight
-import controllers.SystemActors.SplitsProvider
 import controllers._
 import drt.services.AirportConfigHelpers
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName, PortPaxAndWorkLoads}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import org.specs2.execute.Result
-import org.specs2.mutable.{Specification, SpecificationLike}
-import services.FlightCrunchInteractionTests.TestCrunchActor
-import services.WorkloadCalculatorTests._
+import org.specs2.mutable.SpecificationLike
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
-import services.{FlightCrunchInteractionTests, SDate, SplitsProvider, WorkloadCalculatorTests}
+import services.{FlightCrunchInteractionTests, SDate, SplitsProvider}
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
 
-object CrunchTests {
+object TestCrunchConfig {
   val airportConfig = airportConfigForHours(1)
   val AirportConfigOrigin = "Airport Config"
 
@@ -134,7 +129,7 @@ object CrunchTests {
   }
 
   def withContext[T](tn: String = "", timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
-    val journalDirName = CrunchTests.levelDbJournalDir(tn)
+    val journalDirName = TestCrunchConfig.levelDbJournalDir(tn)
 
     val journalDir = new File(journalDirName)
     journalDir.mkdirs()
@@ -163,7 +158,7 @@ object CrunchTests {
   }
 
   def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
-    val airportConfig: AirportConfig = CrunchTests.airportConfigForHours(hoursToCrunch)
+    val airportConfig: AirportConfig = TestCrunchConfig.airportConfigForHours(hoursToCrunch)
     val paxFlowCalculator = (flight: Arrival) => {
       PaxFlow.makeFlightPaxFlowCalculator(
         PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
@@ -199,7 +194,7 @@ class TimezoneFlightCrunchTests extends SpecificationLike {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  import CrunchTests._
+  import TestCrunchConfig._
 
   "Flight Crunch needs to be aware of local times" >> {
     val dt20160101_1011 = new DateTime(2016, 1, 1, 10, 11)
