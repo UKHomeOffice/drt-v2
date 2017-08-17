@@ -39,7 +39,6 @@ case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
 object PaxTypeAndQueue {
   def apply(split: SplitsPaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
-
 }
 
 

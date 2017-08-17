@@ -15,6 +15,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import services.Crunch.Publisher
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -127,8 +128,19 @@ trait SystemActors extends Core {
   val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor]), name = "crunch-state-actor")
   private val flightsActorProps = Props(
-    classOf[FlightsActor], crunchStateActor, crunchActor, flightPassengerSplitReporter, csvSplitsProvider, BestPax(portCode),
-    pcpArrivalTimeCalculator, airportConfig)
+    classOf[FlightsActor],
+    crunchStateActor,
+    crunchActor,
+    flightPassengerSplitReporter,
+    Publisher(Crunch.Props(
+      crunchStateActor,
+      airportConfig.slaByQueue,
+      airportConfig.minMaxDesksByTerminalQueue,
+      airportConfig.defaultProcessingTimes.head._2)),
+    csvSplitsProvider,
+    BestPax(portCode),
+    pcpArrivalTimeCalculator, airportConfig
+  )
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
   val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
@@ -288,17 +300,17 @@ class Application @Inject()(
         case FlightsWithSplits(flights) => Right(FlightsWithSplits(flights))
       }
 
-//
-//      flights.recover {
-//        case e: Throwable =>
-//          log.info(s"GetFlightsWithSplits failed: $e")
-//          Left(FlightsNotReady())
-//      }.map {
-//        case fs: FlightsWithSplits => Right(fs)
-//        case e =>
-//          log.info(s"GetFlightsWithSplits failed: $e")
-//          Left(FlightsNotReady())
-//      }
+      //
+      //      flights.recover {
+      //        case e: Throwable =>
+      //          log.info(s"GetFlightsWithSplits failed: $e")
+      //          Left(FlightsNotReady())
+      //      }.map {
+      //        case fs: FlightsWithSplits => Right(fs)
+      //        case e =>
+      //          log.info(s"GetFlightsWithSplits failed: $e")
+      //          Left(FlightsNotReady())
+      //      }
     }
   }
 
@@ -354,6 +366,7 @@ class Application @Inject()(
       def manifestPassengerToCSV(m: VoyageManifest, p: PassengerInfoJson) = {
         s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode}","${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentType.getOrElse("")}","${p.EEAFlag}","${p.InTransitFlag}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
       }
+
       def headings = """"Event Code","Arrival Port Code","Departure Port Code","Voyage Number","Carrier Code","Scheduled Date","Scheduled Time","Nationality Country Code","Document Type","EEA Flag","In Transit Flag","Document Issuing Country Code","Disembarkation Port Code","Disembarkation Country Code","Age""""
 
       def passengerCsvLines(result: List[VoyageManifest]) = {

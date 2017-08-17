@@ -4,13 +4,15 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.stream._
 import akka.stream.scaladsl._
-import akka.testkit.TestProbe
+import akka.testkit.{TestKit, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import org.joda.time.DateTimeZone
-import org.specs2.mutable.Specification
+import org.specs2.mutable.{Specification, SpecificationLike}
+import passengersplits.AkkaPersistTestConfig
 import services.Crunch._
+import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -19,8 +21,8 @@ import scala.util.Success
 
 //case class QueueMinute(queueName: QueueName, paxLoad: Double, workLoad: Double, crunchDesks: Int, crunchWait: Int, allocStaff: Int, allocWait: Int, minute: Long)
 
-class StreamingSpec extends Specification {
-  implicit val system = ActorSystem("reactive-crunch")
+class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
+
   implicit val materializer = ActorMaterializer()
 
   "Given a flight with one passenger and one split to eea desk " +
@@ -291,8 +293,8 @@ class StreamingSpec extends Specification {
     val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * 60000)
 
-    val publisher: Publisher = Publisher(probe.ref, Crunch.Props(probe.ref, slaByQueue, minMaxDesks, procTimes, startTime, endTime))
-    publisher.publish(flightsWithSplits)
+    val publisher: Publisher = Publisher(Crunch.Props(probe.ref, slaByQueue, minMaxDesks, procTimes))
+    publisher.publish(CrunchFlights(flightsWithSplits, startTime, endTime))
 
     val zeroMinutes = (1483228920000L to 1483230540000L by 60000).toList
     val zeroLoads = zeroMinutes.map(minute => (minute, 0.0))
@@ -302,7 +304,9 @@ class StreamingSpec extends Specification {
       Map("T1" -> Map(Queues.EeaDesk -> workloads)),
       Map("T1" -> Map(Queues.EeaDesk -> Success(OptimizerCrunchResult(
         Vector(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-        Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))))))
+        Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))))),
+      startTime
+    )
 
     probe.expectMsg(expected)
 
@@ -337,13 +341,13 @@ class StreamingSpec extends Specification {
     val startTime = SDate("2017-01-01T00:00Z", DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate("2017-01-01T23:59Z", DateTimeZone.UTC).millisSinceEpoch
 
-    val publisher: Publisher = Publisher(probe.ref, Crunch.Props(probe.ref, slaByQueue, minMaxDesks, procTimes, startTime, endTime))
-    publisher.publish(flightsWithSplits)
+    val publisher: Publisher = Publisher(Crunch.Props(probe.ref, slaByQueue, minMaxDesks, procTimes))
+    publisher.publish(CrunchFlights(flightsWithSplits, startTime, endTime))
 
     val result = probe.expectMsgAnyClassOf(classOf[CrunchState])
 
     val resultSummary = result match {
-      case CrunchState(flights, workloads, crunchResult) =>
+      case CrunchState(flights, workloads, crunchResult, _) =>
         val workloadCount = workloads.map {
           case (_, twl) => twl.map {
             case (_, qwl) => qwl.length

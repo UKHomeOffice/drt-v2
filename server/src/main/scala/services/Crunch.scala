@@ -1,5 +1,6 @@
 package services
 
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream._
@@ -28,27 +29,33 @@ object Crunch {
   case class Props(subscriber: ActorRef,
                    slas: Map[QueueName, Int],
                    minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                   procTimes: Map[PaxTypeAndQueue, Double], startTime: Long, endTime: Long)
+                   procTimes: Map[PaxTypeAndQueue, Double])
 
   implicit val system = ActorSystem("reactive-crunch")
   implicit val materializer = ActorMaterializer()
 
-  case class Publisher(subscriber: ActorRef, props: Props) {
-    val crunchFlow = new CrunchStateFlow(props.slas, props.minMaxDesks, props.procTimes, props.startTime, props.endTime)
+  case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch)
 
-    def publish(flights: List[ApiFlightWithSplits]) =
-      Source(List(flights))
+  trait PublisherLike {
+    def publish(crunchFlights: CrunchFlights): NotUsed
+  }
+
+  case class Publisher(props: Props) extends PublisherLike{
+    val crunchFlow = new CrunchStateFlow(props.slas, props.minMaxDesks, props.procTimes)
+
+    def publish(crunchFlights: CrunchFlights) =
+      Source(List(crunchFlights))
         .via(crunchFlow)
-        .to(Sink.actorRef(subscriber, "completed"))
+        .to(Sink.actorRef(props.subscriber, "completed"))
         .run()
   }
 
   class CrunchStateFlow(slas: Map[QueueName, Int],
                         minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                        procTimes: Map[PaxTypeAndQueue, Double], startTime: Long, endTime: Long)
-    extends GraphStage[FlowShape[List[ApiFlightWithSplits], CrunchState]] {
+                        procTimes: Map[PaxTypeAndQueue, Double])
+    extends GraphStage[FlowShape[CrunchFlights, CrunchState]] {
 
-    val in = Inlet[List[ApiFlightWithSplits]]("DigestCalculator.in")
+    val in = Inlet[CrunchFlights]("DigestCalculator.in")
     val out = Outlet[CrunchState]("DigestCalculator.out")
     override val shape = FlowShape.of(in, out)
 
@@ -71,12 +78,12 @@ object Crunch {
         }
 
         override def onPush(): Unit = {
-          val flightsWithSplits = grab(in)
-          val qlm: Set[QueueLoadMinute] = flightsToQueueLoadMinutes(procTimes)(flightsWithSplits)
+          val crunchFlights: CrunchFlights = grab(in)
+          val qlm: Set[QueueLoadMinute] = flightsToQueueLoadMinutes(procTimes)(crunchFlights.flights)
           val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, ProcTime]]] = indexQueueWorkloadsByMinute(qlm)
-          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] = queueMinutesForPeriod(startTime, endTime)(wlByQueue)
+          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
           val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(fullWlByQueue, slas, minMaxDesks)
-          val crunchState = CrunchState(flightsWithSplits, fullWlByQueue, crunchResults, startTime)
+          val crunchState = CrunchState(crunchFlights.flights, fullWlByQueue, crunchResults, crunchFlights.crunchStart)
           crunchStateOption = Option(crunchState)
 
           if (isAvailable(out)) {

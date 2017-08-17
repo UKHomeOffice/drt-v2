@@ -3,6 +3,7 @@ package controllers
 import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
@@ -30,14 +31,8 @@ class FlightsTestActor(crunchActorRef: ActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
-                       airportConfig: AirportConfig )
-  extends FlightsActor(crunchActorRef,
-    dqApiSplitsActorRef,
-    csvSplitsProvider,
-    bestPax,
-    pcpArrivalTimeForFlight,
-    airportConfig
-  ) {
+                       airportConfig: AirportConfig)
+  extends FlightsActor(Actor.noSender, crunchActorRef, dqApiSplitsActorRef, PublisherStub, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -228,8 +223,10 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   def flightsActor(system: ActorSystem, crunchActorRef: ActorRef = crunchActor(system), airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsActor],
-      crunchActorRef,
       Actor.noSender,
+      crunchActorRef,
+      TestProbe()(system).ref,
+      PublisherStub,
       testSplitsProvider,
       BestPax(airportCode),
       (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -301,6 +298,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     testKit2.shutDownActorSystem
     result
   }
+
   def legacyApiFlight(iata: String,
                       airportId: String = "EDI",
                       actPax: Int,

@@ -14,7 +14,7 @@ import org.joda.time.{DateTimeZone, LocalDate}
 import org.joda.time.format.DateTimeFormat
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
-import services.Crunch.Publisher
+import services.Crunch.{CrunchFlights, PublisherLike}
 import services.SplitsProvider.SplitProvider
 import services.{CSVPassengerSplitsProvider, Crunch, FastTrackPercentages, SDate}
 
@@ -31,6 +31,7 @@ case object GetFlightsWithSplits
 class FlightsActor(crunchStateActor: ActorRef,
                    crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
+                   crunchPublisher: PublisherLike,
                    csvSplitsProvider: SplitProvider,
                    _bestPax: (Arrival) => Int,
                    pcpArrivalTimeForFlight: (Arrival) => MilliDate,
@@ -138,8 +139,7 @@ class FlightsActor(crunchStateActor: ActorRef,
             val crunchStartMillis = lastMidnightMillis
             val crunchEndMillis = lastMidnightMillis + (1439 * 60000)
 
-            val publisher: Publisher = Publisher(crunchStateActor, Crunch.Props(crunchStateActor, airportConfig.slaByQueue, airportConfig.minMaxDesksByTerminalQueue, airportConfig.defaultProcessingTimes.head._2, crunchStartMillis, crunchEndMillis))
-            publisher.publish(s.toList)
+            crunchPublisher.publish(CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis))
         }
       }
 
