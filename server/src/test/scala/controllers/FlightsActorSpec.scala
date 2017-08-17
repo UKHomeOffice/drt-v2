@@ -37,7 +37,6 @@ class FlightsActorSpec extends Specification {
     system.actorOf(Props(
       classOf[FlightsActor],
       Actor.noSender,
-      crunchActor(system),
       TestProbe()(system).ref,
       PublisherStub,
       testSplitsProvider,
@@ -45,14 +44,6 @@ class FlightsActorSpec extends Specification {
       testPcpArrival,
       AirportConfigs.edi
     ), "FlightsActor")
-  }
-
-  private def crunchActor(system: ActorSystem) = {
-    val airportConfig: AirportConfig = TestCrunchConfig.airportConfig
-    val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-    val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
-    val crunchActor = system.actorOf(props, "CrunchActor")
-    crunchActor
   }
 
   "FlightsActor " should {

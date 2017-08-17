@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 import org.specs2.mutable.SpecificationLike
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
-import services.{FlightCrunchInteractionTests, SDate, SplitsProvider}
+import services.{SDate, SplitsProvider}
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.{IndexedSeq, Seq}
@@ -104,28 +104,9 @@ object TestCrunchConfig {
     "akka.persistence.snapshot-store.local.dir" -> s"$tn/snapshot"
   )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString)))
 
-  case class TestContext(override val system: ActorSystem, props: Props) extends
+  case class TestContext(override val system: ActorSystem) extends
     TestKit(system) with ImplicitSender {
     implicit val timeout: Timeout = Timeout(5 seconds)
-
-    def sendToCrunch[T](o: T) = crunchActor ! o
-
-    def askCrunchAndWaitForReply[T](o: T) = Await.result(crunchActor ? o, 1 second)
-
-    lazy val crunchActor = createCrunchActor
-
-    def createCrunchActor: ActorRef = {
-      system.actorOf(props, "CrunchActor")
-    }
-
-    def getCrunchActor = system.actorSelection("CrunchActor")
-  }
-
-  def withContextCustomActor[T](props: Props, actorSystem: ActorSystem)(f: (TestContext) => T): T = {
-    val context = TestContext(actorSystem, props: Props)
-    val res = f(context)
-    TestKit.shutdownActorSystem(context.system)
-    res
   }
 
   def withContext[T](tn: String = "", timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
@@ -133,115 +114,16 @@ object TestCrunchConfig {
 
     val journalDir = new File(journalDirName)
     journalDir.mkdirs()
-    val props = Props(classOf[FlightCrunchInteractionTests.TestCrunchActor], 1, airportConfig, timeProvider)
-    val context = TestContext(levelDbTestActorSystem(tn), props)
+    val context = TestContext(levelDbTestActorSystem(tn))
     val res = f(context)
     TestKit.shutdownActorSystem(context.system)
     PersistenceCleanup.deleteJournal(journalDirName)
     res
   }
-
-  def hoursInMinutes(hours: Int) = 60 * hours
-
-  def crunchAndGetCrunchResult(flights: Seq[Arrival], crunchTerminal: TerminalName, deskToInspect: QueueName, hoursToCrunch: Int, now: DateTime) = {
-    val props: Props = crunchActorProps(hoursToCrunch, () => now)
-
-    val result = withContextCustomActor(props, actorSystem = levelDbTestActorSystem("")) { context =>
-      context.sendToCrunch(PerformCrunchOnFlights(flights))
-      Thread.sleep(1000)
-      context.sendToCrunch(GetLatestCrunch(crunchTerminal, deskToInspect))
-      context.fishForMessage(15 seconds, "Looking for CrunchResult in BST test") {
-        case cr: CrunchResult => true
-      }
-    }
-    result
-  }
-
-  def crunchActorProps(hoursToCrunch: Int, timeProvider: () => DateTime) = {
-    val airportConfig: AirportConfig = TestCrunchConfig.airportConfigForHours(hoursToCrunch)
-    val paxFlowCalculator = (flight: Arrival) => {
-      PaxFlow.makeFlightPaxFlowCalculator(
-        PaxFlow.splitRatioForFlight(SplitsProvider.defaultProvider(airportConfig) :: Nil),
-        BestPax.bestPax
-      )(flight)
-    }
-    val props = Props(classOf[ProdCrunchActor], hoursToCrunch, airportConfig, paxFlowCalculator, timeProvider, BestPax.bestPax)
-    props
-  }
-
-  def assertCrunchResult(result: Any, expectedMidnightLocalTime: Long, expectedFirstMinuteOfNonZeroWaitTime: Int): Boolean = {
-    result match {
-      case CrunchResult(`expectedMidnightLocalTime`, _, _, waitTimes) =>
-        waitTimes.indexWhere(_ != 0) == expectedFirstMinuteOfNonZeroWaitTime
-      case _ => false
-    }
-  }
-
-  def assertCrunchResultDeskRecs(result: Any, expectedMidnightLocalTime: Long, expectedDeskRecs: IndexedSeq[Int]): Boolean = {
-    result match {
-      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
-        recommendedDesks == expectedDeskRecs
-      case CrunchResult(`expectedMidnightLocalTime`, _, recommendedDesks, _) =>
-        println(s"recommendedDesks: found: $recommendedDesks, expected: $expectedDeskRecs")
-        false
-    }
-  }
 }
 
-class TimezoneFlightCrunchTests extends SpecificationLike {
-  isolated
-  sequential
-
-  val log = LoggerFactory.getLogger(getClass)
-
-  import TestCrunchConfig._
-
-  "Flight Crunch needs to be aware of local times" >> {
-    val dt20160101_1011 = new DateTime(2016, 1, 1, 10, 11)
-    val dt20160701_0555 = new DateTime(2016, 7, 1, 5, 55)
-
-    "2016-01-01 02:00 millis since epoch is 1451606400000L" >> {
-      TimeZone.lastLocalMidnightOn(dt20160101_1011).getMillis === 1451606400000L
-    }
-
-    "2016-07-01 02:00 millis since epoch is 1467327600000L" >> {
-      TimeZone.lastLocalMidnightOn(dt20160701_0555).getMillis === 1467327600000L
-    }
-
-    "Flight Crunch Tests With BST" >> {
-      "Given we have sent flights in GMT and now() is in GMT" in {
-        "When we ask for the latest crunch the workload appears at the correct offset" in {
-          val hoursToCrunch = 4
-          val terminalToCrunch = "A1"
-          val flights = List(
-            apiFlight(iata = "BA123", terminal = terminalToCrunch, actPax = 200, schDt = "2016-01-01T02:00", flightId = 1))
-
-          val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160101_1011)
-          val expectedMidnightLocalTime = 1451606400000L
-          assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(2))
-        }
-      }
-
-      "Given we have sent flights in BST and now() is in GMT" in {
-        "When we ask for the latest crunch the workload appears at the correct offset" in {
-          val hoursToCrunch = 4
-          val terminalToCrunch = "A1"
-          val flights = List(
-            apiFlight(iata = "FR991", terminal = terminalToCrunch, actPax = 200, schDt = "2016-07-01T02:00Z", flightId = 1))
-
-          val result = crunchAndGetCrunchResult(flights, terminalToCrunch, "eeaDesk", hoursToCrunch, now = dt20160701_0555)
-          val expectedMidnightLocalTime = 1467327600000L
-          assertCrunchResult(result, expectedMidnightLocalTime, hoursInMinutes(3))
-        }
-      }
-    }
-  }
-}
-
-class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
-  extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
-
-  override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
+class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
+  extends AirportConfigHelpers {
 
   def splitRatioProvider = _splitRatioProvider
 
@@ -251,10 +133,4 @@ class SplitsRequestRecordingCrunchActor(hours: Int, override val airportConfig: 
 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
-
-  override def lastLocalMidnightString: String = "2000-01-01"
-
-  override def crunchQueueWorkloads(workloads: Seq[WL], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): CrunchResult = {
-    CrunchResult(0L, 0L, IndexedSeq(), Seq())
-  }
 }

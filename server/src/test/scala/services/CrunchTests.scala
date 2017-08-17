@@ -1,6 +1,5 @@
 package services
 
-import actors.CrunchActor
 import drt.services.AirportConfigHelpers
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
@@ -35,45 +34,3 @@ object CrunchStructureTests extends TestSuite {
     new DateTime(year, monthOfYear, dayOfMonth, hourOfDay, minuteOfHour).getMillis
   }
 }
-
-object FlightCrunchInteractionTests extends TestSuite {
-  test =>
-
-  class TestCrunchActor(hours: Int, override val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now())
-    extends CrunchActor(hours, airportConfig, timeProvider) with AirportConfigHelpers {
-    override def bestPax(f: Arrival): Int = BestPax.bestPax(f)
-
-    def splitRatioProvider: (Arrival => Option[SplitRatios]) =
-      _ => Some(SplitRatios(
-        TestAirportConfig,
-        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.585),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate), 0.315),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk), 0.07),
-        SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.03)
-      ))
-
-    def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double =
-      paxTypeAndQueue match {
-        case PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) => 16d / 60d
-        case PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate) => 25d / 60d
-        case PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk) => 50d / 60d
-        case PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) => 64d / 60d
-        case PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) => 75d / 60d
-      }
-
-    def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
-
-    def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-      PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
-
-    override def lastLocalMidnightString: String = "2000-01-01"
-  }
-
-  def tests = TestSuite {
-    "Given a system with flightsactor and crunch actor, flights actor can request crunch actor does a crunch" - {
-      assert(true)
-    }
-  }
-}
-
-

@@ -84,24 +84,6 @@ object PaxFlow {
 
 }
 
-class ProdCrunchActor(hours: Int,
-                      override val airportConfig: AirportConfig,
-                      val _flightPaxTypeAndQueueCountsFlow: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
-                      timeProvider: () => DateTime,
-                      _bestPax: (Arrival) => Int
-                     ) extends CrunchActor(hours, airportConfig, timeProvider) {
-  override def bestPax(a: Arrival): Int = _bestPax(a)
-
-  override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = {
-    log.debug(s"Looking for defaultProcessingTime($terminalName)($paxTypeAndQueue) in ${airportConfig.defaultProcessingTimes}")
-    airportConfig.defaultProcessingTimes(terminalName).getOrElse(paxTypeAndQueue, 0)
-  }
-
-  override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    _flightPaxTypeAndQueueCountsFlow(flight)
-  }
-}
-
 object SystemActors {
   type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
@@ -119,9 +101,7 @@ trait SystemActors {
   val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax(airportConfig.portCode))
 
-  val crunchActorProps = Props(
-    classOf[ProdCrunchActor], 24, airportConfig, paxFlowCalculator, () => DateTime.now(), BestPax(portCode))
-  val crunchActor: ActorRef = system.actorOf(crunchActorProps, "crunchActor")
+
   val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor]), name = "crunch-state-actor")
 
@@ -132,7 +112,6 @@ trait SystemActors {
   val flightsActorProps = Props(
     classOf[FlightsActor],
     crunchStateActor,
-    crunchActor,
     flightPassengerSplitReporter,
     Publisher(crunchStateActor, crunchFlow)(actorMaterialiser),
     csvSplitsProvider,
@@ -246,7 +225,7 @@ class Application @Inject()(
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCache {
+  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCrunchState {
     override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
@@ -257,16 +236,16 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
+//    override def crunchStateActor: AskableActorRef = ctrl.crunchStateActor
+
     override def getActualDeskStats(): Future[ActualDeskStats] = {
       val futureDesks = actualDesksActor ? GetActualDeskStats()
       futureDesks.map(_.asInstanceOf[ActualDeskStats])
     }
   }
 
-  trait CrunchFromCache {
-    self: CrunchResultProvider =>
+  trait CrunchFromCrunchState {
     implicit val timeout: Timeout = Timeout(103 milliseconds)
-    val crunchActor: AskableActorRef = ctrl.crunchActor
     val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
 
     def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
@@ -292,23 +271,11 @@ class Application @Inject()(
       log.info(s"asking $askable for flightsWithSplits")
       val flights = askable.ask(GetFlights)(Timeout(100 milliseconds))
       flights.recover {
-        case e => Left(FlightsNotReady())
+        case e => FlightsNotReady()
       }.map {
         case FlightsNotReady() => Left(FlightsNotReady())
         case FlightsWithSplits(flights) => Right(FlightsWithSplits(flights))
       }
-
-      //
-      //      flights.recover {
-      //        case e: Throwable =>
-      //          log.info(s"GetFlightsWithSplits failed: $e")
-      //          Left(FlightsNotReady())
-      //      }.map {
-      //        case fs: FlightsWithSplits => Right(fs)
-      //        case e =>
-      //          log.info(s"GetFlightsWithSplits failed: $e")
-      //          Left(FlightsNotReady())
-      //      }
     }
   }
 

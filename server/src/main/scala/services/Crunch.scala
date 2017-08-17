@@ -22,7 +22,7 @@ object Crunch {
 
   case class CrunchState(
                           flights: List[ApiFlightWithSplits],
-                          workloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]],
+                          workloads: Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]],
                           crunchResult: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]],
                           crunchFirstMinuteMillis: MillisSinceEpoch
                         )
@@ -73,8 +73,8 @@ object Crunch {
         override def onPush(): Unit = {
           val crunchFlights: CrunchFlights = grab(in)
           val qlm: Set[QueueLoadMinute] = flightsToQueueLoadMinutes(procTimes)(crunchFlights.flights)
-          val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, ProcTime]]] = indexQueueWorkloadsByMinute(qlm)
-          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
+          val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = indexQueueWorkloadsByMinute(qlm)
+          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
           val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchFlights.crunchStart, fullWlByQueue, slas, minMaxDesks)
           val crunchState = CrunchState(crunchFlights.flights, fullWlByQueue, crunchResults, crunchFlights.crunchStart)
           crunchStateOption = Option(crunchState)
@@ -91,7 +91,7 @@ object Crunch {
   val oneMinute = 60000
 
   def queueWorkloadsToCrunchResults(crunchStartMillis: MillisSinceEpoch,
-                                    portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Double)]]],
+                                    portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]],
                                     slas: Map[QueueName, Int],
                                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]
                                    ): Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = {
@@ -99,7 +99,7 @@ object Crunch {
       case (terminalName, terminalWorkloads) =>
         val terminalCrunchResults = terminalWorkloads.map {
           case (queueName, queueWorkloads) =>
-            val workloadMinutes = queueWorkloads.map(_._2)
+            val workloadMinutes = queueWorkloads.map(_._2._2)
             val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
             val sla = slas.getOrElse(queueName, 0)
 //            val firstMinuteOfCrunch = SDate(queueWorkloads.head._1).getHours * 60 + SDate(queueWorkloads.head._1).getMinutes
@@ -119,7 +119,6 @@ object Crunch {
 
   def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]) = {
     val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
-    println(s"millis: $startTimeMidnightBST, UTC hour: ${new DateTime(startTimeMidnightBST).getHourOfDay}, BST hour: ${date.getHourOfDay}")
     desks(date.getHourOfDay)
   }
 
@@ -127,21 +126,21 @@ object Crunch {
     desks.flatMap(List.fill(60)(_)).slice(first, first + length)
 
   def queueMinutesForPeriod(startTime: Long, endTime: Long)
-                           (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, Double]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] =
+                           (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] =
     terminal.mapValues(queue => queue.mapValues(queueWorkloadMinutes =>
       List.range(startTime, endTime + oneMinute, oneMinute).map(minute => {
-        (minute, queueWorkloadMinutes.getOrElse(minute, 0d))
+        (minute, queueWorkloadMinutes.getOrElse(minute, (0d, 0d)))
       })
     ))
 
-  def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[QueueLoadMinute]): Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, Double]]] = {
+  def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[QueueLoadMinute]): Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = {
     val portLoads = queueWorkloadMinutes.groupBy(_.terminalName)
 
     portLoads.mapValues(terminalLoads => {
       val queueLoads = terminalLoads.groupBy(_.queueName)
       queueLoads
         .mapValues(_.map(qwl =>
-          qwl.minute -> qwl.workLoad
+          qwl.minute -> (qwl.paxLoad, qwl.workLoad)
         ).toMap)
     })
   }

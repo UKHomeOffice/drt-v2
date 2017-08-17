@@ -29,7 +29,6 @@ case object GetFlights
 case object GetFlightsWithSplits
 
 class FlightsActor(crunchStateActor: ActorRef,
-                   crunchActorRef: ActorRef,
                    dqApiSplitsActorRef: AskableActorRef,
                    crunchPublisher: PublisherLike,
                    csvSplitsProvider: SplitProvider,

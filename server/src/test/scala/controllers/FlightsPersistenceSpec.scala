@@ -26,13 +26,12 @@ case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
 
 case object GetLastKnownPax
 
-class FlightsTestActor(crunchActorRef: ActorRef,
-                       dqApiSplitsActorRef: AskableActorRef,
+class FlightsTestActor(dqApiSplitsActorRef: AskableActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
                        airportConfig: AirportConfig)
-  extends FlightsActor(Actor.noSender, crunchActorRef, dqApiSplitsActorRef, PublisherStub, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
+  extends FlightsActor(Actor.noSender, dqApiSplitsActorRef, PublisherStub, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -215,16 +214,14 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   }
 
   def flightsAndCrunchActors(system: ActorSystem) = {
-    val crunchActorRef = crunchActor(system)
-    val flightsActorRef = flightsActor(system, crunchActorRef)
-    (flightsActorRef, crunchActorRef)
+    val flightsActorRef = flightsActor(system)
+    (flightsActorRef)
   }
 
-  def flightsActor(system: ActorSystem, crunchActorRef: ActorRef = crunchActor(system), airportCode: String = "EDI") = {
+  def flightsActor(system: ActorSystem, airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsActor],
       Actor.noSender,
-      crunchActorRef,
       TestProbe()(system).ref,
       PublisherStub,
       testSplitsProvider,
@@ -234,17 +231,9 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     ), "FlightsActor")
   }
 
-  def crunchActor(system: ActorSystem) = {
-    val airportConfig: AirportConfig = TestCrunchConfig.airportConfig
-    val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-    val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
-    system.actorOf(props, "crunchActor")
-  }
-
   def flightsActorWithSnapshotIntervalOf1(system: ActorSystem, airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsTestActor],
-      crunchActor(system),
       Actor.noSender,
       testSplitsProvider,
       BestPax.bestPax,

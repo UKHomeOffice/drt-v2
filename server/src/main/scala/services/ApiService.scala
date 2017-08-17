@@ -2,12 +2,12 @@ package services
 
 import java.util.Date
 
-import actors.{EGateBankCrunchTransformations, GetLatestCrunch}
+import actors.{EGateBankCrunchTransformations, GetLatestCrunch, GetPortWorkload}
 import akka.actor.ActorRef
 import akka.event.DiagnosticLoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, GetTerminalCrunch, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
@@ -102,8 +102,6 @@ abstract class ApiService(val airportConfig: AirportConfig)
     with WorkloadCalculator
     with FlightsService
     with AirportToCountryLike
-    with ActorBackedCrunchService
-    with CrunchResultProvider
     with ShiftPersistence
     with FixedPointPersistence
     with StaffMovementsPersistence {
@@ -113,28 +111,37 @@ abstract class ApiService(val airportConfig: AirportConfig)
   val log = LoggerFactory.getLogger(this.getClass)
 
   def flightPassengerReporter: ActorRef
+  def crunchStateActor: AskableActorRef
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
   override def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
-    log.info("getting workloads")
-    val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
+    val workloadsFuture = crunchStateActor ? GetPortWorkload
 
-    flightsFut.recover {
-      case e: Throwable =>
-        log.info(s"Didn't receive flights: $e")
-        List()
-    }
-
-    val flightsForTerminalsWeCareAbout = flightsFut.map {
-      case Nil => List()
-      case first :: rest =>
-        val allFlights = first :: rest
-        val names: Set[TerminalName] = airportConfig.terminalNames.toSet
-        allFlights.filter(flight => names.contains(flight.Terminal))
-    }
-
-    val workloadsFuture = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
+//    workloads.recover {
+//      case e => WorkloadsNotReady
+//    }.map {
+//      case WorkloadsNotReady =>
+//    }
+//
+//    log.info("getting workloads")
+//    val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
+//
+//    flightsFut.recover {
+//      case e: Throwable =>
+//        log.info(s"Didn't receive flights: $e")
+//        List()
+//    }
+//
+//    val flightsForTerminalsWeCareAbout = flightsFut.map {
+//      case Nil => List()
+//      case first :: rest =>
+//        val allFlights = first :: rest
+//        val names: Set[TerminalName] = airportConfig.terminalNames.toSet
+//        allFlights.filter(flight => names.contains(flight.Terminal))
+//    }
+//
+//    val workloadsFuture = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
 
     workloadsFuture.recover {
       case e: Throwable =>
@@ -244,31 +251,26 @@ trait CrunchCalculator {
   }
 }
 
-
-trait CrunchResultProvider {
-  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
-}
-
-trait ActorBackedCrunchService {
-  self: CrunchResultProvider =>
-  private val log: Logger = LoggerFactory.getLogger(getClass)
-  implicit val timeout: akka.util.Timeout
-
-  val crunchActor: AskableActorRef
-
-  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
-    log.info("Starting crunch latest request")
-    val crunchFuture: Future[Any] = crunchActor.ask(GetLatestCrunch(terminalName, queueName))
-
-    crunchFuture.recover {
-      case e: Throwable =>
-        log.info("Crunch not ready in time ", e)
-        Left(NoCrunchAvailable())
-    }.map {
-      case cr: CrunchResult =>
-        Right(cr)
-      case _ =>
-        Left(NoCrunchAvailable())
-    }
-  }
-}
+//trait ActorBackedCrunchService {
+//  self: CrunchResultProvider =>
+//  private val log: Logger = LoggerFactory.getLogger(getClass)
+//  implicit val timeout: akka.util.Timeout
+//
+//  val crunchActor: AskableActorRef
+//
+//  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
+//    log.info("Starting crunch latest request")
+//    val crunchFuture: Future[Any] = crunchActor.ask(GetLatestCrunch(terminalName, queueName))
+//
+//    crunchFuture.recover {
+//      case e: Throwable =>
+//        log.info("Crunch not ready in time ", e)
+//        Left(NoCrunchAvailable())
+//    }.map {
+//      case cr: CrunchResult =>
+//        Right(cr)
+//      case _ =>
+//        Left(NoCrunchAvailable())
+//    }
+//  }
+//}
