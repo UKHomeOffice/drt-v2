@@ -387,9 +387,9 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val publisher: Publisher = Publisher(probe.ref, new CrunchStateFlow(slaByQueue, minMaxDesks, procTimes))
     publisher.publish(CrunchFlights(flightsWithSplits, startTimeMidnightBST, endTime))
 
-    val zeroLoads1 = (startTimeMidnightBST  to startTimeMidnightBST + (oneMinute * 59) by oneMinute).toList.map(minute => (minute, 0.0))
+    val zeroLoads1 = (startTimeMidnightBST to startTimeMidnightBST + (oneMinute * 59) by oneMinute).toList.map(minute => (minute, 0.0))
     val zeroLoads2 = (startTimeMidnightBST + oneMinute * 61  to startTimeMidnightBST + (oneMinute * 119) by oneMinute).toList.map(minute => (minute, 0.0))
-    val workloads = zeroLoads1 :: (startTimeMidnightBST + (oneMinute * 60), 0.3333333333333333) :: zeroLoads2 
+    val workloads = (zeroLoads1 :+ (startTimeMidnightBST + (oneMinute * 60), 0.3333333333333333)) ::: zeroLoads2
     val expected = CrunchState(
       flightsWithSplits,
       Map("T1" -> Map(Queues.EeaDesk -> workloads)),

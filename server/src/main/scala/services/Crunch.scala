@@ -34,7 +34,7 @@ object Crunch {
     def publish(crunchFlights: CrunchFlights): NotUsed
   }
 
-  case class Publisher(subscriber: ActorRef, crunchFlow: CrunchStateFlow)(implicit val mat: ActorMaterializer) extends PublisherLike{
+  case class Publisher(subscriber: ActorRef, crunchFlow: CrunchStateFlow)(implicit val mat: ActorMaterializer) extends PublisherLike {
 
     def publish(crunchFlights: CrunchFlights) =
       Source(List(crunchFlights))
@@ -75,7 +75,7 @@ object Crunch {
           val qlm: Set[QueueLoadMinute] = flightsToQueueLoadMinutes(procTimes)(crunchFlights.flights)
           val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, ProcTime]]] = indexQueueWorkloadsByMinute(qlm)
           val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Load)]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
-          val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(fullWlByQueue, slas, minMaxDesks)
+          val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchFlights.crunchStart, fullWlByQueue, slas, minMaxDesks)
           val crunchState = CrunchState(crunchFlights.flights, fullWlByQueue, crunchResults, crunchFlights.crunchStart)
           crunchStateOption = Option(crunchState)
 
@@ -90,7 +90,8 @@ object Crunch {
 
   val oneMinute = 60000
 
-  def queueWorkloadsToCrunchResults(portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Double)]]],
+  def queueWorkloadsToCrunchResults(crunchStartMillis: MillisSinceEpoch,
+                                    portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, Double)]]],
                                     slas: Map[QueueName, Int],
                                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]
                                    ): Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = {
@@ -101,12 +102,12 @@ object Crunch {
             val workloadMinutes = queueWorkloads.map(_._2)
             val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
             val sla = slas.getOrElse(queueName, 0)
-            val firstMinuteOfCrunch = SDate(queueWorkloads.head._1).getHours * 60 + SDate(queueWorkloads.head._1).getMinutes
+//            val firstMinuteOfCrunch = SDate(queueWorkloads.head._1).getHours * 60 + SDate(queueWorkloads.head._1).getMinutes
             val queueMinMaxDesks = minMaxDesks.getOrElse(terminalName, Map()).getOrElse(queueName, defaultMinMaxDesks)
-            val crunchEndTime = firstMinuteOfCrunch + ((workloadMinutes.length * oneMinute) - oneMinute)
-            val crunchMinutes = firstMinuteOfCrunch to crunchEndTime by oneMinute
-            val minDesks =  crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
-            val maxDesks =  crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
+            val crunchEndTime = crunchStartMillis + ((workloadMinutes.length * oneMinute) - oneMinute)
+            val crunchMinutes = crunchStartMillis to crunchEndTime by oneMinute
+            val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
+            val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
             println(s"crunching $terminalName - $queueName")
             println(s"wl: ${workloadMinutes.length}, minDesk: ${minDesks.length}")
             val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
@@ -118,6 +119,7 @@ object Crunch {
 
   def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]) = {
     val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
+    println(s"millis: $startTimeMidnightBST, UTC hour: ${new DateTime(startTimeMidnightBST).getHourOfDay}, BST hour: ${date.getHourOfDay}")
     desks(date.getHourOfDay)
   }
 
