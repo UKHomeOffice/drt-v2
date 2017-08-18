@@ -108,7 +108,13 @@ trait SystemActors {
   val actorMaterialiser = ActorMaterializer()
 
   implicit val actorSystem = system
-  def crunchFlow = new CrunchStateFlow(airportConfig.slaByQueue, airportConfig.minMaxDesksByTerminalQueue, airportConfig.defaultProcessingTimes.head._2)
+  def crunchFlow = new CrunchStateFlow(
+    airportConfig.slaByQueue,
+    airportConfig.minMaxDesksByTerminalQueue,
+    airportConfig.defaultProcessingTimes.head._2,
+    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
+    airportConfig.terminalNames.toSet)
+
   val flightsActorProps = Props(
     classOf[FlightsActor],
     crunchStateActor,

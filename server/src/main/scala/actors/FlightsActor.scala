@@ -10,7 +10,7 @@ import controllers.FlightState
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.{Arrival, _}
-import org.joda.time.{DateTimeZone, LocalDate}
+import org.joda.time.{DateTime, DateTimeZone, LocalDate}
 import org.joda.time.format.DateTimeFormat
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
@@ -89,6 +89,7 @@ class FlightsActor(crunchStateActor: ActorRef,
 
     case RecoveryCompleted =>
       log.info("Flights recovery completed")
+
     case message => log.error(s"unhandled message - $message")
   }
 
@@ -126,20 +127,7 @@ class FlightsActor(crunchStateActor: ActorRef,
           flightMessages = flightsWithLastKnownPax.map(flight => apiFlightToFlightMessage(flight)),
           createdAt = Option(SDate.now().millisSinceEpoch)
         ))
-        //        requestCrunch(flightsWithLastKnownPax)
-        val startTime = org.joda.time.DateTime.now()
-        val flights = flightsWithSplits
-        flights.onSuccess {
-          case s =>
-            val replyingAt = org.joda.time.DateTime.now()
-            val delta = replyingAt.getMillis - startTime.getMillis
-            log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
-
-            val crunchStartMillis = lastMidnightMillis
-            val crunchEndMillis = lastMidnightMillis + (1439 * 60000)
-
-            crunchPublisher.publish(CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis))
-        }
+        crunchFlightsWithSplits
       }
 
     case Flights(updatedFlights) if updatedFlights.isEmpty =>
@@ -153,6 +141,30 @@ class FlightsActor(crunchStateActor: ActorRef,
 
     case message => log.error("Actor saw unexpected message: " + message.toString)
 
+  }
+
+  private def crunchFlightsWithSplits = {
+    val startTime = org.joda.time.DateTime.now()
+    val flights = flightsWithSplits
+    flights.onSuccess {
+      case s =>
+        val replyingAt = org.joda.time.DateTime.now()
+        val delta = replyingAt.getMillis - startTime.getMillis
+        log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
+
+        val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
+        val crunchStartMillis = getLocalLastMidnight(localNow).millisSinceEpoch
+        val crunchEndMillis = lastMidnightMillis + (1439 * 60000)
+
+        log.info(s"crunchStartMillis: $crunchStartMillis")
+
+        crunchPublisher.publish(CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis))
+    }
+  }
+
+  def getLocalLastMidnight(now: SDateLike) = {
+    val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
+    SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
 
   def flightsWithSplits: Future[Seq[ApiFlightWithSplits]] = {

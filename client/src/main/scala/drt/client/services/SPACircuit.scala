@@ -329,18 +329,29 @@ case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
 case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
 
 class FlightsHandler[M](modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
-  val flightsRequestFrequency = 60L seconds
+  val flightsRequestFrequency = 60 seconds
 
   protected def handle = {
     case RequestFlights(from, to) =>
-      val flightsEffect = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
-      val fe = Effect(AjaxClient[Api].flightsWithSplits(from, to).call().map {
-        case Right(fs) => UpdateFlightsWithSplits(fs)
+      val x = AjaxClient[Api].flightsWithSplits(from, to).call().map {
+        case Right(fs) =>
+          log.info(s"Got ${fs.flights.length} flights!")
+          UpdateFlightsAndContinuePolling(fs)
         case Left(FlightsNotReady()) =>
           log.info(s"Flights not ready")
-          NoAction
-      })
-      effectOnly(fe + flightsEffect)
+          RequestFlightsAfter(2)
+      }
+      effectOnly(Effect(x))
+
+    case UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) =>
+      val requestFlightsAfterDelay = Effect(Future(RequestFlights(0, 0))).after(flightsRequestFrequency)
+      val updateFlights = Effect(Future(UpdateFlightsWithSplits(flights)))
+      effectOnly(updateFlights + requestFlightsAfterDelay)
+
+    case RequestFlightsAfter(delaySeconds: Int) =>
+      val requestFlightsAfterDelay = Effect(Future(RequestFlights(0, 0))).after(delaySeconds seconds)
+      effectOnly(requestFlightsAfterDelay)
+
     case UpdateFlightsWithSplits(flightsWithSplits) =>
       log.info(s"client got ${flightsWithSplits.flights.length} flights")
       val flights = flightsWithSplits.flights.map(_.apiFlight)
@@ -729,4 +740,8 @@ case class UpdateTerminalSimulation(terminalName: TerminalName, terminalSimulati
 case class GetTerminalCrunch(terminalName: TerminalName) extends Action
 
 case class UpdateTerminalCrunchResult(terminalName: TerminalName, terminalCrunchResults: Map[QueueName, CrunchResult]) extends Action
+
+case class RequestFlightsAfter(delaySeconds: Int) extends Action
+
+case class UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) extends Action
 

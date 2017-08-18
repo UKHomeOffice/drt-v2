@@ -40,6 +40,7 @@ class CrunchStateActor extends Actor with ActorLogging {
           val values = workloads.mapValues(_.mapValues(wl =>
             (wl.map(wlm => WL(wlm._1, wlm._2._2)), wl.map(wlm => Pax(wlm._1, wlm._2._1)))))
           sender() ! values
+        case None => WorkloadsNotReady
       }
     case GetTerminalCrunch(terminalName) =>
       val terminalCrunchResults: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] = state match {

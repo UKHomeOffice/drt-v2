@@ -14,7 +14,7 @@ class CodeShareSpec extends Specification {
     "Then we should see that flight with zero code shares " >> {
     val flight: Arrival = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 100)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flight))
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight))
 
     val expected = List((flight, Set()))
 
@@ -27,7 +27,7 @@ class CodeShareSpec extends Specification {
     val flight1: Arrival = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 100)
     val flight2: Arrival = apiFlight(flightId = 2, iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 150)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flight1, flight2))
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2))
 
     val expected = List((flight2, Set(flight1)))
 
@@ -41,7 +41,7 @@ class CodeShareSpec extends Specification {
     val flight2: Arrival = apiFlight(flightId = 2, iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 150)
     val flight3: Arrival = apiFlight(flightId = 3, iata = "ZZ5566", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 175)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flight1, flight2, flight3))
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2, flight3))
 
     val expected = List((flight3, Set(flight1, flight2)))
 
@@ -57,7 +57,7 @@ class CodeShareSpec extends Specification {
     val flightCS2b: Arrival = apiFlight(flightId = 4, iata = "TG8000", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "CDG", actPax = 180)
     val flight: Arrival = apiFlight(flightId = 5, iata = "KL1010", schDt = "2016-01-01T10:25Z", terminal = "T2", origin = "JFK", actPax = 175)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flightCS1a, flightCS1b, flightCS2a, flightCS2b, flight)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flightCS1a, flightCS1b, flightCS2a, flightCS2b, flight)).toSet
 
     val expected = Set(
       (flightCS1b, Set(flightCS1a)),
@@ -74,7 +74,7 @@ class CodeShareSpec extends Specification {
     val flight1: Arrival = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 100)
     val flight2: Arrival = apiFlight(flightId = 2, iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "CDG", actPax = 150)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flight1, flight2)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
 
     val expected = Set(
       (flight1, Set()),
@@ -90,7 +90,7 @@ class CodeShareSpec extends Specification {
     val flight1: Arrival = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 100)
     val flight2: Arrival = apiFlight(flightId = 2, iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T2", origin = "JFK", actPax = 150)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flight1, flight2)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
 
     val expected = Set(
       (flight1, Set()),
@@ -106,7 +106,7 @@ class CodeShareSpec extends Specification {
     val flight1: Arrival = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T10:30Z", terminal = "T1", origin = "JFK", actPax = 100)
     val flight2: Arrival = apiFlight(flightId = 2, iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 150)
 
-    val result = uniqueArrivalsWithCodeshares(identity[Arrival])(Seq(flight1, flight2)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
 
     val expected = Set(
       (flight1, Set()),

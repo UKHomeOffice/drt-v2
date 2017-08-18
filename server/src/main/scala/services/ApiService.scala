@@ -118,31 +118,6 @@ abstract class ApiService(val airportConfig: AirportConfig)
   override def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
     val workloadsFuture = crunchStateActor ? GetPortWorkload
 
-//    workloads.recover {
-//      case e => WorkloadsNotReady
-//    }.map {
-//      case WorkloadsNotReady =>
-//    }
-//
-//    log.info("getting workloads")
-//    val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
-//
-//    flightsFut.recover {
-//      case e: Throwable =>
-//        log.info(s"Didn't receive flights: $e")
-//        List()
-//    }
-//
-//    val flightsForTerminalsWeCareAbout = flightsFut.map {
-//      case Nil => List()
-//      case first :: rest =>
-//        val allFlights = first :: rest
-//        val names: Set[TerminalName] = airportConfig.terminalNames.toSet
-//        allFlights.filter(flight => names.contains(flight.Terminal))
-//    }
-//
-//    val workloadsFuture = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
-
     workloadsFuture.recover {
       case e: Throwable =>
         log.info(s"Didn't get the workloads: $e")
