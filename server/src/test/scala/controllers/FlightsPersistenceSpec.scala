@@ -171,45 +171,42 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   implicit val timeout: Timeout = Timeout(0.5 seconds)
 
   def setFlightsStopAndSleep(flightsSet: Set[Flights]) = {
-    val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors(system)
+    val flightsActorRef1 = flightsAndCrunchActors(system)
 
     flightsSet.foreach(flightsActorRef1 ! _)
 
     Await.ready(flightsActorRef1 ? GetFlights, 1 seconds)
     system.stop(flightsActorRef1)
-    system.stop(crunchActorRef1)
     Thread.sleep(100L)
   }
 
   def getFlightsAsSet() = {
-    val (flightsActorRef2, crunchActorRef2) = flightsAndCrunchActors(system)
+    val flightsActorRef2 = flightsAndCrunchActors(system)
     val futureResult = flightsActorRef2 ? GetFlights
 
     val result = Await.result(futureResult, 1 seconds).asInstanceOf[Flights] match {
       case Flights(flights) => flights.toSet
     }
-    stopAndShutdown(flightsActorRef2, crunchActorRef2)
+    stopAndShutdown(flightsActorRef2)
     result
   }
 
   def setFlightsAndStopActors(arrivals: List[Arrival]) = {
-    val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors(system)
+    val flightsActorRef1 = flightsAndCrunchActors(system)
 
     flightsActorRef1 ! Flights(arrivals)
 
-    syncStopAndSleep(flightsActorRef1, crunchActorRef1)
+    syncStopAndSleep(flightsActorRef1)
   }
 
-  def stopAndShutdown(flightsActorRef2: ActorRef, crunchActorRef2: ActorRef) = {
+  def stopAndShutdown(flightsActorRef2: ActorRef) = {
     system.stop(flightsActorRef2)
-    system.stop(crunchActorRef2)
     shutDownActorSystem
   }
 
-  def syncStopAndSleep(flightsActorRef1: ActorRef, crunchActorRef1: ActorRef) = {
+  def syncStopAndSleep(flightsActorRef1: ActorRef) = {
     Await.ready(flightsActorRef1 ? GetFlights, 1 seconds)
     system.stop(flightsActorRef1)
-    system.stop(crunchActorRef1)
     Thread.sleep(100L)
   }
 

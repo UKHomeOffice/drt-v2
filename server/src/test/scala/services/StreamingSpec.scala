@@ -214,9 +214,9 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val expected = Map(
       "T1" -> Map(
         Queues.EeaDesk -> List(
-          (SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch, emr2dProcTime),
-          (SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + oneMinute, emr2dProcTime),
-          (SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + 120000, 0))))
+          (SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch, (1.0, emr2dProcTime)),
+          (SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + oneMinute, (1.0, emr2dProcTime)),
+          (SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + 120000, (0.0, 0.0)))))
 
     probe.expectMsg(expected)
     true
@@ -248,10 +248,9 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-    val slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20)
+    val slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 20)
     val minMaxDesks = Map("T1" -> Map(
       "eeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-      "nonEeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
       "eGate" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
 
     sourceUnderTest
@@ -291,10 +290,9 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       eeaMachineReadableToEGate -> 35d / 60
     )
 
-    val slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20)
+    val slaByQueue = Map("eeaDesk" -> 25, "eGate" -> 20)
     val minMaxDesks = Map("T1" -> Map(
       "eeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-      "nonEeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
       "eGate" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
 
     val probe = TestProbe()
@@ -305,8 +303,9 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     publisher.publish(CrunchFlights(flightsWithSplits, startTime, endTime))
 
     val zeroMinutes = (1483228920000L to 1483230540000L by oneMinute).toList
-    val zeroLoads = zeroMinutes.map(minute => (minute, 0.0))
-    val workloads = (1483228800000L, 0.3333333333333333) :: (1483228860000L, 0.3333333333333333) :: zeroLoads
+    val zeroLoads = zeroMinutes.map(minute => (minute, (0.0, 0.0)))
+    val workloads = (1483228800000L, (1.0, 0.3333333333333333)) :: (1483228860000L, (1.0, 0.3333333333333333)) :: zeroLoads
+
     val expected = CrunchState(
       flightsWithSplits,
       Map("T1" -> Map(Queues.EeaDesk -> workloads)),
@@ -345,8 +344,8 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     publisher.publish(CrunchFlights(flightsWithSplits, startTime, endTime))
 
     val zeroMinutes = (startTime + (oneMinute * 1) to startTime + (oneMinute * 29) by oneMinute).toList
-    val zeroLoads = zeroMinutes.map(minute => (minute, 0.0))
-    val workloads = (startTime, 0.3333333333333333) :: zeroLoads
+    val zeroLoads = zeroMinutes.map(minute => (minute, (0.0, 0.0)))
+    val workloads = (startTime, (1.0, 0.3333333333333333)) :: zeroLoads
     val expected = CrunchState(
       flightsWithSplits,
       Map("T1" -> Map(Queues.EeaDesk -> workloads)),
@@ -389,7 +388,6 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
 
     val zeroLoads1 = (startTimeMidnightBST to startTimeMidnightBST + (oneMinute * 59) by oneMinute).toList.map(minute => (minute, 0.0))
     val zeroLoads2 = (startTimeMidnightBST + oneMinute * 61 to startTimeMidnightBST + (oneMinute * 119) by oneMinute).toList.map(minute => (minute, 0.0))
-    val workloads = (zeroLoads1 :+ (startTimeMidnightBST + (oneMinute * 60), 0.3333333333333333)) ::: zeroLoads2
 
     val result = probe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -439,14 +437,12 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
   "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
     "When crunching a whole day " +
     "Then I should emit a CrunchState containing the right flights, workload minutes and crunch minutes" >> {
-    val scheduled1 = "2017-01-01T00:00Z"
-    val scheduled2 = "2017-01-01T00:01Z"
     val flightsWithSplits = List(
       ApiFlightWithSplits(
-        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled1),
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = "2017-01-01T00:00Z"),
         List(ApiSplits(List(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1d)), "api", PaxNumbers))),
       ApiFlightWithSplits(
-        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled2),
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = "2017-01-01T00:01Z"),
         List(ApiSplits(List(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1d)), "api", PaxNumbers))))
 
     val procTimes: Map[PaxTypeAndQueue, Double] = Map(
@@ -457,7 +453,6 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20)
     val minMaxDesks = Map("T1" -> Map(
       "eeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-      "nonEeaDesk" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
       "eGate" -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
 
     val probe = TestProbe()
