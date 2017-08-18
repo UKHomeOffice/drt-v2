@@ -32,46 +32,13 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
     case cs@CrunchState(_, _, _, _) =>
       log.info(s"received CrunchState")
       state = Option(cs)
-      persist(cs) { (crunchState: CrunchState) =>
-
-        val cm = CrunchStateSnapshotMessage(
-          crunchState.flights.map(f => {
-            FlightWithSplitsMessage(
-              Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
-              f.splits.map(s => {
-                SplitMessage(s.splits.map(ptqc => {
-                  PaxTypeAndQueueCountMessage(
-                    Option(ptqc.passengerType.name),
-                    Option(ptqc.queueType),
-                    Option(ptqc.paxCount)
-                  )
-                }))
-              }))}
-            ),
-          crunchState.workloads.map {
-            case (terminalName, queueLoads) =>
-              TerminalLoadMessage(Option(terminalName), queueLoads.map{
-                case (queueName, loads) =>
-                  QueueLoadMessage(Option(queueName), loads.map{
-                    case (timestamp, (pax, work)) =>
-                      LoadMessage(Option(timestamp), Option(pax), Option(work))
-                  })
-              }.toList)
-          }.toList,
-          crunchState.crunchResult.map {
-            case (terminalName, queueCrunch) =>
-              TerminalCrunchMessage(Option(terminalName), queueCrunch.collect{
-                case (queueName, Success(cr)) =>
-                  QueueCrunchMessage(Option(queueName), Option(CrunchMessage(cr.recommendedDesks, cr.waitTimes)))
-              }.toList)
-          }.toList,
-          Option(crunchState.crunchFirstMinuteMillis)
-        )
-        context.system.eventStream.publish(cm)
-      }
+      //      persist(cs) { (crunchState: CrunchState) =>
+      //        val cm = stateToSnapshotMessage(crunchState)
+      //        context.system.eventStream.publish(cm)
+      //      }
       state.foreach(s => {
         log.info(s"Saving Snapshot $s")
-        saveSnapshot(s)
+        saveSnapshot(stateToSnapshotMessage(s))
       })
     case GetFlights =>
       state match {
@@ -104,11 +71,78 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
       sender() ! terminalCrunchResults
   }
 
+  def snapshotMessageToState(snapshot: CrunchStateSnapshotMessage) = {
+    CrunchState(
+      snapshot.flightWithSplits.map(fm => {
+        ApiFlightWithSplits(
+          FlightMessageConversion.flightMessageV2ToArrival(fm.flight.get),
+          fm.splits.map(sm => {
+            ApiSplits(
+              sm.paxTypeAndQueueCount.map(pqcm => {
+                ApiPaxTypeAndQueueCount(pqcm.paxType.get, pqcm.queueType.get, pqcm.paxValue.get)
+              }).toList, sm.source.get, sm.style.get)
+          }).toList
+        )
+      }).toList,
+      snapshot.terminalLoad.map(tlm => {
+        (tlm.terminalName.get, tlm.queueLoad.map(qlm => {
+          (qlm.queueName.get, qlm.load.map(lm => {
+            (lm.timestamp.get, (lm.pax.get, lm.work.get))
+          }).toList)
+        }).toMap)
+      }).toMap,
+      snapshot.terminalCrunch.map(tcm => {
+        (tcm.terminalName.get, tcm.queueCrunch.map(qcm => {
+          val cm = qcm.crunch.get
+          (qcm.queueName.get, Success(OptimizerCrunchResult(cm.desks.toIndexedSeq, cm.waitTimes.toList)))
+        }).toMap)
+      }).toMap,
+      snapshot.crunchFirstMinuteTimestamp.get
+    )
+  }
+
+  def stateToSnapshotMessage(crunchState: CrunchState): CrunchStateSnapshotMessage = {
+    CrunchStateSnapshotMessage(
+      crunchState.flights.map(f => {
+        FlightWithSplitsMessage(
+          Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
+          f.splits.map(s => {
+            SplitMessage(s.splits.map(ptqc => {
+              PaxTypeAndQueueCountMessage(
+                Option(ptqc.passengerType.name),
+                Option(ptqc.queueType),
+                Option(ptqc.paxCount)
+              )
+            }))
+          }))
+      }
+      ),
+      crunchState.workloads.map {
+        case (terminalName, queueLoads) =>
+          TerminalLoadMessage(Option(terminalName), queueLoads.map {
+            case (queueName, loads) =>
+              QueueLoadMessage(Option(queueName), loads.map {
+                case (timestamp, (pax, work)) =>
+                  LoadMessage(Option(timestamp), Option(pax), Option(work))
+              })
+          }.toList)
+      }.toList,
+      crunchState.crunchResult.map {
+        case (terminalName, queueCrunch) =>
+          TerminalCrunchMessage(Option(terminalName), queueCrunch.collect {
+            case (queueName, Success(cr)) =>
+              QueueCrunchMessage(Option(queueName), Option(CrunchMessage(cr.recommendedDesks, cr.waitTimes)))
+          }.toList)
+      }.toList,
+      Option(crunchState.crunchFirstMinuteMillis)
+    )
+  }
+
   override def receiveRecover: Receive = {
     case SnapshotOffer(m, s) =>
       log.info(s"restoring crunch state")
       s match {
-        case c@CrunchState(_,_,_,_) =>
+        case c@CrunchState(_, _, _, _) =>
           log.info("matched crunch state, storing it.")
           state = Option(c)
         case somethingElse =>
