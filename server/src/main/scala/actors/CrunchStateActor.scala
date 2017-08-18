@@ -1,12 +1,14 @@
 package actors
 
 import akka.actor._
+import akka.persistence.{PersistentActor, RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
 import controllers.{FlightState, GetTerminalCrunch}
 import drt.shared
 import drt.shared.FlightsApi._
 import drt.shared.{Arrival, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
+import server.protobuf.messages.CrunchState._
 import services.Crunch.CrunchState
 import services._
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
@@ -21,13 +23,56 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class CrunchStateActor extends Actor with ActorLogging {
+class CrunchStateActor extends PersistentActor with ActorLogging {
   var state: Option[CrunchState] = None
 
-  override def receive: Receive = {
+  override def receiveCommand: Receive = {
+    case SaveSnapshotSuccess =>
+      log.info("Saved CrunchState Snapshot")
     case cs@CrunchState(_, _, _, _) =>
       log.info(s"received CrunchState")
       state = Option(cs)
+      persist(cs) { (crunchState: CrunchState) =>
+
+        val cm = CrunchStateSnapshotMessage(
+          crunchState.flights.map(f => {
+            FlightWithSplitsMessage(
+              Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
+              f.splits.map(s => {
+                SplitMessage(s.splits.map(ptqc => {
+                  PaxTypeAndQueueCountMessage(
+                    Option(ptqc.passengerType.name),
+                    Option(ptqc.queueType),
+                    Option(ptqc.paxCount)
+                  )
+                }))
+              }))}
+            ),
+          crunchState.workloads.map {
+            case (terminalName, queueLoads) =>
+              TerminalLoadMessage(Option(terminalName), queueLoads.map{
+                case (queueName, loads) =>
+                  QueueLoadMessage(Option(queueName), loads.map{
+                    case (timestamp, (pax, work)) =>
+                      LoadMessage(Option(timestamp), Option(pax), Option(work))
+                  })
+              }.toList)
+          }.toList,
+          crunchState.crunchResult.map {
+            case (terminalName, queueCrunch) =>
+              TerminalCrunchMessage(Option(terminalName), queueCrunch.collect{
+                case (queueName, Success(cr)) =>
+                  QueueCrunchMessage(Option(queueName), Option(CrunchMessage(cr.recommendedDesks, cr.waitTimes)))
+              }.toList)
+          }.toList,
+          Option(crunchState.crunchFirstMinuteMillis)
+        )
+        context.system.eventStream.publish(cm)
+      }
+      state.foreach(s => {
+        log.info(s"Saving Snapshot $s")
+        saveSnapshot(s)
+      })
     case GetFlights =>
       state match {
         case Some(CrunchState(flights, _, _, _)) =>
@@ -58,6 +103,22 @@ class CrunchStateActor extends Actor with ActorLogging {
       }
       sender() ! terminalCrunchResults
   }
+
+  override def receiveRecover: Receive = {
+    case SnapshotOffer(m, s) =>
+      log.info(s"restoring crunch state")
+      s match {
+        case c@CrunchState(_,_,_,_) =>
+          log.info("matched crunch state, storing it.")
+          state = Option(c)
+        case somethingElse =>
+          log.info(s"Got $somethingElse when trying to restore Crunch State")
+      }
+    case RecoveryCompleted =>
+      log.info("Finished restoring crunch state")
+  }
+
+  override def persistenceId: String = "crunch-state"
 }
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.

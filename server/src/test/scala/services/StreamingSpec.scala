@@ -6,6 +6,7 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.testkit.{TestKit, TestProbe}
 import controllers.ArrivalGenerator
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import org.joda.time.DateTimeZone
@@ -37,9 +38,8 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     "When I ask for a corresponding cunch start time " +
     "Then I should get an SDateLike representing the previous midnight UTC" >> {
     val now = SDate("2010-01-02T11:39", DateTimeZone.forID("Europe/London"))
-    val value1 = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
-    println(s"value1: $value1")
-    val result = SDate(value1, DateTimeZone.forID("Europe/London")).millisSinceEpoch
+
+    val result = getLocalLastMidnight(now).millisSinceEpoch
     val expected = SDate("2010-01-02T00:00").millisSinceEpoch
 
     result === expected
@@ -714,6 +714,47 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
             case qwl => qwl.map(_._2._1)
           }
         }
+    }
+
+    resultSummary === expected
+  }
+
+  "Given a flight with transfers " +
+    "When I ask for a crunch " +
+    "Then I should see only the non-transfer queue" >> {
+    val scheduled00 = "2017-01-01T00:00Z"
+    val scheduled15 = "2017-01-01T00:15Z"
+    val flightsWithSplits = List(
+      ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15),
+        List(ApiSplits(List(
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 15d),
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.Transfer, 5d)
+        ), "api", PaxNumbers))))
+
+    val processingTime = 10d / 60
+    val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> processingTime)
+
+    val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
+    val minMaxDesks = Map("T1" -> Map(
+      Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20)))))
+
+    val probe = TestProbe()
+    val startTime = SDate(scheduled00).millisSinceEpoch
+    val endTime = startTime + (29 * oneMinute)
+
+    val publisher: Publisher = Publisher(probe.ref, new CrunchStateFlow(slaByQueue, minMaxDesks, procTimes, CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight), validTerminals))
+    publisher.publish(CrunchFlights(flightsWithSplits, startTime, endTime))
+
+    val result = probe.expectMsgAnyClassOf(classOf[CrunchState])
+
+    val expected = Set(Queues.EeaDesk)
+
+    val resultSummary: Set[QueueName] = result match {
+      case CrunchState(_, workloads, _, _) =>
+        workloads.values.flatMap {
+          case twl => twl.keys
+        }.toSet
     }
 
     resultSummary === expected

@@ -71,8 +71,10 @@ object TableViewUtils {
     simulationResult.get(queueName) match {
       case Some(sr) =>
         val result = queueNosFromSimulationResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, simulationResult, queueName)
+        println("Doing it with Simulation Results")
         queueDeploymentsRowsFromNos(queueName, result)
       case None =>
+        println("Doing it with Crunch Results")
         queueCrunchResultsForTerminal.get(queueName) match {
           case Some(cr) =>
             queueDeploymentsRowsFromNos(queueName, queueNosFromCrunchResult(timestamps, paxload, queueCrunchResultsForTerminal, userDeskRec, queueName))
@@ -84,6 +86,8 @@ object TableViewUtils {
 
   def queueDeploymentsRowsFromNos(queueName: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
     val toTranspose = queueNos.toList
+    val qnl = queueNos.map(_.length)
+    println(s"Got these lenghths of queueNos: $qnl")
     toTranspose.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, queueName) -> QueueDeploymentsRowEntry(
@@ -158,12 +162,15 @@ object TableViewUtils {
                                queueCrunchResultsForTerminal: QueueCrunchResults,
                                userDeskRec: QueueStaffDeployments, qn: QueueName
                               ): Seq[List[Long]] = {
+
+    println(s"Lengths of things: timestamps: ${timestamps.length}, paxload: ${paxload.map(q => q._1 + ": " + q._2.length)}")
     val ts = sampleTimestampsForRows(timestamps)
     val userDeskRecsSample: List[Long] = getSafeUserDeskRecs(userDeskRec, qn, ts)
 
     val queueCrunchRes = queueCrunchResultsForTerminal(qn)
     val groupedWaitTimes = queueCrunchRes.waitTimes.map(_.toLong).grouped(15).map(_.max).toList
     val queueDeskRecs = queueCrunchRes.recommendedDesks
+    println(s"Lenghts after whatever: queueCrunchRes:{${queueCrunchRes.recommendedDesks.length}} queueCrunchRes:{${queueCrunchRes.waitTimes.length}}, queueDeskRecs ${queueDeskRecs.length}, groupedWaitTimes ${groupedWaitTimes.length}")
     Seq(
       ts,
       paxload(qn).grouped(15).map(paxes => paxes.sum.toLong).toList,

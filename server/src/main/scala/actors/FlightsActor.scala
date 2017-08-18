@@ -153,8 +153,8 @@ class FlightsActor(crunchStateActor: ActorRef,
         log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
 
         val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
-        val crunchStartMillis = getLocalLastMidnight(localNow).millisSinceEpoch
-        val crunchEndMillis = lastMidnightMillis + (1439 * 60000)
+        val crunchStartMillis = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
+        val crunchEndMillis = crunchStartMillis + (1439 * 60000)
 
         log.info(s"crunchStartMillis: $crunchStartMillis")
 
@@ -162,10 +162,6 @@ class FlightsActor(crunchStateActor: ActorRef,
     }
   }
 
-  def getLocalLastMidnight(now: SDateLike) = {
-    val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
-    SDate(localMidnight, DateTimeZone.forID("Europe/London"))
-  }
 
   def flightsWithSplits: Future[Seq[ApiFlightWithSplits]] = {
     val apiFlights = flightState.values.toList
@@ -273,11 +269,6 @@ class FlightsActor(crunchStateActor: ActorRef,
     val toList: List[ApiPaxTypeAndQueueCount] = csvSplit.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100))
     ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)
   }
-
-//  private def requestCrunch(newFlights: List[Arrival]) = {
-//    if (newFlights.nonEmpty)
-//      crunchActorRef ! PerformCrunchOnFlights(newFlights)
-//  }
 
   def ApiFlightToArrival(f: ApiFlight): Arrival = {
     Arrival(

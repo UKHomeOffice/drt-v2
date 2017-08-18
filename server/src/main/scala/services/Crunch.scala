@@ -181,13 +181,13 @@ object Crunch {
                                  procTimes: Map[PaxTypeAndQueue, Double]): immutable.IndexedSeq[FlightSplitMinute] = {
     val splitsToUse = splits.head
     val totalPax = splitsToUse.splits.map(qc => qc.paxCount).sum
-    val splitRatios = splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
+    val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
 
     minutesForHours(flight.PcpTime, 1)
       .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
       .flatMap {
         case (minuteMillis, flightPaxInMinute) =>
-          splitRatios.map(apiSplitRatio => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplitRatio))
+          splitRatios.filterNot(_.queueType == Queues.Transfer).map(apiSplitRatio => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplitRatio))
       }
   }
 
@@ -208,5 +208,10 @@ object Crunch {
         val workLoad = fsms.map(_.workLoad).sum
         QueueLoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
     }
+  }
+
+  def getLocalLastMidnight(now: SDateLike) = {
+    val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
+    SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
 }
