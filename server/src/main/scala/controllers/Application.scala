@@ -242,8 +242,6 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
-//    override def crunchStateActor: AskableActorRef = ctrl.crunchStateActor
-
     override def getActualDeskStats(): Future[ActualDeskStats] = {
       val futureDesks = actualDesksActor ? GetActualDeskStats()
       futureDesks.map(_.asInstanceOf[ActualDeskStats])

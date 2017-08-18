@@ -37,7 +37,7 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
       //        context.system.eventStream.publish(cm)
       //      }
       state.foreach(s => {
-        log.info(s"Saving Snapshot $s")
+        log.info(s"Saving CrunchState as CrunchStateSnapshotMessage")
         saveSnapshot(stateToSnapshotMessage(s))
       })
     case GetFlights =>
@@ -79,8 +79,8 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
           fm.splits.map(sm => {
             ApiSplits(
               sm.paxTypeAndQueueCount.map(pqcm => {
-                ApiPaxTypeAndQueueCount(pqcm.paxType.get, pqcm.queueType.get, pqcm.paxValue.get)
-              }).toList, sm.source.get, sm.style.get)
+                ApiPaxTypeAndQueueCount(PaxType(pqcm.paxType.get), pqcm.queueType.get, pqcm.paxValue.get)
+              }).toList, sm.source.get, SplitStyle(sm.style.get))
           }).toList
         )
       }).toList,
@@ -113,7 +113,10 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
                 Option(ptqc.queueType),
                 Option(ptqc.paxCount)
               )
-            }))
+            }),
+              Option(s.source),
+              Option(s.splitStyle.name)
+            )
           }))
       }
       ),
@@ -142,9 +145,9 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
     case SnapshotOffer(m, s) =>
       log.info(s"restoring crunch state")
       s match {
-        case c@CrunchState(_, _, _, _) =>
-          log.info("matched crunch state, storing it.")
-          state = Option(c)
+        case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
+          log.info("matched CrunchStateSnapshotMessage, storing it.")
+          state = Option(snapshotMessageToState(sm))
         case somethingElse =>
           log.info(s"Got $somethingElse when trying to restore Crunch State")
       }

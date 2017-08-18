@@ -36,11 +36,23 @@ object FlightParsing {
 }
 
 
-sealed trait SplitStyle
+sealed trait SplitStyle {
+  def name = getClass.getSimpleName
+}
+
+object SplitStyle {
+  def apply(splitStyle: String) = splitStyle match {
+    case "PaxNumbers$" => PaxNumbers
+    case "Percentage$" => Percentage
+    case _ => UndefinedSplitStyle
+  }
+}
 
 case object PaxNumbers extends SplitStyle
 
 case object Percentage extends SplitStyle
+
+case object UndefinedSplitStyle extends SplitStyle
 
 case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax = ApiSplits.totalExcludingTransferPax(splits)

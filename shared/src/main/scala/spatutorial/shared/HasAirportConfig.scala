@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
-import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.PaxTypes._
 import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 
@@ -21,6 +21,17 @@ sealed trait PaxType {
   def name = getClass.getSimpleName
 }
 
+object PaxType {
+  def apply(paxTypeString: String) = paxTypeString match {
+    case "EeaNonMachineReadable$" => EeaNonMachineReadable
+    case "Transit$" => Transit
+    case "VisaNational$" => VisaNational
+    case "EeaMachineReadable$" => EeaMachineReadable
+    case "NonVisaNational$" => NonVisaNational
+    case _ => UndefinedPaxType
+  }
+}
+
 object PaxTypes {
 
   case object EeaNonMachineReadable extends PaxType
@@ -32,6 +43,8 @@ object PaxTypes {
   case object EeaMachineReadable extends PaxType
 
   case object NonVisaNational extends PaxType
+
+  case object UndefinedPaxType extends PaxType
 
 }
 

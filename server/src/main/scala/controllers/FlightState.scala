@@ -54,7 +54,7 @@ trait FlightState {
   def filterOutFlightsBeforeThreshold(flights: Map[Int, Arrival], since: String): Map[Int, Arrival] = {
     val totalFlightsBeforeFilter = flights.size
     val flightsWithOldDropped = flights.filter { case (_, flight) => flight.EstDT >= since || flight.SchDT >= since }
-    val totalFlightsAfterFilter = flights.size
+    val totalFlightsAfterFilter = flightsWithOldDropped.size
     log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $since")
     flightsWithOldDropped
   }
