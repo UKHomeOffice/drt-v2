@@ -220,7 +220,7 @@ object SPAMain extends js.JSApp {
   def requestInitialActions() = {
     val initActions = Seq(
       GetAirportConfig(),
-      RequestFlights(0, 0),
+      RequestFlights(),
       GetShifts(),
       GetFixedPoints(),
       GetStaffMovements(),

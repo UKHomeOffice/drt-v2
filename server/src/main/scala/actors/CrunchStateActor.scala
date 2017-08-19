@@ -25,6 +25,7 @@ import scala.util.{Failure, Success, Try}
 
 class CrunchStateActor extends PersistentActor with ActorLogging {
   var state: Option[CrunchState] = None
+  val snapshotInterval = 1
 
   override def receiveCommand: Receive = {
     case SaveSnapshotSuccess =>

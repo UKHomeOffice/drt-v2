@@ -1,6 +1,7 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.util.UUID
 
 import actors._
 import akka.Done
@@ -271,14 +272,39 @@ class Application @Inject()(
     }
 
     override def getFlightsWithSplits(start: Long, end: Long): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
-      val askable = ctrl.crunchStateActor
-      log.info(s"asking $askable for flightsWithSplits")
-      val flights = askable.ask(GetFlights)(Timeout(100 milliseconds))
+      if(start > 0) {
+        getFlightsWithSplitsAtDate(start)
+      } else {
+        val askable = ctrl.crunchStateActor
+        log.info(s"asking $askable for flightsWithSplits")
+        val flights = askable.ask(GetFlights)(Timeout(100 milliseconds))
+        flights.recover {
+          case e => FlightsNotReady()
+        }.map {
+          case FlightsNotReady() => Left(FlightsNotReady())
+          case FlightsWithSplits(flights) => Right(FlightsWithSplits(flights))
+        }
+      }
+    }
+
+    override def getFlightsWithSplitsAtDate(pointInTime: MillisSinceEpoch): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
+      val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime))
+      val crunchStateReadActor: ActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
+
+      log.info(s"asking $crunchStateReadActor for flightsWithSplits")
+      val flights = crunchStateReadActor.ask(GetFlights)(Timeout(3000 milliseconds))
+
       flights.recover {
-        case e => FlightsNotReady()
+        case e: Throwable =>
+          log.info(s"GetFlightsWithSplits failed: $e")
+          Left(FlightsNotReady())
       }.map {
-        case FlightsNotReady() => Left(FlightsNotReady())
-        case FlightsWithSplits(flights) => Right(FlightsWithSplits(flights))
+        case fs: FlightsWithSplits =>
+          log.info(s"GetFlightsWithSplits success: ${fs.flights.length} flights")
+          Right(fs)
+        case e =>
+          log.info(s"GetFlightsWithSplits failed: $e")
+          Left(FlightsNotReady())
       }
     }
   }

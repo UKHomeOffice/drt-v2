@@ -62,4 +62,6 @@ object Actions {
 
   case class SetActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]]) extends Action
 
+  case class SetPointInTime(value: String) extends Action
+
 }

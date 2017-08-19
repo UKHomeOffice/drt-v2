@@ -57,6 +57,7 @@ object Crunch {
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
       var crunchStateOption: Option[CrunchState] = None
       var outAwaiting = false
+      var crunchPending = false
 
       setHandlers(in, out, new InHandler with OutHandler {
         override def onPull(): Unit = {
@@ -71,6 +72,20 @@ object Crunch {
         }
 
         override def onPush(): Unit = {
+          if (!crunchPending) {
+            crunchPending = true
+            crunchStateOption = Option(crunch)
+            crunchPending = false
+          }
+
+          crunchStateOption.foreach(crunchState =>
+            if (isAvailable(out)) {
+              outAwaiting = false
+              push(out, crunchState)
+            })
+        }
+
+        private def crunch = {
           val crunchFlights: CrunchFlights = grab(in)
           val flightsToValidTerminals = crunchFlights.flights.filter {
             case ApiFlightWithSplits(flight, _) => validPortTerminals.contains(flight.Terminal)
@@ -78,19 +93,15 @@ object Crunch {
           val uniqueFlights = groupFlightsByCodeShares(flightsToValidTerminals).map(_._1)
           val qlm: Set[QueueLoadMinute] = flightsToQueueLoadMinutes(procTimes)(uniqueFlights)
           println(s"qlm: $qlm")
-          val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = indexQueueWorkloadsByMinute(qlm)
+          val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
           println(s"wlByQueue: $wlByQueue")
 
-          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
+          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
           val eGateBankSize = 5
           val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchFlights.crunchStart, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
           val crunchState = CrunchState(crunchFlights.flights, fullWlByQueue, crunchResults, crunchFlights.crunchStart)
           crunchStateOption = Option(crunchState)
-
-          if (isAvailable(out)) {
-            outAwaiting = false
-            push(out, crunchState)
-          }
+          crunchState
         }
       })
     }
