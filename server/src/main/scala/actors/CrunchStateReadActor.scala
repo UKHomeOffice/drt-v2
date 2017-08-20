@@ -2,7 +2,7 @@ package actors
 
 import akka.persistence._
 import controllers.GetTerminalCrunch
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName}
+import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchStateSnapshotMessage
 import services.Crunch.CrunchState
@@ -10,7 +10,7 @@ import services.OptimizerCrunchResult
 
 import scala.util.Success
 
-class CrunchStateReadActor(pointInTime: SDateLike) extends CrunchStateActor {
+class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Set[QueueName]]) extends CrunchStateActor(queues) {
   override val receiveRecover: Receive = {
     case SnapshotOffer(md, s) =>
       log.info(s"restoring crunch state $md")

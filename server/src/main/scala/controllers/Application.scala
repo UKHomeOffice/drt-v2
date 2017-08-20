@@ -104,7 +104,7 @@ trait SystemActors {
 
 
   val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
-  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor]), name = "crunch-state-actor")
+  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
 
   val actorMaterialiser = ActorMaterializer()
 
@@ -288,7 +288,7 @@ class Application @Inject()(
     }
 
     override def getFlightsWithSplitsAtDate(pointInTime: MillisSinceEpoch): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
-      val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime))
+      val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
       val crunchStateReadActor: ActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
 
       log.info(s"asking $crunchStateReadActor for flightsWithSplits")

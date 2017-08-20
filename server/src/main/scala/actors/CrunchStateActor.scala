@@ -9,8 +9,9 @@ import drt.shared.{Arrival, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.CrunchState._
-import services.Crunch.CrunchState
+import services.Crunch.{CrunchState, CrunchStateDiff}
 import services._
+import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
 import spray.caching.{Cache, LruCache}
 
@@ -23,9 +24,30 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class CrunchStateActor extends PersistentActor with ActorLogging {
+class CrunchStateActor(queues: Map[TerminalName, Set[QueueName]]) extends PersistentActor with ActorLogging {
   var state: Option[CrunchState] = None
   val snapshotInterval = 1
+
+  def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = queues.mapValues(_.map(queueName => {
+    val loads = (0 until 1440).map(minute => {
+      (firstMinuteMillis + (minute * 60000), (0d, 0d))
+    }).toList
+    (queueName, loads)
+  }).toMap)
+
+  def emptyCrunch(crunchStartMillis: MillisSinceEpoch) = queues.mapValues(_.map(queueName => {
+    val zeros = (0 until 1440).map(_ => 0).toList
+    (queueName, Success(OptimizerCrunchResult(zeros.toIndexedSeq, zeros)))
+  }).toMap)
+
+  def emptyState(crunchStartMillis: MillisSinceEpoch) = {
+    CrunchState(
+      crunchFirstMinuteMillis = crunchStartMillis,
+      flights = List(),
+      workloads = emptyWorkloads(crunchStartMillis),
+      crunchResult = emptyCrunch(crunchStartMillis)
+    )
+  }
 
   override def receiveCommand: Receive = {
     case SaveSnapshotSuccess =>
@@ -40,6 +62,17 @@ class CrunchStateActor extends PersistentActor with ActorLogging {
       state.foreach(s => {
         log.info(s"Saving CrunchState as CrunchStateSnapshotMessage")
         saveSnapshot(stateToSnapshotMessage(s))
+      })
+    case csd@CrunchStateDiff(crunchStartMillis, flights, queueLoads, crunches) =>
+      log.info(s"received CrunchStateDiff: $csd")
+      val currentState = state match {
+        case Some(s) => s
+        case None => emptyState(crunchStartMillis)
+      }
+      val newFlights = flights.map(f => {
+        currentState.flights.indexWhere(_.apiFlight.FlightID == f.apiFlight.FlightID) match {
+          case -1 => currentState.flights
+        }
       })
     case GetFlights =>
       state match {
