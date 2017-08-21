@@ -19,11 +19,11 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Set
           log.info("matched CrunchStateSnapshotMessage, storing it.")
           state = Option(snapshotMessageToState(sm))
         case somethingElse =>
-          log.info(s"Got $somethingElse when trying to restore Crunch State")
+          log.error(s"Got $somethingElse when trying to restore Crunch State")
       }
 
     case u =>
-      log.info(s"CrunchStateReadActor received $u")
+      log.warning(s"unexpected message: $u")
   }
 
   override def receiveCommand: Receive = {

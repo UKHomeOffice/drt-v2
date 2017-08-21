@@ -460,8 +460,6 @@ object StaffDeploymentCalculator {
         val terminalStaffAvailable = staffAvailable(terminalName)
         val queueCrunchResult = terminalQueueCrunchResult._2
 
-        println(s"Got crunch results for queues: ${queueCrunchResult.keys}")
-
         /*
          Fixme: This transpose loses the queue name and thus certainty of order
          */

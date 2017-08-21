@@ -167,7 +167,7 @@ trait ProdPassengerSplitProviders {
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
 
-  private implicit val timeout = Timeout(101 milliseconds)
+  private implicit val timeout = Timeout(250 milliseconds)
 
   def apiSplitsProv(flight: Arrival): Option[SplitRatios] =
     AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
@@ -250,7 +250,6 @@ class Application @Inject()(
   }
 
   trait CrunchFromCrunchState {
-    implicit val timeout: Timeout = Timeout(103 milliseconds)
     val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
 
     def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
