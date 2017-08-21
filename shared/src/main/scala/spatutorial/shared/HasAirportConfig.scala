@@ -2,9 +2,9 @@ package drt.shared
 
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
-import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.PaxTypes._
 import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 
 import scala.collection.immutable.Seq
 
@@ -21,6 +21,17 @@ sealed trait PaxType {
   def name = getClass.getSimpleName
 }
 
+object PaxType {
+  def apply(paxTypeString: String) = paxTypeString match {
+    case "EeaNonMachineReadable$" => EeaNonMachineReadable
+    case "Transit$" => Transit
+    case "VisaNational$" => VisaNational
+    case "EeaMachineReadable$" => EeaMachineReadable
+    case "NonVisaNational$" => NonVisaNational
+    case _ => UndefinedPaxType
+  }
+}
+
 object PaxTypes {
 
   case object EeaNonMachineReadable extends PaxType
@@ -33,13 +44,14 @@ object PaxTypes {
 
   case object NonVisaNational extends PaxType
 
+  case object UndefinedPaxType extends PaxType
+
 }
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
 object PaxTypeAndQueue {
   def apply(split: SplitsPaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
-
 }
 
 
@@ -149,12 +161,10 @@ object AirportConfigs {
     NonEeaDesk -> 45
   )
 
-  val AirportConfigOrigin = "AirportConfig"
-
   import PaxTypesAndQueues._
 
   val defaultPaxSplits = SplitRatios(
-    AirportConfigOrigin,
+    SplitSources.TerminalAverage,
     SplitRatio(eeaMachineReadableToDesk, 0.4875),
     SplitRatio(eeaMachineReadableToEGate, 0.1625),
     SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
@@ -221,7 +231,7 @@ object AirportConfigs {
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
     terminalNames = Seq("T1"),
     defaultPaxSplits = SplitRatios(
-      AirportConfigOrigin,
+      SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.7425),
       SplitRatio(eeaMachineReadableToEGate, 0.2475),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
@@ -310,7 +320,7 @@ object AirportConfigs {
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     terminalNames = Seq("T2", "T3", "T4", "T5"),
     defaultPaxSplits = SplitRatios(
-      AirportConfigOrigin,
+      SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.57),
       SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.43),
       SplitRatio(eeaNonMachineReadableToDesk, 0),

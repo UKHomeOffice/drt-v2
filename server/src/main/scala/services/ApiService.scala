@@ -2,12 +2,12 @@ package services
 
 import java.util.Date
 
-import actors.{EGateBankCrunchTransformations, GetLatestCrunch}
+import actors.{EGateBankCrunchTransformations, GetLatestCrunch, GetPortWorkload}
 import akka.actor.ActorRef
 import akka.event.DiagnosticLoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, GetTerminalCrunch, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
@@ -40,7 +40,6 @@ trait AirportToCountryLike {
         AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
       }
       t.getOrElse({
-        //        println(s"boo ${l}");
         AirportInfo("failed on", l, "boo", "ya")
       })
     }.map(ai => (ai.code, ai)).toMap
@@ -102,8 +101,6 @@ abstract class ApiService(val airportConfig: AirportConfig)
     with WorkloadCalculator
     with FlightsService
     with AirportToCountryLike
-    with ActorBackedCrunchService
-    with CrunchResultProvider
     with ShiftPersistence
     with FixedPointPersistence
     with StaffMovementsPersistence {
@@ -113,28 +110,12 @@ abstract class ApiService(val airportConfig: AirportConfig)
   val log = LoggerFactory.getLogger(this.getClass)
 
   def flightPassengerReporter: ActorRef
+  def crunchStateActor: AskableActorRef
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
   override def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
-    log.info("getting workloads")
-    val flightsFut: Future[List[Arrival]] = getFlights(0, 0)
-
-    flightsFut.recover {
-      case e: Throwable =>
-        log.info(s"Didn't receive flights: $e")
-        List()
-    }
-
-    val flightsForTerminalsWeCareAbout = flightsFut.map {
-      case Nil => List()
-      case first :: rest =>
-        val allFlights = first :: rest
-        val names: Set[TerminalName] = airportConfig.terminalNames.toSet
-        allFlights.filter(flight => names.contains(flight.Terminal))
-    }
-
-    val workloadsFuture = queueLoadsByTerminal[QueuePaxAndWorkLoads](flightsForTerminalsWeCareAbout, queueWorkAndPaxLoadCalculator)
+    val workloadsFuture = crunchStateActor ? GetPortWorkload
 
     workloadsFuture.recover {
       case e: Throwable =>
@@ -176,99 +157,4 @@ abstract class ApiService(val airportConfig: AirportConfig)
   }
 
   override def airportConfiguration() = airportConfig
-}
-
-trait LoggingCrunchCalculator extends CrunchCalculator with EGateBankCrunchTransformations {
-  def airportConfig: AirportConfig
-
-  def crunchPeriodHours: Int
-
-  def log: DiagnosticLoggingAdapter
-
-  def crunchQueueWorkloads(queueWorkloads: Seq[WL], terminalName: TerminalName, queueName: QueueName, crunchWindowStartTimeMillis: Long): CrunchResult = {
-    val tq: QueueName = terminalName + "/" + queueName
-
-    val minutesRangeInMillis: NumericRange[Long] = WorkloadsHelpers.minutesForPeriod(crunchWindowStartTimeMillis, crunchPeriodHours)
-    val fullWorkloads: List[Double] = WorkloadsHelpers.queueWorkloadsForPeriod(queueWorkloads, minutesRangeInMillis)
-
-
-    val queueSla = airportConfig.slaByQueue(queueName)
-
-    val (minDesks, maxDesks) = airportConfig.minMaxDesksByTerminalQueue(terminalName)(queueName)
-    val minDesksByMinute = minDesks.flatMap(d => List.fill[Int](60)(d))
-    val maxDesksByMinute = maxDesks.flatMap(d => List.fill[Int](60)(d))
-
-    val adjustedMinDesks = adjustDesksForEgates(queueName, minDesksByMinute)
-    val adjustedMaxDesks = adjustDesksForEgates(queueName, maxDesksByMinute)
-
-    log.info(s"Trying to crunch $terminalName / $queueName")
-
-    val triedCrunchResult = tryCrunch(fullWorkloads, queueSla, adjustedMinDesks, adjustedMaxDesks)
-
-    if (queueName == Queues.EGate)
-      triedCrunchResult.map(crunchResSuccess => {
-        groupEGatesIntoBanksWithSla(5, queueSla)(crunchResSuccess, fullWorkloads)
-      })
-    else
-      triedCrunchResult
-
-    triedCrunchResult match {
-      case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
-        log.info(s"$tq Successful crunch for starting at $crunchWindowStartTimeMillis")
-        CrunchResult(crunchWindowStartTimeMillis, 60000L, deskRecs, waitTimes)
-      case Failure(f) =>
-        log.warning(s"$tq Failed to crunch. ${f.getMessage}")
-        throw f
-    }
-  }
-
-  private def adjustDesksForEgates(queueName: QueueName, desksByMinute: List[Int]) = {
-    if (queueName == Queues.EGate) {
-      desksByMinute.map(_ * 5)
-    } else {
-      desksByMinute
-    }
-  }
-
-  def tryCrunch(workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
-    try {
-      crunch(workloads, sla, minDesks, maxDesks)
-    }
-  }
-}
-
-trait CrunchCalculator {
-  def crunch(workloads: List[Double], sla: Int, minDesks: List[Int], maxDesks: List[Int]): Try[OptimizerCrunchResult] = {
-    val optimizerConfig = OptimizerConfig(sla)
-    TryRenjin.crunch(workloads, minDesks, maxDesks, optimizerConfig)
-  }
-}
-
-
-trait CrunchResultProvider {
-  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]]
-}
-
-trait ActorBackedCrunchService {
-  self: CrunchResultProvider =>
-  private val log: Logger = LoggerFactory.getLogger(getClass)
-  implicit val timeout: akka.util.Timeout
-
-  val crunchActor: AskableActorRef
-
-  def tryTQCrunch(terminalName: TerminalName, queueName: QueueName): Future[Either[NoCrunchAvailable, CrunchResult]] = {
-    log.info("Starting crunch latest request")
-    val crunchFuture: Future[Any] = crunchActor.ask(GetLatestCrunch(terminalName, queueName))
-
-    crunchFuture.recover {
-      case e: Throwable =>
-        log.info("Crunch not ready in time ", e)
-        Left(NoCrunchAvailable())
-    }.map {
-      case cr: CrunchResult =>
-        Right(cr)
-      case _ =>
-        Left(NoCrunchAvailable())
-    }
-  }
 }

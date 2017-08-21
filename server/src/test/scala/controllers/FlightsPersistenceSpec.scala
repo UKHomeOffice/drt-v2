@@ -13,7 +13,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable.{BeforeAfter, SpecificationLike}
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SplitsProvider.SplitProvider
-import services.inputfeeds.CrunchTests
+import services.inputfeeds.TestCrunchConfig
 import services.{SDate, SplitsProvider}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,19 +26,12 @@ case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
 
 case object GetLastKnownPax
 
-class FlightsTestActor(crunchActorRef: ActorRef,
-                       dqApiSplitsActorRef: ActorRef,
+class FlightsTestActor(dqApiSplitsActorRef: ActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
-                       airportConfig: AirportConfig )
-  extends FlightsActor(crunchActorRef,
-    dqApiSplitsActorRef,
-    csvSplitsProvider,
-    bestPax,
-    pcpArrivalTimeForFlight,
-    airportConfig
-  ) {
+                       airportConfig: AirportConfig)
+  extends FlightsActor(Actor.noSender, dqApiSplitsActorRef, PublisherStub, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
   log.info(s"On construction we got $dqApiSplitsActorRef")
   override val snapshotInterval = 1
 
@@ -179,59 +172,56 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   implicit val timeout: Timeout = Timeout(0.5 seconds)
 
   def setFlightsStopAndSleep(flightsSet: Set[Flights]) = {
-    val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors(system)
+    val flightsActorRef1 = flightsAndCrunchActors(system)
 
     flightsSet.foreach(flightsActorRef1 ! _)
 
     Await.ready(flightsActorRef1 ? GetFlights, 1 seconds)
     system.stop(flightsActorRef1)
-    system.stop(crunchActorRef1)
     Thread.sleep(100L)
   }
 
   def getFlightsAsSet() = {
-    val (flightsActorRef2, crunchActorRef2) = flightsAndCrunchActors(system)
+    val flightsActorRef2 = flightsAndCrunchActors(system)
     val futureResult = flightsActorRef2 ? GetFlights
 
     val result = Await.result(futureResult, 1 seconds).asInstanceOf[Flights] match {
       case Flights(flights) => flights.toSet
     }
-    stopAndShutdown(flightsActorRef2, crunchActorRef2)
+    stopAndShutdown(flightsActorRef2)
     result
   }
 
   def setFlightsAndStopActors(arrivals: List[Arrival]) = {
-    val (flightsActorRef1, crunchActorRef1) = flightsAndCrunchActors(system)
+    val flightsActorRef1 = flightsAndCrunchActors(system)
 
     flightsActorRef1 ! Flights(arrivals)
 
-    syncStopAndSleep(flightsActorRef1, crunchActorRef1)
+    syncStopAndSleep(flightsActorRef1)
   }
 
-  def stopAndShutdown(flightsActorRef2: ActorRef, crunchActorRef2: ActorRef) = {
+  def stopAndShutdown(flightsActorRef2: ActorRef) = {
     system.stop(flightsActorRef2)
-    system.stop(crunchActorRef2)
     shutDownActorSystem
   }
 
-  def syncStopAndSleep(flightsActorRef1: ActorRef, crunchActorRef1: ActorRef) = {
+  def syncStopAndSleep(flightsActorRef1: ActorRef) = {
     Await.ready(flightsActorRef1 ? GetFlights, 1 seconds)
     system.stop(flightsActorRef1)
-    system.stop(crunchActorRef1)
     Thread.sleep(100L)
   }
 
   def flightsAndCrunchActors(system: ActorSystem) = {
-    val crunchActorRef = crunchActor(system)
-    val flightsActorRef = flightsActor(system, crunchActorRef)
-    (flightsActorRef, crunchActorRef)
+    val flightsActorRef = flightsActor(system)
+    (flightsActorRef)
   }
 
-  def flightsActor(system: ActorSystem, crunchActorRef: ActorRef = crunchActor(system), airportCode: String = "EDI") = {
+  def flightsActor(system: ActorSystem, airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsActor],
-      crunchActorRef,
+      Actor.noSender,
       TestProbe()(system).ref,
+      PublisherStub,
       testSplitsProvider,
       BestPax(airportCode),
       (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -239,19 +229,11 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     ), "FlightsActor")
   }
 
-  def crunchActor(system: ActorSystem) = {
-    val airportConfig: AirportConfig = CrunchTests.airportConfig
-    val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-    val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
-    system.actorOf(props, "crunchActor")
-  }
-
   def flightsActorWithSnapshotIntervalOf1(system: ActorSystem, airportCode: String = "EDI") = {
     implicit val testSystem = system
     system.actorOf(Props(
       classOf[FlightsTestActor],
-      crunchActor(system),
-      TestProbe().ref,
+      Actor.noSender,
       testSplitsProvider,
       BestPax.bestPax,
       (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -304,6 +286,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     testKit2.shutDownActorSystem
     result
   }
+
   def legacyApiFlight(iata: String,
                       airportId: String = "EDI",
                       actPax: Int,

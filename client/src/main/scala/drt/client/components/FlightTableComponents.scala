@@ -209,5 +209,5 @@ object FlightTableComponents {
     actClass
   }
 
-  val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeshares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
+  val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
 }

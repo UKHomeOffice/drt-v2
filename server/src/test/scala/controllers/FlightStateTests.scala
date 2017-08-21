@@ -6,7 +6,7 @@ import services.SDate
 import utest._
 
 object FlightStateTests extends TestSuite {
-  import services.inputfeeds.CrunchTests.{withContext, TestContext}
+  import services.inputfeeds.TestCrunchConfig.{withContext, TestContext}
 
   def tests = TestSuite {
     "given a flight arriving after the start threshold, " +

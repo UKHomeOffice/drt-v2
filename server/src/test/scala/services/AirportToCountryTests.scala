@@ -3,18 +3,7 @@ package services
 import drt.shared.AirportInfo
 import utest._
 
-import drt.shared._
-import utest._
-
-import akka.actor.ActorSystem
-import scala.concurrent.{Future, Await}
-import scala.util.{Success, Failure}
-import scala.util.Try
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.testkit.{TestKit, TestActors, DefaultTimeout, ImplicitSender }
-import controllers.SystemActors
-import controllers.Core
 
 object AirportToCountryTests extends TestSuite {
   def tests = TestSuite {

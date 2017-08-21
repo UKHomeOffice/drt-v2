@@ -16,7 +16,7 @@ import controllers.FlightState
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.slf4j.LoggerFactory
-import services.inputfeeds.CrunchTests.TestContext
+import services.inputfeeds.TestCrunchConfig.TestContext
 import spray.http.DateTime
 
 import scala.collection.generic.SeqFactory

@@ -1,6 +1,7 @@
 package controllers
 
 import actors.{FlightsActor, GetFlights}
+import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.testkit.TestProbe
@@ -10,9 +11,10 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import services.Crunch.{CrunchFlights, PublisherLike}
 //import services.WorkloadCalculatorTests.apiFlight
 import ArrivalGenerator.apiFlight
-import services.inputfeeds.CrunchTests
+import services.inputfeeds.TestCrunchConfig
 import services.{SDate, SplitsProvider}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,7 +22,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Success
 
-
+object PublisherStub extends PublisherLike {
+  override def publish(crunchFlights: CrunchFlights): NotUsed = NotUsed
+}
 
 class FlightsActorSpec extends Specification {
   sequential
@@ -32,21 +36,14 @@ class FlightsActorSpec extends Specification {
   private def flightsActor(system: ActorSystem, airportCode: String = "EDI") = {
     system.actorOf(Props(
       classOf[FlightsActor],
-      crunchActor(system),
+      Actor.noSender,
       TestProbe()(system).ref,
+      PublisherStub,
       testSplitsProvider,
       BestPax(airportCode),
       testPcpArrival,
       AirportConfigs.edi
     ), "FlightsActor")
-  }
-
-  private def crunchActor(system: ActorSystem) = {
-    val airportConfig: AirportConfig = CrunchTests.airportConfig
-    val timeProvider = () => new DateTime(2016, 1, 1, 0, 0)
-    val props = Props(classOf[ProdCrunchActor], 1, airportConfig, SplitsProvider.defaultProvider(airportConfig) :: Nil, timeProvider, BestPax.bestPax)
-    val crunchActor = system.actorOf(props, "CrunchActor")
-    crunchActor
   }
 
   "FlightsActor " should {

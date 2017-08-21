@@ -10,12 +10,13 @@ import controllers.FlightState
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.{Arrival, _}
-import org.joda.time.{DateTimeZone, LocalDate}
+import org.joda.time.{DateTime, DateTimeZone, LocalDate}
 import org.joda.time.format.DateTimeFormat
 import passengersplits.core.PassengerInfoRouterActor.{FlushOldVoyageManifests, ReportVoyagePaxSplit}
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
+import services.Crunch.{CrunchFlights, PublisherLike}
 import services.SplitsProvider.SplitProvider
-import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate}
+import services.{CSVPassengerSplitsProvider, Crunch, FastTrackPercentages, SDate}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -27,8 +28,9 @@ case object GetFlights
 
 case object GetFlightsWithSplits
 
-class FlightsActor(crunchActorRef: ActorRef,
+class FlightsActor(crunchStateActor: ActorRef,
                    dqApiSplitsActorRef: ActorRef,
+                   crunchPublisher: PublisherLike,
                    csvSplitsProvider: SplitProvider,
                    _bestPax: (Arrival) => Int,
                    pcpArrivalTimeForFlight: (Arrival) => MilliDate,
@@ -90,7 +92,16 @@ class FlightsActor(crunchActorRef: ActorRef,
 
     case RecoveryCompleted =>
       log.info("Flights recovery completed")
+
     case message => log.error(s"unhandled message - $message")
+  }
+
+  private def lastMidnight = {
+    LocalDate.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd"))
+  }
+
+  private def lastMidnightMillis = {
+    SDate(s"${lastMidnight}T00:00Z").millisSinceEpoch
   }
 
   val receiveCommand: Receive = LoggingReceive {
@@ -100,24 +111,14 @@ class FlightsActor(crunchActorRef: ActorRef,
 
     case GetFlightsWithSplits =>
       log.info(s"Being asked for flights with splits and I know about ${flightState.size}")
-
       val startTime = org.joda.time.DateTime.now()
       val replyTo = sender()
-      val apiFlights = flightState.values.toList
-      val allSplitRequests: Seq[Future[ApiFlightWithSplits]] = apiFlights.map(addSplitsToArrival)
-
-      val futureOfSeq: Future[Seq[ApiFlightWithSplits]] = Future.sequence(allSplitRequests)
-      futureOfSeq.onFailure {
-        case t =>
-          log.error(t, s"Failed retrieving all splits for ${allSplitRequests.length} flights")
-        //todo should we return a failure, or a partial list, here
-      }
-
-      futureOfSeq.onSuccess {
+      val flights = flightsWithSplits
+      flights.onSuccess {
         case s =>
           val replyingAt = org.joda.time.DateTime.now()
           val delta = replyingAt.getMillis - startTime.getMillis
-          log.info(s"Replying to GetFlightsWithSplits took ${delta}ms")
+          log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
           replyTo ! FlightsWithSplits(s.toList)
       }
 
@@ -130,7 +131,7 @@ class FlightsActor(crunchActorRef: ActorRef,
           flightMessages = flightsWithLastKnownPax.map(flight => apiFlightToFlightMessage(flight)),
           createdAt = Option(SDate.now().millisSinceEpoch)
         ))
-        requestCrunch(flightsWithLastKnownPax)
+        crunchFlightsWithSplits
       }
 
     case Flights(updatedFlights) if updatedFlights.isEmpty =>
@@ -144,6 +145,40 @@ class FlightsActor(crunchActorRef: ActorRef,
 
     case message => log.error("Actor saw unexpected message: " + message.toString)
 
+  }
+
+  private def crunchFlightsWithSplits = {
+    val startTime = org.joda.time.DateTime.now()
+    val flights = flightsWithSplits
+    flights.onSuccess {
+      case s =>
+        val replyingAt = org.joda.time.DateTime.now()
+        val delta = replyingAt.getMillis - startTime.getMillis
+        log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
+
+        val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
+        val crunchStartMillis = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
+        val crunchEndMillis = crunchStartMillis + (1439 * 60000)
+
+        log.info(s"crunchStartMillis: $crunchStartMillis")
+
+        crunchPublisher.publish(CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis))
+    }
+  }
+
+
+  def flightsWithSplits: Future[Seq[ApiFlightWithSplits]] = {
+    val apiFlights = flightState.values.toList
+    val allSplitRequests: Seq[Future[ApiFlightWithSplits]] = apiFlights.map(addSplitsToArrival)
+
+    val futureOfSeq: Future[Seq[ApiFlightWithSplits]] = Future.sequence(allSplitRequests)
+    futureOfSeq.onFailure {
+      case t =>
+        log.error(t, s"Failed retrieving all splits for ${allSplitRequests.length} flights")
+      //todo should we return a failure, or a partial list, here
+    }
+
+    futureOfSeq
   }
 
   def consumeFlights(flights: List[Arrival], dropFlightsBefore: SDateLike): List[Arrival] = {
@@ -234,11 +269,6 @@ class FlightsActor(crunchActorRef: ActorRef,
   def splitRatiosToApiSplits(csvSplit: SplitRatiosNs.SplitRatios) = {
     val toList: List[ApiPaxTypeAndQueueCount] = csvSplit.splits.map(sr => ApiPaxTypeAndQueueCount(sr.paxType.passengerType, sr.paxType.queueType, sr.ratio * 100))
     ApiSplits(toList, csvSplit.origin, splitStyle = Percentage)
-  }
-
-  private def requestCrunch(newFlights: List[Arrival]) = {
-    if (newFlights.nonEmpty)
-      crunchActorRef ! PerformCrunchOnFlights(newFlights)
   }
 
   def ApiFlightToArrival(f: ApiFlight): Arrival = {

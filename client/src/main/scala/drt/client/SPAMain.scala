@@ -84,6 +84,7 @@ object TableViewUtils {
 
   def queueDeploymentsRowsFromNos(queueName: QueueName, queueNos: Seq[List[Long]]): List[((Long, String), QueueDeploymentsRowEntry)] = {
     val toTranspose = queueNos.toList
+    val qnl = queueNos.map(_.length)
     toTranspose.transpose.zipWithIndex.map {
       case ((timestamp :: pax :: _ :: crunchDeskRec :: userDeskRec :: waitTimeCrunch :: waitTimeUser :: Nil), rowIndex) =>
         (timestamp, queueName) -> QueueDeploymentsRowEntry(
@@ -213,7 +214,7 @@ object SPAMain extends js.JSApp {
   def requestInitialActions() = {
     val initActions = Seq(
       GetAirportConfig(),
-      RequestFlights(0, 0),
+      RequestFlights(),
       GetShifts(),
       GetFixedPoints(),
       GetStaffMovements(),

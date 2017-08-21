@@ -32,7 +32,6 @@ object SDate {
 
     def millisSinceEpoch: Long = dateTime.getMillis
 
-
   }
 
   object implicits {
@@ -52,7 +51,6 @@ object SDate {
     fmt.print(dt)
   }
 
-
   def parseString(dateTime: String) = {
     MilliDate(apply(dateTime, DateTimeZone.UTC).millisSinceEpoch)
   }
@@ -71,6 +69,10 @@ object SDate {
 
   def now() = {
     JodaSDate(new DateTime(DateTimeZone.UTC))
+  }
+
+  def now(dtz: DateTimeZone) = {
+    JodaSDate(new DateTime(dtz))
   }
 
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
