@@ -30,7 +30,7 @@ case object GetFlightsWithSplits
 
 class FlightsActor(crunchStateActor: ActorRef,
                    dqApiSplitsActorRef: ActorRef,
-                   crunchPublisher: PublisherLike,
+                   flightsSubscriber: ActorRef,
                    csvSplitsProvider: SplitProvider,
                    _bestPax: (Arrival) => Int,
                    pcpArrivalTimeForFlight: (Arrival) => MilliDate,
@@ -161,8 +161,9 @@ class FlightsActor(crunchStateActor: ActorRef,
         val crunchEndMillis = crunchStartMillis + (1439 * 60000)
 
         log.info(s"crunchStartMillis: $crunchStartMillis")
+        log.info(s"flightsSubscriber: $flightsSubscriber")
 
-        crunchPublisher.publish(CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis))
+        flightsSubscriber ! CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis)
     }
   }
 

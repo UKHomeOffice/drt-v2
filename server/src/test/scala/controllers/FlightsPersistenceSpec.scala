@@ -1,5 +1,7 @@
 package controllers
 
+import java.util.UUID
+
 import actors.{FlightsActor, GetFlights}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
@@ -8,14 +10,17 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator.apiFlight
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
+import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.{AirportConfig, ApiFlight, BestPax, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable.{BeforeAfter, SpecificationLike}
+import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SplitsProvider.SplitProvider
 import services.inputfeeds.TestCrunchConfig
 import services.{SDate, SplitsProvider}
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -28,10 +33,11 @@ case object GetLastKnownPax
 
 class FlightsTestActor(dqApiSplitsActorRef: ActorRef,
                        csvSplitsProvider: SplitProvider,
+                       subscriber: ActorRef,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
                        airportConfig: AirportConfig)
-  extends FlightsActor(Actor.noSender, dqApiSplitsActorRef, PublisherStub, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
+  extends FlightsActor(Actor.noSender, dqApiSplitsActorRef, subscriber, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
   log.info(s"On construction we got $dqApiSplitsActorRef")
   override val snapshotInterval = 1
 
@@ -43,6 +49,13 @@ class FlightsTestActor(dqApiSplitsActorRef: ActorRef,
       saveSnapshot(fssm)
     case GetLastKnownPax =>
       sender() ! lastKnownPaxState
+  }
+}
+
+class SplitsTestActor extends Actor {
+  override def receive: Receive = {
+    case ReportVoyagePaxSplit(_, _, _, _) =>
+      sender() ! VoyagePaxSplits("LHR", "BA", "1234", 25, MilliDate(60000L), List(SplitsPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 25)))
   }
 }
 
@@ -220,8 +233,8 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
     system.actorOf(Props(
       classOf[FlightsActor],
       Actor.noSender,
+      system.actorOf(Props(classOf[SplitsTestActor]), UUID.randomUUID().toString),
       TestProbe()(system).ref,
-      PublisherStub,
       testSplitsProvider,
       BestPax(airportCode),
       (a: Arrival) => MilliDate(SDate(a.SchDT, DateTimeZone.UTC).millisSinceEpoch),
@@ -235,6 +248,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
       classOf[FlightsTestActor],
       Actor.noSender,
       testSplitsProvider,
+      TestProbe()(system).ref,
       BestPax.bestPax,
       (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
       AirportConfigs.lhr

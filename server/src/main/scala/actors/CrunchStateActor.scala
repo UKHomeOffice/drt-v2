@@ -2,38 +2,38 @@ package actors
 
 import akka.actor._
 import akka.persistence.{PersistentActor, RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
-import controllers.{FlightState, GetTerminalCrunch}
-import drt.shared
+import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi._
 import drt.shared.{Arrival, _}
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.CrunchState._
-import services.Crunch.{CrunchState, CrunchStateDiff}
+import services.Crunch._
 import services._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
-import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
-import spray.caching.{Cache, LruCache}
 
-import scala.collection.immutable
-import scala.collection.immutable.{NumericRange, Seq}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.collection.immutable._
+//import scala.collection.immutable.Seq
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 
-class CrunchStateActor(queues: Map[TerminalName, Set[QueueName]]) extends PersistentActor with ActorLogging {
+class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
   var state: Option[CrunchState] = None
   val snapshotInterval = 1
 
-  def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = queues.mapValues(_.map(queueName => {
-    val loads = (0 until 1440).map(minute => {
-      (firstMinuteMillis + (minute * 60000), (0d, 0d))
-    }).toList
-    (queueName, loads)
-  }).toMap)
+  def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = {
+    queues.map {
+      case (tn, q) =>
+        val tl = q.map(queueName => {
+          val ql = (0 until 1440).map(minute => {
+            (firstMinuteMillis + (minute * oneMinute), (0d, 0d))
+          }).toList
+
+          (queueName, ql)
+        }).toMap
+
+        (tn, tl)
+    }
+  }
 
   def emptyCrunch(crunchStartMillis: MillisSinceEpoch) = queues.mapValues(_.map(queueName => {
     val zeros = (0 until 1440).map(_ => 0).toList
@@ -69,11 +69,13 @@ class CrunchStateActor(queues: Map[TerminalName, Set[QueueName]]) extends Persis
         case Some(s) => s
         case None => emptyState(crunchStartMillis)
       }
-      val newFlights = flights.map(f => {
-        currentState.flights.indexWhere(_.apiFlight.FlightID == f.apiFlight.FlightID) match {
-          case -1 => currentState.flights
-        }
-      })
+
+      state = Option(currentState.copy(
+        flights = updatedFlightState(flights, currentState),
+        workloads = updatedLoadState(queueLoads, currentState),
+        crunchResult = updatedCrunchState(crunchStartMillis, crunches, currentState)
+      ))
+
     case GetFlights =>
       state match {
         case Some(CrunchState(flights, _, _, _)) =>
@@ -103,6 +105,82 @@ class CrunchStateActor(queues: Map[TerminalName, Set[QueueName]]) extends Persis
         case None => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
       }
       sender() ! terminalCrunchResults
+  }
+
+  private def updatedCrunchState(crunchStartMillis: Long, crunches: Set[CrunchDiff], currentState: CrunchState) = {
+    val crunchByTQM = currentState.crunchResult.flatMap {
+      case (tn, tc) =>
+        tc.flatMap {
+          case (qn, qc) =>
+            qc match {
+              case Success(c) =>
+                c.recommendedDesks.indices.map(m => ((tn, qn, crunchStartMillis + (m * oneMinute)), (c.recommendedDesks(m), c.waitTimes(m))))
+            }
+        }
+    }
+    val newCrunch = crunches.foldLeft(crunchByTQM) {
+      case (crunchesSoFar, CrunchDiff(tn, qn, m, dr, wt)) =>
+        val currentCr = crunchesSoFar.getOrElse((tn, qn, m), (0, 0))
+        crunchesSoFar.updated((tn, qn, m), (currentCr._1 + dr, currentCr._2 + wt))
+    }
+    val updatedCrunch: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = newCrunch
+      .groupBy { case ((tn, qn, m), l) => tn }
+      .map {
+        case ((tn, tl)) =>
+          val terminalLoads = tl.groupBy {
+            case ((_, qn, _), _) => qn
+          }.map {
+            case (qn, ql) =>
+              val deskRecs = ql.map {
+                case ((tn, qn, m), (dr, wt)) => dr
+              }.toIndexedSeq
+              val waitTimes = ql.map {
+                case ((tn, qn, m), (dr, wt)) => wt
+              }.toList
+              (qn, Success(OptimizerCrunchResult(deskRecs, waitTimes)))
+          }
+          (tn, terminalLoads)
+      }
+    updatedCrunch
+  }
+
+  private def updatedLoadState(queueLoads: Set[QueueLoadDiff], currentState: CrunchState) = {
+    val loadByTQM = currentState.workloads.flatMap {
+      case (tn, tlw) => tlw.flatMap {
+        case (qn, qlw) => qlw.map {
+          case (millis, (pl, wl)) => ((tn, qn, millis), (pl, wl))
+        }
+      }
+    }
+    val newLoads = queueLoads.foldLeft(loadByTQM) {
+      case (loadsSoFar, QueueLoadDiff(tn, qn, m, pl, wl)) =>
+        val currentLoads = loadsSoFar.getOrElse((tn, qn, m), (0d, 0d))
+        loadsSoFar.updated((tn, qn, m), (currentLoads._1 + pl, currentLoads._2 + wl))
+    }
+    val updatedLoads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = newLoads
+      .groupBy { case ((tn, qn, m), l) => tn }
+      .map {
+        case ((tn, tl)) =>
+          val terminalLoads = tl.groupBy {
+            case ((_, qn, _), _) => qn
+          }.map {
+            case (qn, ql) =>
+              val queueLoads = ql.map {
+                case ((tn, qn, m), (pl, wl)) => (m, (pl, wl))
+              }.toList
+              (qn, queueLoads)
+          }
+          (tn, terminalLoads)
+      }
+    updatedLoads
+  }
+
+  private def updatedFlightState(flights: Set[ApiFlightWithSplits], currentState: CrunchState) = {
+    val newFlights = currentState.flights.map(f => (f.apiFlight.FlightID, f)).toMap
+    val updatedFlights = flights.foldLeft(newFlights) {
+      case (flightsSoFar, newFlight) => flightsSoFar.updated(newFlight.apiFlight.FlightID, newFlight)
+    }.values.toList
+    updatedFlights
   }
 
   def snapshotMessageToState(snapshot: CrunchStateSnapshotMessage) = {
@@ -189,7 +267,9 @@ class CrunchStateActor(queues: Map[TerminalName, Set[QueueName]]) extends Persis
       log.info("Finished restoring crunch state")
   }
 
-  override def persistenceId: String = "crunch-state"
+  override def persistenceId: String
+
+  = "crunch-state"
 }
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
@@ -212,7 +292,7 @@ trait EGateBankCrunchTransformations {
     )
   }
 
-  protected[actors] def runSimulation(workloads: Seq[Double], recommendedDesks: immutable.IndexedSeq[Int], optimizerConfig: OptimizerConfig) = {
+  protected[actors] def runSimulation(workloads: Seq[Double], recommendedDesks: IndexedSeq[Int], optimizerConfig: OptimizerConfig) = {
     TryRenjin.runSimulationOfWork(workloads, recommendedDesks, optimizerConfig)
   }
 

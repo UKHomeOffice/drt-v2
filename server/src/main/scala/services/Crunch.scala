@@ -40,11 +40,20 @@ object Crunch {
 
   case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch)
 
+  val oneMinute = 60000
+
   trait PublisherLike {
     def publish(crunchFlights: CrunchFlights): NotUsed
   }
 
   case class Publisher(subscriber: ActorRef, crunchFlow: CrunchStateFlow)(implicit val mat: ActorMaterializer) extends PublisherLike {
+
+    def something = {
+      Source.actorRef(1, OverflowStrategy.dropHead)
+        .via(crunchFlow)
+        .to(Sink.actorRef(subscriber, "completed"))
+        .run()
+    }
 
     def publish(crunchFlights: CrunchFlights) =
       Source(List(crunchFlights))
@@ -58,83 +67,17 @@ object Crunch {
                         procTimes: Map[PaxTypeAndQueue, Double],
                         groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
                         validPortTerminals: Set[String])
-    extends GraphStage[FlowShape[CrunchFlights, CrunchState]] {
-
-    val in = Inlet[CrunchFlights]("CrunchState.in")
-    val out = Outlet[CrunchState]("CrunchState.out")
-    override val shape = FlowShape.of(in, out)
-
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-      var flightLoads: Map[Int, Set[FlightSplitMinute]] = Map()
-      var crunchMinutes: Set[CrunchMinute] = Set()
-      var crunchStateOption: Option[CrunchState] = None
-      var outAwaiting = false
-      var crunchPending = false
-
-      setHandlers(in, out, new InHandler with OutHandler {
-        override def onPull(): Unit = {
-          crunchStateOption match {
-            case Some(crunchState) =>
-              outAwaiting = false
-              push(out, crunchState)
-            case None =>
-              outAwaiting = true
-              if (!hasBeenPulled(in)) pull(in)
-          }
-        }
-
-        override def onPush(): Unit = {
-          if (!crunchPending) {
-            crunchPending = true
-            crunchStateOption = Option(crunch)
-            crunchPending = false
-          }
-
-          crunchStateOption.foreach(crunchState =>
-            if (isAvailable(out)) {
-              outAwaiting = false
-              push(out, crunchState)
-            })
-        }
-
-        private def crunch = {
-          val crunchFlights: CrunchFlights = grab(in)
-          val flightsToValidTerminals = crunchFlights.flights.filter {
-            case ApiFlightWithSplits(flight, _) => validPortTerminals.contains(flight.Terminal)
-          }
-          val uniqueFlights = groupFlightsByCodeShares(flightsToValidTerminals).map(_._1)
-          val flightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
-
-          val qlm = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
-          val wlByQueue = indexQueueWorkloadsByMinute(qlm)
-          val fullWlByQueue = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
-
-          val eGateBankSize = 5
-          val crunchResults = queueWorkloadsToCrunchResults(crunchFlights.crunchStart, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
-
-          val crunchState = CrunchState(crunchFlights.flights, fullWlByQueue, crunchResults, crunchFlights.crunchStart)
-          crunchStateOption = Option(crunchState)
-          crunchState
-        }
-      })
-    }
-  }
-  
-  class CrunchStateDiffFlow(slas: Map[QueueName, Int],
-                            minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                            procTimes: Map[PaxTypeAndQueue, Double],
-                            groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                            validPortTerminals: Set[String])
     extends GraphStage[FlowShape[CrunchFlights, CrunchStateDiff]] {
 
-    val in = Inlet[CrunchFlights]("CrunchStateDiff.in")
-    val out = Outlet[CrunchStateDiff]("CrunchStateDiff.out")
+    val in = Inlet[CrunchFlights]("CrunchState.in")
+    val out = Outlet[CrunchStateDiff]("CrunchState.out")
     override val shape = FlowShape.of(in, out)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
       var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
       var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
       var crunchMinutes: Set[CrunchMinute] = Set()
+
       var crunchStateDiffOption: Option[CrunchStateDiff] = None
       var outAwaiting = false
       var crunchPending = false
@@ -142,9 +85,10 @@ object Crunch {
       setHandlers(in, out, new InHandler with OutHandler {
         override def onPull(): Unit = {
           crunchStateDiffOption match {
-            case Some(crunchStateDiff) =>
+            case Some(crunchState) =>
               outAwaiting = false
-              push(out, crunchStateDiff)
+              push(out, crunchState)
+              crunchStateDiffOption = None
             case None =>
               outAwaiting = true
               if (!hasBeenPulled(in)) pull(in)
@@ -162,6 +106,7 @@ object Crunch {
             if (isAvailable(out)) {
               outAwaiting = false
               push(out, crunchState)
+              crunchStateDiffOption = None
             })
         }
 
@@ -172,57 +117,205 @@ object Crunch {
           }
           val uniqueFlights = groupFlightsByCodeShares(flightsToValidTerminals).map(_._1)
           val newFlightsById = crunchFlights.flights.map(f => (f.apiFlight.FlightID, f)).toMap
-          val flightsDiff = newFlightsById.filterNot {
-            case (id, nf) => flightsByFlightId.get(id) match {
-              case Some(oldFlight) => nf == oldFlight
-              case None => false
-            }
-          }.values.toSet
           val newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
 
-          val allKnownFlightIds = newFlightSplitMinutesByFlight.keys.toSet.union(flightSplitMinutesByFlight.keys.toSet)
-          val flightSplitDiffs: Set[FlightSplitDiff] = allKnownFlightIds.flatMap(id => {
-            flightLoadDiff(flightSplitMinutesByFlight.getOrElse(id, Set()), newFlightSplitMinutesByFlight.getOrElse(id, Set()))
-          })
-          val queueDiffs: Set[QueueLoadDiff] = flightSplitDiffs
-            .groupBy(sd => (sd.terminalName, sd.queueName, sd.minute))
-            .map {
-              case ((tn, qn, m), fsd) => QueueLoadDiff(tn, qn, m, fsd.map(_.paxLoad).sum, fsd.map(_.workLoad).sum)
-            }.toSet
-          val flightDiffs: Set[ApiFlightWithSplits] = flightSplitDiffs.map(_.flightId).map(newFlightsById.get).collect {
-            case Some(flight) => flight
+          val flightSplitDiffs: Set[FlightSplitDiff] = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
+
+          val crunchStart = crunchFlights.crunchStart
+
+          val crunchStateDiff = flightSplitDiffs match {
+            case fsd if fsd.isEmpty => emptyCrunchStateDiff(crunchStart)
+            case fsd => crunchStateDiffFromFlightSplitMinutes(crunchStart, crunchFlights.crunchEnd, newFlightsById, newFlightSplitMinutesByFlight, fsd)
           }
-
-          val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(newFlightSplitMinutesByFlight)
-          val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
-
-          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
-          val eGateBankSize = 5
-          val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchFlights.crunchStart, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
-          val newCrunchMinutes: Set[CrunchMinute] = crunchResults.flatMap {
-            case (tn, tcr) => tcr.flatMap {
-              case (qn, Success(ocr)) =>
-                ocr.recommendedDesks.indices.map(m => CrunchMinute(tn, qn, crunchFlights.crunchStart + m, ocr.recommendedDesks(m), ocr.waitTimes(m)))
-            }
-          }.toSet
-          val crunchDiffs = crunchMinuteDiff(crunchMinutes, newCrunchMinutes)
-
-          println(s"diff, flights: $flightDiffs")
-          println(s"diff, queue load: $queueDiffs")
-          println(s"diff, crunch: $crunchDiffs")
-          val crunchStateDiff = CrunchStateDiff(crunchFlights.crunchStart, flightDiffs, queueDiffs, crunchDiffs)
 
           flightsByFlightId = newFlightsById
           flightSplitMinutesByFlight = newFlightSplitMinutesByFlight
-          crunchMinutes = newCrunchMinutes
-          crunchStateDiffOption = Option(crunchStateDiff)
+
+          println(s"flightSplitDiffs: $flightSplitDiffs")
+          println(s"diff, flights: ${crunchStateDiff.flightDiffs}")
+          println(s"diff, queue load: ${crunchStateDiff.queueDiffs}")
+          println(s"diff, crunch: ${crunchStateDiff.crunchDiffs}")
+
           crunchStateDiff
         }
       })
+
+      private def crunchStateDiffFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
+                                                        crunchEnd: MillisSinceEpoch,
+                                                        flightsById: Map[Int, ApiFlightWithSplits],
+                                                        fsmsByFlightId: Map[Int, Set[FlightSplitMinute]],
+                                                        flightSplitDiffs: Set[FlightSplitDiff]) = {
+        val flightDiffs: Set[ApiFlightWithSplits] = splitDiffsToFlightDiffs(flightsById, flightSplitDiffs)
+        flightDiffs match {
+          case fd if fd.isEmpty => CrunchStateDiff(crunchStart, fd, Set(), Set())
+          case fd => crunchStateDiffFromFlightSplitDiffs(crunchStart, crunchEnd, fsmsByFlightId, flightSplitDiffs, fd)
+        }
+      }
+
+      private def crunchStateDiffFromFlightSplitDiffs(crunchStart: MillisSinceEpoch,
+                                                      crunchEnd: MillisSinceEpoch,
+                                                      fsmsByFlightId: Map[Int, Set[FlightSplitMinute]],
+                                                      flightSplitDiffs: Set[FlightSplitDiff], fd: Set[ApiFlightWithSplits]) = {
+        val queueDiffs: Set[QueueLoadDiff] = splitDiffsToQueueDiffs(flightSplitDiffs)
+        queueDiffs match {
+          case qd if qd.isEmpty => CrunchStateDiff(crunchStart, fd, qd, Set())
+          case qd => crunchStateDiffFromFlightSplitMinutesByFlightId(crunchStart, crunchEnd, fsmsByFlightId, fd, qd)
+        }
+      }
+
+      private def crunchStateDiffFromFlightSplitMinutesByFlightId(crunchStart: MillisSinceEpoch,
+                                                                  crunchEnd: MillisSinceEpoch,
+                                                                  fsmsByFlightId: Map[Int, Set[FlightSplitMinute]],
+                                                                  fd: Set[ApiFlightWithSplits],
+                                                                  qd: Set[QueueLoadDiff]) = {
+        val crunchResults = crunchFlightSplitMinutes(crunchStart, crunchEnd, fsmsByFlightId)
+        val newCrunchMinutes: Set[CrunchMinute] = crunchMinutesFromCrunch(crunchResults, crunchStart)
+        val crunchDiffs = crunchMinuteDiff(crunchMinutes, newCrunchMinutes)
+        crunchMinutes = newCrunchMinutes
+
+        CrunchStateDiff(crunchStart, fd, qd, crunchDiffs)
+      }
+    }
+
+    private def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]) = {
+      val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
+      val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
+
+      val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, crunchEnd)(wlByQueue)
+      val eGateBankSize = 5
+
+      val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchStart, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
+      crunchResults
     }
   }
 
-  val oneMinute = 60000
+  //  class CrunchStateDiffFlow(slas: Map[QueueName, Int],
+  //                            minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+  //                            procTimes: Map[PaxTypeAndQueue, Double],
+  //                            groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
+  //                            validPortTerminals: Set[String])
+  //    extends GraphStage[FlowShape[CrunchFlights, CrunchStateDiff]] {
+  //
+  //    val in = Inlet[CrunchFlights]("CrunchStateDiff.in")
+  //    val out = Outlet[CrunchStateDiff]("CrunchStateDiff.out")
+  //    override val shape = FlowShape.of(in, out)
+  //
+  //    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+  //      var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
+  //      var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
+  //      var crunchMinutes: Set[CrunchMinute] = Set()
+  //      var crunchStateDiffOption: Option[CrunchStateDiff] = None
+  //      var outAwaiting = false
+  //      var crunchPending = false
+  //
+  //      setHandlers(in, out, new InHandler with OutHandler {
+  //        override def onPull(): Unit = {
+  //          crunchStateDiffOption match {
+  //            case Some(crunchStateDiff) =>
+  //              outAwaiting = false
+  //              push(out, crunchStateDiff)
+  //            case None =>
+  //              outAwaiting = true
+  //              if (!hasBeenPulled(in)) pull(in)
+  //          }
+  //        }
+  //
+  //        override def onPush(): Unit = {
+  //          if (!crunchPending) {
+  //            crunchPending = true
+  //            crunchStateDiffOption = Option(crunch)
+  //            crunchPending = false
+  //          }
+  //
+  //          crunchStateDiffOption.foreach(crunchState =>
+  //            if (isAvailable(out)) {
+  //              outAwaiting = false
+  //              push(out, crunchState)
+  //            })
+  //        }
+  //
+  //        private def crunch = {
+  //          val crunchFlights: CrunchFlights = grab(in)
+  //          val flightsToValidTerminals = crunchFlights.flights.filter {
+  //            case ApiFlightWithSplits(flight, _) => validPortTerminals.contains(flight.Terminal)
+  //          }
+  //          val uniqueFlights = groupFlightsByCodeShares(flightsToValidTerminals).map(_._1)
+  //          val newFlightsById = crunchFlights.flights.map(f => (f.apiFlight.FlightID, f)).toMap
+  //          val newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
+  //
+  //          val flightSplitDiffs: Set[FlightSplitDiff] = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
+  //          val flightDiffs: Set[ApiFlightWithSplits] = splitDiffsToFlightDiffs(newFlightsById, flightSplitDiffs)
+  //          val queueDiffs: Set[QueueLoadDiff] = splitDiffsToQueueDiffs(flightSplitDiffs)
+  //
+  //          val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(newFlightSplitMinutesByFlight)
+  //          val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
+  //
+  //          val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchFlights.crunchStart, crunchFlights.crunchEnd)(wlByQueue)
+  //          val eGateBankSize = 5
+  //
+  //          val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchFlights.crunchStart, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
+  //
+  //          val newCrunchMinutes: Set[CrunchMinute] = crunchMinutesFromCrunch(crunchResults, crunchFlights.crunchStart)
+  //          val crunchDiffs = crunchMinuteDiff(crunchMinutes, newCrunchMinutes)
+  //
+  //          println(s"diff, flights: $flightDiffs")
+  //          println(s"diff, queue load: $queueDiffs")
+  //          println(s"diff, crunch: $crunchDiffs")
+  //          val crunchStateDiff = CrunchStateDiff(crunchFlights.crunchStart, flightDiffs, queueDiffs, crunchDiffs)
+  //
+  //          flightsByFlightId = newFlightsById
+  //          flightSplitMinutesByFlight = newFlightSplitMinutesByFlight
+  //          crunchMinutes = newCrunchMinutes
+  //          crunchStateDiffOption = Option(crunchStateDiff)
+  //          crunchStateDiff
+  //        }
+  //      })
+  //    }
+  //  }
+
+  private def emptyCrunchStateDiff(crunchStart: Long) = {
+    CrunchStateDiff(crunchStart, Set(), Set(), Set())
+  }
+
+  private def crunchMinutesFromCrunch(crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]], startMillis: Long) = {
+    val newCrunchMinutes: Set[CrunchMinute] = crunchResults.flatMap {
+      case (tn, tcr) => tcr.flatMap {
+        case (qn, Success(ocr)) =>
+          ocr.recommendedDesks.indices.map(m => CrunchMinute(tn, qn, startMillis + (m * oneMinute), ocr.recommendedDesks(m), ocr.waitTimes(m)))
+      }
+    }.toSet
+    newCrunchMinutes
+  }
+
+  private def splitDiffsToQueueDiffs(flightSplitDiffs: Set[FlightSplitDiff]) = {
+    val queueDiffs: Set[QueueLoadDiff] = flightSplitDiffs
+      .groupBy(sd => (sd.terminalName, sd.queueName, sd.minute))
+      .map {
+        case ((tn, qn, m), fsd) => QueueLoadDiff(tn, qn, m, fsd.map(_.paxLoad).sum, fsd.map(_.workLoad).sum)
+      }.toSet
+    queueDiffs
+  }
+
+  private def splitDiffsToFlightDiffs(newFlightsById: Map[Int, ApiFlightWithSplits], flightSplitDiffs: Set[FlightSplitDiff]) = {
+    val flightDiffs: Set[ApiFlightWithSplits] = flightSplitDiffs.map(_.flightId).map(newFlightsById.get).collect {
+      case Some(flight) => flight
+    }
+    flightDiffs
+  }
+
+  private def flightsToSplitDiffs(flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]], newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[FlightSplitDiff] = {
+    val allKnownFlightIds = newFlightSplitMinutesByFlight.keys.toSet.union(flightSplitMinutesByFlight.keys.toSet)
+    val flightSplitDiffs: Set[FlightSplitDiff] = allKnownFlightIds.flatMap(id => {
+      val existingSplits = flightSplitMinutesByFlight.getOrElse(id, Set())
+      val newSplits = newFlightSplitMinutesByFlight.getOrElse(id, Set())
+      //      println(s"splits for $id:")
+      //      println(s"old: $existingSplits")
+      //      println(s"new: $newSplits")
+      flightLoadDiff(existingSplits, newSplits)
+    })
+    //    println(s"allExistingSplits: $flightSplitMinutesByFlight")
+    flightSplitDiffs
+  }
 
   def queueWorkloadsToCrunchResults(crunchStartMillis: MillisSinceEpoch,
                                     portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
@@ -244,8 +337,8 @@ object Crunch {
             val crunchMinutes = crunchStartMillis to crunchEndTime by oneMinute
             val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
             val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
-            println(s"crunching $terminalName - $queueName")
-            println(s"wl: ${workloadMinutes.length}, minDesk: ${minDesks.length}")
+            //            println(s"crunching $terminalName - $queueName")
+            //            println(s"wl: ${workloadMinutes.length}, minDesk: ${minDesks.length}")
             val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
             (queueName, triedResult)
         }
@@ -326,7 +419,6 @@ object Crunch {
   def flightToFlightSplitMinutes(flight: Arrival,
                                  splits: List[ApiSplits],
                                  procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
-    log.info(s"splits available: ${splits.map(s => s.source).mkString(" :: ")}")
     val apiSplits = splits.find(_.source == SplitSources.ApiSplitsWithCsvPercentage)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)

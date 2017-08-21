@@ -7,7 +7,7 @@ import actors._
 import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
@@ -116,11 +116,16 @@ trait SystemActors {
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
     airportConfig.terminalNames.toSet)
 
+  val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
+    .via(crunchFlow)
+    .to(Sink.actorRef(crunchStateActor, "completed"))
+    .run()(actorMaterialiser)
+
   val flightsActorProps = Props(
     classOf[FlightsActor],
     crunchStateActor,
     flightPassengerSplitReporter,
-    Publisher(crunchStateActor, crunchFlow)(actorMaterialiser),
+    subscriber,
     csvSplitsProvider,
     BestPax(portCode),
     pcpArrivalTimeCalculator, airportConfig

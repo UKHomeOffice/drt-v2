@@ -28,12 +28,13 @@
     "webpack-dev-server": "^1.9.0"
   },
   "dependencies": {
-   "@terebentina/react-popover": "github:terebentina/react-popover",
+    "@terebentina/react-popover": "github:terebentina/react-popover",
     "elemental": "v0.5.14",
     "highlight.js": "8.9.1",
     "jquery": "^1.11.1",
     "jsdom": "^9.11.0",
     "log4javascript": "^1.4.15",
+    "ls": "^0.2.1",
     "material-ui": "v0.15.2",
     "react": "^15.4.1",
     "react-addons-create-fragment": "^15.5.1",
