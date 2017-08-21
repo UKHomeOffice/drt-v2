@@ -28,7 +28,7 @@
     "webpack-dev-server": "^1.9.0"
   },
   "dependencies": {
-   "@terebentina/react-popover": "github:terebentina/react-popover#4387cbe765edca75b49650077c0839a1f620bc6c",
+   "@terebentina/react-popover": "github:terebentina/react-popover",
     "elemental": "v0.5.14",
     "highlight.js": "8.9.1",
     "jquery": "^1.11.1",
