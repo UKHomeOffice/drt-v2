@@ -2,15 +2,10 @@ package controllers
 
 
 import akka.event.LoggingAdapter
-import com.typesafe.config.ConfigFactory
-import drt.shared.BestPax.lhrBestPax
-import org.joda.time.LocalDate
-import org.joda.time.format.DateTimeFormat
-import drt.shared.{AirportConfig, Arrival, BestPax, MilliDate}
-import services.PcpArrival.{pcpFrom, walkTimeMillisProviderFromCsv}
+import drt.shared._
+import services.SDate
 
 import scala.language.postfixOps
-import scala.collection.mutable
 
 //todo think about where we really want this flight flights, one source of truth?
 trait FlightState {
@@ -22,11 +17,11 @@ trait FlightState {
 
   var state = State(Map(), Map())
 
-  def onFlightUpdates(newFlights: List[Arrival], since: String, domesticPorts: Seq[String]) = {
+  def onFlightUpdates(newFlights: List[Arrival], dropFlightsBefore: SDateLike, domesticPorts: Seq[String]) = {
     logNewFlightInfo(flightState, newFlights)
 
     val withNewFlights = addNewFlights(flightState, newFlights)
-    val withoutOldFlights = filterOutFlightsBeforeThreshold(withNewFlights, since)
+    val withoutOldFlights = filterOutFlightsBefore(withNewFlights, dropFlightsBefore)
     val withoutDomesticFlights = filterOutDomesticFlights(withoutOldFlights, domesticPorts)
 
     setFlights(withoutDomesticFlights)
@@ -34,6 +29,10 @@ trait FlightState {
 
   def flightState = state.flights
   def lastKnownPaxState = state.lastKnownPax
+
+  def retentionCutoff: SDateLike = {
+    SDate.now().addDays(-1)
+  }
 
   def setFlights(flights: Map[Int, Arrival]) = {
     state = state.copy(flights = flights)
@@ -51,12 +50,16 @@ trait FlightState {
     existingFlights ++ newFlights.map(newFlight => (newFlight.FlightID, newFlight))
   }
 
-  def filterOutFlightsBeforeThreshold(flights: Map[Int, Arrival], since: String): Map[Int, Arrival] = {
-    val totalFlightsBeforeFilter = flights.size
-    val flightsWithOldDropped = flights.filter { case (_, flight) => flight.EstDT >= since || flight.SchDT >= since }
-    val totalFlightsAfterFilter = flightsWithOldDropped.size
-    log.info(s"Dropped ${totalFlightsBeforeFilter - totalFlightsAfterFilter} flights before $since")
-    flightsWithOldDropped
+  def filterOutFlightsBefore(flights: Map[Int, Arrival], before: SDateLike): Map[Int, Arrival] = {
+    flights.filterNot {
+      case (_, f) if f.ActChoxDT != "" && f.ActChoxDT < before.toString =>
+        log.info(s"Dropping flight ${f.IATA} ActChoxDT: ${f.ActChoxDT} before 1st cutoff ${before.toString}")
+        true
+      case (_, f) if f.SchDT < before.addDays(-1).toString =>
+        log.info(s"Dropping flight ${f.IATA} SchDT: ${f.SchDT} before 2nd cutoff ${before.toString}")
+        true
+      case _ => false
+    }
   }
 
   def filterOutDomesticFlights(flights: Map[Int, Arrival], domesticPorts: Seq[String]) = {

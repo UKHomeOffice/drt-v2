@@ -1,15 +1,10 @@
 package services
 
-import drt.services.AirportConfigHelpers
-import drt.shared.FlightsApi.TerminalName
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import org.joda.time.DateTime
-import services.workloadcalculator.PaxLoadCalculator
-import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
 import utest._
 
-import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.immutable.Seq
 
 object CrunchStructureTests extends TestSuite {
   def tests = TestSuite {

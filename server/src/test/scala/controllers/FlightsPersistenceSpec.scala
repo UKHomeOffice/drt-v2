@@ -26,12 +26,13 @@ case class TriggerV1Snapshot(newFlights: Map[Int, ApiFlight])
 
 case object GetLastKnownPax
 
-class FlightsTestActor(dqApiSplitsActorRef: AskableActorRef,
+class FlightsTestActor(dqApiSplitsActorRef: ActorRef,
                        csvSplitsProvider: SplitProvider,
                        bestPax: (Arrival) => Int,
                        pcpArrivalTimeForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.ActChoxDT, DateTimeZone.UTC).millisSinceEpoch),
                        airportConfig: AirportConfig)
   extends FlightsActor(Actor.noSender, dqApiSplitsActorRef, PublisherStub, csvSplitsProvider, bestPax, pcpArrivalTimeForFlight, airportConfig) {
+  log.info(s"On construction we got $dqApiSplitsActorRef")
   override val snapshotInterval = 1
 
   override def receive: Receive = {
@@ -229,6 +230,7 @@ class FlightsPersistenceSpec extends AkkaTestkitSpecs2SupportForPersistence("tar
   }
 
   def flightsActorWithSnapshotIntervalOf1(system: ActorSystem, airportCode: String = "EDI") = {
+    implicit val testSystem = system
     system.actorOf(Props(
       classOf[FlightsTestActor],
       Actor.noSender,

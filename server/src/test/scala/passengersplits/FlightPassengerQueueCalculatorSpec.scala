@@ -129,8 +129,8 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
             SplitsPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1)))
 
         }
-        "Number of visaCountries is 113" in {
-          PassengerTypeCalculator.visaCountyCodes.size == 113
+        "Number of visaCountries is 112" in {
+          PassengerTypeCalculator.visaCountyCodes.size == 112
         }
         "All country codes are 3 characters" in {
           PassengerTypeCalculator.countries.forall(_.code3Letter.length == 3)

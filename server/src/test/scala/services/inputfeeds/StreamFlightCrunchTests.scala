@@ -5,7 +5,7 @@ import java.io.File
 import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator.apiFlight
