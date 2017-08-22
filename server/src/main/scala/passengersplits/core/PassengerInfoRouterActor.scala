@@ -95,7 +95,6 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
       sender ! PassengerSplitsAck
 
     case report: ReportVoyagePaxSplit =>
-      log.info(s"Got $report")
       val replyTo = sender
       val key = voyageKey(report.destinationPort, report.voyageNumber, report.scheduledArrivalDateTime)
       val manifest = state.flightManifests.get(key)

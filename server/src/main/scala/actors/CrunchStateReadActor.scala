@@ -7,10 +7,11 @@ import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchStateSnapshotMessage
 import services.Crunch.CrunchState
 import services.OptimizerCrunchResult
+import scala.collection.immutable._
 
 import scala.util.Success
 
-class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Set[QueueName]]) extends CrunchStateActor(queues) {
+class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor(queues) {
   override val receiveRecover: Receive = {
     case SnapshotOffer(md, s) =>
       log.info(s"restoring crunch state $md")

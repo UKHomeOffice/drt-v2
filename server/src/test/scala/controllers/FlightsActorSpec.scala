@@ -37,8 +37,8 @@ class FlightsActorSpec extends Specification {
     system.actorOf(Props(
       classOf[FlightsActor],
       Actor.noSender,
+      system.actorOf(Props(classOf[SplitsTestActor]), "splits-test-actor"),
       TestProbe()(system).ref,
-      PublisherStub,
       testSplitsProvider,
       BestPax(airportCode),
       testPcpArrival,
