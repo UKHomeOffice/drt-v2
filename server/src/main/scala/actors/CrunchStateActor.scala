@@ -17,7 +17,7 @@ import scala.util.{Success, Try}
 
 class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
   override def persistenceId: String = "crunch-state"
-  
+
   var state: Option[CrunchState] = None
 
   val snapshotInterval = 1
