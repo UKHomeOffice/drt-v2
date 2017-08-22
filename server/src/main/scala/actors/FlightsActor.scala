@@ -163,7 +163,7 @@ class FlightsActor(crunchStateActor: ActorRef,
         log.info(s"crunchStartMillis: $crunchStartMillis")
         log.info(s"flightsSubscriber: $flightsSubscriber")
 
-        flightsSubscriber ! CrunchFlights(s.toList, crunchStartMillis, crunchEndMillis)
+        flightsSubscriber ! CrunchFlights(flights = s.toList, crunchStart = crunchStartMillis, crunchEnd = crunchEndMillis, initialState = false)
     }
   }
 

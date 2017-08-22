@@ -1,0 +1,28 @@
+package server.protobuf.messages;
+
+
+import "FlightsMessage.proto";
+import "CrunchState.proto";
+
+message CrunchStateDiffMessage {
+    optional int64 CrunchFirstMinuteTimestamp = 1;
+    repeated FlightWithSplitsMessage flightDiffs = 2;
+    repeated QueueLoadDiffMessage queueDiffs = 3;
+    repeated CrunchDiffMessage crunchDiffs = 4;
+}
+
+message QueueLoadDiffMessage {
+    optional string TerminalName = 1;
+    optional string QueueName = 2;
+    optional int64 MinuteTimestamp = 3;
+    optional double pax = 4;
+    optional double work = 5;
+}
+
+message CrunchDiffMessage {
+    optional string TerminalName = 1;
+    optional string QueueName = 2;
+    optional int64 MinuteTimestamp = 3;
+    optional int32 desks = 4;
+    optional int32 waitTime = 5;
+}

@@ -38,7 +38,7 @@ object Crunch {
 
   case class CrunchStateDiff(crunchFirstMinuteMillis: MillisSinceEpoch, flightDiffs: Set[ApiFlightWithSplits], queueDiffs: Set[QueueLoadDiff], crunchDiffs: Set[CrunchDiff])
 
-  case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch)
+  case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch, initialState: Boolean)
 
   val oneMinute = 60000
 
@@ -98,7 +98,23 @@ object Crunch {
         override def onPush(): Unit = {
           if (!crunchPending) {
             crunchPending = true
-            crunchStateDiffOption = Option(crunch)
+
+            val crunchFlights: CrunchFlights = grab(in)
+
+            if (crunchFlights.initialState) {
+              log.info(s"received initialState message. clearing state")
+              flightsByFlightId = Map()
+              flightSplitMinutesByFlight = Map()
+              crunchMinutes = Set()
+              crunchStateDiffOption = None
+            }
+
+            val newCrunchStateDiff = crunch(crunchFlights)
+
+            if (!crunchFlights.initialState) {
+              crunchStateDiffOption = Option(newCrunchStateDiff)
+            }
+
             crunchPending = false
           }
 
@@ -110,8 +126,8 @@ object Crunch {
             })
         }
 
-        private def crunch = {
-          val crunchFlights: CrunchFlights = grab(in)
+        private def crunch(crunchFlights: CrunchFlights) = {
+
           val flightsToValidTerminals = crunchFlights.flights.filter {
             case ApiFlightWithSplits(flight, _) => validPortTerminals.contains(flight.Terminal)
           }

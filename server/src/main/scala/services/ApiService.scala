@@ -1,32 +1,24 @@
 package services
 
-import java.util.Date
-
-import actors.{EGateBankCrunchTransformations, GetLatestCrunch, GetPortWorkload}
+import actors.GetPortWorkload
 import akka.actor.ActorRef
-import akka.event.DiagnosticLoggingAdapter
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, GetTerminalCrunch, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.FlightsApi._
-import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.LoggerFactory
 import passengersplits.query.FlightPassengerSplitsReportingService
-import services.SDate.implicits._
-import services.workloadcalculator.PaxLoadCalculator.queueWorkAndPaxLoadCalculator
 import services.workloadcalculator.WorkloadCalculator
 
-import scala.collection.JavaConversions._
-import scala.collection.immutable.{NumericRange, Seq}
-import scala.collection.immutable.{List, Map}
+import scala.collection.immutable.{List, Map, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.Codec
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 trait AirportToCountryLike {
   lazy val airportInfo: Map[String, AirportInfo] = {

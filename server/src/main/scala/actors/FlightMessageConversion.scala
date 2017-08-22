@@ -1,12 +1,36 @@
 package actors
 
-import drt.shared.{Arrival, MilliDate}
+import drt.shared._
+import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
 import server.protobuf.messages.FlightsMessage.FlightMessage
 import services.SDate
 
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
+
+  def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {
+    FlightWithSplitsMessage(
+      Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
+      f.splits.map(apiSplitsToMessage))
+  }
+
+  def apiSplitsToMessage(s: ApiSplits): SplitMessage = {
+    SplitMessage(
+      s.splits.map(paxTypeAndQueueCountToMessage),
+      Option(s.source),
+      Option(s.splitStyle.name)
+    )
+  }
+
+  def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount) = {
+    PaxTypeAndQueueCountMessage(
+      Option(ptqc.passengerType.name),
+      Option(ptqc.queueType),
+      Option(ptqc.paxCount)
+    )
+  }
+
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
       operator = Some(apiFlight.Operator),
