@@ -11,20 +11,22 @@ import services._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable._
-//import scala.collection.immutable.Seq
 import scala.language.postfixOps
 import scala.util.{Success, Try}
 
 
 class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
+  override def persistenceId: String = "crunch-state"
+  
   var state: Option[CrunchState] = None
+
   val snapshotInterval = 1
 
   def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = {
     portQueues.map {
       case (tn, q) =>
         val tl = q.filterNot(_ == Queues.Transfer).map(queueName => {
-          val ql = (0 until 1440).map(minute => {
+          val ql = oneDayOfMinutes.map(minute => {
             (firstMinuteMillis + (minute * oneMinute), (0d, 0d))
           }).toList
 
@@ -35,10 +37,14 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     }
   }
 
+  def oneDayOfMinutes = {
+    0 until 1440
+  }
+
   def emptyCrunch(crunchStartMillis: MillisSinceEpoch) = portQueues
     .mapValues(_.filterNot(_ == Queues.Transfer)
       .map(queueName => {
-        val zeros = (0 until 1440).map(_ => 0).toList
+        val zeros = oneDayOfMinutes.map(_ => 0).toList
         (queueName, Success(OptimizerCrunchResult(zeros.toIndexedSeq, zeros)))
       }).toMap)
 
@@ -274,10 +280,6 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case RecoveryCompleted =>
       log.info("Finished restoring crunch state")
   }
-
-  override def persistenceId: String
-
-  = "crunch-state"
 }
 
 //i'm of two minds about the benefit of having this message independent of the Flights() message.
