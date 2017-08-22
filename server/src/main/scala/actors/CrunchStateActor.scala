@@ -63,18 +63,9 @@ class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends Persis
         log.info(s"Saving CrunchState as CrunchStateSnapshotMessage")
         saveSnapshot(stateToSnapshotMessage(s))
       })
-    case csd@CrunchStateDiff(crunchStartMillis, flights, queueLoads, crunches) =>
-      log.info(s"received CrunchStateDiff: $csd")
-      val currentState = state match {
-        case Some(s) => s
-        case None => emptyState(crunchStartMillis)
-      }
-
-      state = Option(currentState.copy(
-        flights = updatedFlightState(flights, currentState),
-        workloads = updatedLoadState(queueLoads, currentState),
-        crunchResult = updatedCrunchState(crunchStartMillis, crunches, currentState)
-      ))
+    case csd@CrunchStateDiff(start, fd, qd, cd) =>
+      log.info(s"received CrunchStateDiff - $start, ${fd.size} flights, ${qd.size} queue minutes, ${cd.size} crunch minutes")
+      updateStateFromDiff(csd)
 
     case GetFlights =>
       state match {
@@ -107,8 +98,21 @@ class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends Persis
       sender() ! terminalCrunchResults
   }
 
+  def updateStateFromDiff(csd: CrunchStateDiff) = {
+    val currentState = state match {
+      case Some(s) => s
+      case None => emptyState(csd.crunchFirstMinuteMillis)
+    }
+
+    state = Option(currentState.copy(
+      flights = updatedFlightState(csd.flightDiffs, currentState),
+      workloads = updatedLoadState(csd.queueDiffs, currentState),
+      crunchResult = updatedCrunchState(csd.crunchFirstMinuteMillis, csd.crunchDiffs, currentState)
+    ))
+  }
+
   private def updatedCrunchState(crunchStartMillis: Long, crunches: Set[CrunchDiff], currentState: CrunchState) = {
-    val crunchByTQM = currentState.crunchResult.flatMap {
+    val crunchByTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)] = currentState.crunchResult.flatMap {
       case (tn, tc) =>
         tc.flatMap {
           case (qn, qc) =>
@@ -118,7 +122,7 @@ class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends Persis
             }
         }
     }
-    val newCrunch = crunches.foldLeft(crunchByTQM) {
+    val newCrunch: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)] = crunches.foldLeft(crunchByTQM) {
       case (crunchesSoFar, CrunchDiff(tn, qn, m, dr, wt)) =>
         val currentCr = crunchesSoFar.getOrElse((tn, qn, m), (0, 0))
         crunchesSoFar.updated((tn, qn, m), (currentCr._1 + dr, currentCr._2 + wt))
@@ -131,12 +135,14 @@ class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends Persis
             case ((_, qn, _), _) => qn
           }.map {
             case (qn, ql) =>
-              val deskRecs = ql.map {
-                case ((tn, qn, m), (dr, wt)) => dr
-              }.toIndexedSeq
-              val waitTimes = ql.map {
-                case ((tn, qn, m), (dr, wt)) => wt
-              }.toList
+              val deskRecs: IndexedSeq[Int] = ql.map {
+                case ((_, _, millis), (dr, _)) => (millis, dr)
+              }.toList.sortBy(_._1).map(_._2).toIndexedSeq
+
+              val waitTimes: Seq[Int] = ql.toSeq.map {
+                case ((_, _, millis), (_, wt)) => (millis, wt)
+              }.toList.sortBy(_._1).map(_._2)
+
               (qn, Success(OptimizerCrunchResult(deskRecs, waitTimes)))
           }
           (tn, terminalLoads)
