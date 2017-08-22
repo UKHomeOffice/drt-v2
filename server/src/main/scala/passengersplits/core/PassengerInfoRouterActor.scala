@@ -119,18 +119,11 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
 
     case VoyageManifestZipFileComplete(zipFilename, completionMonitor) =>
       log.info(s"FlightPaxSplitBatchComplete received telling $completionMonitor")
-      state.copy(latestFileName = Option(zipFilename))
+      state = state.copy(latestFileName = Option(zipFilename))
       completionMonitor ! VoyageManifestZipFileCompleteAck(zipFilename)
 
     case FlushOldVoyageManifests(before) =>
-      state.copy(flightManifests = state.flightManifests.filterNot {
-        case (_, vm) =>
-          val scheduledMillis = vm.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
-          if (scheduledMillis < before.millisSinceEpoch) {
-            log.info(s"Dropping voyage manifest ${vm.summary}. Scheduled ${vm.scheduleArrivalDateTime.getOrElse("")} < $before")
-            true
-          } else false
-      })
+      state = stateWithoutOldManifests(before)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Snapshot success $md")
@@ -140,6 +133,17 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
 
     case default =>
       log.error(s"$self got an unhandled message ${default}")
+  }
+
+  def stateWithoutOldManifests(before: SDateLike) = {
+    state.copy(flightManifests = state.flightManifests.filterNot {
+      case (_, vm) =>
+        val scheduledMillis = vm.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
+        if (scheduledMillis < before.millisSinceEpoch) {
+          log.info(s"Dropping voyage manifest ${vm.summary}. Scheduled ${vm.scheduleArrivalDateTime.getOrElse("")} < $before")
+          true
+        } else false
+    })
   }
 
   def childName(arrivalPortCode: String): String = {
