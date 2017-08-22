@@ -16,14 +16,14 @@ import scala.language.postfixOps
 import scala.util.{Success, Try}
 
 
-class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
+class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
   var state: Option[CrunchState] = None
   val snapshotInterval = 1
 
   def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = {
-    queues.map {
+    portQueues.map {
       case (tn, q) =>
-        val tl = q.map(queueName => {
+        val tl = q.filterNot(_ == Queues.Transfer).map(queueName => {
           val ql = (0 until 1440).map(minute => {
             (firstMinuteMillis + (minute * oneMinute), (0d, 0d))
           }).toList
@@ -35,10 +35,12 @@ class CrunchStateActor(queues: Map[TerminalName, Seq[QueueName]]) extends Persis
     }
   }
 
-  def emptyCrunch(crunchStartMillis: MillisSinceEpoch) = queues.mapValues(_.map(queueName => {
-    val zeros = (0 until 1440).map(_ => 0).toList
-    (queueName, Success(OptimizerCrunchResult(zeros.toIndexedSeq, zeros)))
-  }).toMap)
+  def emptyCrunch(crunchStartMillis: MillisSinceEpoch) = portQueues
+    .mapValues(_.filterNot(_ == Queues.Transfer)
+      .map(queueName => {
+        val zeros = (0 until 1440).map(_ => 0).toList
+        (queueName, Success(OptimizerCrunchResult(zeros.toIndexedSeq, zeros)))
+      }).toMap)
 
   def emptyState(crunchStartMillis: MillisSinceEpoch) = {
     CrunchState(

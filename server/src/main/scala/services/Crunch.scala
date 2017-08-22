@@ -362,32 +362,6 @@ object Crunch {
     }).getOrElse(Set())
   }
 
-//
-//  def flightToFlightSplitMinutes(flight: Arrival,
-//                                 splits: List[ApiSplits],
-//                                 procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
-//    val apiSplits = splits.find(_.source == SplitSources.ApiSplitsWithCsvPercentage)
-//    val splitsToUse = apiSplits.getOrElse(splits.find(_.source == SplitSources.Historical).get)
-//
-//    val totalPax = splitsToUse.splitStyle match {
-//      case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
-//      case Percentage => BestPax.lhrBestPax(flight)
-//    }
-//    val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
-//      case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
-//      case Percentage => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
-//    }
-//
-//    minutesForHours(flight.PcpTime, 1)
-//      .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
-//      .flatMap {
-//        case (minuteMillis, flightPaxInMinute) =>
-//          splitRatios
-//            .filterNot(_.queueType == Queues.Transfer)
-//            .map(apiSplit => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplit, splitsToUse.splitStyle))
-//      }.toSet
-//  }
-
   def flightSplitMinute(flight: Arrival,
                         procTimes: Map[PaxTypeAndQueue, Load],
                         minuteMillis: MillisSinceEpoch,
