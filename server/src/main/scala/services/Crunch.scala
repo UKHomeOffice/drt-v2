@@ -41,6 +41,7 @@ object Crunch {
   case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch)
 
   val oneMinute = 60000
+  val oneDay = 1440 * oneMinute
 
   trait PublisherLike {
     def publish(crunchFlights: CrunchFlights): NotUsed
@@ -140,8 +141,9 @@ object Crunch {
                                                         flightsById: Map[Int, ApiFlightWithSplits],
                                                         fsmsByFlightId: Map[Int, Set[FlightSplitMinute]],
                                                         flightSplitDiffs: Set[FlightSplitDiff]) = {
-        val flightDiffs: Set[ApiFlightWithSplits] = splitDiffsToFlightDiffs(flightsById, flightSplitDiffs)
-        flightDiffs match {
+        val flightsSinceCrunchStart: Set[ApiFlightWithSplits] = splitDiffsToFlightDiffs(flightsById, flightSplitDiffs)
+
+        flightsSinceCrunchStart match {
           case fd if fd.isEmpty => CrunchStateDiff(crunchStart, fd, Set(), Set())
           case fd => crunchStateDiffFromFlightSplitDiffs(crunchStart, crunchEnd, fsmsByFlightId, flightSplitDiffs, fd)
         }
