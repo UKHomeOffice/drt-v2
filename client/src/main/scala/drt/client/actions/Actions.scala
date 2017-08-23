@@ -64,4 +64,6 @@ object Actions {
 
   case class SetPointInTime(value: String) extends Action
 
+  case class SetPointInTimeToLive() extends Action
+
 }

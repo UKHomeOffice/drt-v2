@@ -14,6 +14,11 @@
   display: inline-block;
 }
 
+.date-time-picker-container {
+  position: relative;
+  display: inline-block;
+}
+
 .staff-deployment-adjustment-container .popover-trigger {
   display: inline-block;
   padding: 4px;
@@ -67,6 +72,34 @@
   }
   left: -24em;
   top: 58%;
+
+}
+
+.date-time-picker-container .container{
+  display: block;
+  font-size: medium;
+  position: absolute;
+
+  /* prettify */
+  padding: 0.5em;
+  color: #000000;
+  opacity: 0.9;
+  background: #ebf4fb;
+  border: 0.1em solid #b7ddf2;
+  /* round the corners */
+  border-radius: 0.5em;
+  width: 26em;
+  z-index: 1000;
+  .below {
+    top: 1em;
+  }
+
+  .left {
+    top: 1em;
+    right: 1em;
+  }
+  left: -19em;
+  top: 93%;
 
 }
 

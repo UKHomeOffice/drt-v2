@@ -7,6 +7,7 @@ import drt.client.SPAMain.{Loc, TerminalDepsLoc}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.TerminalName
+import org.scalajs.dom
 
 import scala.collection.immutable.Seq
 
@@ -27,7 +28,7 @@ object Navbar {
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
                 <.ul(^.className := "nav navbar-nav navbar-right",
-                  <.li(DateTimeSelector()),
+                  <.li(if (dom.window.hasOwnProperty("snapshots")) {DateTimeSelector()} else ""),
                   <.li(StaffDeploymentsAdjustmentPopover(airportConfig.terminalNames, currentTerminalOption(page), "Staff movements", "Reason...", SDate.now(), SDate.now().addHours(1), "bottom")()),
                   <.li(StaffDeploymentsAdjustmentPopover(airportConfig.terminalNames, currentTerminalOption(page), "Breaks+15", "Breaks", SDate.now(), SDate.now().addMinutes(15), "bottom")()),
                   <.li(StaffDeploymentsAdjustmentPopover(airportConfig.terminalNames, currentTerminalOption(page), "Breaks+30", "Breaks", SDate.now(), SDate.now().addMinutes(30), "bottom")()),
