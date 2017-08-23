@@ -6,7 +6,7 @@ import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi._
 import drt.shared._
 import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.CrunchStateDiff.{CrunchStateDiffMessage, QueueLoadDiffMessage}
+import server.protobuf.messages.CrunchStateDiff.{CrunchDiffMessage, CrunchStateDiffMessage, QueueLoadDiffMessage}
 import services.Crunch._
 import services._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
@@ -33,11 +33,9 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         case somethingElse =>
           log.info(s"Got $somethingElse when trying to restore Crunch State")
       }
-    case csd@CrunchStateDiff(start, fd, qd, cd) =>
+    case csdm@CrunchStateDiffMessage(start, fd, qd, cd, _) =>
       log.info(s"recovery: received CrunchStateDiff - $start, ${fd.size} flights, ${qd.size} queue minutes, ${cd.size} crunch minutes")
-      updateStateFromDiff(csd)
-    case RecoveryCompleted =>
-      log.info("Finished restoring crunch state")
+      updateStateFromDiff(crunchStateDiffFromMessage(csdm))
   }
 
   override def receiveCommand: Receive = {
@@ -83,6 +81,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         val flightsForInitialisation = CrunchFlights(flights = s.flights, crunchStart = s.crunchFirstMinuteMillis, crunchEnd = crunchEnd, initialState = true)
         flightsSubscriber ! flightsForInitialisation
       })
+    case RecoveryCompleted =>
+      log.info("Finished restoring crunch state")
   }
 
   def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = {
@@ -115,6 +115,35 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       flights = List(),
       workloads = emptyWorkloads(crunchStartMillis),
       crunchResult = emptyCrunch(crunchStartMillis)
+    )
+  }
+
+  def crunchStateDiffFromMessage(csdm: CrunchStateDiffMessage) = {
+    CrunchStateDiff(
+      csdm.crunchFirstMinuteTimestamp.getOrElse(0L),
+      csdm.flightDiffs.map(flightWithSplitsFromMessage).toSet,
+      csdm.queueDiffs.map(queueLoadDiffFromMessage).toSet,
+      csdm.crunchDiffs.map(crunchDiffFromMessage).toSet
+    )
+  }
+
+  def crunchDiffFromMessage(cdm: CrunchDiffMessage) = {
+    CrunchDiff(
+      cdm.terminalName.getOrElse(""),
+      cdm.queueName.getOrElse(""),
+      cdm.minuteTimestamp.getOrElse(0L),
+      cdm.desks.getOrElse(0),
+      cdm.waitTime.getOrElse(0)
+    )
+  }
+
+  def queueLoadDiffFromMessage(qdm: QueueLoadDiffMessage) = {
+    QueueLoadDiff(
+      qdm.terminalName.getOrElse(""),
+      qdm.queueName.getOrElse(""),
+      qdm.minuteTimestamp.getOrElse(0L),
+      qdm.pax.getOrElse(0),
+      qdm.work.getOrElse(0)
     )
   }
 
@@ -234,6 +263,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         case ((tn, tl)) =>
           (tn, terminalLoadFromQueuesAndLoads(tl))
       }
+    log.info(s"updatedLoads: $updatedLoads")
     updatedLoads
   }
 

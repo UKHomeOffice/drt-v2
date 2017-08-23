@@ -9,6 +9,7 @@ message CrunchStateDiffMessage {
     repeated FlightWithSplitsMessage flightDiffs = 2;
     repeated QueueLoadDiffMessage queueDiffs = 3;
     repeated CrunchDiffMessage crunchDiffs = 4;
+    optional int64 CreatedAt = 5;
 }
 
 message QueueLoadDiffMessage {
