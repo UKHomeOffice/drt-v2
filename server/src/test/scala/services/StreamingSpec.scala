@@ -1,12 +1,16 @@
 package services
 
-import actors.CrunchStateActor
+import actors.{CrunchStateActor, GetFlights, GetPortWorkload}
 import akka.actor._
+import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.testkit.{TestKit, TestProbe}
-import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import akka.util.Timeout
+
+import scala.concurrent.duration._
+import controllers.{ArrivalGenerator, GetTerminalCrunch}
+import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.SplitSources
@@ -17,7 +21,8 @@ import passengersplits.AkkaPersistTestConfig
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{List, Seq}
+import scala.concurrent.Await
 import scala.util.Success
 
 
@@ -28,8 +33,6 @@ class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: Act
     probe ! state.get
   }
 }
-
-//case class QueueMinute(queueName: QueueName, paxLoad: Double, workLoad: Double, crunchDesks: Int, crunchWait: Int, allocStaff: Int, allocWait: Int, minute: Long)
 
 class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
   isolated
@@ -339,6 +342,195 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(15.0, 0.0, 0.0, 0.0, 0.0)))
 
       resultSummary === expected
+    }
+  }
+
+  "Relevant flights " >> {
+    "Given two flights one reaching PCP before the crunch start time and one after " +
+      "When I crunch and ask for flights " +
+      "I should see only see the flight reaching PCP after the crunch start time " >> {
+      val scheduledBeforeCrunchStart = "2017-01-01T00:00Z"
+      val scheduledAtCrunchStart = "2017-01-02T00:00Z"
+
+      val flightOutsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledBeforeCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+      val flightInsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+
+      val flightsWithSplits = List(flightOutsideCrunchWindow, flightInsideCrunchWindow)
+
+      val testProbe = TestProbe()
+      val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+
+      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
+      val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
+
+      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
+      val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
+      val result = Await.result(askableCrunchStateTestActor.ask(GetFlights)(new Timeout(1 second)), 1 second).asInstanceOf[FlightsWithSplits]
+
+      val expected = FlightsWithSplits(List(flightInsideCrunchWindow))
+
+      result === expected
+    }
+  }
+
+  "Relevant workload minutes " >> {
+    "Given two flights one reaching PCP before the crunch start time and one after " +
+      "When I crunch and ask for workloads " +
+      "I should see only see minutes falling within the crunch window " >> {
+      val scheduledBeforeCrunchStart = "2017-01-01T00:00Z"
+      val scheduledAtCrunchStart = "2017-01-02T00:00Z"
+
+      val flightOutsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledBeforeCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+      val flightInsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+
+      val flightsWithSplits = List(flightOutsideCrunchWindow, flightInsideCrunchWindow)
+
+      val testProbe = TestProbe()
+      val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+
+      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
+      val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
+
+      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
+      val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
+      val result = Await
+        .result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second)
+        .asInstanceOf[Map[TerminalName, Map[QueueName, (List[WL], List[Pax])]]]
+
+      val wl = result("T1")(Queues.EeaDesk)._1
+
+      val expectedLength = 1440
+      val expectedWl = startTime to endTime by oneMinute
+
+      (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
+    }
+
+    "Given two flights one reaching PCP after the crunch window and one during " +
+      "When I crunch and ask for workloads " +
+      "I should see only see minutes falling within the crunch window " >> {
+      val scheduledAfterCrunchEnd = "2017-01-03T00:00Z"
+      val scheduledAtCrunchStart = "2017-01-02T00:00Z"
+
+      val flightOutsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledAfterCrunchEnd, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+      val flightInsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+
+      val flightsWithSplits = List(flightOutsideCrunchWindow, flightInsideCrunchWindow)
+
+      val testProbe = TestProbe()
+      val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+
+      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
+      val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
+
+      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
+      val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
+      val result = Await
+        .result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second)
+        .asInstanceOf[Map[TerminalName, Map[QueueName, (List[WL], List[Pax])]]]
+
+      val wl = result("T1")(Queues.EeaDesk)._1
+
+      val expectedLength = 1440
+      val expectedWl = startTime to endTime by oneMinute
+
+      (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
+    }
+  }
+
+  "Relevant crunch minutes " >> {
+    "Given two flights one reaching PCP before the crunch start time and one after " +
+      "When I crunch and ask for crunch results " +
+      "I should see only see minutes falling within the crunch window " >> {
+      val scheduledBeforeCrunchStart = "2017-01-01T00:00Z"
+      val scheduledAtCrunchStart = "2017-01-02T00:00Z"
+
+      val flightOutsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledBeforeCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+      val flightInsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+
+      val flightsWithSplits = List(flightOutsideCrunchWindow, flightInsideCrunchWindow)
+
+      val testProbe = TestProbe()
+      val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+
+      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
+      val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
+
+      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
+      val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
+      val result = Await
+        .result(askableCrunchStateTestActor.ask(GetTerminalCrunch("T1"))(new Timeout(1 second)), 1 second)
+        .asInstanceOf[List[(QueueName, Right[NoCrunchAvailable, CrunchResult])]]
+
+      val deskRecMinutes = result.head._2.b.recommendedDesks.length
+
+      val expected = 1440
+
+      deskRecMinutes === expected
+    }
+
+    "Given two flights one reaching PCP after the crunch window and one during " +
+      "When I crunch and ask for crunch results " +
+      "I should see only see minutes falling within the crunch window " >> {
+      val scheduledAfterCrunchEnd = "2017-01-03T00:00Z"
+      val scheduledAtCrunchStart = "2017-01-02T00:00Z"
+
+      val flightOutsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledAfterCrunchEnd, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+      val flightInsideCrunchWindow = ApiFlightWithSplits(
+        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, actPax = 20),
+        List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage)))
+
+      val flightsWithSplits = List(flightOutsideCrunchWindow, flightInsideCrunchWindow)
+
+      val testProbe = TestProbe()
+      val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+
+      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
+      val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
+
+      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
+      val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
+      val result = Await
+        .result(askableCrunchStateTestActor.ask(GetTerminalCrunch("T1"))(new Timeout(1 second)), 1 second)
+        .asInstanceOf[List[(QueueName, Right[NoCrunchAvailable, CrunchResult])]]
+
+      val deskRecMinutes = result.head._2.b.recommendedDesks.length
+
+      val expected = 1440
+
+      deskRecMinutes === expected
     }
   }
 
@@ -659,6 +851,17 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
                         queues: Map[TerminalName, Seq[QueueName]],
                         testProbe: TestProbe,
                         validTerminals: Set[String]) = {
+    val (subscriber, _) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+
+    subscriber
+  }
+
+  def flightsSubscriberAndCrunchStateTestActor(procTimes: Map[PaxTypeAndQueue, Double],
+                                               slaByQueue: Map[QueueName, Int],
+                                               minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]],
+                                               queues: Map[TerminalName, Seq[QueueName]],
+                                               testProbe: TestProbe,
+                                               validTerminals: Set[String]) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterialiser = ActorMaterializer()
@@ -676,7 +879,8 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       .via(crunchFlow)
       .to(Sink.actorRef(crunchStateActor, "completed"))
       .run()(actorMaterialiser)
-    subscriber
+
+    (subscriber, crunchStateActor)
   }
 
   def paxLoadsFromCrunchState(result: CrunchState, minutesToTake: Int) = {
@@ -685,6 +889,18 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
         workloads.mapValues {
           case twl => twl.mapValues {
             case qwl => qwl.sortBy(_._1).map(_._2._1).take(minutesToTake)
+          }
+        }
+    }
+    resultSummary
+  }
+
+  def allWorkLoadsFromCrunchState(result: CrunchState) = {
+    val resultSummary: Map[TerminalName, Map[QueueName, List[Double]]] = result match {
+      case CrunchState(_, workloads, _, _) =>
+        workloads.mapValues {
+          case twl => twl.mapValues {
+            case qwl => qwl.sortBy(_._1).map(_._2._2)
           }
         }
     }
