@@ -84,9 +84,9 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case GetPortWorkload =>
       state match {
         case Some(CrunchState(_, workloads, _, _)) =>
-          val values = workloads.mapValues(_.mapValues(wl =>
+          val portWorkloadByTerminalAndQueue = workloads.mapValues(_.mapValues(wl =>
             (wl.map(wlm => WL(wlm._1, wlm._2._2)), wl.map(wlm => Pax(wlm._1, wlm._2._1)))))
-          sender() ! values
+          sender() ! portWorkloadByTerminalAndQueue
         case None => WorkloadsNotReady
       }
     case GetTerminalCrunch(terminalName) =>
@@ -113,7 +113,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     }
 
     state = Option(currentState.copy(
-      flights = updatedFlightState(csd.flightDiffs, currentState),
+      flights = updatedFlightState(csd.flightDiffs, currentState)
+        .filter(_.apiFlight.PcpTime >= csd.crunchFirstMinuteMillis),
       workloads = updatedLoadState(csd.queueDiffs, currentState),
       crunchResult = updatedCrunchState(csd.crunchFirstMinuteMillis, csd.crunchDiffs, currentState)
     ))
@@ -168,8 +169,10 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     }
     val newLoads = queueLoads.foldLeft(loadByTQM) {
       case (loadsSoFar, QueueLoadDiff(tn, qn, m, pl, wl)) =>
-        val currentLoads = loadsSoFar.getOrElse((tn, qn, m), (0d, 0d))
-        loadsSoFar.updated((tn, qn, m), (currentLoads._1 + pl, currentLoads._2 + wl))
+        if (m >= currentState.crunchFirstMinuteMillis && m < currentState.crunchFirstMinuteMillis + (1440 * oneMinute)) {
+          val currentLoads = loadsSoFar.getOrElse((tn, qn, m), (0d, 0d))
+          loadsSoFar.updated((tn, qn, m), (currentLoads._1 + pl, currentLoads._2 + wl))
+        } else loadsSoFar
     }
     val updatedLoads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = newLoads
       .groupBy { case ((tn, qn, m), l) => tn }
