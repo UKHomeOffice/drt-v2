@@ -103,9 +103,6 @@ trait SystemActors {
     PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax(airportConfig.portCode))
 
 
-  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
-  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
-
   val actorMaterialiser = ActorMaterializer()
 
   implicit val actorSystem = system
@@ -116,10 +113,15 @@ trait SystemActors {
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
     airportConfig.terminalNames.toSet)
 
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
+  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
+
   val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
     .via(crunchFlow)
     .to(Sink.actorRef(crunchStateActor, "completed"))
     .run()(actorMaterialiser)
+
+  crunchStateActor ! subscriber
 
   val flightsActorProps = Props(
     classOf[FlightsActor],
@@ -131,7 +133,6 @@ trait SystemActors {
     pcpArrivalTimeCalculator, airportConfig
   )
   val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
-  val crunchByAnotherName: ActorSelection = system.actorSelection("crunchActor")
   val flightsActorAskable: AskableActorRef = flightsActor
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 

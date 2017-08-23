@@ -188,7 +188,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val startTime = SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-    subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+    initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
     val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
     val resultSummary = paxLoadsFromCrunchState(result = result, minutesToTake = 2)
@@ -222,7 +222,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-    subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+    initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
     val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
     val resultSummary = paxLoadsFromCrunchState(result = result, minutesToTake = 5)
@@ -251,7 +251,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
     val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-    subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+    initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
     val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
     val resultSummary = paxLoadsFromCrunchState(result = result, minutesToTake = 5)
@@ -277,7 +277,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -304,7 +304,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -334,7 +334,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -367,7 +367,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -378,6 +378,12 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
 
       result === expected
     }
+  }
+
+  def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, endTime: MillisSinceEpoch) = {
+    subscriber ! CrunchFlights(List(), startTime, endTime, true)
+    expectNoMsg(50 milliseconds)
+    subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime, false)
   }
 
   "Relevant workload minutes " >> {
@@ -402,7 +408,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -440,7 +446,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -480,7 +486,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -517,7 +523,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -549,7 +555,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
     val startTime = SDate("2017-05-30T23:00Z").millisSinceEpoch
     val endTime = startTime + (119 * oneMinute)
 
-    subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+    initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
     val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
     val resultSummary = deskRecsFromCrunchState(result, 30)
@@ -579,7 +585,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate("2017-05-30T23:00Z").millisSinceEpoch
       val endTime = startTime + (119 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 120)
@@ -647,7 +653,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled).millisSinceEpoch
       val endTime = startTime + (29 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 15)
@@ -688,7 +694,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled).millisSinceEpoch
       val endTime = startTime + (29 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 15)
@@ -734,7 +740,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled00).millisSinceEpoch
       val endTime = startTime + (119 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
@@ -781,7 +787,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled00).millisSinceEpoch
       val endTime = startTime + (119 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
@@ -821,7 +827,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       val startTime = SDate(scheduled00).millisSinceEpoch
       val endTime = startTime + (119 * oneMinute)
 
-      subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime)
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 1).flatMap(_._2.map(_._1))
@@ -879,7 +885,7 @@ class StreamingSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPers
       .via(crunchFlow)
       .to(Sink.actorRef(crunchStateActor, "completed"))
       .run()(actorMaterialiser)
-
+    
     (subscriber, crunchStateActor)
   }
 
