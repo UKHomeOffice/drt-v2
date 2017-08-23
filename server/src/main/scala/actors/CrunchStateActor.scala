@@ -227,7 +227,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   def updatedLoadState(queueLoads: Set[QueueLoadDiff], currentState: CrunchState) = {
     val loadByTQM = loadByTerminalQueueMinute(currentState)
-    val updatedTQM = applyQueueLoadDiffsToTQM(queueLoads, loadByTQM)
+    val updatedTQM = applyQueueLoadDiffsToTQM(queueLoads, loadByTQM, currentState.crunchFirstMinuteMillis)
     val updatedLoads = updatedTQM
       .groupBy { case ((tn, qn, m), l) => tn }
       .map {
@@ -237,10 +237,10 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     updatedLoads
   }
 
-  def applyQueueLoadDiffsToTQM(queueLoads: Set[QueueLoadDiff], loadByTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)]) = {
+  def applyQueueLoadDiffsToTQM(queueLoads: Set[QueueLoadDiff], loadByTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)], crunchStartMinute: MillisSinceEpoch): Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)] = {
     val updatedTQM = queueLoads.foldLeft(loadByTQM) {
       case (loadsSoFar, QueueLoadDiff(tn, qn, m, pl, wl)) =>
-        if (m >= currentState.crunchFirstMinuteMillis && m < currentState.crunchFirstMinuteMillis + oneDay) {
+        if (m >= crunchStartMinute && m < crunchStartMinute + oneDay) {
           val currentLoads = loadsSoFar.getOrElse((tn, qn, m), (0d, 0d))
           loadsSoFar.updated((tn, qn, m), (currentLoads._1 + pl, currentLoads._2 + wl))
         } else loadsSoFar
