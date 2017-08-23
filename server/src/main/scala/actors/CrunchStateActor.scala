@@ -114,7 +114,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     state = Option(currentState.copy(
       flights = updatedFlightState(csd.flightDiffs, currentState)
-        .filter(_.apiFlight.PcpTime >= csd.crunchFirstMinuteMillis),
+        .filter(fs => (fs.apiFlight.PcpTime + 30 * oneMinute) >= csd.crunchFirstMinuteMillis),
       workloads = updatedLoadState(csd.queueDiffs, currentState),
       crunchResult = updatedCrunchState(csd.crunchFirstMinuteMillis, csd.crunchDiffs, currentState)
     ))
@@ -169,7 +169,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     }
     val newLoads = queueLoads.foldLeft(loadByTQM) {
       case (loadsSoFar, QueueLoadDiff(tn, qn, m, pl, wl)) =>
-        if (m >= currentState.crunchFirstMinuteMillis && m < currentState.crunchFirstMinuteMillis + (1440 * oneMinute)) {
+        if (m >= currentState.crunchFirstMinuteMillis && m < currentState.crunchFirstMinuteMillis + oneDay) {
           val currentLoads = loadsSoFar.getOrElse((tn, qn, m), (0d, 0d))
           loadsSoFar.updated((tn, qn, m), (currentLoads._1 + pl, currentLoads._2 + wl))
         } else loadsSoFar

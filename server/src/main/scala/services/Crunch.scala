@@ -41,6 +41,7 @@ object Crunch {
   case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch)
 
   val oneMinute = 60000
+  val oneDay = 1440 * oneMinute
 
   trait PublisherLike {
     def publish(crunchFlights: CrunchFlights): NotUsed
