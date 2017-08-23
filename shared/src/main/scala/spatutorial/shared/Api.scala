@@ -171,6 +171,8 @@ trait SDateLike {
 
   def millisSinceEpoch: Long
 
+  def toISOString(): String
+
   def addDays(daysToAdd: Int): SDateLike
 
   def addHours(hoursToAdd: Int): SDateLike

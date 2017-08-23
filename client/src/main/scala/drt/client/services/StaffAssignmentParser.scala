@@ -60,6 +60,8 @@ object JSDateConversions {
       }
 
       def millisSinceEpoch: Long = date.getTime().toLong
+
+      override def toISOString(): String = date.toISOString()
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)

@@ -687,6 +687,10 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
       val sdatePointInTime = SDate.parse(pointInTime)
       val nextRequest = Effect(Future(RequestFlights()))
       updated(Option(sdatePointInTime), nextRequest)
+    case SetPointInTimeToLive() =>
+      log.info(s"Set client point in time to live")
+      val nextRequest = Effect(Future(RequestFlights()))
+      updated(None, nextRequest)
   }
 }
 
