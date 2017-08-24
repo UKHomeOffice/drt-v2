@@ -16,7 +16,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.{CrunchStateFlow, Publisher}
+import services.Crunch.CrunchStateFlow
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
