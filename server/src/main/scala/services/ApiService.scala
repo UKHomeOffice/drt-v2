@@ -119,6 +119,11 @@ abstract class ApiService(val airportConfig: AirportConfig)
         Left(WorkloadsNotReady())
       case workloads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads] =>
         log.info(s"Got the workloads")
+        workloads.foreach {
+          case (tn, tl) => tl.foreach {
+            case (qn, (wl, pl)) => log.info(s"workloads: $tn/$qn wl: ${wl.length}, pl: ${pl.length} ")
+          }
+        }
         Right(workloads)
 
     }

@@ -103,7 +103,6 @@ case class RootModel(
       case Ready(rawFixedPoints) => rawFixedPoints
       case _ => ""
     }
-
     val movements = staffMovements match {
       case Ready(mm) => mm
       case _ => Seq()
@@ -418,6 +417,12 @@ class CrunchHandler[M](totalQueues: () => Map[TerminalName, Int], modelRW: Model
     case UpdateTerminalCrunchResult(terminalName, tqr) =>
       val oldTC = value.getOrElse(terminalName, Map())
       val newTC = Map(terminalName -> tqr)
+
+      newTC.foreach {
+        case (tn, qcr) => qcr.foreach {
+          case (qn, qcr) => log.info(s"received crunch: $tn/$qn - ${qcr.recommendedDesks.length}")
+        }
+      }
 
       val terminalQueues = totalQueues().getOrElse(terminalName, -1)
       val effects = if (tqr.size < terminalQueues) {
