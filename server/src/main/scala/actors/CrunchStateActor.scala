@@ -54,8 +54,15 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case GetPortWorkload =>
       state match {
         case Some(CrunchState(_, workloads, _, _)) =>
-          val portWorkloadByTerminalAndQueue = workloads.mapValues(_.mapValues(wl =>
-            (wl.map(wlm => WL(wlm._1, wlm._2._2)), wl.map(wlm => Pax(wlm._1, wlm._2._1)))))
+          val portWorkloadByTerminalAndQueue = workloads.mapValues {
+            case twl => twl.mapValues {
+              case qwl =>
+                val wl = qwl.map(wlm => WL(wlm._1, wlm._2._2))
+                val pl = qwl.map(wlm => Pax(wlm._1, wlm._2._1))
+                log.info(s"GetPortWorkload, wl: ${wl.length}, pl: ${pl.length}")
+                (wl, pl)
+            }
+          }
           sender() ! portWorkloadByTerminalAndQueue
         case None => WorkloadsNotReady
       }
@@ -76,11 +83,17 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       sender() ! terminalCrunchResults
     case flightsSubscriber: ActorRef =>
       log.info(s"received flightsSubscriber. sending flights")
-      state.foreach(s => {
-        val crunchEnd = s.crunchFirstMinuteMillis + (1439 * oneMinute)
-        val flightsForInitialisation = CrunchFlights(flights = s.flights, crunchStart = s.crunchFirstMinuteMillis, crunchEnd = crunchEnd, initialState = true)
-        flightsSubscriber ! flightsForInitialisation
-      })
+      val flightsForInitialisation = state match {
+        case None =>
+          log.info(s"No state recovered so sending blank CrunchFlights")
+          CrunchFlights(flights = List(), crunchStart = 0L, crunchEnd = 0L + oneDay, initialState = true)
+        case Some(cs) =>
+          val crunchEnd = cs.crunchFirstMinuteMillis + (1439 * oneMinute)
+          CrunchFlights(flights = cs.flights, crunchStart = cs.crunchFirstMinuteMillis, crunchEnd = crunchEnd, initialState = true)
+      }
+      log.info(s"sending ${flightsForInitialisation.flights.length} flights")
+      flightsSubscriber ! flightsForInitialisation
+
     case RecoveryCompleted =>
       log.info("Finished restoring crunch state")
   }
@@ -263,7 +276,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         case ((tn, tl)) =>
           (tn, terminalLoadFromQueuesAndLoads(tl))
       }
-    log.info(s"updatedLoads: $updatedLoads")
+//    log.info(s"updatedLoads: $updatedLoads")
     updatedLoads
   }
 

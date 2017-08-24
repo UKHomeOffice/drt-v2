@@ -109,6 +109,7 @@ object Crunch {
           val crunchFlights: CrunchFlights = grab(in)
 
           if (initialised || crunchFlights.initialState) {
+            log.info(s"processing crunchFlights - ${crunchFlights.flights.length}")
             processFlights(crunchFlights)
           } else {
             log.info(s"Ignoring CrunchFlights: not yet initialised")
@@ -123,8 +124,10 @@ object Crunch {
           val newCrunchStateDiff = crunch(crunchFlights)
 
           if (!crunchFlights.initialState) {
+            log.info(s"setting crunchStateDiffOption")
             crunchStateDiffOption = Option(newCrunchStateDiff)
           } else {
+            log.info(s"initialised = true")
             initialised = true
             if (!hasBeenPulled(in)) pull(in)
           }
