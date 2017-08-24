@@ -43,6 +43,8 @@ class CrunchCodeSharesSpec() extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 15)
 
@@ -88,6 +90,8 @@ class CrunchCodeSharesSpec() extends CrunchTestLike {
       val endTime = startTime + (119 * oneMinute)
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
@@ -135,6 +139,8 @@ class CrunchCodeSharesSpec() extends CrunchTestLike {
       val endTime = startTime + (119 * oneMinute)
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)

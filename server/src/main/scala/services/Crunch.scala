@@ -107,6 +107,7 @@ object Crunch {
           crunchRunning = true
 
           val crunchFlights: CrunchFlights = grab(in)
+          log.info(s"grabbed ${crunchFlights.crunchStart}")
 
           if (initialised || crunchFlights.initialState) {
             log.info(s"processing crunchFlights - ${crunchFlights.flights.length}")
@@ -159,10 +160,11 @@ object Crunch {
       })
 
       def pushStateIfReady() = {
-        crunchStateDiffOption.foreach(crunchState =>
+        crunchStateDiffOption.foreach(crunchStateDiff =>
           if (isAvailable(out)) {
             outAwaiting = false
-            push(out, crunchState)
+            log.info(s"pushing csd ${crunchStateDiff.crunchFirstMinuteMillis}")
+            push(out, crunchStateDiff)
             crunchStateDiffOption = None
           })
       }

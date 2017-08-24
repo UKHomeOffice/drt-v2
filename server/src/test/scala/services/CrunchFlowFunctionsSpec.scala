@@ -19,6 +19,7 @@ class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: Act
   override def updateStateFromDiff(csd: CrunchStateDiff): Unit = {
     super.updateStateFromDiff(csd)
 
+    probe ! csd
     probe ! state.get
   }
 }

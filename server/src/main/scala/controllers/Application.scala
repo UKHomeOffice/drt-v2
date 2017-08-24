@@ -262,12 +262,7 @@ class Application @Inject()(
       val terminalCrunchResult = crunchStateActor ? GetTerminalCrunch(terminalName)
       terminalCrunchResult.map {
         case Nil => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
-        case qrcs: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] =>
-          qrcs.foreach {
-            case (qn, Right(cr)) => log.info(s"crunch: $terminalName/$qn desks: ${cr.recommendedDesks.length}, waits: ${cr.waitTimes.length}")
-          }
-
-          qrcs
+        case qrcs: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] => qrcs
       }
     }
   }

@@ -6,7 +6,7 @@ import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadabl
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.DateTimeZone
-import services.Crunch.CrunchState
+import services.Crunch.{CrunchState, CrunchStateDiff}
 import services.{CrunchTestLike, SDate}
 
 import scala.collection.immutable.{List, Seq}
@@ -44,6 +44,9 @@ class StreamingSpec extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result = result, minutesToTake = 2)
 
@@ -78,6 +81,8 @@ class StreamingSpec extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result = result, minutesToTake = 5)
 
@@ -107,6 +112,8 @@ class StreamingSpec extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result = result, minutesToTake = 5)
 
@@ -132,6 +139,8 @@ class StreamingSpec extends CrunchTestLike {
         val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
         initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+
+        testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -159,6 +168,8 @@ class StreamingSpec extends CrunchTestLike {
         val endTime = SDate(scheduled1, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
         initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+
+        testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -189,6 +200,8 @@ class StreamingSpec extends CrunchTestLike {
         val endTime = SDate(scheduled, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
         initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+
+        testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = paxLoadsFromCrunchState(result, 5)

@@ -103,7 +103,6 @@ case class RootModel(
       case Ready(rawFixedPoints) => rawFixedPoints
       case _ => ""
     }
-
     val movements = staffMovements match {
       case Ready(mm) => mm
       case _ => Seq()
@@ -290,6 +289,7 @@ class SimulationHandler[M](
     case RunTerminalSimulation(terminalName) =>
       if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady && allQueueCrunchesReceived() && airportConfig.value.isReady) {
         log.info(s"Requesting simulation for $terminalName")
+        log.info(s"staffDeployments: ${staffDeployments.value.keys}")
         val terminalDeskRecs = staffDeployments.value.getOrElse(terminalName, Map()).map {
           case (queueName, drtsPot) => queueName -> drtsPot.map(_.items.map(_.deskRec)).getOrElse(List()).toList
         }
@@ -418,6 +418,12 @@ class CrunchHandler[M](totalQueues: () => Map[TerminalName, Int], modelRW: Model
     case UpdateTerminalCrunchResult(terminalName, tqr) =>
       val oldTC = value.getOrElse(terminalName, Map())
       val newTC = Map(terminalName -> tqr)
+
+      newTC.foreach {
+        case (tn, qcr) => qcr.foreach {
+          case (qn, qcr) => log.info(s"received crunch: $tn/$qn - ${qcr.recommendedDesks.length}")
+        }
+      }
 
       val terminalQueues = totalQueues().getOrElse(terminalName, -1)
       val effects = if (tqr.size < terminalQueues) {

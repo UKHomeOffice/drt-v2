@@ -53,6 +53,8 @@ class CrunchTimezoneSpec() extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 30)
 
@@ -82,6 +84,8 @@ class CrunchTimezoneSpec() extends CrunchTestLike {
         val endTime = startTime + (119 * oneMinute)
 
         initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+
+        testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = deskRecsFromCrunchState(result, 120)

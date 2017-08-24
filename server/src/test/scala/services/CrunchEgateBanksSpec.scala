@@ -44,6 +44,8 @@ class CrunchEgateBanksSpec() extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 15)
 

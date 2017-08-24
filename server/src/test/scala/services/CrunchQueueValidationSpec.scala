@@ -41,6 +41,8 @@ class CrunchQueueValidationSpec() extends CrunchTestLike {
 
       initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 1).flatMap(_._2.map(_._1))
 
