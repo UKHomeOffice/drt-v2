@@ -289,7 +289,6 @@ class SimulationHandler[M](
     case RunTerminalSimulation(terminalName) =>
       if (rawShifts.value.isReady && rawFixedPoints.value.isReady && movements.value.isReady && allQueueCrunchesReceived() && airportConfig.value.isReady) {
         log.info(s"Requesting simulation for $terminalName")
-        log.info(s"staffDeployments: ${staffDeployments.value.keys}")
         val terminalDeskRecs = staffDeployments.value.getOrElse(terminalName, Map()).map {
           case (queueName, drtsPot) => queueName -> drtsPot.map(_.items.map(_.deskRec)).getOrElse(List()).toList
         }

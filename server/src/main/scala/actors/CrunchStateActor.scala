@@ -33,7 +33,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         case somethingElse =>
           log.info(s"Got $somethingElse when trying to restore Crunch State")
       }
-      
+
     case csdm@ CrunchStateDiffMessage(Some(start), fd, qd, cd, Some(createdAt)) =>
       log.info(s"recovery: received CrunchStateDiffMessage - $start, ${fd.size} flights, ${qd.size} queue minutes, ${cd.size} crunch minutes, createdAt: ${createdAt}")
       updateStateFromDiff(crunchStateDiffFromMessage(csdm))
