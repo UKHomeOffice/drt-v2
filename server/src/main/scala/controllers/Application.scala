@@ -7,21 +7,18 @@ import actors._
 import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
-import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween}
+import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.{CrunchStateFlow, Publisher}
+import services.Crunch.CrunchStateFullFlow
 
-import scala.collection.immutable
 import scala.collection.immutable.Map
-import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.ChromaFetcher
@@ -31,7 +28,6 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
-import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.chrono.ISOChronology
 import passengersplits.core.AdvancePassengerInfoActor
 import passengersplits.s3.SimpleAtmosReader
@@ -106,7 +102,7 @@ trait SystemActors {
   val actorMaterialiser = ActorMaterializer()
 
   implicit val actorSystem = system
-  def crunchFlow = new CrunchStateFlow(
+  def crunchFlow = new CrunchStateFullFlow(
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
     airportConfig.defaultProcessingTimes.head._2,

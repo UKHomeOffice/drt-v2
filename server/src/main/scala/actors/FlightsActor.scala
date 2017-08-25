@@ -10,11 +10,11 @@ import controllers.FlightState
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.{Arrival, _}
-import org.joda.time.{DateTime, DateTimeZone, LocalDate}
 import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone, LocalDate}
 import passengersplits.core.PassengerInfoRouterActor.{FlushOldVoyageManifests, ReportVoyagePaxSplit}
-import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage, FlightsMessage}
-import services.Crunch.{CrunchFlights, PublisherLike}
+import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightStateSnapshotMessage, FlightsMessage}
+import services.Crunch.CrunchRequest
 import services.SplitsProvider.SplitProvider
 import services.{CSVPassengerSplitsProvider, Crunch, FastTrackPercentages, SDate}
 
@@ -158,12 +158,12 @@ class FlightsActor(crunchStateActor: ActorRef,
 
         val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
         val crunchStartMillis = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
-        val crunchEndMillis = crunchStartMillis + (1439 * 60000)
+        val numberOfMinutes = 1440
 
         log.info(s"crunchStartMillis: $crunchStartMillis")
         log.info(s"flightsSubscriber: $flightsSubscriber")
 
-        flightsSubscriber ! CrunchFlights(flights = s.toList, crunchStart = crunchStartMillis, crunchEnd = crunchEndMillis, initialState = false)
+        flightsSubscriber ! CrunchRequest(flights = s.toList, crunchStart = crunchStartMillis, numberOfMinutes = numberOfMinutes)
     }
   }
 

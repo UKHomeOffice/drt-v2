@@ -1,7 +1,6 @@
 package controllers
 
 import actors.{FlightsActor, GetFlights}
-import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.testkit.TestProbe
@@ -9,22 +8,15 @@ import akka.util.Timeout
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import services.Crunch.{CrunchFlights, PublisherLike}
 //import services.WorkloadCalculatorTests.apiFlight
-import ArrivalGenerator.apiFlight
-import services.inputfeeds.TestCrunchConfig
+import controllers.ArrivalGenerator.apiFlight
 import services.{SDate, SplitsProvider}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Success
-
-object PublisherStub extends PublisherLike {
-  override def publish(crunchFlights: CrunchFlights): NotUsed = NotUsed
-}
 
 class FlightsActorSpec extends Specification {
   sequential

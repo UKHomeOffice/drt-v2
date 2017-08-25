@@ -39,11 +39,8 @@ class CrunchCodeSharesSpec() extends CrunchTestLike {
       val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val startTime = SDate(scheduled).millisSinceEpoch
-      val endTime = startTime + (29 * oneMinute)
 
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 30)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 15)
@@ -87,11 +84,8 @@ class CrunchCodeSharesSpec() extends CrunchTestLike {
       val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val startTime = SDate(scheduled00).millisSinceEpoch
-      val endTime = startTime + (119 * oneMinute)
 
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
@@ -136,11 +130,8 @@ class CrunchCodeSharesSpec() extends CrunchTestLike {
       val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val startTime = SDate(scheduled00).millisSinceEpoch
-      val endTime = startTime + (119 * oneMinute)
 
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)

@@ -37,11 +37,8 @@ class CrunchQueueValidationSpec() extends CrunchTestLike {
       val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val startTime = SDate(scheduled00).millisSinceEpoch
-      val endTime = startTime + (119 * oneMinute)
 
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 1).flatMap(_._2.map(_._1))
