@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import controllers.ArrivalGenerator.apiFlight
 
 
-class CodeShareSpec extends Specification {
+class CodeSharesSpec extends Specification {
 
   import drt.shared.CodeShares._
 

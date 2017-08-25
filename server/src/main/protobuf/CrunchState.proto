@@ -3,10 +3,10 @@ package server.protobuf.messages;
 import "FlightsMessage.proto";
 
 message CrunchStateSnapshotMessage {
-    repeated FlightWithSplitsMessage flightWithSplits = 1;
-    repeated TerminalLoadMessage terminalLoad = 2;
-    repeated TerminalCrunchMessage terminalCrunch = 3;
-    optional int64 crunchFirstMinuteTimestamp = 4;
+    optional int64 crunchStart = 1;
+    optional int32 numberOfMinutes = 2;
+    repeated FlightWithSplitsMessage flightWithSplits = 3;
+    repeated CrunchMinuteMessage crunchMinutes = 4;
 }
 
 message FlightWithSplitsMessage {
@@ -26,35 +26,14 @@ message PaxTypeAndQueueCountMessage {
     optional double paxValue = 3;
 }
 
-message TerminalLoadMessage {
+message CrunchMinuteMessage {
     optional string terminalName = 1;
-    repeated QueueLoadMessage queueLoad =2;
-}
-
-message QueueLoadMessage {
-    optional string queueName =1;
-    repeated LoadMessage load =2;
-}
-
-message LoadMessage {
-    optional int64 timestamp = 1;
-    optional double pax = 2;
-    optional double work = 3;
-}
-
-message TerminalCrunchMessage {
-    optional string terminalName = 1;
-    repeated QueueCrunchMessage queueCrunch = 2;
-}
-
-message QueueCrunchMessage {
-    optional string queueName = 1;
-    optional CrunchMessage crunch = 2;
-}
-
-message CrunchMessage {
-    repeated int32 desks = 1;
-    repeated int32 waitTimes = 2;
+    optional string queueName = 2;
+    optional int64 minute = 3;
+    optional double paxLoad = 4;
+    optional double workLoad = 5;
+    optional int32 deskRec = 6;
+    optional int32 waitTime = 7;
 }
 
 

@@ -40,11 +40,8 @@ class CrunchEgateBanksSpec() extends CrunchTestLike {
       val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val startTime = SDate(scheduled).millisSinceEpoch
-      val endTime = startTime + (29 * oneMinute)
 
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 30)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 15)

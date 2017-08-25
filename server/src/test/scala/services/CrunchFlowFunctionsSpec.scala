@@ -1,6 +1,6 @@
 package services
 
-import actors.CrunchStateActor
+import actors._
 import akka.actor._
 import akka.stream._
 import akka.testkit.TestKit
@@ -16,10 +16,9 @@ import scala.collection.immutable.{List, Seq}
 
 
 class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef) extends CrunchStateActor(queues) {
-  override def updateStateFromDiff(csd: CrunchStateDiff): Unit = {
-    super.updateStateFromDiff(csd)
+  override def updateStateFromCrunchState(cs: CrunchState): Unit = {
+    super.updateStateFromCrunchState(cs)
 
-    probe ! csd
     probe ! state.get
   }
 }

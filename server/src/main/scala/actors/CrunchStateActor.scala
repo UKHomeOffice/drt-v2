@@ -5,15 +5,12 @@ import akka.persistence._
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi._
 import drt.shared._
-import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.CrunchStateDiff.{CrunchDiffMessage, CrunchStateDiffMessage, QueueLoadDiffMessage}
+import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, SplitMessage}
 import services.Crunch._
-import services._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable._
 import scala.language.postfixOps
-import scala.util.{Success, Try}
 
 
 class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
@@ -21,25 +18,20 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   var state: Option[CrunchState] = None
 
-  val snapshotInterval = 25
+  val snapshotInterval = 2
+
+  val oneDayMinutes = 1440
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
-      log.info(s"restoring crunch state")
+      log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
       snapshot match {
         case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
-          log.info(s"matched snapshot CrunchStateSnapshotMessage $metadata, storing it.")
+          log.info(s"Using snapshot to restore")
           state = Option(snapshotMessageToState(sm))
         case somethingElse =>
-          log.info(s"Got $somethingElse when trying to restore Crunch State")
+          log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
       }
-
-    case csdm@ CrunchStateDiffMessage(Some(start), fd, qd, cd, Some(createdAt)) =>
-      log.info(s"recovery: received CrunchStateDiffMessage - $start, ${fd.size} flights, ${qd.size} queue minutes, ${cd.size} crunch minutes, createdAt: ${createdAt}")
-      updateStateFromDiff(crunchStateDiffFromMessage(csdm))
-
-    case CrunchStateDiff(_, _, _, _) =>
-      log.info(s"recovery: ignoring old CrunchStateDiff message")
 
     case RecoveryCompleted =>
       log.info("Finished restoring crunch state")
@@ -48,62 +40,37 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       log.info(s"recovery: received unexpected ${u.getClass}")
   }
 
+  def updateStateFromCrunchState(cs: CrunchState): Unit =
+    state = Option(cs)
+
   override def receiveCommand: Receive = {
-    case csd@CrunchStateDiff(start, fd, qd, cd) =>
-      log.info(s"received CrunchStateDiff - $start, ${fd.size} flights, ${qd.size} queue minutes, ${cd.size} crunch minutes")
-      updateStateFromDiff(csd)
-      persistDiff(csd)
+    case cs@CrunchState(_, _, _, _) =>
+      log.info(s"received CrunchState. storing")
+      updateStateFromCrunchState(cs)
+      saveSnapshotAtInterval(cs)
 
     case GetFlights =>
       state match {
-        case Some(CrunchState(flights, _, _, _)) =>
-          sender() ! FlightsWithSplits(flights)
+        case Some(CrunchState(_, _, flights, _)) =>
+          sender() ! FlightsWithSplits(flights.toList)
         case None => FlightsNotReady
       }
 
     case GetPortWorkload =>
       state match {
-        case Some(CrunchState(_, workloads, _, _)) =>
-          val portWorkloadByTerminalAndQueue = workloads.mapValues {
-            case twl => twl.mapValues {
-              case qwl =>
-                val wl = qwl.map(wlm => WL(wlm._1, wlm._2._2))
-                val pl = qwl.map(wlm => Pax(wlm._1, wlm._2._1))
-                (wl, pl)
-            }
-          }
-          sender() ! portWorkloadByTerminalAndQueue
-        case None => WorkloadsNotReady
+        case Some(CrunchState(_, _, _, crunchMinutes)) =>
+          sender() ! portWorkload(crunchMinutes)
+        case None =>
+          sender() ! WorkloadsNotReady()
       }
 
     case GetTerminalCrunch(terminalName) =>
-      val terminalCrunchResults: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] = state match {
-        case Some(CrunchState(_, _, portCrunchResult, crunchFirstMinuteMillis)) =>
-          portCrunchResult.getOrElse(terminalName, Map()).map {
-            case (queueName, optimiserCRTry) =>
-              optimiserCRTry match {
-                case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
-                  (queueName, Right(CrunchResult(crunchFirstMinuteMillis, 60000, deskRecs, waitTimes)))
-                case _ =>
-                  (queueName, Left(NoCrunchAvailable()))
-              }
-          }.toList
-        case None => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
+      state match {
+        case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
+          sender() ! queueCrunchResults(terminalName, startMillis, crunchMinutes)
+        case _ =>
+          sender() ! List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
       }
-      sender() ! terminalCrunchResults
-
-    case flightsSubscriber: ActorRef =>
-      log.info(s"received flightsSubscriber. sending flights")
-      val flightsForInitialisation = state match {
-        case None =>
-          log.info(s"No state recovered so sending blank CrunchFlights")
-          CrunchFlights(flights = List(), crunchStart = 0L, crunchEnd = 0L + oneDay, initialState = true)
-        case Some(cs) =>
-          val crunchEnd = cs.crunchFirstMinuteMillis + (1439 * oneMinute)
-          CrunchFlights(flights = cs.flights, crunchStart = cs.crunchFirstMinuteMillis, crunchEnd = crunchEnd, initialState = true)
-      }
-      log.info(s"sending ${flightsForInitialisation.flights.length} flights")
-      flightsSubscriber ! flightsForInitialisation
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Snapshot success $md")
@@ -112,332 +79,110 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       log.info(s"Snapshot failed $md\n$cause")
   }
 
-  def emptyWorkloads(firstMinuteMillis: MillisSinceEpoch): Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]] = {
-    portQueues.map {
-      case (tn, q) =>
-        val tl = q.filterNot(_ == Queues.Transfer).map(queueName => {
-          val ql = oneDayOfMinutes.map(minute => {
-            (firstMinuteMillis + (minute * oneMinute), (0d, 0d))
-          }).toList
-          (queueName, ql)
-        }).toMap
-        (tn, tl)
+  def saveSnapshotAtInterval(cs: CrunchState) = state.foreach(s =>
+    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+      val snapshotMessage: CrunchStateSnapshotMessage = crunchStateToSnapshotMessage(cs)
+      log.info("Saving CrunchState snapshot")
+      saveSnapshot(snapshotMessage)
+    })
+
+  def portWorkload(crunchMinutes: Set[CrunchMinute]) = crunchMinutes
+    .groupBy(_.terminalName)
+    .map {
+      case (tn, tms) =>
+        val terminalLoads = tms
+          .groupBy(_.queueName)
+          .map {
+            case (qn, qms) =>
+              val sortedCms = qms.toList.sortBy(_.minute)
+              val paxLoad = sortedCms.map {
+                case CrunchMinute(_, _, m, pl, _, _, _) => Pax(m, pl)
+              }.toIndexedSeq
+              val workLoad = sortedCms.map {
+                case CrunchMinute(_, _, m, _, wl, _, _) => WL(m, wl)
+              }
+              (qn, (workLoad, paxLoad))
+          }
+        (tn, terminalLoads)
     }
-  }
+
+  def queueCrunchResults(terminalName: TerminalName,
+                         startMillis: MillisSinceEpoch,
+                         crunchMinutes: Set[CrunchMinute]): Seq[(QueueName, Either[NoCrunchAvailable, CrunchResult])] = crunchMinutes
+    .groupBy(_.terminalName).getOrElse(terminalName, Set[CrunchMinute]())
+    .groupBy(_.queueName)
+    .map {
+      case (qn, qms) =>
+        if (qms.size == oneDayMinutes) {
+          val sortedCms = qms.toList.sortBy(_.minute)
+          val desks = sortedCms.map {
+            case CrunchMinute(_, _, _, _, _, dr, _) => dr
+          }.toIndexedSeq
+          val waits = sortedCms.map {
+            case CrunchMinute(_, _, _, _, _, _, wt) => wt
+          }
+          (qn, Right(CrunchResult(startMillis, oneMinute, desks, waits)))
+        } else {
+          (qn, Left(NoCrunchAvailable()))
+        }
+    }.toList
 
   def oneDayOfMinutes = {
     0 until 1440
   }
 
-  def emptyCrunch(crunchStartMillis: MillisSinceEpoch) = portQueues
-    .mapValues(_.filterNot(_ == Queues.Transfer)
-      .map(queueName => {
-        val zeros = oneDayOfMinutes.map(_ => 0).toList
-        (queueName, Success(OptimizerCrunchResult(zeros.toIndexedSeq, zeros)))
-      }).toMap)
-
-  def emptyState(crunchStartMillis: MillisSinceEpoch) = {
-    CrunchState(
-      crunchFirstMinuteMillis = crunchStartMillis,
-      flights = List(),
-      workloads = emptyWorkloads(crunchStartMillis),
-      crunchResult = emptyCrunch(crunchStartMillis)
-    )
-  }
-
-  def crunchStateDiffFromMessage(csdm: CrunchStateDiffMessage) = {
-    CrunchStateDiff(
-      csdm.crunchFirstMinuteTimestamp.getOrElse(0L),
-      csdm.flightDiffs.map(flightWithSplitsFromMessage).toSet,
-      csdm.queueDiffs.map(queueLoadDiffFromMessage).toSet,
-      csdm.crunchDiffs.map(crunchDiffFromMessage).toSet
-    )
-  }
-
-  def crunchDiffFromMessage(cdm: CrunchDiffMessage) = {
-    CrunchDiff(
-      cdm.terminalName.getOrElse(""),
-      cdm.queueName.getOrElse(""),
-      cdm.minuteTimestamp.getOrElse(0L),
-      cdm.desks.getOrElse(0),
-      cdm.waitTime.getOrElse(0)
-    )
-  }
-
-  def queueLoadDiffFromMessage(qdm: QueueLoadDiffMessage) = {
-    QueueLoadDiff(
-      qdm.terminalName.getOrElse(""),
-      qdm.queueName.getOrElse(""),
-      qdm.minuteTimestamp.getOrElse(0L),
-      qdm.pax.getOrElse(0),
-      qdm.work.getOrElse(0)
-    )
-  }
-
-  def stateDiffToMessage(csd: CrunchStateDiff) = {
-    CrunchStateDiffMessage(
-      crunchFirstMinuteTimestamp = Option(csd.crunchFirstMinuteMillis),
-      flightDiffs = csd.flightDiffs.map(FlightMessageConversion.flightWithSplitsToMessage).toSeq,
-      queueDiffs = csd.queueDiffs.map(queueLoadDiffToMessage).toSeq
-    )
-  }
-
-  def queueLoadDiffToMessage(qd: QueueLoadDiff) = {
-    QueueLoadDiffMessage(
-      Option(qd.terminalName),
-      Option(qd.queueName),
-      Option(qd.minute),
-      Option(qd.paxLoad),
-      Option(qd.workLoad)
-    )
-  }
-
-  def persistDiff(csd: CrunchStateDiff) = {
-    persist(csd) { (crunchDiff: CrunchStateDiff) =>
-      val diffMessage = stateDiffToMessage(crunchDiff)
-      log.info(s"persisting ${diffMessage.getClass}")
-      context.system.eventStream.publish(diffMessage)
-      state.foreach(s =>
-        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-          log.info("saving CrunchState snapshot")
-          saveSnapshot(stateToSnapshotMessage(s))
-        })
-    }
-  }
-
-  def updateStateFromDiff(csd: CrunchStateDiff) = {
-    val currentState = state match {
-      case Some(s) => s
-      case None => emptyState(csd.crunchFirstMinuteMillis)
-    }
-
-    state = Option(currentState.copy(
-      crunchFirstMinuteMillis = csd.crunchFirstMinuteMillis,
-      flights = updatedFlightState(csd.flightDiffs, currentState)
-        .filter(fs => (fs.apiFlight.PcpTime + (30 * oneMinute)) >= csd.crunchFirstMinuteMillis),
-      workloads = updatedLoadState(csd.crunchFirstMinuteMillis, csd.queueDiffs, currentState),
-      crunchResult = updatedCrunchState(csd.crunchFirstMinuteMillis, csd.crunchDiffs, currentState)
+  def crunchStateToSnapshotMessage(crunchState: CrunchState) = CrunchStateSnapshotMessage(
+    Option(crunchState.crunchFirstMinuteMillis),
+    Option(crunchState.numberOfMinutes),
+    crunchState.flights.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
+    crunchState.crunchMinutes.toList.map(cm => CrunchMinuteMessage(
+      Option(cm.terminalName),
+      Option(cm.queueName),
+      Option(cm.minute),
+      Option(cm.paxLoad),
+      Option(cm.workLoad),
+      Option(cm.deskRec),
+      Option(cm.waitTime)
     ))
-  }
-
-  def updatedCrunchState(crunchStartMillis: Long, crunches: Set[CrunchDiff], currentState: CrunchState) = {
-    val crunchByTQM = crunchByTerminalQueueMinute(currentState)
-    val emptyCrunchTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)] = portQueues.flatMap {
-      case (tn, tq) => tq.filter(_ != Queues.Transfer).flatMap {
-        case qn => oneDayOfMinutes.map(minute => Tuple2(Tuple3(tn, qn, crunchStartMillis + (minute * oneMinute)), Tuple2(0, 0)))
-      }
-    }
-    val fullCrunchByTQM = crunchByTQM.foldLeft(emptyCrunchTQM) {
-      case (crunchSoFar, (key, values)) => crunchSoFar.updated(key, values)
-    }
-    val updatedTQM = applyCrunchDiffsToTQM(crunches, fullCrunchByTQM)
-    val updatedCrunch = updatedTQM
-      .filter {
-        case ((_, _, millis), _) => (crunchStartMillis <= millis) && (millis < (crunchStartMillis + oneDay))
-      }
-      .groupBy { case ((tn, _, _), _) => tn }
-      .map {
-        case ((tn, tl)) => (tn, terminalCrunchFromQueuesAndCrunch(tl))
-      }
-    updatedCrunch
-  }
-
-  def applyCrunchDiffsToTQM(crunches: Set[CrunchDiff], crunchByTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)]) = {
-    val updatedTQM = crunches.foldLeft(crunchByTQM) {
-      case (crunchesSoFar, CrunchDiff(tn, qn, m, dr, wt)) =>
-        val currentCr = crunchesSoFar.getOrElse((tn, qn, m), (0, 0))
-        crunchesSoFar.updated((tn, qn, m), (currentCr._1 + dr, currentCr._2 + wt))
-    }
-    updatedTQM
-  }
-
-  def crunchByTerminalQueueMinute(currentState: CrunchState): Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)] = {
-    val startMillis = currentState.crunchFirstMinuteMillis
-    val crunchByTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)] = currentState.crunchResult.flatMap {
-      case (tn, tc) => tc.flatMap { case (qn, qc) => crunchResultToTQM(startMillis, tn, qn, qc) }
-    }
-    crunchByTQM
-  }
-
-  def crunchResultToTQM(startMillis: MillisSinceEpoch, tn: TerminalName, qn: QueueName, qc: Try[OptimizerCrunchResult]): IndexedSeq[((TerminalName, QueueName, MillisSinceEpoch), (Int, Int))] = {
-    qc match {
-      case Success(c) =>
-        c.recommendedDesks.indices.map(m => {
-          ((tn, qn, startMillis + (m * oneMinute)), (c.recommendedDesks(m), c.waitTimes(m)))
-        })
-    }
-  }
-
-  def terminalCrunchFromQueuesAndCrunch(tl: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)]): Map[QueueName, Success[OptimizerCrunchResult]] = {
-    tl
-      .groupBy { case ((_, qn, _), _) => qn }
-      .map {
-        case (qn, ql) =>
-          val deskRecs: IndexedSeq[Int] = deskRecsFromMillisAndDeskRecs(ql)
-          val waitTimes: List[Int] = waitTimesFromMillisAndWaitTimes(ql)
-          (qn, Success(OptimizerCrunchResult(deskRecs, waitTimes)))
-      }
-  }
-
-  def waitTimesFromMillisAndWaitTimes(ql: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)]) = {
-    val waitTimes = ql.toSeq.map {
-      case ((_, _, millis), (_, wt)) => (millis, wt)
-    }.toList.sortBy(_._1).map(_._2)
-    waitTimes
-  }
-
-  def deskRecsFromMillisAndDeskRecs(ql: Map[(TerminalName, QueueName, MillisSinceEpoch), (Int, Int)]) = {
-    val deskRecs = ql.map {
-      case ((_, _, millis), (dr, _)) => (millis, dr)
-    }.toList.sortBy(_._1).map(_._2).toIndexedSeq
-    deskRecs
-  }
-
-  def updatedLoadState(crunchStartMillis: MillisSinceEpoch, queueLoads: Set[QueueLoadDiff], currentState: CrunchState) = {
-    val loadByTQM = loadByTerminalQueueMinute(currentState)
-    val emptyLoadsTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)] = portQueues.flatMap {
-      case (tn, tq) => tq.filter(_ != Queues.Transfer).flatMap {
-        case qn => oneDayOfMinutes.map(minute => Tuple2(Tuple3(tn, qn, crunchStartMillis + (minute * oneMinute)), Tuple2(0.0, 0.0)))
-      }
-    }
-    val fullLoadsByTQM = loadByTQM.foldLeft(emptyLoadsTQM) {
-      case (crunchSoFar, (key, values)) => crunchSoFar.updated(key, values)
-    }
-    val updatedTQM = applyQueueLoadDiffsToTQM(queueLoads, fullLoadsByTQM, currentState.crunchFirstMinuteMillis)
-    val updatedLoads = updatedTQM
-      .filter {
-        case ((_, _, millis), _) => crunchStartMillis <= millis && millis < crunchStartMillis + oneDay
-      }
-      .groupBy { case ((tn, qn, m), l) => tn }
-      .map {
-        case ((tn, tl)) =>
-          (tn, terminalLoadFromQueuesAndLoads(tl))
-      }
-    updatedLoads
-  }
-
-  def applyQueueLoadDiffsToTQM(queueLoads: Set[QueueLoadDiff], loadByTQM: Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)], crunchStartMinute: MillisSinceEpoch): Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)] = {
-    val updatedTQM = queueLoads.foldLeft(loadByTQM) {
-      case (loadsSoFar, QueueLoadDiff(tn, qn, m, pl, wl)) =>
-        if (m >= crunchStartMinute && m < crunchStartMinute + oneDay) {
-          val currentLoads = loadsSoFar.getOrElse((tn, qn, m), (0d, 0d))
-          loadsSoFar.updated((tn, qn, m), (currentLoads._1 + pl, currentLoads._2 + wl))
-        } else loadsSoFar
-    }
-    updatedTQM
-  }
-
-  def loadByTerminalQueueMinute(currentState: CrunchState) = currentState.workloads.flatMap {
-    case (tn, tlw) => tlw.flatMap {
-      case (qn, qlw) => qlw.map {
-        case (millis, (pl, wl)) => ((tn, qn, millis), (pl, wl))
-      }
-    }
-  }
-
-  def terminalLoadFromQueuesAndLoads(tl: Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)]) = tl.groupBy {
-    case ((_, qn, _), _) => qn
-  }.map {
-    case (qn, ql) =>
-      (qn, queueLoadsFromMillisAndLoads(ql))
-  }
-
-  def queueLoadsFromMillisAndLoads(ql: Map[(TerminalName, QueueName, MillisSinceEpoch), (Double, Double)]) = ql.map {
-    case ((tn, qn, m), (pl, wl)) => (m, (pl, wl))
-  }.toList
-
-  def updatedFlightState(flights: Set[ApiFlightWithSplits], currentState: CrunchState) = {
-    val flightsById = currentState.flights.map(f => (f.apiFlight.FlightID, f)).toMap
-    val updatedFlights = flights.foldLeft(flightsById) {
-      case (flightsSoFar, newFlight) => flightsSoFar.updated(newFlight.apiFlight.FlightID, newFlight)
-    }.values.toList
-    updatedFlights
-  }
-
-  def snapshotMessageToState(snapshot: CrunchStateSnapshotMessage) = CrunchState(
-    snapshot.flightWithSplits.map(flightWithSplitsFromMessage).toList,
-    snapshot.terminalLoad.map(tlm => (tlm.terminalName.get, terminalLoadFromMessage(tlm))).toMap,
-    snapshot.terminalCrunch.map(tcm => (tcm.terminalName.get, terminalCrunchResultFromMessage(tcm))).toMap,
-    snapshot.crunchFirstMinuteTimestamp.get
   )
 
-  def terminalCrunchResultFromMessage(tcm: TerminalCrunchMessage) = {
-    val toMap = tcm.queueCrunch.map(qcm => {
-      val cm = qcm.crunch.get
-      (qcm.queueName.get, Success(OptimizerCrunchResult(cm.desks.toIndexedSeq, cm.waitTimes.toList)))
-    }).toMap
-    toMap
-  }
+  def snapshotMessageToState(sm: CrunchStateSnapshotMessage) = CrunchState(
+    sm.crunchStart.getOrElse(0L),
+    sm.numberOfMinutes.getOrElse(0),
+    sm.flightWithSplits.map(fm => ApiFlightWithSplits(
+      FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
+      fm.splits.map(sm => splitMessageToApiSplits(sm)).toList
+    )).toSet,
+    sm.crunchMinutes.map(cmm => CrunchMinute(
+      cmm.terminalName.getOrElse(""),
+      cmm.queueName.getOrElse(""),
+      cmm.minute.getOrElse(0L),
+      cmm.paxLoad.getOrElse(0d),
+      cmm.workLoad.getOrElse(0d),
+      cmm.deskRec.getOrElse(0),
+      cmm.waitTime.getOrElse(0)
+    )).toSet
+  )
 
-  def terminalLoadFromMessage(tlm: TerminalLoadMessage) = {
-    val toMap = tlm.queueLoad.map(qlm => {
-      (qlm.queueName.get, queueLoadMessagesToQueueLoad(qlm))
-    }).toMap
-    toMap
-  }
-
-  def queueLoadMessagesToQueueLoad(qlm: QueueLoadMessage) = {
-    val toList = qlm.load.map(lm => {
-      (lm.timestamp.get, (lm.pax.get, lm.work.get))
-    }).toList
-    toList
-  }
-
-  def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage) = {
-    ApiFlightWithSplits(
-      FlightMessageConversion.flightMessageV2ToArrival(fm.flight.get),
-      fm.splits.map(apiSplitsFromMessage).toList
-    )
-  }
-
-  def apiSplitsFromMessage(sm: SplitMessage) = {
+  def splitMessageToApiSplits(sm: SplitMessage) = {
     ApiSplits(
-      sm.paxTypeAndQueueCount.map(pqcm => {
-        ApiPaxTypeAndQueueCount(PaxType(pqcm.paxType.get), pqcm.queueType.get, pqcm.paxValue.get)
-      }).toList, sm.source.get, SplitStyle(sm.style.get))
-  }
-
-  def stateToSnapshotMessage(crunchState: CrunchState): CrunchStateSnapshotMessage = {
-    CrunchStateSnapshotMessage(
-      crunchState.flights.map(FlightMessageConversion.flightWithSplitsToMessage),
-      terminalLoadsToMessages(crunchState.workloads),
-      terminalCrunchesToMessages(crunchState.crunchResult),
-      Option(crunchState.crunchFirstMinuteMillis)
+      sm.paxTypeAndQueueCount.map(ptqcm => ApiPaxTypeAndQueueCount(
+        PaxType(ptqcm.paxType.getOrElse("")),
+        ptqcm.queueType.getOrElse(""),
+        ptqcm.paxValue.getOrElse(0d)
+      )).toList,
+      sm.source.getOrElse(""),
+      SplitStyle(sm.style.getOrElse(""))
     )
   }
 
-  def terminalCrunchesToMessages(crunchResult: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]]) = {
-    crunchResult.map {
-      case (terminalName, queueCrunch) =>
-        terminalCrunchToMessage(terminalName, queueCrunch)
-    }.toList
-  }
+  //  def persistState(cs: CrunchState) = {
+  //    persist(cs) { (crunchState: CrunchState) =>
+  //      log.info(s"persisting ${snapshotMessage.getClass}")
+  //      context.system.eventStream.publish(snapshotMessage)
 
-  def terminalLoadsToMessages(loads: Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]]): List[TerminalLoadMessage] = {
-    loads.map {
-      case (terminalName, queueLoads) =>
-        terminalLoadToMessage(terminalName, queueLoads)
-    }.toList
-  }
-
-  def terminalCrunchToMessage(terminalName: TerminalName, queueCrunch: Map[QueueName, Try[OptimizerCrunchResult]]) = {
-    TerminalCrunchMessage(Option(terminalName), queueCrunch.collect {
-      case (queueName, Success(cr)) =>
-        QueueCrunchMessage(Option(queueName), Option(CrunchMessage(cr.recommendedDesks, cr.waitTimes)))
-    }.toList)
-  }
-
-  def terminalLoadToMessage(terminalName: TerminalName, queueLoads: Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]) = {
-    TerminalLoadMessage(Option(terminalName), queueLoads.map {
-      case (queueName, loads) => queueLoadToMessage(queueName, loads)
-    }.toList)
-  }
-
-  def queueLoadToMessage(queueName: QueueName, loads: List[(MillisSinceEpoch, (Double, Double))]) = {
-    QueueLoadMessage(Option(queueName), loads.map {
-      case (timestamp, (pax, work)) => LoadMessage(Option(timestamp), Option(pax), Option(work))
-    })
-  }
+  //    }
+  //  }
 }
 
 case object GetPortWorkload

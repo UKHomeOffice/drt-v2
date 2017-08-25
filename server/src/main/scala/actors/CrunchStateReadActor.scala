@@ -18,7 +18,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       s match {
         case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
           log.info("matched CrunchStateSnapshotMessage, storing it.")
-          state = Option(snapshotMessageToState(sm))
+          state = None //Option(snapshotMessageToState(sm))
         case somethingElse =>
           log.error(s"Got $somethingElse when trying to restore Crunch State")
       }
@@ -33,35 +33,26 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
 
     case GetFlights =>
       state match {
-        case Some(CrunchState(flights, _, _, _)) =>
-          sender() ! FlightsWithSplits(flights)
+        case Some(CrunchState(_, _, flights, _)) =>
+          sender() ! FlightsWithSplits(flights.toList)
         case None => FlightsNotReady
       }
 
     case GetPortWorkload =>
       state match {
-        case Some(CrunchState(_, workloads, _, _)) =>
-          val values = workloads.mapValues(_.mapValues(wl =>
-            (wl.map(wlm => WL(wlm._1, wlm._2._2)), wl.map(wlm => Pax(wlm._1, wlm._2._1)))))
-          sender() ! values
-        case None => WorkloadsNotReady
+        case Some(CrunchState(_, _, _, crunchMinutes)) =>
+          sender() ! portWorkload(crunchMinutes)
+        case None =>
+          sender() ! WorkloadsNotReady()
       }
 
     case GetTerminalCrunch(terminalName) =>
-      val terminalCrunchResults: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] = state match {
-        case Some(CrunchState(_, _, portCrunchResult, crunchFirstMinuteMillis)) =>
-          portCrunchResult.getOrElse(terminalName, Map()).map {
-            case (queueName, optimiserCRTry) =>
-              optimiserCRTry match {
-                case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
-                  (queueName, Right(CrunchResult(crunchFirstMinuteMillis, 60000, deskRecs, waitTimes)))
-                case _ =>
-                  (queueName, Left(NoCrunchAvailable()))
-              }
-          }.toList
-        case None => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
+      state match {
+        case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
+          sender() ! queueCrunchResults(terminalName, startMillis, crunchMinutes)
+        case _ =>
+          sender() ! List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
       }
-      sender() ! terminalCrunchResults
   }
 
   override def recovery: Recovery = {

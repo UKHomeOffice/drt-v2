@@ -6,15 +6,13 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.{ApiFlightWithSplits, CodeShares, PaxTypeAndQueue, Queues}
+import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import services.Crunch.{CrunchFlights, CrunchState, CrunchStateFlow}
+import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
-import scala.concurrent.duration._
 
-import scala.collection.immutable.{List, Seq}
-import scala.util.Success
+import scala.collection.immutable.{List, Seq, Set}
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
@@ -64,7 +62,7 @@ class CrunchTestLike
 
     implicit val actorSystem = system
 
-    def crunchFlow = new CrunchStateFlow(
+    def crunchFlow = new CrunchStateFullFlow(
       slaByQueue,
       minMaxDesks,
       procTimes,
@@ -79,62 +77,67 @@ class CrunchTestLike
     (subscriber, crunchStateActor)
   }
 
-  def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, endTime: MillisSinceEpoch) = {
-    subscriber ! CrunchFlights(List(), startTime, endTime, true)
-    expectNoMsg(50 milliseconds)
-    subscriber ! CrunchFlights(flightsWithSplits, startTime, endTime, false)
+  def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {
+    subscriber ! CrunchRequest(flightsWithSplits, startTime, numberOfMinutes)
   }
 
-  def paxLoadsFromCrunchState(result: CrunchState, minutesToTake: Int) = {
-    val resultSummary: Map[TerminalName, Map[QueueName, List[Double]]] = result match {
-      case CrunchState(_, workloads, _, _) =>
-        workloads.mapValues {
-          case twl => twl.mapValues {
-            case qwl => qwl.sortBy(_._1).map(_._2._1).take(minutesToTake)
+  def paxLoadsFromCrunchState(crunchState: CrunchState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = crunchState.crunchMinutes
+    .groupBy(_.terminalName)
+    .map {
+      case (tn, tms) =>
+        val terminalLoads = tms
+          .groupBy(_.queueName)
+          .map {
+            case (qn, qms) =>
+              val sortedCms = qms.toList.sortBy(_.minute)
+              val paxLoad = sortedCms.map(_.paxLoad).take(minsToTake)
+              (qn, paxLoad)
           }
-        }
+        (tn, terminalLoads)
     }
-    resultSummary
-  }
 
-  def allWorkLoadsFromCrunchState(result: CrunchState) = {
-    val resultSummary: Map[TerminalName, Map[QueueName, List[Double]]] = result match {
-      case CrunchState(_, workloads, _, _) =>
-        workloads.mapValues {
-          case twl => twl.mapValues {
-            case qwl => qwl.sortBy(_._1).map(_._2._2)
+  def allWorkLoadsFromCrunchState(crunchState: CrunchState): Map[TerminalName, Map[QueueName, List[Double]]] = crunchState.crunchMinutes
+    .groupBy(_.terminalName)
+    .map {
+      case (tn, tms) =>
+        val terminalLoads = tms
+          .groupBy(_.queueName)
+          .map {
+            case (qn, qms) =>
+              val sortedCms = qms.toList.sortBy(_.minute)
+              val workLoad = sortedCms.map(_.workLoad)
+              (qn, workLoad)
           }
-        }
+        (tn, terminalLoads)
     }
-    resultSummary
-  }
 
-  def workLoadsFromCrunchState(result: CrunchState, minutesToTake: Int) = {
-    val resultSummary: Map[TerminalName, Map[QueueName, List[Double]]] = result match {
-      case CrunchState(_, workloads, _, _) =>
-        workloads.mapValues {
-          case twl => twl.mapValues {
-            case qwl => qwl.sortBy(_._1).map(_._2._2).take(minutesToTake)
+  def workLoadsFromCrunchState(crunchState: CrunchState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = crunchState.crunchMinutes
+    .groupBy(_.terminalName)
+    .map {
+      case (tn, tms) =>
+        val terminalLoads = tms
+          .groupBy(_.queueName)
+          .map {
+            case (qn, qms) =>
+              val sortedCms = qms.toList.sortBy(_.minute)
+              val workLoad = sortedCms.map(_.workLoad).take(minsToTake)
+              (qn, workLoad)
           }
-        }
+        (tn, terminalLoads)
     }
-    resultSummary
-  }
 
-  def deskRecsFromCrunchState(result: CrunchState, minutesToTake: Int): Map[TerminalName, Map[QueueName, IndexedSeq[Int]]] = {
-    val resultSummary = result match {
-      case CrunchState(_, _, crunchResult, _) =>
-        crunchResult.map {
-          case (tn, twl) =>
-            val tdr = twl.map {
-              case (qn, Success(OptimizerCrunchResult(recommendedDesks, _))) =>
-                (qn, recommendedDesks.take(minutesToTake))
-              case (qn, _) =>
-                (qn, IndexedSeq.fill[Int](minutesToTake)(1))
-            }
-            (tn, tdr)
-        }
+  def deskRecsFromCrunchState(crunchState: CrunchState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Int]]] = crunchState.crunchMinutes
+    .groupBy(_.terminalName)
+    .map {
+      case (tn, tms) =>
+        val terminalLoads = tms
+          .groupBy(_.queueName)
+          .map {
+            case (qn, qms) =>
+              val sortedCms = qms.toList.sortBy(_.minute)
+              val deskRecs = sortedCms.map(_.deskRec).take(minsToTake)
+              (qn, deskRecs)
+          }
+        (tn, terminalLoads)
     }
-    resultSummary
-  }
 }

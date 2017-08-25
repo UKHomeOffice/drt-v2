@@ -10,7 +10,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.DateTimeZone
-import services.Crunch.{CrunchFlights, CrunchState, CrunchStateDiff}
+import services.Crunch.{CrunchRequest, CrunchState}
 
 import scala.collection.immutable.List
 import scala.concurrent.Await
@@ -40,11 +40,8 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
           val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-          val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (29 * oneMinute)
 
-          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-          testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 30)
           testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
           val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -74,11 +71,10 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
           val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-          val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
+          val endTime = startTime + (1440 * oneMinute)
 
-          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 1440)
 
-          testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
           testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
           val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -89,7 +85,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val wl = result("T1")(Queues.EeaDesk)._1
 
           val expectedLength = 1440
-          val expectedWl = startTime to endTime by oneMinute
+          val expectedWl = startTime until endTime by oneMinute
 
           (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
         }
@@ -113,11 +109,10 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
           val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-          val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
+          val endTime = startTime + (1440 * oneMinute)
 
-          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 1440)
 
-          testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
           testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
           val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -128,7 +123,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val wl = result("T1")(Queues.EeaDesk)._1
 
           val expectedLength = 1440
-          val expectedWl = startTime to endTime by oneMinute
+          val expectedWl = startTime until endTime by oneMinute
 
           (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
         }
@@ -152,11 +147,9 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
           val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-          val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
 
-          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 1440)
 
-          testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
           testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
           val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -190,11 +183,9 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
           val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
           val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-          val endTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch + (1439 * oneMinute)
 
-          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
+          initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 1440)
 
-          testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
           testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
           val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -228,18 +219,14 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val firstDayCrunchStartTime = SDate(scheduledFirstDate, DateTimeZone.UTC).millisSinceEpoch
-      val firstDayCrunchEndTime = firstDayCrunchStartTime + (1439 * oneMinute)
       val nextDayCrunchStartTime = SDate(scheduledFirstDate, DateTimeZone.UTC).millisSinceEpoch
-      val nextDayCrunchEndTime = nextDayCrunchStartTime + (1439 * oneMinute)
 
-      initialiseAndSendFlights(flightsForFirstDayCrunch, subscriber, firstDayCrunchStartTime, firstDayCrunchEndTime)
+      initialiseAndSendFlights(flightsForFirstDayCrunch, subscriber, firstDayCrunchStartTime, numberOfMinutes = 1440)
 
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
-      subscriber ! CrunchFlights(flightsForNextDayCrunch, nextDayCrunchStartTime, nextDayCrunchEndTime, false)
+      subscriber ! CrunchRequest(flightsForNextDayCrunch, nextDayCrunchStartTime, numberOfMinutes = 1440)
 
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
       val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -250,7 +237,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val wl = result("T1")(Queues.EeaDesk)._1
 
       val expectedLength = 1440
-      val expectedWl = nextDayCrunchStartTime to nextDayCrunchEndTime by oneMinute
+      val expectedWl = nextDayCrunchStartTime until (nextDayCrunchStartTime + (1440 * oneMinute)) by oneMinute
 
       (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
     }
@@ -274,18 +261,14 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val firstDayCrunchStartTime = SDate(scheduledFirstDate, DateTimeZone.UTC).millisSinceEpoch
-      val firstDayCrunchEndTime = firstDayCrunchStartTime + (1439 * oneMinute)
       val nextDayCrunchStartTime = SDate(scheduledNextDay, DateTimeZone.UTC).millisSinceEpoch
-      val nextDayCrunchEndTime = nextDayCrunchStartTime + (1439 * oneMinute)
 
-      initialiseAndSendFlights(flightsForFirstDayCrunch, subscriber, firstDayCrunchStartTime, firstDayCrunchEndTime)
+      initialiseAndSendFlights(flightsForFirstDayCrunch, subscriber, firstDayCrunchStartTime, numberOfMinutes = 1440)
 
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
-      subscriber ! CrunchFlights(flightsForNextDayCrunch, nextDayCrunchStartTime, nextDayCrunchEndTime, false)
+      subscriber ! CrunchRequest(flightsForNextDayCrunch, nextDayCrunchStartTime, numberOfMinutes = 1440)
 
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
       val askableCrunchStateTestActor: AskableActorRef = crunchStateTestActor
@@ -302,7 +285,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
     "Given an empty crunch state " +
       "When I first crunch one date and then crunch the day after " +
-      "Then I should see a CrunchStates and CrunchStateDiffs start times matching the crunch requests" >> {
+      "Then I should see a CrunchStates start times matching the crunch requests" >> {
 
       val scheduledFirstDate = "2017-01-01T00:00Z"
       val scheduledNextDay = "2017-01-02T00:00Z"
@@ -316,29 +299,18 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
         List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50)), SplitSources.Historical, Percentage))))
 
       val testProbe = TestProbe()
-      val (subscriber, crunchStateTestActor) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+      val subscriber = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
       val firstDayCrunchStartTime = SDate(scheduledFirstDate, DateTimeZone.UTC).millisSinceEpoch
-      val firstDayCrunchEndTime = firstDayCrunchStartTime + (1439 * oneMinute)
       val nextDayCrunchStartTime = SDate(scheduledNextDay, DateTimeZone.UTC).millisSinceEpoch
-      val nextDayCrunchEndTime = nextDayCrunchStartTime + (1439 * oneMinute)
 
-      initialiseAndSendFlights(flightsForFirstDayCrunch, subscriber, firstDayCrunchStartTime, firstDayCrunchEndTime)
-
-      val csd1 = testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsForFirstDayCrunch, subscriber, firstDayCrunchStartTime, numberOfMinutes = 1440)
       val cs1 = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
-      subscriber ! CrunchFlights(flightsForNextDayCrunch, nextDayCrunchStartTime, nextDayCrunchEndTime, false)
-
-      val csd2 = testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      subscriber ! CrunchRequest(flightsForNextDayCrunch, nextDayCrunchStartTime, numberOfMinutes = 1440)
       val cs2 = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
-      println(s"cr1 ${cs1.crunchFirstMinuteMillis} & ${csd1.crunchFirstMinuteMillis}")
-      println(s"cr2 ${cs2.crunchFirstMinuteMillis} & ${csd2.crunchFirstMinuteMillis}")
-      cs1.crunchFirstMinuteMillis === firstDayCrunchStartTime &&
-        csd1.crunchFirstMinuteMillis === firstDayCrunchStartTime &&
-        cs2.crunchFirstMinuteMillis === nextDayCrunchStartTime &&
-        csd2.crunchFirstMinuteMillis === nextDayCrunchStartTime
+      cs1.crunchFirstMinuteMillis === firstDayCrunchStartTime && cs2.crunchFirstMinuteMillis === nextDayCrunchStartTime
     }
   }
 }

@@ -37,9 +37,9 @@ class CrunchTimezoneSpec() extends CrunchTestLike {
     }
 
     "Given flights with one passenger and one split to eea desk" +
-      "When the date falls within GMT" +
+      "When the date falls within GMT " +
       "Then I should see desks being allocated at the time passengers start arriving at PCP" >> {
-      val scheduled = "2017-01-01T00:00Z"
+      val scheduled = "2017-06-01T00:00Z"
       val flightsWithSplits = List(
         ApiFlightWithSplits(
           ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled),
@@ -48,12 +48,9 @@ class CrunchTimezoneSpec() extends CrunchTestLike {
       val testProbe = TestProbe()
       val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
-      val startTime = SDate("2017-05-30T23:00Z").millisSinceEpoch
-      val endTime = startTime + (119 * oneMinute)
+      val startTime = SDate("2017-05-31T23:00Z").millisSinceEpoch
 
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-      testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 30)
@@ -80,12 +77,9 @@ class CrunchTimezoneSpec() extends CrunchTestLike {
         val testProbe = TestProbe()
         val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
 
-        val startTime = SDate("2017-05-30T23:00Z").millisSinceEpoch
-        val endTime = startTime + (119 * oneMinute)
+        val startTime = SDate("2017-05-31T23:00Z").millisSinceEpoch
 
-        initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, endTime)
-
-        testProbe.expectMsgAnyClassOf(classOf[CrunchStateDiff])
+        initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = deskRecsFromCrunchState(result, 120)

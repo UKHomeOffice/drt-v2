@@ -1,21 +1,20 @@
 package services
 
-import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.scaladsl.{Sink, Source}
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import org.apache.commons.logging.LogFactory
 import org.joda.time.{DateTime, DateTimeZone}
+import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator._
 
-import scala.collection.immutable
 import scala.collection.immutable.{Map, Seq}
-import scala.util.{Success, Try}
+import scala.util.Success
 
 object Crunch {
+  val log = LoggerFactory.getLogger(getClass)
 
   case class FlightSplitMinute(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
@@ -23,34 +22,26 @@ object Crunch {
 
   case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class QueueLoadDiff(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, paxLoad: Double, workLoad: Double)
-
-  case class CrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, deskRec: Int, waitTime: Int)
-
-  case class CrunchDiff(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, deskRec: Int, waitTime: Int)
+  case class CrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, paxLoad: Double, workLoad: Double, deskRec: Int, waitTime: Int)
 
   case class CrunchState(
-                          flights: List[ApiFlightWithSplits],
-                          workloads: Map[TerminalName, Map[QueueName, List[(Long, (Double, Double))]]],
-                          crunchResult: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]],
-                          crunchFirstMinuteMillis: MillisSinceEpoch
-                        )
+                          crunchFirstMinuteMillis: MillisSinceEpoch,
+                          numberOfMinutes: Int,
+                          flights: Set[ApiFlightWithSplits],
+                          crunchMinutes: Set[CrunchMinute])
 
-  case class CrunchStateDiff(crunchFirstMinuteMillis: MillisSinceEpoch, flightDiffs: Set[ApiFlightWithSplits], queueDiffs: Set[QueueLoadDiff], crunchDiffs: Set[CrunchDiff])
-
-  case class CrunchFlights(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch, initialState: Boolean)
+  case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, numberOfMinutes: Int)
 
   val oneMinute = 60000
-  val oneDay = 1440 * oneMinute
 
   class CrunchStateFullFlow(slas: Map[QueueName, Int],
                             minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                             procTimes: Map[PaxTypeAndQueue, Double],
                             groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
                             validPortTerminals: Set[String])
-    extends GraphStage[FlowShape[CrunchFlights, CrunchState]] {
+    extends GraphStage[FlowShape[CrunchRequest, CrunchState]] {
 
-    val in = Inlet[CrunchFlights]("CrunchState.in")
+    val in = Inlet[CrunchRequest]("CrunchState.in")
     val out = Outlet[CrunchState]("CrunchState.out")
     override val shape = FlowShape.of(in, out)
 
@@ -60,56 +51,61 @@ object Crunch {
       var crunchMinutes: Set[CrunchMinute] = Set()
 
       var crunchStateOption: Option[CrunchState] = None
-      var outAwaiting = false
       var crunchRunning = false
 
       setHandlers(in, out, new InHandler with OutHandler {
         override def onPull(): Unit = {
+          log.info(s"onPull called")
           crunchStateOption match {
             case Some(crunchState) =>
-              outAwaiting = false
               push(out, crunchState)
               crunchStateOption = None
             case None =>
-              outAwaiting = true
-              if (!hasBeenPulled(in)) pull(in)
+              log.info(s"No CrunchState to push")
           }
+          if (!hasBeenPulled(in)) pull(in)
         }
 
         override def onPush(): Unit = {
+          log.info(s"onPush called")
           if (!crunchRunning) grabAndCrunch()
 
           pushStateIfReady()
+
+          if (!hasBeenPulled(in)) pull(in)
         }
 
         def grabAndCrunch() = {
           crunchRunning = true
 
-          val crunchFlights: CrunchFlights = grab(in)
+          val crunchRequest: CrunchRequest = grab(in)
 
-          log.info(s"processing crunchFlights - ${crunchFlights.flights.length}")
-          processFlights(crunchFlights)
+          log.info(s"processing crunchRequest - ${crunchRequest.flights.length} flights")
+          processFlights(crunchRequest)
 
           crunchRunning = false
         }
 
-        def processFlights(crunchFlights: CrunchFlights) = {
+        def processFlights(crunchFlights: CrunchRequest) = {
           val newCrunchStateOption = crunch(crunchFlights)
 
           log.info(s"setting crunchStateOption")
           crunchStateOption = newCrunchStateOption
         }
 
-        def crunch(crunchFlights: CrunchFlights) = {
-          val flightsToValidTerminals = crunchFlights.flights.filter {
-            case ApiFlightWithSplits(flight, _) => validPortTerminals.contains(flight.Terminal)
+        def crunch(crunchRequest: CrunchRequest) = {
+          val relevantFlights = crunchRequest.flights.filter {
+            case ApiFlightWithSplits(flight, _) =>
+              validPortTerminals.contains(flight.Terminal) && (flight.PcpTime + 30) > crunchRequest.crunchStart
           }
-          val uniqueFlights = groupFlightsByCodeShares(flightsToValidTerminals).map(_._1)
+          val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
+          log.info(s"found ${uniqueFlights.length} flights to crunch")
           val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
           val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
 
-          val crunchStart = crunchFlights.crunchStart
-          val crunchEnd = crunchStart + oneDay
+          val crunchStart = crunchRequest.crunchStart
+          val numberOfMinutes = crunchRequest.numberOfMinutes
+          val crunchEnd = crunchStart + (numberOfMinutes * oneMinute)
           val flightSplitDiffs: Set[FlightSplitDiff] = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
             .filter {
               case FlightSplitDiff(_, _, _, _, _, _, minute) =>
@@ -121,7 +117,7 @@ object Crunch {
               log.info(s"No flight changes. No need to crunch")
               None
             case _ =>
-              val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, crunchFlights.crunchEnd, newFlightsById, newFlightSplitMinutesByFlight)
+              val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
               Option(newCrunchState)
           }
 
@@ -135,40 +131,32 @@ object Crunch {
       def pushStateIfReady() = {
         crunchStateOption.foreach(crunchState =>
           if (isAvailable(out)) {
-            outAwaiting = false
             log.info(s"pushing csd ${crunchState.crunchFirstMinuteMillis}")
             push(out, crunchState)
             crunchStateOption = None
           })
       }
 
-      def clearState() = {
-        log.info(s"received initialState message. clearing state")
-        flightsByFlightId = Map()
-        flightSplitMinutesByFlight = Map()
-        crunchMinutes = Set()
-        crunchStateOption = None
-      }
-
       def crunchStateFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
-                                            crunchEnd: MillisSinceEpoch,
+                                            numberOfMinutes: Int,
                                             flightsById: Map[Int, ApiFlightWithSplits],
                                             fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]) = {
-        val crunchResults = crunchFlightSplitMinutes(crunchStart, crunchEnd, fsmsByFlightId)
+        val crunchResults: Set[CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
 
-        CrunchState(flightsById.values.toList, Map(), crunchResults, crunchStart)
+        CrunchState(crunchStart, numberOfMinutes, flightsById.values.toSet, crunchResults)
       }
-    }
 
-    def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]) = {
-      val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
-      val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
+      def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]) = {
+        val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
+        val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
 
-      val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, crunchEnd)(wlByQueue)
-      val eGateBankSize = 5
+        val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, numberOfMinutes)(wlByQueue)
+        val eGateBankSize = 5
 
-      val crunchResults: Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = queueWorkloadsToCrunchResults(crunchStart, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
-      crunchResults
+        val crunchResults: Set[CrunchMinute] = workloadsToCrunchMinutes(crunchStart, numberOfMinutes, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
+        crunchResults
+      }
+
     }
   }
 
@@ -182,31 +170,48 @@ object Crunch {
     flightSplitDiffs
   }
 
-  def queueWorkloadsToCrunchResults(crunchStartMillis: MillisSinceEpoch,
-                                    portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
-                                    slas: Map[QueueName, Int],
-                                    minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                                    eGateBankSize: Int): Map[TerminalName, Map[QueueName, Try[OptimizerCrunchResult]]] = {
-    portWorkloads.map {
-      case (terminalName, terminalWorkloads) =>
-        val terminalCrunchResults = terminalWorkloads.map {
-          case (queueName, queueWorkloads) =>
-            val workloadMinutes = queueName match {
+  def workloadsToCrunchMinutes(crunchStartMillis: MillisSinceEpoch,
+                               numberOfMinutes: Int,
+                               portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
+                               slas: Map[QueueName, Int],
+                               minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+                               eGateBankSize: Int): Set[CrunchMinute] = {
+    val crunchEnd = crunchStartMillis + (numberOfMinutes * oneMinute)
+
+    portWorkloads.flatMap {
+      case (tn, terminalWorkloads) =>
+        val terminalCrunchMinutes = terminalWorkloads.flatMap {
+          case (qn, queueWorkloads) =>
+            val workloadMinutes = qn match {
               case Queues.EGate => queueWorkloads.map(_._2._2 / eGateBankSize)
               case _ => queueWorkloads.map(_._2._2)
             }
+            val loadByMillis = queueWorkloads.toMap
             val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
-            val sla = slas.getOrElse(queueName, 0)
-            val queueMinMaxDesks = minMaxDesks.getOrElse(terminalName, Map()).getOrElse(queueName, defaultMinMaxDesks)
-            val crunchEndTime = crunchStartMillis + ((workloadMinutes.length * oneMinute) - oneMinute)
-            val crunchMinutes = crunchStartMillis to crunchEndTime by oneMinute
+            val sla = slas.getOrElse(qn, 0)
+            val queueMinMaxDesks = minMaxDesks.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
+            val crunchMinutes = crunchStartMillis until crunchEnd by oneMinute
             val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
             val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
             val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-            (queueName, triedResult)
+
+            val queueCrunchMinutes = triedResult match {
+              case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
+                val crunchMinutes = (0 until numberOfMinutes).map(minuteIdx => {
+                  val minuteMillis = crunchStartMillis + (minuteIdx * oneMinute)
+                  val paxLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._1
+                  val workLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._2
+                  CrunchMinute(tn, qn, minuteMillis, paxLoad, workLoad, deskRecs(minuteIdx), waitTimes(minuteIdx))
+                }).toSet
+                crunchMinutes
+              case _ =>
+                Set[CrunchMinute]()
+            }
+
+            queueCrunchMinutes
         }
-        (terminalName, terminalCrunchResults)
-    }
+        terminalCrunchMinutes
+    }.toSet
   }
 
   def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]) = {
@@ -214,13 +219,17 @@ object Crunch {
     desks(date.getHourOfDay)
   }
 
-  def queueMinutesForPeriod(startTime: Long, endTime: Long)
-                           (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] =
-    terminal.mapValues(queue => queue.mapValues(queueWorkloadMinutes =>
-      List.range(startTime, endTime + oneMinute, oneMinute).map(minute => {
-        (minute, queueWorkloadMinutes.getOrElse(minute, (0d, 0d)))
+  def queueMinutesForPeriod(startTime: Long, numberOfMinutes: Int)
+                           (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = {
+    val endTime = startTime + numberOfMinutes * oneMinute
+
+    terminal.mapValues(queue => {
+      queue.mapValues(queueWorkloadMinutes => {
+        (startTime until endTime by oneMinute).map(minuteMillis =>
+          (minuteMillis, queueWorkloadMinutes.getOrElse(minuteMillis, (0d, 0d)))).toList
       })
-    ))
+    })
+  }
 
   def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[QueueLoadMinute]): Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = {
     val portLoads = queueWorkloadMinutes.groupBy(_.terminalName)
@@ -273,11 +282,11 @@ object Crunch {
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
     val splitsToUseOption = apiSplits match {
-      case s@Some(splits) => s
+      case s@Some(_) => s
       case None => historicalSplits match {
-        case s@Some(splits) => s
+        case s@Some(_) => s
         case None => terminalSplits match {
-          case s@Some(splits) => s
+          case s@Some(_) => s
           case n@None =>
             log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
             None

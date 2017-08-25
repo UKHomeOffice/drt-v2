@@ -218,11 +218,14 @@ class WorkloadsHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingAc
   protected def handle = {
     case GetWorkloads(_, _) =>
       val newWorkloads = if (value.isEmpty) Pending() else value
-      updated(newWorkloads,
-        Effect(AjaxClient[Api].getWorkloads().call().map {
-          case Left(WorkloadsNotReady()) => GetWorkloads("", "")
-          case Right(wl) => UpdateWorkloads(wl)
-        }))
+      val futureActions = AjaxClient[Api].getWorkloads().call().map {
+        case Left(WorkloadsNotReady()) => GetWorkloadsAfter(2 seconds)
+        case Right(wl) => UpdateWorkloads(wl)
+      }
+      updated(newWorkloads, Effect(futureActions))
+    case GetWorkloadsAfter(delay) =>
+      log.info(s"Re-requesting workloads")
+      effectOnly(Effect(Future(GetWorkloads("", ""))).after(delay))
     case UpdateWorkloads(terminalQueueWorkloads: PortPaxAndWorkLoads[(Seq[WL], Seq[Pax])]) =>
       val roundedTimesToMinutes: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]] = {
         terminalQueueWorkloads.mapValues(q => q.mapValues(plWl =>
@@ -330,9 +333,9 @@ case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxS
 
 class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
   val flightsRequestFrequency = 60 seconds
+  val reRequestDelay = 1 second
 
   def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
-
   protected def handle = {
     case RequestFlights() =>
       log.info(s"Requesting flights for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
@@ -342,7 +345,7 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
           UpdateFlightsAndContinuePolling(fs)
         case Left(FlightsNotReady()) =>
           log.info(s"Flights not ready")
-          RequestFlightsAfter(10)
+          RequestFlightsAfter(reRequestDelay)
       }
       effectOnly(Effect(x))
 
@@ -351,9 +354,9 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
       val updateFlights = Effect(Future(UpdateFlightsWithSplits(flights)))
       effectOnly(updateFlights + requestFlightsAfterDelay)
 
-    case RequestFlightsAfter(delaySeconds: Int) =>
-      log.info(s"Re-requesting in $delaySeconds seconds")
-      val requestFlightsAfterDelay = Effect(Future(RequestFlights())).after(delaySeconds seconds)
+    case RequestFlightsAfter(delay) =>
+      log.info(s"Re-requesting flights")
+      val requestFlightsAfterDelay = Effect(Future(RequestFlights())).after(delay)
       effectOnly(requestFlightsAfterDelay)
 
     case UpdateFlightsWithSplits(flightsWithSplits) =>
@@ -770,7 +773,9 @@ case class GetTerminalCrunch(terminalName: TerminalName) extends Action
 
 case class UpdateTerminalCrunchResult(terminalName: TerminalName, terminalCrunchResults: Map[QueueName, CrunchResult]) extends Action
 
-case class RequestFlightsAfter(delaySeconds: Int) extends Action
+case class RequestFlightsAfter(delay: FiniteDuration) extends Action
 
 case class UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) extends Action
+
+case class GetWorkloadsAfter(delay: FiniteDuration) extends Action
 
