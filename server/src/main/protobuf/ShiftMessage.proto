@@ -2,6 +2,7 @@ package server.protobuf.messages;
 
 message ShiftsMessage {
     repeated ShiftMessage shifts = 1;
+    optional int64 createdAt = 2;
 }
 
 message ShiftStateSnapshotMessage {

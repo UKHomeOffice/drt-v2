@@ -1,15 +1,14 @@
-package actors
+package actors.pointInTime
 
+import actors.{CrunchStateActor, GetFlights, GetPortWorkload}
 import akka.persistence._
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchStateSnapshotMessage
 import services.Crunch.CrunchState
-import services.OptimizerCrunchResult
-import scala.collection.immutable._
 
-import scala.util.Success
+import scala.collection.immutable._
 
 class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor(queues) {
   override val receiveRecover: Receive = {
@@ -18,7 +17,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       s match {
         case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
           log.info("matched CrunchStateSnapshotMessage, storing it.")
-          state = None //Option(snapshotMessageToState(sm))
+          state = Option(snapshotMessageToState(sm))
         case somethingElse =>
           log.error(s"Got $somethingElse when trying to restore Crunch State")
       }

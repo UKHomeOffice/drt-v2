@@ -1,5 +1,6 @@
 package actors
 
+import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
@@ -10,12 +11,45 @@ import services.SDate
 import scala.collection.immutable
 import scala.util.Try
 
-case class FixedPointsState(events: List[String] = Nil) {
-  def updated(data: String): FixedPointsState = copy(data :: events)
+case class FixedPointsState(fixedPoints: String) {
+  def updated(data: String): FixedPointsState = copy(fixedPoints = data)
+}
 
-  def size: Int = events.length
+class FixedPointsActor extends PersistentActor with ActorLogging {
 
-  override def toString: String = events.reverse.toString
+  override def persistenceId = "fixedPoints-store"
+
+  var state = FixedPointsState("")
+
+  import FixedPointsMessageParser._
+
+  val receiveRecover: Receive = {
+    case fixedPointsMessage: FixedPointsMessage =>
+      updateState(fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList))
+    case SnapshotOffer(_, snapshot: FixedPointsStateSnapshotMessage) =>
+      state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
+  }
+
+  val snapshotInterval = 1
+
+  val receiveCommand: Receive = {
+    case GetState =>
+      sender() ! state.fixedPoints
+
+    case fp: String if fp != state.fixedPoints =>
+      updateState(fp)
+
+      log.info(s"Fixed points updated. Saving snapshot")
+      val snapshotMessage = FixedPointsStateSnapshotMessage(fixedPointsStringToFixedPointsMessages(state.fixedPoints))
+      saveSnapshot(snapshotMessage)
+
+    case _: String =>
+      log.info(s"No changes to fixed points. Not persisting")
+  }
+
+  def updateState(data: String): Unit = {
+    state = state.updated(data)
+  }
 }
 
 object FixedPointsMessageParser {
@@ -85,8 +119,8 @@ object FixedPointsMessageParser {
   }
 
   def fixedPointsMessageToFixedPointsString(fixedPointsMessage: FixedPointsMessage): String = fixedPointsMessage.fixedPoints.collect {
-      case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
-        s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
+    case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
+      s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
   }.mkString("\n")
 
   def fixedPointMessagesToFixedPointsString(fixedPointMessages: List[FixedPointMessage]): String = fixedPointMessages.map {
@@ -97,38 +131,3 @@ object FixedPointsMessageParser {
   }.mkString("\n")
 
 }
-
-class FixedPointsActor extends PersistentActor {
-
-  override def persistenceId = "fixedPoints-store"
-
-  var state = FixedPointsState()
-
-  import FixedPointsMessageParser._
-
-  def updateState(data: String): Unit = {
-    state = state.updated(data)
-  }
-
-  val receiveRecover: Receive = {
-    case fixedPointsMessage: FixedPointsMessage => updateState(fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList))
-    case SnapshotOffer(_, snapshot: FixedPointsStateSnapshotMessage) => state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList) :: Nil)
-  }
-
-  val snapshotInterval = 5
-
-  val receiveCommand: Receive = {
-    case GetState =>
-      sender() ! state.events.headOption.getOrElse("")
-    case data: String =>
-      persist(FixedPointsMessage(fixedPointsStringToFixedPointsMessages(data))) { fixedPointsMessage =>
-        updateState(data)
-        context.system.eventStream.publish(fixedPointsMessage)
-      }
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
-        saveSnapshot(FixedPointsStateSnapshotMessage(fixedPointsStringToFixedPointsMessages(state.events.headOption.getOrElse(""))))
-      }
-  }
-}
-

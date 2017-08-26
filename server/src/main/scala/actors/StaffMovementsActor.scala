@@ -12,12 +12,8 @@ import scala.collection.immutable.Seq
 
 case class StaffMovements(staffMovements: Seq[StaffMovement])
 
-case class StaffMovementsState(events: List[StaffMovements] = Nil) {
-  def updated(data: StaffMovements): StaffMovementsState = copy(data :: events)
-
-  def size: Int = events.length
-
-  override def toString: String = events.reverse.toString
+case class StaffMovementsState(staffMovements: StaffMovements) {
+  def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
 }
 
 class StaffMovementsActor extends PersistentActor
@@ -25,9 +21,9 @@ class StaffMovementsActor extends PersistentActor
 
   override def persistenceId = "staff-movements-store"
 
-  var state = StaffMovementsState()
+  var state = StaffMovementsState(StaffMovements(List()))
 
-  val snapshotInterval = 5
+  val snapshotInterval = 1
 
   def updateState(data: StaffMovements): Unit = {
     state = state.updated(data)
@@ -39,7 +35,7 @@ class StaffMovementsActor extends PersistentActor
     case smm: StaffMovementsMessage =>
       updateState(staffMovementMessagesToStaffMovements(smm.staffMovements.toList))
     case SnapshotOffer(_, snapshot: StaffMovementsStateSnapshotMessage) =>
-      state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList) :: Nil)
+      state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
@@ -56,21 +52,15 @@ class StaffMovementsActor extends PersistentActor
 
   val receiveCommand: Receive = {
     case GetState =>
-      sender() ! state.events.headOption.getOrElse("")
-    case staffMovements: StaffMovements =>
-      val staffMovementsMessage = staffMovementsToStaffMovementsMessage(staffMovements)
-      persist(staffMovementsMessage) { (staffMovementsMessage: StaffMovementsMessage) =>
-        context.system.eventStream.publish(staffMovementsMessage)
+      sender() ! state.staffMovements
+    case sm@StaffMovements(_) =>
+      if (sm != state.staffMovements) {
+        updateState(sm)
+        log.info(s"Staff movements updated. Saving snapshot")
+        saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
+      } else {
+        log.info(s"No changes to staff movements. Not persisting")
       }
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
-        state.events.headOption.foreach {
-          case staffMovements: StaffMovements =>
-            saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(staffMovements)))
-        }
-      }
-      updateState(staffMovements)
-
   }
 
   def staffMovementsToStaffMovementsMessage(staffMovements: StaffMovements) =

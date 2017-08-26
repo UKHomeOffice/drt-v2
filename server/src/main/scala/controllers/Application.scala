@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 import java.util.UUID
 
 import actors._
+import actors.pointInTime.CrunchStateReadActor
 import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}

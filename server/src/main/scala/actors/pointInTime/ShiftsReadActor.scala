@@ -1,0 +1,23 @@
+package actors.pointInTime
+
+import actors.ShiftsMessageParser.shiftMessagesToShiftsString
+import actors.{ShiftsActor, ShiftsState}
+import akka.persistence.{Recovery, SnapshotOffer, SnapshotSelectionCriteria}
+import drt.shared.SDateLike
+import server.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
+
+class ShiftsReadActor(pointInTime: SDateLike) extends ShiftsActor {
+  override val receiveRecover: Receive = {
+    case shiftsMessage: ShiftsMessage => updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList))
+    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) => state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
+  }
+
+  override def recovery: Recovery = {
+    val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
+    val recovery = Recovery(
+      fromSnapshot = criteria,
+      replayMax = snapshotInterval)
+    log.info(s"recovery: $recovery")
+    recovery
+  }
+}
