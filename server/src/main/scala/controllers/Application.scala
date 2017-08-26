@@ -246,8 +246,13 @@ class Application @Inject()(
 
     override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
-    override def getActualDeskStats(): Future[ActualDeskStats] = {
-      val futureDesks = actualDesksActor ? GetActualDeskStats()
+    override def getActualDeskStats(pointInTime: Long): Future[ActualDeskStats] = {
+      val actor: AskableActorRef = if (pointInTime > 0) {
+        val DeskstatsReadActorProps = Props(classOf[DeskstatsReadActor], SDate(pointInTime))
+        actorSystem.actorOf(DeskstatsReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
+      } else actualDesksActor
+
+      val futureDesks = actor ? GetActualDeskStats()
       futureDesks.map(_.asInstanceOf[ActualDeskStats])
     }
   }
@@ -255,8 +260,14 @@ class Application @Inject()(
   trait CrunchFromCrunchState {
     val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
 
-    def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
-      val terminalCrunchResult = crunchStateActor ? GetTerminalCrunch(terminalName)
+    def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
+      val actor: AskableActorRef = if (pointInTime > 0) {
+        val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
+        actorSystem.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
+      } else crunchStateActor
+
+      val terminalCrunchResult = actor ? GetTerminalCrunch(terminalName)
+
       terminalCrunchResult.map {
         case Nil => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
         case qrcs: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] => qrcs
@@ -291,21 +302,21 @@ class Application @Inject()(
 
     override def getFlightsWithSplitsAtDate(pointInTime: MillisSinceEpoch): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
       val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
-      val crunchStateReadActor: ActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
+      val crunchStateReadActor: AskableActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
 
       log.info(s"asking $crunchStateReadActor for flightsWithSplits")
-      val flights = crunchStateReadActor.ask(GetFlights)(Timeout(3000 milliseconds))
+      val flights = crunchStateReadActor.ask(GetFlights)(Timeout(500 milliseconds))
 
       flights.recover {
         case e: Throwable =>
-          log.info(s"GetFlightsWithSplits failed: $e")
+          log.info(s"GetFlights failed: $e")
           Left(FlightsNotReady())
       }.map {
         case fs: FlightsWithSplits =>
-          log.info(s"GetFlightsWithSplits success: ${fs.flights.length} flights")
+          log.info(s"GetFlights success: ${fs.flights.length} flights")
           Right(fs)
         case e =>
-          log.info(s"GetFlightsWithSplits failed: $e")
+          log.info(s"GetFlights failed: $e")
           Left(FlightsNotReady())
       }
     }

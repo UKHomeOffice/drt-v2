@@ -6,7 +6,7 @@ import java.util.TimeZone
 import javax.net.ssl._
 
 import akka.actor.{ActorLogging, ActorRef, ActorSystem}
-import akka.persistence.{PersistentActor, SnapshotOffer}
+import akka.persistence.{PersistentActor, Recovery, SnapshotOffer, SnapshotSelectionCriteria}
 import controllers.Deskstats.{PortDeskStats, QueueDeskStats, TerminalDeskStats}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -14,6 +14,7 @@ import org.joda.time.DateTimeZone
 import org.slf4j.LoggerFactory
 import server.protobuf.messages.DeskStatsMessage._
 import services.SDate
+import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -24,6 +25,25 @@ case class GetActualDeskStats()
 
 case class DeskStatsState(portDeskStats: PortDeskStats = Map()) {
   def updated(data: PortDeskStats): DeskStatsState = copy(data)
+}
+
+class DeskstatsReadActor(pointInTime: SDateLike) extends DeskstatsActor {
+  override def receiveRecover: Receive = {
+    case portDeskStatsMessage: PortDeskStatsMessage =>
+      updateState(portDeskStatsMessageToPortDeskStats(portDeskStatsMessage))
+
+    case SnapshotOffer(_, snapshot: PortDeskStatsMessage) =>
+      state = state.updated(portDeskStatsMessageToPortDeskStats(snapshot))
+  }
+
+  override def recovery: Recovery = {
+    val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
+    val recovery = Recovery(
+      fromSnapshot = criteria,
+      replayMax = snapshotInterval)
+    log.info(s"recovery: $recovery")
+    recovery
+  }
 }
 
 class DeskstatsActor extends PersistentActor with ActorLogging {
@@ -40,13 +60,11 @@ class DeskstatsActor extends PersistentActor with ActorLogging {
   override def receiveCommand: Receive = {
     case ActualDeskStats(deskStats) =>
       log.info(s"Received ActualDeskStats")
-      persist(portDeskStatsToPortDeskStatsMessage(deskStats)) { portDeskStatsMessage: PortDeskStatsMessage =>
-        updateState(deskStats)
-        context.system.eventStream.publish(portDeskStatsMessage)
-        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-          log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
-          saveSnapshot(DeskStatsStateSnapshotMessage(portDeskStatsMessage.terminals))
-        }
+
+      val portDeskStatsMessage = portDeskStatsToPortDeskStatsMessage(deskStats)
+      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+        log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
+        saveSnapshot(DeskStatsStateSnapshotMessage(portDeskStatsMessage.terminals))
       }
       state = state.updated(deskStats)
 

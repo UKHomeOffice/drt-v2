@@ -2,7 +2,7 @@ package actors.pointInTime
 
 import actors.FixedPointsMessageParser.fixedPointMessagesToFixedPointsString
 import actors.{FixedPointsActor, FixedPointsState}
-import akka.persistence.{Recovery, SnapshotOffer, SnapshotSelectionCriteria}
+import akka.persistence.{Recovery, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessage
 
@@ -13,6 +13,9 @@ class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActor {
         case FixedPointsStateSnapshotMessage(fixedPoints) =>
           state = FixedPointsState(fixedPointMessagesToFixedPointsString(fixedPoints.toList))
       }
+
+    case RecoveryCompleted =>
+      log.info(s"Recovered successfully")
   }
 
   override def recovery: Recovery = {

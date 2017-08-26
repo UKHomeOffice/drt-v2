@@ -174,7 +174,7 @@ class ShiftsActorSpec extends Specification {
         shiftPersistenceApi.saveShifts("shift name, T1, 20/01/17, 10:00, 20:00, 9")
 
         awaitAssert({
-          val resultFuture = shiftPersistenceApi.getShifts()
+          val resultFuture = shiftPersistenceApi.getShifts(0L)
           val result = Await.result(resultFuture, 1 seconds)
           assert("shift name, T1, 20/01/17, 10:00, 20:00, 9" == result)
         }, 2 seconds)

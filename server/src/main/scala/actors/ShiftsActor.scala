@@ -40,6 +40,7 @@ class ShiftsActor extends PersistentActor with ActorLogging {
 
   val receiveCommand: Receive = {
     case GetState =>
+      log.info(s"GetState received")
       sender() ! state.shifts
 
     case data: String =>
@@ -51,6 +52,9 @@ class ShiftsActor extends PersistentActor with ActorLogging {
       } else {
         log.info(s"No changes to shifts. Not persisting")
       }
+
+    case u =>
+      log.info(s"unhandled message: $u")
   }
 }
 

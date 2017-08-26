@@ -28,7 +28,7 @@ class StaffMovementsActorSpec extends Specification {
       ))
 
       awaitAssert({
-        val resultFuture = staffMovementsApi.getStaffMovements()
+        val resultFuture = staffMovementsApi.getStaffMovements(0L)
         val result = Await.result(resultFuture, 1 seconds)
         assert(Seq(StaffMovement("T1", "is81", MilliDate(0L), -1, uuid)) == result)
       }, 2 seconds)

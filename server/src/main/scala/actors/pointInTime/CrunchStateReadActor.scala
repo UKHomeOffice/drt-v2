@@ -1,7 +1,7 @@
 package actors.pointInTime
 
 import actors.{CrunchStateActor, GetFlights, GetPortWorkload}
-import akka.persistence._
+import akka.persistence.{RecoveryCompleted, _}
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
@@ -22,6 +22,9 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
           log.error(s"Got $somethingElse when trying to restore Crunch State")
       }
 
+    case RecoveryCompleted =>
+      log.info(s"Recovered successfully")
+
     case u =>
       log.warning(s"unexpected message: $u")
   }
@@ -31,10 +34,14 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       log.info("Saved CrunchState Snapshot")
 
     case GetFlights =>
+      log.info(s"Received GetFlights message")
       state match {
         case Some(CrunchState(_, _, flights, _)) =>
+          log.info(s"Found ${flights.size} flights")
           sender() ! FlightsWithSplits(flights.toList)
-        case None => FlightsNotReady
+        case None =>
+          log.info(s"No CrunchState available")
+          sender() ! FlightsNotReady()
       }
 
     case GetPortWorkload =>

@@ -34,8 +34,27 @@ class StaffMovementsActor extends PersistentActor
   val receiveRecover: Receive = {
     case smm: StaffMovementsMessage =>
       updateState(staffMovementMessagesToStaffMovements(smm.staffMovements.toList))
+
     case SnapshotOffer(_, snapshot: StaffMovementsStateSnapshotMessage) =>
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
+  }
+
+  val receiveCommand: Receive = {
+    case GetState =>
+      log.info(s"GetState received")
+      sender() ! state.staffMovements
+
+    case sm@StaffMovements(_) =>
+      if (sm != state.staffMovements) {
+        updateState(sm)
+        log.info(s"Staff movements updated. Saving snapshot")
+        saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
+      } else {
+        log.info(s"No changes to staff movements. Not persisting")
+      }
+
+    case u =>
+      log.info(s"unhandled message: $u")
   }
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
@@ -49,19 +68,6 @@ class StaffMovementsActor extends PersistentActor
 
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
     staffMovements.staffMovements.map(staffMovementToStaffMovementMessage)
-
-  val receiveCommand: Receive = {
-    case GetState =>
-      sender() ! state.staffMovements
-    case sm@StaffMovements(_) =>
-      if (sm != state.staffMovements) {
-        updateState(sm)
-        log.info(s"Staff movements updated. Saving snapshot")
-        saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
-      } else {
-        log.info(s"No changes to staff movements. Not persisting")
-      }
-  }
 
   def staffMovementsToStaffMovementsMessage(staffMovements: StaffMovements) =
     StaffMovementsMessage(staffMovements.staffMovements.map(staffMovementToStaffMovementMessage))

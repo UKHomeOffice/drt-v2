@@ -26,6 +26,7 @@ class FixedPointsActor extends PersistentActor with ActorLogging {
   val receiveRecover: Receive = {
     case fixedPointsMessage: FixedPointsMessage =>
       updateState(fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList))
+
     case SnapshotOffer(_, snapshot: FixedPointsStateSnapshotMessage) =>
       state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
   }
@@ -34,6 +35,7 @@ class FixedPointsActor extends PersistentActor with ActorLogging {
 
   val receiveCommand: Receive = {
     case GetState =>
+      log.info(s"GetState received")
       sender() ! state.fixedPoints
 
     case fp: String if fp != state.fixedPoints =>
@@ -45,6 +47,9 @@ class FixedPointsActor extends PersistentActor with ActorLogging {
 
     case _: String =>
       log.info(s"No changes to fixed points. Not persisting")
+
+    case u =>
+      log.info(s"unhandled message: $u")
   }
 
   def updateState(data: String): Unit = {
