@@ -361,7 +361,7 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]]
+  def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]]
 }
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
@@ -375,7 +375,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def getTerminalCrunchResult(terminalName: TerminalName): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]]
+  def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult
 
@@ -385,15 +385,15 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def saveShifts(rawShifts: String): Unit
 
-  def getShifts(): Future[String]
+  def getShifts(pointIntTime: Long): Future[String]
 
   def saveFixedPoints(rawFixedPoints: String): Unit
 
-  def getFixedPoints(): Future[String]
+  def getFixedPoints(pointIntTime: Long): Future[String]
 
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
-  def getStaffMovements(): Future[Seq[StaffMovement]]
+  def getStaffMovements(pointIntTime: Long): Future[Seq[StaffMovement]]
 
-  def getActualDeskStats(): Future[ActualDeskStats]
+  def getActualDeskStats(pointInTime: Long): Future[ActualDeskStats]
 }

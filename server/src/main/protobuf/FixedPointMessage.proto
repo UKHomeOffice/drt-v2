@@ -2,6 +2,7 @@ package server.protobuf.messages;
 
 message FixedPointsMessage {
     repeated FixedPointMessage fixedPoints = 1;
+    optional int64 createdAt = 2;
 }
 
 message FixedPointsStateSnapshotMessage {

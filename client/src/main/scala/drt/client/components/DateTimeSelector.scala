@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{SetPointInTime, SetPointInTimeToLive}
+import drt.client.logger.LoggerFactory
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.SDateLike
@@ -12,10 +13,12 @@ import scala.scalajs.js.Date
 
 object DateTimeSelector {
 
+  val log = LoggerFactory.getLogger("DateTimeSelector")
+
   case class Props()
 
   case class State(live: Boolean, showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
-    def snapshotDateTime = SDate(year, month - 1, day, hours, minutes)
+    def snapshotDateTime = SDate(year, month + 1, day, hours, minutes)
   }
 
 
@@ -44,6 +47,7 @@ object DateTimeSelector {
       val minutes = Seq.range(0, 60)
 
       def drawSelect(values: Seq[String], names: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
+        log.info(s"drawSelect: $state")
         val nameValues = values.zip(names)
         <.select(^.defaultValue := defaultValue.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))),
@@ -52,7 +56,7 @@ object DateTimeSelector {
           }.toTagMod)
       }
 
-      def daysInMonth(month: Int, year: Int) = new Date(year, month + 1, 0).getDate()
+      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def selectPointInTime = (e: ReactEventFromInput) => {
         SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.toISOString()))

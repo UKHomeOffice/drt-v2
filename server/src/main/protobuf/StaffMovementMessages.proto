@@ -2,6 +2,7 @@ package server.protobuf.messages;
 
 message StaffMovementsMessage {
     repeated StaffMovementMessage staffMovements = 1;
+    optional int64 createdAt = 2;
 }
 
 message StaffMovementsStateSnapshotMessage {

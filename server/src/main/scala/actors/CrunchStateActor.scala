@@ -79,12 +79,13 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       log.info(s"Snapshot failed $md\n$cause")
   }
 
-  def saveSnapshotAtInterval(cs: CrunchState) = state.foreach(s =>
-    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+  def saveSnapshotAtInterval(cs: CrunchState) = {
+//    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
       val snapshotMessage: CrunchStateSnapshotMessage = crunchStateToSnapshotMessage(cs)
       log.info("Saving CrunchState snapshot")
       saveSnapshot(snapshotMessage)
-    })
+//    }
+  }
 
   def portWorkload(crunchMinutes: Set[CrunchMinute]) = crunchMinutes
     .groupBy(_.terminalName)

@@ -214,11 +214,12 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 }
 
-class WorkloadsHandler[M](modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
+class WorkloadsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[Workloads]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case GetWorkloads(_, _) =>
       val newWorkloads = if (value.isEmpty) Pending() else value
-      val futureActions = AjaxClient[Api].getWorkloads().call().map {
+      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+      val futureActions = AjaxClient[Api].getWorkloads(pointInTimeMillis).call().map {
         case Left(WorkloadsNotReady()) => GetWorkloadsAfter(2 seconds)
         case Right(wl) => UpdateWorkloads(wl)
       }
@@ -335,7 +336,10 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
   val flightsRequestFrequency = 60 seconds
   val reRequestDelay = 1 second
 
-  def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+  def pointInTimeMillis = pointInTime.value.map(m => {
+    log.info(s"millisSinceEpoch value: ${m.millisSinceEpoch}")
+    m.millisSinceEpoch
+  }).getOrElse(0L)
   protected def handle = {
     case RequestFlights() =>
       log.info(s"Requesting flights for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
@@ -397,7 +401,7 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
 
 }
 
-class CrunchHandler[M](totalQueues: () => Map[TerminalName, Int], modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
+class CrunchHandler[M](pointInTime: ModelR[M, Option[SDateLike]], totalQueues: () => Map[TerminalName, Int], modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
                        staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
                        airportConfig: ModelR[M, Pot[AirportConfig]])
   extends LoggingActionHandler(modelRW) {
@@ -406,7 +410,8 @@ class CrunchHandler[M](totalQueues: () => Map[TerminalName, Int], modelRW: Model
 
   override def handle = {
     case GetTerminalCrunch(terminalName) =>
-      val callResultFuture: Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = AjaxClient[Api].getTerminalCrunchResult(terminalName).call()
+      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+      val callResultFuture: Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = AjaxClient[Api].getTerminalCrunchResult(terminalName, pointInTimeMillis).call()
 
       val updateTerminalAction: Future[UpdateTerminalCrunchResult] = callResultFuture.map {
         case qncrs =>
@@ -559,18 +564,22 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
   }
 }
 
-class ShiftsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class ShiftsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetShifts(shifts: String) =>
       updated(Ready(shifts), Effect(Future(RunAllSimulations())))
+
     case SaveShifts(shifts: String) =>
       AjaxClient[Api].saveShifts(shifts).call()
       effectOnly(Effect(Future(SetShifts(shifts))))
+
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
+
     case GetShifts() =>
       val shiftsEffect = Effect(Future(GetShifts())).after(300 seconds)
-      val apiCallEffect = Effect(AjaxClient[Api].getShifts().call().map(res => SetShifts(res)))
+      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+      val apiCallEffect = Effect(AjaxClient[Api].getShifts(pointInTimeMillis).call().map(res => SetShifts(res)))
       effectOnly(apiCallEffect + shiftsEffect)
   }
 }
@@ -624,7 +633,7 @@ object FixedPoints {
   }
 }
 
-class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class FixedPointsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetFixedPoints(fixedPoints: String, terminalName: Option[String]) =>
       if (terminalName.isDefined)
@@ -640,12 +649,13 @@ class FixedPointsHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingAct
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
     case GetFixedPoints() =>
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
-      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints().call().map(res => SetFixedPoints(res, None)))
+      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(pointInTimeMillis).call().map(res => SetFixedPoints(res, None)))
       effectOnly(apiCallEffect + fixedPointsEffect)
   }
 }
 
-class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
+class StaffMovementsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
       if (value.isReady) {
@@ -665,7 +675,8 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) ext
       updated(Ready(staffMovements), Effect(Future(RunAllSimulations())))
     case GetStaffMovements() =>
       val movementsEffect = Effect(Future(GetStaffMovements())).after(60 seconds)
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements().call().map(res => SetStaffMovements(res)))
+      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(pointInTimeMillis).call().map(res => SetStaffMovements(res)))
       effectOnly(apiCallEffect + movementsEffect)
     case SaveStaffMovements(terminalName) =>
       if (value.isReady) {
@@ -675,14 +686,16 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) ext
   }
 }
 
-class ActualDesksHandler[M](modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]]) extends LoggingActionHandler(modelRW) {
+class ActualDesksHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetActualDeskStats() =>
       val nextRequest = Effect(Future(GetActualDeskStats())).after(60 seconds)
-      val response = Effect(AjaxClient[Api].getActualDeskStats().call().map {
+      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+      val response = Effect(AjaxClient[Api].getActualDeskStats(pointInTimeMillis).call().map {
         case ActualDeskStats(deskStats) => SetActualDeskStats(deskStats)
       })
       effectOnly(response + nextRequest)
+
     case SetActualDeskStats(deskStats) =>
       updated(deskStats)
   }
@@ -693,8 +706,11 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
     case SetPointInTime(pointInTime) =>
       log.info(s"Set client point in time: $pointInTime")
       val sdatePointInTime = SDate.parse(pointInTime)
-      val nextRequest = Effect(Future(RequestFlights()))
-      updated(Option(sdatePointInTime), nextRequest)
+      val nextRequests = Effect(Future(RequestFlights())) + Effect(Future(GetShifts())) +
+        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements())) +
+        Effect(Future(GetWorkloads("", ""))) + Effect(Future(GetTerminalCrunch("T1")))
+      updated(Option(sdatePointInTime), nextRequests)
+
     case SetPointInTimeToLive() =>
       log.info(s"Set client point in time to live")
       val nextRequest = Effect(Future(RequestFlights()))
@@ -726,18 +742,18 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override val actionHandler = {
     val composedhandlers: HandlerFunction = composeHandlers(
-      new WorkloadsHandler(zoomRW(_.workloadPot)((m, v) => {
+      new WorkloadsHandler(zoom(_.pointInTime), zoomRW(_.workloadPot)((m, v) => {
         m.copy(workloadPot = v)
       })),
-      new CrunchHandler(totalQueues, zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
+      new CrunchHandler(zoom(_.pointInTime), totalQueues, zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
       new SimulationHandler(zoom(_.airportConfig), gotAllQueueCrunches, zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new FlightsHandler(zoom(_.pointInTime), zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
-      new ShiftsHandler(zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
-      new FixedPointsHandler(zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
-      new StaffMovementsHandler(zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ActualDesksHandler(zoomRW(_.actualDeskStats)((m, v) => m.copy(actualDeskStats = v))),
+      new ShiftsHandler(zoom(_.pointInTime), zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
+      new FixedPointsHandler(zoom(_.pointInTime), zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
+      new StaffMovementsHandler(zoom(_.pointInTime), zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
+      new ActualDesksHandler(zoom(_.pointInTime), zoomRW(_.actualDeskStats)((m, v) => m.copy(actualDeskStats = v))),
       new PointInTimeHandler(zoomRW(_.pointInTime)((m,v) => m.copy(pointInTime = v)))
     )
 

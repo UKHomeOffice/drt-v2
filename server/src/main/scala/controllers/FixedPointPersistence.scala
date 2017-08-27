@@ -1,17 +1,25 @@
 package controllers
 
-import actors.{GetState, FixedPointsActor}
+import java.util.UUID
+
+import actors.pointInTime.FixedPointsReadActor
+import actors.{FixedPointsActor, GetState}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
+import org.slf4j.LoggerFactory
+import services.SDate
+import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 trait FixedPointPersistence {
-  implicit val timeout: Timeout = Timeout(100 milliseconds)
+  implicit val timeout: Timeout = Timeout(250 milliseconds)
+
+  val log = LoggerFactory.getLogger(getClass)
 
   def actorSystem: ActorSystem
 
@@ -21,14 +29,21 @@ trait FixedPointPersistence {
     fixedPointsActor ! rawFixedPoints
   }
 
-  def getFixedPoints(): Future[String] = {
-    val res: Future[Any] = fixedPointsActor ? GetState
+  def getFixedPoints(pointInTime: MillisSinceEpoch): Future[String] = {
+    log.info(s"getFixedPoints($pointInTime)")
+    val actor: AskableActorRef = if (pointInTime > 0) {
+      log.info(s"Creating FixedPointsReadActor for $pointInTime")
+      val fixedPointsReadActorProps = Props(classOf[FixedPointsReadActor], SDate(pointInTime))
+      actorSystem.actorOf(fixedPointsReadActorProps, "fixedPointsReadActor" + UUID.randomUUID().toString)
+    } else fixedPointsActor
 
-    val fixedPointsFuture = res.collect {
+    val fixedPointsFuture = actor ? GetState
+
+    val fixedPointsCollected = fixedPointsFuture.collect {
       case fixedPoints: String =>
-        actorSystem.log.info(s"Retrieved fixedPoints from actor: $fixedPoints")
+        log.info(s"Retrieved fixedPoints from actor ($actor): $fixedPoints")
         fixedPoints
     }
-    fixedPointsFuture
+    fixedPointsCollected
   }
 }

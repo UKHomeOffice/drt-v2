@@ -2,20 +2,16 @@ package controllers
 
 import actors.ShiftsActor
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.stream.Materializer
 import com.google.inject.Inject
 import drt.staff.ImportStaff
-import play.api.{Configuration, Environment}
 import play.api.mvc.{Action, Controller}
 
-import scala.concurrent.ExecutionContext
 
-
-class Data @Inject()(override val actorSystem: ActorSystem) extends Controller with ShiftPersistence {
+class Data @Inject()(val system: ActorSystem) extends Controller {
 
   def saveStaff() = Action {
     implicit request =>
-      def shiftsActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsActor]))
+      def shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
 
       request.body.asJson.flatMap(ImportStaff.staffJsonToShifts) match {
         case Some(shiftsString) =>

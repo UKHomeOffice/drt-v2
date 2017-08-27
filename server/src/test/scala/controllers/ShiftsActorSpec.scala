@@ -3,7 +3,7 @@ package controllers
 import java.io.File
 
 import actors.{GetState, ShiftsActor, ShiftsMessageParser}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
@@ -105,6 +105,7 @@ class ShiftsActorSpec extends Specification {
       val actor = testKit1.getActor
       actor ! "shift name, T1, 20/01/17, 10:00, 20:00, 9"
       actor ! "another name, T1, 20/01/17, 10:00, 20:00, 9"
+      actor ! PoisonPill
       testKit1.shutDownActorSystem
 
       val testKit2 = getTestKit
@@ -173,7 +174,7 @@ class ShiftsActorSpec extends Specification {
         shiftPersistenceApi.saveShifts("shift name, T1, 20/01/17, 10:00, 20:00, 9")
 
         awaitAssert({
-          val resultFuture = shiftPersistenceApi.getShifts()
+          val resultFuture = shiftPersistenceApi.getShifts(0L)
           val result = Await.result(resultFuture, 1 seconds)
           assert("shift name, T1, 20/01/17, 10:00, 20:00, 9" == result)
         }, 2 seconds)

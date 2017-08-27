@@ -1,5 +1,6 @@
 package actors
 
+import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
@@ -9,15 +10,54 @@ import services.SDate
 
 import scala.util.Try
 
-case class ShiftsState(events: List[String] = Nil) {
-  def updated(data: String): ShiftsState = copy(data :: events)
-
-  def size: Int = events.length
-
-  override def toString: String = events.reverse.toString
+case class ShiftsState(shifts: String) {
+  def updated(data: String): ShiftsState = copy(shifts = data)
 }
 
 case object GetState
+
+
+class ShiftsActor extends PersistentActor with ActorLogging {
+
+  override def persistenceId = "shifts-store"
+
+  var state = ShiftsState("")
+
+  val snapshotInterval = 1
+
+  import ShiftsMessageParser._
+
+  def updateState(data: String): Unit = {
+    state = state.updated(data = data)
+  }
+
+  val receiveRecover: Receive = {
+    case shiftsMessage: ShiftsMessage =>
+      updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList))
+    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) =>
+      state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
+  }
+
+  val receiveCommand: Receive = {
+    case GetState =>
+      log.info(s"GetState received")
+      sender() ! state.shifts
+
+    case data: String =>
+      if (data != state.shifts) {
+        updateState(data)
+        val createdAt = SDate.now()
+        log.info(s"Shifts updated. Saving snapshot")
+        saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.shifts, createdAt)))
+      } else {
+        log.info(s"No changes to shifts. Not persisting")
+      }
+
+    case u =>
+      log.info(s"unhandled message: $u")
+  }
+}
+
 
 object ShiftsMessageParser {
 
@@ -89,46 +129,10 @@ object ShiftsMessageParser {
 
   def shiftMessagesToShiftsString(shiftMessages: List[ShiftMessage]): String = {
     shiftMessages.collect {
-        case ShiftMessage(Some(name), Some(terminalName), Some(startDay), Some(startTime), Some(endTime), Some(numberOfStaff), None, None, _) =>
-          s"$name, $terminalName, $startDay, $startTime, $endTime, $numberOfStaff"
-        case ShiftMessage(Some(name), Some(terminalName), None, None, None, Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
-          s"$name, $terminalName, ${ShiftsMessageParser.dateString(startTimestamp)}, ${ShiftsMessageParser.timeString(startTimestamp)}, ${ShiftsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
+      case ShiftMessage(Some(name), Some(terminalName), Some(startDay), Some(startTime), Some(endTime), Some(numberOfStaff), None, None, _) =>
+        s"$name, $terminalName, $startDay, $startTime, $endTime, $numberOfStaff"
+      case ShiftMessage(Some(name), Some(terminalName), None, None, None, Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
+        s"$name, $terminalName, ${ShiftsMessageParser.dateString(startTimestamp)}, ${ShiftsMessageParser.timeString(startTimestamp)}, ${ShiftsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
     }.mkString("\n")
   }
 }
-
-class ShiftsActor extends PersistentActor {
-
-  override def persistenceId = "shifts-store"
-
-  var state = ShiftsState()
-
-  import ShiftsMessageParser._
-
-  def updateState(data: String): Unit = {
-    state = state.updated(data = data)
-  }
-
-  val receiveRecover: Receive = {
-    case shiftsMessage: ShiftsMessage => updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList))
-    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) => state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList) :: Nil)
-  }
-
-  val snapshotInterval = 5
-
-  val receiveCommand: Receive = {
-    case GetState =>
-      sender() ! state.events.headOption.getOrElse("")
-    case data: String =>
-      val createdAt = SDate.now()
-      persist(shiftsStringToShiftsMessage(data, createdAt)) { shiftsMessage =>
-        updateState(data)
-        context.system.eventStream.publish(shiftsMessage)
-        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-          log.info(s"saving shifts snapshot info snapshot (lastSequenceNr: $lastSequenceNr)")
-          saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.events.headOption.getOrElse(""), createdAt)))
-        }
-      }
-  }
-}
-

@@ -1,7 +1,10 @@
 package services
 
+import java.util.UUID
+
 import actors.GetPortWorkload
-import akka.actor.ActorRef
+import actors.pointInTime.CrunchStateReadActor
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
@@ -99,15 +102,21 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
-  val log = LoggerFactory.getLogger(this.getClass)
+  override val log = LoggerFactory.getLogger(this.getClass)
 
   def flightPassengerReporter: ActorRef
   def crunchStateActor: AskableActorRef
+  def actorSystem: ActorSystem
 
   val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
-  override def getWorkloads(): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
-    val workloadsFuture = crunchStateActor ? GetPortWorkload
+  override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
+    val actor: AskableActorRef = if (pointInTime > 0) {
+      val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
+      actorSystem.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
+    } else crunchStateActor
+
+    val workloadsFuture = actor ? GetPortWorkload
 
     workloadsFuture.recover {
       case e: Throwable =>
