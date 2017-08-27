@@ -336,7 +336,10 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
   val flightsRequestFrequency = 60 seconds
   val reRequestDelay = 1 second
 
-  def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+  def pointInTimeMillis = pointInTime.value.map(m => {
+    log.info(s"millisSinceEpoch value: ${m.millisSinceEpoch}")
+    m.millisSinceEpoch
+  }).getOrElse(0L)
   protected def handle = {
     case RequestFlights() =>
       log.info(s"Requesting flights for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
