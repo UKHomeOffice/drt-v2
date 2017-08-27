@@ -59,7 +59,7 @@ object DateTimeSelector {
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def selectPointInTime = (e: ReactEventFromInput) => {
-        SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.toISOString()))
+        SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.millisSinceEpoch))
         scope.modState(_.copy(live = false, showDatePicker = false))
       }
 
