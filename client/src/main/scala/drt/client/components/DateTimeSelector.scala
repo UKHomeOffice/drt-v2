@@ -18,12 +18,12 @@ object DateTimeSelector {
   case class Props()
 
   case class State(live: Boolean, showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
-    def snapshotDateTime = SDate(year, month, day, hours, minutes)
+    def snapshotDateTime = SDate(year, month + 1, day, hours, minutes)
   }
 
 
   val today = new Date()
-  val initialState = State(true, false, today.getDate(), today.getMonth() + 1, today.getFullYear(), today.getHours(), today.getMinutes())
+  val initialState = State(true, false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
 
   def formRow(label: String, xs: TagMod*) = {
     <.div(^.className := "form-group row",
@@ -39,7 +39,7 @@ object DateTimeSelector {
     pointInTimeRCP((pointInTimeMP: ModelProxy[Option[SDateLike]]) => {
 
       val pointInTime = pointInTimeMP()
-      val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
+      val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zipWithIndex
       val days = Seq.range(1, 31)
       val years = Seq.range(2017, today.getFullYear() + 1)
       val hours = Seq.range(0, 24)
@@ -56,7 +56,7 @@ object DateTimeSelector {
           }.toTagMod)
       }
 
-      def daysInMonth(month: Int, year: Int) = new Date(year, month + 1, 0).getDate()
+      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def selectPointInTime = (e: ReactEventFromInput) => {
         SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.toISOString()))
@@ -78,7 +78,7 @@ object DateTimeSelector {
                 <.div(^.className := "container",
 
                   formRow("Choose Date: ", <.div(^.className := "date-select", List(
-                    drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt + 1)),
+                    drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt)),
                     drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt)),
                     drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt))
                   ).toTagMod)),
