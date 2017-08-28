@@ -46,9 +46,8 @@ object DateViewSelector {
       val todayMillis = today.getTime().toLong
       val defaultValue = state.dateSelected.millisSinceEpoch.toString
       <.div(
-        <.div(^.className := "date-view-picker-container",
-          <.div(
-            "Show: ",
+          <.div(^.className := "date-view-picker-container",
+            "Select date: ",
             <.select(
               ^.defaultValue := defaultValue,
               ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))),
@@ -59,7 +58,6 @@ object DateViewSelector {
                   <.option(^.value := s"$millis", dateLabel)
                 }
               }.toTagMod))
-        )
       )
     })
   }).build

@@ -25,17 +25,8 @@ object MainMenu {
 
   case class MenuItem(idx: Int, label: (Props) => VdomNode, icon: Icon, location: Loc)
 
-  // build the Todo menu item, showing the number of open todos
-  private def buildTodoMenu(props: Props): VdomElement = {
-    <.span(
-      <.span("User Desk Overrides"),
-      <.span(^.classSet(bss.labelDanger.toSeq: _*) ,
-        ^.className := bss.labelAsBadgeCls)
-    )
-  }
-
   val staticMenuItems = List(
-    MenuItem(0, _ => "Terminals Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
+    MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
   )
 
   def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {

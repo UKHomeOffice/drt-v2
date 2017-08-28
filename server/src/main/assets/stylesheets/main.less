@@ -5,18 +5,83 @@
 
 // Condensed table w/ half padding
 
-.main-logo {
-    height: 70px;
-    width: 96%;
-    padding: 15px;
-    margin: auto;
-    background-image: url(/v2/stn/live/assets/images/logo_colour.png);
-    background-repeat: no-repeat;
-    background-position: 16px 15px;
+@bgDefault      : #f8f8f8;
+@bgHighlight    : #dddddd;
+@colDefault     : #333333;
+@colHighlight   : #666666;
+@dropDown       : false;
+.ddm() when (@dropDown) {
+  > .dropdown-menu {
+    background-color: @bgDefault;
+    > li {
+      > a {
+        color: @colDefault;
+        &:hover,  &:focus {
+          color: @colHighlight;
+          background-color: @bgHighlight; }}
+      &.divider {
+        background-color: @bgHighlight;}}}}
+.navbar-default {
+  background-color: @bgDefault;
+  border-color: @bgHighlight;
+  .navbar-brand {
+    color: @colDefault;
+    &:hover, &:focus {
+      color: @colHighlight; }}
+  .navbar-text {
+    color: @colDefault; }
+  .navbar-nav {
+    > li {
+      > a {
+        color: @colDefault;
+        &:hover,  &:focus {
+          color: @colHighlight; }}
+      .ddm; }
+    > .active {
+      > a, > a:hover, > a:focus {
+        color: @colHighlight;
+        background-color: @bgHighlight; }}
+    > .open {
+      > a, > a:hover, > a:focus {
+        color: @colHighlight;
+        background-color: @bgHighlight; }}}
+  .navbar-toggle {
+    border-color: @bgHighlight;
+    &:hover, &:focus {
+      background-color: @bgHighlight; }
+    .icon-bar {
+      background-color: @colDefault; }}
+  .navbar-collapse,
+  .navbar-form {
+    border-color: @colDefault; }
+  .navbar-link {
+    color: @colDefault;
+    &:hover {
+      color: @colHighlight; }}}
+@media (max-width: 767px) {
+  .navbar-default .navbar-nav .open .dropdown-menu {
+    > li > a {
+      color: @colDefault;
+      &:hover, &:focus {
+        color: @colHighlight; }}
+    > .active {
+      > a, > a:hover, > a:focus {
+        color: @colHighlight;
+        background-color: @bgHighlight; }}}
 }
 
-.navbar .navbar-default .container span.navbar-brand {
-    color: #333;
+.main-logo {
+  height: 70px;
+  width: 96%;
+  padding: 15px;
+  margin: auto;
+  background-image: url(/v2/stn/live/assets/images/logo_colour.png);
+  background-repeat: no-repeat;
+  background-position: 16px 15px;
+}
+
+.navbar-drt > span {
+  color: #333;
 }
 
 .popover.flights-popover .popover__content > tr td {
@@ -29,9 +94,11 @@
 }
 
 .date-view-picker-container {
-  padding: 7px;
-  color: white;
-  }
+  padding: 17px;
+  color: #333;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
 
 .date-view-picker-container select {
   color: black;
@@ -86,12 +153,12 @@
   width: 23em;
   z-index: 1000;
   .below {
-    top: 1em;
+  top: 1em;
   }
 
   .left {
-    top: 1em;
-    right: 1em;
+  top: 1em;
+  right: 1em;
   }
   left: -24em;
   top: 58%;
@@ -114,12 +181,12 @@
   width: 26em;
   z-index: 1000;
   .below {
-    top: 1em;
+  top: 1em;
   }
 
   .left {
-    top: 1em;
-    right: 1em;
+  top: 1em;
+  right: 1em;
   }
   left: -19em;
   top: 93%;
@@ -130,12 +197,12 @@
   > thead,
   > tbody,
   > tfoot {
-    > tr {
-      > th,
-      > td {
-        padding: @table-condensed-cell-padding / 2;
-      }
+  > tr {
+    > th,
+    > td {
+    padding: @table-condensed-cell-padding / 2;
     }
+  }
   }
 }
 
@@ -255,21 +322,21 @@ table.user-desk-recs > tbody > tr > td.date-field {
 
 table.user-desk-recs.cols-2, table.user-desk-recs.cols-4 {
   thead th:nth-child(1) {
-    width: 180px;
+  width: 180px;
   }
 
   tbody td:nth-child(1) {
-    width: 180px;
+  width: 180px;
   }
 }
 
 table.user-desk-recs.cols-5 {
   thead th:nth-last-child(1) {
-    width: 75px;
+  width: 75px;
   }
 
   tbody td:nth-last-child(1) {
-    width: 75px;
+  width: 75px;
   }
 }
 
@@ -283,21 +350,21 @@ table.user-desk-recs.cols-5-with-actuals thead th {
 
 table.user-desk-recs.cols-5-with-actuals {
   thead th:nth-child(1) {
-    width: 60px;
+  width: 60px;
   }
 
   tbody td:nth-child(1) {
-    width: 60px;
+  width: 60px;
   }
 }
 
 table.user-desk-recs.cols-4 {
   thead th:nth-last-child(-n+2) {
-    width: 66px;
+  width: 66px;
   }
 
   tbody td:nth-last-child(-n+2) {
-    width: 66px;
+  width: 66px;
   }
 }
 
@@ -346,7 +413,7 @@ rect.bordered {
 
 @media (min-width: 1200px) {
   .container {
-    width: 96%;
+  width: 96%;
   }
 }
 
@@ -545,8 +612,8 @@ p {
   -webkit-overflow-scrolling: touch;
 
   td, th {
-    line-height: 1.4;
-    vertical-align: top;
+  line-height: 1.4;
+  vertical-align: top;
   }
 }
 
@@ -726,12 +793,12 @@ th h2 {
   max-width: 80em;
   z-index: 1000;
   .below {
-    top: 1em;
+  top: 1em;
   }
 
   .left {
-    top: 1em;
-    right: 1em;
+  top: 1em;
+  right: 1em;
   }
 
 }

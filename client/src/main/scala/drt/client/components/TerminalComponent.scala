@@ -76,6 +76,7 @@ object TerminalComponent {
           <.div(
 //            SummaryBoxesComponent(summaryBoxesProps),
 //            HeatmapComponent(heatmapProps),
+            DateViewSelector(),
             TerminalContentComponent(terminalContentProps)
           )
         }
