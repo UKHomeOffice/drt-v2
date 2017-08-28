@@ -23,15 +23,15 @@ object Navbar {
       case _ => None
     }
 
-    <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
+    <.nav(^.className := "navbar navbar-default",
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
           airportConfigPotMP().renderReady(airportConfig => {
-            <.div(
-              <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"),
+            <.div(^.className := "navbar-drt",
+              <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
                 <.ul(^.className := "nav navbar-nav navbar-right",
-                  <.li(DateViewSelector()),
+                  //<.li(),
                   <.li(StaffDeploymentsAdjustmentPopover(airportConfig.terminalNames, currentTerminalOption(page), "Staff movements", "Reason...", SDate.now(), SDate.now().addHours(1), "bottom")()),
                   <.li(StaffDeploymentsAdjustmentPopover(airportConfig.terminalNames, currentTerminalOption(page), "Breaks+15", "Breaks", SDate.now(), SDate.now().addMinutes(15), "bottom")()),
                   <.li(StaffDeploymentsAdjustmentPopover(airportConfig.terminalNames, currentTerminalOption(page), "Breaks+30", "Breaks", SDate.now(), SDate.now().addMinutes(30), "bottom")()),

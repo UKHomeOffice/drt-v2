@@ -8,6 +8,7 @@ GET         /splits/:fromDate/:toDate                     controllers.Applicatio
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/fonts/*file                           controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
+GET         /assets/images/*file                          controllers.Assets.at(path="/public/images", file)
 GET         /assets/*file                                 controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls
