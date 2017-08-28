@@ -41,7 +41,7 @@ object DateViewSelector {
         State(date)
       }
 
-      val earliestAvailable = SDate.parse("2017-08-26").millisSinceEpoch
+      val earliestAvailable = SDate.parse("2017-08-27").millisSinceEpoch
 
       val todayMillis = today.getTime().toLong
       val defaultValue = state.dateSelected.millisSinceEpoch.toString

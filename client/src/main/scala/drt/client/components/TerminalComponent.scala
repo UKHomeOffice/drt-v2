@@ -51,15 +51,15 @@ object TerminalComponent {
       val model = modelMP.value
       <.div(
         model.airportConfig.renderReady(airportConfig => {
-          val summaryBoxesProps = SummaryBoxesComponent.Props(
-            airportConfig,
-            props.terminalName,
-            model.flightsWithSplitsPot
-          )
-          val heatmapProps = HeatmapComponent.Props(
-            airportConfig,
-            props.terminalName,
-            model.simulationResult)
+//          val summaryBoxesProps = SummaryBoxesComponent.Props(
+//            airportConfig,
+//            props.terminalName,
+//            model.flightsWithSplitsPot
+//          )
+//          val heatmapProps = HeatmapComponent.Props(
+//            airportConfig,
+//            props.terminalName,
+//            model.simulationResult)
 
           val terminalContentProps = TerminalContentComponent.Props(
             airportConfig,
@@ -74,8 +74,8 @@ object TerminalComponent {
           )
 
           <.div(
-            SummaryBoxesComponent(summaryBoxesProps),
-            HeatmapComponent(heatmapProps),
+//            SummaryBoxesComponent(summaryBoxesProps),
+//            HeatmapComponent(heatmapProps),
             TerminalContentComponent(terminalContentProps)
           )
         }

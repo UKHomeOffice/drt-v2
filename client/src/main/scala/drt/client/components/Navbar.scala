@@ -23,12 +23,12 @@ object Navbar {
       case _ => None
     }
 
-    <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
+    <.nav(^.className := "navbar navbar-default",
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
           airportConfigPotMP().renderReady(airportConfig => {
             <.div(
-              <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode} Live"),
+              <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
                 <.ul(^.className := "nav navbar-nav navbar-right",
                   <.li(DateViewSelector()),
