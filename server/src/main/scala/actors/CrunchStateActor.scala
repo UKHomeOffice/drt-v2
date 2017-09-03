@@ -5,8 +5,9 @@ import akka.persistence._
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi._
 import drt.shared._
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, SplitMessage}
+import server.protobuf.messages.CrunchState._
 import services.Crunch._
+import services.SDate
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable._
@@ -18,7 +19,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   var state: Option[CrunchState] = None
 
-  val snapshotInterval = 2
+  val snapshotInterval = 25
 
   val oneDayMinutes = 1440
 
@@ -33,6 +34,25 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
           log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
       }
 
+    case cdm@CrunchDiffMessage(_, flightIdsToRemove, flightsToUpdate, crunchMinutesToRemove, crunchMinutesToUpdate) =>
+      val diff = CrunchDiff(
+        flightRemovals = flightIdsToRemove.map(RemoveFlight(_)).toSet,
+        flightUpdates = flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
+        crunchMinuteRemovals = crunchMinutesToRemove.map(m => RemoveCrunchMinute(m.terminalName.getOrElse(""), m.queueName.getOrElse(""), m.minute.getOrElse(0L))).toSet,
+        crunchMinuteUpdates = crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet
+      )
+      val newState = state match {
+        case None =>
+          log.error(s"We don't have a CrunchState to apply the diff to")
+          None
+        case Some(cs) =>
+          log.info(s"Applying CrunchDiff to CrunchState")
+          Option(cs.copy(
+            flights = applyFlightsDiff(diff, cs.flights),
+            crunchMinutes = applyCrunchDiff(diff, cs.crunchMinutes)))
+      }
+      state = newState
+
     case RecoveryCompleted =>
       log.info("Finished restoring crunch state")
 
@@ -40,8 +60,46 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       log.info(s"recovery: received unexpected ${u.getClass}")
   }
 
-  def updateStateFromCrunchState(cs: CrunchState): Unit =
-    state = Option(cs)
+  def updateStateFromCrunchState(newState: CrunchState): Unit = {
+    val updatedState = state match {
+      case None =>
+        log.info(s"updating from no existing state")
+        newState
+      case Some(existingState) =>
+        val (crunchesToRemove, crunchesToUpdate) = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
+        val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
+        val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToRemove, crunchesToUpdate)
+        
+        val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
+        if (cmsFromDiff != newState.crunchMinutes) {
+          log.error(s"new CrunchMinutes do not match update from diff")
+        }
+        val flightsFromDiff = applyFlightsDiff(diff, existingState.flights)
+        if (flightsFromDiff != newState.flights) {
+          log.error(s"new Flights do not match update from diff")
+        }
+
+        val diffToPersist = CrunchDiffMessage(
+          createdAt = Option(SDate.now().millisSinceEpoch),
+          diff.flightRemovals.map(rf => rf.flightId).toList,
+          diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
+          diff.crunchMinuteRemovals.map(rc => RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))).toList,
+          diff.crunchMinuteUpdates.map(cm => CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))).toList
+        )
+
+        persist(diffToPersist) { (diff: CrunchDiffMessage) =>
+          log.info(s"persisting ${diff.getClass}")
+          context.system.eventStream.publish(diff)
+        }
+
+        existingState.copy(
+          crunchFirstMinuteMillis = newState.crunchFirstMinuteMillis,
+          crunchMinutes = cmsFromDiff,
+          flights = flightsFromDiff)
+    }
+
+    state = Option(updatedState)
+  }
 
   override def receiveCommand: Receive = {
     case cs@CrunchState(_, _, _, _) =>
@@ -77,14 +135,17 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Snapshot failed $md\n$cause")
+
+    case u =>
+      log.warning(s"unexpected message $u")
   }
 
   def saveSnapshotAtInterval(cs: CrunchState) = {
-//    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
       val snapshotMessage: CrunchStateSnapshotMessage = crunchStateToSnapshotMessage(cs)
       log.info("Saving CrunchState snapshot")
       saveSnapshot(snapshotMessage)
-//    }
+    }
   }
 
   def portWorkload(crunchMinutes: Set[CrunchMinute]) = crunchMinutes
@@ -150,11 +211,12 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage) = CrunchState(
     sm.crunchStart.getOrElse(0L),
     sm.numberOfMinutes.getOrElse(0),
-    sm.flightWithSplits.map(fm => ApiFlightWithSplits(
-      FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
-      fm.splits.map(sm => splitMessageToApiSplits(sm)).toList
-    )).toSet,
-    sm.crunchMinutes.map(cmm => CrunchMinute(
+    sm.flightWithSplits.map(flightWithSplitsFromMessage).toSet,
+    sm.crunchMinutes.map(crunchMinuteFromMessage).toSet
+  )
+
+  def crunchMinuteFromMessage(cmm: CrunchMinuteMessage) = {
+    CrunchMinute(
       cmm.terminalName.getOrElse(""),
       cmm.queueName.getOrElse(""),
       cmm.minute.getOrElse(0L),
@@ -162,8 +224,15 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       cmm.workLoad.getOrElse(0d),
       cmm.deskRec.getOrElse(0),
       cmm.waitTime.getOrElse(0)
-    )).toSet
-  )
+    )
+  }
+
+  def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage) = {
+    ApiFlightWithSplits(
+      FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
+      fm.splits.map(sm => splitMessageToApiSplits(sm)).toList
+    )
+  }
 
   def splitMessageToApiSplits(sm: SplitMessage) = {
     ApiSplits(

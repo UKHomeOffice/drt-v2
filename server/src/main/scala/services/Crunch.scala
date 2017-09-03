@@ -5,7 +5,6 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import org.apache.commons.logging.LogFactory
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import services.workloadcalculator.PaxLoadCalculator._
@@ -23,6 +22,12 @@ object Crunch {
   case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class CrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, paxLoad: Double, workLoad: Double, deskRec: Int, waitTime: Int)
+
+  case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
+
+  case class RemoveFlight(flightId: Int)
+
+  case class CrunchDiff(flightRemovals: Set[RemoveFlight], flightUpdates: Set[ApiFlightWithSplits], crunchMinuteRemovals: Set[RemoveCrunchMinute], crunchMinuteUpdates: Set[CrunchMinute])
 
   case class CrunchState(
                           crunchFirstMinuteMillis: MillisSinceEpoch,
@@ -341,6 +346,66 @@ object Crunch {
   def getLocalLastMidnight(now: SDateLike) = {
     val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
     SDate(localMidnight, DateTimeZone.forID("Europe/London"))
+  }
+  
+  def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]) = {
+    val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+    val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+    val oldIds = oldFlightsById.keys.toSet
+    val newIds = newFlightsById.keys.toSet
+    val toRemove = (oldIds -- newIds).map {
+      case id => RemoveFlight(id)
+    }
+    val toUpdate = newFlightsById.collect {
+      case (id, cm) if oldFlightsById.get(id).isEmpty || cm != oldFlightsById(id) => cm
+    }.toSet
+
+    Tuple2(toRemove, toUpdate)
+  }
+
+  def crunchMinutesDiff(oldCm: Set[CrunchMinute], newCm: Set[CrunchMinute]) = {
+    val oldTqmToCm = oldCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
+    val newTqmToCm = newCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
+    val oldKeys = oldTqmToCm.keys.toSet
+    val newKeys = newTqmToCm.keys.toSet
+    val toRemove = (oldKeys -- newKeys).map {
+      case k@ (tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
+    }
+    val toUpdate = newTqmToCm.collect {
+      case (k, cm) if oldTqmToCm.get(k).isEmpty || cm != oldTqmToCm(k) => cm
+    }.toSet
+
+    Tuple2(toRemove, toUpdate)
+  }
+
+  def crunchMinuteToTqmCm(cm: CrunchMinute) = {
+    Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
+  }
+
+  def applyCrunchDiff(diff: CrunchDiff, cms: Set[CrunchMinute]): Set[CrunchMinute] = {
+    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms){
+      case (soFar, removal) => soFar.filterNot{
+        case CrunchMinute(tn, qn, m, _, _, _, _) => removal.terminalName == tn && removal.queueName == qn && removal.minute == m
+      }
+    }
+    val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals.map(crunchMinuteToTqmCm).toMap) {
+      case (soFar, ncm) =>
+        soFar.updated((ncm.terminalName, ncm.queueName, ncm.minute), ncm)
+    }
+    withoutRemovalsWithUpdates.values.toSet
+  }
+
+  def applyFlightsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
+    val withoutRemovals = diff.flightRemovals.foldLeft(flights){
+      case (soFar, removal) => soFar.filterNot{
+        case f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
+      }
+    }
+    val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
+      case (soFar, flight) =>
+        soFar.updated(flight.apiFlight.FlightID, flight)
+    }
+    withoutRemovalsWithUpdates.values.toSet
   }
 }
 

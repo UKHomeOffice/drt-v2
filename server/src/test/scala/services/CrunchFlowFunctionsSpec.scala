@@ -17,6 +17,7 @@ import scala.collection.immutable.{List, Seq}
 
 class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef) extends CrunchStateActor(queues) {
   override def updateStateFromCrunchState(cs: CrunchState): Unit = {
+    log.info(s"calling parent updateState...")
     super.updateStateFromCrunchState(cs)
 
     probe ! state.get

@@ -36,4 +36,20 @@ message CrunchMinuteMessage {
     optional int32 waitTime = 7;
 }
 
+message CrunchDiffMessage {
+    optional int64 createdAt = 1;
+    repeated int32 flightIdsToRemove = 2;
+    repeated FlightWithSplitsMessage flightsToUpdate = 3;
+    repeated RemoveCrunchMinuteMessage CrunchMinutesToRemove = 4;
+    repeated CrunchMinuteMessage CrunchMinutesToUpdate = 5;
+}
 
+message RemoveCrunchMinuteMessage {
+    optional string terminalName = 1;
+    optional string queueName = 2;
+    optional int64 minute = 3;
+}
+
+message RemoveFlightMessage {
+    optional int64 FlightId = 1;
+}
