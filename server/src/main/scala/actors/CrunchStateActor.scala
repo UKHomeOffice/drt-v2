@@ -34,7 +34,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
           log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
       }
 
-    case cdm@ CrunchDiffMessage(_, flightIdsToRemove, flightsToUpdate, crunchMinutesToRemove, crunchMinutesToUpdate) =>
+    case cdm@CrunchDiffMessage(_, flightIdsToRemove, flightsToUpdate, crunchMinutesToRemove, crunchMinutesToUpdate) =>
       val diff = CrunchDiff(
         flightRemovals = flightIdsToRemove.map(RemoveFlight(_)).toSet,
         flightUpdates = flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
@@ -66,28 +66,25 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         log.info(s"updating from no existing state")
         newState
       case Some(existingState) =>
-        val cd = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
-        val fd = flightsDiff(existingState.flights, newState.flights)
-        val diff = CrunchDiff(fd._1, fd._2, cd._1, cd._2)
+        val (crunchesToRemove, crunchesToUpdate) = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
+        val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
+        val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToRemove, crunchesToUpdate)
+        
         val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
         if (cmsFromDiff != newState.crunchMinutes) {
           log.error(s"new CrunchMinutes do not match update from diff")
-        } else {
-          log.info(s"new CrunchMinutes match update from diff!")
         }
         val flightsFromDiff = applyFlightsDiff(diff, existingState.flights)
         if (flightsFromDiff != newState.flights) {
           log.error(s"new Flights do not match update from diff")
-        } else {
-          log.info(s"new Flights match update from diff!")
         }
 
         val diffToPersist = CrunchDiffMessage(
           createdAt = Option(SDate.now().millisSinceEpoch),
-          fd._1.map(rf => rf.flightId).toList,
-          fd._2.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
-          cd._1.map(rc => RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))).toList,
-          cd._2.map(cm => CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))).toList
+          diff.flightRemovals.map(rf => rf.flightId).toList,
+          diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
+          diff.crunchMinuteRemovals.map(rc => RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))).toList,
+          diff.crunchMinuteUpdates.map(cm => CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))).toList
         )
 
         persist(diffToPersist) { (diff: CrunchDiffMessage) =>
@@ -144,11 +141,11 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   }
 
   def saveSnapshotAtInterval(cs: CrunchState) = {
-    //    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-    val snapshotMessage: CrunchStateSnapshotMessage = crunchStateToSnapshotMessage(cs)
-    log.info("Saving CrunchState snapshot")
-    saveSnapshot(snapshotMessage)
-    //    }
+    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+      val snapshotMessage: CrunchStateSnapshotMessage = crunchStateToSnapshotMessage(cs)
+      log.info("Saving CrunchState snapshot")
+      saveSnapshot(snapshotMessage)
+    }
   }
 
   def portWorkload(crunchMinutes: Set[CrunchMinute]) = crunchMinutes
