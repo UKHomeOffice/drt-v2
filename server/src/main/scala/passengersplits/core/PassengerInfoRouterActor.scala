@@ -66,7 +66,7 @@ class AdvancePassengerInfoActor extends PersistentActor with PassengerQueueCalcu
 
   implicit def implLog = log
 
-  def manifestKey(vm: VoyageManifest) = voyageKey(vm.ArrivalPortCode, vm.VoyageNumber, vm.scheduleArrivalDateTime.get)
+  def manifestKey(vm: VoyageManifest) = voyageKey(vm.ArrivalPortCode, vm.VoyageNumber, vm.scheduleArrivalDateTime.getOrElse(SDate("1970-01-01T00:00Z")))
 
   private def voyageKey(arrivalPortCode: String, voyageNumber: String, scheduledDate: SDateLike) = {
     s"${arrivalPortCode}-${padTo4Digits(voyageNumber)}@${SDate.jodaSDateToIsoString(scheduledDate)}"
