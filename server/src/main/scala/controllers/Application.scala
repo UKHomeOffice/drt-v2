@@ -305,7 +305,7 @@ class Application @Inject()(
       val crunchStateReadActor: AskableActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
 
       log.info(s"asking $crunchStateReadActor for flightsWithSplits")
-      val flights = crunchStateReadActor.ask(GetFlights)(Timeout(500 milliseconds))
+      val flights = crunchStateReadActor.ask(GetFlights)(Timeout(5 seconds))
 
       flights.recover {
         case e: Throwable =>
