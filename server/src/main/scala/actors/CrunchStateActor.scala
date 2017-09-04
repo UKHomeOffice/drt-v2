@@ -26,31 +26,10 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
       log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
-      snapshot match {
-        case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
-          log.info(s"Using snapshot to restore")
-          state = Option(snapshotMessageToState(sm))
-        case somethingElse =>
-          log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
-      }
+      setStateFromSnapshot(snapshot)
 
-    case cdm@CrunchDiffMessage(_, flightIdsToRemove, flightsToUpdate, crunchMinutesToRemove, crunchMinutesToUpdate) =>
-      val diff = CrunchDiff(
-        flightRemovals = flightIdsToRemove.map(RemoveFlight(_)).toSet,
-        flightUpdates = flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
-        crunchMinuteRemovals = crunchMinutesToRemove.map(m => RemoveCrunchMinute(m.terminalName.getOrElse(""), m.queueName.getOrElse(""), m.minute.getOrElse(0L))).toSet,
-        crunchMinuteUpdates = crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet
-      )
-      val newState = state match {
-        case None =>
-          log.error(s"We don't have a CrunchState to apply the diff to")
-          None
-        case Some(cs) =>
-          log.info(s"Applying CrunchDiff to CrunchState")
-          Option(cs.copy(
-            flights = applyFlightsDiff(diff, cs.flights),
-            crunchMinutes = applyCrunchDiff(diff, cs.crunchMinutes)))
-      }
+    case cdm: CrunchDiffMessage =>
+      val newState = stateFromDiff(cdm, state)
       state = newState
 
     case RecoveryCompleted =>
@@ -58,6 +37,40 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     case u =>
       log.info(s"recovery: received unexpected ${u.getClass}")
+  }
+
+  def setStateFromSnapshot(snapshot: Any) = {
+    snapshot match {
+      case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
+        log.info(s"Using snapshot to restore")
+        state = Option(snapshotMessageToState(sm))
+      case somethingElse =>
+        log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
+    }
+  }
+
+  def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[CrunchState]) = {
+    val newState = existingState match {
+      case None =>
+        log.error(s"We don't have a CrunchState to apply the diff to")
+        None
+      case Some(cs) =>
+        val diff = crunchDiffFromMessage(cdm)
+        log.info(s"Applying CrunchDiff to CrunchState")
+        Option(cs.copy(
+          flights = applyFlightsDiff(diff, cs.flights),
+          crunchMinutes = applyCrunchDiff(diff, cs.crunchMinutes)))
+    }
+    newState
+  }
+
+  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage) = {
+    CrunchDiff(
+      flightRemovals = diffMessage.flightIdsToRemove.map(RemoveFlight(_)).toSet,
+      flightUpdates = diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
+      crunchMinuteRemovals = diffMessage.crunchMinutesToRemove.map(m => RemoveCrunchMinute(m.terminalName.getOrElse(""), m.queueName.getOrElse(""), m.minute.getOrElse(0L))).toSet,
+      crunchMinuteUpdates = diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet
+    )
   }
 
   def updateStateFromCrunchState(newState: CrunchState): Unit = {
@@ -69,7 +82,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         val (crunchesToRemove, crunchesToUpdate) = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
         val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
         val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToRemove, crunchesToUpdate)
-        
+
         val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
         if (cmsFromDiff != newState.crunchMinutes) {
           log.error(s"new CrunchMinutes do not match update from diff")

@@ -5,21 +5,25 @@ import akka.persistence.{RecoveryCompleted, _}
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
-import server.protobuf.messages.CrunchState.CrunchStateSnapshotMessage
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
 import services.Crunch.CrunchState
 
 import scala.collection.immutable._
 
 class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor(queues) {
   override val receiveRecover: Receive = {
-    case SnapshotOffer(md, s) =>
-      log.info(s"restoring crunch state $md")
-      s match {
-        case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
-          log.info("matched CrunchStateSnapshotMessage, storing it.")
-          state = Option(snapshotMessageToState(sm))
-        case somethingElse =>
-          log.error(s"Got $somethingElse when trying to restore Crunch State")
+    case SnapshotOffer(metadata, snapshot) =>
+      log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
+      setStateFromSnapshot(snapshot)
+
+    case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _) =>
+      createdAtOption match {
+        case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
+          log.info(s"Applying crunch diff with createdAt ($createdAt) <= point in time requested: ${pointInTime.millisSinceEpoch}")
+          val newState = stateFromDiff(cdm, state)
+          state = newState
+        case Some(createdAt) =>
+          log.info(s"Ignoring crunch diff with createdAt ($createdAt) > point in time requested: ${pointInTime.millisSinceEpoch}")
       }
 
     case RecoveryCompleted =>
