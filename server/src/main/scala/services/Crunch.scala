@@ -134,12 +134,16 @@ object Crunch {
       })
 
       def pushStateIfReady() = {
-        crunchStateOption.foreach(crunchState =>
-          if (isAvailable(out)) {
-            log.info(s"pushing csd ${crunchState.crunchFirstMinuteMillis}")
-            push(out, crunchState)
-            crunchStateOption = None
-          })
+        crunchStateOption match {
+          case None =>
+            log.info(s"We have no state yet. Nothing to push")
+          case Some(crunchState) =>
+            if (isAvailable(out)) {
+              log.info(s"pushing csd ${crunchState.crunchFirstMinuteMillis}")
+              push(out, crunchState)
+              crunchStateOption = None
+            }
+        }
       }
 
       def crunchStateFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
@@ -347,7 +351,7 @@ object Crunch {
     val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
     SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
-  
+
   def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]) = {
     val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
     val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
@@ -369,7 +373,7 @@ object Crunch {
     val oldKeys = oldTqmToCm.keys.toSet
     val newKeys = newTqmToCm.keys.toSet
     val toRemove = (oldKeys -- newKeys).map {
-      case k@ (tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
+      case k@(tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
     }
     val toUpdate = newTqmToCm.collect {
       case (k, cm) if oldTqmToCm.get(k).isEmpty || cm != oldTqmToCm(k) => cm
@@ -383,8 +387,8 @@ object Crunch {
   }
 
   def applyCrunchDiff(diff: CrunchDiff, cms: Set[CrunchMinute]): Set[CrunchMinute] = {
-    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms){
-      case (soFar, removal) => soFar.filterNot{
+    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms) {
+      case (soFar, removal) => soFar.filterNot {
         case CrunchMinute(tn, qn, m, _, _, _, _) => removal.terminalName == tn && removal.queueName == qn && removal.minute == m
       }
     }
@@ -396,8 +400,8 @@ object Crunch {
   }
 
   def applyFlightsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
-    val withoutRemovals = diff.flightRemovals.foldLeft(flights){
-      case (soFar, removal) => soFar.filterNot{
+    val withoutRemovals = diff.flightRemovals.foldLeft(flights) {
+      case (soFar, removal) => soFar.filterNot {
         case f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
       }
     }
