@@ -15,14 +15,13 @@ object DateViewSelector {
 
   val log = LoggerFactory.getLogger("DateTimeSelector")
 
-  case class Props()
+  case class Props(dateSelected: SDateLike = SDate.now())
 
   case class State(dateSelected: SDateLike)
 
-  val initialState = State(SDate.now())
 
   val component = ScalaComponent.builder[Props]("DateTimeSelector")
-    .initialState(initialState).renderS((scope, state) => {
+    .initialStateFromProps(p => State(p.dateSelected)).renderS((scope, state) => {
     val pointInTimeRCP = SPACircuit.connect(
       m => m.pointInTime
     )
@@ -63,5 +62,5 @@ object DateViewSelector {
   }).build
 
 
-  def apply(): VdomElement = component(Props())
+  def apply(props: Props): VdomElement = component(props)
 }
