@@ -22,6 +22,8 @@ object TerminalsDashboardPage {
 
       def interestingFlight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
 
+
+
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
       val portCodeAndQueueOrder = SPACircuit.connect(_.airportConfig.map(ac => (ac.portCode, ac.queueOrder)))
       val flightsByTerminalC = SPACircuit.connect(_.flightsWithSplitsPot.map(_.flights.filter(interestingFlight).groupBy(_.apiFlight.Terminal)))
