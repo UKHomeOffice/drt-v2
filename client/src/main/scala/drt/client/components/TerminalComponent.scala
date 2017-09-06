@@ -33,7 +33,9 @@ object TerminalComponent {
                             deployments: QueueStaffDeployments,
                             workloads: Workloads,
                             actualDesks: Map[QueueName, Map[Long, DeskStat]],
-                            flightsWithSplitsPot: Pot[FlightsWithSplits])
+                            flightsWithSplitsPot: Pot[FlightsWithSplits],
+                            pointInTime: Option[SDateLike]
+                          )
 
   def render(props: Props) = {
     val modelRCP = SPACircuit.connect(model => TerminalModel(
@@ -44,7 +46,8 @@ object TerminalComponent {
       model.staffDeploymentsByTerminalAndQueue.getOrElse(props.terminalName, Map()),
       model.workloadPot.getOrElse(Workloads(Map())),
       model.actualDeskStats.getOrElse(props.terminalName, Map()),
-      model.flightsWithSplitsPot
+      model.flightsWithSplitsPot,
+      model.pointInTime
     ))
 
     modelRCP(modelMP => {
@@ -76,7 +79,7 @@ object TerminalComponent {
           <.div(
 //            SummaryBoxesComponent(summaryBoxesProps),
 //            HeatmapComponent(heatmapProps),
-            DateViewSelector(),
+            DateViewSelector(DateViewSelector.Props(model.pointInTime.getOrElse(SDate.now()))),
             TerminalContentComponent(terminalContentProps)
           )
         }
