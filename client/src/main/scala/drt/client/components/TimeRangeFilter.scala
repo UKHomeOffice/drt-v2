@@ -21,7 +21,6 @@ object TimeRangeFilter {
 
   case class State(startTime: Int, endTime: Int)
 
-
   val component = ScalaComponent.builder[Props]("TimeRangeFilter")
     .initialStateFromProps(p => State(p.timeRangeHours.start, p.timeRangeHours.end)).renderS((scope, state) => {
     val timeRangeFilterRCP = SPACircuit.connect(
@@ -65,7 +64,6 @@ object TimeRangeFilter {
         ))
     })
   }).build
-
 
   def apply(props: Props): VdomElement = component(props)
 }

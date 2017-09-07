@@ -253,6 +253,17 @@ object TerminalContentComponent {
     }
   }
 
+  def filterFlightsByRange(range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]) = arrivals.filter(a => {
+
+    def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
+      case s: SDateLike =>
+        s.getHours >= range.start && s.getHours < range.end
+      case _ => false
+    } else false
+
+    withinRange(a.apiFlight.SchDT) || withinRange(a.apiFlight.EstDT) || withinRange(a.apiFlight.ActDT) || withinRange(a.apiFlight.EstChoxDT)  || withinRange(a.apiFlight.ActChoxDT) || withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString)
+  })
+
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
   def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
@@ -296,7 +307,10 @@ object TerminalContentComponent {
               val flights: Pot[FlightsApi.FlightsWithSplits] = props.flightsWithSplitsPot
 
               <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-                val flightsForTerminal = FlightsWithSplits(flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName))
+                val terminalFlights = flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName)
+                val flightsInRange = filterFlightsByRange(props.timeRangeHours, terminalFlights)
+
+                val flightsForTerminal = FlightsWithSplits(flightsInRange)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
               }))
             } else ""

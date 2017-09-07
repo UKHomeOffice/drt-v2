@@ -107,7 +107,6 @@ object TerminalDeploymentsTable {
 
   def terminalDeploymentsComponent(props: TerminalProps) = {
     val airportWrapper = SPACircuit.connect(_.airportInfos)
-    println(s"Filtering out flights outside ${props.timeRangeHours}")
     <.div(
      filterByTimeRange(props.timeRangeHours, calculateTerminalDeploymentRows(props)) match {
         case Nil => <.div("No rows yet")
