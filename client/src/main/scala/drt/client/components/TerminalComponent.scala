@@ -9,7 +9,7 @@ import drt.client.components.TerminalHeatmaps._
 import drt.client.logger.log
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, Workloads}
+import drt.client.services.{SPACircuit, TimeRangeHours, Workloads}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
@@ -34,7 +34,8 @@ object TerminalComponent {
                             workloads: Workloads,
                             actualDesks: Map[QueueName, Map[Long, DeskStat]],
                             flightsWithSplitsPot: Pot[FlightsWithSplits],
-                            pointInTime: Option[SDateLike]
+                            pointInTime: Option[SDateLike],
+                            timeRangeHours: TimeRangeHours
                           )
 
   def render(props: Props) = {
@@ -47,7 +48,8 @@ object TerminalComponent {
       model.workloadPot.getOrElse(Workloads(Map())),
       model.actualDeskStats.getOrElse(props.terminalName, Map()),
       model.flightsWithSplitsPot,
-      model.pointInTime
+      model.pointInTime,
+      model.timeRangeFilter
     ))
 
     modelRCP(modelMP => {
@@ -73,13 +75,15 @@ object TerminalComponent {
             model.crunchResult,
             model.deployments,
             model.workloads,
-            model.actualDesks
+            model.actualDesks,
+            model.timeRangeHours
           )
 
           <.div(
 //            SummaryBoxesComponent(summaryBoxesProps),
 //            HeatmapComponent(heatmapProps),
             DateViewSelector(DateViewSelector.Props(model.pointInTime.getOrElse(SDate.now()))),
+            TimeRangeFilter(TimeRangeFilter.Props(model.timeRangeHours)),
             TerminalContentComponent(terminalContentProps)
           )
         }
@@ -218,7 +222,8 @@ object TerminalContentComponent {
                     crunchResult: Map[QueueName, CrunchResult],
                     deployments: QueueStaffDeployments,
                     workloads: Workloads,
-                    actualDesks: Map[QueueName, Map[Long, DeskStat]]
+                    actualDesks: Map[QueueName, Map[Long, DeskStat]],
+                    timeRangeHours: TimeRangeHours
                   ) {
     lazy val hash = {
       val depsHash: List[Option[List[Int]]] = deployments.values.map(drtsPot => {
@@ -244,7 +249,7 @@ object TerminalContentComponent {
         )
       }))
 
-      (depsHash, flightsHash)
+      (depsHash, flightsHash, timeRangeHours.start, timeRangeHours.end)
     }
   }
 
@@ -306,7 +311,8 @@ object TerminalContentComponent {
                 props.crunchResult,
                 props.deployments,
                 props.workloads,
-                props.actualDesks
+                props.actualDesks,
+                props.timeRangeHours
               )
               TerminalDeploymentsTable.terminalDeploymentsComponent(deploymentProps)
             } else ""

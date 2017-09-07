@@ -101,20 +101,25 @@ object TerminalDeploymentsTable {
                             crunchResult: Map[QueueName, CrunchResult],
                             deployments: QueueStaffDeployments,
                             workloads: Workloads,
-                            actualDesks: Map[QueueName, Map[Long, DeskStat]]
+                            actualDesks: Map[QueueName, Map[Long, DeskStat]],
+                            timeRangeHours: TimeRangeHours
                           )
 
   def terminalDeploymentsComponent(props: TerminalProps) = {
     val airportWrapper = SPACircuit.connect(_.airportInfos)
-
+    println(s"Filtering out flights outside ${props.timeRangeHours}")
     <.div(
-      calculateTerminalDeploymentRows(props) match {
+     filterByTimeRange(props.timeRangeHours, calculateTerminalDeploymentRows(props)) match {
         case Nil => <.div("No rows yet")
         case rows =>
           renderTerminalUserTable(props.terminalName, airportWrapper, props.flightsWithSplitsPot, rows, props.airportConfig)
       }
     )
   }
+
+  import drt.client.services.JSDateConversions._
+  def filterByTimeRange(hourRange: TimeRangeHours,rowsToFilter: List[TerminalDeploymentsRow]) =
+    rowsToFilter.filter(r => SDate(r.time).getHours >= hourRange.start && SDate(r.time).getHours < hourRange.end)
 
   def calculateTerminalDeploymentRows(props: TerminalProps): List[TerminalDeploymentsRow] = {
     log.info(s"calculateTerminalDeploymentRows called ${props.terminalName}")
