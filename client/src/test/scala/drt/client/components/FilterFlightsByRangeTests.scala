@@ -1,0 +1,81 @@
+package drt.client.components
+
+import drt.client.components.TerminalContentComponent.filterFlightsByRange
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.TimeRangeHours
+import drt.shared.ApiFlightWithSplits
+import japgolly.scalajs.react.test
+import utest.{TestSuite, _}
+
+
+object FilterFlightsByRangeTests extends TestSuite {
+
+  import ApiFlightGenerator._
+
+  test.WebpackRequire.ReactTestUtils
+
+  def tests = TestSuite {
+    "Given an hour range of 10 to 14" - {
+      val range = TimeRangeHours(10, 14)
+      "When a flight has a scheduled date within that range then it should appear within the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight("2017-01-01T11:00:00Z"), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List(withinRangeFlight)
+
+        assert(result == expected)
+
+      }
+      "When a flight has has no times within the range, then it should not appear in the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight("2017-01-01T09:00:00Z"), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List()
+
+        assert(result == expected)
+      }
+      "When a flight has an est date within that range then it should appear within the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight(SchDT = "2017-01-01T09:00:00Z", EstDT = "2017-01-01T11:00:00Z"), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List(withinRangeFlight)
+
+        assert(result == expected)
+      }
+      "When a flight has an PCP Date within that range then it should appear within the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight(SchDT = "2017-01-01T09:00:00Z", PcpTime = SDate.parse("2017-01-01T11:00:00Z").millisSinceEpoch), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List(withinRangeFlight)
+
+        assert(result == expected)
+      }
+      "When a flight has an Actual Arrival Date within that range then it should appear within the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight(SchDT = "2017-01-01T09:00:00Z", ActDT = "2017-01-01T11:00:00Z"), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List(withinRangeFlight)
+
+        assert(result == expected)
+      }
+      "When a flight has an Est Chox  Date within that range then it should appear within the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight(SchDT = "2017-01-01T09:00:00Z", EstChoxDT = "2017-01-01T11:00:00Z"), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List(withinRangeFlight)
+
+        assert(result == expected)
+      }
+      "When a flight has an Act Chox  Date within that range then it should appear within the filtered range" - {
+        val withinRangeFlight = ApiFlightWithSplits(apiFlight(SchDT = "2017-01-01T09:00:00Z", ActChoxDT = "2017-01-01T11:00:00Z"), List())
+
+        val result = filterFlightsByRange(range, List(withinRangeFlight))
+        val expected = List(withinRangeFlight)
+
+        assert(result == expected)
+      }
+    }
+  }
+
+  def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+}

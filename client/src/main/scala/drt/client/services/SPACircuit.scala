@@ -77,6 +77,8 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
   def firstFlightTimeAcrossTerminals: Long = workloads.values.map(firstFlightTimeQueue).min
 }
 
+case class TimeRangeHours(start: Int = 0, end: Int = 24)
+
 case class RootModel(
                       motd: Pot[String] = Empty,
                       workloadPot: Pot[Workloads] = Empty,
@@ -91,7 +93,8 @@ case class RootModel(
                       staffMovements: Pot[Seq[StaffMovement]] = Empty,
                       slotsInADay: Int = 96,
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map(),
-                      pointInTime: Option[SDateLike] = None
+                      pointInTime: Option[SDateLike] = None,
+                      timeRangeFilter: TimeRangeHours = TimeRangeHours()
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -401,7 +404,6 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
       log.info(s"Found flightPaxSplits ${result}")
       noChange
   }
-
 }
 
 class CrunchHandler[M](pointInTime: ModelR[M, Option[SDateLike]], totalQueues: () => Map[TerminalName, Int], modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
@@ -425,7 +427,9 @@ class CrunchHandler[M](pointInTime: ModelR[M, Option[SDateLike]], totalQueues: (
 
     case GetTerminalCrunch(terminalName) =>
       log.info(s"calling getTerminalCrunchResult: $terminalName")
+
       def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
+
       val callResultFuture: Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = AjaxClient[Api].getTerminalCrunchResult(terminalName, pointInTimeMillis).call()
 
       val updateTerminalAction: Future[UpdateTerminalCrunchResult] = callResultFuture.map {
@@ -740,6 +744,13 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
   }
 }
 
+class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case SetTimeRangeFilter(r) =>
+      updated(r)
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -776,7 +787,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FixedPointsHandler(zoom(_.pointInTime), zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(zoom(_.pointInTime), zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ActualDesksHandler(zoom(_.pointInTime), zoomRW(_.actualDeskStats)((m, v) => m.copy(actualDeskStats = v))),
-      new PointInTimeHandler(zoomRW(_.pointInTime)((m, v) => m.copy(pointInTime = v)))
+      new PointInTimeHandler(zoomRW(_.pointInTime)((m, v) => m.copy(pointInTime = v))),
+      new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v)))
     )
 
     val loggedhandlers: HandlerFunction = (model, update) => {

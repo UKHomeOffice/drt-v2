@@ -3,7 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
-import drt.client.services.{DeskRecTimeslot, StaffAssignment}
+import drt.client.services.{DeskRecTimeslot, StaffAssignment, TimeRangeHours}
 import drt.shared._
 import drt.shared.FlightsApi._
 import drt.shared.Simulations.QueueSimulationResult
@@ -65,5 +65,7 @@ object Actions {
   case class SetPointInTime(value: Long) extends Action
 
   case class SetPointInTimeToLive() extends Action
+
+  case class SetTimeRangeFilter(timeRangeHours: TimeRangeHours) extends Action
 
 }

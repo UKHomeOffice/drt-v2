@@ -1,7 +1,8 @@
 package drt.client.services
 
 import diode.data._
-import drt.client.components.TerminalDeploymentsTable.{QueueDeploymentsRowEntry, TerminalDeploymentsRow}
+import drt.client.components.TerminalDeploymentsTable._
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
@@ -30,6 +31,7 @@ object TerminalDeploymentTests extends TestSuite  {
       "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
     ))
   )
+
 
   def tests = TestSuite {
 
@@ -314,6 +316,25 @@ object TerminalDeploymentTests extends TestSuite  {
       )
 
       assert(expected == result)
+    }
+
+    "Given a list of TerminalDemploymentsRows when we filter by time range then we should only see deployments within those times" - {
+      val allRows = List(
+        TerminalDeploymentsRow(SDate(2017,10,10,10, 0).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk"))),
+        TerminalDeploymentsRow(SDate(2017,10,10,11, 5).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk"))),
+        TerminalDeploymentsRow(SDate(2017,10,10,11, 10).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk"))),
+        TerminalDeploymentsRow(SDate(2017,10,10,11, 11).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk"))),
+        TerminalDeploymentsRow(SDate(2017,10,10,12, 12).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk")))
+      )
+
+      val result = filterByTimeRange(TimeRangeHours(11, 12), allRows)
+      val expected = List(
+        TerminalDeploymentsRow(SDate(2017,10,10,11, 5).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk"))),
+        TerminalDeploymentsRow(SDate(2017,10,10,11, 10).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk"))),
+        TerminalDeploymentsRow(SDate(2017,10,10,11, 11).millisSinceEpoch, List(QueueDeploymentsRowEntry(0L, 1,1, DeskRecTimeslot(0, 0), None, 0, 0, None, "eeaDesk")))
+      )
+
+      assert(result == expected)
     }
   }
 }
