@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.ModelProxy
+import drt.client.actions.Actions.SetPointInTime
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
 import drt.client.components.Heatmap.Series
@@ -76,7 +77,8 @@ object TerminalComponent {
             model.deployments,
             model.workloads,
             model.actualDesks,
-            model.timeRangeHours
+            model.timeRangeHours,
+            model.pointInTime.getOrElse(SDate.today())
           )
 
           <.div(
@@ -223,7 +225,8 @@ object TerminalContentComponent {
                     deployments: QueueStaffDeployments,
                     workloads: Workloads,
                     actualDesks: Map[QueueName, Map[Long, DeskStat]],
-                    timeRangeHours: TimeRangeHours
+                    timeRangeHours: TimeRangeHours,
+                    dayToDisplay: SDateLike
                   ) {
     lazy val hash = {
       val depsHash: List[Option[List[Int]]] = deployments.values.map(drtsPot => {
@@ -253,10 +256,10 @@ object TerminalContentComponent {
     }
   }
 
-  def filterFlightsByRange(range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]) = arrivals.filter(a => {
+  def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]) = arrivals.filter(a => {
 
     def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
-      case s: SDateLike =>
+      case s: SDateLike if s.ddMMyyString == date.ddMMyyString =>
         s.getHours >= range.start && s.getHours < range.end
       case _ => false
     } else false
@@ -308,7 +311,7 @@ object TerminalContentComponent {
 
               <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
                 val terminalFlights = flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName)
-                val flightsInRange = filterFlightsByRange(props.timeRangeHours, terminalFlights)
+                val flightsInRange = filterFlightsByRange(props.dayToDisplay, props.timeRangeHours, terminalFlights)
 
                 val flightsForTerminal = FlightsWithSplits(flightsInRange)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
