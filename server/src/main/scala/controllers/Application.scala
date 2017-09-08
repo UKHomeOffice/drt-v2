@@ -99,7 +99,6 @@ trait SystemActors {
   val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax(airportConfig.portCode))
 
-
   val actorMaterialiser = ActorMaterializer()
 
   implicit val actorSystem = system
@@ -154,7 +153,6 @@ trait AirportConfProvider extends AirportConfiguration {
   def getPortConfFromEnvVar(): AirportConfig = AirportConfigs.confByPort(portCode)
 
   def airportConfig: AirportConfig = getPortConfFromEnvVar()
-
 }
 
 trait ProdPassengerSplitProviders {
