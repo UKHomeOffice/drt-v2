@@ -84,6 +84,7 @@ trait ChromaFetcher extends ChromaConfig with WithSendAndReceive {
   }
 
   def currentFlights: Future[Seq[ChromaSingleFlight]] = {
+    log.info(s"requesting token")
     val eventualToken: Future[ChromaToken] = tokenPipeline(Post(tokenUrl, chromaTokenRequestCredentials))
     def eventualLiveFlights(accessToken: String): Future[List[ChromaSingleFlight]] = livePipeline(accessToken).pipeline(Get(url))
 

@@ -24,7 +24,7 @@ object ZipUtils {
 
   def unzipAllFilesInStream(unzippedStream: ZipInputStream, ze: Option[ZipEntry]): Stream[UnzippedFileContent] = {
     ze match {
-      case None => Stream.empty
+        case None => Stream.empty
       case Some(ze) =>
         val name: String = ze.getName
         val entry: String = ZipUtils.getZipEntry(unzippedStream)

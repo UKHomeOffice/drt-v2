@@ -20,6 +20,7 @@ import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.SDateLike
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
@@ -44,7 +45,9 @@ trait FileProvider {
 }
 
 
-trait S3Reader extends CoreLogging with FileProvider {
+trait S3Reader extends FileProvider {
+
+  def log: Logger
 
   def builder: S3StreamBuilder
 
@@ -84,7 +87,7 @@ trait S3Reader extends CoreLogging with FileProvider {
 
     } catch {
       case e: Throwable =>
-        log.error(e, s"Error in S3Poller for ${zipFileName}: ")
+        log.error(s"Error in S3Poller for ${zipFileName}: $e")
         throw e
     }
   }
@@ -105,11 +108,12 @@ object DqSettings {
 }
 
 case class SimpleAtmosReader(override val bucket: String,
-                             skyscapeAtmosHost: String,
-                             log: LoggingAdapter)(
+                             skyscapeAtmosHost: String)(
                               implicit val actorMaterializer: Materializer,
                               val ec: ExecutionContext
                             ) extends FileProvider with S3Reader {
+
+  val log = LoggerFactory.getLogger(getClass)
 
   override def createBuilder: S3StreamBuilder = S3StreamBuilder(createS3client)
 

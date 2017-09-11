@@ -16,6 +16,7 @@ import controllers.ArrivalGenerator.apiFlight
 
 class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers {
   "WorkloadsCalculator" >> {
+/*
     "Given a flight with 10 pax with processing time of 20 seconds, " +
       "when we ask for the terminal workloads, " +
       "then we should see 1 minute with 200 workload" >> {
@@ -46,7 +47,9 @@ class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers 
 
       terminalWorkload == expected
     }
+*/
 
+/*
     "Given 2 flights arriving at T1 & T2, " +
       "when we ask for the terminal workloads, " +
       "then we should see each terminal's processing times applied " >> {
@@ -80,6 +83,7 @@ class WorkloadsServiceTests extends SpecificationLike with AirportConfigHelpers 
 
       terminalWorkload == expected
     }
+*/
   }
 
   def extractTerminalWorkload(result: Map[TerminalName, Map[QueueName, (Seq[WL], Seq[Pax])]]): Set[(TerminalName, Iterable[Double])] = {

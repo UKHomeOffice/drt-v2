@@ -9,15 +9,16 @@ import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source}
+import akka.stream._
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.CrunchStateFullFlow
+import services.Crunch.{CrunchRequest, CrunchState, CrunchStateFullFlow}
+import services.{FlightsAndManifests, RunnableCrunchGraph}
 
 import scala.collection.immutable.Map
 //import controllers.Deskstats.log
@@ -102,34 +103,31 @@ trait SystemActors {
   val actorMaterialiser = ActorMaterializer()
 
   implicit val actorSystem = system
-  def crunchFlow = new CrunchStateFullFlow(
+
+  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
+  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
+
+  val crunchFlow = new CrunchStateFullFlow(
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
     airportConfig.defaultProcessingTimes.head._2,
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
     airportConfig.terminalNames.toSet)
 
-  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
-  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
+//  val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
+//    .via(crunchFlow)
+//    .to(Sink.actorRef(crunchStateActor, "completed"))
+//    .run()(actorMaterialiser)
 
-  val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
-    .via(crunchFlow)
-    .to(Sink.actorRef(crunchStateActor, "completed"))
-    .run()(actorMaterialiser)
+  val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
+  val flightsSource = chroma.chromaVanillaFlights().map(Flights(_))
+  val bucket = "drtdqprod"
+  val atmosHost = "cas00003.skyscapecloud.com:8443"
+  val manifestsSource = AdvPaxInfo(atmosHost, bucket).manifests("drt_dq_170911_000000_0000.zip")
 
-  crunchStateActor ! subscriber
+//  implicit val materializer = ActorMaterializer()
+  val result = RunnableCrunchGraph(flightsSource, manifestsSource, crunchFlow, crunchStateActor, airportConfig.defaultPaxSplits).run()(actorMaterialiser)
 
-  val flightsActorProps = Props(
-    classOf[FlightsActor],
-    crunchStateActor,
-    flightPassengerSplitReporter,
-    subscriber,
-    csvSplitsProvider,
-    BestPax(portCode),
-    pcpArrivalTimeCalculator, airportConfig
-  )
-  val flightsActor: ActorRef = system.actorOf(flightsActorProps, "flightsActor")
-  val flightsActorAskable: AskableActorRef = flightsActor
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
   def csvSplitsProvider: SplitsProvider
@@ -274,16 +272,9 @@ class Application @Inject()(
   }
 
   trait GetFlightsFromActor extends FlightsService {
-    override def getFlights(start: Long, end: Long): Future[List[Arrival]] = {
-      val flights: Future[Any] = ctrl.flightsActorAskable.ask(GetFlights)(Timeout(1 second))
-      val fsFuture = flights.collect {
-        case Flights(fs) => fs
-      }
-      fsFuture
-    }
 
     override def getFlightsWithSplits(start: Long, end: Long): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
-      if(start > 0) {
+      if (start > 0) {
         getFlightsWithSplitsAtDate(start)
       } else {
         val askable = ctrl.crunchStateActor
@@ -331,7 +322,7 @@ class Application @Inject()(
     }
   }
 
-  private def createChromaFlightFeed(prodMock: String) = {
+  def createChromaFlightFeed(prodMock: String) = {
     val fetcher = prodMock match {
       case "MOCK" => MockChroma(system)
       case "PROD" => ProdChroma(system)
@@ -340,28 +331,28 @@ class Application @Inject()(
 
   }
 
-  val copiedToApiFlights = flightsSource(mockProd, portCode)
-  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+//  val copiedToApiFlights = flightsSource(mockProd, portCode)
+//  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   import passengersplits.polling.{AtmosManifestFilePolling => afp}
 
   /// PassengerSplits reader
   import SDate.implicits._
 
-  val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  val pollingDone: Future[Done] = afp.beginPolling(
-    SimpleAtmosReader(bucket, atmosHost, log),
-    ctrl.flightPassengerSplitReporter,
-    afp.previousDayDqFilename(SDate.now()),
-    portCode,
-    afp.tickingSource(1 seconds, 1 minutes),
-    batchAtMost = 400 seconds)
-
-  pollingDone.onComplete(
-    pollingCompletion =>
-      log.warning(s"Atmos Polling completed with ${pollingCompletion}")
-  )
+//  val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+//  val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+//  val pollingDone: Future[Done] = afp.beginPolling(
+//    SimpleAtmosReader(bucket, atmosHost),
+//    ctrl.flightPassengerSplitReporter,
+//    afp.previousDayDqFilename(SDate.now()),
+//    portCode,
+//    afp.tickingSource(1 seconds, 1 minutes),
+//    batchAtMost = 400 seconds)
+//
+//  pollingDone.onComplete(
+//    pollingCompletion =>
+//      log.warning(s"Atmos Polling completed with ${pollingCompletion}")
+//  )
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

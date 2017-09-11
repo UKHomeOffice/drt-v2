@@ -225,8 +225,6 @@ object FlightsApi {
 }
 
 trait FlightsApi {
-  def flights(startTimeEpoch: Long, endTimeEpoch: Long): Flights
-
   def flightsWithSplits(startTimeEpoch: Long, endTimeEpoch: Long): Future[Either[FlightsNotReady, FlightsWithSplits]]
 }
 
