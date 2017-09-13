@@ -482,7 +482,7 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
   }
 
   override def receiveCommand: Receive = {
-    case UpdateLatestZipFilename(updatedLZF) =>
+    case UpdateLatestZipFilename(updatedLZF) if updatedLZF != latestZipFilename=>
       log.info(s"Received update: $updatedLZF")
       latestZipFilename = updatedLZF
 
@@ -706,9 +706,7 @@ class FlightsAndManifests(portSplits: SplitRatios,
           val defaultSplits = List(ApiSplits(portDefault.toList, SplitSources.TerminalAverage, PaxNumbers))
           val splitsWithHistorical = historical match {
             case None => defaultSplits
-            case Some(h) =>
-              log.info(s"historical: total ${h.map(_.paxCount).sum}:  $h}")
-              ApiSplits(h, SplitSources.Historical, PaxNumbers) :: defaultSplits
+            case Some(h) => ApiSplits(h, SplitSources.Historical, PaxNumbers) :: defaultSplits
           }
 
           val allSplits = apiSplits.get(splitsIndex(fs)) match {
