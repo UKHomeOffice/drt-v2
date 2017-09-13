@@ -34,7 +34,7 @@ object TerminalsDashboardPage {
         <.div(
           portCodeMP().renderReady(portCodeAndQueue => {
             val (portCode, queueOrder) = portCodeAndQueue
-            val bestPaxFN = BestPax(portCode)
+            val bestPaxFN = BestPax()
             val bestSplitPaxFn = BigSummaryBoxes.bestFlightSplitPax(bestPaxFN)
             <.div(terminalsC { terminalsPotMP =>
               <.div(terminalsPotMP().renderReady { terminals =>

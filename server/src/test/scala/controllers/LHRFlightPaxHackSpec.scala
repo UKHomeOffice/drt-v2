@@ -36,35 +36,35 @@ class LHRFlightPaxHackSpec extends Specification {
       "Then we should get the ActPax no" >> {
         val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z", actPax = 300, maxPax = 500, lastKnownPax = None, terminal = "T1")
 
-        300 === BestPax.lhrBestPax(newFlight)
+        300 === BestPax.bestPax(newFlight)
       }
     }
     "Given a flight with 200 ActPax and no LastKnownPax" >> {
       "Then we should get 200" >> {
         val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z", actPax = 200, maxPax = 500, lastKnownPax = None, terminal = "T1")
 
-        200 === BestPax.lhrBestPax(newFlight)
+        200 === BestPax.bestPax(newFlight)
       }
     }
     "Given a flight with no ActPax and no LastKnownPax with MaxPax of 300" >> {
       "Then we should get 300" >> {
         val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z", actPax = 0, maxPax = 300, lastKnownPax = None, terminal = "T1")
 
-        300 === BestPax.lhrBestPax(newFlight)
+        300 === BestPax.bestPax(newFlight)
       }
     }
     "Given a flight with default ActPax and LastKnownPax of 300" >> {
       "Then we should get 300" >> {
         val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z", actPax = 0, maxPax = 0, lastKnownPax = Option(300), terminal = "T1")
 
-        300 === BestPax.lhrBestPax(newFlight)
+        300 === BestPax.bestPax(newFlight)
       }
     }
     "Given a flight with no ActPax no MaxPax and no LastKnownPax" >> {
       "Then we should get 200" >> {
         val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z", actPax = 0, maxPax = 0, lastKnownPax = None, terminal = "T1")
 
-        200 === BestPax.lhrBestPax(newFlight)
+        200 === BestPax.bestPax(newFlight)
       }
 
       "DRT-4632 PcpPax is ActPax - TranPax" >> {
@@ -72,20 +72,20 @@ class LHRFlightPaxHackSpec extends Specification {
           val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324",
             schDt = "2017-06-08T12:00:00.00Z", actPax = 100, tranPax = 60, lastKnownPax = None, terminal = "T1")
 
-          40 === BestPax.lhrBestPax(newFlight)
+          40 === BestPax.bestPax(newFlight)
         }
         "Given a flight with default ActPax, maxPax and tranPax, and with LastKnownPax=400" >> {
           "Then we should get 400" >> {
             val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z",
                lastKnownPax = Option(400), terminal = "T1")
-            400 === BestPax.lhrBestPax(newFlight)
+            400 === BestPax.bestPax(newFlight)
           }
         }
         "Given a flight with default ActPax, maxPax and tranPax, and with LastKnownPax=400" >> {
           "Then we should get 400" >> {
             val newFlight = apiFlight(flightId = 0, iata = "SA324", icao = "SA324", schDt = "2017-06-08T12:00:00.00Z",
                lastKnownPax = Option(400), terminal = "T1")
-            400 === BestPax.lhrBestPax(newFlight)
+            400 === BestPax.bestPax(newFlight)
           }
         }
       }

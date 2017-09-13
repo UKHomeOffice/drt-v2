@@ -76,44 +76,15 @@ case class AirportConfig(
 
 object BestPax {
 
-  def apply(portCode: String) = portCode.toUpperCase match {
-    case "LHR" => lhrBestPax
-    case _ => bestPax
-  }
+  def apply() = bestPax
 
   def bestPax = (flight: Arrival) => {
-    flight match {
-      case f if f.ActPax > 0 =>
-        f.ActPax
-      case f if f.LastKnownPax.isDefined && f.LastKnownPax.get > 0 =>
-        f.LastKnownPax.get
-      case f =>
-        f.MaxPax
-    }
-  }
-
-  def lhrBestPax = (flight: Arrival) => {
-    val DefaultPax = 200
+    val DefaultPax = 0
     (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
       case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (DefaultPax, _, None, _) => DefaultPax
-      case (DefaultPax, _, Some(lastPax), _) => lastPax
       case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
       case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
       case (actPax, tranPax, _, _) => actPax - tranPax
-      case _ => DefaultPax
-    }
-  }
-
-  def lhrBestPaxIncludingTransfer = (flight: Arrival) => {
-    val DefaultPax = 200
-    (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
-      case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (DefaultPax, _, None, _) => DefaultPax
-      case (DefaultPax, _, Some(lastPax), _) => lastPax
-      case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
-      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
-      case (actPax, _, _, _) => actPax
       case _ => DefaultPax
     }
   }

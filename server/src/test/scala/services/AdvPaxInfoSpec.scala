@@ -79,7 +79,7 @@ class AdvPaxInfoSpec()
 
     val ac = airportConfig
 
-    def crunchFlow = new CrunchStateFullFlow(
+    def crunchFlow = new CrunchFlow(
       ac.slaByQueue,
       ac.minMaxDesksByTerminalQueue,
       ac.defaultProcessingTimes.head._2,

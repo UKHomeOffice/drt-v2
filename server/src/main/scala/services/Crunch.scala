@@ -5,15 +5,18 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.ZipInputStream
 
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Cancellable}
+import akka.actor.{ActorLogging, ActorRef, ActorSystem, Cancellable}
+import akka.pattern.AskableActorRef
+import akka.persistence.{RecoveryCompleted, _}
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, StreamConverters}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import akka.util.ByteString
+import akka.util.{ByteString, Timeout}
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
+import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -23,7 +26,8 @@ import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.Crunch.{CrunchRequest, CrunchStateFullFlow, log}
+import server.protobuf.messages.CrunchState.CrunchStateSnapshotMessage
+import services.Crunch.{log => _, _}
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
@@ -60,11 +64,11 @@ object Crunch {
 
   val oneMinute = 60000
 
-  class CrunchStateFullFlow(slas: Map[QueueName, Int],
-                            minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                            procTimes: Map[PaxTypeAndQueue, Double],
-                            groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                            validPortTerminals: Set[String])
+  class CrunchFlow(slas: Map[QueueName, Int],
+                   minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+                   procTimes: Map[PaxTypeAndQueue, Double],
+                   groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
+                   validPortTerminals: Set[String])
     extends GraphStage[FlowShape[CrunchRequest, CrunchState]] {
 
     val in = Inlet[CrunchRequest]("CrunchState.in")
@@ -122,7 +126,6 @@ object Crunch {
         def crunch(crunchRequest: CrunchRequest) = {
           val relevantFlights = crunchRequest.flights.filter {
             case ApiFlightWithSplits(flight, _) =>
-              //              log.info(s"terminal: ${flight.Terminal}, valid terminals: ${validPortTerminals}, pcp: ${flight.PcpTime}, crunchstart: ${crunchRequest.crunchStart}")
               validPortTerminals.contains(flight.Terminal) && (flight.PcpTime + 30) > crunchRequest.crunchStart
           }
           val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
@@ -140,9 +143,7 @@ object Crunch {
             }
 
           val crunchState = flightSplitDiffs match {
-            case fsd if fsd.isEmpty =>
-              log.info(s"No flight changes. No need to crunch")
-              None
+            case fsd if fsd.isEmpty => None
             case _ =>
               val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
               Option(newCrunchState)
@@ -328,7 +329,7 @@ object Crunch {
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
-        case Percentage => BestPax.lhrBestPax(flight)
+        case Percentage => BestPax()(flight)
       }
       val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
@@ -441,15 +442,14 @@ object RunnableCrunchGraph {
 
   def apply(
              flightsSource: Source[Flights, Cancellable],
-             voyageManifestsSource: Source[VoyageManifest, Cancellable],
-             cruncher: CrunchStateFullFlow,
-             crunchStateActor: ActorRef,
-             portSplits: SplitRatios) =
+             voyageManifestsSource: Source[Set[VoyageManifest], NotUsed],
+             flightsAndManifests: FlightsAndManifests,
+             cruncher: CrunchFlow,
+             crunchStateActor: ActorRef) =
     RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
-      val flightsAndManifests = new FlightsAndManifests(portSplits)
       val crunchSink = Sink.actorRef(crunchStateActor, "completed")
       val F: Outlet[Flights] = builder.add(flightsSource).out
-      val M: Outlet[VoyageManifest] = builder.add(voyageManifestsSource).out
+      val M: Outlet[Set[VoyageManifest]] = builder.add(voyageManifestsSource).out
 
       val FS = builder.add(flightsAndManifests)
       val CR = builder.add(cruncher)
@@ -463,11 +463,135 @@ object RunnableCrunchGraph {
     })
 }
 
-class FlightsAndManifests(portSplits: SplitRatios) extends GraphStage[FanInShape2[Flights, VoyageManifest, CrunchRequest]] {
+class VoyageManifestsActor extends PersistentActor with ActorLogging {
+  var latestZipFilename = "drt_dq_170912"
+  val snapshotInterval = 100
+
+  override def persistenceId: String = "VoyageManifests"
+
+  override def receiveRecover: Receive = {
+    case recoveredLZF: String =>
+      log.info(s"Recovery received $recoveredLZF")
+      latestZipFilename = recoveredLZF
+    case SnapshotOffer(md, ss) =>
+      log.info(s"Recovery received SnapshotOffer($md, $ss)")
+      ss match {
+        case lzf: String => latestZipFilename = lzf
+        case u => log.info(s"Received unexpected snapshot data: $u")
+      }
+  }
+
+  override def receiveCommand: Receive = {
+    case UpdateLatestZipFilename(updatedLZF) =>
+      log.info(s"Received update: $updatedLZF")
+      latestZipFilename = updatedLZF
+
+      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+        log.info(s"Saving VoyageManifests latestZipFilename snapshot $latestZipFilename")
+        saveSnapshot(latestZipFilename)
+      } else persist(latestZipFilename) { lzf =>
+        log.info(s"Persisting VoyageManifests latestZipFilename $latestZipFilename")
+        context.system.eventStream.publish(lzf)
+      }
+    case GetLatestZipFilename =>
+      log.info(s"Received GetLatestZipFilename request. Sending $latestZipFilename")
+      sender() ! latestZipFilename
+
+    case RecoveryCompleted =>
+      log.info(s"Recovery completed")
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
+  }
+}
+
+class VoyageManifests(advPaxInfo: AdvPaxInfo, voyageManifestsActor: ActorRef) extends GraphStage[SourceShape[Set[VoyageManifest]]] {
+  val out = Outlet[Set[VoyageManifest]]("VoyageManifests.out")
+  override val shape = SourceShape(out)
+
+  val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
+
+  val log = LoggerFactory.getLogger(getClass)
+
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+    var manifestsState: Set[VoyageManifest] = Set()
+    var manifestsToPush: Option[Set[VoyageManifest]] = None
+    var latestZipFilename: Option[String] = None
+    var fetchInProgress: Boolean = false
+    val dqRegex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
+
+    askableVoyageManifestsActor.ask(GetLatestZipFilename)(new Timeout(1 second)).onSuccess {
+      case lzf: String =>
+        latestZipFilename = Option(lzf)
+        if (isAvailable(out)) fetchAndPushManifests(lzf)
+    }
+
+    setHandler(out, new OutHandler {
+      override def onPull(): Unit = {
+        latestZipFilename match {
+          case None => log.info(s"We don't have a latestZipFilename yet")
+          case Some(lzf) =>
+            log.info(s"Sending latestZipFilename: $lzf to VoyageManfestsActor")
+            voyageManifestsActor ! UpdateLatestZipFilename(lzf)
+            fetchAndPushManifests(lzf)
+        }
+      }
+    })
+
+    def fetchAndPushManifests(lzf: String): Unit = {
+      if (!fetchInProgress) {
+        log.info(s"Fetching manifests from files newer than ${lzf}")
+        val manifestsFuture = advPaxInfo.manifestsFuture(lzf)
+        manifestsFuture.onSuccess {
+          case ms =>
+            val maxFilename = ms.map(_._1).max
+            latestZipFilename = Option(maxFilename)
+            log.info(s"Set latestZipFilename to '$latestZipFilename'")
+            val vms = ms.map(_._2).toSet
+            (vms -- manifestsState) match {
+              case newOnes if newOnes.isEmpty =>
+                log.info(s"No new manifests")
+              case newOnes =>
+                log.info(s"${newOnes.size} manifests to push")
+                manifestsToPush = Option(newOnes)
+                manifestsState = manifestsState ++ newOnes
+            }
+
+            manifestsToPush match {
+              case None =>
+                log.info(s"No manifests to push")
+              case Some(manifests) =>
+                log.info(s"Pushing ${manifests.size} manifests")
+                push(out, manifests)
+                manifestsToPush = None
+            }
+
+            fetchInProgress = false
+            fetchAndPushManifests(maxFilename)
+        }
+        manifestsFuture.onFailure {
+          case t =>
+            log.info(s"manifestsFuture failed: $t")
+            fetchInProgress = false
+            fetchAndPushManifests(lzf)
+        }
+      } else log.info(s"Fetch already in progress")
+    }
+  }
+}
+
+class FlightsAndManifests(portSplits: SplitRatios,
+                          csvSplitsProvider: SplitsProvider,
+                          historicalEGateSplitProvider: (Option[SplitRatios], Double) => Double)
+  extends GraphStage[FanInShape2[Flights, Set[VoyageManifest], CrunchRequest]] {
+
   val inFlights = Inlet[Flights]("Flights.in")
-  val inSplits = Inlet[VoyageManifest]("Splits.in")
+  val inSplits = Inlet[Set[VoyageManifest]]("Splits.in")
   val out = Outlet[CrunchRequest]("CrunchRequest.out")
   override val shape = new FanInShape2(inFlights, inSplits, out)
+
+  val log = LoggerFactory.getLogger(getClass)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flights: Map[Int, Arrival] = Map()
@@ -477,7 +601,6 @@ class FlightsAndManifests(portSplits: SplitRatios) extends GraphStage[FanInShape
     setHandler(inFlights, new InHandler {
       override def onPush(): Unit = {
         val newFlights = grab(inFlights)
-        log.info(s"flights triggered onPush call: ${newFlights.flights.length} flights")
 
         flights = newFlights.flights.foldLeft(flights) {
           case (flightsSoFar, newFlight) =>
@@ -496,7 +619,7 @@ class FlightsAndManifests(portSplits: SplitRatios) extends GraphStage[FanInShape
             }
         }
 
-        log.info(s"we now have ${flights.size} splits")
+        log.info(s"we now have ${flights.size} flights")
 
         if (somethingToPush && isAvailable(out)) {
           pushFlightsWithSplits(flights, splits)
@@ -509,23 +632,26 @@ class FlightsAndManifests(portSplits: SplitRatios) extends GraphStage[FanInShape
 
     setHandler(inSplits, new InHandler {
       override def onPush(): Unit = {
-        val manifest = grab(inSplits)
+        val manifests = grab(inSplits)
 
-        val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
-        val apiPaxTypeAndQueueCounts = paxTypeAndQueueCounts.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
-        val splitsFromManifest = ApiSplits(apiPaxTypeAndQueueCounts, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
-        val index = splitsIndex(manifest)
+        val newSplits = manifests.foldLeft(splits) {
+          case (splitsSoFar, manifest) =>
+            val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
+            val apiPaxTypeAndQueueCounts = paxTypeAndQueueCounts.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
+            val splitsFromManifest = ApiSplits(apiPaxTypeAndQueueCounts, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
+            val index = splitsIndex(manifest)
 
-        val newSplits = splits.get(index) match {
-          case None =>
-            log.info(s"Adding new split")
-            splits.updated(index, splitsFromManifest)
-          case Some(s) if s != splitsFromManifest =>
-            log.info(s"Updating existing split ($s != $splitsFromManifest")
-            splits.updated(index, splitsFromManifest)
-          case Some(s) if s == splitsFromManifest =>
-            log.info(s"No update to splits")
-            splits
+            splitsSoFar.get(index) match {
+              case None =>
+                log.info(s"Adding new split")
+                splitsSoFar.updated(index, splitsFromManifest)
+              case Some(s) if s != splitsFromManifest =>
+                log.info(s"Updating existing split ($s != $splitsFromManifest")
+                splitsSoFar.updated(index, splitsFromManifest)
+              case Some(s) if s == splitsFromManifest =>
+                log.info(s"No update to splits")
+                splitsSoFar
+            }
         }
 
         if (newSplits != splits) {
@@ -547,6 +673,7 @@ class FlightsAndManifests(portSplits: SplitRatios) extends GraphStage[FanInShape
 
     setHandler(out, new OutHandler {
       override def onPull(): Unit = {
+        log.info(s"FlightsAndSplits onPull() called - somethingToPush: $somethingToPush")
         if (somethingToPush && isAvailable(out)) {
           pushFlightsWithSplits(flights, splits)
           somethingToPush = false
@@ -562,22 +689,44 @@ class FlightsAndManifests(portSplits: SplitRatios) extends GraphStage[FanInShape
     def pushFlightsWithSplits(flights: Map[Int, Arrival], apiSplits: Map[String, ApiSplits]) = {
       val toPush = flights.map {
         case (_, fs) =>
-          val defaultApiPTQCs = portSplits.splits.map {
-            case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
+          val totalPax = BestPax()(fs)
+          val historical: Option[List[ApiPaxTypeAndQueueCount]] = csvSplitsProvider(fs).map(ratios => ratios.splits.map {
+            case SplitRatio(ptqc, _) if ptqc.passengerType == PaxTypes.EeaMachineReadable =>
+              val totalEeaMr = ratios.splits.filter(_.paxType.passengerType == PaxTypes.EeaMachineReadable).map(_.ratio).sum
+              val historicalEgateSplit = historicalEGateSplitProvider(Option(ratios), 0.6)
+              val ratioOfEeaMr = if (ptqc.queueType == Queues.EeaDesk) 1 - historicalEgateSplit else historicalEgateSplit
+              val ratioFromHistorical = totalEeaMr * ratioOfEeaMr
+              ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, (ratioFromHistorical * totalPax.toDouble).round)
+            case SplitRatio(ptqc, ratio) =>
+              ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, (ratio * totalPax.toDouble).round)
+          })
+          val portDefault: Seq[ApiPaxTypeAndQueueCount] = portSplits.splits.map {
+            case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, (ratio * totalPax.toDouble).round)
           }
-          val splits = List(ApiSplits(defaultApiPTQCs, SplitSources.TerminalAverage, Percentage))
+          val defaultSplits = List(ApiSplits(portDefault.toList, SplitSources.TerminalAverage, PaxNumbers))
+          val splitsWithHistorical = historical match {
+            case None => defaultSplits
+            case Some(h) =>
+              log.info(s"historical: total ${h.map(_.paxCount).sum}:  $h}")
+              ApiSplits(h, SplitSources.Historical, PaxNumbers) :: defaultSplits
+          }
+
           val allSplits = apiSplits.get(splitsIndex(fs)) match {
-            case None =>
-              splits
+            case None => splitsWithHistorical
             case Some(as) =>
-              as :: splits
+              val totalApiPax = as.splits.map(_.paxCount).sum
+              ApiSplits(
+                as.splits.map(aptqc => aptqc.copy(paxCount = ((aptqc.paxCount / totalApiPax) * totalPax))),
+                SplitSources.ApiSplitsWithCsvPercentage,
+                PaxNumbers) :: splitsWithHistorical
           }
           ApiFlightWithSplits(fs, allSplits)
       }.toSet
 
       log.info(s"pushing ${toPush.size} flights with splits")
 
-      val cr = CrunchRequest(toPush.toList, SDate("2017-09-10T23:00Z").millisSinceEpoch, 1440)
+      val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
+      val cr = CrunchRequest(toPush.toList, Crunch.getLocalLastMidnight(localNow).millisSinceEpoch, 1440)
 
       push(out, cr)
     }
@@ -616,22 +765,20 @@ case class AdvPaxInfo(s3HostName: String, bucketName: String) {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  def manifests(latestFile: String): Source[VoyageManifest, Cancellable] = {
-    Source.tick[Source[VoyageManifest, NotUsed]](1 millisecond, 30 seconds, {
-      log.info("API tick")
-
-      zipFiles(latestFile)
-        .mapAsync(64) {
-          case filename =>
-            log.info(s"fetching $filename as stream")
-            val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
-            Future(fileNameAndContentFromZip(filename, zipByteStream))
-        }
-        .mapConcat(jsons => jsons)
-    }).flatMapConcat(x => x)
+  def manifestsFuture(latestFile: String): Future[Seq[(String, VoyageManifest)]] = {
+    log.info(s"requesting zipFiles source")
+    zipFiles(latestFile)
+      .mapAsync(64) {
+        case filename =>
+          log.info(s"fetching $filename as stream")
+          val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
+          Future(fileNameAndContentFromZip(filename, zipByteStream))
+      }
+      .mapConcat(jsons => jsons)
+      .runWith(Sink.seq[(String, VoyageManifest)])
   }
 
-  def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed]): Stream[VoyageManifest] = {
+  def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed]): Seq[(String, VoyageManifest)] = {
     val inputStream: InputStream = zippedFileByteStream.runWith(
       StreamConverters.asInputStream()
     )
@@ -645,11 +792,11 @@ case class AdvPaxInfo(s3HostName: String, bucketName: String) {
         stringBuffer ++= buffer.take(len)
         len = zipInputStream.read(buffer)
       }
-      log.info(s"Finished reading manifest from ${jsonFile.getName}")
+      //      log.info(s"Finished reading manifest from ${jsonFile.getName}")
       val content: String = new String(stringBuffer.toArray, UTF_8)
       Tuple3(zipFileName, jsonFile.getName, VoyageManifestParser.parseVoyagePassengerInfo(content))
     }.collect {
-      case (_, _, Success(vm)) if vm.ArrivalPortCode == "STN" => vm
+      case (zipFilename, _, Success(vm)) if vm.ArrivalPortCode == "STN" => (zipFilename, vm)
     }
     log.info(s"Finished processing $zipFileName")
     vmStream
@@ -661,7 +808,11 @@ case class AdvPaxInfo(s3HostName: String, bucketName: String) {
 
   def filterToFilesNewerThan(filesSource: Source[String, NotUsed], latestFile: String) = {
     val filterFrom: String = filterFromFileName(latestFile)
-    filesSource.filter(fn => fn >= filterFrom && fn != latestFile)
+    filesSource.filter(fn => {
+      val takeFile = fn >= filterFrom && fn != latestFile
+      if (takeFile) log.info(s"taking api zip $fn")
+      takeFile
+    })
   }
 
   def filterFromFileName(latestFile: String) = {
@@ -691,3 +842,7 @@ case class AdvPaxInfo(s3HostName: String, bucketName: String) {
     client
   }
 }
+
+case class UpdateLatestZipFilename(filename: String)
+
+case object GetLatestZipFilename

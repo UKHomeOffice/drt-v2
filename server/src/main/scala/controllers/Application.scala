@@ -17,7 +17,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.{CrunchRequest, CrunchState, CrunchStateFullFlow}
+import services.Crunch.{CrunchRequest, CrunchState, CrunchFlow}
 import services.{FlightsAndManifests, RunnableCrunchGraph}
 
 import scala.collection.immutable.Map
@@ -93,12 +93,14 @@ trait SystemActors {
 
   implicit val system: ActorSystem
 
+  val config: Configuration
+
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
   val pcpArrivalTimeCalculator = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider) _
 
   val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax(airportConfig.portCode))
+    PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax())
 
   val actorMaterialiser = ActorMaterializer()
 
@@ -106,35 +108,61 @@ trait SystemActors {
 
   val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
+  val voyageManifestsActor = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
-  val crunchFlow = new CrunchStateFullFlow(
+  val crunchFlow = new CrunchFlow(
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
     airportConfig.defaultProcessingTimes.head._2,
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
     airportConfig.terminalNames.toSet)
 
-//  val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
-//    .via(crunchFlow)
-//    .to(Sink.actorRef(crunchStateActor, "completed"))
-//    .run()(actorMaterialiser)
-
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
-  val flightsSource = chroma.chromaVanillaFlights().map(Flights(_))
-  val bucket = "drtdqprod"
-  val atmosHost = "cas00003.skyscapecloud.com:8443"
-  val manifestsSource = AdvPaxInfo(atmosHost, bucket).manifests("drt_dq_170911_000000_0000.zip")
 
-//  implicit val materializer = ActorMaterializer()
-  val result = RunnableCrunchGraph(flightsSource, manifestsSource, crunchFlow, crunchStateActor, airportConfig.defaultPaxSplits).run()(actorMaterialiser)
+  val bucket = config.getString("atmos.s3.bucket").getOrElse("")//"drtdqprod"
+  val atmosHost = config.getString("atmos.s3.url").getOrElse("")//"cas00003.skyscapecloud.com:8443"
+  val advPaxInfoProvider = AdvPaxInfo(atmosHost, bucket)
+
+  val manifestsSource = Source.fromGraph(new VoyageManifests(advPaxInfoProvider, voyageManifestsActor))
+
+  val historicalEgateSplitProvider = CSVPassengerSplitsProvider.egatePercentageFromSplit _
+
+  val flightsAndManifests = new FlightsAndManifests(airportConfig.defaultPaxSplits, historicalSplitsProvider, historicalEgateSplitProvider)
+
+  val result = RunnableCrunchGraph(
+    flightsSource(mockProd, airportConfig.portCode),
+    manifestsSource,
+    flightsAndManifests,
+    crunchFlow,
+    crunchStateActor
+  ).run()(actorMaterialiser)
 
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
-  def csvSplitsProvider: SplitsProvider
+  def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
   def splitsProviders(): List[SplitsProvider]
 
   def flightWalkTimeProvider(flight: Arrival): Millis
+
+  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
+    portCode match {
+      case "LHR" =>
+        LHRFlightFeed().map(Flights(_))
+      case "EDI" =>
+        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights(_))
+      case _ =>
+        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights(_))
+    }
+  }
+
+  def createChromaFlightFeed(prodMock: String) = {
+    val fetcher = prodMock match {
+      case "MOCK" => MockChroma(system)
+      case "PROD" => ProdChroma(system)
+    }
+    ChromaFlightFeed(system.log, fetcher)
+  }
 }
 
 
@@ -158,13 +186,14 @@ trait ProdPassengerSplitProviders {
 
   import scala.concurrent.ExecutionContext.global
 
-  override val csvSplitsProvider: (Arrival) => Option[SplitRatios] = SplitsProvider.csvProvider
+  val csvSplitsProvider: (Arrival) => Option[SplitRatios] = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: Arrival): Double = {
     CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
   }
 
-  def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] = Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
+  def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
+    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
 
   private implicit val timeout = Timeout(250 milliseconds)
 
@@ -311,48 +340,28 @@ class Application @Inject()(
     }
   }
 
-  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
-    portCode match {
-      case "LHR" =>
-        LHRFlightFeed().map(Flights(_))
-      case "EDI" =>
-        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights(_))
-      case _ =>
-        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights(_))
-    }
-  }
-
-  def createChromaFlightFeed(prodMock: String) = {
-    val fetcher = prodMock match {
-      case "MOCK" => MockChroma(system)
-      case "PROD" => ProdChroma(system)
-    }
-    ChromaFlightFeed(log, fetcher)
-
-  }
-
-//  val copiedToApiFlights = flightsSource(mockProd, portCode)
-//  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
+  //  val copiedToApiFlights = flightsSource(mockProd, portCode)
+  //  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
 
   import passengersplits.polling.{AtmosManifestFilePolling => afp}
 
   /// PassengerSplits reader
   import SDate.implicits._
 
-//  val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-//  val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-//  val pollingDone: Future[Done] = afp.beginPolling(
-//    SimpleAtmosReader(bucket, atmosHost),
-//    ctrl.flightPassengerSplitReporter,
-//    afp.previousDayDqFilename(SDate.now()),
-//    portCode,
-//    afp.tickingSource(1 seconds, 1 minutes),
-//    batchAtMost = 400 seconds)
-//
-//  pollingDone.onComplete(
-//    pollingCompletion =>
-//      log.warning(s"Atmos Polling completed with ${pollingCompletion}")
-//  )
+  //  val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  //  val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  //  val pollingDone: Future[Done] = afp.beginPolling(
+  //    SimpleAtmosReader(bucket, atmosHost),
+  //    ctrl.flightPassengerSplitReporter,
+  //    afp.previousDayDqFilename(SDate.now()),
+  //    portCode,
+  //    afp.tickingSource(1 seconds, 1 minutes),
+  //    batchAtMost = 400 seconds)
+  //
+  //  pollingDone.onComplete(
+  //    pollingCompletion =>
+  //      log.warning(s"Atmos Polling completed with ${pollingCompletion}")
+  //  )
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))

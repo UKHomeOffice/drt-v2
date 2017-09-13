@@ -62,7 +62,7 @@ class CrunchTestLike
 
     implicit val actorSystem = system
 
-    def crunchFlow = new CrunchStateFullFlow(
+    def crunchFlow = new CrunchFlow(
       slaByQueue,
       minMaxDesks,
       procTimes,

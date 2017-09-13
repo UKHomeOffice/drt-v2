@@ -1,15 +1,13 @@
 package drt.chroma.chromafetcher
 
 import akka.actor.ActorSystem
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaToken, ChromaSingleFlight}
 import drt.chroma.ChromaConfig
+import drt.chroma.chromafetcher.ChromaFetcher.{ChromaSingleFlight, ChromaToken}
 import drt.http.WithSendAndReceive
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http.HttpHeaders.{Accept, Authorization}
 import spray.http.{HttpRequest, HttpResponse, MediaTypes, OAuth2BearerToken}
-import spray.httpx.SprayJsonSupport // intellij may try to remove this, don't let it or unmarshall will stop working
-import spray.json.DefaultJsonProtocol
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{Duration, _}
@@ -44,8 +42,8 @@ object ChromaFetcher {
 trait ChromaFetcher extends ChromaConfig with WithSendAndReceive {
   implicit val system: ActorSystem
 
-  import system.dispatcher
   import ChromaParserProtocol._
+  import system.dispatcher
 
   def log = LoggerFactory.getLogger(classOf[ChromaFetcher])
 

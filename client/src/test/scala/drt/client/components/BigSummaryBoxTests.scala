@@ -210,7 +210,7 @@ object BigSummaryBoxTests extends TestSuite {
                         ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 20) :: Nil,
                       SplitSources.Historical, PaxNumbers))) :: Nil
 
-                  val aggSplits = aggregateSplits(BestPax.lhrBestPax)(flights)
+                  val aggSplits = aggregateSplits(BestPax.bestPax)(flights)
 
                   val expectedAggSplits = Map(
                     PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (60),
