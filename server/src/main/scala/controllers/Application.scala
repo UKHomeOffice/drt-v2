@@ -4,20 +4,21 @@ import java.nio.ByteBuffer
 import java.util.UUID
 
 import actors._
-import actors.pointInTime.CrunchStateReadActor
+import actors.pointInTime.{CrunchStateReadActor, GetCrunchMinutes}
 import akka.Done
 import akka.actor._
 import akka.pattern.{AskableActorRef, _}
 import akka.stream.actor.ActorSubscriberMessage.OnComplete
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
-import akka.util.Timeout
+import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.CrunchStateFullFlow
+import play.api.http.HttpEntity
+import services.Crunch.{CrunchMinute, CrunchState, CrunchStateFullFlow}
 
 import scala.collection.immutable.Map
 //import controllers.Deskstats.log
@@ -102,6 +103,7 @@ trait SystemActors {
   val actorMaterialiser = ActorMaterializer()
 
   implicit val actorSystem = system
+
   def crunchFlow = new CrunchStateFullFlow(
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
@@ -283,7 +285,7 @@ class Application @Inject()(
     }
 
     override def getFlightsWithSplits(start: Long, end: Long): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
-      if(start > 0) {
+      if (start > 0) {
         getFlightsWithSplitsAtDate(start)
       } else {
         val askable = ctrl.crunchStateActor
@@ -387,6 +389,33 @@ class Application @Inject()(
       voyageManifestsFuture.map {
         case result: List[VoyageManifest] => Ok(headings + "\n" + passengerCsvLines(result).mkString("\n"))
       }
+  }
+
+  def getDesksAndQueuesCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
+    implicit val timeout: Timeout = Timeout(5 seconds)
+
+    val actor: AskableActorRef = actorSystem.actorOf(
+      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
+      "crunchStateReadActor" + UUID.randomUUID().toString
+    )
+
+    val potMillidate = MilliDate(pointInTime.toLong)
+    val portCrunchResult = actor ? GetCrunchMinutes
+    val fileName = s"${terminalName}-desks-and-queues-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
+
+    portCrunchResult.map {
+      case Some(cm: Set[CrunchMinute]) =>
+
+        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == potMillidate.ddMMyyString)
+        val csvData = DesksAndQueuesCSV.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
+        Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+        )
+      case unexpected =>
+        log.error(s"got the wrong thing: $unexpected")
+        NotFound("")
+    }
   }
 
   def autowireApi(path: String) = Action.async(parse.raw) {

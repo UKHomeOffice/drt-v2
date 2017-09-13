@@ -18,7 +18,7 @@ import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
-
+import org.scalajs.dom
 import scala.collection.immutable.Map
 import scala.util.Try
 
@@ -84,8 +84,7 @@ object TerminalComponent {
           <.div(
 //            SummaryBoxesComponent(summaryBoxesProps),
 //            HeatmapComponent(heatmapProps),
-            DateViewSelector(DateViewSelector.Props(model.pointInTime.getOrElse(SDate.now()))),
-            TimeRangeFilter(TimeRangeFilter.Props(model.timeRangeHours)),
+            DateTimeSelector(DateTimeSelector.Props(model.pointInTime, props.terminalName)),
             TerminalContentComponent(terminalContentProps)
           )
         }
