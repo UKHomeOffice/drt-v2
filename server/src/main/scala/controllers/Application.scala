@@ -418,7 +418,7 @@ class Application @Inject()(
     }
   }
 
-  def getFlightswithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
+  def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
     implicit val timeout: Timeout = Timeout(10 seconds)
 
     val actor: AskableActorRef = actorSystem.actorOf(
