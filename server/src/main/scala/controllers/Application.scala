@@ -193,7 +193,7 @@ trait ProdWalkTimesProvider {
 }
 
 trait ImplicitTimeoutProvider {
-  implicit val timeout = Timeout(102 milliseconds)
+  implicit val timeout = Timeout(1 second)
 }
 
 class Application @Inject()(
