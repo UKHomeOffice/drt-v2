@@ -407,7 +407,33 @@ class Application @Inject()(
       case Some(cm: Set[CrunchMinute]) =>
 
         val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == potMillidate.ddMMyyString)
-        val csvData = DesksAndQueuesCSV.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
+        val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
+        Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+        )
+      case unexpected =>
+        log.error(s"got the wrong thing: $unexpected")
+        NotFound("")
+    }
+  }
+
+  def getFlightswithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
+    implicit val timeout: Timeout = Timeout(10 seconds)
+
+    val actor: AskableActorRef = actorSystem.actorOf(
+      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
+      "crunchStateReadActor" + UUID.randomUUID().toString
+    )
+
+    val potMillidate = MilliDate(pointInTime.toLong)
+    val flights = actor ? GetFlights
+    val fileName = s"${terminalName}-arrivals-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
+
+    flights.map {
+      case FlightsWithSplits(flights) =>
+
+        val csvData = CSVData.flightsWithSplitsToCSV(flights.filter(_.apiFlight.Terminal == terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
