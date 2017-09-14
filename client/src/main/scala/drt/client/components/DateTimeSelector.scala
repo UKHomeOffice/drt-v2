@@ -105,7 +105,8 @@ object DateTimeSelector {
               } else {
                 <.div(^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))), ^.className := "popover-trigger", "Show Snapshot")
               },
-              <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank")
+              <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank"),
+              <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank")
             )
           }
 

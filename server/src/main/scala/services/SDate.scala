@@ -32,7 +32,7 @@ object SDate {
 
     def millisSinceEpoch: Long = dateTime.getMillis
 
-    override def toISOString(): String = dateTime.toISOString()
+    override def toISOString(): String = jodaSDateToIsoString(dateTime)
   }
 
   object implicits {
