@@ -99,7 +99,8 @@ object FlightMessageConversion {
       Origin = flightMessage.origin.getOrElse(""),
       SchDT = apiFlightDateTime(flightMessage.scheduled),
       PcpTime = flightMessage.pcpTime.getOrElse(0),
-      LastKnownPax = flightMessage.lastKnownPax
+      LastKnownPax = flightMessage.lastKnownPax,
+      Scheduled = flightMessage.scheduled.getOrElse(0)
     )
   }
 
@@ -125,7 +126,8 @@ object FlightMessageConversion {
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),
       SchDT = flightMessage.schDTOLD.getOrElse(""),
-      PcpTime = flightMessage.pcpTime.getOrElse(0)
+      PcpTime = flightMessage.pcpTime.getOrElse(0),
+      Scheduled = flightMessage.scheduled.getOrElse(0)
     )
   }
 

@@ -90,6 +90,7 @@ case class Arrival(
                     rawIATA: String,
                     Origin: String,
                     SchDT: String,
+                    Scheduled: Long,
                     PcpTime: Long,
                     LastKnownPax: Option[Int] = None) {
   lazy val ICAO = Arrival.standardiseFlightCode(rawICAO)

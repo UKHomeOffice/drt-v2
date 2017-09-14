@@ -119,21 +119,22 @@ trait SystemActors {
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
 
-  val bucket = config.getString("atmos.s3.bucket").getOrElse("")//"drtdqprod"
-  val atmosHost = config.getString("atmos.s3.url").getOrElse("")//"cas00003.skyscapecloud.com:8443"
-  val advPaxInfoProvider = AdvPaxInfo(atmosHost, bucket)
+  val bucket = config.getString("atmos.s3.bucket").getOrElse("")
+  val atmosHost = config.getString("atmos.s3.url").getOrElse("")
+  val advPaxInfoProvider = AdvPaxInfo(atmosHost, bucket, airportConfig.portCode)
 
   val manifestsSource = Source.fromGraph(new VoyageManifests(advPaxInfoProvider, voyageManifestsActor))
 
   val historicalEgateSplitProvider = CSVPassengerSplitsProvider.egatePercentageFromSplit _
 
-  val flightsAndManifests = new FlightsAndManifests(airportConfig.defaultPaxSplits, historicalSplitsProvider, historicalEgateSplitProvider)
+  val flightsAndManifests = new FlightsAndManifests(airportConfig.defaultPaxSplits, historicalSplitsProvider, historicalEgateSplitProvider, pcpArrivalTimeCalculator)
 
   val result = RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),
     manifestsSource,
     flightsAndManifests,
     crunchFlow,
+    crunchStateActor,
     crunchStateActor
   ).run()(actorMaterialiser)
 
