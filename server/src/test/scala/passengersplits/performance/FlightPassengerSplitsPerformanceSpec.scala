@@ -9,8 +9,7 @@ import org.scalacheck.{Arbitrary, Gen}
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import passengersplits.{AkkaPersistTestConfig, PassengerInfoBatchActor}
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
-import passengersplits.core.{AdvancePassengerInfoActor, PassengerTypeCalculatorValues}
+import passengersplits.core.PassengerTypeCalculatorValues
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import spray.http.DateTime
 import spray.routing.Directives

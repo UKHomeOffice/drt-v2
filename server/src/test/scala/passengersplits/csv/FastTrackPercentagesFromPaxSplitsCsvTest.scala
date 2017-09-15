@@ -12,9 +12,8 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, PaxTypeAndQueue, Queues, SDateLike}
 import org.joda.time.format.DateTimeFormat
 import org.specs2.mutable.{Specification, SpecificationLike}
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import passengersplits.csv.SplitsMocks.{MockSplitsActor, testVoyagePaxSplits}
-import services.AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages
+import .splitRatioProviderWithCsvPercentages
 import services.SDate.implicits._
 import services.{CSVPassengerSplitsProvider, FastTrackPercentages, SDate}
 import controllers.ArrivalGenerator.apiFlight

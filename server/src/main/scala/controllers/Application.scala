@@ -15,7 +15,6 @@ import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import play.api.http.HttpEntity
 import services.Crunch.CrunchMinute
@@ -30,7 +29,6 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalNam
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
 import org.joda.time.chrono.ISOChronology
-import passengersplits.core.AdvancePassengerInfoActor
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.PcpArrival._
@@ -98,12 +96,8 @@ trait SystemActors {
 
   val pcpArrivalTimeCalculator: (Arrival) => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider)
 
-  val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax())
-
   val actorMaterializer = ActorMaterializer()
 
-   val flightPassengerSplitReporter: ActorRef = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   val crunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
   val askableCrunchStateActor: AskableActorRef = crunchStateActor
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
@@ -144,8 +138,6 @@ trait SystemActors {
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
   def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
-
-  def splitsProviders: List[SplitsProvider]
 
   def flightWalkTimeProvider(flight: Arrival): Millis
 
@@ -200,17 +192,6 @@ trait ProdPassengerSplitProviders {
     Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
 
   private implicit val timeout = Timeout(250 milliseconds)
-
-  def apiSplitsProv(flight: Arrival): Option[SplitRatios] =
-    AdvPaxSplitsProvider.splitRatioProviderWithCsvPercentages(
-      airportConfig.portCode)(
-      flightPassengerSplitReporter)(
-      egatePercentageProvider,
-      fastTrackPercentageProvider
-    )(flight)(timeout, global)
-
-  val apiSplitsProvider: (Arrival) => Option[SplitRatios] = (flight: Arrival) => apiSplitsProv(flight)
-  override val splitsProviders = List(apiSplitsProvider, csvSplitsProvider, SplitsProvider.defaultProvider(airportConfig))
 }
 
 trait ProdWalkTimesProvider {
@@ -261,15 +242,12 @@ class Application @Inject()(
   }
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCrunchState {
-    override def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = paxFlowCalculator(flight)
 
     override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
 
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
-
-    override def flightPassengerReporter: ActorRef = ctrl.flightPassengerSplitReporter
 
     override def getActualDeskStats(pointInTime: Long): Future[ActualDeskStats] = {
       val actor: AskableActorRef = if (pointInTime > 0) {
@@ -344,27 +322,27 @@ class Application @Inject()(
     Ok(views.html.index("DRT - BorderForce"))
   }
 
-  def splits(fromDate: String, toDate: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      def manifestPassengerToCSV(m: VoyageManifest, p: PassengerInfoJson) = {
-        s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode}","${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentType.getOrElse("")}","${p.EEAFlag}","${p.InTransitFlag}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
-      }
-
-      def headings = """"Event Code","Arrival Port Code","Departure Port Code","Voyage Number","Carrier Code","Scheduled Date","Scheduled Time","Nationality Country Code","Document Type","EEA Flag","In Transit Flag","Document Issuing Country Code","Disembarkation Port Code","Disembarkation Country Code","Age""""
-
-      def passengerCsvLines(result: List[VoyageManifest]) = {
-        for {
-          manifest <- result
-          passenger <- manifest.PassengerList
-        } yield
-          manifestPassengerToCSV(manifest, passenger)
-      }
-
-      val voyageManifestsFuture = ctrl.flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(fromDate), SDate(toDate))
-      voyageManifestsFuture.map {
-        case result: List[VoyageManifest] => Ok(headings + "\n" + passengerCsvLines(result).mkString("\n"))
-      }
-  }
+//  def splits(fromDate: String, toDate: String): Action[AnyContent] = Action.async {
+//    implicit request =>
+//      def manifestPassengerToCSV(m: VoyageManifest, p: PassengerInfoJson) = {
+//        s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode}","${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentType.getOrElse("")}","${p.EEAFlag}","${p.InTransitFlag}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
+//      }
+//
+//      def headings = """"Event Code","Arrival Port Code","Departure Port Code","Voyage Number","Carrier Code","Scheduled Date","Scheduled Time","Nationality Country Code","Document Type","EEA Flag","In Transit Flag","Document Issuing Country Code","Disembarkation Port Code","Disembarkation Country Code","Age""""
+//
+//      def passengerCsvLines(result: List[VoyageManifest]) = {
+//        for {
+//          manifest <- result
+//          passenger <- manifest.PassengerList
+//        } yield
+//          manifestPassengerToCSV(manifest, passenger)
+//      }
+//
+//      val voyageManifestsFuture = ctrl.flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(fromDate), SDate(toDate))
+//      voyageManifestsFuture.map {
+//        case result: List[VoyageManifest] => Ok(headings + "\n" + passengerCsvLines(result).mkString("\n"))
+//      }
+//  }
 
   def getDesksAndQueuesCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     implicit val timeout: Timeout = Timeout(5 seconds)

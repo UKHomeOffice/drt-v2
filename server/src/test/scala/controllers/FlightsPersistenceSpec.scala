@@ -2,7 +2,7 @@ package controllers
 
 import java.util.UUID
 
-import actors.{FlightsActor, GetFlights}
+import actors.GetFlights
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.testkit.TestProbe
@@ -14,7 +14,6 @@ import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.{AirportConfig, ApiFlight, BestPax, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable.{BeforeAfter, SpecificationLike}
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SplitsProvider.SplitProvider
 import services.inputfeeds.TestCrunchConfig

@@ -14,6 +14,7 @@ import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 import scala.collection.immutable._
 import scala.language.postfixOps
 
+case object GetFlights
 
 class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
   override def persistenceId: String = "crunch-state"

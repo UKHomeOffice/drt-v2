@@ -20,37 +20,10 @@ trait WorkloadCalculator {
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double
 
-  def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)]
-
   type FlightsToQueueLoads[L] = (
     (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)],
       (PaxTypeAndQueue) => ProcTime
     ) => (List[Arrival]) => Map[QueueName, L]
-
-  def terminalQueueLoads[L](terminalName: TerminalName, flightsFuture: Future[List[Arrival]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[TerminalPaxAndWorkLoads[L]] = {
-    flightsFuture.map((flightsByTerminal: List[Arrival]) => {
-      val arrivalsToTerminalLoads = flightsToQueueLoads(flightPaxTypeAndQueueCountsFlow, procTimesProvider(terminalName))
-      arrivalsToTerminalLoads(flightsByTerminal)
-    })
-  }
-
-  def queueLoadsByTerminal[L](flights: Future[List[Arrival]], flightsToQueueLoads: FlightsToQueueLoads[L]): Future[PortPaxAndWorkLoads[L]] = {
-    val flightsByTerminalFut: Future[Map[TerminalName, List[Arrival]]] = flights.map(fs => {
-      val flightsByTerminal = fs.filterNot(freightOrEngineering).groupBy(_.Terminal)
-      flightsByTerminal
-    })
-
-    val workloadByTerminal: Future[Map[TerminalName, Map[QueueName, L]]] = flightsByTerminalFut.map((flightsByTerminal: Map[TerminalName, List[Arrival]]) =>
-      flightsByTerminal.map((fbt: (TerminalName, List[Arrival])) => {
-        log.debug(s"Got flights by terminal ${fbt}")
-        val terminalName = fbt._1
-        val flights = fbt._2
-        val queueLoadsForFlights = flightsToQueueLoads(flightPaxTypeAndQueueCountsFlow, procTimesProvider(terminalName))
-        terminalName -> queueLoadsForFlights(flights)
-      }))
-
-    workloadByTerminal
-  }
 
   def freightOrEngineering(flight: Arrival): Boolean = Set("FRT", "ENG").contains(flight.Terminal)
 }

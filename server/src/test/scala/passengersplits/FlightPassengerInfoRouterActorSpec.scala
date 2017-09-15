@@ -10,8 +10,6 @@ import drt.shared.PaxTypes.NonVisaNational
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.core.PassengerInfoRouterActor.{ReportVoyagePaxSplit, ReportVoyagePaxSplitBetween, VoyagesPaxSplits}
-import passengersplits.core.AdvancePassengerInfoActor
 import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfo, PassengerInfoJson, VoyageManifest}
 import services.SDate
 

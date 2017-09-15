@@ -8,7 +8,6 @@ import com.typesafe.config.ConfigFactory
 import drt.services.AirportConfigHelpers
 import drt.services.workload.SplitsMocks.{MockSplitsActor, NotFoundSplitsActor}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
 import services.SDate.implicits._
 import services.workloadcalculator.PaxLoadCalculator
 import services.{SDate, WorkloadCalculatorTests}
@@ -59,7 +58,6 @@ class WorkloadWithAdvPaxSplitsTests extends TestKit(ActorSystem("WorkloadwithAdv
   import controllers.ArrivalGenerator.apiFlight
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  import services.AdvPaxSplitsProvider._
   val AdvancedPaxInfo = "AdvancedPaxInfo"
 
   "voyagePaxSplitsAsPaxLoadPaxTypeAndQueueCount " >> {

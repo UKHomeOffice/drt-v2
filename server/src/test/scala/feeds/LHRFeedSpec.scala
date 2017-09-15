@@ -12,7 +12,6 @@ import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
-import controllers.FlightState
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.slf4j.LoggerFactory

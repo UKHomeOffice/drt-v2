@@ -12,7 +12,6 @@ import drt.shared.FlightsApi._
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 import org.slf4j.LoggerFactory
-import passengersplits.query.FlightPassengerSplitsReportingService
 import services.workloadcalculator.WorkloadCalculator
 
 import scala.collection.immutable.{List, Map, Seq}
@@ -104,11 +103,8 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   override val log = LoggerFactory.getLogger(this.getClass)
 
-  def flightPassengerReporter: ActorRef
   def crunchStateActor: AskableActorRef
   def actorSystem: ActorSystem
-
-  val splitsCalculator = FlightPassengerSplitsReportingService.calculateSplits(flightPassengerReporter) _
 
   override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
     val actor: AskableActorRef = if (pointInTime > 0) {

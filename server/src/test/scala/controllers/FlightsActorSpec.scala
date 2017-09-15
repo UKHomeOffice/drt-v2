@@ -1,6 +1,6 @@
 package controllers
 
-import actors.{FlightsActor, GetFlights}
+import actors.GetFlights
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.testkit.TestProbe
