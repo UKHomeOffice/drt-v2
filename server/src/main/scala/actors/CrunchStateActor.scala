@@ -20,7 +20,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   var state: Option[CrunchState] = None
 
-  val snapshotInterval = 2
+  val snapshotInterval = 100
 
   val oneDayMinutes = 1440
 

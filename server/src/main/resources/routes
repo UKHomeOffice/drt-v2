@@ -6,6 +6,9 @@
 GET         /                                             controllers.Application.index
 GET         /splits/:fromDate/:toDate                     controllers.Application.splits(fromDate, toDate)
 
+GET         /export/desks/:pointInTime/:terminalName               controllers.Application.getDesksAndQueuesCSV(pointInTime, terminalName)
+GET         /export/arrivals/:pointInTime/:terminalName             controllers.Application.getFlightsWithSplitsCSV(pointInTime, terminalName)
+
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/fonts/*file                           controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
 GET         /assets/images/*file                          controllers.Assets.at(path="/public/images", file)

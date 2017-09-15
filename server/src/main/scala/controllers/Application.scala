@@ -4,19 +4,21 @@ import java.nio.ByteBuffer
 import java.util.UUID
 
 import actors._
-import actors.pointInTime.CrunchStateReadActor
+import actors.pointInTime.{CrunchStateReadActor, GetCrunchMinutes}
 import akka.NotUsed
 import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
 import akka.stream.scaladsl.Source
-import akka.util.Timeout
+import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import play.api.http.HttpEntity
+import services.Crunch.CrunchMinute
 import services.RunnableCrunchGraph
 
 import scala.collection.immutable.Map
@@ -32,6 +34,7 @@ import passengersplits.core.AdvancePassengerInfoActor
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.PcpArrival._
+import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services._
 import services.workloadcalculator.PaxLoadCalculator
@@ -100,8 +103,7 @@ trait SystemActors {
 
   val actorMaterializer = ActorMaterializer()
 
-
-  val flightPassengerSplitReporter: ActorRef = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
+   val flightPassengerSplitReporter: ActorRef = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
   val crunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
   val askableCrunchStateActor: AskableActorRef = crunchStateActor
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
@@ -220,7 +222,7 @@ trait ProdWalkTimesProvider {
 }
 
 trait ImplicitTimeoutProvider {
-  implicit val timeout = Timeout(102 milliseconds)
+  implicit val timeout = Timeout(1 second)
 }
 
 class Application @Inject()(
@@ -362,6 +364,59 @@ class Application @Inject()(
       voyageManifestsFuture.map {
         case result: List[VoyageManifest] => Ok(headings + "\n" + passengerCsvLines(result).mkString("\n"))
       }
+  }
+
+  def getDesksAndQueuesCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+    implicit val timeout: Timeout = Timeout(5 seconds)
+
+    val actor: AskableActorRef = system.actorOf(
+      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
+      "crunchStateReadActor" + UUID.randomUUID().toString
+    )
+
+    val potMillidate = MilliDate(pointInTime.toLong)
+    val portCrunchResult = actor ? GetCrunchMinutes
+    val fileName = s"$terminalName-desks-and-queues-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
+
+    portCrunchResult.map {
+      case Some(cm: Set[CrunchMinute]) =>
+
+        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == potMillidate.ddMMyyString)
+        val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
+        Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+        )
+      case unexpected =>
+        log.error(s"got the wrong thing: $unexpected")
+        NotFound("")
+    }
+  }
+
+  def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+    implicit val timeout: Timeout = Timeout(10 seconds)
+
+    val actor: AskableActorRef = system.actorOf(
+      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
+      "crunchStateReadActor" + UUID.randomUUID().toString
+    )
+
+    val potMillidate = MilliDate(pointInTime.toLong)
+    val flights = actor ? GetFlights
+    val fileName = s"$terminalName-arrivals-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
+
+    flights.map {
+      case FlightsWithSplits(fs) =>
+
+        val csvData = CSVData.flightsWithSplitsToCSV(fs.filter(_.apiFlight.Terminal == terminalName))
+        Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+        )
+      case unexpected =>
+        log.error(s"got the wrong thing: $unexpected")
+        NotFound("")
+    }
   }
 
   def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {

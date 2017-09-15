@@ -61,7 +61,7 @@ object FlightComponents {
     val max: String = if (flight.MaxPax > 0) flight.MaxPax.toString else "n/a"
     val portDirectPax: Int = flight.ActPax - flight.TranPax
     s"""
-       |API: ${api} = (${apiIncTrans} - ${apiIncTrans - apiPax} transfer)
+       |API: ${api} (${apiIncTrans} - ${apiIncTrans - apiPax} transfer)
        |Port: ${portDirectPax} (${flight.ActPax} - ${flight.TranPax} transfer)
        |Previous: ${last}
        |Max: ${max}

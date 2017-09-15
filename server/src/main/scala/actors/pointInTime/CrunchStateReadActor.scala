@@ -10,6 +10,8 @@ import services.Crunch.CrunchState
 
 import scala.collection.immutable._
 
+case object GetCrunchMinutes
+
 class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor(queues) {
   override val receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
@@ -63,6 +65,11 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
         case _ =>
           sender() ! List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
       }
+
+    case GetCrunchMinutes =>
+      log.info("Sending crunch minutes")
+      sender() ! state.map(_.crunchMinutes)
+
   }
 
   override def recovery: Recovery = {

@@ -8,6 +8,7 @@ import drt.client.services._
 import drt.shared.SDateLike
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom
 
 import scala.scalajs.js.Date
 
@@ -15,7 +16,7 @@ object DateTimeSelector {
 
   val log = LoggerFactory.getLogger("DateTimeSelector")
 
-  case class Props()
+  case class Props(dateSelected: Option[SDateLike], terminalName: String)
 
   case class State(live: Boolean, showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def snapshotDateTime = SDate(year, month + 1, day, hours, minutes)
@@ -27,12 +28,21 @@ object DateTimeSelector {
 
   def formRow(label: String, xs: TagMod*) = {
     <.div(^.className := "form-group row",
-      <.label(label, ^.className := "col-sm-4 col-form-label"),
+      <.label(label, ^.className := "col-sm-1 col-form-label"),
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
   val component = ScalaComponent.builder[Props]("DateTimeSelector")
-    .initialState(initialState).renderS((scope, state) => {
+    .initialStateFromProps(
+      p => {
+        p.dateSelected match {
+          case Some(dateSelected) =>
+            State(false, false, dateSelected.getDate(), dateSelected.getMonth(), dateSelected.getFullYear(), dateSelected.getHours(), dateSelected.getMinutes())
+          case None =>
+            State(true, false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+        }
+      }
+    ).renderPS((scope, props, state) => {
     val pointInTimeRCP = SPACircuit.connect(
       m => m.pointInTime
     )
@@ -69,39 +79,43 @@ object DateTimeSelector {
       }
 
       <.div(
-        <.div(^.className := "date-time-picker-container",
 
-          <.div(
-            if (state.showDatePicker) {
+        <.div(
+          if (state.showDatePicker) {
+            <.div(
               <.div(
-                <.div(^.className := "popover-overlay"),
-                <.div(^.className := "container",
-
-                  formRow("Choose Date: ", <.div(^.className := "date-select", List(
-                    drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt)),
-                    drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt)),
-                    drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt))
-                  ).toTagMod)),
-                  formRow("Choose Time: ",
-                    <.div(^.className := "time-select", List(
+                <.div(^.className := "form-group row",
+                  <.label("Choose Date and Time", ^.className := "col-sm-1 col-form-label"),
+                  <.div(^.className := "col-sm-8",
+                    List(
+                      drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt)),
+                      drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt)),
+                      drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt)),
                       drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt)),
-                      drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString),  state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt))
-                    ).toTagMod)),
-                  <.input.button(^.value := "Load snapshot", ^.className:="btn btn-success", ^.onClick ==> selectPointInTime),
-                  <.input.button(^.value := "Back to live", ^.className:="btn btn-secondary", ^.onClick ==> backToLive)))
-            } else "",
-            if (!scope.state.live) {
-              <.div(s"Showing Snapshot at: ${state.snapshotDateTime.toLocalDateTimeString()}", ^.className := "popover-trigger", ^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))))
+                      drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt)),
+                      <.input.button(^.value := "Load snapshot", ^.className := "btn btn-success", ^.onClick ==> selectPointInTime),
+                      <.input.button(^.value := "Back to live", ^.className := "btn btn-secondary", ^.onClick ==> backToLive)
+                    ).toTagMod)
+                )
+              ))
+          } else {
+            <.div(
+              if (!scope.state.live) {
+                <.div(s"Showing Snapshot at: ${state.snapshotDateTime.toLocalDateTimeString()}", ^.className := "popover-trigger", ^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))))
+              } else {
+                <.div(^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))), ^.className := "popover-trigger", "Show Snapshot")
+              },
+              <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank"),
+              <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank")
+            )
+          }
 
-            } else {
-              <.div(^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))), ^.className := "popover-trigger", "Show Snapshot")
-            }
-          )
         )
+
       )
     })
   }).build
 
 
-  def apply(): VdomElement = component(Props())
+  def apply(props: Props): VdomElement = component(props)
 }
