@@ -168,7 +168,9 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     def crunch(crunchRequest: CrunchRequest): Option[CrunchState] = {
       val relevantFlights = crunchRequest.flights.filter {
         case ApiFlightWithSplits(flight, _) =>
-          validPortTerminals.contains(flight.Terminal) && (flight.PcpTime + 30) > crunchRequest.crunchStart
+          validPortTerminals.contains(flight.Terminal) &&
+            (flight.PcpTime + 30) > crunchRequest.crunchStart &&
+            !domesticPorts.contains(flight.Origin)
       }
       val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
       log.info(s"found ${uniqueFlights.length} flights to crunch")
@@ -245,19 +247,10 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     }
 
     def historicalSplits(fs: Arrival): Option[List[ApiPaxTypeAndQueueCount]] = {
-      //      val egatePercentage = egatePercentageFromSplit(csvSplitsProvider(fs), 0.6)
-      //      val withEgateSplits = applyEgatesSplits(egatePercentage)
-      val historical: Option[List[ApiPaxTypeAndQueueCount]] = csvSplitsProvider(fs).map(ratios => ratios.splits.map {
-        //        case SplitRatio(ptqc, _) if ptqc.passengerType == PaxTypes.EeaMachineReadable =>
-        //          val totalEeaMr = ratios.splits.filter(_.paxType.passengerType == PaxTypes.EeaMachineReadable).map(_.ratio).sum
-        //          val historicalEgateSplit = historicalEGateSplitProvider(Option(ratios), 0.6)
-        //          val ratioOfEeaMr = if (ptqc.queueType == Queues.EeaDesk) 1 - historicalEgateSplit else historicalEgateSplit
-        //          val ratioFromHistorical = totalEeaMr * ratioOfEeaMr
-        //          ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratioFromHistorical)
+      csvSplitsProvider(fs).map(ratios => ratios.splits.map {
         case SplitRatio(ptqc, ratio) =>
           ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
       })
-      historical
     }
 
     def fastTrackPercentagesFromSplit(splitOpt: Option[SplitRatios], defaultVisaPct: Double, defaultNonVisaPct: Double): FastTrackPercentages = {
