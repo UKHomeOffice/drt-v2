@@ -1,44 +1,22 @@
 package services
 
-import java.io.InputStream
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.zip.ZipInputStream
-
 import akka.NotUsed
-import akka.actor.{ActorLogging, ActorRef, ActorSystem, Cancellable}
-import akka.pattern.AskableActorRef
-import akka.persistence.{RecoveryCompleted, _}
+import akka.actor.{ActorRef, Cancellable}
 import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, StreamConverters}
-import akka.stream.stage._
-import akka.util.{ByteString, Timeout}
-import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.services.s3.S3ClientOptions
-import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
-import controllers.SystemActors.SplitsProvider
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
-import passengersplits.core.PassengerQueueCalculator
-import passengersplits.parsing.VoyageManifestParser
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import server.protobuf.messages.CrunchState.CrunchStateSnapshotMessage
-import services.Crunch.{log => _, _}
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
-import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import scala.util.Success
 
 object Crunch {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class FlightSplitMinute(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
@@ -64,133 +42,23 @@ object Crunch {
 
   val oneMinute = 60000
 
-  class CrunchFlow(slas: Map[QueueName, Int],
-                   minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                   procTimes: Map[PaxTypeAndQueue, Double],
-                   groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                   validPortTerminals: Set[String])
-    extends GraphStage[FlowShape[CrunchRequest, CrunchState]] {
-
-    val in = Inlet[CrunchRequest]("CrunchState.in")
-    val out = Outlet[CrunchState]("CrunchState.out")
-    override val shape = FlowShape.of(in, out)
-
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-      var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-      var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
-      var crunchMinutes: Set[CrunchMinute] = Set()
-
-      var crunchStateOption: Option[CrunchState] = None
-      var crunchRunning = false
-
-      setHandlers(in, out, new InHandler with OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"onPull called")
-          crunchStateOption match {
-            case Some(crunchState) =>
-              push(out, crunchState)
-              crunchStateOption = None
-            case None =>
-              log.info(s"No CrunchState to push")
-          }
-          if (!hasBeenPulled(in)) pull(in)
-        }
-
-        override def onPush(): Unit = {
-          log.info(s"onPush called")
-          if (!crunchRunning) grabAndCrunch()
-
-          pushStateIfReady()
-
-          if (!hasBeenPulled(in)) pull(in)
-        }
-
-        def grabAndCrunch() = {
-          crunchRunning = true
-
-          val crunchRequest: CrunchRequest = grab(in)
-
-          log.info(s"processing crunchRequest - ${crunchRequest.flights.length} flights")
-          processFlights(crunchRequest)
-
-          crunchRunning = false
-        }
-
-        def processFlights(crunchFlights: CrunchRequest) = {
-          val newCrunchStateOption = crunch(crunchFlights)
-
-          log.info(s"setting crunchStateOption")
-          crunchStateOption = newCrunchStateOption
-        }
-
-        def crunch(crunchRequest: CrunchRequest) = {
-          val relevantFlights = crunchRequest.flights.filter {
-            case ApiFlightWithSplits(flight, _) =>
-              validPortTerminals.contains(flight.Terminal) && (flight.PcpTime + 30) > crunchRequest.crunchStart
-          }
-          val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
-          log.info(s"found ${uniqueFlights.length} flights to crunch")
-          val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
-          val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
-
-          val crunchStart = crunchRequest.crunchStart
-          val numberOfMinutes = crunchRequest.numberOfMinutes
-          val crunchEnd = crunchStart + (numberOfMinutes * oneMinute)
-          val flightSplitDiffs: Set[FlightSplitDiff] = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
-            .filter {
-              case FlightSplitDiff(_, _, _, _, _, _, minute) =>
-                crunchStart <= minute && minute < crunchEnd
-            }
-
-          val crunchState = flightSplitDiffs match {
-            case fsd if fsd.isEmpty => None
-            case _ =>
-              val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
-              Option(newCrunchState)
-          }
-
-          flightsByFlightId = newFlightsById
-          flightSplitMinutesByFlight = newFlightSplitMinutesByFlight
-
-          crunchState
-        }
-      })
-
-      def pushStateIfReady() = {
-        crunchStateOption match {
-          case None =>
-            log.info(s"We have no state yet. Nothing to push")
-          case Some(crunchState) =>
-            if (isAvailable(out)) {
-              log.info(s"pushing csd ${crunchState.crunchFirstMinuteMillis}")
-              push(out, crunchState)
-              crunchStateOption = None
-            }
-        }
-      }
-
-      def crunchStateFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
-                                            numberOfMinutes: Int,
-                                            flightsById: Map[Int, ApiFlightWithSplits],
-                                            fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]) = {
-        val crunchResults: Set[CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
-
-        CrunchState(crunchStart, numberOfMinutes, flightsById.values.toSet, crunchResults)
-      }
-
-      def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]) = {
-        val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
-        val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
-
-        val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, numberOfMinutes)(wlByQueue)
-        val eGateBankSize = 5
-
-        val crunchResults: Set[CrunchMinute] = workloadsToCrunchMinutes(crunchStart, numberOfMinutes, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
-        crunchResults
-      }
-
-    }
+  def flightVoyageNumberPadded(arrival: Arrival): String = {
+    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(arrival.IATA)
+    val vn = padTo4Digits(number.map(_._2).getOrElse("-"))
+    vn
   }
+
+  def padTo4Digits(voyageNumber: String): String = {
+    val prefix = voyageNumber.length match {
+      case 4 => ""
+      case 3 => "0"
+      case 2 => "00"
+      case 1 => "000"
+      case _ => ""
+    }
+    prefix + voyageNumber
+  }
+
 
   def flightsToSplitDiffs(flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]], newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[FlightSplitDiff] = {
     val allKnownFlightIds = newFlightSplitMinutesByFlight.keys.toSet.union(flightSplitMinutesByFlight.keys.toSet)
@@ -246,7 +114,7 @@ object Crunch {
     }.toSet
   }
 
-  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]) = {
+  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]): Int = {
     val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
     desks(date.getHourOfDay)
   }
@@ -281,7 +149,7 @@ object Crunch {
     }.toMap
   }
 
-  def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]) = {
+  def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {
     val toRemove = oldSet.map(fsm => FlightSplitMinute(fsm.flightId, fsm.paxType, fsm.terminalName, fsm.queueName, -fsm.paxLoad, -fsm.workLoad, fsm.minute))
     val addAndRemoveGrouped: Map[(Int, TerminalName, QueueName, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet
       .union(toRemove)
@@ -295,7 +163,7 @@ object Crunch {
       .toSet
   }
 
-  def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[QueueLoadMinute]) = {
+  def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[QueueLoadMinute]): Set[QueueLoadMinute] = {
     queueLoadMinutes
       .groupBy(qlm => (qlm.terminalName, qlm.queueName, qlm.minute))
       .map {
@@ -370,41 +238,17 @@ object Crunch {
     }.toSet
   }
 
-  def getLocalLastMidnight(now: SDateLike) = {
-    val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
+  def getLocalLastMidnight(now: SDateLike): SDateLike = {
+    val localMidnight = s"${now.getFullYear()}-${now.getMonth()}-${now.getDate()}T00:00"
     SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
 
-  def arrivalsDiff(oldArrivals: Map[Int, Arrival], newArrivals: Map[Int, Arrival]) = {
-    val oldIds = oldArrivals.keys.toSet
-    val newIds = newArrivals.keys.toSet
-    val toRemove = (oldIds -- newIds)
-    val toUpdate = newArrivals.collect {
-      case (id, cm) if oldArrivals.get(id).isEmpty || cm != oldArrivals(id) => cm
-    }.toSet
-
-    FlightsDiff(toRemove, toUpdate)
-  }
-
-  def splitsDiff(oldSplits: Map[String, ApiSplits], newSplits: Map[String, ApiSplits]) = {
-    val oldIds = oldSplits.keys.toSet
-    val newIds = newSplits.keys.toSet
-    val toRemove = (oldIds -- newIds)
-    val toUpdate = newSplits.collect {
-      case (id, cm) if oldSplits.get(id).isEmpty || cm != oldSplits(id) => (id, cm)
-    }
-
-    SplitsDiff(toRemove, toUpdate)
-  }
-
-  def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]) = {
+  def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
     val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
     val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
     val oldIds = oldFlightsById.keys.toSet
     val newIds = newFlightsById.keys.toSet
-    val toRemove = (oldIds -- newIds).map {
-      case id => RemoveFlight(id)
-    }
+    val toRemove = (oldIds -- newIds).map(RemoveFlight)
     val toUpdate = newFlightsById.collect {
       case (id, cm) if oldFlightsById.get(id).isEmpty || cm != oldFlightsById(id) => cm
     }.toSet
@@ -412,7 +256,7 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinutesDiff(oldCm: Set[CrunchMinute], newCm: Set[CrunchMinute]) = {
+  def crunchMinutesDiff(oldCm: Set[CrunchMinute], newCm: Set[CrunchMinute]): (Set[RemoveCrunchMinute], Set[CrunchMinute]) = {
     val oldTqmToCm = oldCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
     val newTqmToCm = newCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
     val oldKeys = oldTqmToCm.keys.toSet
@@ -427,7 +271,7 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinuteToTqmCm(cm: CrunchMinute) = {
+  def crunchMinuteToTqmCm(cm: CrunchMinute): ((TerminalName, QueueName, MillisSinceEpoch), CrunchMinute) = {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
@@ -444,10 +288,10 @@ object Crunch {
     withoutRemovalsWithUpdates.values.toSet
   }
 
-  def applyFlightsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
+  def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
     val withoutRemovals = diff.flightRemovals.foldLeft(flights) {
       case (soFar, removal) => soFar.filterNot {
-        case f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
+        f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
       }
     }
     val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
@@ -455,30 +299,6 @@ object Crunch {
         soFar.updated(flight.apiFlight.FlightID, flight)
     }
     withoutRemovalsWithUpdates.values.toSet
-  }
-
-  def applyFlightsDiff(diff: FlightsDiff, arrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
-    val withoutRemovals: Map[Int, Arrival] = diff.removals.foldLeft(arrivals) {
-      case (soFar, removal) => soFar.filterNot {
-        case f: Arrival => removal == f.FlightID
-      }
-    }
-    val withoutRemovalsWithUpdates = diff.updates.foldLeft(withoutRemovals) {
-      case (soFar, flight) => soFar.updated(flight.FlightID, flight)
-    }
-    withoutRemovalsWithUpdates
-  }
-
-  def applySplitsDiff(diff: SplitsDiff, splits: Map[String, ApiSplits]): Map[String, ApiSplits] = {
-    val withoutRemovals: Map[String, ApiSplits] = diff.removals.foldLeft(splits) {
-      case (soFar, removalId) => soFar.filterNot {
-        case (id, splits) => removalId == id
-      }
-    }
-    val withoutRemovalsWithUpdates = diff.updates.foldLeft(withoutRemovals) {
-      case (soFar, (id, splits)) => soFar.updated(id, splits)
-    }
-    withoutRemovalsWithUpdates
   }
 }
 
@@ -489,503 +309,20 @@ object RunnableCrunchGraph {
   def apply(
              flightsSource: Source[Flights, Cancellable],
              voyageManifestsSource: Source[Set[VoyageManifest], NotUsed],
-             flightsAndManifests: FlightsAndManifests,
-             cruncher: CrunchFlow,
-             crunchStateActor: ActorRef) =
+             cruncher: CrunchGraphStage,
+             crunchStateActor: ActorRef): RunnableGraph[NotUsed] =
     RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
       val crunchSink = Sink.actorRef(crunchStateActor, "completed")
       val F: Outlet[Flights] = builder.add(flightsSource).out
       val M: Outlet[Set[VoyageManifest]] = builder.add(voyageManifestsSource).out
 
-      val FS = builder.add(flightsAndManifests)
       val CR = builder.add(cruncher)
-      val G = builder.add(crunchSink).in
+      val G = builder.add(crunchSink)
 
-      F ~> FS.in0
-      M ~> FS.in1
-      FS.out ~> CR ~> G
+      F ~> CR.in0
+      M ~> CR.in1
+      CR.out ~> G
 
       ClosedShape
     })
 }
-
-class VoyageManifestsActor extends PersistentActor with ActorLogging {
-  var latestZipFilename = "drt_dq_170912"
-  val snapshotInterval = 100
-
-  override def persistenceId: String = "VoyageManifests"
-
-  override def receiveRecover: Receive = {
-    case recoveredLZF: String =>
-      log.info(s"Recovery received $recoveredLZF")
-      latestZipFilename = recoveredLZF
-    case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md, $ss)")
-      ss match {
-        case lzf: String => latestZipFilename = lzf
-        case u => log.info(s"Received unexpected snapshot data: $u")
-      }
-  }
-
-  override def receiveCommand: Receive = {
-    case UpdateLatestZipFilename(updatedLZF) if updatedLZF != latestZipFilename =>
-      log.info(s"Received update: $updatedLZF")
-      latestZipFilename = updatedLZF
-
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"Saving VoyageManifests latestZipFilename snapshot $latestZipFilename")
-        saveSnapshot(latestZipFilename)
-      } else persist(latestZipFilename) { lzf =>
-        log.info(s"Persisting VoyageManifests latestZipFilename $latestZipFilename")
-        context.system.eventStream.publish(lzf)
-      }
-    case GetLatestZipFilename =>
-      log.info(s"Received GetLatestZipFilename request. Sending $latestZipFilename")
-      sender() ! "drt_dq_170914" //latestZipFilename
-
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Save snapshot success: $md")
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
-  }
-}
-
-case class FlightsDiff(removals: Set[Int], updates: Set[Arrival])
-case class SplitsDiff(removals: Set[String], updates: Map[String, ApiSplits])
-case class FlightsAndSplitsDiff(flights: FlightsDiff, splits: SplitsDiff)
-
-class FlightsAndSplitsActor extends PersistentActor with ActorLogging {
-  var state: FlightsAndSplitsState = FlightsAndSplitsState(Map(), Map())
-  val snapshotInterval = 100
-
-  override def persistenceId: String = "FlightsAndManifestsActor"
-
-  override def receiveRecover: Receive = {
-    case FlightsAndSplitsDiff(fd, sd) =>
-      log.info(s"Recovery received flights: ${fd.removals.size} removals & ${fd.updates.size}, splits: ${sd.removals.size} removals & ${sd.updates.size} updates")
-      val newState = state.copy(
-        applyFlightsDiff(fd, state.flights),
-        applySplitsDiff(sd, state.apiSplits)
-      )
-      state = newState
-//    case SnapshotOffer(md, ss) =>
-//      log.info(s"Recovery received SnapshotOffer $md")
-//      ss match {
-//        case m@ FlightsAndSplitsStateMessage =>
-//        case u => log.info(s"Received unexpected snapshot data: $u")
-//      }
-  }
-
-  override def receiveCommand: Receive = {
-    case s@ FlightsAndSplitsState(_, _) if s != state =>
-      log.info(s"Received new state")
-      val diff = FlightsAndSplitsDiff(arrivalsDiff(state.flights, s.flights), splitsDiff(state.apiSplits, s.apiSplits))
-      state = s
-
-//      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-//        log.info(s"Saving VoyageManifests latestZipFilename snapshot $latestZipFilename")
-//        saveSnapshot(latestZipFilename)
-//      } else persist(latestZipFilename) { lzf =>
-//        log.info(s"Persisting VoyageManifests latestZipFilename $latestZipFilename")
-//        context.system.eventStream.publish(lzf)
-//      }
-    case GetFlightsAndSplitsState =>
-      log.info(s"Received GetFlightsAndSplitsState request")
-      sender() ! state
-
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Save snapshot success: $md")
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
-  }
-}
-
-class VoyageManifests(advPaxInfo: AdvPaxInfo, voyageManifestsActor: ActorRef) extends GraphStage[SourceShape[Set[VoyageManifest]]] {
-  val out = Outlet[Set[VoyageManifest]]("VoyageManifests.out")
-  override val shape = SourceShape(out)
-
-  val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
-
-  val log = LoggerFactory.getLogger(getClass)
-
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var manifestsState: Set[VoyageManifest] = Set()
-    var manifestsToPush: Option[Set[VoyageManifest]] = None
-    var latestZipFilename: Option[String] = None
-    var fetchInProgress: Boolean = false
-    val dqRegex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
-
-    askableVoyageManifestsActor.ask(GetLatestZipFilename)(new Timeout(1 second)).onSuccess {
-      case lzf: String =>
-        latestZipFilename = Option(lzf)
-        if (isAvailable(out)) fetchAndPushManifests(lzf)
-    }
-
-    setHandler(out, new OutHandler {
-      override def onPull(): Unit = {
-        latestZipFilename match {
-          case None => log.info(s"We don't have a latestZipFilename yet")
-          case Some(lzf) =>
-            log.info(s"Sending latestZipFilename: $lzf to VoyageManfestsActor")
-            voyageManifestsActor ! UpdateLatestZipFilename(lzf)
-            fetchAndPushManifests(lzf)
-        }
-      }
-    })
-
-    def fetchAndPushManifests(lzf: String): Unit = {
-      if (!fetchInProgress) {
-        log.info(s"Fetching manifests from files newer than ${lzf}")
-        val manifestsFuture = advPaxInfo.manifestsFuture(lzf)
-        manifestsFuture.onSuccess {
-          case ms =>
-            val maxFilename = ms.map(_._1).max
-            latestZipFilename = Option(maxFilename)
-            log.info(s"Set latestZipFilename to '$latestZipFilename'")
-            val vms = ms.map(_._2).toSet
-            (vms -- manifestsState) match {
-              case newOnes if newOnes.isEmpty =>
-                log.info(s"No new manifests")
-              case newOnes =>
-                log.info(s"${newOnes.size} manifests to push")
-                manifestsToPush = Option(newOnes)
-                manifestsState = manifestsState ++ newOnes
-            }
-
-            manifestsToPush match {
-              case None =>
-                log.info(s"No manifests to push")
-              case Some(manifests) =>
-                log.info(s"Pushing ${manifests.size} manifests")
-                push(out, manifests)
-                manifestsToPush = None
-            }
-
-            fetchInProgress = false
-            fetchAndPushManifests(maxFilename)
-        }
-        manifestsFuture.onFailure {
-          case t =>
-            log.info(s"manifestsFuture failed: $t")
-            fetchInProgress = false
-            fetchAndPushManifests(lzf)
-        }
-      } else log.info(s"Fetch already in progress")
-    }
-  }
-}
-
-class FlightsAndManifests(initialState: Any,
-                          stateActor: ActorRef,
-                          portSplits: SplitRatios,
-                          csvSplitsProvider: SplitsProvider,
-                          historicalEGateSplitProvider: (Option[SplitRatios], Double) => Double,
-                          pcpArrivalTime: (Arrival) => MilliDate)
-  extends GraphStageWithMaterializedValue[FanInShape2[Flights, Set[VoyageManifest], CrunchRequest], (Set[Arrival], Set[ApiSplits])] {
-
-  val inFlights = Inlet[Flights]("Flights.in")
-  val inSplits = Inlet[Set[VoyageManifest]]("Splits.in")
-  val out = Outlet[CrunchRequest]("CrunchRequest.out")
-  override val shape = new FanInShape2(inFlights, inSplits, out)
-
-  val log = LoggerFactory.getLogger(getClass)
-
-  override def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, (Set[Arrival], Set[ApiSplits])) = {
-    var flightsAndSplits: (Set[Arrival], Set[ApiSplits]) = (Set(), Set())
-    val logic = new GraphStageLogic(shape) {
-      var flights: Map[Int, Arrival] = Map()
-      var apiSplits: Map[String, ApiSplits] = Map()
-      var somethingToPush = false
-
-      setHandler(inFlights, new InHandler {
-        override def onPush(): Unit = {
-          val incomingFlights = grab(inFlights)
-
-          val updatedFlights = updateFlightsFromIncoming(incomingFlights)
-
-          if (flights != updatedFlights) {
-            somethingToPush = true
-            flights = updatedFlights
-            flightsAndSplits = (updatedFlights.values.toSet, flightsAndSplits._2)
-            log.info(s"We now have ${flights.size} flights")
-
-            if (isAvailable(out)) {
-              pushFlightsWithSplits(flights, apiSplits)
-              somethingToPush = false
-            }
-          } else {
-            log.info(s"No flight updates")
-          }
-
-          if (!hasBeenPulled(inFlights)) pull(inFlights)
-        }
-      })
-
-      private def updateFlightsFromIncoming(incomingFlights: Flights) = {
-        val updatedFlights = incomingFlights.flights.foldLeft(flights) {
-          case (flightsSoFar, updatedFlight) =>
-            val flightWithMilliTimes = updatedFlight.copy(PcpTime = pcpArrivalTime(updatedFlight).millisSinceEpoch)
-            flightsSoFar.get(flightWithMilliTimes.FlightID) match {
-              case None =>
-                log.info(s"Adding new flight ${flightWithMilliTimes.IATA}")
-                somethingToPush = true
-                flightsSoFar.updated(flightWithMilliTimes.FlightID, flightWithMilliTimes)
-              case Some(f) if f != flightWithMilliTimes =>
-                log.info(s"Updating flight ${flightWithMilliTimes.IATA}")
-                somethingToPush = true
-                flightsSoFar.updated(flightWithMilliTimes.FlightID, flightWithMilliTimes)
-              case _ =>
-                log.info(s"No update to flight ${flightWithMilliTimes.IATA}")
-                flightsSoFar
-            }
-        }
-        updatedFlights
-      }
-
-      setHandler(inSplits, new InHandler {
-        override def onPush(): Unit = {
-          val manifests = grab(inSplits)
-
-          val updatedSplits = manifests.foldLeft(apiSplits) {
-            case (splitsSoFar, manifest) => updateSplitsWithManifest(splitsSoFar, manifest)
-          }
-
-          if (updatedSplits != apiSplits) {
-            somethingToPush = true
-            apiSplits = updatedSplits
-            flightsAndSplits = (flightsAndSplits._1, updatedSplits.values.toSet)
-            log.info(s"We now have ${apiSplits.size} splits")
-
-            if (isAvailable(out)) {
-              pushFlightsWithSplits(flights, apiSplits)
-              somethingToPush = false
-            }
-          } else {
-            log.info(s"No splits updates")
-          }
-
-          if (!hasBeenPulled(inSplits)) pull(inSplits)
-        }
-      })
-
-      setHandler(out, new OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"FlightsAndSplits onPull() called. Sending existing state to stateActor")
-          stateActor ! FlightsAndSplitsState(flights, apiSplits)
-
-          if (somethingToPush) {
-            pushFlightsWithSplits(flights, apiSplits)
-            somethingToPush = false
-          } else {
-            log.info(s"Nothing to push")
-          }
-
-          if (!hasBeenPulled(inSplits)) pull(inSplits)
-          if (!hasBeenPulled(inFlights)) pull(inFlights)
-        }
-      })
-
-      def updateSplitsWithManifest(splitsSoFar: Map[String, ApiSplits], manifest: VoyageManifest) = {
-        val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
-        val apiPaxTypeAndQueueCounts = paxTypeAndQueueCounts.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
-        val splitsFromManifest = ApiSplits(apiPaxTypeAndQueueCounts, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
-        val index = Splits.splitsIndex(manifest)
-
-        splitsSoFar.get(index) match {
-          case None =>
-            log.info(s"Adding new split")
-            splitsSoFar.updated(index, splitsFromManifest)
-          case Some(s) if s != splitsFromManifest =>
-            log.info(s"Updating existing split ($s != $splitsFromManifest")
-            splitsSoFar.updated(index, splitsFromManifest)
-          case Some(s) if s == splitsFromManifest =>
-            log.info(s"No update to splits")
-            splitsSoFar
-        }
-      }
-
-      def pushFlightsWithSplits(flights: Map[Int, Arrival], apiSplits: Map[String, ApiSplits]) = {
-        val toPush = flights.map {
-          case (_, fs) =>
-            val totalPax = BestPax()(fs)
-            val allSplits = allSplitsForFlight(apiSplits, fs, totalPax)
-            ApiFlightWithSplits(fs, allSplits)
-        }.toSet
-
-        log.info(s"pushing ${toPush.size} flights with splits")
-
-        val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
-        val cr = CrunchRequest(toPush.toList, Crunch.getLocalLastMidnight(localNow).millisSinceEpoch, 1440)
-
-        push(out, cr)
-      }
-
-      def allSplitsForFlight(apiSplits: Map[String, ApiSplits], fs: Arrival, totalPax: Int) = {
-        val historical: Option[List[ApiPaxTypeAndQueueCount]] = historicalSplits(fs, totalPax)
-        val portDefault: Seq[ApiPaxTypeAndQueueCount] = portSplits.splits.map {
-          case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, (ratio * totalPax.toDouble).round)
-        }
-        val defaultSplits = List(ApiSplits(portDefault.toList, SplitSources.TerminalAverage, PaxNumbers))
-        val splitsWithHistorical = historical match {
-          case None => defaultSplits
-          case Some(h) => ApiSplits(h, SplitSources.Historical, PaxNumbers) :: defaultSplits
-        }
-
-        gatherAllSplits(apiSplits, fs, totalPax, splitsWithHistorical)
-      }
-
-      def gatherAllSplits(apiSplits: Map[String, ApiSplits], fs: Arrival, totalPax: Int, splitsWithHistorical: List[ApiSplits]) = {
-        val index = Splits.splitsIndex(fs)
-
-        apiSplits.get(index) match {
-          case None =>
-            splitsWithHistorical
-          case Some(as) =>
-            val totalApiPax = as.splits.map(_.paxCount).sum
-            ApiSplits(
-              as.splits.map(aptqc => aptqc.copy(paxCount = ((aptqc.paxCount / totalApiPax) * totalPax))),
-              SplitSources.ApiSplitsWithCsvPercentage,
-              PaxNumbers) :: splitsWithHistorical
-        }
-      }
-
-      def historicalSplits(fs: Arrival, totalPax: Int) = {
-        val historical: Option[List[ApiPaxTypeAndQueueCount]] = csvSplitsProvider(fs).map(ratios => ratios.splits.map {
-          case SplitRatio(ptqc, _) if ptqc.passengerType == PaxTypes.EeaMachineReadable =>
-            val totalEeaMr = ratios.splits.filter(_.paxType.passengerType == PaxTypes.EeaMachineReadable).map(_.ratio).sum
-            val historicalEgateSplit = historicalEGateSplitProvider(Option(ratios), 0.6)
-            val ratioOfEeaMr = if (ptqc.queueType == Queues.EeaDesk) 1 - historicalEgateSplit else historicalEgateSplit
-            val ratioFromHistorical = totalEeaMr * ratioOfEeaMr
-            ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, (ratioFromHistorical * totalPax.toDouble).round)
-          case SplitRatio(ptqc, ratio) =>
-            ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, (ratio * totalPax.toDouble).round)
-        })
-        historical
-      }
-    }
-
-    (logic, flightsAndSplits)
-  }
-}
-
-object Splits {
-  def splitsIndex(arrival: Arrival) = {
-    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(arrival.IATA)
-    val vn = padTo4Digits(number.map(_._2).getOrElse("-"))
-    s"$vn-${arrival.Scheduled}"
-  }
-
-  def splitsIndex(manifest: VoyageManifest) = {
-    val scheduledMillis = SDate(s"${manifest.ScheduledDateOfArrival}T${manifest.ScheduledTimeOfArrival}Z").millisSinceEpoch
-    val vn = padTo4Digits(manifest.VoyageNumber)
-    s"$vn-$scheduledMillis"
-  }
-
-  def padTo4Digits(voyageNumber: String): String = {
-    val prefix = voyageNumber.length match {
-      case 4 => ""
-      case 3 => "0"
-      case 2 => "00"
-      case 1 => "000"
-      case _ => ""
-    }
-    prefix + voyageNumber
-  }
-}
-
-case class AdvPaxInfo(s3HostName: String, bucketName: String, portCode: String) {
-  implicit val actorSystem = ActorSystem("AdvPaxInfo")
-  implicit val materializer = ActorMaterializer()
-
-  val dqRegex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
-
-  val log = LoggerFactory.getLogger(getClass)
-
-  def manifestsFuture(latestFile: String): Future[Seq[(String, VoyageManifest)]] = {
-    log.info(s"Requesting zipFiles source")
-    zipFiles(latestFile)
-      .mapAsync(64) {
-        case filename =>
-          log.info(s"Fetching $filename as stream")
-          val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
-          Future(fileNameAndContentFromZip(filename, zipByteStream))
-      }
-      .mapConcat(jsons => jsons)
-      .runWith(Sink.seq[(String, VoyageManifest)])
-  }
-
-  def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed]): Seq[(String, VoyageManifest)] = {
-    val inputStream: InputStream = zippedFileByteStream.runWith(
-      StreamConverters.asInputStream()
-    )
-    val zipInputStream = new ZipInputStream(inputStream)
-    val vmStream = Stream.continually(zipInputStream.getNextEntry).takeWhile(_ != null).map { jsonFile =>
-      val buffer = new Array[Byte](4096)
-      val stringBuffer = new ArrayBuffer[Byte]()
-      var len: Int = zipInputStream.read(buffer)
-
-      while (len > 0) {
-        stringBuffer ++= buffer.take(len)
-        len = zipInputStream.read(buffer)
-      }
-      val content: String = new String(stringBuffer.toArray, UTF_8)
-      val manifest = VoyageManifestParser.parseVoyagePassengerInfo(content)
-      Tuple3(zipFileName, jsonFile.getName, manifest)
-    }.collect {
-      case (zipFilename, _, Success(vm)) if vm.ArrivalPortCode == portCode => (zipFilename, vm)
-    }
-    log.info(s"Finished processing $zipFileName")
-    vmStream
-  }
-
-  def zipFiles(latestFile: String): Source[String, NotUsed] = {
-    filterToFilesNewerThan(filesAsSource, latestFile)
-  }
-
-  def filterToFilesNewerThan(filesSource: Source[String, NotUsed], latestFile: String) = {
-    val filterFrom: String = filterFromFileName(latestFile)
-    filesSource.filter(fn => {
-      val takeFile = fn >= filterFrom && fn != latestFile
-      if (takeFile) log.info(s"Taking api zip $fn")
-      takeFile
-    })
-  }
-
-  def filterFromFileName(latestFile: String) = {
-    latestFile match {
-      case dqRegex(dateTime, _) => dateTime
-      case _ => latestFile
-    }
-  }
-
-  def filesAsSource: Source[String, NotUsed] = {
-    S3StreamBuilder(s3Client)
-      .listFilesAsStream(bucketName)
-      .map {
-        case (filename, _) => filename
-      }
-  }
-
-  def s3Client: AmazonS3AsyncClient = {
-    val configuration: ClientConfiguration = new ClientConfiguration()
-    configuration.setSignerOverride("S3SignerType")
-    val provider: ProfileCredentialsProvider = new ProfileCredentialsProvider("drt-atmos")
-
-    val client = new AmazonS3AsyncClient(provider, configuration)
-    client.client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build)
-    client.client.setEndpoint(s3HostName)
-    client
-  }
-}
-
-case class UpdateLatestZipFilename(filename: String)
-
-case object GetLatestZipFilename
-
-case class FlightsAndSplitsState(flights: Map[Int, Arrival], apiSplits: Map[String, ApiSplits])
-
-case object GetFlightsAndSplitsState

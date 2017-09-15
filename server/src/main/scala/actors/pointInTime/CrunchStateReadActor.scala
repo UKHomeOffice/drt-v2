@@ -16,7 +16,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
       setStateFromSnapshot(snapshot)
 
-    case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _) =>
+    case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.info(s"Applying crunch diff with createdAt ($createdAt) <= point in time requested: ${pointInTime.millisSinceEpoch}")

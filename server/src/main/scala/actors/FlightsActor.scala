@@ -7,13 +7,13 @@ import akka.pattern.AskableActorRef
 import akka.persistence._
 import akka.util.Timeout
 import controllers.FlightState
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.Flights
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.shared.{Arrival, _}
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, LocalDate}
-import passengersplits.core.PassengerInfoRouterActor.{FlushOldVoyageManifests, ReportVoyagePaxSplit}
-import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightStateSnapshotMessage, FlightsMessage}
+import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplit
+import server.protobuf.messages.FlightsMessage.{FlightLastKnownPaxMessage, FlightStateSnapshotMessage}
 import services.Crunch.CrunchRequest
 import services.SplitsProvider.SplitProvider
 import services.{CSVPassengerSplitsProvider, Crunch, FastTrackPercentages, SDate}
@@ -59,36 +59,36 @@ class FlightsActor(crunchStateActor: ActorRef,
   }
 
   val receiveRecover: Receive = {
-    case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length > 0 =>
-      log.info(s"Recovering ${recoveredFlights.length} flights")
-      consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, retentionCutoff)
-      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
-
-    case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length == 0 =>
-      log.info(s"No flight updates")
-
-    case SnapshotOffer(_, snapshot) =>
-      val flightsFromSnapshot = snapshot match {
-        case flightStateSnapshot: FlightStateSnapshotMessage =>
-          log.info(s"Restoring snapshot from protobuf message")
-          flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
-        case flights: Map[Int, Any] =>
-          log.info(s"Restoring snapshot from legacy ApiFlight")
-          flights.mapValues {
-            case a: Arrival => a
-            case f: ApiFlight => ApiFlightToArrival(f)
-          }
-      }
-      val lastKnownPaxFromSnapshot = snapshot match {
-        case flightStateSnapshot: FlightStateSnapshotMessage =>
-          flightStateSnapshot.lastKnownPax.collect {
-            case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
-              (key, pax)
-          }.toMap
-        case _ => Map[String, Int]()
-      }
-      setFlights(flightsFromSnapshot)
-      setLastKnownPax(lastKnownPaxFromSnapshot)
+//    case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length > 0 =>
+//      log.info(s"Recovering ${recoveredFlights.length} flights")
+//      consumeFlights(recoveredFlights.map(flightMessageToApiFlight).toList, retentionCutoff)
+//      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
+//
+//    case FlightsMessage(recoveredFlights, createdAt) if recoveredFlights.length == 0 =>
+//      log.info(s"No flight updates")
+//
+//    case SnapshotOffer(_, snapshot) =>
+//      val flightsFromSnapshot = snapshot match {
+//        case flightStateSnapshot: FlightStateSnapshotMessage =>
+//          log.info(s"Restoring snapshot from protobuf message")
+//          flightStateSnapshot.flightMessages.map(flightMessageToApiFlight).map(f => (f.FlightID, f)).toMap
+//        case flights: Map[Int, Any] =>
+//          log.info(s"Restoring snapshot from legacy ApiFlight")
+//          flights.mapValues {
+//            case a: Arrival => a
+//            case f: ApiFlight => ApiFlightToArrival(f)
+//          }
+//      }
+//      val lastKnownPaxFromSnapshot = snapshot match {
+//        case flightStateSnapshot: FlightStateSnapshotMessage =>
+//          flightStateSnapshot.lastKnownPax.collect {
+//            case FlightLastKnownPaxMessage(Some(key), Some(pax)) =>
+//              (key, pax)
+//          }.toMap
+//        case _ => Map[String, Int]()
+//      }
+//      setFlights(flightsFromSnapshot)
+//      setLastKnownPax(lastKnownPaxFromSnapshot)
 
     case RecoveryCompleted =>
       log.info("Flights recovery completed")
@@ -109,41 +109,41 @@ class FlightsActor(crunchStateActor: ActorRef,
       log.info(s"Being asked for flights and I know about ${flightState.size}")
       sender ! Flights(flightState.values.toList)
 
-    case GetFlightsWithSplits =>
-      log.info(s"Being asked for flights with splits and I know about ${flightState.size}")
-      val startTime = org.joda.time.DateTime.now()
-      val replyTo = sender()
-      val flights = flightsWithSplits
-      flights.onSuccess {
-        case s =>
-          val replyingAt = org.joda.time.DateTime.now()
-          val delta = replyingAt.getMillis - startTime.getMillis
-          log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
-          replyTo ! FlightsWithSplits(s.toList)
-      }
-
-    case Flights(updatedFlights) if updatedFlights.nonEmpty =>
-      val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, retentionCutoff)
-      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
-
-      if (flightsWithLastKnownPax.nonEmpty) {
-        persistFlights(FlightsMessage(
-          flightMessages = flightsWithLastKnownPax.map(flight => apiFlightToFlightMessage(flight)),
-          createdAt = Option(SDate.now().millisSinceEpoch)
-        ))
-        crunchFlightsWithSplits
-      }
-
-    case Flights(updatedFlights) if updatedFlights.isEmpty =>
-      log.info(s"No flight updates")
-
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Snapshot success $md")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Snapshot failed $md\n$cause")
-
-    case message => log.error("Actor saw unexpected message: " + message.toString)
+//    case GetFlightsWithSplits =>
+//      log.info(s"Being asked for flights with splits and I know about ${flightState.size}")
+//      val startTime = org.joda.time.DateTime.now()
+//      val replyTo = sender()
+//      val flights = flightsWithSplits
+//      flights.onSuccess {
+//        case s =>
+//          val replyingAt = org.joda.time.DateTime.now()
+//          val delta = replyingAt.getMillis - startTime.getMillis
+//          log.info(s"gathering flights wih splits to send to crunch state actor took ${delta}ms")
+//          replyTo ! FlightsWithSplits(s.toList)
+//      }
+//
+//    case Flights(updatedFlights) if updatedFlights.nonEmpty =>
+//      val flightsWithLastKnownPax: List[Arrival] = consumeFlights(updatedFlights, retentionCutoff)
+//      dqApiSplitsActorRef ! FlushOldVoyageManifests(retentionCutoff.addDays(-1))
+//
+//      if (flightsWithLastKnownPax.nonEmpty) {
+//        persistFlights(FlightsMessage(
+//          flightMessages = flightsWithLastKnownPax.map(flight => apiFlightToFlightMessage(flight)),
+//          createdAt = Option(SDate.now().millisSinceEpoch)
+//        ))
+//        crunchFlightsWithSplits
+//      }
+//
+//    case Flights(updatedFlights) if updatedFlights.isEmpty =>
+//      log.info(s"No flight updates")
+//
+//    case SaveSnapshotSuccess(md) =>
+//      log.info(s"Snapshot success $md")
+//
+//    case SaveSnapshotFailure(md, cause) =>
+//      log.info(s"Snapshot failed $md\n$cause")
+//
+//    case message => log.error("Actor saw unexpected message: " + message.toString)
 
   }
 
@@ -195,16 +195,16 @@ class FlightsActor(crunchStateActor: ActorRef,
     flightsWithLastKnownPax
   }
 
-  def persistFlights(flightsMessage: FlightsMessage) = {
-    persist(flightsMessage) { (event: FlightsMessage) =>
-      log.info(s"persisting ${flightsMessage.flightMessages.length} flights")
-      context.system.eventStream.publish(event)
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info("saving flights snapshot")
-        saveSnapshot(flightStateSnapshotMessageFromState)
-      }
-    }
-  }
+//  def persistFlights(flightsMessage: FlightsMessage) = {
+//    persist(flightsMessage) { (event: FlightsMessage) =>
+//      log.info(s"persisting ${flightsMessage.flightMessages.length} flights")
+//      context.system.eventStream.publish(event)
+//      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+//        log.info("saving flights snapshot")
+//        saveSnapshot(flightStateSnapshotMessageFromState)
+//      }
+//    }
+//  }
 
   def addSplitsToArrival(flight: Arrival): Future[ApiFlightWithSplits] = {
     FlightParsing.parseIataToCarrierCodeVoyageNumber(flight.IATA) match {

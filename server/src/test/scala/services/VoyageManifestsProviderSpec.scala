@@ -44,7 +44,7 @@ import scala.util.Success
 
 
 
-class AdvPaxInfoSpec()
+class VoyageManifestsProviderSpec()
   extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
     with SpecificationLike {
   isolated
@@ -75,11 +75,11 @@ class AdvPaxInfoSpec()
     //    val fakeManifestsSource = Source(List(VoyageManifest("DC", "LHR", "JFK", "0011", "BA", "2016-01-01", "T00:00", List())))
     val bucket = "drtdqprod"
     val atmosHost = "cas00003.skyscapecloud.com:8443"
-    val manifestsSource = AdvPaxInfo(atmosHost, bucket).manifests("drt_dq_170911_000000_0000.zip")
+    val manifestsSource = VoyageManifestsProvider(atmosHost, bucket).manifests("drt_dq_170911_000000_0000.zip")
 
     val ac = airportConfig
 
-    def crunchFlow = new CrunchFlow(
+    def crunchFlow = new CrunchGraphStage(
       ac.slaByQueue,
       ac.minMaxDesksByTerminalQueue,
       ac.defaultProcessingTimes.head._2,

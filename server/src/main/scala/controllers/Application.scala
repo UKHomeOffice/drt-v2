@@ -5,26 +5,23 @@ import java.util.UUID
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.Done
+import akka.NotUsed
 import akka.actor._
+import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
-import akka.stream.actor.ActorSubscriberMessage.OnComplete
-import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream._
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.core.PassengerInfoRouterActor.ReportVoyagePaxSplitBetween
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.Crunch.{CrunchRequest, CrunchState, CrunchFlow}
-import services.{FlightsAndManifests, RunnableCrunchGraph}
+import services.RunnableCrunchGraph
 
 import scala.collection.immutable.Map
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
-import drt.chroma.chromafetcher.ChromaFetcher
-import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
@@ -32,7 +29,6 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
 import org.joda.time.chrono.ISOChronology
 import passengersplits.core.AdvancePassengerInfoActor
-import passengersplits.s3.SimpleAtmosReader
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.PcpArrival._
@@ -54,11 +50,11 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
   import scala.language.experimental.macros
 
-  override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
+  override def read[R: Pickler](p: ByteBuffer): R = Unpickle[R].fromBytes(p)
 
   def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
 
-  override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
+  override def write[R: Pickler](r: R): ByteBuffer = Pickle.intoBytes(r)
 }
 
 object PaxFlow {
@@ -70,7 +66,7 @@ object PaxFlow {
       val paxFlow = provider(arrival)
       val summedPax = paxFlow.map(_._2.paxSum).sum
       val firstPaxTime = paxFlow.headOption.map(pf => SDate(pf._1).toString)
-      log.debug(s"${Arrival.summaryString(arrival)} pax: $pax, summedFlowPax: $summedPax, deltaPax: ${pax - summedPax}, firstPaxTime: ${firstPaxTime}")
+      log.debug(s"${Arrival.summaryString(arrival)} pax: $pax, summedFlowPax: $summedPax, deltaPax: ${pax - summedPax}, firstPaxTime: $firstPaxTime")
       paxFlow
     }
   }
@@ -97,67 +93,72 @@ trait SystemActors {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val pcpArrivalTimeCalculator = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider) _
+  val pcpArrivalTimeCalculator: (Arrival) => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider)
 
   val paxFlowCalculator: (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
     PaxFlow.makeFlightPaxFlowCalculator(PaxFlow.splitRatioForFlight(splitsProviders), BestPax())
 
-  val actorMaterialiser = ActorMaterializer()
+  val actorMaterializer = ActorMaterializer()
 
-  implicit val actorSystem = system
 
-  val flightPassengerSplitReporter = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
-  val crunchStateActor = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
-  val voyageManifestsActor = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
+  val flightPassengerSplitReporter: ActorRef = system.actorOf(Props[AdvancePassengerInfoActor], name = "flight-pax-reporter")
+  val crunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
+  val askableCrunchStateActor: AskableActorRef = crunchStateActor
+  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
-  val crunchFlow = new CrunchFlow(
+  val historicalEgateSplitProvider: (Option[SplitRatios], Double) => Double = CSVPassengerSplitsProvider.egatePercentageFromSplit
+
+  val initialFlightsFuture: Future[List[ApiFlightWithSplits]] = askableCrunchStateActor.ask(GetFlights)(new Timeout(10 seconds)).map {
+    case FlightsWithSplits(flights) => flights
+    case FlightsNotReady => List()
+  }
+  val crunchFlow = new CrunchGraphStage(
+    initialFlightsFuture,
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
     airportConfig.defaultProcessingTimes.head._2,
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-    airportConfig.terminalNames.toSet)
+    airportConfig.terminalNames.toSet,
+    airportConfig.defaultPaxSplits,
+    historicalSplitsProvider,
+    historicalEgateSplitProvider,
+    pcpArrivalTimeCalculator)
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
 
-  val bucket = config.getString("atmos.s3.bucket").getOrElse("")
-  val atmosHost = config.getString("atmos.s3.url").getOrElse("")
-  val advPaxInfoProvider = AdvPaxInfo(atmosHost, bucket, airportConfig.portCode)
+  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
 
-  val manifestsSource = Source.fromGraph(new VoyageManifests(advPaxInfoProvider, voyageManifestsActor))
+  val manifestsSource: Source[Set[VoyageManifest], NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
 
-  val historicalEgateSplitProvider = CSVPassengerSplitsProvider.egatePercentageFromSplit _
-
-  val flightsAndManifests = new FlightsAndManifests(airportConfig.defaultPaxSplits, historicalSplitsProvider, historicalEgateSplitProvider, pcpArrivalTimeCalculator)
-
-  val result = RunnableCrunchGraph(
+  RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),
     manifestsSource,
-    flightsAndManifests,
     crunchFlow,
-    crunchStateActor,
     crunchStateActor
-  ).run()(actorMaterialiser)
+  ).run()(actorMaterializer)
 
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
   def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
-  def splitsProviders(): List[SplitsProvider]
+  def splitsProviders: List[SplitsProvider]
 
   def flightWalkTimeProvider(flight: Arrival): Millis
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     portCode match {
       case "LHR" =>
-        LHRFlightFeed().map(Flights(_))
+        LHRFlightFeed().map(Flights)
       case "EDI" =>
-        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights(_))
+        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights)
       case _ =>
-        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights(_))
+        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights)
     }
   }
 
-  def createChromaFlightFeed(prodMock: String) = {
+  def createChromaFlightFeed(prodMock: String): ChromaFlightFeed = {
     val fetcher = prodMock match {
       case "MOCK" => MockChroma(system)
       case "PROD" => ProdChroma(system)
@@ -173,13 +174,13 @@ trait AirportConfiguration {
 
 
 trait AirportConfProvider extends AirportConfiguration {
-  val portCode = ConfigFactory.load().getString("portcode").toUpperCase
+  val portCode: String = ConfigFactory.load().getString("portcode").toUpperCase
 
-  def mockProd = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
+  def mockProd: String = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
-  def getPortConfFromEnvVar(): AirportConfig = AirportConfigs.confByPort(portCode)
+  def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = getPortConfFromEnvVar()
+  def airportConfig: AirportConfig = getPortConfFromEnvVar
 }
 
 trait ProdPassengerSplitProviders {
@@ -235,16 +236,12 @@ class Application @Inject()(
     with SystemActors with ImplicitTimeoutProvider
     with ProdWalkTimesProvider {
   ctrl =>
-  val log = system.log
+  val log: LoggingAdapter = system.log
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
   private val systemTimeZone = System.getProperty("user.timezone")
-  log.info(s"System.getProperty(user.timezone): ${systemTimeZone}")
+  log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   assert(systemTimeZone == "UTC")
-
-  val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-    implicit val system: ActorSystem = ctrl.system
-  }
 
   log.info(s"Application using airportConfig $airportConfig")
 
@@ -289,7 +286,7 @@ class Application @Inject()(
     def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
       val actor: AskableActorRef = if (pointInTime > 0) {
         val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
-        actorSystem.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
+        system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
       } else crunchStateActor
 
       val terminalCrunchResult = actor ? GetTerminalCrunch(terminalName)
@@ -311,10 +308,10 @@ class Application @Inject()(
         log.info(s"asking $askable for flightsWithSplits")
         val flights = askable.ask(GetFlights)(Timeout(100 milliseconds))
         flights.recover {
-          case e => FlightsNotReady()
+          case _ => FlightsNotReady()
         }.map {
           case FlightsNotReady() => Left(FlightsNotReady())
-          case FlightsWithSplits(flights) => Right(FlightsWithSplits(flights))
+          case FlightsWithSplits(fs) => Right(FlightsWithSplits(fs))
         }
       }
     }
@@ -341,34 +338,11 @@ class Application @Inject()(
     }
   }
 
-  //  val copiedToApiFlights = flightsSource(mockProd, portCode)
-  //  copiedToApiFlights.runWith(Sink.actorRef(flightsActor, OnComplete))
-
-  import passengersplits.polling.{AtmosManifestFilePolling => afp}
-
-  /// PassengerSplits reader
-  import SDate.implicits._
-
-  //  val bucket = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-  //  val atmosHost = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  //  val pollingDone: Future[Done] = afp.beginPolling(
-  //    SimpleAtmosReader(bucket, atmosHost),
-  //    ctrl.flightPassengerSplitReporter,
-  //    afp.previousDayDqFilename(SDate.now()),
-  //    portCode,
-  //    afp.tickingSource(1 seconds, 1 minutes),
-  //    batchAtMost = 400 seconds)
-  //
-  //  pollingDone.onComplete(
-  //    pollingCompletion =>
-  //      log.warning(s"Atmos Polling completed with ${pollingCompletion}")
-  //  )
-
   def index = Action {
     Ok(views.html.index("DRT - BorderForce"))
   }
 
-  def splits(fromDate: String, toDate: String) = Action.async {
+  def splits(fromDate: String, toDate: String): Action[AnyContent] = Action.async {
     implicit request =>
       def manifestPassengerToCSV(m: VoyageManifest, p: PassengerInfoJson) = {
         s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode}","${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentType.getOrElse("")}","${p.EEAFlag}","${p.InTransitFlag}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
@@ -390,7 +364,7 @@ class Application @Inject()(
       }
   }
 
-  def autowireApi(path: String) = Action.async(parse.raw) {
+  def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
     implicit request =>
       println(s"Request path: $path")
 
@@ -409,7 +383,7 @@ class Application @Inject()(
       })
   }
 
-  def logging = Action(parse.anyContent) {
+  def logging: Action[AnyContent] = Action(parse.anyContent) {
     implicit request =>
       request.body.asJson.foreach {
         msg =>
