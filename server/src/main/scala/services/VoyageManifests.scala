@@ -71,8 +71,8 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
         val manifestsFuture = advPaxInfo.manifestsFuture(lzf)
         manifestsFuture.onSuccess {
           case ms =>
-            if (!ms.isEmpty) {
-              val maxFilename = ms.map(_._1).max
+            if (ms.nonEmpty) {
+              val maxFilename = ms.map(_._1).max.take(20)
               latestZipFilename = Option(maxFilename)
               log.info(s"Set latestZipFilename to '$latestZipFilename'")
 
@@ -94,9 +94,9 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
                   push(out, manifests)
                   manifestsToPush = None
               }
+            } else log.info(s"No manifests received")
 
-              fetchAndPushManifests(maxFilename)
-            }
+            fetchAndPushManifests(lzf)
         }
         manifestsFuture.onFailure {
           case t =>
