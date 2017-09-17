@@ -50,13 +50,17 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       val flights = Await.result(futureFlightsSeq, 3 seconds)
 
       flights match {
-        case Vector(Arrival("Qatar Airways", "UNK",
+        case Vector(
+        Arrival(
+        "Qatar Airways",
+        "UNK",
         "2017-03-09T21:32:00.000Z",
         "2017-03-09T21:33:00.000Z",
         "2017-03-09T21:43:00.000Z",
         "2017-03-09T21:45:00.000Z",
         "", "10", 795, 142, 1, "", "", _, "LHR", "T4", "QR005", "QR005", "DOH",
         "2017-03-09T22:00:00.000Z",
+        0L,
         1489097040000L,
         None) :: tail) =>
           true

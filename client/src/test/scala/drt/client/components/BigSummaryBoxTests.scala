@@ -24,14 +24,14 @@ object BigSummaryBoxTests extends TestSuite {
           val rootModel = RootModel(flightsWithSplitsPot = Ready(FlightsWithSplits(Nil)))
 
           "AND a current time of 2017-05-01T12:00" - {
-            val now = SDate(2016, 5, 1, 12, 0)
+            val now = SDate(2016, 5, 1, 12)
             val nowPlus3Hours = now.addHours(3)
 
             "Then we can get a number of flights arriving in that period" - {
-              val countOfFlights = rootModel.flightsWithSplitsPot.map(_.flights.filter(f => {
+              val countOfFlights = rootModel.flightsWithSplitsPot.map(_.flights.count(f => {
                 val flightDt = SDate.parse(f.apiFlight.SchDT)
                 now.millisSinceEpoch <= flightDt.millisSinceEpoch && flightDt.millisSinceEpoch <= nowPlus3Hours.millisSinceEpoch
-              }).length)
+              }))
               assert(countOfFlights == Ready(0))
             }
           }
@@ -280,7 +280,7 @@ object BigSummaryBoxTests extends TestSuite {
             }
           }
           "DRT-4632 Given we're running for LHR" - {
-            val bestPaxFn = BestPax("LHR")
+            val bestPaxFn = BestPax()
             "AND we have a flight " - {
               "AND it has no splits " - {
                 "AND it has 100 act pax AND it has 60 tranprax" - {
@@ -367,7 +367,8 @@ object ApiFlightGenerator {
       rawIATA = iataFlightCode,
       Origin = Origin,
       PcpTime = if (PcpTime != 0) PcpTime else SDate.parse(SchDT).millisSinceEpoch,
-      SchDT = SchDT
+      SchDT = SchDT,
+      Scheduled = if (SchDT != "") SDate.parse(SchDT).millisSinceEpoch else 0L
     )
 
 }

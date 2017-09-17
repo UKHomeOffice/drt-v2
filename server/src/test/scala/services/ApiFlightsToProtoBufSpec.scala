@@ -30,7 +30,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
+        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
       val flightMessage = apiFlightToFlightMessage(apiFlight)
 
@@ -109,7 +110,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
+        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
 
       apiFlight === expected
@@ -163,7 +165,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
+        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
 
       apiFlight === expected
@@ -217,7 +220,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
+        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
 
       apiFlight === expected
@@ -271,7 +275,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
+        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
 
       apiFlight === expected

@@ -13,6 +13,7 @@ import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable.{List, Seq, Set}
+import scala.concurrent.Future
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
@@ -63,11 +64,12 @@ class CrunchTestLike
     implicit val actorSystem = system
 
     def crunchFlow = new CrunchGraphStage(
-      slaByQueue,
-      minMaxDesks,
-      procTimes,
-      CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-      validTerminals)
+      initialFlightsFuture = Future(List[ApiFlightWithSplits]()),
+      slas = slaByQueue,
+      minMaxDesks = minMaxDesks,
+      procTimes = procTimes,
+      groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
+      validPortTerminals = validTerminals)
 
     val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
       .via(crunchFlow)

@@ -97,6 +97,7 @@ object ArrivalGenerator {
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
       PcpTime = if (schDt != "") SDate.parse(schDt).millisSinceEpoch else 0L,
-      LastKnownPax = lastKnownPax
+      LastKnownPax = lastKnownPax,
+      Scheduled = if (schDt != "") SDate.parse(schDt).millisSinceEpoch else 0L
     )
 }
