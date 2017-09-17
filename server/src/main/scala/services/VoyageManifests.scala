@@ -72,7 +72,7 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
         manifestsFuture.onSuccess {
           case ms =>
             if (ms.nonEmpty) {
-              val maxFilename = ms.map(_._1).max.take(20)
+              val maxFilename = ms.map(_._1).max
               latestZipFilename = Option(maxFilename)
               log.info(s"Set latestZipFilename to '$latestZipFilename'")
 
@@ -94,9 +94,12 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
                   push(out, manifests)
                   manifestsToPush = None
               }
-            } else log.info(s"No manifests received")
+              fetchAndPushManifests(maxFilename)
+            } else {
+              log.info(s"No manifests received")
+              fetchAndPushManifests(lzf)
+            }
 
-            fetchAndPushManifests(lzf)
         }
         manifestsFuture.onFailure {
           case t =>
@@ -160,7 +163,7 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def manifestsFuture(latestFile: String): Future[Seq[(String, VoyageManifest)]] = {
-    log.info(s"Requesting zipFiles source")
+    log.info(s"Requesting zipFiles source for file names > ${latestFile.take(20)}")
     zipFiles(latestFile)
       .mapAsync(64) { filename =>
         log.info(s"Fetching $filename as stream")

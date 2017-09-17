@@ -95,7 +95,8 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
           flightsSoFar.get(updatedFlightWithPcp.FlightID) match {
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
-              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, nonApiSplits(updatedFlightWithPcp))
+              val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
+              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithSplits)
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}")
@@ -232,13 +233,13 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       crunchResults
     }
 
-    def nonApiSplits(fs: Arrival): List[ApiSplits] = {
+    def terminalAndHistoricSplits(fs: Arrival): List[ApiSplits] = {
       val historical: Option[List[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
       val portDefault: Seq[ApiPaxTypeAndQueueCount] = portSplits.splits.map {
         case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
       }
 
-      val defaultSplits = List(ApiSplits(portDefault.toList, SplitSources.TerminalAverage, Percentage))
+      val defaultSplits = List(ApiSplits(portDefault.toList.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, Percentage))
 
       historical match {
         case None => defaultSplits
@@ -249,7 +250,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     def historicalSplits(fs: Arrival): Option[List[ApiPaxTypeAndQueueCount]] = {
       csvSplitsProvider(fs).map(ratios => ratios.splits.map {
         case SplitRatio(ptqc, ratio) =>
-          ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
+          ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100)
       })
     }
 
