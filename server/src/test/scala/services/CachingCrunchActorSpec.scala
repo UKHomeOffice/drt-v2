@@ -31,15 +31,12 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests", AkkaPersi
   isolated
   sequential
 
-
   implicit val actorSystem = system
   implicit val materializer = ActorMaterializer()
   implicit val timeout = Timeout(1 seconds)
 
-
   val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "crunch-cache-actor")
   "Should pass a message onto the crunch actor and return the response" >> {
-
 
     def inc() = {}
     val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), Map(), inc _), GetTerminalCrunch("T1Ø"))

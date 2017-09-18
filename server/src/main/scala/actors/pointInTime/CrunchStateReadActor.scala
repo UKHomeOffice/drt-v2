@@ -69,7 +69,8 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
     case GetCrunchMinutes =>
       log.info("Sending crunch minutes")
       sender() ! state.map(_.crunchMinutes)
-
+    case other =>
+      log.info(s"Sent an unknown message: $other")
   }
 
   override def recovery: Recovery = {

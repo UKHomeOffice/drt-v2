@@ -346,16 +346,26 @@ class Application @Inject()(
     }
   }
 
-  def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+
+  def flightsAtTimestamp(millis: MillisSinceEpoch) = {
+    implicit val timeout: Timeout = Timeout(5 seconds)
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(millis), airportConfig.queues), GetFlights)
+    val flights = cacheActorRef ? query
+    flights
+  }
+
+  def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
+
     implicit val timeout: Timeout = Timeout(10 seconds)
 
-    val actor: AskableActorRef = system.actorOf(
-      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
-      "crunchStateReadActor" + UUID.randomUUID().toString
-    )
+//    val actor: AskableActorRef = system.actorOf(
+//      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
+//      "crunchStateReadActor" + UUID.randomUUID().toString
+//    )
 
     val potMillidate = MilliDate(pointInTime.toLong)
-    val flights = actor ? GetFlights
+    val flights = flightsAtTimestamp(pointInTime.toLong)
     val fileName = s"$terminalName-arrivals-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
 
     flights.map {
