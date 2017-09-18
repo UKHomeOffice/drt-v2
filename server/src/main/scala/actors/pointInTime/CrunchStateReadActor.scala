@@ -5,7 +5,7 @@ import akka.persistence.{RecoveryCompleted, _}
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
+import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services.Crunch.CrunchState
 
 import scala.collection.immutable._

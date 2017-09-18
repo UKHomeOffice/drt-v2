@@ -48,6 +48,12 @@ object Crunch {
     vn
   }
 
+  def midnightThisMorning() = {
+    val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
+    val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
+    crunchStartDate
+  }
+
   def padTo4Digits(voyageNumber: String): String = {
     val prefix = voyageNumber.length match {
       case 4 => ""
@@ -181,13 +187,14 @@ object Crunch {
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
+    log.info(s"looking for splits $splits")
     val splitsToUseOption = apiSplits match {
       case s@Some(_) => s
       case None => historicalSplits match {
         case s@Some(_) => s
         case None => terminalSplits match {
           case s@Some(_) => s
-          case n@None =>
+          case None =>
             log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
             None
         }
@@ -333,8 +340,8 @@ object RunnableCrunchGraph {
   import akka.stream.scaladsl.GraphDSL.Implicits._
 
   def apply(
-             flightsSource: Source[Flights, Cancellable],
-             voyageManifestsSource: Source[Set[VoyageManifest], NotUsed],
+             flightsSource: Source[Flights, _],
+             voyageManifestsSource: Source[Set[VoyageManifest], _],
              cruncher: CrunchGraphStage,
              crunchStateActor: ActorRef): RunnableGraph[NotUsed] =
     RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>

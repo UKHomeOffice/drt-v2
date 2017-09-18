@@ -17,7 +17,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import play.api.http.HttpEntity
-import services.Crunch.CrunchMinute
+import services.Crunch.{CrunchMinute, midnightThisMorning}
 import services.RunnableCrunchGraph
 
 import scala.collection.immutable.Map
@@ -102,8 +102,6 @@ trait SystemActors {
   val askableCrunchStateActor: AskableActorRef = crunchStateActor
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
-  val historicalEgateSplitProvider: (Option[SplitRatios], Double) => Double = CSVPassengerSplitsProvider.egatePercentageFromSplit
-
   val initialFlightsFuture: Future[List[ApiFlightWithSplits]] = askableCrunchStateActor.ask(GetFlights)(new Timeout(10 seconds)).map {
     case FlightsWithSplits(flights) => flights
     case FlightsNotReady => List()
@@ -117,8 +115,10 @@ trait SystemActors {
     airportConfig.terminalNames.toSet,
     airportConfig.defaultPaxSplits,
     historicalSplitsProvider,
-    historicalEgateSplitProvider,
-    pcpArrivalTimeCalculator)
+    pcpArrivalTimeCalculator,
+    midnightThisMorning,
+    1440
+  )
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
 

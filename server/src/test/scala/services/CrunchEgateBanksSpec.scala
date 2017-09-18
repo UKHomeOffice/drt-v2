@@ -2,6 +2,7 @@ package services
 
 import akka.NotUsed
 import akka.actor._
+import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
@@ -41,7 +42,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => NotUsed =
+      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           slaByQueue = slaByQueue,

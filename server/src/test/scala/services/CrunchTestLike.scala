@@ -1,6 +1,7 @@
 package services
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.testkit.{TestKit, TestProbe}
@@ -86,6 +87,8 @@ class CrunchTestLike
       crunchFlow,
       crunchStateActor
     ).run()(actorMaterializer)
+    val askableCrunchStateActor: AskableActorRef = crunchStateActor
+    askableCrunchStateActor
   }
 
   def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {

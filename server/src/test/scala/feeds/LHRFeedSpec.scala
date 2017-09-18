@@ -15,6 +15,7 @@ import akka.stream.ActorMaterializer
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.slf4j.LoggerFactory
+import services.SDate
 import services.inputfeeds.TestCrunchConfig.TestContext
 import spray.http.DateTime
 
@@ -47,26 +48,38 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
-      val flights = Await.result(futureFlightsSeq, 3 seconds)
+      val flights = Await.result(futureFlightsSeq, 3 seconds).asInstanceOf[Vector[Arrival]]
+//      flights match {
+//        case Vector(
+//        Arrival(
+//        "Qatar Airways",
+//        "UNK",
+//        "2017-03-09T21:32:00.000Z",
+//        "2017-03-09T21:33:00.000Z",
+//        "2017-03-09T21:43:00.000Z",
+//        "2017-03-09T21:45:00.000Z",
+//        "", "10", 795, 142, 1, "", "", _, "LHR", "T4", "QR005", "QR005", "DOH",
+//        "2017-03-09T22:00:00.000Z",
+//        0L,
+//        1489097040000L,
+//        None) :: tail) =>
+//          true
+//        case _ =>
+//          false
+//      }
 
-      flights match {
-        case Vector(
-        Arrival(
+      flights.toList === List(List(Arrival(
         "Qatar Airways",
         "UNK",
         "2017-03-09T21:32:00.000Z",
         "2017-03-09T21:33:00.000Z",
         "2017-03-09T21:43:00.000Z",
         "2017-03-09T21:45:00.000Z",
-        "", "10", 795, 142, 1, "", "", _, "LHR", "T4", "QR005", "QR005", "DOH",
+        "", "10", 795, 142, 1, "", "", -54860421, "LHR", "T4", "QR005", "QR005", "DOH",
         "2017-03-09T22:00:00.000Z",
-        0L,
-        1489097040000L,
-        None) :: tail) =>
-          true
-        case _ =>
-          false
-      }
+        SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
+        SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch,
+        None)))
     }
 
     "Produce an Arrival source with one flight based on a line with missing values from the LHR csv" in {
@@ -145,5 +158,4 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     //    }
   }
 }
-
 

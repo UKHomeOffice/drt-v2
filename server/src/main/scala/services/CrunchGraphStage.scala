@@ -30,8 +30,10 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
                        validPortTerminals: Set[String],
                        portSplits: SplitRatios,
                        csvSplitsProvider: SplitsProvider,
-                       historicalEGateSplitProvider: (Option[SplitRatios], Double) => Double,
-                       pcpArrivalTime: (Arrival) => MilliDate)
+                       pcpArrivalTime: (Arrival) => MilliDate,
+                       crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning,
+                       minutesToCrunch: Int
+                      )
   extends GraphStage[FanInShape2[Flights, Set[VoyageManifest], CrunchState]] {
 
   val inFlights: Inlet[Flights] = Inlet[Flights]("Flights.in")
@@ -113,6 +115,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       override def onPush(): Unit = {
         val manifests = grab(inSplits)
 
+        log.info(s"We got a manifest")
         val updatedFlights = updateFlightsWithManifests(manifests, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
@@ -152,8 +155,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     def crunchAndUpdateState(flightsToCrunch: List[ApiFlightWithSplits]): Unit = {
       crunchRunning = true
 
-      val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
-      val crunchRequest = CrunchRequest(flightsToCrunch, Crunch.getLocalLastMidnight(localNow).millisSinceEpoch, 1440)
+      val crunchRequest = CrunchRequest(flightsToCrunch, crunchStartDateProvider(), minutesToCrunch)
 
       log.info(s"processing crunchRequest - ${crunchRequest.flights.length} flights")
       val newCrunchStateOption = crunch(crunchRequest)
@@ -167,28 +169,38 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     }
 
     def crunch(crunchRequest: CrunchRequest): Option[CrunchState] = {
+      log.info(s"CrunchRequestFlights: ${crunchRequest.flights.length}")
       val relevantFlights = crunchRequest.flights.filter {
         case ApiFlightWithSplits(flight, _) =>
+          log.info(s"Flight to filter: $flight, $validPortTerminals, ${crunchRequest.crunchStart}")
           validPortTerminals.contains(flight.Terminal) &&
-            (flight.PcpTime + 30) > crunchRequest.crunchStart &&
+            (flight.PcpTime) >= crunchRequest.crunchStart &&
             !domesticPorts.contains(flight.Origin)
       }
+      log.info(s"Relevant flights: $relevantFlights")
       val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
       log.info(s"found ${uniqueFlights.length} flights to crunch")
       val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
+      log.info(s"We got splits: $newFlightSplitMinutesByFlight")
 
+      log.info(s"Existing splits: $flightSplitMinutesByFlight")
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
       val crunchEnd = crunchStart + (numberOfMinutes * Crunch.oneMinute)
       val flightSplitDiffs = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
         .filter {
-          case FlightSplitDiff(_, _, _, _, _, _, minute) => crunchStart <= minute && minute < crunchEnd
+          case FlightSplitDiff(_, _, _, _, _, _, minute) =>
+            log.info(s"Crunch start: $crunchStart, Minute: $minute, Crunch End: $crunchEnd")
+            crunchStart <= minute && minute < crunchEnd
         }
 
       val crunchState = flightSplitDiffs match {
-        case fsd if fsd.isEmpty => None
+        case fsd if fsd.isEmpty =>
+          log.info("No changes to flight workloads")
+          None
         case _ =>
+          log.info("Flight workloads changed, triggering crunch")
           val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
           Option(newCrunchState)
       }
@@ -198,7 +210,6 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
       crunchState
     }
-
 
     def pushStateIfReady(): Unit = {
       crunchStateOption match {

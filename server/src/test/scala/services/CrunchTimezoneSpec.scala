@@ -1,19 +1,21 @@
 package services
 
-import akka.actor._
+import akka.NotUsed
+import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.FlightsApi.Flights
+import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable.{List, Seq}
 
 
-class CrunchTimezoneSpec() extends CrunchTestLike {
+class CrunchTimezoneSpec extends CrunchTestLike {
   "Crunch timezone " >> {
     "Given an SDateLike for a date outside BST" +
       "When I ask for a corresponding cunch start time " +
@@ -36,50 +38,32 @@ class CrunchTimezoneSpec() extends CrunchTestLike {
       result === expected
     }
 
-    "Given flights with one passenger and one split to eea desk" +
-      "When the date falls within GMT " +
-      "Then I should see desks being allocated at the time passengers start arriving at PCP" >> {
-      val scheduled = "2017-06-01T00:00Z"
-      val flightsWithSplits = List(
-        ApiFlightWithSplits(
-          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled),
-          List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 1d)), SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers))))
-
-      val testProbe = TestProbe()
-      val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
-
-      val startTime = SDate("2017-05-31T23:00Z").millisSinceEpoch
-
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
-
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-      val resultSummary = deskRecsFromCrunchState(result, 30)
-
-      val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-      )))
-
-      resultSummary === expected
-    }
-
     "Min / Max desks in BST " >> {
       "Given flights with one passenger and one split to eea desk " +
         "When the date falls within BST " +
         "Then I should see min desks allocated in alignment with BST" >> {
-        val scheduled1amBST = "2017-06-01T00:00Z"
-        val flightsWithSplits = List(
-          ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled1amBST),
-            List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 1d)), SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers))))
-
         val minMaxDesks = Map("T1" -> Map(Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))))
 
+        val scheduled = "2017-06-01T00:00Z"
+
+        val flights = List(Flights(List(
+          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1)
+        )))
+
+        val fiveMinutes = 600d / 60
+        val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
+
         val testProbe = TestProbe()
-        val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+        val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+          runCrunchGraph(
+            procTimes = procTimes,
+            testProbe = testProbe,
+            crunchStartDateProvider = () => SDate("2017-05-31T23:00Z").millisSinceEpoch,
+            minMaxDesks = minMaxDesks,
+            minutesToCrunch = 120
+          )
 
-        val startTime = SDate("2017-05-31T23:00Z").millisSinceEpoch
-
-        initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 120)
+        runnableGraphDispatcher(flights, Nil)
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = deskRecsFromCrunchState(result, 120)

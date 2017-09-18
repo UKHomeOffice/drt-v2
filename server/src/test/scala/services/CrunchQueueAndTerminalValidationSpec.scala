@@ -1,6 +1,7 @@
 package services
 
 import akka.NotUsed
+import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
@@ -28,7 +29,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => NotUsed =
+      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
@@ -66,7 +67,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
     val testProbe = TestProbe()
-    val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => NotUsed =
+    val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
       runCrunchGraph(procTimes = procTimes,
         testProbe = testProbe,
         crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
