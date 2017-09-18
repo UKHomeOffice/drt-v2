@@ -144,7 +144,7 @@ object Crunch {
       val queueLoads = terminalLoads.groupBy(_.queueName)
       queueLoads
         .mapValues(_.map(qwl =>
-          qwl.minute -> (qwl.paxLoad, qwl.workLoad)
+          (qwl.minute, (qwl.paxLoad, qwl.workLoad))
         ).toMap)
     })
   }
@@ -205,10 +205,12 @@ object Crunch {
       val totalPax = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
         case Percentage => BestPax()(flight)
+        case UndefinedSplitStyle => 0
       }
       val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
         case Percentage => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
+        case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
       }
 
       minutesForHours(flight.PcpTime, 1)

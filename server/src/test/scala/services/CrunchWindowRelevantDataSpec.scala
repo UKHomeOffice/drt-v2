@@ -30,9 +30,12 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val scheduledBeforeCrunchStart = "2017-01-01T00:00Z"
       val scheduledAtCrunchStart = "2017-01-02T00:00Z"
 
+      val flightOutsideCrunch = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledBeforeCrunchStart, iata = "BA0001", terminal = "T1", actPax = 20)
+      val flightInsideCrunch = ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, iata = "BA0001", terminal = "T1", actPax = 20)
+
       val flights = List(Flights(List(
-        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduledBeforeCrunchStart, iata = "BA0001", terminal = "T1", actPax = 20),
-        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, iata = "BA0001", terminal = "T1", actPax = 20)
+        flightOutsideCrunch,
+        flightInsideCrunch
       )))
 
       val fiveMinutes = 600d / 60
@@ -55,8 +58,9 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val result = Await.result(askableCrunchStateTestActor.ask(GetFlights)(new Timeout(1 second)), 1 second).asInstanceOf[FlightsWithSplits]
 
+      val expected = ApiFlightWithSplits(flightInsideCrunch, List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0)), SplitSources.TerminalAverage, Percentage)))
 
-      result.flights === List(ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduledAtCrunchStart, iata = "BA0001", terminal = "T1", actPax = 20))
+      result.flights === List(expected)
     }
 
     "Given two flights one reaching PCP before the crunch start time and one after " +
@@ -74,24 +78,28 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
+      val minutesToCrunch = 120
       val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
-          minutesToCrunch = 120
+          minutesToCrunch = minutesToCrunch
         )
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-      val endTime = startTime + (1440 * oneMinute)
+      val endTime = startTime + (minutesToCrunch * oneMinute)
 
       val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
       val result = Await.result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second)
         .asInstanceOf[Map[TerminalName, Map[QueueName, (List[WL], List[Pax])]]]
 
       val wl = result("T1")(Queues.EeaDesk)._1
 
-      val expectedLength = 1440
+      val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
 
       (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
@@ -112,24 +120,28 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
+      val minutesToCrunch = 120
       val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
-          minutesToCrunch = 120
+          minutesToCrunch = minutesToCrunch
         )
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-      val endTime = startTime + (1440 * oneMinute)
+      val endTime = startTime + (minutesToCrunch * oneMinute)
 
       val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
+
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
       val result = Await.result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second)
         .asInstanceOf[Map[TerminalName, Map[QueueName, (List[WL], List[Pax])]]]
 
       val wl = result("T1")(Queues.EeaDesk)._1
 
-      val expectedLength = 1440
+      val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
 
       (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
@@ -150,26 +162,30 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
+      val minutesToCrunch = 120
+      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
-          crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
+          crunchStartDateProvider = () => startTime,
           minMaxDesks = minMaxDesks,
-          minutesToCrunch = 120
+          minutesToCrunch = minutesToCrunch
         )
-      val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-      val endTime = startTime + (1440 * oneMinute)
 
       val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
 
+      testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+
       val result = Await
         .result(askableCrunchStateTestActor.ask(GetTerminalCrunch("T1"))(new Timeout(1 second)), 1 second)
-        .asInstanceOf[List[(QueueName, Right[NoCrunchAvailable, CrunchResult])]]
+        .asInstanceOf[TerminalCrunchResult]
 
-      val deskRecMinutes = result.head._2.b.recommendedDesks.length
+      val deskRecMinutes = result.queuesAndCrunchResults.head._2 match {
+        case Right(cr) => cr.recommendedDesks.length
+      }
 
-      val expected = 1440
+      val expected = minutesToCrunch
 
       deskRecMinutes === expected
     }

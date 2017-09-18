@@ -430,10 +430,10 @@ class CrunchHandler[M](pointInTime: ModelR[M, Option[SDateLike]], totalQueues: (
 
       def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
 
-      val callResultFuture: Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = AjaxClient[Api].getTerminalCrunchResult(terminalName, pointInTimeMillis).call()
+      val callResultFuture: Future[TerminalCrunchResult] = AjaxClient[Api].getTerminalCrunchResult(terminalName, pointInTimeMillis).call()
 
       val updateTerminalAction: Future[UpdateTerminalCrunchResult] = callResultFuture.map {
-        case qncrs =>
+        case TerminalCrunchResult(qncrs) =>
           UpdateTerminalCrunchResult(terminalName, qncrs.collect {
             case (queueName, Right(cr)) => queueName -> cr
           }.toMap)

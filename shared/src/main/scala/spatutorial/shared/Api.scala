@@ -367,6 +367,8 @@ case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 
 case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 
+case class TerminalCrunchResult(queuesAndCrunchResults: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])])
+
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi with WorkloadsApi {
 
@@ -374,7 +376,7 @@ trait Api extends FlightsApi with WorkloadsApi {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]]
+  def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[TerminalCrunchResult]
 
   def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult
 

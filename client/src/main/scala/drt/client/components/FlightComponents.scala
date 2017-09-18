@@ -57,7 +57,10 @@ object FlightComponents {
   def paxComponentTitle(flight: Arrival, apiPax: Int, apiIncTrans: Int): String = {
     val api: String = if (apiPax > 0) apiPax.toString else "n/a"
     val port: String = if (flight.ActPax > 0) flight.ActPax.toString else "n/a"
-    val last: String = flight.LastKnownPax.getOrElse("n/a").toString
+    val last: String = flight.LastKnownPax match {
+      case Some(lkp) => lkp.toString
+      case None => "n/a"
+    }
     val max: String = if (flight.MaxPax > 0) flight.MaxPax.toString else "n/a"
     val portDirectPax: Int = flight.ActPax - flight.TranPax
     s"""

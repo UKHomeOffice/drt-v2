@@ -151,9 +151,9 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case GetTerminalCrunch(terminalName) =>
       state match {
         case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
-          sender() ! queueCrunchResults(terminalName, startMillis, crunchMinutes)
+          sender() ! TerminalCrunchResult(queueCrunchResults(terminalName, startMillis, crunchMinutes).toList)
         case _ =>
-          sender() ! List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
+          sender() ! TerminalCrunchResult(List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]())
       }
 
     case SaveSnapshotSuccess(md) =>
@@ -201,7 +201,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     .groupBy(_.queueName)
     .map {
       case (qn, qms) =>
-        if (qms.size == oneDayMinutes) {
+        if (qms.nonEmpty) {
           val sortedCms = qms.toList.sortBy(_.minute)
           val desks = sortedCms.map {
             case CrunchMinute(_, _, _, _, _, dr, _) => dr

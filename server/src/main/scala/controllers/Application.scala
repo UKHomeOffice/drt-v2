@@ -263,7 +263,7 @@ class Application @Inject()(
   trait CrunchFromCrunchState {
     val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
 
-    def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]] = {
+    def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[TerminalCrunchResult] = {
       val actor: AskableActorRef = if (pointInTime > 0) {
         val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
         system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
@@ -272,8 +272,7 @@ class Application @Inject()(
       val terminalCrunchResult = actor ? GetTerminalCrunch(terminalName)
 
       terminalCrunchResult.map {
-        case Nil => List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
-        case qrcs: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])] => qrcs
+        case tcr@ TerminalCrunchResult(_) => tcr
       }
     }
   }
