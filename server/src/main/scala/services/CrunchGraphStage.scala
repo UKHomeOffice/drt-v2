@@ -327,14 +327,12 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       }
       val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
       val apiPaxTypeAndQueueCounts: List[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
-      log.info(s"from manifest: $apiPaxTypeAndQueueCounts")
       val csvSplits = csvSplitsProvider(f.apiFlight)
       val egatePercentage: Double = egatePercentageFromSplit(csvSplits, 0.6)
       val fastTrackPercentages: FastTrackPercentages = fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
       val ptqcWithCsvEgates = applyEgatesSplits(apiPaxTypeAndQueueCounts, egatePercentage)
       val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
       val splitsFromManifest = ApiSplits(ptqcwithCsvEgatesFastTrack, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
-      log.info(s"ptqcwithCsvEgatesFastTrack: $ptqcwithCsvEgatesFastTrack")
       val updatedFlight = f.copy(splits = splitsFromManifest :: nonApiSplits)
       updatedFlight
     }

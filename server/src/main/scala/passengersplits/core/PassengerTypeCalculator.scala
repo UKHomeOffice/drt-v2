@@ -137,7 +137,6 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
 
   private def distributeToQueues(paxTypes: Seq[PaxType]) = {
     val paxTypeCounts = countPassengerTypes(paxTypes)
-    log.info(s"paxTypes: $paxTypeCounts")
     val disabledEgatePercentage = 0d
 
     calculateQueuePaxCounts(paxTypeCounts, disabledEgatePercentage)
