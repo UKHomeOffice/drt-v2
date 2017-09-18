@@ -187,7 +187,6 @@ object Crunch {
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    log.info(s"looking for splits $splits")
     val splitsToUseOption = apiSplits match {
       case s@Some(_) => s
       case None => historicalSplits match {

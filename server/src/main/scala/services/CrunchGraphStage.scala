@@ -172,26 +172,20 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       log.info(s"CrunchRequestFlights: ${crunchRequest.flights.length}")
       val relevantFlights = crunchRequest.flights.filter {
         case ApiFlightWithSplits(flight, _) =>
-          log.info(s"Flight to filter: $flight, $validPortTerminals, ${crunchRequest.crunchStart}")
           validPortTerminals.contains(flight.Terminal) &&
             (flight.PcpTime) >= crunchRequest.crunchStart &&
             !domesticPorts.contains(flight.Origin)
       }
-      log.info(s"Relevant flights: $relevantFlights")
       val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
-      log.info(s"found ${uniqueFlights.length} flights to crunch")
+      log.info(s"${uniqueFlights.length} unique flights to crunch")
       val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
-      log.info(s"We got splits: $newFlightSplitMinutesByFlight")
-
-      log.info(s"Existing splits: $flightSplitMinutesByFlight")
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
       val crunchEnd = crunchStart + (numberOfMinutes * Crunch.oneMinute)
       val flightSplitDiffs = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
         .filter {
           case FlightSplitDiff(_, _, _, _, _, _, minute) =>
-            log.info(s"Crunch start: $crunchStart, Minute: $minute, Crunch End: $crunchEnd")
             crunchStart <= minute && minute < crunchEnd
         }
 
