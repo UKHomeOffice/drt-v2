@@ -1,18 +1,22 @@
 package services
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import akka.testkit.{TestKit, TestProbe}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
+import controllers.SystemActors.SplitsProvider
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.PaxTypesAndQueues._
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable.{List, Seq, Set}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class CrunchTestLike
@@ -30,6 +34,10 @@ class CrunchTestLike
 
   val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> 25d / 60)
   val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20)
+  val defaultPaxSplits = SplitRatios(
+    SplitSources.TerminalAverage,
+    SplitRatio(eeaMachineReadableToDesk, 1)
+  )
   val minMaxDesks = Map(
     "T1" -> Map(
       Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -40,26 +48,21 @@ class CrunchTestLike
   val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
 
 
-  def flightsSubscriber(procTimes: Map[PaxTypeAndQueue, Double],
-                        slaByQueue: Map[QueueName, Int],
-                        minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]],
-                        queues: Map[TerminalName, Seq[QueueName]],
-                        testProbe: TestProbe,
-                        validTerminals: Set[String]) = {
-    val (subscriber, _) = flightsSubscriberAndCrunchStateTestActor(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
-
-    subscriber
-  }
-
-  def flightsSubscriberAndCrunchStateTestActor(procTimes: Map[PaxTypeAndQueue, Double],
-                                               slaByQueue: Map[QueueName, Int],
-                                               minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]],
-                                               queues: Map[TerminalName, Seq[QueueName]],
-                                               testProbe: TestProbe,
-                                               validTerminals: Set[String]) = {
+  def runCrunchGraph(procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
+                     slaByQueue: Map[QueueName, Int] = slaByQueue,
+                     minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]] = minMaxDesks,
+                     queues: Map[TerminalName, Seq[QueueName]] = queues,
+                     testProbe: TestProbe,
+                     validTerminals: Set[String] = validTerminals,
+                     portSplits: SplitRatios = defaultPaxSplits,
+                     csvSplitsProvider: SplitsProvider = (a: Arrival) => None,
+                     pcpArrivalTime: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch),
+                     crunchStartDateProvider: () => MillisSinceEpoch,
+                     minutesToCrunch: Int = 30
+                    )(flightSets: List[Flights], manifestSets: List[Set[VoyageManifest]]) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
-    val actorMaterialiser = ActorMaterializer()
+    val actorMaterializer = ActorMaterializer()
 
     implicit val actorSystem = system
 
@@ -69,14 +72,20 @@ class CrunchTestLike
       minMaxDesks = minMaxDesks,
       procTimes = procTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-      validPortTerminals = validTerminals)
+      validPortTerminals = validTerminals,
+      portSplits = portSplits,
+      csvSplitsProvider = csvSplitsProvider,
+      pcpArrivalTime = pcpArrivalTime,
+      crunchStartDateProvider = crunchStartDateProvider,
+      minutesToCrunch = minutesToCrunch
+    )
 
-    val subscriber = Source.actorRef(1, OverflowStrategy.dropHead)
-      .via(crunchFlow)
-      .to(Sink.actorRef(crunchStateActor, "completed"))
-      .run()(actorMaterialiser)
-
-    (subscriber, crunchStateActor)
+    RunnableCrunchGraph(
+      Source(flightSets),
+      Source(manifestSets),
+      crunchFlow,
+      crunchStateActor
+    ).run()(actorMaterializer)
   }
 
   def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {
