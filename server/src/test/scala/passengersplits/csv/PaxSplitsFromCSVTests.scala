@@ -1,20 +1,10 @@
 package passengersplits.csv
 
-import drt.shared.FlightsApi.{QueuePaxAndWorkLoads, TerminalName, PortPaxAndWorkLoads}
+import controllers.ArrivalGenerator.apiFlight
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import org.slf4j.LoggerFactory
-import org.specs2.mutable.{Specification, SpecificationLike}
-import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
-import services.workloadcalculator.{PaxLoadCalculator, WorkloadCalculator}
-import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate}
-
-import scala.collection.immutable.IndexedSeq
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import controllers.ArrivalGenerator.apiFlight
+import org.specs2.mutable.SpecificationLike
+import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
 
 class PaxSplitsFromCSVTests extends SpecificationLike {
   val CsvSplitSource = "Historical"

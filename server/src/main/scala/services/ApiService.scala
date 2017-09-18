@@ -12,7 +12,6 @@ import drt.shared.FlightsApi._
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 import org.slf4j.LoggerFactory
-import services.workloadcalculator.WorkloadCalculator
 
 import scala.collection.immutable.{List, Map, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -92,7 +91,6 @@ object WorkloadSimulation {
 
 abstract class ApiService(val airportConfig: AirportConfig)
   extends Api
-    with WorkloadCalculator
     with FlightsService
     with AirportToCountryLike
     with ShiftPersistence

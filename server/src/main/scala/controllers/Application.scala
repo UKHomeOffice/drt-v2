@@ -243,8 +243,6 @@ class Application @Inject()(
 
   def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCrunchState {
 
-    override def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = airportConfig.defaultProcessingTimes(terminalName)(paxTypeAndQueue)
-
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
