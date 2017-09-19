@@ -23,7 +23,6 @@ object StreamingChromaFlow {
       .map(x => x match {
         case Failure(f) =>
           log.error(f, s"Something went wrong on the fetch, but we'll try again in ${pollFrequency}")
-//          log.info(s"Something went wrong on the fetch, but we'll try again in ${pollFrequency}: $f")
           x
         case s => s
       })
