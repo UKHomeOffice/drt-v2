@@ -70,13 +70,6 @@ object FlightMessageConversion {
   }
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
-    flightMessage.schDTOLD match {
-      case Some(_) => flightMessageV1ToArrival(flightMessage)
-      case None => flightMessageV2ToArrival(flightMessage)
-    }
-  }
-
-  def flightMessageV2ToArrival(flightMessage: FlightMessage): Arrival = {
     Arrival(
       Operator = flightMessage.operator.getOrElse(""),
       Status = flightMessage.status.getOrElse(""),
@@ -99,33 +92,8 @@ object FlightMessageConversion {
       Origin = flightMessage.origin.getOrElse(""),
       SchDT = apiFlightDateTime(flightMessage.scheduled),
       PcpTime = flightMessage.pcpTime.getOrElse(0),
-      LastKnownPax = flightMessage.lastKnownPax
-    )
-  }
-
-  def flightMessageV1ToArrival(flightMessage: FlightMessage): Arrival = {
-    Arrival(
-      Operator = flightMessage.operator.getOrElse(""),
-      Status = flightMessage.status.getOrElse(""),
-      EstDT = flightMessage.estDTOLD.getOrElse(""),
-      ActDT = flightMessage.actDTOLD.getOrElse(""),
-      EstChoxDT = flightMessage.estChoxDTOLD.getOrElse(""),
-      ActChoxDT = flightMessage.actChoxDTOLD.getOrElse(""),
-      Gate = flightMessage.gate.getOrElse(""),
-      Stand = flightMessage.stand.getOrElse(""),
-      MaxPax = flightMessage.maxPax.getOrElse(0),
-      ActPax = flightMessage.actPax.getOrElse(0),
-      TranPax = flightMessage.tranPax.getOrElse(0),
-      RunwayID = flightMessage.runwayID.getOrElse(""),
-      BaggageReclaimId = flightMessage.baggageReclaimId.getOrElse(""),
-      FlightID = flightMessage.flightID.getOrElse(0),
-      AirportID = flightMessage.airportID.getOrElse(""),
-      Terminal = flightMessage.terminal.getOrElse(""),
-      rawICAO = flightMessage.iCAO.getOrElse(""),
-      rawIATA = flightMessage.iATA.getOrElse(""),
-      Origin = flightMessage.origin.getOrElse(""),
-      SchDT = flightMessage.schDTOLD.getOrElse(""),
-      PcpTime = flightMessage.pcpTime.getOrElse(0)
+      LastKnownPax = flightMessage.lastKnownPax,
+      Scheduled = flightMessage.scheduled.getOrElse(0)
     )
   }
 

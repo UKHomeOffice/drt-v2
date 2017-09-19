@@ -24,7 +24,7 @@ class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: Act
   }
 }
 
-class CrunchFlowFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
+class CrunchGraphStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
   isolated
   sequential
 

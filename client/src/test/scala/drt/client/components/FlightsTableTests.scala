@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.ActionResult.ModelUpdate
 import diode.data.{Pot, Ready}
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{DrtCircuit, RootModel, SPACircuit}
 import drt.client.services.TerminalDeploymentTests.TestAirportConfig
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -59,53 +60,13 @@ object FlightsTableTests extends TestSuite {
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
-      )
-
-      val testFlight2 = Arrival(
-        Operator = "EZ",
-        Status = "scheduled",
-        SchDT = "2016-01-01T13:00",
-        EstDT = "2016-01-01T13:05",
-        ActDT = "2016-01-01T13:10",
-        EstChoxDT = "2016-01-01T13:15",
-        ActChoxDT = "2016-01-01T13:20",
-        Gate = "10",
-        Stand = "10A",
-        MaxPax = 200,
-        ActPax = 150,
-        TranPax = 10,
-        RunwayID = "1",
-        BaggageReclaimId = "A",
-        FlightID = 1000,
-        AirportID = "LHR",
-        Terminal = "T2",
-        rawICAO = "EZ0001",
-        rawIATA = "EZY0001",
-        Origin = "JFK",
-        PcpTime = 1451655000000L // 2016-01-01 13:30:00 UTC
+        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        Scheduled = SDate("2016-01-01T13:00").millisSinceEpoch
       )
 
       def withSplits(flights: Seq[Arrival]) = {
         FlightsWithSplits(flights.map(ApiFlightWithSplits(_, Nil)).toList)
       }
-
-      val airportConfig = AirportConfig(
-        portCode = "STN",
-        queues = Map("T1" -> Seq("eeaDesk", "nonEeaDesk", "eGate")),
-        slaByQueue = Map("eeaDesk" -> 25, "nonEeaDesk" -> 45, "eGate" -> 20),
-        terminalNames = Seq("T1"),
-        defaultPaxSplits = SplitRatios(
-          TestAirportConfig,
-
-          List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
-        defaultProcessingTimes = Map(),
-        minMaxDesksByTerminalQueue = Map("T1" -> Map(
-          "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-          "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-          "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
-        ))
-      )
 
       "FlightsTables" - {
         "Given a single flight then we see the FlightCode(ICAO???) " +
@@ -136,12 +97,12 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")),
                   <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
-                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                   <.td(testFlight.ActPax),
                   <.td()))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
@@ -174,7 +135,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.ActDT),
                   date(testFlight.EstChoxDT),
                   date(testFlight.ActChoxDT),
-                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                   <.td(testFlight.ActPax),
                   <.td()))))
 
@@ -182,7 +143,7 @@ object FlightsTableTests extends TestSuite {
           //            .renderStatic(<.span("herebecallback")).build
           val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
 
@@ -219,7 +180,7 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.ActDT),
                     date(testFlight.EstChoxDT),
                     date(testFlight.ActChoxDT),
-                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:38", "13:38"))), //pcp
+                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                     <.td(testFlight.ActPax),
                     <.td()))))
 
@@ -228,7 +189,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = (port) => originMapperComponent(port)
-            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack))
+            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -298,21 +259,8 @@ object FlightsTableTests extends TestSuite {
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = (s) => s)(paxComponent)(
-              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), BestPax.bestPax, PaxTypesAndQueues.inOrderSansFastTrack)),
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack)),
             staticComponent(expected)())
-
-          //          val className: TagMod = ^.className := s"pax-${origin}"
-          //          val title: TagMod = ^.title := s"from ${origin}"
-          //          val relativePax = Math.floor(100 * (pax / 853)).toInt
-          //          val style = widthStyle(relativePax)
-          //          <.div(po.pax, className, title, ^.style := style)
-          //          "Unit tests for paxComponent Hook" - {
-          //            val testFlightT = testFlight.copy(ActPax = 0, MaxPax = 150)
-          //
-          //            def paxComponent(f: Arrival): VdomNode = {
-          //              <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
-          //            }
-          //          }
 
         }
       }

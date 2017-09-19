@@ -116,7 +116,7 @@ object SummaryBoxesComponent {
     .render_P(props => {
       val portCode = props.airportConfig.portCode
       val queueOrder = props.airportConfig.queueOrder
-      val bestPaxFn = BestPax(portCode)
+      val bestPaxFn = ArrivalHelper.bestPax _
       val now = SDate.now()
       val hoursToAdd = 3
       val nowplus3 = now.addHours(hoursToAdd)
@@ -294,7 +294,7 @@ object TerminalContentComponent {
       splitsGraphComponentColoured)(paxComp(843))
 
     def render(props: Props, state: State) = {
-      val bestPax = BestPax(props.airportConfig.portCode)
+      val bestPax = ArrivalHelper.bestPax _
       val queueOrder = props.airportConfig.queueOrder
 
       <.div(

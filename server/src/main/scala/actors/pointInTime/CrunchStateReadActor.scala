@@ -5,7 +5,7 @@ import akka.persistence.{RecoveryCompleted, _}
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
+import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services.Crunch.CrunchState
 
 import scala.collection.immutable._
@@ -18,7 +18,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
       setStateFromSnapshot(snapshot)
 
-    case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _) =>
+    case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.info(s"Applying crunch diff with createdAt ($createdAt) <= point in time requested: ${pointInTime.millisSinceEpoch}")

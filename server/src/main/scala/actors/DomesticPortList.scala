@@ -1,8 +1,5 @@
 package actors
 
-/**
-  * Created by rich on 13/04/17.
-  */
 trait DomesticPortList {
   val domesticPorts = Seq(
     "ABB","ABZ","ACI","ADV","ADX","AYH",

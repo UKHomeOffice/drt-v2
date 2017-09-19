@@ -1,30 +1,35 @@
 package services
 
+import akka.NotUsed
 import akka.actor._
+import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
+import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 
 
-class CrunchEgateBanksSpec() extends CrunchTestLike {
+class CrunchEgateBanksSpec extends CrunchTestLike {
   "Egate banks handling " >> {
     "Given flights with 20 very expensive passengers and splits to eea desk & egates " +
       "When I ask for desk recs " +
       "Then I should see lower egates recs by a factor of 5 (rounded up)" >> {
+
+      val scheduled00 = "2017-01-01T00:00Z"
+      val scheduled15 = "2017-01-01T00:15Z"
+
       val scheduled = "2017-01-01T00:00Z"
-      val flightsWithSplits = List(
-        ApiFlightWithSplits(
-          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled),
-          List(ApiSplits(List(
-            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 10d),
-            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 10d)
-          ), SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers))))
+
+      val flights = List(Flights(List(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 20)
+      )))
 
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(
@@ -37,11 +42,21 @@ class CrunchEgateBanksSpec() extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val testProbe = TestProbe()
-      val subscriber: ActorRef = flightsSubscriber(procTimes, slaByQueue, minMaxDesks, queues, testProbe, validTerminals)
+      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+        runCrunchGraph(
+          procTimes = procTimes,
+          slaByQueue = slaByQueue,
+          minMaxDesks = minMaxDesks,
+          testProbe = testProbe,
+          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
+          portSplits = SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 0.5),
+            SplitRatio(eeaMachineReadableToEGate, 0.5)
+          )
+        )
 
-      val startTime = SDate(scheduled).millisSinceEpoch
-
-      initialiseAndSendFlights(flightsWithSplits, subscriber, startTime, numberOfMinutes = 30)
+      runnableGraphDispatcher(flights, Nil)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 15)

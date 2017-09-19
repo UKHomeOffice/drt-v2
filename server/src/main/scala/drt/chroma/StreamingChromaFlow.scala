@@ -16,8 +16,9 @@ object StreamingChromaFlow {
     implicit val l = log
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[Try[Seq[ChromaSingleFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((t) => Try(chromaFetcher.currentFlightsBlocking))
+      .map((_) => Try(chromaFetcher.currentFlightsBlocking))
 
+    log.info(s"setting up ticking chroma source")
     val recoverableTicking: Source[Seq[ChromaSingleFlight], Cancellable] = tickingSource
       .map(x => x match {
         case Failure(f) =>

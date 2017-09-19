@@ -12,6 +12,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.LoggerFactory
+import services.SDate
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable
@@ -118,7 +119,8 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
           rawIATA = flight.flightCode,
           Origin = flight.from,
           SchDT = schDtIso,
-          PcpTime = pcpTime)
+          PcpTime = pcpTime,
+          Scheduled = SDate(schDtIso).millisSinceEpoch)
       }).toList))
 }
 

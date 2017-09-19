@@ -5,7 +5,7 @@ import diode.react.ReactConnectProps
 import drt.client.SPAMain.Loc
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.{ApiFlightWithSplits, BestPax}
+import drt.shared.{ApiFlightWithSplits, ArrivalHelper}
 import japgolly.scalajs.react.component.Generic
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -34,7 +34,7 @@ object TerminalsDashboardPage {
         <.div(
           portCodeMP().renderReady(portCodeAndQueue => {
             val (portCode, queueOrder) = portCodeAndQueue
-            val bestPaxFN = BestPax(portCode)
+            val bestPaxFN = ArrivalHelper.bestPax _
             val bestSplitPaxFn = BigSummaryBoxes.bestFlightSplitPax(bestPaxFN)
             <.div(terminalsC { terminalsPotMP =>
               <.div(terminalsPotMP().renderReady { terminals =>

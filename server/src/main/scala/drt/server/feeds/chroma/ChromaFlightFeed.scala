@@ -10,6 +10,7 @@ import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.http.ProdSendAndReceive
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
+import services.SDate
 
 import scala.concurrent.duration._
 
@@ -77,7 +78,8 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
           rawIATA = flight.IATA,
           Origin = flight.Origin,
           SchDT = flight.SchDT,
-          PcpTime = pcpTime
+          PcpTime = pcpTime,
+          Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )
       }).toList)
   }

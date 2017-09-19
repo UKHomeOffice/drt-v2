@@ -74,14 +74,14 @@ object TestCrunchConfig {
         )),
       minMaxDesksByTerminalQueue = Map(
         "A1" -> Map(
-          "eeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
-          "nonEeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
-          "eGate" -> (seqOfHoursInts(2), seqOfHoursInts(25))
+          "eeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          "nonEeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          "eGate" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
         ),
         "A2" -> Map(
-          "eeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
-          "nonEeaDesk" -> (seqOfHoursInts(2), seqOfHoursInts(25)),
-          "eGate" -> (seqOfHoursInts(2), seqOfHoursInts(25))
+          "eeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          "nonEeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          "eGate" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
         )
       ),
       shiftExamples = Seq(
@@ -132,5 +132,5 @@ class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportCo
   def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, ArrivalHelper.bestPax)(flight)
 }

@@ -77,6 +77,7 @@ object JSDateConversions {
       * @param dateString
       * @return
       */
+    def apply(dateString: String): SDateLike = new Date(dateString)
     def parse(dateString: String): SDateLike = new Date(dateString)
 
     def today(): SDateLike = {

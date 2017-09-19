@@ -1,19 +1,22 @@
 package services
 
+import akka.NotUsed
+import akka.actor.{ActorRef, Cancellable}
 import akka.stream._
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.util.Success
 
 object Crunch {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class FlightSplitMinute(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
@@ -39,135 +42,29 @@ object Crunch {
 
   val oneMinute = 60000
 
-  class CrunchStateFullFlow(slas: Map[QueueName, Int],
-                            minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                            procTimes: Map[PaxTypeAndQueue, Double],
-                            groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                            validPortTerminals: Set[String])
-    extends GraphStage[FlowShape[CrunchRequest, CrunchState]] {
-
-    val in = Inlet[CrunchRequest]("CrunchState.in")
-    val out = Outlet[CrunchState]("CrunchState.out")
-    override val shape = FlowShape.of(in, out)
-
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-      var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-      var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
-      var crunchMinutes: Set[CrunchMinute] = Set()
-
-      var crunchStateOption: Option[CrunchState] = None
-      var crunchRunning = false
-
-      setHandlers(in, out, new InHandler with OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"onPull called")
-          crunchStateOption match {
-            case Some(crunchState) =>
-              push(out, crunchState)
-              crunchStateOption = None
-            case None =>
-              log.info(s"No CrunchState to push")
-          }
-          if (!hasBeenPulled(in)) pull(in)
-        }
-
-        override def onPush(): Unit = {
-          log.info(s"onPush called")
-          if (!crunchRunning) grabAndCrunch()
-
-          pushStateIfReady()
-
-          if (!hasBeenPulled(in)) pull(in)
-        }
-
-        def grabAndCrunch() = {
-          crunchRunning = true
-
-          val crunchRequest: CrunchRequest = grab(in)
-
-          log.info(s"processing crunchRequest - ${crunchRequest.flights.length} flights")
-          processFlights(crunchRequest)
-
-          crunchRunning = false
-        }
-
-        def processFlights(crunchFlights: CrunchRequest) = {
-          val newCrunchStateOption = crunch(crunchFlights)
-
-          log.info(s"setting crunchStateOption")
-          crunchStateOption = newCrunchStateOption
-        }
-
-        def crunch(crunchRequest: CrunchRequest) = {
-          val relevantFlights = crunchRequest.flights.filter {
-            case ApiFlightWithSplits(flight, _) =>
-              validPortTerminals.contains(flight.Terminal) && (flight.PcpTime + 30) > crunchRequest.crunchStart
-          }
-          val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
-          log.info(s"found ${uniqueFlights.length} flights to crunch")
-          val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
-          val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
-
-          val crunchStart = crunchRequest.crunchStart
-          val numberOfMinutes = crunchRequest.numberOfMinutes
-          val crunchEnd = crunchStart + (numberOfMinutes * oneMinute)
-          val flightSplitDiffs: Set[FlightSplitDiff] = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
-            .filter {
-              case FlightSplitDiff(_, _, _, _, _, _, minute) =>
-                crunchStart <= minute && minute < crunchEnd
-            }
-
-          val crunchState = flightSplitDiffs match {
-            case fsd if fsd.isEmpty =>
-              log.info(s"No flight changes. No need to crunch")
-              None
-            case _ =>
-              val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
-              Option(newCrunchState)
-          }
-
-          flightsByFlightId = newFlightsById
-          flightSplitMinutesByFlight = newFlightSplitMinutesByFlight
-
-          crunchState
-        }
-      })
-
-      def pushStateIfReady() = {
-        crunchStateOption match {
-          case None =>
-            log.info(s"We have no state yet. Nothing to push")
-          case Some(crunchState) =>
-            if (isAvailable(out)) {
-              log.info(s"pushing csd ${crunchState.crunchFirstMinuteMillis}")
-              push(out, crunchState)
-              crunchStateOption = None
-            }
-        }
-      }
-
-      def crunchStateFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
-                                            numberOfMinutes: Int,
-                                            flightsById: Map[Int, ApiFlightWithSplits],
-                                            fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]) = {
-        val crunchResults: Set[CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
-
-        CrunchState(crunchStart, numberOfMinutes, flightsById.values.toSet, crunchResults)
-      }
-
-      def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]) = {
-        val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
-        val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
-
-        val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, numberOfMinutes)(wlByQueue)
-        val eGateBankSize = 5
-
-        val crunchResults: Set[CrunchMinute] = workloadsToCrunchMinutes(crunchStart, numberOfMinutes, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
-        crunchResults
-      }
-
-    }
+  def flightVoyageNumberPadded(arrival: Arrival): String = {
+    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(arrival.IATA)
+    val vn = padTo4Digits(number.map(_._2).getOrElse("-"))
+    vn
   }
+
+  def midnightThisMorning() = {
+    val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
+    val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
+    crunchStartDate
+  }
+
+  def padTo4Digits(voyageNumber: String): String = {
+    val prefix = voyageNumber.length match {
+      case 4 => ""
+      case 3 => "0"
+      case 2 => "00"
+      case 1 => "000"
+      case _ => ""
+    }
+    prefix + voyageNumber
+  }
+
 
   def flightsToSplitDiffs(flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]], newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[FlightSplitDiff] = {
     val allKnownFlightIds = newFlightSplitMinutesByFlight.keys.toSet.union(flightSplitMinutesByFlight.keys.toSet)
@@ -223,7 +120,7 @@ object Crunch {
     }.toSet
   }
 
-  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]) = {
+  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]): Int = {
     val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
     desks(date.getHourOfDay)
   }
@@ -247,7 +144,7 @@ object Crunch {
       val queueLoads = terminalLoads.groupBy(_.queueName)
       queueLoads
         .mapValues(_.map(qwl =>
-          qwl.minute -> (qwl.paxLoad, qwl.workLoad)
+          (qwl.minute, (qwl.paxLoad, qwl.workLoad))
         ).toMap)
     })
   }
@@ -258,7 +155,7 @@ object Crunch {
     }.toMap
   }
 
-  def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]) = {
+  def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {
     val toRemove = oldSet.map(fsm => FlightSplitMinute(fsm.flightId, fsm.paxType, fsm.terminalName, fsm.queueName, -fsm.paxLoad, -fsm.workLoad, fsm.minute))
     val addAndRemoveGrouped: Map[(Int, TerminalName, QueueName, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet
       .union(toRemove)
@@ -272,7 +169,7 @@ object Crunch {
       .toSet
   }
 
-  def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[QueueLoadMinute]) = {
+  def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[QueueLoadMinute]): Set[QueueLoadMinute] = {
     queueLoadMinutes
       .groupBy(qlm => (qlm.terminalName, qlm.queueName, qlm.minute))
       .map {
@@ -296,7 +193,7 @@ object Crunch {
         case s@Some(_) => s
         case None => terminalSplits match {
           case s@Some(_) => s
-          case n@None =>
+          case None =>
             log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
             None
         }
@@ -306,11 +203,13 @@ object Crunch {
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
-        case Percentage => BestPax.lhrBestPax(flight)
+        case Percentage => ArrivalHelper.bestPax(flight)
+        case UndefinedSplitStyle => 0
       }
       val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
         case Percentage => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
+        case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
       }
 
       minutesForHours(flight.PcpTime, 1)
@@ -347,19 +246,17 @@ object Crunch {
     }.toSet
   }
 
-  def getLocalLastMidnight(now: SDateLike) = {
-    val localMidnight = s"${now.getFullYear}-${now.getMonth}-${now.getDate}T00:00"
+  def getLocalLastMidnight(now: SDateLike): SDateLike = {
+    val localMidnight = s"${now.getFullYear()}-${now.getMonth()}-${now.getDate()}T00:00"
     SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
 
-  def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]) = {
+  def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
     val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
     val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
     val oldIds = oldFlightsById.keys.toSet
     val newIds = newFlightsById.keys.toSet
-    val toRemove = (oldIds -- newIds).map {
-      case id => RemoveFlight(id)
-    }
+    val toRemove = (oldIds -- newIds).map(RemoveFlight)
     val toUpdate = newFlightsById.collect {
       case (id, cm) if oldFlightsById.get(id).isEmpty || cm != oldFlightsById(id) => cm
     }.toSet
@@ -367,7 +264,7 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinutesDiff(oldCm: Set[CrunchMinute], newCm: Set[CrunchMinute]) = {
+  def crunchMinutesDiff(oldCm: Set[CrunchMinute], newCm: Set[CrunchMinute]): (Set[RemoveCrunchMinute], Set[CrunchMinute]) = {
     val oldTqmToCm = oldCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
     val newTqmToCm = newCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
     val oldKeys = oldTqmToCm.keys.toSet
@@ -382,7 +279,7 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinuteToTqmCm(cm: CrunchMinute) = {
+  def crunchMinuteToTqmCm(cm: CrunchMinute): ((TerminalName, QueueName, MillisSinceEpoch), CrunchMinute) = {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
@@ -399,10 +296,10 @@ object Crunch {
     withoutRemovalsWithUpdates.values.toSet
   }
 
-  def applyFlightsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
+  def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
     val withoutRemovals = diff.flightRemovals.foldLeft(flights) {
       case (soFar, removal) => soFar.filterNot {
-        case f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
+        f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
       }
     }
     val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
@@ -411,5 +308,55 @@ object Crunch {
     }
     withoutRemovalsWithUpdates.values.toSet
   }
+
+  val domesticPorts = Seq(
+    "ABB","ABZ","ACI","ADV","ADX","AYH",
+    "BBP","BBS","BEB","BEQ","BEX","BFS","BHD","BHX","BLK","BLY","BOH","BOL","BQH","BRF","BRR","BRS","BSH","BUT","BWF","BWY","BYT","BZZ",
+    "CAL","CAX","CBG","CEG","CFN","CHE","CLB","COL","CRN","CSA","CVT","CWL",
+    "DCS","DGX","DND","DOC","DSA","DUB",
+    "EDI","EMA","ENK","EOI","ESH","EWY","EXT",
+    "FAB","FEA","FFD","FIE","FKH","FLH","FOA","FSS","FWM","FZO",
+    "GCI","GLA","GLO","GQJ","GSY","GWY","GXH",
+    "HAW","HEN","HLY","HOY","HRT","HTF","HUY","HYC",
+    "IIA","ILY","INQ","INV","IOM","IOR","IPW","ISC",
+    "JER",
+    "KIR","KKY","KNF","KOI","KRH","KYN",
+    "LBA","LCY","LDY","LEQ","LGW","LHR","LKZ","LMO","LON","LPH","LPL","LSI","LTN","LTR","LWK","LYE","LYM","LYX",
+    "MAN","MHZ","MME","MSE",
+    "NCL","NDY","NHT","NNR","NOC","NQT","NQY","NRL","NWI",
+    "OBN","ODH","OHP","OKH","ORK","ORM","OUK","OXF",
+    "PIK","PLH","PME","PPW","PSL","PSV","PZE",
+    "QCY","QFO","QLA","QUG",
+    "RAY","RCS",
+    "SCS","SDZ","SEN","SKL","SNN","SOU","SOY","SQZ","STN","SWI","SWS","SXL","SYY","SZD",
+    "TRE","TSO","TTK",
+    "UHF","ULL","UNT","UPV",
+    "WAT","WEM","WEX","WFD","WHS","WIC","WOB","WRY","WTN","WXF",
+    "YEO"
+  )
 }
 
+object RunnableCrunchGraph {
+
+  import akka.stream.scaladsl.GraphDSL.Implicits._
+
+  def apply(
+             flightsSource: Source[Flights, _],
+             voyageManifestsSource: Source[Set[VoyageManifest], _],
+             cruncher: CrunchGraphStage,
+             crunchStateActor: ActorRef): RunnableGraph[NotUsed] =
+    RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
+      val crunchSink = Sink.actorRef(crunchStateActor, "completed")
+      val F: Outlet[Flights] = builder.add(flightsSource).out
+      val M: Outlet[Set[VoyageManifest]] = builder.add(voyageManifestsSource).out
+
+      val CR = builder.add(cruncher)
+      val G = builder.add(crunchSink)
+
+      F ~> CR.in0
+      M ~> CR.in1
+      CR.out ~> G
+
+      ClosedShape
+    })
+}

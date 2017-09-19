@@ -38,10 +38,11 @@ message CrunchMinuteMessage {
 
 message CrunchDiffMessage {
     optional int64 createdAt = 1;
-    repeated int32 flightIdsToRemove = 2;
-    repeated FlightWithSplitsMessage flightsToUpdate = 3;
-    repeated RemoveCrunchMinuteMessage CrunchMinutesToRemove = 4;
-    repeated CrunchMinuteMessage CrunchMinutesToUpdate = 5;
+    optional int64 crunchStart = 2;
+    repeated int32 flightIdsToRemove = 3;
+    repeated FlightWithSplitsMessage flightsToUpdate = 4;
+    repeated RemoveCrunchMinuteMessage CrunchMinutesToRemove = 5;
+    repeated CrunchMinuteMessage CrunchMinutesToUpdate = 6;
 }
 
 message RemoveCrunchMinuteMessage {

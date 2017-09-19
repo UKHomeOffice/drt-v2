@@ -8,7 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object ZipUtils {
 
-  case class UnzippedFileContent( filename: String, content: String, zipFilename: Option[String] = None)
+  case class UnzippedFileContent(filename: String, content: String, zipFilename: Option[String] = None)
 
   def usingZip[R <: Closeable, T](unzippedStream: R)(f: (R) => T) = {
     try {

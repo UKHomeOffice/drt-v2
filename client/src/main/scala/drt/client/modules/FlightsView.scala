@@ -106,7 +106,7 @@ object FlightsView {
                       "ActPax",
                       "Terminal"
                     ),
-                    bestPax: (Arrival) => Int = BestPax.bestPax
+                    bestPax: (Arrival) => Int = ArrivalHelper.bestPax
                   )
 
   case class State(

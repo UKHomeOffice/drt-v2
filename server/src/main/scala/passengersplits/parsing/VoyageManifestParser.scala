@@ -50,18 +50,18 @@ object VoyageManifestParser {
     def flightCode: String = CarrierCode + VoyageNumber
 
     def scheduleArrivalDateTime: Option[SDateLike] = {
-      Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate(_))
+      Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
     }
 
     def passengerInfos: Seq[PassengerInfo] = PassengerList.map(_.toPassengerInfo)
 
     private def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
 
-    def summary: String = s"${DeparturePortCode}->${ArrivalPortCode}/${CarrierCode}${VoyageNumber}@${scheduleDateTimeString}"
+    def summary: String = s"$DeparturePortCode->$ArrivalPortCode/$CarrierCode$VoyageNumber@$scheduleDateTimeString"
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {
-    implicit val passengerInfoConverter = jsonFormat(PassengerInfoJson,
+    implicit val passengerInfoConverter: RootJsonFormat[PassengerInfoJson] = jsonFormat(PassengerInfoJson,
       "DocumentType",
       "DocumentIssuingCountryCode",
       "NationalityCountryEEAFlag",

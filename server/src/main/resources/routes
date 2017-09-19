@@ -4,7 +4,6 @@
 
 # Home page
 GET         /                                             controllers.Application.index
-GET         /splits/:fromDate/:toDate                     controllers.Application.splits(fromDate, toDate)
 
 GET         /export/desks/:pointInTime/:terminalName               controllers.Application.getDesksAndQueuesCSV(pointInTime, terminalName)
 GET         /export/arrivals/:pointInTime/:terminalName             controllers.Application.getFlightsWithSplitsCSV(pointInTime, terminalName)
