@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
+import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.joda.time.DateTimeZone
@@ -75,14 +75,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled2, iata = "SA123", terminal = "T1", actPax = 1)
       )))
 
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(
-        eeaMachineReadableToDesk -> 20d / 60,
-        eeaMachineReadableToEGate -> 35d / 60)
-
       val testProbe = TestProbe()
       val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
         runCrunchGraph(
-          procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch
         )
@@ -97,8 +92,51 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       resultSummary === expected
     }
 
+    "Given 1 flight with 100 passengers eaa splits to desk and eGates" +
+      "When I ask for queue loads " +
+      "Then I should see the correct loads for each queue" >> {
+      val scheduled = "2017-01-01T00:00Z"
+
+      val flights = List(Flights(List(
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 100)
+      )))
+      val procTimes: Map[PaxTypeAndQueue, Double] = Map(
+        eeaMachineReadableToDesk -> 0.25,
+        eeaMachineReadableToEGate -> 0.3,
+        eeaNonMachineReadableToDesk -> 0.4
+      )
+
+      val testProbe = TestProbe()
+      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+        runCrunchGraph(
+          testProbe = testProbe,
+          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
+          procTimes = procTimes,
+          portSplits = SplitRatios(
+            SplitSources.TerminalAverage,
+            List(SplitRatio(eeaMachineReadableToDesk, 0.25),
+              SplitRatio(eeaMachineReadableToEGate, 0.25),
+              SplitRatio(eeaNonMachineReadableToDesk, 0.5)
+            )
+          )
+        )
+
+      runnableGraphDispatcher(flights, Nil)
+
+      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+      val resultSummary = workLoadsFromCrunchState(result, 5)
+
+
+      val expected = Map("T1" -> Map(
+        "eeaDesk" -> List(5.25, 5.25, 5.25, 5.25, 5.25),
+        "eGate" -> List(1.5, 1.5, 1.5, 1.5, 1.5))
+      )
+
+      resultSummary === expected
+    }
+
     "CSV split ratios " >> {
-      "Given a flight with 20 passengers and one CSV split of 25% to eea desk" +
+      "Given a flight with 20 passengers and one CSV split of 25% to eea desk " +
         "When request a crunch " +
         "Then I should see a pax load of 5 (20 * 0.25)" >> {
         val scheduled1 = "2017-01-01T00:00Z"
