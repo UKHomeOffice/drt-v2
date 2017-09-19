@@ -203,7 +203,7 @@ object Crunch {
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
-        case Percentage => BestPax()(flight)
+        case Percentage => ArrivalHelper.bestPax(flight)
         case UndefinedSplitStyle => 0
       }
       val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {

@@ -2,7 +2,7 @@ package drt.client.components
 
 //import chandu0101.scalajs.react.components.Spinner
 import diode.data.{Pot, Ready}
-import drt.shared.{BestPax, PaxTypesAndQueues}
+import drt.shared.{ArrivalHelper, PaxTypesAndQueues}
 //import japgolly.scalajs.react.vdom.all.{VdomAttr => _, TagMod => _, _react_attrString => _, _react_autoRender => _, _react_fragReactNode => _}
 import japgolly.scalajs.react.vdom.html_<^._
 import drt.client.modules.{FlightsView, GriddleComponentWrapper, ViewTools}

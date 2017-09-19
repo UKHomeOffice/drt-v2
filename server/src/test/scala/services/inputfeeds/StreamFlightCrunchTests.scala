@@ -132,5 +132,5 @@ class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportCo
   def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(SDate.parseString(flight.SchDT).millisSinceEpoch)
 
   def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, BestPax.bestPax)(flight)
+    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, ArrivalHelper.bestPax)(flight)
 }

@@ -36,7 +36,7 @@ object FlightComponents {
   }
 
   def bestPaxToDisplay(flight: Arrival, apiExTransPax: Int, portCode: String) = {
-    val bestNonApiPax = BestPax()(flight)
+    val bestNonApiPax = ArrivalHelper.bestPax(flight)
     val apiDiffTrustThreshold = 0.2
     val absPercentageDifference = Math.abs(apiExTransPax - bestNonApiPax).toDouble / bestNonApiPax
     val trustApi = absPercentageDifference <= apiDiffTrustThreshold
