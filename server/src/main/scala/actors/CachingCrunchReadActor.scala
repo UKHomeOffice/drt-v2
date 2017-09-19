@@ -2,7 +2,7 @@ package actors
 
 import java.util.UUID
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import spray.caching.{Cache, LruCache}
@@ -23,16 +23,29 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
       log.info(s"Received query: $caq")
       val actorName = "query-actor" + UUID.randomUUID().toString
       val s = sender()
-      val readActor: AskableActorRef = context.actorOf(caq.props, actorName)
+
+      val hit = resultCache.keys.contains(key(caq))
+      if(hit) {
+
+        log.info(s"Cache hit: ${caq.props}")
+      } else {
+        log.info(s"Cache miss: ${caq.props}")
+
+      }
       resultCache(key(caq)) {
-        val resToCache: Future[Any] = readActor.ask(caq.query)
+
+        log.info(s"Starting actor for query ${caq.props}")
+        val actorRef: ActorRef = context.actorOf(caq.props, actorName)
+        val askableActorRef: AskableActorRef = actorRef
+        val resToCache: Future[Any] = askableActorRef.ask(caq.query)
         val res = Await.result(resToCache, 5 seconds)
-        log.info(s"The result of the thing: $res")
+        log.info(s"Sending and caching: ${caq.props}")
+        actorRef ! PoisonPill
         res
       }.pipeTo(s)
   }
 
-  val resultCache: Cache[Any] = LruCache()
+  val resultCache: Cache[Any] = LruCache(maxCapacity = 50)
 
   def key(query: CachableActorQuery): Int = {
     query.hashCode()
