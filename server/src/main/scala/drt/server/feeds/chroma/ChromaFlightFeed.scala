@@ -9,10 +9,10 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.http.ProdSendAndReceive
 import drt.shared.Arrival
-import drt.shared.FlightsApi.Flights
 import services.SDate
 
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 
 trait ChromaFetcherLike {
@@ -48,13 +48,13 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
       "T2" -> ArrivalsHall2
     )
 
-    def ediBaggageTerminalHack(csf: ChromaSingleFlight) = {
+    def ediBaggageTerminalHack(csf: ChromaSingleFlight): ChromaSingleFlight = {
       if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
     }
   }
 
 
-  def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]) = {
+  def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]): Source[List[Arrival], Cancellable] = {
     ediMapping.map(flights =>
       flights.map(flight => {
         val walkTimeMinutes = 4

@@ -8,7 +8,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{FixedPointPersistence, GetTerminalCrunch, ShiftPersistence, StaffMovementsPersistence}
-import drt.shared.FlightsApi._
+import drt.shared.FlightsApi.{PortPaxAndWorkLoads, _}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 import org.slf4j.LoggerFactory
@@ -106,14 +106,13 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   def askableCacheActorRef: AskableActorRef
 
-  override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
+  override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortLoads]] = {
     val workloadsFuture = if (pointInTime > 0) {
       val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetPortWorkload)
       askableCacheActorRef ? query
     } else {
       crunchStateActor ? GetPortWorkload
     }
-
 
     workloadsFuture.recover {
       case e: Throwable =>
@@ -130,8 +129,7 @@ abstract class ApiService(val airportConfig: AirportConfig)
             case (qn, (wl, pl)) => log.info(s"workloads: $tn/$qn wl: ${wl.length}, pl: ${pl.length} ")
           }
         }
-        Right(workloads)
-
+        Right(PortLoads(workloads))
     }
   }
 
@@ -161,3 +159,4 @@ abstract class ApiService(val airportConfig: AirportConfig)
 
   override def airportConfiguration() = airportConfig
 }
+

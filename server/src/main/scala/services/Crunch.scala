@@ -24,7 +24,19 @@ object Crunch {
 
   case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class CrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, paxLoad: Double, workLoad: Double, deskRec: Int, waitTime: Int)
+  case class CrunchMinute(
+                           terminalName: TerminalName,
+                           queueName: QueueName,
+                           minute: MillisSinceEpoch,
+                           paxLoad: Double,
+                           workLoad: Double,
+                           deskRec: Int,
+                           waitTime: Int,
+                           simDesks: Option[Int] = None,
+                           simWait: Option[Int] = None,
+                           actDesks: Option[Int] = None,
+                           actWait: Option[Int] = None)
+
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
 
@@ -286,7 +298,7 @@ object Crunch {
   def applyCrunchDiff(diff: CrunchDiff, cms: Set[CrunchMinute]): Set[CrunchMinute] = {
     val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms) {
       case (soFar, removal) => soFar.filterNot {
-        case CrunchMinute(tn, qn, m, _, _, _, _) => removal.terminalName == tn && removal.queueName == qn && removal.minute == m
+        case CrunchMinute(tn, qn, m, _, _, _, _, _, _, _, _) => removal.terminalName == tn && removal.queueName == qn && removal.minute == m
       }
     }
     val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals.map(crunchMinuteToTqmCm).toMap) {
@@ -310,28 +322,28 @@ object Crunch {
   }
 
   val domesticPorts = Seq(
-    "ABB","ABZ","ACI","ADV","ADX","AYH",
-    "BBP","BBS","BEB","BEQ","BEX","BFS","BHD","BHX","BLK","BLY","BOH","BOL","BQH","BRF","BRR","BRS","BSH","BUT","BWF","BWY","BYT","BZZ",
-    "CAL","CAX","CBG","CEG","CFN","CHE","CLB","COL","CRN","CSA","CVT","CWL",
-    "DCS","DGX","DND","DOC","DSA","DUB",
-    "EDI","EMA","ENK","EOI","ESH","EWY","EXT",
-    "FAB","FEA","FFD","FIE","FKH","FLH","FOA","FSS","FWM","FZO",
-    "GCI","GLA","GLO","GQJ","GSY","GWY","GXH",
-    "HAW","HEN","HLY","HOY","HRT","HTF","HUY","HYC",
-    "IIA","ILY","INQ","INV","IOM","IOR","IPW","ISC",
+    "ABB", "ABZ", "ACI", "ADV", "ADX", "AYH",
+    "BBP", "BBS", "BEB", "BEQ", "BEX", "BFS", "BHD", "BHX", "BLK", "BLY", "BOH", "BOL", "BQH", "BRF", "BRR", "BRS", "BSH", "BUT", "BWF", "BWY", "BYT", "BZZ",
+    "CAL", "CAX", "CBG", "CEG", "CFN", "CHE", "CLB", "COL", "CRN", "CSA", "CVT", "CWL",
+    "DCS", "DGX", "DND", "DOC", "DSA", "DUB",
+    "EDI", "EMA", "ENK", "EOI", "ESH", "EWY", "EXT",
+    "FAB", "FEA", "FFD", "FIE", "FKH", "FLH", "FOA", "FSS", "FWM", "FZO",
+    "GCI", "GLA", "GLO", "GQJ", "GSY", "GWY", "GXH",
+    "HAW", "HEN", "HLY", "HOY", "HRT", "HTF", "HUY", "HYC",
+    "IIA", "ILY", "INQ", "INV", "IOM", "IOR", "IPW", "ISC",
     "JER",
-    "KIR","KKY","KNF","KOI","KRH","KYN",
-    "LBA","LCY","LDY","LEQ","LGW","LHR","LKZ","LMO","LON","LPH","LPL","LSI","LTN","LTR","LWK","LYE","LYM","LYX",
-    "MAN","MHZ","MME","MSE",
-    "NCL","NDY","NHT","NNR","NOC","NQT","NQY","NRL","NWI",
-    "OBN","ODH","OHP","OKH","ORK","ORM","OUK","OXF",
-    "PIK","PLH","PME","PPW","PSL","PSV","PZE",
-    "QCY","QFO","QLA","QUG",
-    "RAY","RCS",
-    "SCS","SDZ","SEN","SKL","SNN","SOU","SOY","SQZ","STN","SWI","SWS","SXL","SYY","SZD",
-    "TRE","TSO","TTK",
-    "UHF","ULL","UNT","UPV",
-    "WAT","WEM","WEX","WFD","WHS","WIC","WOB","WRY","WTN","WXF",
+    "KIR", "KKY", "KNF", "KOI", "KRH", "KYN",
+    "LBA", "LCY", "LDY", "LEQ", "LGW", "LHR", "LKZ", "LMO", "LON", "LPH", "LPL", "LSI", "LTN", "LTR", "LWK", "LYE", "LYM", "LYX",
+    "MAN", "MHZ", "MME", "MSE",
+    "NCL", "NDY", "NHT", "NNR", "NOC", "NQT", "NQY", "NRL", "NWI",
+    "OBN", "ODH", "OHP", "OKH", "ORK", "ORM", "OUK", "OXF",
+    "PIK", "PLH", "PME", "PPW", "PSL", "PSV", "PZE",
+    "QCY", "QFO", "QLA", "QUG",
+    "RAY", "RCS",
+    "SCS", "SDZ", "SEN", "SKL", "SNN", "SOU", "SOY", "SQZ", "STN", "SWI", "SWS", "SXL", "SYY", "SZD",
+    "TRE", "TSO", "TTK",
+    "UHF", "ULL", "UNT", "UPV",
+    "WAT", "WEM", "WEX", "WFD", "WHS", "WIC", "WOB", "WRY", "WTN", "WXF",
     "YEO"
   )
 }
@@ -360,3 +372,4 @@ object RunnableCrunchGraph {
       ClosedShape
     })
 }
+

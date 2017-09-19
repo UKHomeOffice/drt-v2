@@ -307,8 +307,8 @@ object ShiftsServiceTests extends TestSuite {
               val parsedShift: Try[StaffAssignment] = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.head
 
               parsedShift match {
-                case Success(StaffAssignment(name, _, _, _, _)) =>
-                  assert(name == "Alpha\\, 1 ODM")
+                case Success(StaffAssignment(name, _, _, _, _)) => assert(name == "Alpha\\, 1 ODM")
+                case Failure(_) => assert(1 == 2)
               }
             }
           }

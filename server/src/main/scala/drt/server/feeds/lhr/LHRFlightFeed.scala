@@ -5,18 +5,18 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import com.typesafe.config.ConfigFactory
 import drt.chroma.DiffingStage
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.Arrival
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.sys.process._
 import scala.util.{Failure, Success, Try}
 
@@ -50,11 +50,11 @@ case class LHRCsvException(originalLine: String, idx: Int, innerException: Throw
 
 case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
-  def opt(s: String) = emptyStringToOption(s, x => x)
+  def opt(s: String): Option[String] = emptyStringToOption(s, x => x)
 
-  def optDate(s: String) = emptyStringToOption(s, parseDateTime(_))
+  def optDate(s: String): Option[DateTime] = emptyStringToOption(s, parseDateTime)
 
-  def optInt(s: String) = emptyStringToOption(s, _.toInt)
+  def optInt(s: String): Option[Int] = emptyStringToOption(s, _.toInt)
 
   lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
     csvRecords.zipWithIndex.map { case (splitRow, lineNo) =>
@@ -78,26 +78,24 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
       t match {
         case Success(s) => Success(s)
-        case Failure(t) =>
-          Failure(LHRCsvException("", lineNo, t))
+        case Failure(f) => Failure(LHRCsvException("", lineNo, f))
       }
     }
   }
 
   val walkTimeMinutes = 4
 
-  lazy val successfulFlights = lhrFlights.collect {
+  lazy val successfulFlights: Iterator[LHRLiveFlight] = lhrFlights.collect {
     case Success(s) => s
   }
 
-  def dateOptToStringOrEmptyString = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
+  def dateOptToStringOrEmptyString: (Option[DateTime]) => String = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
 
   lazy val copiedToApiFlights: Source[List[Arrival], NotUsed] = Source(
     List(
       successfulFlights.map(flight => {
         val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
-        val schDtIso = flight.scheduled.toDateTimeISO().toString()
-        val defaultPaxPerFlight = 200
+        val schDtIso = flight.scheduled.toDateTimeISO.toString()
         Arrival(
           Operator = flight.operator,
           Status = "UNK",
@@ -126,13 +124,13 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
 object LHRFlightFeed {
 
-  def csvParserAsIteratorOfColumnGetter(csvString: String) = {
+  def csvParserAsIteratorOfColumnGetter(csvString: String): Iterator[(Int) => String] = {
     val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
     val csvGetters: Iterator[(Int) => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
     csvGetters
   }
 
-  def emptyStringToOption[T](s: String, t: (String) => T) = {
+  def emptyStringToOption[T](s: String, t: (String) => T): Option[T] = {
     if (s.isEmpty) None else Option(t(s))
   }
 
@@ -144,17 +142,17 @@ object LHRFlightFeed {
   }
 
   val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
-  val log = LoggerFactory.getLogger(classOf[LHRFlightFeed])
+  val log: Logger = LoggerFactory.getLogger(classOf[LHRFlightFeed])
 
-  def parseDateTime(dateString: String) = pattern.parseDateTime(dateString)
+  def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => String = csvContentsProviderProd _): Source[List[Arrival], Cancellable] = {
+  def apply(csvContentsProvider: () => String = csvContentsProviderProd): Source[List[Arrival], Cancellable] = {
     log.info(s"preparing lhrfeed")
 
     val pollFrequency = 1 minute
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[Source[List[Arrival], NotUsed], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((t) => {
+      .map((_) => {
         log.info(s"about to request csv")
         val csvContents: String = csvContentsProvider()
         log.info(s"got csv content")

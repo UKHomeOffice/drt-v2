@@ -2,16 +2,15 @@ package drt.client.services
 
 import java.util.UUID
 
-import diode.data.Pot
-import drt.client.logger._
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.shared.FlightsApi.TerminalName
+import drt.shared.{MilliDate, SDateLike, StaffMovement}
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.JSDateConversions.SDate.JSSDate
-import drt.shared.{MilliDate, SDateLike, StaffMovement}
-import drt.shared.FlightsApi.TerminalName
+import scala.language.implicitConversions
 
 object JSDateConversions {
   implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
@@ -96,12 +95,12 @@ object JSDateConversions {
 }
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
-  def toCsv = {
+  def toCsv: String = {
     val startDate: SDateLike = SDate(startDt)
     val endDate: SDateLike = SDate(endDt)
-    val startDateString = f"${startDate.getDate}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
-    val startTimeString = f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
-    val endTimeString = f"${endDate.getHours}%02d:${endDate.getMinutes}%02d"
+    val startDateString = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
+    val startTimeString = f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
+    val endTimeString = f"${endDate.getHours()}%02d:${endDate.getMinutes()}%02d"
 
     s"$name,$terminalName,$startDateString,$startTimeString,$endTimeString,$numberOfStaff"
   }
@@ -151,7 +150,7 @@ object StaffAssignment {
 }
 
 case class StaffAssignmentParser(rawStaffAssignments: String) {
-  val lines = rawStaffAssignments.split("\n")
+  val lines: Array[TerminalName] = rawStaffAssignments.split("\n")
   val parsedAssignments: Array[Try[StaffAssignment]] = lines.map(l => {
     l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
   })
@@ -190,7 +189,7 @@ object StaffAssignmentServiceWithoutDates {
     if (assignments.exists(_.isFailure))
       Failure(new Exception("Couldn't parse assignments"))
     else {
-      Success(StaffAssignmentServiceWithoutDates(assignments.map { case Success(s) => s }))
+      Success(StaffAssignmentServiceWithoutDates(assignments.collect { case Success(s) => s }))
     }
   }
 }
@@ -200,13 +199,13 @@ object StaffAssignmentServiceWithDates {
     if (assignments.exists(_.isFailure))
       Failure(new Exception("Couldn't parse assignments"))
     else {
-      Success(StaffAssignmentServiceWithDates(assignments.map { case Success(s) => s }))
+      Success(StaffAssignmentServiceWithDates(assignments.collect { case Success(s) => s }))
     }
   }
 }
 
 object StaffMovements {
-  def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]) = {
+  def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
       val uuid: UUID = UUID.randomUUID()
       StaffMovement(assignment.terminalName, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid) ::
@@ -214,9 +213,9 @@ object StaffMovements {
     }).sortBy(_.time)
   }
 
-  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate) = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
+  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate): Int = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
 
-  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentServiceWithoutDates)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate) = {
+  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentServiceWithoutDates)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate): Int = {
     val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
     val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTime)
 

@@ -1,14 +1,14 @@
 package services
 
-import java.time.chrono.Chronology
-
-import org.joda.time.{DateTime, DateTimeZone}
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.ISODateTimeFormat
-import org.slf4j.LoggerFactory
+import org.joda.time.{DateTime, DateTimeZone}
+import org.slf4j.{Logger, LoggerFactory}
+
+import scala.language.implicitConversions
 
 object SDate {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class JodaSDate(dateTime: DateTime) extends SDateLike {
 
@@ -46,13 +46,13 @@ object SDate {
     implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
   }
 
-  def jodaSDateToIsoString(dateTime: SDateLike) = {
+  def jodaSDateToIsoString(dateTime: SDateLike): String = {
     val fmt = ISODateTimeFormat.dateTimeNoMillis()
     val dt = dateTime.asInstanceOf[JodaSDate].dateTime
     fmt.print(dt)
   }
 
-  def parseString(dateTime: String) = {
+  def parseString(dateTime: String): MilliDate = {
     MilliDate(apply(dateTime, DateTimeZone.UTC).millisSinceEpoch)
   }
 
@@ -68,11 +68,11 @@ object SDate {
     JodaSDate(new DateTime(millis, DateTimeZone.UTC))
   }
 
-  def now() = {
+  def now(): JodaSDate = {
     JodaSDate(new DateTime(DateTimeZone.UTC))
   }
 
-  def now(dtz: DateTimeZone) = {
+  def now(dtz: DateTimeZone): JodaSDate = {
     JodaSDate(new DateTime(dtz))
   }
 

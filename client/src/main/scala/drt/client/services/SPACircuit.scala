@@ -226,7 +226,7 @@ class WorkloadsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mo
 
       val futureActions = AjaxClient[Api].getWorkloads(pointInTimeMillis).call().map {
         case Left(WorkloadsNotReady()) => GetWorkloadsAfter(2 seconds)
-        case Right(wl) => UpdateWorkloads(wl)
+        case Right(PortLoads(wl)) => UpdateWorkloads(wl)
       }
       updated(newWorkloads, Effect(futureActions))
     case GetWorkloadsAfter(delay) =>

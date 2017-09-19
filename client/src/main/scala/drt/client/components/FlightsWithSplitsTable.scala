@@ -190,6 +190,7 @@ object FlightTableRow {
                 }).toMap
                 GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
               }
+              case UndefinedSplitStyle => <.div("")
             }
             vdomElement
           }

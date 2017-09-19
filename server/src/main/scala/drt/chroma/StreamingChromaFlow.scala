@@ -9,6 +9,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
+import scala.language.postfixOps
 
 object StreamingChromaFlow {
 
@@ -20,12 +21,12 @@ object StreamingChromaFlow {
 
     log.info(s"setting up ticking chroma source")
     val recoverableTicking: Source[Seq[ChromaSingleFlight], Cancellable] = tickingSource
-      .map(x => x match {
-        case Failure(f) =>
-          log.error(f, s"Something went wrong on the fetch, but we'll try again in ${pollFrequency}")
+      .map {
+        case x@Failure(f) =>
+          log.error(f, s"Something went wrong on the fetch, but we'll try again in $pollFrequency")
           x
         case s => s
-      })
+      }
       .collect({
         case Success(s: Seq[ChromaSingleFlight]) =>
           log.info("Got success {} flights", s.length)

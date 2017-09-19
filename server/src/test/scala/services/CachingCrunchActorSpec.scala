@@ -9,6 +9,7 @@ import akka.util.Timeout
 import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
+import org.specs2.control.LanguageFeatures
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 
@@ -21,17 +22,17 @@ case object WasCalled
 class TestActorProbe(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]], incrementer: () => Unit) extends Actor {
 
   def receive: Receive = {
-    case gtc: GetTerminalCrunch =>
+    case _: GetTerminalCrunch =>
       incrementer()
       sender() ! s"Terminal Crunch Results for ${pointInTime.toISOString()}"
   }
 }
 
-class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
+class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike with LanguageFeatures {
   isolated
   sequential
 
-  implicit val actorSystem = system
+  implicit val actorSystem: ActorSystem = system
   implicit val materializer = ActorMaterializer()
   implicit val timeout = Timeout(1 seconds)
 
@@ -69,6 +70,7 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests", AkkaPersi
       called === 1
     }
   }
+
   "When two different queries are sent" >> {
     var called = 0
     def inc() = {

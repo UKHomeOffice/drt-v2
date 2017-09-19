@@ -17,8 +17,8 @@ import org.scalajs.dom
 
 import scala.collection.immutable.{Map, Seq}
 import scala.scalajs.js
-import scala.scalajs.js.annotation.{JSExport, JSImport}
-import scalacss.Defaults._
+import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel, JSImport}
+import scalacss.ProdDefaults._
 
 object TableViewUtils {
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
@@ -190,7 +190,7 @@ object TableViewUtils {
   }
 }
 
-@JSExport("SPAMain")
+@JSExportTopLevel("SPAMain")
 object SPAMain extends js.JSApp {
 
   sealed trait Loc

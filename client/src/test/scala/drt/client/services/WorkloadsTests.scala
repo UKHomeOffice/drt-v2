@@ -17,7 +17,7 @@ object WorkloadsTests extends TestSuite {
         val workloads = Workloads(
           Map("T1" ->
             Map("eeaDesk" ->
-              (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
+              Tuple2(List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
         val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
         assert(labels  == List(
           "00:00",
@@ -32,7 +32,7 @@ object WorkloadsTests extends TestSuite {
         val workloads = Workloads(
           Map("A1" ->
             Map("eeaDesk" ->
-              (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
+              Tuple2(List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
         val labels: IndexedSeq[TerminalName] = workloads.labels.take(5)
         assert(labels  == List(
           "00:00",
@@ -47,8 +47,8 @@ object WorkloadsTests extends TestSuite {
         val workloads = Workloads(
           Map("A1" ->
             Map("eeaDesk" ->
-              (List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
-        val labels: IndexedSeq[TerminalName] = workloads.labels.drop(800).take(5)
+              Tuple2(List(WL(firstTime, 99)), List(Pax(firstTime, 10))))))
+        val labels: IndexedSeq[TerminalName] = workloads.labels.slice(800, 805)
         assert(labels  == List(
           "13:20", "13:21", "13:22", "13:23", "13:24"
         ))

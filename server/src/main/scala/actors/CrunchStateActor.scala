@@ -184,10 +184,10 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
             case (qn, qms) =>
               val sortedCms = qms.toList.sortBy(_.minute)
               val paxLoad = sortedCms.map {
-                case CrunchMinute(_, _, m, pl, _, _, _) => Pax(m, pl)
+                case CrunchMinute(_, _, m, pl, _, _, _, _, _, _, _) => Pax(m, pl)
               }.toIndexedSeq
               val workLoad = sortedCms.map {
-                case CrunchMinute(_, _, m, _, wl, _, _) => WL(m, wl)
+                case CrunchMinute(_, _, m, _, wl, _, _, _, _, _, _) => WL(m, wl)
               }
               (qn, (workLoad, paxLoad))
           }
@@ -204,10 +204,10 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         if (qms.nonEmpty) {
           val sortedCms = qms.toList.sortBy(_.minute)
           val desks = sortedCms.map {
-            case CrunchMinute(_, _, _, _, _, dr, _) => dr
+            case CrunchMinute(_, _, _, _, _, dr, _, _, _, _, _) => dr
           }.toIndexedSeq
           val waits = sortedCms.map {
-            case CrunchMinute(_, _, _, _, _, _, wt) => wt
+            case CrunchMinute(_, _, _, _, _, _, wt, _, _, _, _) => wt
           }
           (qn, Right(CrunchResult(startMillis, oneMinute, desks, waits)))
         } else {

@@ -360,8 +360,10 @@ object PassengerSplits {
 }
 
 trait WorkloadsApi {
-  def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]]
+  def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortLoads]]
 }
+
+case class PortLoads(loads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads])
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 

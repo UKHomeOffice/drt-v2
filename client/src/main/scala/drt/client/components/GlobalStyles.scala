@@ -1,6 +1,6 @@
 package drt.client.components
 
-import scalacss.Defaults._
+import scalacss.ProdDefaults._
 
 object GlobalStyles extends StyleSheet.Inline {
   import dsl._

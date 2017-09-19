@@ -95,7 +95,7 @@ object TerminalStaffing {
       <.h2("Movements"),
       if (terminalMovements.nonEmpty)
         <.ul(^.className := "list-unstyled", terminalMovements.map(movement => {
-          val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatch(RemoveStaffMovement(0, movement.uUID))))
+          val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventFromInput) => mp.dispatchCB(RemoveStaffMovement(0, movement.uUID))))
           <.li(remove, " ", MovementDisplay.toCsv(movement))
         }).toTagMod)
       else

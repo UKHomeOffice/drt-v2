@@ -332,15 +332,14 @@ class Application @Inject()(
   def getDesksAndQueuesCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     implicit val timeout: Timeout = Timeout(5 seconds)
 
-    val portCrunchResult: Future[Any] = crunchMinutesAtPointInTime(pointInTime)
+    val portCrunchResult: Future[CrunchMinutes] = crunchMinutesAtPointInTime(pointInTime)
 
     val pitMilliDate = MilliDate(pointInTime.toLong)
 
     val fileName = s"$terminalName-desks-and-queues-${pitMilliDate.getFullYear()}-${pitMilliDate.getMonth()}-${pitMilliDate.getDate()}T${pitMilliDate.getHours()}-${pitMilliDate.getMinutes()}"
 
     portCrunchResult.map {
-      case Some(cm: Set[CrunchMinute]) =>
-
+      case CrunchMinutes(cm) =>
         val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
         val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
         Result(
@@ -353,10 +352,12 @@ class Application @Inject()(
     }
   }
 
-  private def crunchMinutesAtPointInTime(pointInTime: String) = {
+  def crunchMinutesAtPointInTime(pointInTime: String): Future[CrunchMinutes] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetCrunchMinutes)
     val portCrunchResult = cacheActorRef ? query
-    portCrunchResult
+    portCrunchResult.map {
+      case cms@ CrunchMinutes(_) => cms
+    }
   }
 
 
@@ -419,3 +420,5 @@ class Application @Inject()(
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)
+
+case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])

@@ -3,13 +3,13 @@ package drt.client.services
 import diode.data.Ready
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.FlightsApi._
 import drt.shared.{CrunchResult, MilliDate}
 import utest._
 
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.util.Success
+import scala.language.postfixOps
 
 object StaffDeploymentCalculatorTests extends TestSuite {
   type TerminalQueueStaffDeployments = Map[TerminalName, QueueStaffDeployments]
@@ -56,7 +56,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
         (60000L, List((6, "T1"), (9, "T2"), (12, "T3"))),
         (120000L, List((9, "T1"), (12, "T2"), (15, "T3")))
       )
-      val staffAvailableAt: (MilliDate) => Int = (md: MilliDate) => 30
+      val staffAvailableAt: (MilliDate) => Int = (_: MilliDate) => 30
       val result = PortDeployment.terminalAutoDeployments(terminalRecsOverTime, staffAvailableAt)
       val expected = List(
         (0L, List((5, "T1"), (10, "T2"), (15, "T3"))),
@@ -100,8 +100,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val terminalQueueCrunchResults = Map(
         "T1" -> Map("eeaDesk" -> CrunchResult(startTime, oneHour, deskRecs, waitTimes))
       )
-      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(60)(0), List.fill(60)(100))))
-      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> Tuple2(List.fill(60)(0), List.fill(60)(100))))
+      val staffAvailable = (_: TerminalName) => (_: MilliDate) => 6
 
       val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
 
@@ -126,8 +126,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val waitTimes = List.fill(60)(10)
       val minMaxDesks = Map("T1" ->
         Map(
-          "eeaDesk" -> (List.fill(60)(0), List.fill(60)(100)),
-          "nonEea" -> (List.fill(60)(0), List.fill(60)(100))
+          "eeaDesk" -> Tuple2(List.fill(60)(0), List.fill(60)(100)),
+          "nonEea" -> Tuple2(List.fill(60)(0), List.fill(60)(100))
         )
       )
 
@@ -137,7 +137,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       "nonEea" -> CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))
       )
 
-      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+      val staffAvailable = (_: TerminalName) => (_: MilliDate) => 6
       val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
       val expected = Success(Map("T1" -> Map(
       "eeaDesk" -> Ready(DeskRecTimeSlots(List(
@@ -163,9 +163,9 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val terminalQueueCrunchResults = Map(
         "T1" -> Map("eeaDesk" -> CrunchResult(startTime, oneHour, deskRecs, waitTimes))
       )
-      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(24)(0), List.fill(24)(2))))
+      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> Tuple2(List.fill(24)(0), List.fill(24)(2))))
 
-      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 6
+      val staffAvailable = (_: TerminalName) => (_: MilliDate) => 6
       val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(
@@ -188,9 +188,9 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val terminalQueueCrunchResults = Map(
         "T1" -> Map("eeaDesk" -> CrunchResult(startTime, oneHour, deskRecs, waitTimes))
       )
-      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> (List.fill(24)(0), List.fill(24)(2))))
+      val minMaxDesks = Map("T1" -> Map("eeaDesk" -> Tuple2(List.fill(24)(0), List.fill(24)(2))))
 
-      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 1
+      val staffAvailable = (_: TerminalName) => (_: MilliDate) => 1
       val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(
@@ -213,8 +213,8 @@ object StaffDeploymentCalculatorTests extends TestSuite {
       val waitTimes = List.fill(60)(10)
       val minMaxDesks = Map("T1" ->
         Map(
-          "eeaDesk" -> (List.fill(60)(0), List.fill(60)(3)),
-          "nonEea" -> (List.fill(60)(0), List.fill(60)(3))
+          "eeaDesk" -> Tuple2(List.fill(60)(0), List.fill(60)(3)),
+          "nonEea" -> Tuple2(List.fill(60)(0), List.fill(60)(3))
         )
       )
 
@@ -224,7 +224,7 @@ object StaffDeploymentCalculatorTests extends TestSuite {
           "nonEea" -> CrunchResult(startTime, oneHour, nonEeaDeskRecs, waitTimes))
       )
 
-      val staffAvailable = (tn: TerminalName) => (m: MilliDate) => 100
+      val staffAvailable = (_: TerminalName) => (_: MilliDate) => 100
       val result = StaffDeploymentCalculator(staffAvailable, terminalQueueCrunchResults, minMaxDesks)
       val expected = Success(Map("T1" -> Map(
         "eeaDesk" -> Ready(DeskRecTimeSlots(List(
@@ -245,11 +245,11 @@ object StaffDeploymentCalculatorTests extends TestSuite {
     "Given min max desks then we should get a map of min and max desks for a queue at a timeslot" - {
       val minDesks =  0 to 23 toList
       val maxDesks =  0 to 23 toList
-      val minMaxDesks = Map("eeaDesk" -> (minDesks, maxDesks))
+      val minMaxDesks = Map("eeaDesk" -> Tuple2(minDesks, maxDesks))
       val time = 1491405172000L //3pm UTC
 
       val actual = StaffDeploymentCalculator.minMaxDesksForTime(minMaxDesks, time)
-      val expected = Map("eeaDesk" -> (16, 16))
+      val expected = Map("eeaDesk" -> Tuple2(16, 16))
 
       assert(actual == expected)
     }

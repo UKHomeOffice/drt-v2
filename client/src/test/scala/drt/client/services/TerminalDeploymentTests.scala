@@ -26,9 +26,9 @@ object TerminalDeploymentTests extends TestSuite  {
       List(SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.4875))),
     defaultProcessingTimes = Map(),
     minMaxDesksByTerminalQueue = Map("T1" -> Map(
-      "eeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "nonEeaDesk" -> (List.fill[Int](24)(1), List.fill[Int](24)(20)),
-      "eGate" -> (List.fill[Int](24)(1), List.fill[Int](24)(20))
+      "eeaDesk" -> Tuple2(List.fill[Int](24)(1), List.fill[Int](24)(20)),
+      "nonEeaDesk" -> Tuple2(List.fill[Int](24)(1), List.fill[Int](24)(20)),
+      "eGate" -> Tuple2(List.fill[Int](24)(1), List.fill[Int](24)(20))
     ))
   )
 

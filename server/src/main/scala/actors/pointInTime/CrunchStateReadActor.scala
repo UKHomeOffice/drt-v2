@@ -2,7 +2,7 @@ package actors.pointInTime
 
 import actors.{CrunchStateActor, GetFlights, GetPortWorkload}
 import akka.persistence.{RecoveryCompleted, _}
-import controllers.GetTerminalCrunch
+import controllers.{CrunchMinutes, GetTerminalCrunch}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
@@ -68,7 +68,10 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
 
     case GetCrunchMinutes =>
       log.info("Sending crunch minutes")
-      sender() ! state.map(_.crunchMinutes)
+      state.map(_.crunchMinutes) match {
+        case Some(cms) => sender() ! CrunchMinutes(cms)
+        case None => CrunchMinutes(Set())
+      }
     case other =>
       log.info(s"Sent an unknown message: $other")
   }

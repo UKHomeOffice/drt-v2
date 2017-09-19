@@ -9,6 +9,7 @@ import spray.caching.{Cache, LruCache}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 case class CachableActorQuery(props: Props, query: Any)
 

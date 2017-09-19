@@ -11,14 +11,14 @@ import controllers.Deskstats.{PortDeskStats, QueueDeskStats, TerminalDeskStats}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.DateTimeZone
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.DeskStatsMessage._
 import services.SDate
-import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 case class GetActualDeskStats()
@@ -110,7 +110,7 @@ class DeskstatsActor extends PersistentActor with ActorLogging {
 }
 
 object Deskstats {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   type PortDeskStats = Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]
   type QueueDeskStats = Map[Long, DeskStat]
@@ -147,7 +147,7 @@ object Deskstats {
   def blackjackDeskstats(blackjackUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
     val sc = SSLContext.getInstance("SSL")
     sc.init(null, Array(new NaiveTrustManager), new java.security.SecureRandom())
-    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
+    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory)
     val backupSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory
 
     log.info(s"DeskStats: requesting blackjack CSV from $blackjackUrl")
@@ -164,7 +164,7 @@ object Deskstats {
   def csvLinesUntil(csvContent: Source, until: Long): String = {
     csvContent.getLines().takeWhile(line => {
       val cells: Seq[String] = parseCsvLine(line)
-      cells(0) match {
+      cells.head match {
         case "device" => true
         case _ =>
           val statsDate: SDateLike = parseSDate(cells)
@@ -186,23 +186,22 @@ object Deskstats {
   }
 
   def desksForQueueByMillis(queueName: String, dateIndex: Int, timeIndex: Int, deskIndex: Int, waitTimeIndex: Int, rows: Seq[Seq[String]]): Map[Long, DeskStat] = {
-    rows.map {
-      case columnData: Seq[String] =>
-        val desksOption = Try {
-          columnData(deskIndex).toInt
-        } match {
-          case Success(d) => Option(d)
-          case Failure(f) => None
-        }
-        val waitTimeOption = Try {
-          log.debug(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: ${columnData}")
-          val Array(hours, minutes) = columnData(waitTimeIndex).split(":").map(_.toInt)
-          (hours * 60) + minutes
-        } match {
-          case Success(d) => Option(d)
-          case Failure(f) => None
-        }
-        parseSDate(columnData).millisSinceEpoch -> DeskStat(desksOption, waitTimeOption)
+    rows.map { columnData: Seq[String] =>
+      val desksOption = Try {
+        columnData(deskIndex).toInt
+      } match {
+        case Success(d) => Option(d)
+        case Failure(_) => None
+      }
+      val waitTimeOption = Try {
+        log.debug(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: $columnData")
+        val Array(hours, minutes) = columnData(waitTimeIndex).split(":").map(_.toInt)
+        (hours * 60) + minutes
+      } match {
+        case Success(d) => Option(d)
+        case Failure(_) => None
+      }
+      parseSDate(columnData).millisSinceEpoch -> DeskStat(desksOption, waitTimeOption)
     }.toMap
   }
 
@@ -223,17 +222,17 @@ object Deskstats {
     val dataByTerminal = parsedRows.groupBy(_ (columnIndices("terminal")))
     val dataByTerminalAndQueue =
       dataByTerminal.map {
-        case (terminal, rows) =>
+        case (terminal, rs) =>
           terminal -> queueColumns.map {
             case (queueName, desksAndWaitIndexes) =>
-              queueName -> desksForQueueByMillis(queueName, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rows)
+              queueName -> desksForQueueByMillis(queueName, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rs)
           }
       }
 
     dataByTerminalAndQueue
   }
 
-  def queueColumnIndexes(headings: Seq[String]) = {
+  def queueColumnIndexes(headings: Seq[String]): Map[QueueName, Map[QueueName, Int]] = {
     Map(
       Queues.EeaDesk -> Map(
         "desks" -> headings.indexOf("EEA desks open"),
