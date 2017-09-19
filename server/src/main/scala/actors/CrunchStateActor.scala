@@ -27,11 +27,11 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
-      log.info(s"Recovery received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
+      log.info(s"Recovery: received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
       setStateFromSnapshot(snapshot)
 
     case cdm: CrunchDiffMessage =>
-      log.info(s"Recovery received CrunchDiffMessage")
+      log.info(s"Recovery: received CrunchDiffMessage")
       val newState = stateFromDiff(cdm, state)
       newState match {
         case None => log.info(s"Recovery: state is None")
@@ -129,7 +129,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   override def receiveCommand: Receive = {
     case cs@CrunchState(_, _, _, _) =>
-      log.info(s"received CrunchState. storing")
+      log.info(s"Received CrunchState. storing")
       updateStateFromCrunchState(cs)
       saveSnapshotAtInterval(cs)
 
