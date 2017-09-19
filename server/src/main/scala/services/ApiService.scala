@@ -2,12 +2,12 @@ package services
 
 import java.util.UUID
 
-import actors.GetPortWorkload
+import actors.{CachableActorQuery, GetPortWorkload}
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, GetTerminalCrunch, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.FlightsApi._
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
@@ -104,13 +104,16 @@ abstract class ApiService(val airportConfig: AirportConfig)
   def crunchStateActor: AskableActorRef
   def actorSystem: ActorSystem
 
-  override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
-    val actor: AskableActorRef = if (pointInTime > 0) {
-      val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
-      actorSystem.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
-    } else crunchStateActor
+  def askableCacheActorRef: AskableActorRef
 
-    val workloadsFuture = actor ? GetPortWorkload
+  override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortPaxAndWorkLoads[QueuePaxAndWorkLoads]]] = {
+    val workloadsFuture = if (pointInTime > 0) {
+      val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetPortWorkload)
+      askableCacheActorRef ? query
+    } else {
+      crunchStateActor ? GetPortWorkload
+    }
+
 
     workloadsFuture.recover {
       case e: Throwable =>

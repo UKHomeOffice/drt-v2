@@ -18,7 +18,7 @@ import com.typesafe.config.ConfigFactory
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import play.api.http.HttpEntity
 import services.Crunch.{CrunchMinute, midnightThisMorning}
-import services.RunnableCrunchGraph
+import services.{RunnableCrunchGraph, SDate}
 
 import scala.collection.immutable.Map
 //import controllers.Deskstats.log
@@ -228,6 +228,8 @@ class Application @Inject()(
 
   log.info(s"Application using airportConfig $airportConfig")
 
+  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
     val threeMinutesInterval = 3 * 60 * 1000
 
@@ -256,21 +258,29 @@ class Application @Inject()(
       val futureDesks = actor ? GetActualDeskStats()
       futureDesks.map(_.asInstanceOf[ActualDeskStats])
     }
+
+    override def askableCacheActorRef: AskableActorRef = cacheActorRef
+
+    override def crunchStateActor: AskableActorRef = ctrl.crunchStateActor
   }
 
   trait CrunchFromCrunchState {
-    val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
 
     def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[TerminalCrunchResult] = {
-      val actor: AskableActorRef = if (pointInTime > 0) {
-        val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
-        system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
-      } else crunchStateActor
 
-      val terminalCrunchResult = actor ? GetTerminalCrunch(terminalName)
+      if (pointInTime > 0) {
+        val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetTerminalCrunch(terminalName))
+        val terminalCrunchResult = cacheActorRef ? query
 
-      terminalCrunchResult.map {
-        case tcr@ TerminalCrunchResult(_) => tcr
+        terminalCrunchResult.map {
+          case tcr@ TerminalCrunchResult(_) => tcr
+        }
+      } else {
+        val crunchStateActor: AskableActorRef = ctrl.crunchStateActor
+        val terminalCrunchResult = crunchStateActor ? GetTerminalCrunch(terminalName)
+        terminalCrunchResult.map {
+          case tcr@ TerminalCrunchResult(_) => tcr
+        }
       }
     }
   }
@@ -298,7 +308,7 @@ class Application @Inject()(
       val crunchStateReadActor: AskableActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
 
       log.info(s"asking $crunchStateReadActor for flightsWithSplits")
-      val flights = crunchStateReadActor.ask(GetFlights)(Timeout(5 seconds))
+      val flights = flightsAtTimestamp(pointInTime.toLong)
 
       flights.recover {
         case e: Throwable =>
@@ -322,13 +332,10 @@ class Application @Inject()(
   def getDesksAndQueuesCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     implicit val timeout: Timeout = Timeout(5 seconds)
 
-    val actor: AskableActorRef = system.actorOf(
-      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
-      "crunchStateReadActor" + UUID.randomUUID().toString
-    )
+    val portCrunchResult: Future[Any] = crunchMinutesAtPointInTime(pointInTime)
 
     val pitMilliDate = MilliDate(pointInTime.toLong)
-    val portCrunchResult = actor ? GetCrunchMinutes
+
     val fileName = s"$terminalName-desks-and-queues-${pitMilliDate.getFullYear()}-${pitMilliDate.getMonth()}-${pitMilliDate.getDate()}T${pitMilliDate.getHours()}-${pitMilliDate.getMinutes()}"
 
     portCrunchResult.map {
@@ -346,16 +353,26 @@ class Application @Inject()(
     }
   }
 
-  def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
-    implicit val timeout: Timeout = Timeout(10 seconds)
+  private def crunchMinutesAtPointInTime(pointInTime: String) = {
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetCrunchMinutes)
+    val portCrunchResult = cacheActorRef ? query
+    portCrunchResult
+  }
 
-    val actor: AskableActorRef = system.actorOf(
-      Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues),
-      "crunchStateReadActor" + UUID.randomUUID().toString
-    )
+
+  def flightsAtTimestamp(millis: MillisSinceEpoch) = {
+    implicit val timeout: Timeout = Timeout(5 seconds)
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(millis), airportConfig.queues), GetFlights)
+    val flights = cacheActorRef ? query
+    flights
+  }
+
+  def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
+
+    implicit val timeout: Timeout = Timeout(5 seconds)
 
     val potMillidate = MilliDate(pointInTime.toLong)
-    val flights = actor ? GetFlights
+    val flights = flightsAtTimestamp(pointInTime.toLong)
     val fileName = s"$terminalName-arrivals-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
 
     flights.map {
