@@ -319,28 +319,6 @@ class Application @Inject()(
     Ok(views.html.index("DRT - BorderForce"))
   }
 
-//  def splits(fromDate: String, toDate: String): Action[AnyContent] = Action.async {
-//    implicit request =>
-//      def manifestPassengerToCSV(m: VoyageManifest, p: PassengerInfoJson) = {
-//        s""""${m.EventCode}","${m.ArrivalPortCode}","${m.DeparturePortCode}","${m.VoyageNumber}","${m.CarrierCode}","${m.ScheduledDateOfArrival}","${m.ScheduledTimeOfArrival}","${p.NationalityCountryCode.getOrElse("")}","${p.DocumentType.getOrElse("")}","${p.EEAFlag}","${p.InTransitFlag}","${p.DocumentIssuingCountryCode}","${p.DisembarkationPortCode.getOrElse("")}","${p.DisembarkationPortCountryCode.getOrElse("")}","${p.Age.getOrElse("")}""""
-//      }
-//
-//      def headings = """"Event Code","Arrival Port Code","Departure Port Code","Voyage Number","Carrier Code","Scheduled Date","Scheduled Time","Nationality Country Code","Document Type","EEA Flag","In Transit Flag","Document Issuing Country Code","Disembarkation Port Code","Disembarkation Country Code","Age""""
-//
-//      def passengerCsvLines(result: List[VoyageManifest]) = {
-//        for {
-//          manifest <- result
-//          passenger <- manifest.PassengerList
-//        } yield
-//          manifestPassengerToCSV(manifest, passenger)
-//      }
-//
-//      val voyageManifestsFuture = ctrl.flightPassengerSplitReporter ? ReportVoyagePaxSplitBetween(SDate(fromDate), SDate(toDate))
-//      voyageManifestsFuture.map {
-//        case result: List[VoyageManifest] => Ok(headings + "\n" + passengerCsvLines(result).mkString("\n"))
-//      }
-//  }
-
   def getDesksAndQueuesCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -349,14 +327,14 @@ class Application @Inject()(
       "crunchStateReadActor" + UUID.randomUUID().toString
     )
 
-    val potMillidate = MilliDate(pointInTime.toLong)
+    val pitMilliDate = MilliDate(pointInTime.toLong)
     val portCrunchResult = actor ? GetCrunchMinutes
-    val fileName = s"$terminalName-desks-and-queues-${potMillidate.getFullYear()}-${potMillidate.getMonth()}-${potMillidate.getDate()}T${potMillidate.getHours()}-${potMillidate.getMinutes()}"
+    val fileName = s"$terminalName-desks-and-queues-${pitMilliDate.getFullYear()}-${pitMilliDate.getMonth()}-${pitMilliDate.getDate()}T${pitMilliDate.getHours()}-${pitMilliDate.getMinutes()}"
 
     portCrunchResult.map {
       case Some(cm: Set[CrunchMinute]) =>
 
-        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == potMillidate.ddMMyyString)
+        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
         val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
