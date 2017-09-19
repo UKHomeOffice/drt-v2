@@ -16,32 +16,26 @@ message FlightLastKnownPaxMessage {
 }
 
 message FlightMessage {
-    optional string SchDT_OLD = 20;
-    optional string EstDT_OLD = 5;
-    optional string ActDT_OLD = 4;
-    optional string EstChoxDT_OLD = 2;
-    optional string ActChoxDT_OLD = 6;
-
     optional string Operator = 1;
-    optional string Gate = 3;
-    optional string Stand = 7;
-    optional string Status = 8;
-    optional int32 MaxPax = 9;
-    optional int32 ActPax = 10;
-    optional int32 TranPax = 11;
-    optional string RunwayID = 12;
-    optional string BaggageReclaimId = 13;
-    optional int32 FlightID = 14;
-    optional string AirportID = 15;
-    optional string Terminal = 16;
-    optional string ICAO = 17;
-    optional string IATA = 18;
-    optional string Origin = 19;
-    optional int64 PcpTime = 21;
-    optional int64 Scheduled = 22;
-    optional int64 Estimated = 23;
-    optional int64 Touchdown = 24;
-    optional int64 EstimatedChox = 25;
-    optional int64 ActualChox = 26;
-    optional int32 LastKnownPax = 27;
+    optional string Gate = 2;
+    optional string Stand = 3;
+    optional string Status = 4;
+    optional int32 MaxPax = 5;
+    optional int32 ActPax = 6;
+    optional int32 TranPax = 7;
+    optional string RunwayID = 8;
+    optional string BaggageReclaimId = 9;
+    optional int32 FlightID = 10;
+    optional string AirportID = 11;
+    optional string Terminal = 12;
+    optional string ICAO = 13;
+    optional string IATA = 14;
+    optional string Origin = 15;
+    optional int64 PcpTime = 16;
+    optional int64 Scheduled = 17;
+    optional int64 Estimated = 18;
+    optional int64 Touchdown = 19;
+    optional int64 EstimatedChox = 20;
+    optional int64 ActualChox = 21;
+    optional int32 LastKnownPax = 22;
 }
