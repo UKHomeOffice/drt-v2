@@ -1,6 +1,5 @@
-package services
+package services.crunch
 
-import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -8,8 +7,9 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch._
+import services.SDate
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable.{List, Seq}
@@ -54,7 +54,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
         val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+        val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
           runCrunchGraph(
             procTimes = procTimes,
             testProbe = testProbe,

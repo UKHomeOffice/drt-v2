@@ -1,18 +1,15 @@
-package services
+package services.crunch
 
-import akka.NotUsed
-import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch.{CrunchState, getLocalLastMidnight}
+import services.SDate
 
 import scala.collection.immutable.{List, Seq}
 
@@ -39,7 +36,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         eeaMachineReadableToEGate -> 35d / 60)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
@@ -76,7 +73,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       )))
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch
@@ -107,7 +104,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       )
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
@@ -150,7 +147,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 35d / 60)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+        val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
           runCrunchGraph(
             procTimes = procTimes,
             testProbe = testProbe,
@@ -188,7 +185,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 //          eeaMachineReadableToEGate -> 35d / 60)
 //
 //        val testProbe = TestProbe()
-//        val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+//        val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
 //          runCrunchGraph(
 //            procTimes = procTimes,
 //            testProbe = testProbe,

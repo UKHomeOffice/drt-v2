@@ -39,6 +39,8 @@ object VoyageManifestParser {
     val CheckIn = "CI"
   }
 
+  case class VoyageManifests(manifests: Set[VoyageManifest])
+
   case class VoyageManifest(EventCode: String,
                             ArrivalPortCode: String,
                             DeparturePortCode: String,

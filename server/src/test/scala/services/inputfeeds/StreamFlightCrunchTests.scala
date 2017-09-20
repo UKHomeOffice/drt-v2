@@ -106,6 +106,7 @@ object TestCrunchConfig {
 
   case class TestContext(override val system: ActorSystem) extends
     TestKit(system) with ImplicitSender {
+    import scala.language.postfixOps
     implicit val timeout: Timeout = Timeout(5 seconds)
   }
 

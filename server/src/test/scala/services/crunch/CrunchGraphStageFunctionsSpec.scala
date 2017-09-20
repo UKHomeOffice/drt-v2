@@ -1,4 +1,4 @@
-package services
+package services.crunch
 
 import actors._
 import akka.actor._

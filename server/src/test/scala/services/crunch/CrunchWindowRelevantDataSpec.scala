@@ -1,7 +1,6 @@
-package services
+package services.crunch
 
 import actors.{GetFlights, GetPortWorkload}
-import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -12,8 +11,9 @@ import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.Crunch.{CrunchRequest, CrunchState}
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import services.Crunch.CrunchState
+import services.SDate
 
 import scala.collection.immutable.List
 import scala.concurrent.Await
@@ -42,7 +42,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
@@ -79,7 +79,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val minutesToCrunch = 120
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
@@ -102,7 +102,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
 
-      (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
+      (wl.length, wl.map(_.time).toSet) === Tuple2(expectedLength, expectedWl.toSet)
     }
 
     "Given two flights one reaching PCP after the crunch window and one during " +
@@ -121,7 +121,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val minutesToCrunch = 120
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,
@@ -144,7 +144,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
 
-      (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
+      (wl.length, wl.map(_.time).toSet) === Tuple2(expectedLength, expectedWl.toSet)
     }
 
     "Given two flights one reaching PCP before the crunch start time and one after " +
@@ -164,7 +164,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val testProbe = TestProbe()
       val minutesToCrunch = 120
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           testProbe = testProbe,

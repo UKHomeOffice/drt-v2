@@ -18,7 +18,7 @@ import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -34,8 +34,8 @@ case class UpdateLatestZipFilename(filename: String)
 
 case object GetLatestZipFilename
 
-class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManifestsActor: ActorRef) extends GraphStage[SourceShape[Set[VoyageManifest]]] {
-  val out: Outlet[Set[VoyageManifest]] = Outlet[Set[VoyageManifest]]("VoyageManifests.out")
+class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManifestsActor: ActorRef) extends GraphStage[SourceShape[VoyageManifests]] {
+  val out: Outlet[VoyageManifests] = Outlet[VoyageManifests]("VoyageManifests.out")
   override val shape = SourceShape(out)
 
   val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
@@ -92,7 +92,7 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
                   log.info(s"No manifests to push")
                 case Some(manifests) =>
                   log.info(s"Pushing ${manifests.size} manifests")
-                  push(out, manifests)
+                  push(out, VoyageManifests(manifests))
                   manifestsToPush = None
               }
               fetchAndPushManifests(maxFilename)

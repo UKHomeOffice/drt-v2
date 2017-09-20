@@ -13,7 +13,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.CSVPassengerSplitsProvider.log
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.{Load, MillisSinceEpoch}
@@ -34,10 +34,10 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
                        crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning,
                        minutesToCrunch: Int
                       )
-  extends GraphStage[FanInShape2[Flights, Set[VoyageManifest], CrunchState]] {
+  extends GraphStage[FanInShape2[Flights, VoyageManifests, CrunchState]] {
 
   val inFlights: Inlet[Flights] = Inlet[Flights]("Flights.in")
-  val inSplits: Inlet[Set[VoyageManifest]] = Inlet[Set[VoyageManifest]]("Splits.in")
+  val inSplits: Inlet[VoyageManifests] = Inlet[VoyageManifests]("Splits.in")
   val out: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
   override val shape = new FanInShape2(inFlights, inSplits, out)
 
@@ -113,10 +113,10 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
     setHandler(inSplits, new InHandler {
       override def onPush(): Unit = {
-        val manifests = grab(inSplits)
+        val vms = grab(inSplits)
 
         log.info(s"We got a manifest")
-        val updatedFlights = updateFlightsWithManifests(manifests, flightsByFlightId)
+        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights

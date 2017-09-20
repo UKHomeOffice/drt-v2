@@ -1,17 +1,15 @@
-package services
+package services.crunch
 
-import akka.NotUsed
-import akka.actor._
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch._
+import services.SDate
 
 import scala.collection.immutable.{List, Seq}
 
@@ -42,7 +40,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(
           procTimes = procTimes,
           slaByQueue = slaByQueue,

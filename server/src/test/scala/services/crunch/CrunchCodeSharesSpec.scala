@@ -1,20 +1,17 @@
-package services
+package services.crunch
 
-import akka.NotUsed
-import akka.actor._
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import drt.shared.PaxTypes.EeaMachineReadable
+import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch._
+import services.SDate
 
-import scala.concurrent.duration._
 import scala.collection.immutable.{List, Seq}
+import scala.concurrent.duration._
 
 
 class CrunchCodeSharesSpec extends CrunchTestLike {
@@ -32,7 +29,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
@@ -64,7 +61,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
@@ -103,7 +100,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
+      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
         runCrunchGraph(procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,

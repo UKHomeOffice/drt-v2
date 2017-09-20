@@ -9,7 +9,7 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
@@ -354,13 +354,13 @@ object RunnableCrunchGraph {
 
   def apply(
              flightsSource: Source[Flights, _],
-             voyageManifestsSource: Source[Set[VoyageManifest], _],
+             voyageManifestsSource: Source[VoyageManifests, _],
              cruncher: CrunchGraphStage,
              crunchStateActor: ActorRef): RunnableGraph[NotUsed] =
     RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
       val crunchSink = Sink.actorRef(crunchStateActor, "completed")
       val F: Outlet[Flights] = builder.add(flightsSource).out
-      val M: Outlet[Set[VoyageManifest]] = builder.add(voyageManifestsSource).out
+      val M: Outlet[VoyageManifests] = builder.add(voyageManifestsSource).out
 
       val CR = builder.add(cruncher)
       val G = builder.add(crunchSink)

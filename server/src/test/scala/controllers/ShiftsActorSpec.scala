@@ -8,15 +8,12 @@ import akka.pattern._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import drt.shared.MilliDate
-import org.joda.time.format.DateTimeFormat
-import org.specs2.mutable.{After, Before, Specification}
-import org.specs2.specification.AfterAll
+import org.specs2.mutable.{After, Specification}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.Try
+import scala.language.reflectiveCalls
 
 object PersistenceCleanup {
   def deleteJournal(dbLocation: String): Unit = {
@@ -48,6 +45,7 @@ abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) ex
   def shutDownActorSystem = {
     //TODO figure out how to wait for the actor to finish saving rather than this nasty timer.
     Thread.sleep(200)
+    import scala.language.postfixOps
     Await.ready(system.terminate(), 2 second)
     Await.ready(system.whenTerminated, 2 second)
   }
@@ -140,15 +138,15 @@ class ShiftsActorSpec extends Specification {
     }
     "get start and end date millis from the startDate, endTime and startTime when endTime is later than startTime" in {
       val result = ShiftsMessageParser.startAndEndTimestamps("20/01/17", "10:00", "11:00")
-      result === (Some(1484906400000L), Some(1484910000000L))
+      result === Tuple2(Some(1484906400000L), Some(1484910000000L))
     }
     "get start and end date millis from the startDate, endTime and startTime when endTime is earlier than startTime" in {
       val result = ShiftsMessageParser.startAndEndTimestamps("20/01/17", "10:00", "09:00")
-      result === (Some(1484906400000L), Some(1484989200000L))
+      result === Tuple2(Some(1484906400000L), Some(1484989200000L))
     }
     "get start and end date millis from the startDate, endTime and startTime given invalid data" in {
       val result = ShiftsMessageParser.startAndEndTimestamps("jkhsdfjhdsf", "10:00", "09:00")
-      result === (None, None)
+      result === Tuple2(None, None)
     }
     "convert timestamp to dateString" in {
       val timestamp = 1484906400000L

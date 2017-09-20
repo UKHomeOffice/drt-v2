@@ -1,4 +1,4 @@
-package services
+package services.crunch
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
@@ -12,9 +12,10 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
+import services.{CrunchGraphStage, RunnableCrunchGraph, SDate}
 
 import scala.collection.immutable.{List, Seq, Set}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -60,7 +61,7 @@ class CrunchTestLike
                      pcpArrivalTime: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch),
                      crunchStartDateProvider: () => MillisSinceEpoch,
                      minutesToCrunch: Int = 30
-                    )(flightSets: List[Flights], manifestSets: List[Set[VoyageManifest]]) = {
+                    )(flightSets: List[Flights], manifestSets: List[VoyageManifests]) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -87,6 +88,7 @@ class CrunchTestLike
       crunchFlow,
       crunchStateActor
     ).run()(actorMaterializer)
+
     val askableCrunchStateActor: AskableActorRef = crunchStateActor
     askableCrunchStateActor
   }

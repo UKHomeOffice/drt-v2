@@ -15,7 +15,7 @@ import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import play.api.http.HttpEntity
 import services.Crunch.{CrunchMinute, midnightThisMorning}
 import services.{RunnableCrunchGraph, SDate}
@@ -126,7 +126,7 @@ trait SystemActors {
   val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
   val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
 
-  val manifestsSource: Source[Set[VoyageManifest], NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
+  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
 
   RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),
