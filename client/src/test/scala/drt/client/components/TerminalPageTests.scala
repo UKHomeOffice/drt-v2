@@ -95,7 +95,7 @@
 //    )
 //
 //    def withSplits(flights: Seq[Arrival]) = {
-//      FlightsWithSplits(flights.map(ApiFlightWithSplits(_, Nil)).toList)
+//      FlightsWithSplits(flights.map(ApiFlightWithSplits(_, Set())).toList)
 //    }
 //
 //    val airportConfig = AirportConfig(

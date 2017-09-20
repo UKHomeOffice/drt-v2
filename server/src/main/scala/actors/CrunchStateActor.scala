@@ -254,7 +254,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = {
     ApiFlightWithSplits(
       FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
-      fm.splits.map(sm => splitMessageToApiSplits(sm)).toList
+      fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet
     )
   }
 }
@@ -266,7 +266,7 @@ object SplitsConversion {
         PaxType(ptqcm.paxType.getOrElse("")),
         ptqcm.queueType.getOrElse(""),
         ptqcm.paxValue.getOrElse(0d)
-      )).toList,
+      )).toSet,
       sm.source.getOrElse(""),
       SplitStyle(sm.style.getOrElse(""))
     )

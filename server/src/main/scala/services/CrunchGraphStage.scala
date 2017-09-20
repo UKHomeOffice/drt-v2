@@ -273,24 +273,27 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       crunchResults
     }
 
-    def terminalAndHistoricSplits(fs: Arrival): List[ApiSplits] = {
-      val historical: Option[List[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
-      val portDefault: Seq[ApiPaxTypeAndQueueCount] = portSplits.splits.map {
+    def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {
+      val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
+      val splitRatios: Set[SplitRatio] = portSplits.splits.toSet
+      val portDefault: Set[ApiPaxTypeAndQueueCount] = splitRatios.map {
         case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
       }
 
-      val defaultSplits = List(ApiSplits(portDefault.toList.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, Percentage))
+      val defaultSplits = Set(ApiSplits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, Percentage))
 
       historical match {
         case None => defaultSplits
-        case Some(h) => ApiSplits(h, SplitSources.Historical, Percentage) :: defaultSplits
+        case Some(h) => Set(ApiSplits(h, SplitSources.Historical, Percentage)) ++ defaultSplits
       }
     }
 
-    def historicalSplits(fs: Arrival): Option[List[ApiPaxTypeAndQueueCount]] = {
-      csvSplitsProvider(fs).map(ratios => ratios.splits.map {
-        case SplitRatio(ptqc, ratio) =>
-          ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100)
+    def historicalSplits(fs: Arrival): Option[Set[ApiPaxTypeAndQueueCount]] = {
+      csvSplitsProvider(fs).map(ratios => {
+        val splitRatios: Set[SplitRatio] = ratios.splits.toSet
+        splitRatios.map {
+          case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100)
+        }
       })
     }
 
@@ -334,7 +337,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
         }.getOrElse(defaultPct)
     }
 
-    def applyEgatesSplits(ptaqc: List[ApiPaxTypeAndQueueCount], egatePct: Double): List[ApiPaxTypeAndQueueCount] = {
+    def applyEgatesSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], egatePct: Double): Set[ApiPaxTypeAndQueueCount] = {
       ptaqc.flatMap {
         case s@ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count) =>
           val eeaDeskPax = Math.round(count * (1 - egatePct)).toInt
@@ -344,7 +347,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       }
     }
 
-    def applyFastTrackSplits(ptaqc: List[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[ApiPaxTypeAndQueueCount] = {
+    def applyFastTrackSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): Set[ApiPaxTypeAndQueueCount] = {
       val results = ptaqc.flatMap {
         case s@ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
           val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
@@ -366,14 +369,15 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
         case _ => false
       }
       val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
-      val apiPaxTypeAndQueueCounts: List[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
+      val sptqc: Set[SplitsPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
+      val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = sptqc.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
       val csvSplits = csvSplitsProvider(f.apiFlight)
       val egatePercentage: Double = egatePercentageFromSplit(csvSplits, 0.6)
       val fastTrackPercentages: FastTrackPercentages = fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
       val ptqcWithCsvEgates = applyEgatesSplits(apiPaxTypeAndQueueCounts, egatePercentage)
       val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
-      val splitsFromManifest = ApiSplits(ptqcwithCsvEgatesFastTrack, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
-      val updatedFlight = f.copy(splits = splitsFromManifest :: nonApiSplits)
+      val splitsFromManifest = Set(ApiSplits(ptqcwithCsvEgatesFastTrack, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers))
+      val updatedFlight = f.copy(splits = splitsFromManifest ++ nonApiSplits)
       updatedFlight
     }
   }

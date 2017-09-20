@@ -3,11 +3,12 @@ package drt.shared
 import java.util.Date
 
 import drt.shared.FlightsApi._
-import drt.shared.PassengerSplits.{FlightNotFound, SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 
 import scala.collection.immutable._
 import scala.concurrent.Future
+import scala.util.matching.Regex
 
 
 object DeskAndPaxTypeCombinations {
@@ -19,17 +20,17 @@ object DeskAndPaxTypeCombinations {
 }
 
 case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
-  def compare(that: MilliDate) = millisSinceEpoch.compare(that.millisSinceEpoch)
+  def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 }
 
 object FlightParsing {
-  val iataRe = """([A-Z0-9]{2})(\d{1,4})(\w)?""".r
-  val icaoRe = """([A-Z]{2,3})(\d{1,4})(\w)?""".r
+  val iataRe: Regex = """([A-Z0-9]{2})(\d{1,4})(\w)?""".r
+  val icaoRe: Regex = """([A-Z]{2,3})(\d{1,4})(\w)?""".r
 
   def parseIataToCarrierCodeVoyageNumber(iata: String): Option[(String, String)] = {
     iata match {
-      case iataRe(carriercode, voyageNumber, suffix) => Option((carriercode, voyageNumber))
-      case icaoRe(carriercode, voyageNumber, suffix) => Option((carriercode, voyageNumber))
+      case iataRe(carriercode, voyageNumber, _) => Option((carriercode, voyageNumber))
+      case icaoRe(carriercode, voyageNumber, _) => Option((carriercode, voyageNumber))
       case what => None
     }
   }
@@ -37,11 +38,11 @@ object FlightParsing {
 
 
 sealed trait SplitStyle {
-  def name = getClass.getSimpleName
+  def name: String = getClass.getSimpleName
 }
 
 object SplitStyle {
-  def apply(splitStyle: String) = splitStyle match {
+  def apply(splitStyle: String): SplitStyle = splitStyle match {
     case "PaxNumbers$" => PaxNumbers
     case "Percentage$" => Percentage
     case _ => UndefinedSplitStyle
@@ -54,18 +55,18 @@ case object Percentage extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class ApiSplits(splits: List[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
-  lazy val totalExcludingTransferPax = ApiSplits.totalExcludingTransferPax(splits)
-  lazy val totalPax = ApiSplits.totalPax(splits)
+case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
+  lazy val totalExcludingTransferPax: Double = ApiSplits.totalExcludingTransferPax(splits)
+  lazy val totalPax: Double = ApiSplits.totalPax(splits)
 }
 
 object ApiSplits {
-  def totalExcludingTransferPax(splits: List[ApiPaxTypeAndQueueCount]) = splits.filter(s => s.queueType != Queues.Transfer).map(_.paxCount).sum
+  def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).map(_.paxCount).sum
 
-  def totalPax(splits: List[ApiPaxTypeAndQueueCount]) = splits.map(_.paxCount).sum
+  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.map(_.paxCount).sum
 }
 
-case class ApiFlightWithSplits(apiFlight: Arrival, splits: List[ApiSplits])
+case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits])
 
 case class FlightsNotReady()
 
@@ -98,14 +99,14 @@ case class Arrival(
 }
 
 object Arrival {
-  def summaryString(arrival: Arrival) = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
+  def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
 
     flightCode match {
       case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"${operator}${flightNumber.toInt}%04d${suffix}"
+        f"$operator${flightNumber.toInt}%04d$suffix"
       case _ => flightCode
     }
   }
@@ -136,8 +137,8 @@ case class ApiFlight(
                       SchDT: String,
                       PcpTime: Long) {
 
-  lazy val ICAO = ApiFlight.standardiseFlightCode(rawICAO)
-  lazy val IATA = ApiFlight.standardiseFlightCode(rawIATA)
+  lazy val ICAO: String = ApiFlight.standardiseFlightCode(rawICAO)
+  lazy val IATA: String = ApiFlight.standardiseFlightCode(rawIATA)
 
 
 }
@@ -149,7 +150,7 @@ object ApiFlight {
 
     flightCode match {
       case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"${operator}${flightNumber.toInt}%04d${suffix}"
+        f"$operator${flightNumber.toInt}%04d$suffix"
       case _ => flightCode
     }
   }
@@ -189,7 +190,7 @@ trait SDateLike {
 
 
 object CrunchResult {
-  def empty = CrunchResult(0, 0, Vector[Int](), Nil)
+  def empty = CrunchResult(0, 0, Vector[Int](), List())
 }
 
 

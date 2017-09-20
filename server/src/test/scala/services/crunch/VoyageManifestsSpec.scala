@@ -1,7 +1,6 @@
 package services.crunch
 
 import akka.actor.Cancellable
-import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -9,7 +8,6 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
@@ -58,19 +56,18 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ms.cancel
     fs.cancel
 
-    val expectedSplits = List(
-      ApiSplits(List(
+    val expectedSplits = Set(
+      ApiSplits(Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0)), TerminalAverage, Percentage),
-      ApiSplits(List(
+      ApiSplits(Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0),
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0)), ApiSplitsWithCsvPercentage, PaxNumbers)
     )
-    val expected = Set(ApiFlightWithSplits(flight, expectedSplits))
     val splitsSet = flights.head match {
-      case ApiFlightWithSplits(_, s) => s.toSet
+      case ApiFlightWithSplits(_, s) => s
     }
 
-    splitsSet === expectedSplits.toSet
+    splitsSet === expectedSplits
   }
 
   //  "Given 2 DQ messages for a flight, where the DC message arrives after the CI message " +

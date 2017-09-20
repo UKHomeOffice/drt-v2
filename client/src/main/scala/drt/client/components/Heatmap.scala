@@ -221,7 +221,7 @@ object Heatmap {
   implicit val doubleReuse = Reusability.double(0.01)
   implicit val doubleSeqReuse = Reusability.indexedSeq[IndexedSeq, Double]
   implicit val seriesReuse = Reusability.caseClass[Series]
-  implicit val propsReuse = Reusability.caseClassExceptDebug[Props]('valueDisplayFormatter, 'scaleFunction)
+  implicit val propsReuse = Reusability.caseClassExcept[Props]('valueDisplayFormatter, 'scaleFunction)
   implicit val rectPropsReuse = Reusability.caseClass[RectProps]
 
   val colors = Vector("#D3F8E6", "#BEF4CC", "#A9F1AB", "#A8EE96", "#B2EA82", "#C3E76F", "#DCE45D",
