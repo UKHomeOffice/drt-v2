@@ -1,12 +1,13 @@
 package services.crunch
 
 import akka.pattern.AskableActorRef
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.Crunch._
 import services.SDate
 
@@ -29,13 +30,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
+      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
         runCrunchGraph(procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         )
 
-      runnableGraphDispatcher(flights, Nil)
+      runnableGraphDispatcher(Source(flights), Source(List()))
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 15)
 
@@ -61,13 +62,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
+      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
         runCrunchGraph(procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         )
 
-      runnableGraphDispatcher(flights, Nil)
+      runnableGraphDispatcher(Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
@@ -100,14 +101,14 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[VoyageManifests]) => AskableActorRef =
+      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
         runCrunchGraph(procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
           minutesToCrunch = 120
         )
 
-      runnableGraphDispatcher(flights, Nil)
+      runnableGraphDispatcher(Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)

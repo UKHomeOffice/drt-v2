@@ -12,7 +12,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 import services.{CrunchGraphStage, RunnableCrunchGraph, SDate}
@@ -60,8 +60,8 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider = (a: Arrival) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch),
                      crunchStartDateProvider: () => MillisSinceEpoch,
-                     minutesToCrunch: Int = 30
-                    )(flightSets: List[Flights], manifestSets: List[VoyageManifests]) = {
+                     minutesToCrunch: Int = 30)
+                    (flightsSource: Source[Flights, _], manifestsSource: Source[VoyageManifests, _]) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -83,8 +83,8 @@ class CrunchTestLike
     )
 
     RunnableCrunchGraph(
-      Source(flightSets),
-      Source(manifestSets),
+      flightsSource,
+      manifestsSource,
       crunchFlow,
       crunchStateActor
     ).run()(actorMaterializer)
