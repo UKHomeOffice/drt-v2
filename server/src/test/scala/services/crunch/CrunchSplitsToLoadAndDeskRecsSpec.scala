@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
@@ -37,8 +38,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         eeaMachineReadableToEGate -> 35d / 60)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
@@ -46,8 +47,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, edSplit),
             SplitRatio(eeaMachineReadableToEGate, egSplit)
-          )
-        )
+          )) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 
@@ -74,11 +74,11 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       )))
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch
-        )
+        ) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 
@@ -105,8 +105,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       )
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
           procTimes = procTimes,
@@ -116,8 +116,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               SplitRatio(eeaMachineReadableToEGate, 0.25),
               SplitRatio(eeaNonMachineReadableToDesk, 0.5)
             )
-          )
-        )
+          )) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 
@@ -148,16 +147,15 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 35d / 60)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-          runCrunchGraph(
+        val runnableGraphDispatcher =
+          runCrunchGraph[NotUsed](
             procTimes = procTimes,
             testProbe = testProbe,
             crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch,
             csvSplitsProvider = _ => Option(SplitRatios(
               SplitSources.Historical,
               SplitRatio(eeaMachineReadableToDesk, 0.25)
-            ))
-          )
+            ))) _
 
         runnableGraphDispatcher(Source(flights), Source(List()))
 
@@ -186,8 +184,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 //          eeaMachineReadableToEGate -> 35d / 60)
 //
 //        val testProbe = TestProbe()
-//        val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-//          runCrunchGraph(
+//        val runnableGraphDispatcher =
+//          runCrunchGraph[NotUsed](
 //            procTimes = procTimes,
 //            testProbe = testProbe,
 //            crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch,

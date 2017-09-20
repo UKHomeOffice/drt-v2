@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
@@ -30,11 +31,11 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(procTimes = procTimes,
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
-        )
+        ) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
@@ -62,11 +63,11 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(procTimes = procTimes,
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
-        )
+        ) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 
@@ -101,12 +102,12 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(procTimes = procTimes,
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
           minutesToCrunch = 120
-        )
+        ) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 

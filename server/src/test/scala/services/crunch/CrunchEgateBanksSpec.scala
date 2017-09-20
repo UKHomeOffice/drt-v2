@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
@@ -41,8 +42,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           slaByQueue = slaByQueue,
           minMaxDesks = minMaxDesks,
@@ -52,8 +53,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),
             SplitRatio(eeaMachineReadableToEGate, 0.5)
-          )
-        )
+          )) _
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 

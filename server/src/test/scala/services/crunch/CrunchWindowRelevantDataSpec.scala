@@ -1,6 +1,7 @@
 package services.crunch
 
 import actors.{GetFlights, GetPortWorkload}
+import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
@@ -43,16 +44,16 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = 120
-        )
+        ) _
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(Source(flights), Source(List()))
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -80,18 +81,18 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val minutesToCrunch = 120
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = minutesToCrunch
-        )
+        ) _
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = startTime + (minutesToCrunch * oneMinute)
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(Source(flights), Source(List()))
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -122,18 +123,18 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val minutesToCrunch = 120
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = minutesToCrunch
-        )
+        ) _
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = startTime + (minutesToCrunch * oneMinute)
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(Source(flights), Source(List()))
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -165,16 +166,16 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val testProbe = TestProbe()
       val minutesToCrunch = 120
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-      val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => startTime,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = minutesToCrunch
-        )
+        ) _
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(Source(flights), Source(List()))
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 

@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
@@ -55,14 +56,14 @@ class CrunchTimezoneSpec extends CrunchTestLike {
         val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher: (Source[Flights, _], Source[VoyageManifests, _]) => AskableActorRef =
-          runCrunchGraph(
+        val runnableGraphDispatcher =
+          runCrunchGraph[NotUsed](
             procTimes = procTimes,
             testProbe = testProbe,
             crunchStartDateProvider = () => SDate("2017-05-31T23:00Z").millisSinceEpoch,
             minMaxDesks = minMaxDesks,
             minutesToCrunch = 120
-          )
+          ) _
 
         runnableGraphDispatcher(Source(flights), Source(List()))
 

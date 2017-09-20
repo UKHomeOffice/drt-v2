@@ -209,7 +209,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
           val waits = sortedCms.map {
             case CrunchMinute(_, _, _, _, _, _, wt, _, _, _, _) => wt
           }
-          (qn, Right(CrunchResult(startMillis, oneMinute, desks, waits)))
+          (qn, Right(CrunchResult(startMillis, oneMinuteMillis, desks, waits)))
         } else {
           (qn, Left(NoCrunchAvailable()))
         }

@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
@@ -50,7 +51,7 @@ class CrunchTestLike
   val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
 
 
-  def runCrunchGraph(procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
+  def runCrunchGraph[M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                      slaByQueue: Map[QueueName, Int] = slaByQueue,
                      minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]] = minMaxDesks,
                      queues: Map[TerminalName, Seq[QueueName]] = queues,
@@ -61,7 +62,7 @@ class CrunchTestLike
                      pcpArrivalTime: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch),
                      crunchStartDateProvider: () => MillisSinceEpoch,
                      minutesToCrunch: Int = 30)
-                    (flightsSource: Source[Flights, _], manifestsSource: Source[VoyageManifests, _]) = {
+                    (flightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, AskableActorRef) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -82,7 +83,7 @@ class CrunchTestLike
       minutesToCrunch = minutesToCrunch
     )
 
-    RunnableCrunchGraph(
+    val (fs, ms, _, _) = RunnableCrunchGraph[M](
       flightsSource,
       manifestsSource,
       crunchFlow,
@@ -90,7 +91,8 @@ class CrunchTestLike
     ).run()(actorMaterializer)
 
     val askableCrunchStateActor: AskableActorRef = crunchStateActor
-    askableCrunchStateActor
+
+    (fs, ms, askableCrunchStateActor)
   }
 
   def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {
