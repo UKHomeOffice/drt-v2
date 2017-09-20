@@ -21,8 +21,9 @@ import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import drt.client.actions.Actions._
-import drt.client.components.FlightsWithSplitsTable
+import drt.client.components.{FlightsWithSplitsTable, LoadingState}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
+import drt.shared._
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -94,7 +95,8 @@ case class RootModel(
                       slotsInADay: Int = 96,
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map(),
                       pointInTime: Option[SDateLike] = None,
-                      timeRangeFilter: TimeRangeHours = TimeRangeHours()
+                      timeRangeFilter: TimeRangeHours = TimeRangeHours(),
+                      loadingState: LoadingState = LoadingState(true, "Loading flights and desks")
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -733,13 +735,13 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
     case SetPointInTime(pointInTime) =>
       log.info(s"Set client point in time: $pointInTime")
       val sdatePointInTime = SDate(MilliDate(pointInTime))
-      val nextRequests = Effect(Future(RequestFlights())) + Effect(Future(GetShifts())) +
-        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements()))
+      val nextRequests =  Effect(Future(RequestFlights())) + Effect(Future(GetShifts())) +
+        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements())) + Effect(Future(ShowLoader(s"Loading snapshot for ${sdatePointInTime.prettyDateTime()}...")))
       updated(Option(sdatePointInTime), nextRequests)
 
     case SetPointInTimeToLive() =>
       log.info(s"Set client point in time to live")
-      val nextRequest = Effect(Future(RequestFlights()))
+      val nextRequest =  Effect(Future(RequestFlights())) + Effect(Future(ShowLoader(s"Loading live flights and desks...")))
       updated(None, nextRequest)
   }
 }
@@ -748,6 +750,16 @@ class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends Log
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetTimeRangeFilter(r) =>
       updated(r)
+  }
+}
+class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case ShowLoader(message) =>
+      log.info(s"Showing loader with message $message")
+      updated(LoadingState(isLoading = true, message))
+    case HideLoader() =>
+      log.info("Hiding loader")
+      updated(LoadingState(isLoading = false, ""))
   }
 }
 
@@ -788,7 +800,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffMovementsHandler(zoom(_.pointInTime), zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ActualDesksHandler(zoom(_.pointInTime), zoomRW(_.actualDeskStats)((m, v) => m.copy(actualDeskStats = v))),
       new PointInTimeHandler(zoomRW(_.pointInTime)((m, v) => m.copy(pointInTime = v))),
-      new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v)))
+      new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
+      new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v)))
     )
 
     val loggedhandlers: HandlerFunction = (model, update) => {

@@ -1,10 +1,12 @@
 package drt.client.components
 
+import drt.client.actions.Actions.HideLoader
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -48,7 +50,8 @@ object FlightsWithSplitsTable {
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
-      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime) //todo move this closer to the model
+      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
+      //todo move this closer to the model
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {
@@ -93,7 +96,14 @@ object FlightsWithSplitsTable {
           <.div(s"render failure ${f}")
       }
     })
-    .componentDidMount((p) => Callback.log(s"arrivals table didMount"))
+    .componentDidMount((p) => {
+      SPACircuit.dispatch(HideLoader())
+      Callback.log(s"arrivals table didMount")
+    })
+    .componentDidUpdate((p) => {
+      SPACircuit.dispatch(HideLoader())
+      Callback.log(s"arrivals table didUpdate")
+    })
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -224,7 +234,6 @@ object FlightTableRow {
 
     )
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
-    .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 }

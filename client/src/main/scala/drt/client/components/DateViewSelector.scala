@@ -13,14 +13,14 @@ import scala.scalajs.js.Date
 
 object DateViewSelector {
 
-  val log = LoggerFactory.getLogger("DateTimeSelector")
+  val log = LoggerFactory.getLogger("SnapshotSelector")
 
   case class Props(dateSelected: SDateLike = SDate.now())
 
   case class State(dateSelected: SDateLike)
 
 
-  val component = ScalaComponent.builder[Props]("DateTimeSelector")
+  val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(p => State(p.dateSelected)).renderS((scope, state) => {
     val pointInTimeRCP = SPACircuit.connect(
       m => m.pointInTime

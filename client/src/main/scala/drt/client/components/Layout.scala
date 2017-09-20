@@ -19,9 +19,8 @@ object Layout {
           <.div(
             // here we use plain Bootstrap class names as these are specific to the top level layout defined here
             Navbar(props.ctl, props.currentLoc.page),
+            Loader(<.div(^.className := "container", props.currentLoc.render())))
 
-            // currently active module is shown in this container
-            <.div(^.className := "container", props.currentLoc.render()))
         )
     })
     .build

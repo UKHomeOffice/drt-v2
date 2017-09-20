@@ -12,9 +12,9 @@ import org.scalajs.dom
 
 import scala.scalajs.js.Date
 
-object DateTimeSelector {
+object SnapshotSelector {
 
-  val log = LoggerFactory.getLogger("DateTimeSelector")
+  val log = LoggerFactory.getLogger("SnapshotSelector")
 
   case class Props(dateSelected: Option[SDateLike], terminalName: String)
 
@@ -32,7 +32,7 @@ object DateTimeSelector {
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
-  val component = ScalaComponent.builder[Props]("DateTimeSelector")
+  val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
       p => {
         p.dateSelected match {
@@ -79,7 +79,6 @@ object DateTimeSelector {
       }
 
       <.div(
-
         <.div(
           if (state.showDatePicker) {
             <.div(
@@ -93,15 +92,18 @@ object DateTimeSelector {
                       drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt)),
                       drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt)),
                       drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt)),
-                      <.input.button(^.value := "Load snapshot", ^.className := "btn btn-success", ^.onClick ==> selectPointInTime),
-                      <.input.button(^.value := "Back to live", ^.className := "btn btn-secondary", ^.onClick ==> backToLive)
+                      <.input.button(^.value := "Load snapshot", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime),
+                      <.input.button(^.value := "Back to live", ^.className := "btn btn-success", ^.onClick ==> backToLive)
                     ).toTagMod)
                 )
               ))
           } else {
-            <.div(
+            <.div(^.className := "form-group row",
               if (!scope.state.live) {
-                <.div(s"Showing Snapshot at: ${state.snapshotDateTime.toLocalDateTimeString()}", ^.className := "popover-trigger", ^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))))
+                List(
+                  <.div(s"Showing Snapshot at: ${state.snapshotDateTime.prettyDateTime()}", ^.className := "popover-trigger", ^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true)))),
+                  <.input.button(^.value := "Back to live", ^.className := "btn btn-success", ^.onClick ==> backToLive)
+                ).toTagMod
               } else {
                 <.div(^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))), ^.className := "popover-trigger", "Show Snapshot")
               },
