@@ -102,23 +102,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
-              val vmIdx = s"${Crunch.flightVoyageNumberPadded(updatedFlightWithPcp)}-${updatedFlightWithPcp.Scheduled}"
-              val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
-                case None => newFlightWithSplits
-                case Some(vm) =>
-                  log.info(s"Found buffered manifest to apply to new flight")
-                  manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
-                  log.info(s"Removed applied manifest from buffer")
-                  manifestsBuffer = manifestsBuffer.filterNot {
-                    case (_, vmInBuffer) => vmInBuffer.scheduleArrivalDateTime match {
-                      case None => false
-                      case Some(sch) =>
-                        log.info(s"Removing old manifest from buffer")
-                        sch.millisSinceEpoch < twoDaysAgo
-                    }
-                  }
-                  updateFlightWithManifest(vm, newFlightWithSplits)
-              }
+              val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}")
@@ -129,6 +113,33 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
           }
       }
       updatedFlights
+    }
+
+    def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits) = {
+      val arrival = newFlightWithSplits.apiFlight
+      val vmIdx = s"${Crunch.flightVoyageNumberPadded(arrival)}-${arrival.Scheduled}"
+
+      val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
+        case None => newFlightWithSplits
+        case Some(vm) =>
+          log.info(s"Found buffered manifest to apply to new flight")
+          manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
+          log.info(s"Removed applied manifest from buffer")
+          removeManifestsOldersThan(twoDaysAgo)
+          updateFlightWithManifest(vm, newFlightWithSplits)
+      }
+      newFlightWithAvailableSplits
+    }
+
+    private def removeManifestsOldersThan(olderThan: MillisSinceEpoch) = {
+      manifestsBuffer = manifestsBuffer.filterNot {
+        case (_, vmInBuffer) => vmInBuffer.scheduleArrivalDateTime match {
+          case None => false
+          case Some(sch) =>
+            log.info(s"Removing old manifest from buffer")
+            sch.millisSinceEpoch < olderThan
+        }
+      }
     }
 
     setHandler(inSplits, new InHandler {
