@@ -42,6 +42,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
   override val shape = new FanInShape2(inFlights, inSplits, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+    var initialised: Boolean = false
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
     var manifestsBuffer: Map[String, VoyageManifest] = Map()
@@ -49,26 +50,31 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     var crunchStateOption: Option[CrunchState] = None
     var crunchRunning = false
 
-    val log: Logger = LoggerFactory.getLogger("CrunchFlow")
+    val log: Logger = LoggerFactory.getLogger("CrunchGraphStage")
 
     initialFlightsFuture.onSuccess {
       case flights =>
-        log.info(s"Received initial flights. Setting ${flights.size} flights")
+        log.info(s"Received initial flights. Setting ${flights.size} flights and pulling inlets")
         flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+        initialised = true
+        if (!hasBeenPulled(inSplits)) pull(inSplits)
+        if (!hasBeenPulled(inFlights)) pull(inFlights)
     }
 
     setHandler(out, new OutHandler {
       override def onPull(): Unit = {
         log.info(s"onPull called")
-        crunchStateOption match {
-          case Some(crunchState) =>
-            push(out, crunchState)
-            crunchStateOption = None
-          case None =>
-            log.info(s"No CrunchState to push")
-        }
-        if (!hasBeenPulled(inSplits)) pull(inSplits)
-        if (!hasBeenPulled(inFlights)) pull(inFlights)
+        if (initialised) {
+          crunchStateOption match {
+            case Some(crunchState) =>
+              push(out, crunchState)
+              crunchStateOption = None
+            case None =>
+              log.info(s"No CrunchState to push")
+          }
+          if (!hasBeenPulled(inSplits)) pull(inSplits)
+          if (!hasBeenPulled(inFlights)) pull(inFlights)
+        } else log.info("Waiting to be initialised")
       }
     })
 
