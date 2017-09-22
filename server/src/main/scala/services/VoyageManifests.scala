@@ -22,7 +22,7 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
@@ -49,10 +49,15 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
     var initialised: Boolean = false
     val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
-    askableVoyageManifestsActor.ask(GetLatestZipFilename)(new Timeout(5 seconds)).onSuccess {
-      case lzf: String =>
-        latestZipFilename = Option(lzf)
-        initialised = true
+    override def preStart(): Unit = {
+      val latestFilenameFuture = askableVoyageManifestsActor.ask(GetLatestZipFilename)(new Timeout(5 seconds))
+      latestFilenameFuture.onSuccess {
+        case lzf: String =>
+          latestZipFilename = Option(lzf)
+          initialised = true
+      }
+      Await.ready(latestFilenameFuture, 10 seconds)
+      super.preStart()
     }
 
     setHandler(out, new OutHandler {

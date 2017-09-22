@@ -1,7 +1,6 @@
 package services.crunch
 
 import akka.NotUsed
-import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -9,12 +8,12 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch._
 import services.SDate
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.collection.immutable.{List, Seq}
+import scala.concurrent.duration._
 
 
 class CrunchTimezoneSpec extends CrunchTestLike {
@@ -67,7 +66,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         runnableGraphDispatcher(Source(flights), Source(List()))
 
-        val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+        val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
         val resultSummary = deskRecsFromCrunchState(result, 120)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(

@@ -1,27 +1,25 @@
 package services
 
-import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
-import drt.shared._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import org.joda.time.{DateTime, DateTimeZone}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.CSVPassengerSplitsProvider.log
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.{Load, MillisSinceEpoch}
 
-import scala.Option
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.immutable.{Map, Seq}
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
                        slas: Map[QueueName, Int],
@@ -42,8 +40,8 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
   val out: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
   override val shape = new FanInShape2(inFlights, inSplits, out)
 
+  var initialised: Boolean = false
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var initialised: Boolean = false
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
@@ -53,11 +51,16 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
     val log: Logger = LoggerFactory.getLogger("CrunchGraphStage")
 
-    initialFlightsFuture.onSuccess {
-      case flights =>
-        log.info(s"Received initial flights. Setting ${flights.size}")
-        flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
-        initialised = true
+    override def preStart(): Unit = {
+      initialFlightsFuture.onSuccess {
+        case flights =>
+          log.info(s"Received initial flights. Setting ${flights.size}")
+          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+          initialised = true
+      }
+      Await.ready(initialFlightsFuture, 10 seconds)
+
+      super.preStart()
     }
 
     setHandler(out, new OutHandler {
