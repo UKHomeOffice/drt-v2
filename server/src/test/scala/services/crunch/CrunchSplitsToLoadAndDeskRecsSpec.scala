@@ -1,15 +1,14 @@
 package services.crunch
 
 import akka.NotUsed
-import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
+import scala.concurrent.duration._
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch.{CrunchState, getLocalLastMidnight}
 import services.SDate
 
@@ -51,7 +50,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+      val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 2)
 
       val expected = Map("T1" -> Map(
@@ -197,7 +196,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 //
 //        val voyageManifest = Set(
 //          VoyageManifest(
-//            EventCodes.CheckIn, "LHR", "", "0001", "BA", "2017-01-01", "00:00:00", List(PassengerInfoJson(Option("P"), "GBR", "EEA", Option("22"), Option("LHR"), "N", Option("GBR"), Option("GBR")))))
+//            DqEventCodes.CheckIn, "LHR", "", "0001", "BA", "2017-01-01", "00:00:00", List(PassengerInfoJson(Option("P"), "GBR", "EEA", Option("22"), Option("LHR"), "N", Option("GBR"), Option("GBR")))))
 //
 //        runnableGraphDispatcher(flights, List(voyageManifest))
 //

@@ -24,7 +24,7 @@ class ArrivalsToCSVDataTest extends Specification {
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 5),
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 6),
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 7)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage),
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)),
           ApiSplits(
             Set(
               ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8),
@@ -34,7 +34,7 @@ class ArrivalsToCSVDataTest extends Specification {
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12),
               ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13),
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 14)
-            ), SplitRatiosNs.SplitSources.Historical))
+            ), SplitRatiosNs.SplitSources.Historical, None))
       ),
       ApiFlightWithSplits(
         apiFlight(2, "SA325", "SA0325", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
@@ -44,7 +44,7 @@ class ArrivalsToCSVDataTest extends Specification {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30),
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage))
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)))
       ),
       ApiFlightWithSplits(
         apiFlight(3, "SA326", "SA0326", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
@@ -54,7 +54,7 @@ class ArrivalsToCSVDataTest extends Specification {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30),
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage))
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)))
       )
     )
 

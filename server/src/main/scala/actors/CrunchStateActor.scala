@@ -268,6 +268,7 @@ object SplitsConversion {
         ptqcm.paxValue.getOrElse(0d)
       )).toSet,
       sm.source.getOrElse(""),
+      sm.eventType,
       SplitStyle(sm.style.getOrElse(""))
     )
   }

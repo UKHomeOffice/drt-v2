@@ -60,7 +60,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val result = Await.result(askableCrunchStateTestActor.ask(GetFlights)(new Timeout(1 second)), 1 second).asInstanceOf[FlightsWithSplits]
 
-      val expected = ApiFlightWithSplits(flightInsideCrunch, Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0)), SplitSources.TerminalAverage, Percentage)))
+      val expected = ApiFlightWithSplits(flightInsideCrunch, Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0)), SplitSources.TerminalAverage, None, Percentage)))
 
       result.flights === List(expected)
     }

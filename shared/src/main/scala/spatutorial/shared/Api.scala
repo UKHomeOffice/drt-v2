@@ -55,7 +55,7 @@ case object Percentage extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, splitStyle: SplitStyle = PaxNumbers) {
+case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = ApiSplits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = ApiSplits.totalPax(splits)
 }

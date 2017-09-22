@@ -34,11 +34,6 @@ object VoyageManifestParser {
     })
   }
 
-  object EventCodes {
-    val DoorsClosed = "DC"
-    val CheckIn = "CI"
-  }
-
   case class VoyageManifests(manifests: Set[VoyageManifest])
 
   case class VoyageManifest(EventCode: String,

@@ -17,6 +17,7 @@ message FlightWithSplitsMessage {
 message SplitMessage {
     repeated PaxTypeAndQueueCountMessage paxTypeAndQueueCount = 1;
     optional string source = 2;
+    optional string eventType = 4;
     optional string style = 3;
 }
 

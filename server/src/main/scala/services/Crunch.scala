@@ -197,19 +197,23 @@ object Crunch {
   def flightToFlightSplitMinutes(flight: Arrival,
                                  splits: Set[ApiSplits],
                                  procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
-    val apiSplits = splits.find(_.source == SplitSources.ApiSplitsWithCsvPercentage)
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType == Some(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType == Some(DqEventCodes.DepartureConfirmed))
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    val splitsToUseOption = apiSplits match {
+    val splitsToUseOption = apiSplitsDc match {
       case s@Some(_) => s
-      case None => historicalSplits match {
+      case None => apiSplitsCi match {
         case s@Some(_) => s
-        case None => terminalSplits match {
+        case None => historicalSplits match {
           case s@Some(_) => s
-          case None =>
-            log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
-            None
+          case None => terminalSplits match {
+            case s@Some(_) => s
+            case None =>
+              log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
+              None
+          }
         }
       }
     }
@@ -355,10 +359,10 @@ object RunnableCrunchGraph {
   import akka.stream.scaladsl.GraphDSL.Implicits._
 
   def apply[M](
-             flightsSource: Source[Flights, M],
-             voyageManifestsSource: Source[VoyageManifests, M],
-             cruncher: CrunchGraphStage,
-             crunchStateActor: ActorRef): RunnableGraph[(M, M, NotUsed, NotUsed)] = {
+                flightsSource: Source[Flights, M],
+                voyageManifestsSource: Source[VoyageManifests, M],
+                cruncher: CrunchGraphStage,
+                crunchStateActor: ActorRef): RunnableGraph[(M, M, NotUsed, NotUsed)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
     RunnableGraph.fromGraph(GraphDSL.create(flightsSource, voyageManifestsSource, cruncher, crunchSink)((_, _, _, _)) { implicit builder =>
