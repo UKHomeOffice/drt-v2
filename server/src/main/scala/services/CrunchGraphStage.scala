@@ -20,6 +20,7 @@ import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
                        slas: Map[QueueName, Int],
@@ -84,7 +85,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       override def onPush(): Unit = {
         val incomingFlights = grab(inFlights)
 
-        log.info(s"Grabbed flights $incomingFlights")
+        log.info(s"Grabbed ${incomingFlights.flights.length} flights")
         val updatedFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
@@ -154,7 +155,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       override def onPush(): Unit = {
         val vms = grab(inSplits)
 
-        log.info(s"Grabbed manifests $vms")
+        log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
