@@ -13,11 +13,12 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.CSVPassengerSplitsProvider.log
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.{Load, MillisSinceEpoch}
 
+import scala.Option
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
@@ -34,40 +35,45 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
                        crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning,
                        minutesToCrunch: Int
                       )
-  extends GraphStage[FanInShape2[Flights, Set[VoyageManifest], CrunchState]] {
+  extends GraphStage[FanInShape2[Flights, VoyageManifests, CrunchState]] {
 
   val inFlights: Inlet[Flights] = Inlet[Flights]("Flights.in")
-  val inSplits: Inlet[Set[VoyageManifest]] = Inlet[Set[VoyageManifest]]("Splits.in")
+  val inSplits: Inlet[VoyageManifests] = Inlet[VoyageManifests]("Splits.in")
   val out: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
   override val shape = new FanInShape2(inFlights, inSplits, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+    var initialised: Boolean = false
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
+    var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
 
     var crunchStateOption: Option[CrunchState] = None
     var crunchRunning = false
 
-    val log: Logger = LoggerFactory.getLogger("CrunchFlow")
+    val log: Logger = LoggerFactory.getLogger("CrunchGraphStage")
 
     initialFlightsFuture.onSuccess {
       case flights =>
-        log.info(s"Received initial flights. Setting ${flights.size} flights")
+        log.info(s"Received initial flights. Setting ${flights.size}")
         flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+        initialised = true
     }
 
     setHandler(out, new OutHandler {
       override def onPull(): Unit = {
         log.info(s"onPull called")
-        crunchStateOption match {
-          case Some(crunchState) =>
-            push(out, crunchState)
-            crunchStateOption = None
-          case None =>
-            log.info(s"No CrunchState to push")
-        }
-        if (!hasBeenPulled(inSplits)) pull(inSplits)
-        if (!hasBeenPulled(inFlights)) pull(inFlights)
+        if (initialised) {
+          crunchStateOption match {
+            case Some(crunchState) =>
+              push(out, crunchState)
+              crunchStateOption = None
+            case None =>
+              log.info(s"No CrunchState to push")
+          }
+          if (!hasBeenPulled(inSplits)) pull(inSplits)
+          if (!hasBeenPulled(inFlights)) pull(inFlights)
+        } else log.info("Waiting to be initialised")
       }
     })
 
@@ -75,6 +81,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       override def onPush(): Unit = {
         val incomingFlights = grab(inFlights)
 
+        log.info(s"Grabbed flights $incomingFlights")
         val updatedFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
@@ -97,9 +104,11 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
           flightsSoFar.get(updatedFlightWithPcp.FlightID) match {
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
+
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
-              flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithSplits)
+              val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
+              flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}")
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
@@ -111,12 +120,39 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       updatedFlights
     }
 
+    def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits) = {
+      val arrival = newFlightWithSplits.apiFlight
+      val vmIdx = s"${Crunch.flightVoyageNumberPadded(arrival)}-${arrival.Scheduled}"
+
+      val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
+        case None => newFlightWithSplits
+        case Some(vm) =>
+          log.info(s"Found buffered manifest to apply to new flight")
+          manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
+          log.info(s"Removed applied manifest from buffer")
+          removeManifestsOlderThan(twoDaysAgo)
+          updateFlightWithManifests(vm, newFlightWithSplits)
+      }
+      newFlightWithAvailableSplits
+    }
+
+    private def removeManifestsOlderThan(thresholdMillis: MillisSinceEpoch) = {
+      manifestsBuffer = manifestsBuffer.filter {
+        case (_, vmsInBuffer) =>
+          val vmsToKeep = vmsInBuffer.filter { case vm => isNewerThan(thresholdMillis, vm) }
+          vmsToKeep match {
+            case vms if vms.nonEmpty => true
+            case _ => false
+          }
+      }
+    }
+
     setHandler(inSplits, new InHandler {
       override def onPush(): Unit = {
-        val manifests = grab(inSplits)
+        val vms = grab(inSplits)
 
-        log.info(s"We got a manifest")
-        val updatedFlights = updateFlightsWithManifests(manifests, flightsByFlightId)
+        log.info(s"Grabbed manifests $vms")
+        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights
@@ -131,22 +167,29 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
+          val vmMillis = newManifest.scheduleArrivalDateTime match {
+            case None => 0L
+            case Some(scheduled) => scheduled.millisSinceEpoch
+          }
           val matchingFlight: Option[(Int, ApiFlightWithSplits)] = flightsSoFar
             .find {
               case (_, f) =>
                 val vnMatches = Crunch.flightVoyageNumberPadded(f.apiFlight) == newManifest.VoyageNumber
-                val schMatches = newManifest.scheduleArrivalDateTime match {
-                  case None => false
-                  case Some(scheduled) => scheduled.millisSinceEpoch == f.apiFlight.Scheduled
-                }
+                val schMatches = vmMillis == f.apiFlight.Scheduled
                 vnMatches && schMatches
               case _ => false
             }
 
           matchingFlight match {
-            case None => flightsSoFar
+            case None =>
+              log.info(s"Stashing VoyageManifest in case flight is seen later")
+              val idx = s"${newManifest.VoyageNumber}-$vmMillis"
+              val existingManifests = manifestsBuffer.getOrElse(idx, Set())
+              val updatedManifests = existingManifests + newManifest
+              manifestsBuffer = manifestsBuffer.updated(idx, updatedManifests)
+              flightsSoFar
             case Some(Tuple2(id, f)) =>
-              val updatedFlight = updateFlightWithManifest(newManifest, f)
+              val updatedFlight = updateFlightWithManifest(f, newManifest)
               flightsSoFar.updated(id, updatedFlight)
           }
       }
@@ -182,7 +225,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
-      val crunchEnd = crunchStart + (numberOfMinutes * Crunch.oneMinute)
+      val crunchEnd = crunchStart + (numberOfMinutes * Crunch.oneMinuteMillis)
       val flightSplitDiffs = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
         .filter {
           case FlightSplitDiff(_, _, _, _, _, _, minute) =>
@@ -238,24 +281,27 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       crunchResults
     }
 
-    def terminalAndHistoricSplits(fs: Arrival): List[ApiSplits] = {
-      val historical: Option[List[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
-      val portDefault: Seq[ApiPaxTypeAndQueueCount] = portSplits.splits.map {
+    def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {
+      val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
+      val splitRatios: Set[SplitRatio] = portSplits.splits.toSet
+      val portDefault: Set[ApiPaxTypeAndQueueCount] = splitRatios.map {
         case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
       }
 
-      val defaultSplits = List(ApiSplits(portDefault.toList.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, Percentage))
+      val defaultSplits = Set(ApiSplits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
 
       historical match {
         case None => defaultSplits
-        case Some(h) => ApiSplits(h, SplitSources.Historical, Percentage) :: defaultSplits
+        case Some(h) => Set(ApiSplits(h, SplitSources.Historical, None, Percentage)) ++ defaultSplits
       }
     }
 
-    def historicalSplits(fs: Arrival): Option[List[ApiPaxTypeAndQueueCount]] = {
-      csvSplitsProvider(fs).map(ratios => ratios.splits.map {
-        case SplitRatio(ptqc, ratio) =>
-          ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100)
+    def historicalSplits(fs: Arrival): Option[Set[ApiPaxTypeAndQueueCount]] = {
+      csvSplitsProvider(fs).map(ratios => {
+        val splitRatios: Set[SplitRatio] = ratios.splits.toSet
+        splitRatios.map {
+          case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100)
+        }
       })
     }
 
@@ -299,7 +345,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
         }.getOrElse(defaultPct)
     }
 
-    def applyEgatesSplits(ptaqc: List[ApiPaxTypeAndQueueCount], egatePct: Double): List[ApiPaxTypeAndQueueCount] = {
+    def applyEgatesSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], egatePct: Double): Set[ApiPaxTypeAndQueueCount] = {
       ptaqc.flatMap {
         case s@ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count) =>
           val eeaDeskPax = Math.round(count * (1 - egatePct)).toInt
@@ -309,7 +355,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       }
     }
 
-    def applyFastTrackSplits(ptaqc: List[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[ApiPaxTypeAndQueueCount] = {
+    def applyFastTrackSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): Set[ApiPaxTypeAndQueueCount] = {
       val results = ptaqc.flatMap {
         case s@ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
           val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
@@ -325,21 +371,51 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       results
     }
 
-    def updateFlightWithManifest(manifest: VoyageManifest, f: ApiFlightWithSplits): ApiFlightWithSplits = {
-      val nonApiSplits = f.splits.filterNot {
-        case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _) => true
-        case _ => false
+    def updateFlightWithManifests(manifests: Set[VoyageManifest], f: ApiFlightWithSplits): ApiFlightWithSplits = {
+      manifests.foldLeft(f) {
+        case (flightSoFar, manifest) => updateFlightWithManifest(flightSoFar, manifest)
       }
+    }
+
+    def updateFlightWithManifest(flightSoFar: ApiFlightWithSplits, manifest: VoyageManifest) = {
+      val splitsFromManifest = paxTypeAndQueueCounts(manifest, flightSoFar)
+
+      val updatedSplitsSet = flightSoFar.splits.filterNot {
+        case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, Some(manifest.EventCode), _) => true
+        case _ => false
+      } + splitsFromManifest
+
+      flightSoFar.copy(splits = updatedSplitsSet)
+    }
+
+    def paxTypeAndQueueCounts(manifest: VoyageManifest, f: ApiFlightWithSplits) = {
       val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
-      val apiPaxTypeAndQueueCounts: List[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
+      val sptqc: Set[SplitsPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
+      val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = sptqc.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
+      val withEgateAndFastTrack = addEgatesAndFastTrack(f, apiPaxTypeAndQueueCounts)
+      val splitsFromManifest = ApiSplits(withEgateAndFastTrack, SplitSources.ApiSplitsWithCsvPercentage, Some(manifest.EventCode), PaxNumbers)
+
+      splitsFromManifest
+    }
+
+    def addEgatesAndFastTrack(f: ApiFlightWithSplits, apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount]) = {
       val csvSplits = csvSplitsProvider(f.apiFlight)
-      val egatePercentage: Double = egatePercentageFromSplit(csvSplits, 0.6)
+      val egatePercentage: Load = egatePercentageFromSplit(csvSplits, 0.6)
       val fastTrackPercentages: FastTrackPercentages = fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
       val ptqcWithCsvEgates = applyEgatesSplits(apiPaxTypeAndQueueCounts, egatePercentage)
       val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
-      val splitsFromManifest = ApiSplits(ptqcwithCsvEgatesFastTrack, SplitSources.ApiSplitsWithCsvPercentage, PaxNumbers)
-      val updatedFlight = f.copy(splits = splitsFromManifest :: nonApiSplits)
-      updatedFlight
+      ptqcwithCsvEgatesFastTrack
     }
+  }
+
+  def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest) = {
+    vm.scheduleArrivalDateTime match {
+      case None => false
+      case Some(sch) => sch.millisSinceEpoch > thresholdMillis
+    }
+  }
+
+  def twoDaysAgo = {
+    SDate.now().millisSinceEpoch - (2 * oneDayMillis)
   }
 }

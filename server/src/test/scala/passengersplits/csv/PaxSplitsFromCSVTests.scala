@@ -64,8 +64,8 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       }
     }
 
-    "DRT-4598 Given a FlightPaxSplit" >> {
-      "And the fast-track is zero"
+    "DRT-4598 Given a FlightPaxSplit " +
+      "And the fast-track is zero " +
       "When I ask for the SplitRatios then I should get a list of each split type for a flight" >> {
         "And there will be no fast-track entry" >> {
           val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
@@ -81,9 +81,9 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
             SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.02))
         }
       }
-    }
-    "DRT-4598 Given a FlightPaxSplit" >> {
-      "And the fast-track is zero"
+
+    "DRT-4598 Given a FlightPaxSplit " +
+      "And the fast-track is zero " +
       "When I ask for the SplitRatios then I should get a list of each split type for a flight" >> {
         "And there will be no fast-track entry" >> {
           val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 40, 60, 30, 70, 0, "Sunday", "January", "STN", "T1", "SA")
@@ -99,7 +99,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
             SplitRatio(PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk), 0.012))
         }
       }
-    }
+
   }
 /*
   "Given a Flight Passenger Split" >> {

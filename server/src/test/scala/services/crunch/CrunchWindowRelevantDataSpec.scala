@@ -1,8 +1,9 @@
-package services
+package services.crunch
 
 import actors.{GetFlights, GetPortWorkload}
 import akka.NotUsed
 import akka.pattern.AskableActorRef
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.{ArrivalGenerator, GetTerminalCrunch}
@@ -12,8 +13,9 @@ import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.Crunch.{CrunchRequest, CrunchState}
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import services.Crunch.CrunchState
+import services.SDate
 
 import scala.collection.immutable.List
 import scala.concurrent.Await
@@ -42,23 +44,23 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = 120
-        )
+        ) _
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
 
       val result = Await.result(askableCrunchStateTestActor.ask(GetFlights)(new Timeout(1 second)), 1 second).asInstanceOf[FlightsWithSplits]
 
-      val expected = ApiFlightWithSplits(flightInsideCrunch, List(ApiSplits(List(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0)), SplitSources.TerminalAverage, Percentage)))
+      val expected = ApiFlightWithSplits(flightInsideCrunch, Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0)), SplitSources.TerminalAverage, None, Percentage)))
 
       result.flights === List(expected)
     }
@@ -79,18 +81,18 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val minutesToCrunch = 120
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = minutesToCrunch
-        )
+        ) _
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = startTime + (minutesToCrunch * oneMinute)
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -102,7 +104,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
 
-      (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
+      (wl.length, wl.map(_.time).toSet) === Tuple2(expectedLength, expectedWl.toSet)
     }
 
     "Given two flights one reaching PCP after the crunch window and one during " +
@@ -121,18 +123,18 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val minutesToCrunch = 120
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => SDate(scheduledAtCrunchStart).millisSinceEpoch,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = minutesToCrunch
-        )
+        ) _
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
       val endTime = startTime + (minutesToCrunch * oneMinute)
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
@@ -144,7 +146,7 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
 
-      (wl.length, wl.map(_.time).toSet) === (expectedLength, expectedWl.toSet)
+      (wl.length, wl.map(_.time).toSet) === Tuple2(expectedLength, expectedWl.toSet)
     }
 
     "Given two flights one reaching PCP before the crunch start time and one after " +
@@ -164,16 +166,16 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       val testProbe = TestProbe()
       val minutesToCrunch = 120
       val startTime = SDate(scheduledAtCrunchStart, DateTimeZone.UTC).millisSinceEpoch
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => startTime,
           minMaxDesks = minMaxDesks,
           minutesToCrunch = minutesToCrunch
-        )
+        ) _
 
-      val askableCrunchStateTestActor = runnableGraphDispatcher(flights, Nil)
+      val (_, _, askableCrunchStateTestActor) = runnableGraphDispatcher(Source(flights), Source(List()))
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 

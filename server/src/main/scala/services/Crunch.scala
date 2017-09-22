@@ -9,7 +9,7 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
@@ -52,7 +52,9 @@ object Crunch {
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, numberOfMinutes: Int)
 
-  val oneMinute = 60000
+  val oneMinuteMillis: MillisSinceEpoch = 60000L
+  val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
+  val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
 
   def flightVoyageNumberPadded(arrival: Arrival): String = {
     val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(arrival.IATA)
@@ -94,7 +96,7 @@ object Crunch {
                                slas: Map[QueueName, Int],
                                minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                                eGateBankSize: Int): Set[CrunchMinute] = {
-    val crunchEnd = crunchStartMillis + (numberOfMinutes * oneMinute)
+    val crunchEnd = crunchStartMillis + (numberOfMinutes * oneMinuteMillis)
 
     portWorkloads.flatMap {
       case (tn, terminalWorkloads) =>
@@ -108,7 +110,7 @@ object Crunch {
             val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
             val sla = slas.getOrElse(qn, 0)
             val queueMinMaxDesks = minMaxDesks.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
-            val crunchMinutes = crunchStartMillis until crunchEnd by oneMinute
+            val crunchMinutes = crunchStartMillis until crunchEnd by oneMinuteMillis
             val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
             val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
             val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
@@ -116,7 +118,7 @@ object Crunch {
             val queueCrunchMinutes = triedResult match {
               case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
                 val crunchMinutes = (0 until numberOfMinutes).map(minuteIdx => {
-                  val minuteMillis = crunchStartMillis + (minuteIdx * oneMinute)
+                  val minuteMillis = crunchStartMillis + (minuteIdx * oneMinuteMillis)
                   val paxLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._1
                   val workLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._2
                   CrunchMinute(tn, qn, minuteMillis, paxLoad, workLoad, deskRecs(minuteIdx), waitTimes(minuteIdx))
@@ -139,11 +141,11 @@ object Crunch {
 
   def queueMinutesForPeriod(startTime: Long, numberOfMinutes: Int)
                            (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = {
-    val endTime = startTime + numberOfMinutes * oneMinute
+    val endTime = startTime + numberOfMinutes * oneMinuteMillis
 
     terminal.mapValues(queue => {
       queue.mapValues(queueWorkloadMinutes => {
-        (startTime until endTime by oneMinute).map(minuteMillis =>
+        (startTime until endTime by oneMinuteMillis).map(minuteMillis =>
           (minuteMillis, queueWorkloadMinutes.getOrElse(minuteMillis, (0d, 0d)))).toList
       })
     })
@@ -193,21 +195,25 @@ object Crunch {
   }
 
   def flightToFlightSplitMinutes(flight: Arrival,
-                                 splits: List[ApiSplits],
+                                 splits: Set[ApiSplits],
                                  procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
-    val apiSplits = splits.find(_.source == SplitSources.ApiSplitsWithCsvPercentage)
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType == Some(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType == Some(DqEventCodes.DepartureConfirmed))
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    val splitsToUseOption = apiSplits match {
+    val splitsToUseOption = apiSplitsDc match {
       case s@Some(_) => s
-      case None => historicalSplits match {
+      case None => apiSplitsCi match {
         case s@Some(_) => s
-        case None => terminalSplits match {
+        case None => historicalSplits match {
           case s@Some(_) => s
-          case None =>
-            log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
-            None
+          case None => terminalSplits match {
+            case s@Some(_) => s
+            case None =>
+              log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
+              None
+          }
         }
       }
     }
@@ -218,7 +224,7 @@ object Crunch {
         case Percentage => ArrivalHelper.bestPax(flight)
         case UndefinedSplitStyle => 0
       }
-      val splitRatios: Seq[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
+      val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
         case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
         case Percentage => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
         case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
@@ -352,24 +358,21 @@ object RunnableCrunchGraph {
 
   import akka.stream.scaladsl.GraphDSL.Implicits._
 
-  def apply(
-             flightsSource: Source[Flights, _],
-             voyageManifestsSource: Source[Set[VoyageManifest], _],
-             cruncher: CrunchGraphStage,
-             crunchStateActor: ActorRef): RunnableGraph[NotUsed] =
-    RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
-      val crunchSink = Sink.actorRef(crunchStateActor, "completed")
-      val F: Outlet[Flights] = builder.add(flightsSource).out
-      val M: Outlet[Set[VoyageManifest]] = builder.add(voyageManifestsSource).out
+  def apply[M](
+                flightsSource: Source[Flights, M],
+                voyageManifestsSource: Source[VoyageManifests, M],
+                cruncher: CrunchGraphStage,
+                crunchStateActor: ActorRef): RunnableGraph[(M, M, NotUsed, NotUsed)] = {
+    val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
-      val CR = builder.add(cruncher)
-      val G = builder.add(crunchSink)
+    RunnableGraph.fromGraph(GraphDSL.create(flightsSource, voyageManifestsSource, cruncher, crunchSink)((_, _, _, _)) { implicit builder =>
+      (fs, ms, cr, cs) =>
+        fs ~> cr.in0
+        ms ~> cr.in1
+        cr.out ~> cs
 
-      F ~> CR.in0
-      M ~> CR.in1
-      CR.out ~> G
-
-      ClosedShape
+        ClosedShape
     })
+  }
 }
 

@@ -1,6 +1,7 @@
 package services
 
 import drt.shared.FlightParsing._
+import services.crunch.CrunchTestLike
 
 
 class FlightCodeSpec extends CrunchTestLike {

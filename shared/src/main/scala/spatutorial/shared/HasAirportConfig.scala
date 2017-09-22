@@ -119,6 +119,11 @@ object PaxTypesAndQueues {
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
 }
 
+object DqEventCodes {
+  val DepartureConfirmed = "DC"
+  val CheckIn = "CI"
+}
+
 object AirportConfigs {
 
   import Queues._

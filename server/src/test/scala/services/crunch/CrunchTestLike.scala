@@ -1,5 +1,6 @@
-package services
+package services.crunch
 
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
@@ -12,9 +13,10 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
+import services.{CrunchGraphStage, RunnableCrunchGraph, SDate}
 
 import scala.collection.immutable.{List, Seq, Set}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -49,7 +51,7 @@ class CrunchTestLike
   val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
 
 
-  def runCrunchGraph(procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
+  def runCrunchGraph[M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                      slaByQueue: Map[QueueName, Int] = slaByQueue,
                      minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]] = minMaxDesks,
                      queues: Map[TerminalName, Seq[QueueName]] = queues,
@@ -59,8 +61,8 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider = (a: Arrival) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch),
                      crunchStartDateProvider: () => MillisSinceEpoch,
-                     minutesToCrunch: Int = 30
-                    )(flightSets: List[Flights], manifestSets: List[Set[VoyageManifest]]) = {
+                     minutesToCrunch: Int = 30)
+                    (flightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, AskableActorRef) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -81,14 +83,16 @@ class CrunchTestLike
       minutesToCrunch = minutesToCrunch
     )
 
-    RunnableCrunchGraph(
-      Source(flightSets),
-      Source(manifestSets),
+    val (fs, ms, _, _) = RunnableCrunchGraph[M](
+      flightsSource,
+      manifestsSource,
       crunchFlow,
       crunchStateActor
     ).run()(actorMaterializer)
+
     val askableCrunchStateActor: AskableActorRef = crunchStateActor
-    askableCrunchStateActor
+
+    (fs, ms, askableCrunchStateActor)
   }
 
   def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {

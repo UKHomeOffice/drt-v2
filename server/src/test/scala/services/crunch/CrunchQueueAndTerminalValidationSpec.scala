@@ -1,15 +1,17 @@
-package services
+package services.crunch
 
 import akka.NotUsed
 import akka.pattern.AskableActorRef
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.Crunch._
+import services.SDate
 
 import scala.collection.immutable.List
 
@@ -29,8 +31,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
-        runCrunchGraph(
+      val runnableGraphDispatcher =
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
@@ -38,10 +40,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 1),
             SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
-          )
-        )
+          )) _
 
-      runnableGraphDispatcher(flights, Nil)
+      runnableGraphDispatcher(Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 1).flatMap(_._2.keys)
@@ -67,13 +68,13 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
     val testProbe = TestProbe()
-    val runnableGraphDispatcher: (List[Flights], List[Set[VoyageManifest]]) => AskableActorRef =
-      runCrunchGraph(procTimes = procTimes,
+    val runnableGraphDispatcher =
+      runCrunchGraph[NotUsed](procTimes = procTimes,
         testProbe = testProbe,
         crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
-      )
+      ) _
 
-    runnableGraphDispatcher(flights, Nil)
+    runnableGraphDispatcher(Source(flights), Source(List()))
 
     val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
     val resultSummary = paxLoadsFromCrunchState(result, 30)

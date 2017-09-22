@@ -149,7 +149,7 @@ object FlightTableRow {
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
       Try {
-        val flightSplitsList: List[ApiSplits] = flightWithSplits.splits
+        val flightSplitsList: Set[ApiSplits] = flightWithSplits.splits
 
         def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
           SplitSources.ApiSplitsWithCsvPercentage -> "Live",
@@ -199,7 +199,7 @@ object FlightTableRow {
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val apiSplits = flightWithSplits.splits
           .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
-          .getOrElse(ApiSplits(Nil, "no splits - client"))
+          .getOrElse(ApiSplits(Set(), "no splits - client", None))
 
         <.tr(^.key := flight.FlightID.toString,
           hasChangedStyle,

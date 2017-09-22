@@ -1,12 +1,11 @@
 package passengersplits
 
-import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
-import drt.shared.Queues
+import drt.shared.{DqEventCodes, Queues}
 import org.specs2._
 import org.specs2.specification.script.StandardDelimitedStepParsers
 import passengersplits.core.PassengerQueueCalculator
-import passengersplits.parsing.VoyageManifestParser.{EventCodes, PassengerInfo, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 
 class PaxTransferSpecs extends Specification with specification.dsl.GWT with StandardDelimitedStepParsers {
   def is =
@@ -56,11 +55,11 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
   def splitsByQueue = calculatedSplits.groupBy(_.queueType).mapValues(v => v.map(_.paxCount).sum)
 
   def createLHRFlight = step {
-    currentFlight = Some(VoyageManifest(EventCodes.CheckIn, "LHR", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
+    currentFlight = Some(VoyageManifest(DqEventCodes.CheckIn, "LHR", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
   }
 
   def createNonLHRFlight = step {
-    currentFlight = Some(VoyageManifest(EventCodes.CheckIn, "EDI", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
+    currentFlight = Some(VoyageManifest(DqEventCodes.CheckIn, "EDI", "MON", "123", "RYR", "2017-05-02", "10:33:00", Nil))
   }
 
   def addPassenger = step(threeStrings) {

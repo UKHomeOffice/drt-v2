@@ -18,7 +18,7 @@ import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -34,8 +34,8 @@ case class UpdateLatestZipFilename(filename: String)
 
 case object GetLatestZipFilename
 
-class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManifestsActor: ActorRef) extends GraphStage[SourceShape[Set[VoyageManifest]]] {
-  val out: Outlet[Set[VoyageManifest]] = Outlet[Set[VoyageManifest]]("VoyageManifests.out")
+class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManifestsActor: ActorRef) extends GraphStage[SourceShape[VoyageManifests]] {
+  val out: Outlet[VoyageManifests] = Outlet[VoyageManifests]("VoyageManifests.out")
   override val shape = SourceShape(out)
 
   val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
@@ -46,20 +46,21 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
     var manifestsState: Set[VoyageManifest] = Set()
     var manifestsToPush: Option[Set[VoyageManifest]] = None
     var latestZipFilename: Option[String] = None
-    var fetchInProgress: Boolean = false
+    var initialised: Boolean = false
     val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
-    askableVoyageManifestsActor.ask(GetLatestZipFilename)(new Timeout(1 second)).onSuccess {
+    askableVoyageManifestsActor.ask(GetLatestZipFilename)(new Timeout(5 seconds)).onSuccess {
       case lzf: String =>
         latestZipFilename = Option(lzf)
-        if (isAvailable(out)) fetchAndPushManifests(lzf)
+        initialised = true
     }
 
     setHandler(out, new OutHandler {
       override def onPull(): Unit = {
-        latestZipFilename match {
-          case None => log.info(s"We don't have a latestZipFilename yet")
-          case Some(lzf) =>
+        (initialised, latestZipFilename) match {
+          case (false, _) => log.info(s"Waiting to be initialised")
+          case (true, None) => log.info(s"We don't have a latestZipFilename yet")
+          case (true, Some(lzf)) =>
             log.info(s"Sending latestZipFilename: $lzf to VoyageManfestsActor")
             voyageManifestsActor ! UpdateLatestZipFilename(lzf)
             fetchAndPushManifests(lzf)
@@ -72,7 +73,8 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
         val manifestsFuture = advPaxInfo.manifestsFuture(lzf)
         manifestsFuture.onSuccess {
           case ms =>
-            if (ms.nonEmpty) {
+            log.info(s"manifestsFuture Success")
+            val nextFetchMaxFilename = if (ms.nonEmpty) {
               val maxFilename = ms.map(_._1).max
               latestZipFilename = Option(maxFilename)
               log.info(s"Set latestZipFilename to '$latestZipFilename'")
@@ -92,20 +94,20 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
                   log.info(s"No manifests to push")
                 case Some(manifests) =>
                   log.info(s"Pushing ${manifests.size} manifests")
-                  push(out, manifests)
+                  push(out, VoyageManifests(manifests))
                   manifestsToPush = None
               }
-              fetchAndPushManifests(maxFilename)
+              maxFilename
             } else {
               log.info(s"No manifests received")
-              fetchAndPushManifests(lzf)
+              lzf
             }
+            fetchAndPushManifests(nextFetchMaxFilename)
 
         }
         manifestsFuture.onFailure {
           case t =>
-            log.info(s"manifestsFuture failed: $t")
-            fetchInProgress = false
+            log.info(s"manifestsFuture Failure: $t")
             fetchAndPushManifests(lzf)
         }
     }

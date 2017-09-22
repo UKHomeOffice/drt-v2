@@ -9,6 +9,7 @@ import spray.http._
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.language.reflectiveCalls
 
 class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   test =>
