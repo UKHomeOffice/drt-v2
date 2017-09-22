@@ -1,15 +1,11 @@
-package services
+package services.graphstages
 
-import akka.NotUsed
-import akka.actor.{ActorRef, Cancellable}
-import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import services._
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
@@ -62,7 +58,7 @@ object Crunch {
     vn
   }
 
-  def midnightThisMorning() = {
+  def midnightThisMorning(): MillisSinceEpoch = {
     val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
     crunchStartDate
@@ -197,8 +193,8 @@ object Crunch {
   def flightToFlightSplitMinutes(flight: Arrival,
                                  splits: Set[ApiSplits],
                                  procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType == Some(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType == Some(DqEventCodes.DepartureConfirmed))
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
@@ -288,7 +284,7 @@ object Crunch {
     val oldKeys = oldTqmToCm.keys.toSet
     val newKeys = newTqmToCm.keys.toSet
     val toRemove = (oldKeys -- newKeys).map {
-      case k@(tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
+      case (tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
     }
     val toUpdate = newTqmToCm.collect {
       case (k, cm) if oldTqmToCm.get(k).isEmpty || cm != oldTqmToCm(k) => cm
@@ -353,26 +349,3 @@ object Crunch {
     "YEO"
   )
 }
-
-object RunnableCrunchGraph {
-
-  import akka.stream.scaladsl.GraphDSL.Implicits._
-
-  def apply[M](
-                flightsSource: Source[Flights, M],
-                voyageManifestsSource: Source[VoyageManifests, M],
-                cruncher: CrunchGraphStage,
-                crunchStateActor: ActorRef): RunnableGraph[(M, M, NotUsed, NotUsed)] = {
-    val crunchSink = Sink.actorRef(crunchStateActor, "completed")
-
-    RunnableGraph.fromGraph(GraphDSL.create(flightsSource, voyageManifestsSource, cruncher, crunchSink)((_, _, _, _)) { implicit builder =>
-      (fs, ms, cr, cs) =>
-        fs ~> cr.in0
-        ms ~> cr.in1
-        cr.out ~> cs
-
-        ClosedShape
-    })
-  }
-}
-

@@ -1,7 +1,7 @@
 package services.crunch
 
 import drt.shared._
-import services.Crunch._
+import services.graphstages.Crunch._
 
 
 class CrunchMinuteSpec() extends CrunchTestLike {

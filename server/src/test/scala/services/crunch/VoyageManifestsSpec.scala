@@ -12,7 +12,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import services.Crunch.CrunchState
+import services.graphstages.Crunch.CrunchState
 import services.SDate
 
 import scala.collection.immutable.Seq

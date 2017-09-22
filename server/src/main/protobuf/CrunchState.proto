@@ -35,6 +35,10 @@ message CrunchMinuteMessage {
     optional double workLoad = 5;
     optional int32 deskRec = 6;
     optional int32 waitTime = 7;
+    optional int32 simDesks = 8;
+    optional int32 simWait = 9;
+    optional int32 actDesks = 10;
+    optional int32 actWait = 11;
 }
 
 message CrunchDiffMessage {

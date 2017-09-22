@@ -14,7 +14,7 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.DateTimeZone
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.Crunch.CrunchState
+import services.graphstages.Crunch.CrunchState
 import services.SDate
 
 import scala.collection.immutable.List
@@ -96,10 +96,9 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
-      val result = Await.result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second)
-        .asInstanceOf[Map[TerminalName, Map[QueueName, (List[WL], List[Pax])]]]
-
-      val wl = result("T1")(Queues.EeaDesk)._1
+      val wl = Await.result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second) match {
+        case PortLoads(pl) => pl("T1")(Queues.EeaDesk)._1
+      }
 
       val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute
@@ -138,10 +137,9 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
 
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
-      val result = Await.result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second)
-        .asInstanceOf[Map[TerminalName, Map[QueueName, (List[WL], List[Pax])]]]
-
-      val wl = result("T1")(Queues.EeaDesk)._1
+      val wl = Await.result(askableCrunchStateTestActor.ask(GetPortWorkload)(new Timeout(1 second)), 1 second) match {
+        case PortLoads(pl) => pl("T1")(Queues.EeaDesk)._1
+      }
 
       val expectedLength = minutesToCrunch
       val expectedWl = startTime until endTime by oneMinute

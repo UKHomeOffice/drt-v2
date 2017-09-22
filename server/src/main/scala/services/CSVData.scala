@@ -2,7 +2,7 @@ package services
 
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
-import services.Crunch.CrunchMinute
+import services.graphstages.Crunch.CrunchMinute
 
 object CSVData {
 
@@ -34,11 +34,11 @@ object CSVData {
 
   def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]) = {
 
-    def splitFromFlightWithSplits(fws: ApiFlightWithSplits, source: String, paxTypeAndQueue: PaxTypeAndQueue) = fws.splits
+    def splitFromFlightWithSplits(fws: ApiFlightWithSplits, source: String, paxTypeAndQueue: PaxTypeAndQueue): String = fws.splits
       .find(s => s.source == source)
       .flatMap(as => as.splits.find(s =>
         s.queueType == paxTypeAndQueue.queueType && s.passengerType == paxTypeAndQueue.passengerType
-      )).map(ptqc => Math.round(ptqc.paxCount)).getOrElse("")
+      )).map(ptqc => Math.round(ptqc.paxCount).toString).getOrElse("")
 
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
       "API EEA Machine Readable to EGate,API EEA Machine Readable to Desk,API EEA Non Machine Readable to Desk," +

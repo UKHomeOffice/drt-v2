@@ -7,7 +7,7 @@ import controllers.GetTerminalCrunch
 import drt.shared.FlightsApi._
 import drt.shared._
 import server.protobuf.messages.CrunchState._
-import services.Crunch._
+import services.graphstages.Crunch._
 import services.SDate
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
@@ -110,8 +110,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       crunchStart = Option(newState.crunchFirstMinuteMillis),
       flightIdsToRemove = diff.flightRemovals.map(rf => rf.flightId).toList,
       flightsToUpdate = diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
-      crunchMinutesToRemove = diff.crunchMinuteRemovals.map(rc => RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))).toList,
-      crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(cm => CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))).toList
+      crunchMinutesToRemove = diff.crunchMinuteRemovals.map(removeCrunchMinuteToMessage).toList,
+      crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(crunchMinuteToMessage).toList
     )
 
     persist(diffToPersist) { (diff: CrunchDiffMessage) =>
@@ -125,6 +125,14 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       flights = flightsFromDiff)
 
     state = Option(updatedState)
+  }
+
+  def removeCrunchMinuteToMessage(rc: RemoveCrunchMinute): RemoveCrunchMinuteMessage = {
+    RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))
+  }
+
+  def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = {
+    CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))
   }
 
   override def receiveCommand: Receive = {
@@ -143,7 +151,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case GetPortWorkload =>
       state match {
         case Some(CrunchState(_, _, _, crunchMinutes)) =>
-          sender() ! portWorkload(crunchMinutes)
+          sender() ! PortLoads(portWorkload(crunchMinutes))
         case None =>
           sender() ! WorkloadsNotReady()
       }
@@ -221,15 +229,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     Option(crunchState.crunchFirstMinuteMillis),
     Option(crunchState.numberOfMinutes),
     crunchState.flights.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-    crunchState.crunchMinutes.toList.map(cm => CrunchMinuteMessage(
-      Option(cm.terminalName),
-      Option(cm.queueName),
-      Option(cm.minute),
-      Option(cm.paxLoad),
-      Option(cm.workLoad),
-      Option(cm.deskRec),
-      Option(cm.waitTime)
-    ))
+    crunchState.crunchMinutes.toList.map(crunchMinuteToMessage)
   )
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage) = CrunchState(
@@ -241,13 +241,17 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = {
     CrunchMinute(
-      cmm.terminalName.getOrElse(""),
-      cmm.queueName.getOrElse(""),
-      cmm.minute.getOrElse(0L),
-      cmm.paxLoad.getOrElse(0d),
-      cmm.workLoad.getOrElse(0d),
-      cmm.deskRec.getOrElse(0),
-      cmm.waitTime.getOrElse(0)
+      terminalName = cmm.terminalName.getOrElse(""),
+      queueName = cmm.queueName.getOrElse(""),
+      minute = cmm.minute.getOrElse(0L),
+      paxLoad = cmm.paxLoad.getOrElse(0d),
+      workLoad = cmm.workLoad.getOrElse(0d),
+      deskRec = cmm.deskRec.getOrElse(0),
+      waitTime = cmm.waitTime.getOrElse(0),
+      simDesks = cmm.simDesks,
+      simWait = cmm.simWait,
+      actDesks = cmm.actDesks,
+      actWait = cmm.actWait
     )
   }
 

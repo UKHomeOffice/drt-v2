@@ -2,7 +2,7 @@ package services.crunch
 
 import org.specs2.mutable.Specification
 import services.CSVData
-import services.Crunch.CrunchMinute
+import services.graphstages.Crunch.CrunchMinute
 
 class CrunchMinutesToCSVDataTest extends Specification{
 

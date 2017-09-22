@@ -8,7 +8,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
-import services.Crunch._
+import services.graphstages.Crunch._
 import services.SDate
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 

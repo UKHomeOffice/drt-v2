@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.Crunch._
+import services.graphstages.Crunch._
 import services.SDate
 
 import scala.collection.immutable.{List, Seq}
@@ -71,7 +71,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
 
       val expected = Map(

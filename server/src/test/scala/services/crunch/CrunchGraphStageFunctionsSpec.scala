@@ -10,7 +10,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import services.Crunch._
+import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 

@@ -14,9 +14,10 @@ import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.Crunch._
+import services.graphstages.Crunch._
+import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph}
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
-import services.{CrunchGraphStage, RunnableCrunchGraph, SDate}
+import services.SDate
 
 import scala.collection.immutable.{List, Seq, Set}
 import scala.concurrent.ExecutionContext.Implicits.global

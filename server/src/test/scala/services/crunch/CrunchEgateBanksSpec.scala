@@ -10,7 +10,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.Crunch._
+import services.graphstages.Crunch._
 import services.SDate
 
 import scala.collection.immutable.{List, Seq}

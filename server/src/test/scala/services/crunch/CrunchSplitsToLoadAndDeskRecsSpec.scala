@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import services.Crunch.{CrunchState, getLocalLastMidnight}
+import services.graphstages.Crunch.{CrunchState, getLocalLastMidnight}
 import services.SDate
 
 import scala.collection.immutable.{List, Seq}

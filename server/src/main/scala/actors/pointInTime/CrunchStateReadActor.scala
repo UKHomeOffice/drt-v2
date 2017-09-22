@@ -6,7 +6,7 @@ import controllers.{CrunchMinutes, GetTerminalCrunch}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
-import services.Crunch.CrunchState
+import services.graphstages.Crunch.CrunchState
 
 import scala.collection.immutable._
 
@@ -53,7 +53,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
     case GetPortWorkload =>
       state match {
         case Some(CrunchState(_, _, _, crunchMinutes)) =>
-          sender() ! portWorkload(crunchMinutes)
+          sender() ! PortLoads(portWorkload(crunchMinutes))
         case None =>
           sender() ! WorkloadsNotReady()
       }
