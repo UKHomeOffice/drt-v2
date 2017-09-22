@@ -16,6 +16,8 @@ case class ShiftsState(shifts: String) {
 
 case object GetState
 
+case object GetShifts
+
 
 class ShiftsActor extends PersistentActor with ActorLogging {
 
@@ -42,6 +44,9 @@ class ShiftsActor extends PersistentActor with ActorLogging {
     case GetState =>
       log.info(s"GetState received")
       sender() ! state.shifts
+
+    case GetShifts =>
+
 
     case data: String =>
       if (data != state.shifts) {
