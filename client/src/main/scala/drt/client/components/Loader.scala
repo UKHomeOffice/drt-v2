@@ -13,17 +13,13 @@ object Loader {
 
   val component = ScalaComponent.builder[Props]("Loader")
     .render_P(p => {
-      println(s"calling render for loader")
       val loadingRCP = SPACircuit.connect(m => m.loadingState)
       loadingRCP((loadingMP: ModelProxy[(LoadingState)]) => {
-        println(s"connecting to loader model")
         val loadingState = loadingMP()
 
         if (loadingState.isLoading) {
-          println(s"Rendering visible loader with message ${loadingState.message}")
           <.div(^.className := "loader alert alert-info", s"${loadingState.message}")
         } else {
-          println("Rendering no loader")
         <.div()
         }
       })
