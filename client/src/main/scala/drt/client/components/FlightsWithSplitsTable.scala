@@ -41,7 +41,6 @@ object FlightsWithSplitsTable {
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
-//    .initialState(State(true))
     .renderPS((_$, props, state) => {
 
 
@@ -49,7 +48,6 @@ object FlightsWithSplitsTable {
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
-      //todo move this closer to the model
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {

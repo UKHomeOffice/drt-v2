@@ -308,7 +308,6 @@ class Application @Inject()(
       implicit val timeout: Timeout = Timeout(60 seconds)
       val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetFlights)
       val flights = cacheActorRef ? query
-//      log.info(s"We got $flights back from cached actor")
 
       flights.recover {
         case e: Throwable =>
@@ -362,7 +361,7 @@ class Application @Inject()(
 
 
   def flightsAtTimestamp(millis: MillisSinceEpoch) = {
-    implicit val timeout: Timeout = Timeout(10 seconds)
+    implicit val timeout: Timeout = Timeout(60 seconds)
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(millis), airportConfig.queues), GetFlights)
     val flights = cacheActorRef ? query
     flights
@@ -370,7 +369,7 @@ class Application @Inject()(
 
   def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
 
-    implicit val timeout: Timeout = Timeout(5 seconds)
+    implicit val timeout: Timeout = Timeout(60 seconds)
 
     val potMillidate = MilliDate(pointInTime.toLong)
     val flights = flightsAtTimestamp(pointInTime.toLong)
