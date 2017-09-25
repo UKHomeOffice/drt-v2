@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import actors.pointInTime.StaffMovementsReadActor
-import actors.{GetState, StaffMovements, StaffMovementsActor}
+import actors.{GetState, StaffMovements, StaffMovementsActorBase}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
@@ -25,7 +25,7 @@ trait StaffMovementsPersistence {
 
   def actorSystem: ActorSystem
 
-  def staffMovementsActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsActor]))
+  def staffMovementsActor: ActorRef
 
   def saveStaffMovements(staffMovements: Seq[StaffMovement]) = {
     actorSystem.log.info(s"Sending StaffMovements to staffMovementsActor")

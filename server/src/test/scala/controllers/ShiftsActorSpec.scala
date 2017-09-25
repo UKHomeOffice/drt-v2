@@ -2,7 +2,7 @@ package controllers
 
 import java.io.File
 
-import actors.{GetState, ShiftsActor, ShiftsMessageParser}
+import actors.{GetState, ShiftsActorBase, ShiftsMessageParser}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.testkit.{ImplicitSender, TestKit}
@@ -56,7 +56,7 @@ class ShiftsActorSpec extends Specification {
   isolated
 
   private def shiftsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsactor")
+    val actor = system.actorOf(Props(classOf[ShiftsActorBase]), "shiftsactor")
     actor
   }
 

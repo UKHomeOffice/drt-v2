@@ -1,12 +1,12 @@
 package actors.pointInTime
 
 import actors.FixedPointsMessageParser.fixedPointMessagesToFixedPointsString
-import actors.{FixedPointsActor, FixedPointsState}
+import actors.{FixedPointsActorBase, FixedPointsState}
 import akka.persistence.{Recovery, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessage
 
-class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActor {
+class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase {
   override val receiveRecover: Receive = {
     case SnapshotOffer(_, snapshot) =>
       snapshot match {

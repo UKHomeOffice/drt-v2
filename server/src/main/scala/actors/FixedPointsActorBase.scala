@@ -1,6 +1,6 @@
 package actors
 
-import akka.actor.ActorLogging
+import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
@@ -15,7 +15,14 @@ case class FixedPointsState(fixedPoints: String) {
   def updated(data: String): FixedPointsState = copy(fixedPoints = data)
 }
 
-class FixedPointsActor extends PersistentActor with ActorLogging {
+class FixedPointsActor(subscriber: ActorRef) extends FixedPointsActorBase {
+  override def onUpdateState(data: String) = {
+    log.info(s"Telling subscriber about updated fixed points")
+    subscriber ! data
+  }
+}
+
+class FixedPointsActorBase extends PersistentActor with ActorLogging {
 
   override def persistenceId = "fixedPoints-store"
 
@@ -25,7 +32,9 @@ class FixedPointsActor extends PersistentActor with ActorLogging {
 
   val receiveRecover: Receive = {
     case fixedPointsMessage: FixedPointsMessage =>
-      updateState(fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList))
+      val fp = fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList)
+      updateState(fp)
+      onUpdateState(fp)
 
     case SnapshotOffer(_, snapshot: FixedPointsStateSnapshotMessage) =>
       state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
@@ -40,6 +49,7 @@ class FixedPointsActor extends PersistentActor with ActorLogging {
 
     case fp: String if fp != state.fixedPoints =>
       updateState(fp)
+      onUpdateState(fp)
 
       log.info(s"Fixed points updated. Saving snapshot")
       val snapshotMessage = FixedPointsStateSnapshotMessage(fixedPointsStringToFixedPointsMessages(state.fixedPoints))
@@ -51,6 +61,8 @@ class FixedPointsActor extends PersistentActor with ActorLogging {
     case u =>
       log.info(s"unhandled message: $u")
   }
+
+  def onUpdateState(fp: String) = {}
 
   def updateState(data: String): Unit = {
     state = state.updated(data)

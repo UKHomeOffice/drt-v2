@@ -1,6 +1,6 @@
 package actors
 
-import akka.actor.ActorLogging
+import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
@@ -18,8 +18,14 @@ case object GetState
 
 case object GetShifts
 
+class ShiftsActor(subscriber: ActorRef) extends ShiftsActorBase {
+  override def onUpdateState(data: String) = {
+    log.info(s"Telling subscriber about updated shifts")
+    subscriber ! data
+  }
+}
 
-class ShiftsActor extends PersistentActor with ActorLogging {
+class ShiftsActorBase extends PersistentActor with ActorLogging {
 
   override def persistenceId = "shifts-store"
 
@@ -29,13 +35,18 @@ class ShiftsActor extends PersistentActor with ActorLogging {
 
   import ShiftsMessageParser._
 
-  def updateState(data: String): Unit = {
-    state = state.updated(data = data)
+  def updateState(shifts: String): Unit = {
+    state = state.updated(data = shifts)
+    onUpdateState(shifts)
   }
+
+  def onUpdateState(data: String) = {}
 
   val receiveRecover: Receive = {
     case shiftsMessage: ShiftsMessage =>
-      updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList))
+      val shifts = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
+      updateState(shifts)
+      onUpdateState(shifts)
     case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) =>
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
   }

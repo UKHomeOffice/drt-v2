@@ -1,11 +1,11 @@
 package actors.pointInTime
 
-import actors.{StaffMovementsActor, StaffMovementsState}
+import actors.{StaffMovementsActorBase, StaffMovementsState}
 import akka.persistence.{Recovery, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 
-class StaffMovementsReadActor(pointInTime: SDateLike) extends StaffMovementsActor {
+class StaffMovementsReadActor(pointInTime: SDateLike) extends StaffMovementsActorBase {
   override val receiveRecover: Receive = {
     case smm: StaffMovementsMessage =>
       updateState(staffMovementMessagesToStaffMovements(smm.staffMovements.toList))

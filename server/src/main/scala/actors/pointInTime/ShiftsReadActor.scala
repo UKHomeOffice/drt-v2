@@ -1,12 +1,12 @@
 package actors.pointInTime
 
 import actors.ShiftsMessageParser.shiftMessagesToShiftsString
-import actors.{ShiftsActor, ShiftsState}
+import actors.{ShiftsActorBase, ShiftsState}
 import akka.persistence.{Recovery, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
 
-class ShiftsReadActor(pointInTime: SDateLike) extends ShiftsActor {
+class ShiftsReadActor(pointInTime: SDateLike) extends ShiftsActorBase {
   override val receiveRecover: Receive = {
     case shiftsMessage: ShiftsMessage =>
       updateState(shiftMessagesToShiftsString(shiftsMessage.shifts.toList))
