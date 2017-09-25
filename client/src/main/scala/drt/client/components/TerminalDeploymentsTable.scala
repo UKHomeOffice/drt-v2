@@ -333,14 +333,6 @@ object TerminalDeploymentsTable {
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .initialState[State](State(false))
     .renderPS((sc, p, s) => Backend(sc, p, s))
-    .componentDidMount((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log(s"terminal deployments component didMount")
-    })
-    .componentDidUpdate((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log(s"terminal deployments component didUpdate")
-    })
     .configure(Reusability.shouldComponentUpdate)
     .build
 

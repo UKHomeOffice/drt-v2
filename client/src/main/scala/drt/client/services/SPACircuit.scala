@@ -96,7 +96,7 @@ case class RootModel(
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map(),
                       pointInTime: Option[SDateLike] = None,
                       timeRangeFilter: TimeRangeHours = TimeRangeHours(),
-                      loadingState: LoadingState = LoadingState(true, "Loading flights and desks")
+                      loadingState: LoadingState = LoadingState(true, "Loading...")
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -341,7 +341,7 @@ case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxS
 
 class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
   val flightsRequestFrequency = 60 seconds
-  val reRequestDelay = 1 second
+  val reRequestDelay = 20 seconds
 
   def pointInTimeMillis = pointInTime.value.map(m => {
     log.info(s"millisSinceEpoch value: ${m.millisSinceEpoch}")
@@ -359,7 +359,7 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
           log.info(s"Flights not ready")
           RequestFlightsAfter(reRequestDelay)
       }
-      effectOnly(Effect(x))
+      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
 
     case UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) =>
       val requestFlightsAfterDelay = Effect(Future(RequestFlights())).after(flightsRequestFrequency)
@@ -388,15 +388,16 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
             GetWorkloads("", "")
           })
 
-          val allEffects = airportInfos >> getWorkloads
+          val allEffects = (airportInfos >> getWorkloads) + Effect(Future(HideLoader()))
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
-          noChange
+          //          effectOnly(Effect(Future(HideLoader())))
+          effectOnly(Effect(Future(HideLoader())))
         }
       } else {
         val airportCodes = flights.map(_.Origin).toSet
-        updated(Ready(flightsWithSplits), Effect(Future(GetAirportInfos(airportCodes))))
+        updated(Ready(flightsWithSplits), Effect(Future(HideLoader())) + Effect(Future(GetAirportInfos(airportCodes))))
       }
       result
     case UpdateFlightPaxSplits(Left(failure)) =>
@@ -404,7 +405,7 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
       noChange
     case UpdateFlightPaxSplits(Right(result)) =>
       log.info(s"Found flightPaxSplits ${result}")
-      noChange
+      effectOnly(Effect(Future(HideLoader())))
   }
 }
 
@@ -735,13 +736,13 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
     case SetPointInTime(pointInTime) =>
       log.info(s"Set client point in time: $pointInTime")
       val sdatePointInTime = SDate(MilliDate(pointInTime))
-      val nextRequests =  Effect(Future(RequestFlights())) + Effect(Future(GetShifts())) +
-        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements())) + Effect(Future(ShowLoader(s"Loading snapshot for ${sdatePointInTime.prettyDateTime()}...")))
+      val nextRequests = Effect(Future(RequestFlights())) + Effect(Future(GetShifts())) +
+        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements()))
       updated(Option(sdatePointInTime), nextRequests)
 
     case SetPointInTimeToLive() =>
       log.info(s"Set client point in time to live")
-      val nextRequest =  Effect(Future(RequestFlights())) + Effect(Future(ShowLoader(s"Loading live flights and desks...")))
+      val nextRequest = Effect(Future(RequestFlights()))
       updated(None, nextRequest)
   }
 }
@@ -752,13 +753,12 @@ class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends Log
       updated(r)
   }
 }
+
 class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case ShowLoader(message) =>
-      log.info(s"Showing loader with message $message")
       updated(LoadingState(isLoading = true, message))
     case HideLoader() =>
-      log.info("Hiding loader")
       updated(LoadingState(isLoading = false, ""))
   }
 }

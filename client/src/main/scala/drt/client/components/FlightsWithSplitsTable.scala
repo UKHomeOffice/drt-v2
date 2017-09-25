@@ -1,12 +1,8 @@
 package drt.client.components
 
-import drt.client.actions.Actions.HideLoader
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
-import drt.client.logger
 import drt.client.logger._
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -45,8 +41,10 @@ object FlightsWithSplitsTable {
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
-
+//    .initialState(State(true))
     .renderPS((_$, props, state) => {
+
+
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
@@ -95,14 +93,6 @@ object FlightsWithSplitsTable {
           log.error(s"failure in table render $f")
           <.div(s"render failure ${f}")
       }
-    })
-    .componentDidMount((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log(s"arrivals table didMount")
-    })
-    .componentDidUpdate((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log(s"arrivals table didUpdate")
     })
     .configure(Reusability.shouldComponentUpdate)
     .build

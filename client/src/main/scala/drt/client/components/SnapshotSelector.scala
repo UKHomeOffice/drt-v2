@@ -1,7 +1,8 @@
 package drt.client.components
 
+import diode.Effect
 import diode.react.ModelProxy
-import drt.client.actions.Actions.{SetPointInTime, SetPointInTimeToLive}
+import drt.client.actions.Actions.{SetPointInTime, SetPointInTimeToLive, ShowLoader}
 import drt.client.logger.LoggerFactory
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -10,6 +11,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 
+import scala.concurrent.Future
 import scala.scalajs.js.Date
 
 object SnapshotSelector {
@@ -69,11 +71,13 @@ object SnapshotSelector {
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def selectPointInTime = (e: ReactEventFromInput) => {
+        SPACircuit.dispatch(ShowLoader(s"Loading snapshot for ${state.snapshotDateTime.prettyDateTime()}..."))
         SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.millisSinceEpoch))
         scope.modState(_.copy(live = false, showDatePicker = false))
       }
 
       def backToLive = (e: ReactEventFromInput) => {
+        SPACircuit.dispatch(ShowLoader(s"Loading live flights and desks..."))
         SPACircuit.dispatch(SetPointInTimeToLive())
         scope.modState(_.copy(live = true, showDatePicker = false))
       }

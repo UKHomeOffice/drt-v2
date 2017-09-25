@@ -62,18 +62,10 @@ object TerminalsDashboardPage {
                 }
               })
             })
-          }), Debug())
+          }))
       }
     }
     )
-    .componentDidMount((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log(s"Dashboard didMount")
-    })
-    .componentDidUpdate((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log(s"Dashboard didUpdate")
-    })
     .build
 
   def apply(hours: Int): VdomElement = component(Props(hours))

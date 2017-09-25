@@ -98,17 +98,13 @@ object TerminalComponent {
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .renderPS(($, props, state) => render(props))
-    .componentWillMount((p) => {
-      SPACircuit.dispatch(ShowLoader(s"Loading terminal..."))
-      Callback.log("Will mount Terminal Component")
-    })
-    .componentDidMount((p) => {
-      SPACircuit.dispatch(HideLoader())
-      Callback.log("Did mount Terminal Component")
-    })
+      .componentDidUpdate(p => Callback.log("Updating Terminal Component"))
+      .componentDidMount(p => Callback.log("Updating Terminal Component"))
     .build
 
-  def apply(props: Props): VdomElement = component(props)
+  def apply(props: Props): VdomElement = {
+    component(props)
+  }
 }
 
 object SummaryBoxesComponent {
@@ -358,7 +354,6 @@ object TerminalContentComponent {
     .initialState(State("arrivals"))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount((p) => {
-      SPACircuit.dispatch(HideLoader())
       Callback.log(s"terminal component didMount")
     })
     .configure(Reusability.shouldComponentUpdate)

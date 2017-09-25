@@ -14,14 +14,17 @@ object Layout {
 
   val component = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
+      <.div(
+        <.div(^.className := "main-logo"),
         <.div(
-          <.div(^.className := "main-logo"),
-          <.div(
-            // here we use plain Bootstrap class names as these are specific to the top level layout defined here
-            Navbar(props.ctl, props.currentLoc.page),
-            Loader(<.div(^.className := "container", props.currentLoc.render())))
-
+          // here we use plain Bootstrap class names as these are specific to the top level layout defined here
+          Navbar(props.ctl, props.currentLoc.page),
+          <.div(^.className := "container", props.currentLoc.render()),
+          Loader()
         )
+
+
+      )
     })
     .build
 

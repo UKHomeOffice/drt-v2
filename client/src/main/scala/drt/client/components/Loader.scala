@@ -2,32 +2,35 @@ package drt.client.components
 
 import diode.react.ModelProxy
 import drt.client.services.SPACircuit
-import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 
 case class LoadingState(isLoading: Boolean = false, message: String = "Loading...")
 
 object Loader {
 
-  case class Props(content: TagMod)
+  case class Props()
 
   val component = ScalaComponent.builder[Props]("Loader")
     .render_P(p => {
-
+      println(s"calling render for loader")
       val loadingRCP = SPACircuit.connect(m => m.loadingState)
       loadingRCP((loadingMP: ModelProxy[(LoadingState)]) => {
+        println(s"connecting to loader model")
+        val loadingState = loadingMP()
 
-        val loading = loadingMP()
-
-        val isLoading = if (loading.isLoading) "loading" else ""
-        <.div(^.className := isLoading,
-          <.div(^.id := "loader-overlay", p.content),
-          if(loading.isLoading)
-            <.div(^.className := "loader-message alert alert-info", loading.message)
-          else ""
-        )
+        if (loadingState.isLoading) {
+          println(s"Rendering visible loader with message ${loadingState.message}")
+          <.div(^.className := "loader alert alert-info", s"${loadingState.message}")
+        } else {
+          println("Rendering no loader")
+        <.div()
+        }
       })
-    }).build
+    })
+    .componentDidMount(p => Callback.log("mounted loader"))
+    .componentDidUpdate(p => Callback.log("updated loader"))
+    .build
 
-  def apply(content: TagMod): VdomElement = component(Props(content))
+  def apply(): VdomElement = component(Props())
 }
