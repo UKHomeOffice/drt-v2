@@ -68,4 +68,8 @@ object Actions {
 
   case class SetTimeRangeFilter(timeRangeHours: TimeRangeHours) extends Action
 
+  case class ShowLoader(message: String) extends Action
+
+  case class HideLoader() extends Action
+
 }

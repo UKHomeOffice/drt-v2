@@ -1,17 +1,11 @@
 package drt.client.components
 
 import diode.react.ModelProxy
-import drt.client.actions.Actions.{SetPointInTime, SetTimeRangeFilter}
-import drt.client.components.DateViewSelector.State
-import drt.client.components.TimeRangeFilter.State
+import drt.client.actions.Actions.SetTimeRangeFilter
 import drt.client.logger.LoggerFactory
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.{MilliDate, SDateLike}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
-
-import scala.scalajs.js.Date
 
 object TimeRangeFilter {
 

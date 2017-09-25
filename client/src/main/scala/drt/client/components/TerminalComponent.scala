@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.ModelProxy
-import drt.client.actions.Actions.SetPointInTime
+import drt.client.actions.Actions.{HideLoader, SetPointInTime, ShowLoader}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
 import drt.client.components.Heatmap.Series
@@ -19,6 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 import org.scalajs.dom
+
 import scala.collection.immutable.Map
 import scala.util.Try
 
@@ -57,15 +58,15 @@ object TerminalComponent {
       val model = modelMP.value
       <.div(
         model.airportConfig.renderReady(airportConfig => {
-//          val summaryBoxesProps = SummaryBoxesComponent.Props(
-//            airportConfig,
-//            props.terminalName,
-//            model.flightsWithSplitsPot
-//          )
-//          val heatmapProps = HeatmapComponent.Props(
-//            airportConfig,
-//            props.terminalName,
-//            model.simulationResult)
+          //          val summaryBoxesProps = SummaryBoxesComponent.Props(
+          //            airportConfig,
+          //            props.terminalName,
+          //            model.flightsWithSplitsPot
+          //          )
+          //          val heatmapProps = HeatmapComponent.Props(
+          //            airportConfig,
+          //            props.terminalName,
+          //            model.simulationResult)
 
           val terminalContentProps = TerminalContentComponent.Props(
             airportConfig,
@@ -82,9 +83,9 @@ object TerminalComponent {
           )
 
           <.div(
-//            SummaryBoxesComponent(summaryBoxesProps),
-//            HeatmapComponent(heatmapProps),
-            DateTimeSelector(DateTimeSelector.Props(model.pointInTime, props.terminalName)),
+            //            SummaryBoxesComponent(summaryBoxesProps),
+            //            HeatmapComponent(heatmapProps),
+            SnapshotSelector(SnapshotSelector.Props(model.pointInTime, props.terminalName)),
             TerminalContentComponent(terminalContentProps)
           )
         }
@@ -97,9 +98,13 @@ object TerminalComponent {
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .renderPS(($, props, state) => render(props))
+      .componentDidUpdate(p => Callback.log("Updating Terminal Component"))
+      .componentDidMount(p => Callback.log("Updating Terminal Component"))
     .build
 
-  def apply(props: Props): VdomElement = component(props)
+  def apply(props: Props): VdomElement = {
+    component(props)
+  }
 }
 
 object SummaryBoxesComponent {
@@ -263,7 +268,7 @@ object TerminalContentComponent {
       case _ => false
     } else false
 
-    withinRange(a.apiFlight.SchDT) || withinRange(a.apiFlight.EstDT) || withinRange(a.apiFlight.ActDT) || withinRange(a.apiFlight.EstChoxDT)  || withinRange(a.apiFlight.ActChoxDT) || withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString)
+    withinRange(a.apiFlight.SchDT) || withinRange(a.apiFlight.EstDT) || withinRange(a.apiFlight.ActDT) || withinRange(a.apiFlight.EstChoxDT) || withinRange(a.apiFlight.ActChoxDT) || withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString)
   })
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
@@ -348,7 +353,9 @@ object TerminalContentComponent {
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialState(State("arrivals"))
     .renderBackend[TerminalContentComponent.Backend]
-    .componentDidMount((p) => Callback.log(s"terminal component didMount"))
+    .componentDidMount((p) => {
+      Callback.log(s"terminal component didMount")
+    })
     .configure(Reusability.shouldComponentUpdate)
     .build
 

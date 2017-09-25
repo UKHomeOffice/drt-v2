@@ -4,6 +4,7 @@ import diode.data.{Pot, Ready}
 import diode.react._
 import drt.client.TableViewUtils
 import drt.client.TableViewUtils._
+import drt.client.actions.Actions.HideLoader
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
@@ -332,7 +333,6 @@ object TerminalDeploymentsTable {
   private val component = ScalaComponent.builder[Props]("TerminalDeployments")
     .initialState[State](State(false))
     .renderPS((sc, p, s) => Backend(sc, p, s))
-    .componentDidMount((p) => Callback.log(s"terminal deployments component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

@@ -2,9 +2,7 @@ package drt.client.components
 
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
-import drt.client.logger
 import drt.client.logger._
-import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -43,12 +41,13 @@ object FlightsWithSplitsTable {
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
-
     .renderPS((_$, props, state) => {
+
+
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
-      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime) //todo move this closer to the model
+      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
       Try {
@@ -93,7 +92,6 @@ object FlightsWithSplitsTable {
           <.div(s"render failure ${f}")
       }
     })
-    .componentDidMount((p) => Callback.log(s"arrivals table didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -224,7 +222,6 @@ object FlightTableRow {
 
     )
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
-    .componentDidMount((p) => Callback.log(s"arrivals row didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 }

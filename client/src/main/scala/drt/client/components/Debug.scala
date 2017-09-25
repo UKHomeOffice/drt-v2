@@ -32,7 +32,8 @@ object Debug {
           m.workloadPot,
           m.queueCrunchResults,
           m.simulationResult,
-          m.flightsWithSplitsPot
+          m.flightsWithSplitsPot,
+          m.loadingState
         )
       )
       staffingRCP((staffingMP: ModelProxy[(
@@ -42,9 +43,10 @@ object Debug {
           Pot[Workloads],
           RootModel.PortCrunchResults,
           RootModel.PortSimulationResults,
-          Pot[FlightsWithSplits]
+          Pot[FlightsWithSplits],
+          LoadingState
         )]) => {
-        val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, potFlights) = staffingMP()
+        val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, potFlights, loadingState) = staffingMP()
 
         if (dom.window.hasOwnProperty("debug")) {
           <.table(
@@ -54,7 +56,8 @@ object Debug {
             <.tr(<.th("Terminal queue Crunch Results"), <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), tqcr.toString()))),
             <.tr(<.th("Simulation Result"), <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), simulationResult.toString()))),
             <.tr(<.th("workloads"), potWorkloads.renderReady(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
-            <.tr(<.th("flights with splits"), potFlights.renderReady(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString))))
+            <.tr(<.th("flights with splits"), potFlights.renderReady(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
+            <.tr(<.th("loading state"), s"$loadingState")
           )
         } else {
           <.div()

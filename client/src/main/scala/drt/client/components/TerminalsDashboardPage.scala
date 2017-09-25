@@ -3,11 +3,12 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ReactConnectProps
 import drt.client.SPAMain.Loc
+import drt.client.actions.Actions.HideLoader
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.{ApiFlightWithSplits, ArrivalHelper}
 import japgolly.scalajs.react.component.Generic
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -21,7 +22,6 @@ object TerminalsDashboardPage {
       val nowPlusNHours = now.addHours(p.hours)
 
       def interestingFlight(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, now, nowPlusNHours)
-
 
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
@@ -62,10 +62,11 @@ object TerminalsDashboardPage {
                 }
               })
             })
-          }), Debug())
+          }))
       }
     }
-    ).build
+    )
+    .build
 
   def apply(hours: Int): VdomElement = component(Props(hours))
 

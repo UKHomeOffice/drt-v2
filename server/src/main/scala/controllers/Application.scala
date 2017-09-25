@@ -268,7 +268,7 @@ class Application @Inject()(
   trait CrunchFromCrunchState {
 
     def getTerminalCrunchResult(terminalName: TerminalName, pointInTime: Long): Future[TerminalCrunchResult] = {
-
+      implicit val timeout = Timeout(60 seconds)
       if (pointInTime > 0) {
         val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetTerminalCrunch(terminalName))
         val terminalCrunchResult = cacheActorRef ? query
@@ -294,7 +294,7 @@ class Application @Inject()(
       } else {
         val askable = ctrl.crunchStateActor
         log.info(s"asking $askable for flightsWithSplits")
-        val flights = askable.ask(GetFlights)(Timeout(100 milliseconds))
+        val flights = askable.ask(GetFlights)(Timeout(1 second))
         flights.recover {
           case _ => FlightsNotReady()
         }.map {
@@ -305,11 +305,9 @@ class Application @Inject()(
     }
 
     override def getFlightsWithSplitsAtDate(pointInTime: MillisSinceEpoch): Future[Either[FlightsNotReady, FlightsWithSplits]] = {
-      val crunchStateReadActorProps = Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues)
-      val crunchStateReadActor: AskableActorRef = system.actorOf(crunchStateReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
-
-      log.info(s"asking $crunchStateReadActor for flightsWithSplits")
-      val flights = flightsAtTimestamp(pointInTime.toLong)
+      implicit val timeout: Timeout = Timeout(60 seconds)
+      val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetFlights)
+      val flights = cacheActorRef ? query
 
       flights.recover {
         case e: Throwable =>
@@ -320,7 +318,7 @@ class Application @Inject()(
           log.info(s"GetFlights success: ${fs.flights.length} flights")
           Right(fs)
         case e =>
-          log.info(s"GetFlights failed: $e")
+          log.info(s"GetFlights Flights not ready: $e")
           Left(FlightsNotReady())
       }
     }
@@ -363,7 +361,7 @@ class Application @Inject()(
 
 
   def flightsAtTimestamp(millis: MillisSinceEpoch) = {
-    implicit val timeout: Timeout = Timeout(5 seconds)
+    implicit val timeout: Timeout = Timeout(60 seconds)
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(millis), airportConfig.queues), GetFlights)
     val flights = cacheActorRef ? query
     flights
@@ -371,7 +369,7 @@ class Application @Inject()(
 
   def getFlightsWithSplitsCSV(pointInTime: String, terminalName: TerminalName) = Action.async {
 
-    implicit val timeout: Timeout = Timeout(5 seconds)
+    implicit val timeout: Timeout = Timeout(60 seconds)
 
     val potMillidate = MilliDate(pointInTime.toLong)
     val flights = flightsAtTimestamp(pointInTime.toLong)

@@ -61,9 +61,9 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
     case GetTerminalCrunch(terminalName) =>
       state match {
         case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
-          sender() ! queueCrunchResults(terminalName, startMillis, crunchMinutes)
+          sender() ! TerminalCrunchResult(queueCrunchResults(terminalName, startMillis, crunchMinutes).toList)
         case _ =>
-          sender() ! List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]()
+          sender() ! TerminalCrunchResult(List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]())
       }
 
     case GetCrunchMinutes =>

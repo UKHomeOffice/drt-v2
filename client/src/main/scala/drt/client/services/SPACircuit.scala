@@ -21,8 +21,9 @@ import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
 import drt.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
 import drt.client.actions.Actions._
-import drt.client.components.FlightsWithSplitsTable
+import drt.client.components.{FlightsWithSplitsTable, LoadingState}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
+import drt.shared._
 
 import scala.collection.immutable.{Iterable, Map, NumericRange, Seq}
 import scala.concurrent.Future
@@ -94,7 +95,8 @@ case class RootModel(
                       slotsInADay: Int = 96,
                       actualDeskStats: Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]] = Map(),
                       pointInTime: Option[SDateLike] = None,
-                      timeRangeFilter: TimeRangeHours = TimeRangeHours()
+                      timeRangeFilter: TimeRangeHours = TimeRangeHours(),
+                      loadingState: LoadingState = LoadingState(true, "Loading...")
                     ) {
 
   lazy val staffDeploymentsByTerminalAndQueue: Map[TerminalName, QueueStaffDeployments] = {
@@ -339,7 +341,7 @@ case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxS
 
 class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
   val flightsRequestFrequency = 60 seconds
-  val reRequestDelay = 1 second
+  val reRequestDelay = 20 seconds
 
   def pointInTimeMillis = pointInTime.value.map(m => {
     log.info(s"millisSinceEpoch value: ${m.millisSinceEpoch}")
@@ -357,7 +359,7 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
           log.info(s"Flights not ready")
           RequestFlightsAfter(reRequestDelay)
       }
-      effectOnly(Effect(x))
+      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
 
     case UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) =>
       val requestFlightsAfterDelay = Effect(Future(RequestFlights())).after(flightsRequestFrequency)
@@ -386,15 +388,16 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
             GetWorkloads("", "")
           })
 
-          val allEffects = airportInfos >> getWorkloads
+          val allEffects = (airportInfos >> getWorkloads) + Effect(Future(HideLoader()))
           updated(Ready(flightsWithSplits), allEffects)
         } else {
           log.info("no changes to flights")
-          noChange
+          //          effectOnly(Effect(Future(HideLoader())))
+          effectOnly(Effect(Future(HideLoader())))
         }
       } else {
         val airportCodes = flights.map(_.Origin).toSet
-        updated(Ready(flightsWithSplits), Effect(Future(GetAirportInfos(airportCodes))))
+        updated(Ready(flightsWithSplits), Effect(Future(HideLoader())) + Effect(Future(GetAirportInfos(airportCodes))))
       }
       result
     case UpdateFlightPaxSplits(Left(failure)) =>
@@ -402,7 +405,7 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
       noChange
     case UpdateFlightPaxSplits(Right(result)) =>
       log.info(s"Found flightPaxSplits ${result}")
-      noChange
+      effectOnly(Effect(Future(HideLoader())))
   }
 }
 
@@ -751,6 +754,15 @@ class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends Log
   }
 }
 
+class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case ShowLoader(message) =>
+      updated(LoadingState(isLoading = true, message))
+    case HideLoader() =>
+      updated(LoadingState(isLoading = false, ""))
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -788,7 +800,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffMovementsHandler(zoom(_.pointInTime), zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ActualDesksHandler(zoom(_.pointInTime), zoomRW(_.actualDeskStats)((m, v) => m.copy(actualDeskStats = v))),
       new PointInTimeHandler(zoomRW(_.pointInTime)((m, v) => m.copy(pointInTime = v))),
-      new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v)))
+      new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
+      new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v)))
     )
 
     val loggedhandlers: HandlerFunction = (model, update) => {
