@@ -14,7 +14,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch._
+import services.graphstages.Crunch.{haveWorkloadsChanged, _}
 import services.workloadcalculator.PaxLoadCalculator.Load
 import services.{FastTrackPercentages, SDate}
 
@@ -45,7 +45,6 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-    var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
 
     var crunchStateOption: Option[CrunchState] = None
@@ -106,14 +105,15 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
           flightsSoFar.get(updatedFlightWithPcp.FlightID) match {
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
-
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
+
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
-              log.info(s"Updating flight ${updatedFlightWithPcp.IATA}")
+              log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
+
             case _ =>
               log.info(s"No update to flight ${updatedFlightWithPcp.IATA}")
               flightsSoFar
@@ -227,27 +227,11 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
-      val crunchEnd = crunchStart + (numberOfMinutes * Crunch.oneMinuteMillis)
-      val flightSplitDiffs = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
-        .filter {
-          case FlightSplitDiff(_, _, _, _, _, _, minute) =>
-            crunchStart <= minute && minute < crunchEnd
-        }
-
-      val crunchState = flightSplitDiffs match {
-        case fsd if fsd.isEmpty =>
-          log.info("No changes to flight workloads")
-          None
-        case _ =>
-          log.info("Flight workloads changed, triggering crunch")
-          val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
-          Option(newCrunchState)
-      }
+      val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
 
       flightsByFlightId = newFlightsById
-      flightSplitMinutesByFlight = newFlightSplitMinutesByFlight
 
-      crunchState
+      Option(newCrunchState)
     }
 
     def pushStateIfReady(): Unit = {

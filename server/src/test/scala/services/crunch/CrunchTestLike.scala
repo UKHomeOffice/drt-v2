@@ -5,6 +5,7 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
+import controllers.PaxFlow
 import controllers.SystemActors.SplitsProvider
 import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
@@ -51,6 +52,9 @@ class CrunchTestLike
       Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
       Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
   val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
+  val timeToChoxMillis = 120000L
+  val firstPaxOffMillis = 180000L
+  val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
   def runCrunchGraph[M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                      slaByQueue: Map[QueueName, Int] = slaByQueue,
@@ -60,7 +64,7 @@ class CrunchTestLike
                      validTerminals: Set[String] = validTerminals,
                      portSplits: SplitRatios = defaultPaxSplits,
                      csvSplitsProvider: SplitsProvider = (a: Arrival) => None,
-                     pcpArrivalTime: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch),
+                     pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      crunchStartDateProvider: () => MillisSinceEpoch,
                      minutesToCrunch: Int = 30)
                     (flightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, AskableActorRef) = {
