@@ -45,7 +45,7 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
       override def preStart(): Unit = {
         initialCrunchStateFuture.onSuccess {
           case initialCrunchStateOption =>
-            log.info(s"Received initial crunchState. Setting $initialCrunchStateOption")
+            log.info(s"Received initial crunchState")
             crunchStateOption = initialCrunchStateOption
         }
         Await.ready(initialCrunchStateFuture, 10 seconds)
