@@ -1,25 +1,25 @@
 package services.graphstages
 
-import actors.StaffMovements
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.ClosedShape
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.FlightsApi.Flights
+import drt.shared.StaffMovement
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
 
 object RunnableCrunchGraph {
 
-  def apply[M](
+  def apply[M, SM](
                 flightsSource: Source[Flights, M],
                 voyageManifestsSource: Source[VoyageManifests, M],
-                shiftsSource: Source[String, M],
-                fixedPointsSource: Source[String, M],
-                staffMovementsSource: Source[StaffMovements, M],
+                shiftsSource: Source[String, SM],
+                fixedPointsSource: Source[String, SM],
+                staffMovementsSource: Source[Seq[StaffMovement], SM],
                 staffingStage: StaffingStage,
                 cruncher: CrunchGraphStage,
-                crunchStateActor: ActorRef): RunnableGraph[(M, M, M, M, M, NotUsed, NotUsed, NotUsed)] = {
+                crunchStateActor: ActorRef): RunnableGraph[(M, M, SM, SM, SM, NotUsed, NotUsed, NotUsed)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
     import akka.stream.scaladsl.GraphDSL.Implicits._

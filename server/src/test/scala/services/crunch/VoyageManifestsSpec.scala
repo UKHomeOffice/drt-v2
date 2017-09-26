@@ -138,7 +138,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val queues = crunchMinutes.groupBy(_.queueName).keys.toSet
     val expectedQueues = Set(NonEeaDesk)
 
-    (splitsSet, queues) === (expectedSplits, expectedQueues)
+    (splitsSet, queues) === Tuple2(expectedSplits, expectedQueues)
   }
 
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {

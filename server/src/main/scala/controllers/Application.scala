@@ -132,7 +132,7 @@ trait SystemActors {
   val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
   val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
 
-  val staffingGraphStage = new StaffingStage
+  val staffingGraphStage = new StaffingStage(airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
 
   val (_, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),

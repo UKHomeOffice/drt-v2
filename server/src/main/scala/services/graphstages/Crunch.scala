@@ -130,8 +130,8 @@ object Crunch {
     }.toSet
   }
 
-  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]): Int = {
-    val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
+  def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
+    val date = new DateTime(dateTimeMillis).withZone(DateTimeZone.forID("Europe/London"))
     desks(date.getHourOfDay)
   }
 
