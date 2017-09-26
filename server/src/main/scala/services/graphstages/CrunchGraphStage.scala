@@ -44,7 +44,6 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-    var flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
 
     var crunchStateOption: Option[CrunchState] = None
@@ -105,14 +104,15 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
           flightsSoFar.get(updatedFlightWithPcp.FlightID) match {
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
-
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
+
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
+
             case _ =>
               log.info(s"No update to flight ${updatedFlightWithPcp.IATA}")
               flightsSoFar
@@ -226,21 +226,11 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
-      val workloadsChanged = haveWorkloadsChanged(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
-
-      val crunchState = if (workloadsChanged) {
-        log.info("Flight workloads changed, triggering crunch")
-        val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
-        Option(newCrunchState)
-      } else {
-        log.info("No changes to flight workloads")
-        None
-      }
+      val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
 
       flightsByFlightId = newFlightsById
-      flightSplitMinutesByFlight = newFlightSplitMinutesByFlight
 
-      crunchState
+      Option(newCrunchState)
     }
 
     def pushStateIfReady(): Unit = {
