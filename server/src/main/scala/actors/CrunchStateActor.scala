@@ -141,6 +141,9 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       updateStateFromCrunchState(cs)
       saveSnapshotAtInterval(cs)
 
+    case GetState =>
+      sender() ! state
+
     case GetFlights =>
       state match {
         case Some(CrunchState(_, _, flights, _)) =>
@@ -248,8 +251,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       workLoad = cmm.workLoad.getOrElse(0d),
       deskRec = cmm.deskRec.getOrElse(0),
       waitTime = cmm.waitTime.getOrElse(0),
-      simDesks = cmm.simDesks,
-      simWait = cmm.simWait,
+      deployedDesks = cmm.simDesks,
+      deployedWait = cmm.simWait,
       actDesks = cmm.actDesks,
       actWait = cmm.actWait
     )

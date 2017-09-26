@@ -23,7 +23,7 @@ trait ShiftPersistence {
 
   def actorSystem: ActorSystem
 
-  def shiftsActor: ActorRef// = actorSystem.actorOf(Props(classOf[ShiftsActor]))
+  def shiftsActor: ActorRef
 
   def saveShifts(rawShifts: String) = {
       shiftsActor ! rawShifts

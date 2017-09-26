@@ -110,6 +110,6 @@ class StaffDeploymentSpec extends Specification {
     workLoad = 0d,
     deskRec = deskRec,
     waitTime = 0,
-    simDesks = simDesks
+    deployedDesks = simDesks
   )
 }

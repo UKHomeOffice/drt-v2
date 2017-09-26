@@ -11,15 +11,22 @@ import services.graphstages.Crunch.{CrunchMinute, CrunchState, desksForHourOfDay
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 import services.{OptimizerConfig, SDate, TryRenjin}
-import scala.util.{Failure, Success, Try}
 
-class StaffingStage(minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.postfixOps
+
+class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
   extends GraphStage[FanInShape4[CrunchState, String, String, Seq[StaffMovement], CrunchState]] {
   val inCrunch: Inlet[CrunchState] = Inlet[CrunchState]("CrunchStateWithoutSimulations.in")
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
   val inFixedPoints: Inlet[String] = Inlet[String]("FixedPoints.in")
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
   val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchStateWithSimulations.out")
+
+  val allInlets = List(inCrunch, inShifts, inFixedPoints, inMovements)
 
   var crunchStateOption: Option[CrunchState] = None
   var shifts: Option[String] = None
@@ -35,9 +42,20 @@ class StaffingStage(minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], Li
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
     new GraphStageLogic(shape) {
+      override def preStart(): Unit = {
+        initialCrunchStateFuture.onSuccess {
+          case initialCrunchStateOption =>
+            log.info(s"Received initial crunchState. Setting $initialCrunchStateOption")
+            crunchStateOption = initialCrunchStateOption
+        }
+        Await.ready(initialCrunchStateFuture, 10 seconds)
+
+        super.preStart()
+      }
+
       setHandler(inCrunch, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inCrunch onPush() - setting crunchstate")
+          log.info(s"inCrunch onPush() - setting crunchStateOption")
           crunchStateOption = Option(grab(inCrunch))
           runSimulationAndPush()
         }
@@ -53,7 +71,7 @@ class StaffingStage(minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], Li
 
       setHandler(inFixedPoints, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inFixedPoints onPush() - setting fixedpoints")
+          log.info(s"inFixedPoints onPush() - setting fixedPoints")
           fixedPoints = Option(grab(inFixedPoints))
           runSimulationAndPush()
         }
@@ -72,14 +90,12 @@ class StaffingStage(minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], Li
           case None =>
             log.info(s"Nothing to push")
           case Some(cs) =>
-            log.info(s"pushing CrunchStateWithSimulation")
+            log.info(s"Pushing CrunchStateWithSimulation")
             push(outCrunch, cs)
             crunchStateWithSimulation = None
         }
-        if (!hasBeenPulled(inCrunch)) pull(inCrunch)
-        if (!hasBeenPulled(inShifts)) pull(inShifts)
-        if (!hasBeenPulled(inFixedPoints)) pull(inFixedPoints)
-        if (!hasBeenPulled(inMovements)) pull(inMovements)
+
+        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
       }
 
       def runSimulationAndPush() = {
@@ -92,14 +108,14 @@ class StaffingStage(minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], Li
               case (tn, tcms) =>
                 val minutes = tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
-                    val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.simDesks)).sortBy(_._1)
+                    val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
                     val workLoads = minWlSd.map { case (_, wl, _) => wl }.toList
-                    val simDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
+                    val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
                     val config = OptimizerConfig(slaByQueue(qn))
-                    val queueSimResult: Simulations.QueueSimulationResult = TryRenjin.runSimulationOfWork(workLoads, simDesks, config)
+                    val queueSimResult: Simulations.QueueSimulationResult = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
                     val simWaits = queueSimResult.waitTimes
                     qcms.toSeq.sortBy(_.minute).zipWithIndex.map {
-                      case (cm, idx) => cm.copy(simWait = Option(simWaits(idx)))
+                      case (cm, idx) => cm.copy(deployedWait = Option(simWaits(idx)))
                     }.toSet
                 }
                 minutes
@@ -174,7 +190,7 @@ object StaffDeploymentCalculator {
               }
 
               val deploymentsAndQueueNames: Map[String, Int] = deployer(deskRecAndQueueNames, available(minute, tn), minMaxByQueue).toMap
-              mcrs.map(cm => cm.copy(simDesks = Option(deploymentsAndQueueNames(cm.queueName))))
+              mcrs.map(cm => cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))
           }.toSet
         terminalByMinute
     }.toSet

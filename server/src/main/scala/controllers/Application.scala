@@ -17,7 +17,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import play.api.http.HttpEntity
-import services.graphstages.Crunch.{CrunchMinute, midnightThisMorning}
+import services.graphstages.Crunch.{CrunchMinute, CrunchState, midnightThisMorning}
 import services.SDate
 import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage, VoyageManifestsGraphStage}
 
@@ -131,8 +131,12 @@ trait SystemActors {
   val shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead)
   val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
   val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  def initialCrunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(10 seconds)).map {
+    case None => None
+    case Some(cs: CrunchState) => Option(cs)
+  }
 
-  val staffingGraphStage = new StaffingStage(airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
+  val staffingGraphStage = new StaffingStage(initialCrunchStateFuture, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
 
   val (_, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),

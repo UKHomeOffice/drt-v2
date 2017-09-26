@@ -31,7 +31,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val inputFlights = Flights(List(flight))
     val inputManifests = VoyageManifests(Set(
-      VoyageManifest("CI", "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+      VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"))
       ))
     ))
