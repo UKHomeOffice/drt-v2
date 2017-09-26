@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import actors.pointInTime.FixedPointsReadActor
-import actors.{FixedPointsActor, GetState}
+import actors.{FixedPointsActorBase, GetState}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
@@ -23,7 +23,7 @@ trait FixedPointPersistence {
 
   def actorSystem: ActorSystem
 
-  def fixedPointsActor: ActorRef = actorSystem.actorOf(Props(classOf[FixedPointsActor]))
+  def fixedPointsActor: ActorRef
 
   def saveFixedPoints(rawFixedPoints: String) = {
     fixedPointsActor ! rawFixedPoints

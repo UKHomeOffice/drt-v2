@@ -2,10 +2,10 @@ package controllers
 
 import java.io.File
 
-import actors.{GetState, ShiftsActor, ShiftsMessageParser}
+import actors.{GetState, ShiftsActorBase, ShiftsMessageParser}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.{After, Specification}
@@ -56,7 +56,7 @@ class ShiftsActorSpec extends Specification {
   isolated
 
   private def shiftsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[ShiftsActor]), "shiftsactor")
+    val actor = system.actorOf(Props(classOf[ShiftsActorBase]), "shiftsactor")
     actor
   }
 
@@ -157,26 +157,6 @@ class ShiftsActorSpec extends Specification {
       val timestamp = 1484906400000L
 
       ShiftsMessageParser.timeString(timestamp) === "10:00"
-    }
-
-    "ShiftsPersistenceApi" should {
-      "allow setting and getting of shift data" in new AkkaTestkitSpecs2SupportForPersistence("target/test") {
-
-        val shiftPersistenceApi = new ShiftPersistence {
-
-          override implicit val timeout: Timeout = Timeout(5 seconds)
-
-          val actorSystem = system
-        }
-
-        shiftPersistenceApi.saveShifts("shift name, T1, 20/01/17, 10:00, 20:00, 9")
-
-        awaitAssert({
-          val resultFuture = shiftPersistenceApi.getShifts(0L)
-          val result = Await.result(resultFuture, 1 seconds)
-          assert("shift name, T1, 20/01/17, 10:00, 20:00, 9" == result)
-        }, 2 seconds)
-      }
     }
   }
 }

@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import actors.pointInTime.ShiftsReadActor
-import actors.{GetState, ShiftsActor}
+import actors.{GetState, ShiftsActorBase}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
@@ -23,7 +23,7 @@ trait ShiftPersistence {
 
   def actorSystem: ActorSystem
 
-  def shiftsActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsActor]))
+  def shiftsActor: ActorRef
 
   def saveShifts(rawShifts: String) = {
       shiftsActor ! rawShifts

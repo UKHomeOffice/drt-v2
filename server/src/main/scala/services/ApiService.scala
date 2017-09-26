@@ -89,7 +89,10 @@ object WorkloadSimulation {
   }
 }
 
-abstract class ApiService(val airportConfig: AirportConfig)
+abstract class ApiService(val airportConfig: AirportConfig,
+                          val shiftsActor: ActorRef,
+                          val fixedPointsActor: ActorRef,
+                          val staffMovementsActor: ActorRef)
   extends Api
     with FlightsService
     with AirportToCountryLike

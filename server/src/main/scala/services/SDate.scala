@@ -68,6 +68,10 @@ object SDate {
     JodaSDate(new DateTime(millis, DateTimeZone.UTC))
   }
 
+  def apply(millis: MilliDate): SDateLike = {
+    JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))
+  }
+
   def now(): JodaSDate = {
     JodaSDate(new DateTime(DateTimeZone.UTC))
   }

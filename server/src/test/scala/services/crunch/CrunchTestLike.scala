@@ -3,7 +3,7 @@ package services.crunch
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.Source
 import akka.testkit.{TestKit, TestProbe}
 import controllers.SystemActors.SplitsProvider
@@ -15,7 +15,7 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch._
-import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph}
+import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage}
 import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 import services.SDate
 
@@ -37,7 +37,7 @@ class CrunchTestLike
   val uniquifyArrivals = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
 
   val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> 25d / 60)
-  val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20)
+  val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45)
   val defaultPaxSplits = SplitRatios(
     SplitSources.TerminalAverage,
     SplitRatio(eeaMachineReadableToDesk, 1)
@@ -45,12 +45,13 @@ class CrunchTestLike
   val minMaxDesks = Map(
     "T1" -> Map(
       Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
       Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
     "T2" -> Map(
       Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+      Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
       Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
   val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
-
 
   def runCrunchGraph[M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                      slaByQueue: Map[QueueName, Int] = slaByQueue,
@@ -84,9 +85,15 @@ class CrunchTestLike
       minutesToCrunch = minutesToCrunch
     )
 
-    val (fs, ms, _, _) = RunnableCrunchGraph[M](
+    def staffingStage = new StaffingStage(Future[Option[CrunchState]](None), minMaxDesks, slaByQueue)
+
+    val (fs, ms, _, _, _, _, _, _) = RunnableCrunchGraph[M, ActorRef](
       flightsSource,
       manifestsSource,
+      Source.actorRef(1, OverflowStrategy.dropHead),
+      Source.actorRef(1, OverflowStrategy.dropHead),
+      Source.actorRef(1, OverflowStrategy.dropHead),
+      staffingStage,
       crunchFlow,
       crunchStateActor
     ).run()(actorMaterializer)

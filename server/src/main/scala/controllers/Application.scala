@@ -17,9 +17,9 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import play.api.http.HttpEntity
-import services.graphstages.Crunch.{CrunchMinute, midnightThisMorning}
+import services.graphstages.Crunch.{CrunchMinute, CrunchState, midnightThisMorning}
 import services.SDate
-import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, VoyageManifestsGraphStage}
+import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage, VoyageManifestsGraphStage}
 
 import scala.collection.immutable.Map
 //import controllers.Deskstats.log
@@ -128,13 +128,30 @@ trait SystemActors {
   val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
 
   val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
+  val shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  def initialCrunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(10 seconds)).map {
+    case None => None
+    case Some(cs: CrunchState) => Option(cs)
+  }
 
-  RunnableCrunchGraph(
+  val staffingGraphStage = new StaffingStage(initialCrunchStateFuture, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
+
+  val (_, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),
     manifestsSource,
+    shiftsSource,
+    fixedPointsSource,
+    staffMovementsSource,
+    staffingGraphStage,
     crunchFlow,
     crunchStateActor
   ).run()(actorMaterializer)
+
+  val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
+  val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
+  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], staffMovementsInput))
 
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
@@ -244,7 +261,7 @@ class Application @Inject()(
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  def createApiService = new ApiService(airportConfig) with GetFlightsFromActor with CrunchFromCrunchState {
+  val createApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) with GetFlightsFromActor with CrunchFromCrunchState {
 
     override implicit val timeout: Timeout = Timeout(5 seconds)
 

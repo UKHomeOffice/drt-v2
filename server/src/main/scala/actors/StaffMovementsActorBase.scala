@@ -2,7 +2,7 @@ package actors
 
 import java.util.UUID
 
-import akka.actor.DiagnosticActorLogging
+import akka.actor.{ActorRef, DiagnosticActorLogging}
 import akka.persistence._
 import drt.shared.{MilliDate, StaffMovement}
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -16,7 +16,15 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
   def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
 }
 
-class StaffMovementsActor extends PersistentActor
+
+class StaffMovementsActor(subscriber: ActorRef) extends StaffMovementsActorBase {
+  override def onUpdateState(data: StaffMovements) = {
+    log.info(s"Telling subscriber about updated staff movements")
+    subscriber ! data
+  }
+}
+
+class StaffMovementsActorBase extends PersistentActor
   with DiagnosticActorLogging {
 
   override def persistenceId = "staff-movements-store"
@@ -33,7 +41,9 @@ class StaffMovementsActor extends PersistentActor
 
   val receiveRecover: Receive = {
     case smm: StaffMovementsMessage =>
-      updateState(staffMovementMessagesToStaffMovements(smm.staffMovements.toList))
+      val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
+      updateState(sm)
+      onUpdateState(sm)
 
     case SnapshotOffer(_, snapshot: StaffMovementsStateSnapshotMessage) =>
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
@@ -47,6 +57,8 @@ class StaffMovementsActor extends PersistentActor
     case sm@StaffMovements(_) =>
       if (sm != state.staffMovements) {
         updateState(sm)
+        onUpdateState(sm)
+
         log.info(s"Staff movements updated. Saving snapshot")
         saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
       } else {
@@ -56,6 +68,8 @@ class StaffMovementsActor extends PersistentActor
     case u =>
       log.info(s"unhandled message: $u")
   }
+
+  def onUpdateState(sm: StaffMovements) = {}
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
     terminalName = sm.terminalName.getOrElse(""),

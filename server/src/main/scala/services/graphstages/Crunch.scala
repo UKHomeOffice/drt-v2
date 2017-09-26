@@ -28,8 +28,8 @@ object Crunch {
                            workLoad: Double,
                            deskRec: Int,
                            waitTime: Int,
-                           simDesks: Option[Int] = None,
-                           simWait: Option[Int] = None,
+                           deployedDesks: Option[Int] = None,
+                           deployedWait: Option[Int] = None,
                            actDesks: Option[Int] = None,
                            actWait: Option[Int] = None)
 
@@ -130,8 +130,8 @@ object Crunch {
     }.toSet
   }
 
-  def desksForHourOfDayInUKLocalTime(startTimeMidnightBST: MillisSinceEpoch, desks: Seq[Int]): Int = {
-    val date = new DateTime(startTimeMidnightBST).withZone(DateTimeZone.forID("Europe/London"))
+  def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
+    val date = new DateTime(dateTimeMillis).withZone(DateTimeZone.forID("Europe/London"))
     desks(date.getHourOfDay)
   }
 
@@ -194,7 +194,7 @@ object Crunch {
                                  splits: Set[ApiSplits],
                                  procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
