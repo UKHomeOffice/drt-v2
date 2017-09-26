@@ -4,19 +4,19 @@ import java.util.UUID
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{MilliDate, SDateLike, Simulations, StaffMovement}
 import org.slf4j.LoggerFactory
-import services.graphstages.Crunch.{CrunchMinute, CrunchState, desksForHourOfDayInUKLocalTime}
+import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
-import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 import services.{OptimizerConfig, SDate, TryRenjin}
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
   extends GraphStage[FanInShape4[CrunchState, String, String, Seq[StaffMovement], CrunchState]] {

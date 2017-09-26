@@ -1,5 +1,6 @@
 package services.workloadcalculator
 
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{Arrival, _}
 
@@ -9,7 +10,6 @@ import scala.collection.immutable.{List, _}
 object PaxLoadCalculator {
   val paxOffFlowRate = 20
   val oneMinute = 60000L
-  type MillisSinceEpoch = Long
   type Load = Double
 
   case class PaxTypeAndQueueCount(paxAndQueueType: PaxTypeAndQueue, paxSum: Load)

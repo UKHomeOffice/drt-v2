@@ -1,8 +1,8 @@
 package services
 
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.Crunch.CrunchMinute
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import services.graphstages.Crunch.CrunchMinute
 
 object CSVData {
 

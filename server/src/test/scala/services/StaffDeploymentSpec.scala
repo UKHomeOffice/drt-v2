@@ -1,9 +1,9 @@
 package services
 
+import drt.shared.Crunch.CrunchMinute
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.Queues
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch.CrunchMinute
 import services.graphstages.StaffDeploymentCalculator._
 
 import scala.collection.immutable.List

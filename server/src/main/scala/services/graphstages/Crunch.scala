@@ -1,5 +1,6 @@
 package services.graphstages
 
+import drt.shared.Crunch.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -20,31 +21,11 @@ object Crunch {
 
   case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class CrunchMinute(
-                           terminalName: TerminalName,
-                           queueName: QueueName,
-                           minute: MillisSinceEpoch,
-                           paxLoad: Double,
-                           workLoad: Double,
-                           deskRec: Int,
-                           waitTime: Int,
-                           deployedDesks: Option[Int] = None,
-                           deployedWait: Option[Int] = None,
-                           actDesks: Option[Int] = None,
-                           actWait: Option[Int] = None)
-
-
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
 
   case class RemoveFlight(flightId: Int)
 
   case class CrunchDiff(flightRemovals: Set[RemoveFlight], flightUpdates: Set[ApiFlightWithSplits], crunchMinuteRemovals: Set[RemoveCrunchMinute], crunchMinuteUpdates: Set[CrunchMinute])
-
-  case class CrunchState(
-                          crunchFirstMinuteMillis: MillisSinceEpoch,
-                          numberOfMinutes: Int,
-                          flights: Set[ApiFlightWithSplits],
-                          crunchMinutes: Set[CrunchMinute])
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, numberOfMinutes: Int)
 

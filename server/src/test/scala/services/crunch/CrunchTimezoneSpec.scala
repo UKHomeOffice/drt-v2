@@ -4,13 +4,13 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
+import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
-import services.graphstages.Crunch._
 import services.SDate
-import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
+import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._

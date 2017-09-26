@@ -1,17 +1,16 @@
 package services
 
-import java.util.UUID
-
-import actors.{CachableActorQuery, GetPortWorkload}
 import actors.pointInTime.CrunchStateReadActor
+import actors.{CachableActorQuery, GetPortWorkload, GetState}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, GetTerminalCrunch, ShiftPersistence, StaffMovementsPersistence}
-import drt.shared.FlightsApi.{PortPaxAndWorkLoads, _}
+import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
+import drt.shared.FlightsApi._
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.immutable.{List, Map, Seq}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,7 +28,7 @@ trait AirportToCountryLike {
 
       val t = Try {
         val splitRow: Array[String] = l.split(",")
-        val sq: (String) => String = stripQuotes _
+        val sq: (String) => String = stripQuotes
         AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
       }
       t.getOrElse({
@@ -102,7 +101,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
-  override val log = LoggerFactory.getLogger(this.getClass)
+  override val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def crunchStateActor: AskableActorRef
   def actorSystem: ActorSystem
@@ -160,6 +159,13 @@ abstract class ApiService(val airportConfig: AirportConfig,
     }.toMap
   }
 
-  override def airportConfiguration() = airportConfig
+  def airportConfiguration(): AirportConfig = airportConfig
+
+  def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+    crunchStateActor.ask(GetState)(new Timeout(1 second)).map {
+      case None => None
+      case Some(cs: CrunchState) => Option(cs)
+    }
+  }
 }
 

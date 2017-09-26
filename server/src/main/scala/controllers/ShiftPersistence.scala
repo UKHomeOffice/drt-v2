@@ -2,14 +2,14 @@ package controllers
 
 import java.util.UUID
 
+import actors.GetState
 import actors.pointInTime.ShiftsReadActor
-import actors.{GetState, ShiftsActorBase}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
+import drt.shared.Crunch.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import services.SDate
-import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
