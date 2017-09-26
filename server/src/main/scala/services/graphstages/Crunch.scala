@@ -75,15 +75,17 @@ object Crunch {
     prefix + voyageNumber
   }
 
-
-  def flightsToSplitDiffs(flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]], newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[FlightSplitDiff] = {
+  def haveWorkloadsChanged(flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]], newFlightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Boolean = {
     val allKnownFlightIds = newFlightSplitMinutesByFlight.keys.toSet.union(flightSplitMinutesByFlight.keys.toSet)
-    val flightSplitDiffs: Set[FlightSplitDiff] = allKnownFlightIds.flatMap(id => {
-      val existingSplits = flightSplitMinutesByFlight.getOrElse(id, Set())
-      val newSplits = newFlightSplitMinutesByFlight.getOrElse(id, Set())
-      flightLoadDiff(existingSplits, newSplits)
-    })
-    flightSplitDiffs
+    allKnownFlightIds
+      .find(id => {
+        val existingSplits = flightSplitMinutesByFlight.getOrElse(id, Set())
+        val newSplits = newFlightSplitMinutesByFlight.getOrElse(id, Set())
+        existingSplits != newSplits
+      }) match {
+      case None => false
+      case Some(_) => true
+    }
   }
 
   def workloadsToCrunchMinutes(crunchStartMillis: MillisSinceEpoch,

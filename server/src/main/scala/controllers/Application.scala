@@ -75,9 +75,9 @@ object PaxFlow {
 
   def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: Arrival): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
 
-  def pcpArrivalTimeForFlight(airportConfig: AirportConfig)
+  def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch)
                              (walkTimeProvider: FlightWalkTime)
-                             (flight: Arrival): MilliDate = pcpFrom(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, walkTimeProvider)(flight)
+                             (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
 
 }
 
@@ -95,7 +95,7 @@ trait SystemActors {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val pcpArrivalTimeCalculator: (Arrival) => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig)(flightWalkTimeProvider)
+  val pcpArrivalTimeCalculator: (Arrival) => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(flightWalkTimeProvider)
 
   val actorMaterializer = ActorMaterializer()
 

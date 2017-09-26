@@ -13,7 +13,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch._
+import services.graphstages.Crunch.{haveWorkloadsChanged, _}
 import services.workloadcalculator.PaxLoadCalculator.{Load, MillisSinceEpoch}
 import services.{FastTrackPercentages, SDate}
 
@@ -111,7 +111,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
-              log.info(s"Updating flight ${updatedFlightWithPcp.IATA}")
+              log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
             case _ =>
               log.info(s"No update to flight ${updatedFlightWithPcp.IATA}")
@@ -226,21 +226,15 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
-      val crunchEnd = crunchStart + (numberOfMinutes * Crunch.oneMinuteMillis)
-      val flightSplitDiffs = flightsToSplitDiffs(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
-        .filter {
-          case FlightSplitDiff(_, _, _, _, _, _, minute) =>
-            crunchStart <= minute && minute < crunchEnd
-        }
+      val workloadsChanged = haveWorkloadsChanged(flightSplitMinutesByFlight, newFlightSplitMinutesByFlight)
 
-      val crunchState = flightSplitDiffs match {
-        case fsd if fsd.isEmpty =>
-          log.info("No changes to flight workloads")
-          None
-        case _ =>
-          log.info("Flight workloads changed, triggering crunch")
-          val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
-          Option(newCrunchState)
+      val crunchState = if (workloadsChanged) {
+        log.info("Flight workloads changed, triggering crunch")
+        val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
+        Option(newCrunchState)
+      } else {
+        log.info("No changes to flight workloads")
+        None
       }
 
       flightsByFlightId = newFlightsById
