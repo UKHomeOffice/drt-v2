@@ -11,6 +11,7 @@ import drt.client.logger.log
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, TimeRangeHours, Workloads}
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
@@ -28,6 +29,7 @@ object TerminalComponent {
   case class Props(terminalName: TerminalName)
 
   case class TerminalModel(
+                            crunchStatePot: Pot[CrunchState],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             simulationResult: Map[QueueName, QueueSimulationResult],
@@ -42,6 +44,7 @@ object TerminalComponent {
 
   def render(props: Props) = {
     val modelRCP = SPACircuit.connect(model => TerminalModel(
+      model.crunchStatePot,
       model.airportConfig,
       model.airportInfos.getOrElse(props.terminalName, Pending()),
       model.simulationResult.getOrElse(props.terminalName, Map()),
@@ -69,6 +72,7 @@ object TerminalComponent {
           //            model.simulationResult)
 
           val terminalContentProps = TerminalContentComponent.Props(
+            model.crunchStatePot,
             airportConfig,
             props.terminalName,
             model.airportInfos,
@@ -145,7 +149,7 @@ object SummaryBoxesComponent {
               <.div(summaryBoxes)
             }
             val recovered = tried recoverWith {
-              case f => Try(<.div(f.toString))
+              case f => Try(<.div(f.toString()))
             }
             <.span(recovered.get)
           })
@@ -220,6 +224,7 @@ object HeatmapComponent {
 object TerminalContentComponent {
 
   case class Props(
+                    crunchStatePot: Pot[CrunchState],
                     airportConfig: AirportConfig,
                     terminalName: TerminalName,
                     airportInfoPot: Pot[AirportInfo],
@@ -241,7 +246,7 @@ object TerminalContentComponent {
         })
       }).toList
 
-      val flightsHash: Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]] = flightsWithSplitsPot.toOption.map(_.flights.map(f => {
+      val flightsHash: Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]] = crunchStatePot.toOption.map(_.flights.toList.map(f => {
         (f.splits.hashCode,
           f.apiFlight.Status,
           f.apiFlight.Gate,
@@ -313,9 +318,10 @@ object TerminalContentComponent {
             if (state.activeTab == "arrivals") {
               val flights: Pot[FlightsApi.FlightsWithSplits] = props.flightsWithSplitsPot
 
-              <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-                val terminalFlights = flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName)
-                val flightsInRange = filterFlightsByRange(props.dayToDisplay, props.timeRangeHours, terminalFlights)
+              <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
+                val flightsWithSplits = crunchState.flights
+                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalName)
+                val flightsInRange = filterFlightsByRange(props.dayToDisplay, props.timeRangeHours, terminalFlights.toList)
 
                 val flightsForTerminal = FlightsWithSplits(flightsInRange)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))

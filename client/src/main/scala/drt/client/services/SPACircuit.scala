@@ -8,7 +8,9 @@ import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.{SPAMain, TableViewUtils}
+import drt.client.TableViewUtils
+import drt.client.actions.Actions._
+import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.HandyStuff._
 import drt.client.services.RootModel.{FlightCode, QueueCrunchResults, mergeTerminalQueues}
@@ -17,11 +19,10 @@ import drt.shared._
 import boopickle.Default._
 import diode.ActionResult.NoChange
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.client.services.RootModel.{QueueCrunchResults, mergeTerminalQueues}
+import drt.shared.Crunch.CrunchState
+import drt.shared.FlightsApi.{TerminalName, _}
 import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
-import drt.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
-import drt.client.actions.Actions._
-import drt.client.components.{FlightsWithSplitsTable, LoadingState}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 
@@ -81,7 +82,7 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 case class TimeRangeHours(start: Int = 0, end: Int = 24)
 
 case class RootModel(
-                      motd: Pot[String] = Empty,
+                      crunchStatePot: Pot[CrunchState] = Empty,
                       workloadPot: Pot[Workloads] = Empty,
                       queueCrunchResults: RootModel.PortCrunchResults = Map(),
                       simulationResult: RootModel.PortSimulationResults = Map(),
@@ -141,7 +142,6 @@ case class RootModel(
   override def toString: String =
     s"""
        |RootModel(
-       |motd: $motd
        |paxload: $workloadPot
        |queueCrunchResults: $queueCrunchResults
        |userDeskRec: $staffDeploymentsByTerminalAndQueue
@@ -408,6 +408,44 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
       effectOnly(Effect(Future(HideLoader())))
   }
 }
+class CrunchStateHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[CrunchState]]) extends LoggingActionHandler(modelRW) {
+  val crunchStateRequestFrequency = 60 seconds
+  val reRequestDelay = 20 seconds
+
+  def pointInTimeMillis = pointInTime.value.map(m => {
+    log.info(s"millisSinceEpoch value: ${m.millisSinceEpoch}")
+    m.millisSinceEpoch
+  }).getOrElse(0L)
+
+  protected def handle = {
+    case GetCrunchState() =>
+      log.info(s"Requesting crunchState for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
+      val x = AjaxClient[Api].getCrunchState(pointInTimeMillis).call().map {
+        case Some(cs) =>
+          log.info(s"Got ${cs.flights.size} flights!")
+          UpdateCrunchStateAndContinuePolling(cs)
+        case None =>
+          log.info(s"CrunchState not ready")
+          GetCrunchStateAfter(reRequestDelay)
+      }
+      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
+
+    case UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) =>
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchStateRequestFrequency)
+      val updateCrunchState = Effect(Future(UpdateCrunchState(crunchState)))
+      effectOnly(updateCrunchState + getCrunchStateAfterDelay)
+
+    case GetCrunchStateAfter(delay) =>
+      log.info(s"Re-requesting flights")
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
+      effectOnly(getCrunchStateAfterDelay)
+
+    case UpdateCrunchState(crunchState) =>
+      log.info(s"client got ${crunchState.flights.size} flights (from CrunchState)")
+
+      updated(Ready(crunchState), Effect(Future(HideLoader())))
+  }
+}
 
 class CrunchHandler[M](pointInTime: ModelR[M, Option[SDateLike]], totalQueues: () => Map[TerminalName, Int], modelRW: ModelRW[M, Map[TerminalName, Map[QueueName, CrunchResult]]],
                        staffDeployments: ModelR[M, TerminalQueueStaffDeployments],
@@ -591,9 +629,6 @@ class ShiftsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Model
     case SetShifts(shifts: String) =>
       updated(Ready(shifts), Effect(Future(RunAllSimulations())))
 
-    case SaveShifts(shifts: String) =>
-      AjaxClient[Api].saveShifts(shifts).call()
-      effectOnly(Effect(Future(SetShifts(shifts))))
 
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
@@ -792,7 +827,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new CrunchHandler(zoom(_.pointInTime), totalQueues, zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
       new SimulationHandler(zoom(_.airportConfig), gotAllQueueCrunches, zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
-      new FlightsHandler(zoom(_.pointInTime), zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
+//      new FlightsHandler(zoom(_.pointInTime), zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
+      new CrunchStateHandler(zoom(_.pointInTime), zoomRW(_.crunchStatePot)((m, v) => m.copy(crunchStatePot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoom(_.pointInTime), zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),

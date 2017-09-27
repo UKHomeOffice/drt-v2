@@ -4,15 +4,12 @@ import diode.ActionResult._
 import diode._
 import diode.data._
 import drt.client.UserDeskRecFixtures._
-import drt.client.actions.Actions.{UpdateCrunchResult, UpdateDeskRecsTime, UpdateSimulationResult, UpdateWorkloads}
-import drt.client.services.HandyStuff.PotCrunchResult
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
-import drt.shared.Simulations.QueueSimulationResult
+import drt.client.actions.Actions.UpdateDeskRecsTime
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import utest._
 
-import scala.collection.immutable.{IndexedSeq, Map, Seq}
-import scala.concurrent.Future
+import scala.collection.immutable.{Map, Seq}
 
 object SPACircuitTests extends TestSuite {
   def tests = TestSuite {
