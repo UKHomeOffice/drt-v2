@@ -2,11 +2,11 @@ package actors.pointInTime
 
 import actors.{CrunchStateActor, GetFlights, GetPortWorkload}
 import akka.persistence.{RecoveryCompleted, _}
-import controllers.{CrunchMinutes, GetTerminalCrunch}
+import controllers.GetTerminalCrunch
+import drt.shared.Crunch.{CrunchMinutes, CrunchState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
-import services.graphstages.Crunch.CrunchState
 
 import scala.collection.immutable._
 

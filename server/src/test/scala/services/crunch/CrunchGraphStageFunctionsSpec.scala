@@ -4,6 +4,7 @@ import actors._
 import akka.actor._
 import akka.stream._
 import akka.testkit.TestKit
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._

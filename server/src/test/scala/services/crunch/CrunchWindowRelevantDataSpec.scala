@@ -2,19 +2,17 @@ package services.crunch
 
 import actors.{GetFlights, GetPortWorkload}
 import akka.NotUsed
-import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.{ArrivalGenerator, GetTerminalCrunch}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.Crunch.CrunchState
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch.CrunchState
 import services.SDate
 
 import scala.collection.immutable.List

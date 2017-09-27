@@ -3,6 +3,7 @@ package services.graphstages
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
+import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
@@ -14,7 +15,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.graphstages.Crunch.{haveWorkloadsChanged, _}
-import services.workloadcalculator.PaxLoadCalculator.{Load, MillisSinceEpoch}
+import services.workloadcalculator.PaxLoadCalculator.Load
 import services.{FastTrackPercentages, SDate}
 
 import scala.collection.immutable.{Map, Seq}

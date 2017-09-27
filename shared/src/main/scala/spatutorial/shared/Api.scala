@@ -2,6 +2,7 @@ package drt.shared
 
 import java.util.Date
 
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
@@ -366,6 +367,7 @@ trait WorkloadsApi {
   def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortLoads]]
 }
 
+
 case class PortLoads(loads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads])
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
@@ -373,6 +375,32 @@ case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 
 case class TerminalCrunchResult(queuesAndCrunchResults: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])])
+
+object Crunch {
+  type MillisSinceEpoch = Long
+
+  case class CrunchState(
+                          crunchFirstMinuteMillis: MillisSinceEpoch,
+                          numberOfMinutes: Int,
+                          flights: Set[ApiFlightWithSplits],
+                          crunchMinutes: Set[CrunchMinute])
+
+  case class CrunchMinute(
+                           terminalName: TerminalName,
+                           queueName: QueueName,
+                           minute: MillisSinceEpoch,
+                           paxLoad: Double,
+                           workLoad: Double,
+                           deskRec: Int,
+                           waitTime: Int,
+                           deployedDesks: Option[Int] = None,
+                           deployedWait: Option[Int] = None,
+                           actDesks: Option[Int] = None,
+                           actWait: Option[Int] = None)
+
+  case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
+
+}
 
 //todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api extends FlightsApi with WorkloadsApi {
@@ -402,4 +430,6 @@ trait Api extends FlightsApi with WorkloadsApi {
   def getStaffMovements(pointIntTime: Long): Future[Seq[StaffMovement]]
 
   def getActualDeskStats(pointInTime: Long): Future[ActualDeskStats]
+
+  def getCrunchState(pointInTime: Long): Future[Option[CrunchState]]
 }

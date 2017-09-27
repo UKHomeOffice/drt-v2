@@ -15,10 +15,11 @@ import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
+import drt.shared.Crunch.{CrunchMinutes, CrunchState, MillisSinceEpoch}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
-import services.graphstages.Crunch.{CrunchMinute, CrunchState, midnightThisMorning}
 import services.SDate
+import services.graphstages.Crunch.midnightThisMorning
 import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage, VoyageManifestsGraphStage}
 
 import scala.collection.immutable.Map
@@ -26,9 +27,9 @@ import scala.collection.immutable.Map
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{AirportConfig, Api, Arrival, CrunchResult, _}
+import drt.shared.{AirportConfig, Api, Arrival, _}
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -37,7 +38,7 @@ import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services._
 import services.workloadcalculator.PaxLoadCalculator
-import services.workloadcalculator.PaxLoadCalculator.{MillisSinceEpoch, PaxTypeAndQueueCount}
+import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 
 import scala.collection.immutable.IndexedSeq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -197,8 +198,6 @@ trait AirportConfProvider extends AirportConfiguration {
 
 trait ProdPassengerSplitProviders {
   self: AirportConfiguration with SystemActors =>
-
-  import scala.concurrent.ExecutionContext.global
 
   val csvSplitsProvider: (Arrival) => Option[SplitRatios] = SplitsProvider.csvProvider
 
@@ -436,5 +435,3 @@ class Application @Inject()(
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)
-
-case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])

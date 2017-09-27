@@ -4,12 +4,12 @@ import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
 import controllers.GetTerminalCrunch
+import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared._
 import server.protobuf.messages.CrunchState._
-import services.graphstages.Crunch._
 import services.SDate
-import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
+import services.graphstages.Crunch._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -44,6 +44,48 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")
+  }
+
+  override def receiveCommand: Receive = {
+    case cs@CrunchState(_, _, _, _) =>
+      log.info(s"Received CrunchState. storing")
+      updateStateFromCrunchState(cs)
+      saveSnapshotAtInterval(cs)
+
+    case GetState =>
+      sender() ! state
+
+    case GetFlights =>
+      state match {
+        case Some(CrunchState(_, _, flights, _)) =>
+          sender() ! FlightsWithSplits(flights.toList)
+        case None => FlightsNotReady
+      }
+
+    case GetPortWorkload =>
+      state match {
+        case Some(CrunchState(_, _, _, crunchMinutes)) =>
+          sender() ! PortLoads(portWorkload(crunchMinutes))
+        case None =>
+          sender() ! WorkloadsNotReady()
+      }
+
+    case GetTerminalCrunch(terminalName) =>
+      state match {
+        case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
+          sender() ! TerminalCrunchResult(queueCrunchResults(terminalName, startMillis, crunchMinutes).toList)
+        case _ =>
+          sender() ! TerminalCrunchResult(List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]())
+      }
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Snapshot success $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Snapshot failed $md\n$cause")
+
+    case u =>
+      log.warning(s"unexpected message $u")
   }
 
   def setStateFromSnapshot(snapshot: Any): Unit = {
@@ -133,48 +175,6 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = {
     CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))
-  }
-
-  override def receiveCommand: Receive = {
-    case cs@CrunchState(_, _, _, _) =>
-      log.info(s"Received CrunchState. storing")
-      updateStateFromCrunchState(cs)
-      saveSnapshotAtInterval(cs)
-
-    case GetState =>
-      sender() ! state
-
-    case GetFlights =>
-      state match {
-        case Some(CrunchState(_, _, flights, _)) =>
-          sender() ! FlightsWithSplits(flights.toList)
-        case None => FlightsNotReady
-      }
-
-    case GetPortWorkload =>
-      state match {
-        case Some(CrunchState(_, _, _, crunchMinutes)) =>
-          sender() ! PortLoads(portWorkload(crunchMinutes))
-        case None =>
-          sender() ! WorkloadsNotReady()
-      }
-
-    case GetTerminalCrunch(terminalName) =>
-      state match {
-        case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
-          sender() ! TerminalCrunchResult(queueCrunchResults(terminalName, startMillis, crunchMinutes).toList)
-        case _ =>
-          sender() ! TerminalCrunchResult(List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]())
-      }
-
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Snapshot success $md")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Snapshot failed $md\n$cause")
-
-    case u =>
-      log.warning(s"unexpected message $u")
   }
 
   def saveSnapshotAtInterval(cs: CrunchState): Unit = {

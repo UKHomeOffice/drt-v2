@@ -1,12 +1,10 @@
 package services
 
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.FlightsApi._
 import drt.shared._
-import services.workloadcalculator.PaxLoadCalculator.MillisSinceEpoch
 
-import scala.collection.immutable._
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 
 trait FlightsService extends FlightsApi {

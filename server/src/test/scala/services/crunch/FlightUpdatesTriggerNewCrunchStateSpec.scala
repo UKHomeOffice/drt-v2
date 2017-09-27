@@ -5,6 +5,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
@@ -12,7 +13,6 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import services.SDate
-import services.graphstages.Crunch.CrunchState
 
 import scala.collection.immutable.Seq
 
