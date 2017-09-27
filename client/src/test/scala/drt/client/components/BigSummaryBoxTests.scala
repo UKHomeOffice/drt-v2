@@ -3,6 +3,7 @@ package drt.client.components
 import diode.data.Ready
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -21,14 +22,14 @@ object BigSummaryBoxTests extends TestSuite {
     "Summary for the next 3 hours" - {
       "Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards" - {
         "Given 0 flights" - {
-          val rootModel = RootModel(flightsWithSplitsPot = Ready(FlightsWithSplits(Nil)))
+          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, Set(), Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate(2016, 5, 1, 12)
             val nowPlus3Hours = now.addHours(3)
 
             "Then we can get a number of flights arriving in that period" - {
-              val countOfFlights = rootModel.flightsWithSplitsPot.map(_.flights.count(f => {
+              val countOfFlights = rootModel.crunchStatePot.map(_.flights.count(f => {
                 val flightDt = SDate.parse(f.apiFlight.SchDT)
                 now.millisSinceEpoch <= flightDt.millisSinceEpoch && flightDt.millisSinceEpoch <= nowPlus3Hours.millisSinceEpoch
               }))
@@ -43,10 +44,10 @@ object BigSummaryBoxTests extends TestSuite {
           val apiFlight2 = apiFlight("2017-05-01T13:05Z", FlightID = 2, ActPax = 300)
           val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = 3, ActPax = 40)
 
-          val rootModel = RootModel(flightsWithSplitsPot = Ready(FlightsWithSplits(
-            ApiFlightWithSplits(apiFlight1, Set()) ::
-              ApiFlightWithSplits(apiFlight2, Set()) ::
-              ApiFlightWithSplits(apiFlight3, Set()) :: Nil)))
+          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, Set(
+            ApiFlightWithSplits(apiFlight1, Set()),
+            ApiFlightWithSplits(apiFlight2, Set()),
+            ApiFlightWithSplits(apiFlight3, Set())), Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate.parse("2017-05-01T12:00Z")
@@ -75,12 +76,12 @@ object BigSummaryBoxTests extends TestSuite {
           val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = 4, ActPax = 40, PcpTime = mkMillis("2017-05-01T13:22Z"))
 
 
-          val rootModel = RootModel(flightsWithSplitsPot = Ready(FlightsWithSplits(
-            ApiFlightWithSplits(apiFlightPcpBeforeNow, Set()) ::
-              ApiFlightWithSplits(apiFlight0aPcpAfterNow, Set()) ::
-              ApiFlightWithSplits(apiFlight1, Set()) ::
-              ApiFlightWithSplits(apiFlight2, Set()) ::
-              ApiFlightWithSplits(apiFlight3, Set()) :: Nil)))
+          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, Set(
+            ApiFlightWithSplits(apiFlightPcpBeforeNow, Set()),
+            ApiFlightWithSplits(apiFlight0aPcpAfterNow, Set()),
+            ApiFlightWithSplits(apiFlight1, Set()),
+            ApiFlightWithSplits(apiFlight2, Set()),
+            ApiFlightWithSplits(apiFlight3, Set())), Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate.parse("2017-05-01T12:00Z")
@@ -109,18 +110,19 @@ object BigSummaryBoxTests extends TestSuite {
             val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = 3, ActPax = 300, PcpTime = mkMillis("2017-05-01T13:15Z"))
             val notOurTerminal = apiFlight("2017-05-01T13:20Z", Terminal = "T4", FlightID = 4, ActPax = 40, PcpTime = mkMillis("2017-05-01T13:22Z"))
 
-            val flights = FlightsWithSplits(
-              ApiFlightWithSplits(apiFlight1, Set()) ::
-                ApiFlightWithSplits(apiFlight2, Set()) ::
-                ApiFlightWithSplits(notOurTerminal, Set()) :: Nil)
-            val rootModel = RootModel(flightsWithSplitsPot = Ready(flights))
+            val flights = Set(
+              ApiFlightWithSplits(apiFlight1, Set()),
+              ApiFlightWithSplits(apiFlight2, Set()),
+              ApiFlightWithSplits(notOurTerminal, Set()))
+            val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, flights, Set())))
+
 
             "AND a current time of 2017-05-01T12:00" - {
               val now = SDate.parse("2017-05-01T12:00Z")
               val nowPlus3Hours = now.addHours(3)
 
               "Then we can get a number of flights arriving in that period" - {
-                val flightsPcp = flightsInPeriod(flights.flights, now, nowPlus3Hours)
+                val flightsPcp = flightsInPeriod(flights.toList, now, nowPlus3Hours)
                 val flightsInTerminal = flightsAtTerminal(flightsPcp, ourTerminal)
                 val countOfFlights = flightsInTerminal.length
                 val expected = 2

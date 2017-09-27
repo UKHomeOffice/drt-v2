@@ -10,6 +10,7 @@ import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
@@ -53,7 +54,7 @@ object TerminalDeploymentsTable {
   case class Props(
                     terminalName: String,
                     items: List[TerminalDeploymentsRow],
-                    flights: Pot[FlightsWithSplits],
+                    crunchStatePot: Pot[CrunchState],
                     airportConfig: AirportConfig,
                     airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]
                   )
@@ -83,21 +84,21 @@ object TerminalDeploymentsTable {
   }
 
   def renderTerminalUserTable(terminalName: TerminalName, airportInfoConnectProxy: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
-                              flightsWithSplitsPot: Pot[FlightsWithSplits], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
+                              crunchStatePot: Pot[CrunchState], rows: List[TerminalDeploymentsRow], airportConfig: AirportConfig): VdomElement = {
     <.div(
       TerminalDeploymentsTable(
         terminalName,
         rows,
-        flightsWithSplitsPot,
+        crunchStatePot,
         airportConfig,
         airportInfoConnectProxy
       ))
   }
 
-  case class TerminalProps(
+  case class  TerminalProps(
                             airportConfig: AirportConfig,
                             terminalName: String,
-                            flightsWithSplitsPot: Pot[FlightsWithSplits],
+                            crunchStatePot: Pot[CrunchState],
                             simulationResult: Map[QueueName, QueueSimulationResult],
                             crunchResult: Map[QueueName, CrunchResult],
                             deployments: QueueStaffDeployments,
@@ -112,7 +113,7 @@ object TerminalDeploymentsTable {
      filterByTimeRange(props.timeRangeHours, calculateTerminalDeploymentRows(props)) match {
         case Nil => <.div("No rows yet")
         case rows =>
-          renderTerminalUserTable(props.terminalName, airportWrapper, props.flightsWithSplitsPot, rows, props.airportConfig)
+          renderTerminalUserTable(props.terminalName, airportWrapper, props.crunchStatePot, rows, props.airportConfig)
       }
     )
   }
@@ -153,7 +154,7 @@ object TerminalDeploymentsTable {
 
   case class RowProps(item: TerminalDeploymentsRow, index: Int,
                       terminalName: TerminalName,
-                      flights: Pot[FlightsWithSplits],
+                      crunchStatePot: Pot[CrunchState],
                       airportConfig: AirportConfig,
                       airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                       showActuals: Boolean)
@@ -166,8 +167,8 @@ object TerminalDeploymentsTable {
     val item = props.item
     val time = item.time
     val windowSize = 60000 * 15
-    val flights: Pot[FlightsWithSplits] = props.flights.map(flights =>
-      flights.copy(flights = flights.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize))))
+    val flights: Pot[List[ApiFlightWithSplits]] = props.crunchStatePot.map(crunchState =>
+      crunchState.flights.filter(f => time <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= (time + windowSize)).toList)
 
     val formattedDate: String = SDate(MilliDate(item.time)).toHoursAndMinutes()
     val airportInfo: ReactConnectProxy[Map[String, Pot[AirportInfo]]] = props.airportInfos
@@ -267,7 +268,7 @@ object TerminalDeploymentsTable {
               ^.overflow := "scroll",
               ^.height := "500px",
               props.items.zipWithIndex.map {
-                case (item, index) => renderRow(RowProps(item, index, props.terminalName, props.flights, props.airportConfig, props.airportInfos, state.showActuals))
+                case (item, index) => renderRow(RowProps(item, index, props.terminalName, props.crunchStatePot, props.airportConfig, props.airportInfos, state.showActuals))
               }.toTagMod)))
       } recover {
         case t =>
@@ -338,9 +339,9 @@ object TerminalDeploymentsTable {
 
   def apply(terminalName: String,
             rows: List[TerminalDeploymentsRow],
-            flights: Pot[FlightsWithSplits],
+            crunchStatePot: Pot[CrunchState],
             airportConfig: AirportConfig,
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) =
-    component(Props(terminalName, rows, flights, airportConfig, airportInfos))
+    component(Props(terminalName, rows, crunchStatePot, airportConfig, airportInfos))
 
 }
