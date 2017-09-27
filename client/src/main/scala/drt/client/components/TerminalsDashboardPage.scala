@@ -26,7 +26,7 @@ object TerminalsDashboardPage {
 
       val terminalsC = SPACircuit.connect(_.airportConfig.map(_.terminalNames))
       val portCodeAndQueueOrder = SPACircuit.connect(_.airportConfig.map(ac => (ac.portCode, ac.queueOrder)))
-      val flightsByTerminalC = SPACircuit.connect(_.flightsWithSplitsPot.map(_.flights.filter(interestingFlight).groupBy(_.apiFlight.Terminal)))
+      val flightsByTerminalC = SPACircuit.connect(_.crunchStatePot.map(_.flights.toList.filter(interestingFlight).groupBy(_.apiFlight.Terminal)))
 
 
       val hours = p.hours

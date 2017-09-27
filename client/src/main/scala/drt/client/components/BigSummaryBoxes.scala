@@ -44,11 +44,11 @@ object BigSummaryBoxes {
     flights.filter(flightPcpInPeriod(_, now, nowPlus3Hours))
 
   def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) =
-    rootModel.flightsWithSplitsPot.map(splits => flightsInPeriod(splits.flights, now, nowPlus3Hours).length)
+    rootModel.crunchStatePot.map(crunchState => flightsInPeriod(crunchState.flights.toList, now, nowPlus3Hours).length)
 
   def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
-    rootModel.flightsWithSplitsPot.map(splits => {
-      val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(splits.flights, now, nowPlus3Hours)
+    rootModel.crunchStatePot.map(crunchState => {
+      val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(crunchState.flights.toList, now, nowPlus3Hours)
       sumActPax(flights)
     })
   }
@@ -162,7 +162,7 @@ object BigSummaryBoxes {
       )
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {
-      case f => Try(<.div(f.toString))
+      case f => Try(<.div(f.toString()))
     }
     g.get
   }

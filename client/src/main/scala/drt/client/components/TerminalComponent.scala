@@ -11,6 +11,7 @@ import drt.client.logger.log
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, TimeRangeHours, Workloads}
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
@@ -28,6 +29,7 @@ object TerminalComponent {
   case class Props(terminalName: TerminalName)
 
   case class TerminalModel(
+                            crunchStatePot: Pot[CrunchState],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             simulationResult: Map[QueueName, QueueSimulationResult],
@@ -35,13 +37,13 @@ object TerminalComponent {
                             deployments: QueueStaffDeployments,
                             workloads: Workloads,
                             actualDesks: Map[QueueName, Map[Long, DeskStat]],
-                            flightsWithSplitsPot: Pot[FlightsWithSplits],
                             pointInTime: Option[SDateLike],
                             timeRangeHours: TimeRangeHours
                           )
 
   def render(props: Props) = {
     val modelRCP = SPACircuit.connect(model => TerminalModel(
+      model.crunchStatePot,
       model.airportConfig,
       model.airportInfos.getOrElse(props.terminalName, Pending()),
       model.simulationResult.getOrElse(props.terminalName, Map()),
@@ -49,7 +51,6 @@ object TerminalComponent {
       model.staffDeploymentsByTerminalAndQueue.getOrElse(props.terminalName, Map()),
       model.workloadPot.getOrElse(Workloads(Map())),
       model.actualDeskStats.getOrElse(props.terminalName, Map()),
-      model.flightsWithSplitsPot,
       model.pointInTime,
       model.timeRangeFilter
     ))
@@ -58,21 +59,11 @@ object TerminalComponent {
       val model = modelMP.value
       <.div(
         model.airportConfig.renderReady(airportConfig => {
-          //          val summaryBoxesProps = SummaryBoxesComponent.Props(
-          //            airportConfig,
-          //            props.terminalName,
-          //            model.flightsWithSplitsPot
-          //          )
-          //          val heatmapProps = HeatmapComponent.Props(
-          //            airportConfig,
-          //            props.terminalName,
-          //            model.simulationResult)
-
           val terminalContentProps = TerminalContentComponent.Props(
+            model.crunchStatePot,
             airportConfig,
             props.terminalName,
             model.airportInfos,
-            model.flightsWithSplitsPot,
             model.simulationResult,
             model.crunchResult,
             model.deployments,
@@ -81,10 +72,7 @@ object TerminalComponent {
             model.timeRangeHours,
             model.pointInTime.getOrElse(SDate.today())
           )
-
           <.div(
-            //            SummaryBoxesComponent(summaryBoxesProps),
-            //            HeatmapComponent(heatmapProps),
             SnapshotSelector(SnapshotSelector.Props(model.pointInTime, props.terminalName)),
             TerminalContentComponent(terminalContentProps)
           )
@@ -107,57 +95,6 @@ object TerminalComponent {
   }
 }
 
-object SummaryBoxesComponent {
-
-  case class Props(
-                    airportConfig: AirportConfig,
-                    terminalName: TerminalName,
-                    flightsWithSplitsPot: Pot[FlightsWithSplits]
-                  ) {
-    lazy val hash = Nil
-  }
-
-  val component = ScalaComponent.builder[Props]("SummaryBoxes")
-    .render_P(props => {
-      val portCode = props.airportConfig.portCode
-      val queueOrder = props.airportConfig.queueOrder
-      val bestPaxFn = ArrivalHelper.bestPax _
-      val now = SDate.now()
-      val hoursToAdd = 3
-      val nowplus3 = now.addHours(hoursToAdd)
-
-      <.div(^.id := "terminal-summary-boxes",
-        <.h2(s"In the next $hoursToAdd hours"),
-        <.div({
-          props.flightsWithSplitsPot.renderReady(flightsWithSplits => {
-            import BigSummaryBoxes._
-            val tried: Try[VdomElement] = Try {
-              val filteredFlights = flightsInPeriod(flightsWithSplits.flights, now, nowplus3)
-              val flightsAtTerminal = BigSummaryBoxes.flightsAtTerminal(filteredFlights, props.terminalName)
-              val flightCount = flightsAtTerminal.length
-              val actPax = sumActPax(flightsAtTerminal)
-              val bestSplitPaxFn = bestFlightSplitPax(bestPaxFn)
-              val bestPax = sumBestPax(bestSplitPaxFn)(flightsAtTerminal).toInt
-              val aggSplits = aggregateSplits(bestPaxFn)(flightsAtTerminal)
-
-              val summaryBoxes = SummaryBox(BigSummaryBoxes.Props(flightCount, actPax, bestPax, aggSplits, paxQueueOrder = queueOrder))
-
-              <.div(summaryBoxes)
-            }
-            val recovered = tried recoverWith {
-              case f => Try(<.div(f.toString))
-            }
-            <.span(recovered.get)
-          })
-        },
-          props.flightsWithSplitsPot.renderPending(_ => "Waiting for flights")
-        )
-      )
-    })
-    .build
-
-  def apply(props: Props): VdomElement = component(props)
-}
 
 object HeatmapComponent {
 
@@ -220,10 +157,10 @@ object HeatmapComponent {
 object TerminalContentComponent {
 
   case class Props(
+                    crunchStatePot: Pot[CrunchState],
                     airportConfig: AirportConfig,
                     terminalName: TerminalName,
                     airportInfoPot: Pot[AirportInfo],
-                    flightsWithSplitsPot: Pot[FlightsWithSplits],
                     simulationResult: Map[QueueName, QueueSimulationResult],
                     crunchResult: Map[QueueName, CrunchResult],
                     deployments: QueueStaffDeployments,
@@ -241,7 +178,7 @@ object TerminalContentComponent {
         })
       }).toList
 
-      val flightsHash: Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]] = flightsWithSplitsPot.toOption.map(_.flights.map(f => {
+      val flightsHash: Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]] = crunchStatePot.toOption.map(_.flights.toList.map(f => {
         (f.splits.hashCode,
           f.apiFlight.Status,
           f.apiFlight.Gate,
@@ -311,14 +248,13 @@ object TerminalContentComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
             if (state.activeTab == "arrivals") {
-              val flights: Pot[FlightsApi.FlightsWithSplits] = props.flightsWithSplitsPot
 
-              <.div(flights.renderReady((flightsWithSplits: FlightsWithSplits) => {
-                val terminalFlights = flightsWithSplits.flights.filter(f => f.apiFlight.Terminal == props.terminalName)
-                val flightsInRange = filterFlightsByRange(props.dayToDisplay, props.timeRangeHours, terminalFlights)
+              <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
+                val flightsWithSplits = crunchState.flights
+                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalName)
+                val flightsInRange = filterFlightsByRange(props.dayToDisplay, props.timeRangeHours, terminalFlights.toList)
 
-                val flightsForTerminal = FlightsWithSplits(flightsInRange)
-                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, bestPax, queueOrder))
+                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, bestPax, queueOrder))
               }))
             } else ""
           }),
@@ -327,7 +263,7 @@ object TerminalContentComponent {
               val deploymentProps = TerminalDeploymentsTable.TerminalProps(
                 props.airportConfig,
                 props.terminalName,
-                props.flightsWithSplitsPot,
+                props.crunchStatePot,
                 props.simulationResult,
                 props.crunchResult,
                 props.deployments,

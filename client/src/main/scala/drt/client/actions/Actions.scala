@@ -4,21 +4,24 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{DeskRecTimeslot, StaffAssignment, TimeRangeHours}
-import drt.shared._
+import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi._
-import drt.shared.Simulations.QueueSimulationResult
+import drt.shared._
 
 import scala.collection.immutable.{Map, Seq}
+import scala.concurrent.duration.FiniteDuration
 
 object Actions {
 
-  case class ProcessWork(desks: Seq[Double], workload: Seq[Double]) extends Action
+  case class GetCrunchState() extends Action
+
+  case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
+
+  case class GetCrunchStateAfter(duration: FiniteDuration) extends Action
+
+  case class UpdateCrunchState(crunchState: CrunchState) extends Action
 
   case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
-
-  case class UpdateCrunchResult(terminalName: TerminalName, queueName: QueueName, crunchResultWithTimeAndInterval: CrunchResult) extends Action
-
-  case class UpdateSimulationResult(terminalName: TerminalName, queueName: QueueName, simulationResult: QueueSimulationResult) extends Action
 
   case class UpdateWorkloads(workloads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads]) extends Action
 
@@ -30,8 +33,6 @@ object Actions {
 
   case class RunAllSimulations() extends Action
 
-  case class RunTerminalSimulations(terminalName: TerminalName) extends Action
-
   case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
 
   case class SetFixedPoints(fixedPoints: String, terminalName: Option[String]) extends Action
@@ -41,8 +42,6 @@ object Actions {
   case class GetFixedPoints() extends Action
 
   case class SetShifts(shifts: String) extends Action
-
-  case class SaveShifts(shifts: String) extends Action
 
   case class GetShifts() extends Action
 

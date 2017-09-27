@@ -2,24 +2,19 @@ package drt.client.components
 
 import diode.data.Pot
 import diode.react.ReactConnectProxy
-import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react._
 import drt.client.modules.{FlightsView, PopoverWrapper}
-import drt.shared.AirportInfo
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.{AirportInfo, ApiFlightWithSplits}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.TagOf
 
 import scala.collection.immutable.Map
-import scala.scalajs.js
 
 object FlightsPopover {
 
   case class FlightsPopoverState(hovered: Boolean = false)
 
   def apply(trigger: String,
-            matchingFlights: Pot[FlightsWithSplits],
+            matchingFlights: Pot[List[ApiFlightWithSplits]],
             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]]) = ScalaComponent.builder[Unit]("HoverPopover")
     .initialStateFromProps((p) =>
       FlightsPopoverState()
@@ -31,7 +26,7 @@ object FlightsPopover {
     popover
   }).build
 
-  private def showIfHovered(trigger: String, matchingFlights: Pot[FlightsWithSplits],
+  private def showIfHovered(trigger: String, matchingFlights: Pot[List[ApiFlightWithSplits]],
                             airportInfos: ReactConnectProxy[Map[String, Pot[AirportInfo]]],
                             state: FlightsPopoverState) = {
 
@@ -44,6 +39,5 @@ object FlightsPopover {
       }
     )
     <.div(popoverWrapper)
-    //    trigger
   }
 }

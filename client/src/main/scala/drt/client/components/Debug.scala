@@ -1,22 +1,16 @@
 package drt.client.components
 
-import diode.data.{Pot, Ready}
+import diode.data.Pot
 import diode.react.ModelProxy
-import drt.client.SPAMain.Loc
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.RootModel.FlightCode
 import drt.client.services._
-import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.PassengerSplits.VoyagePaxSplits
-import drt.shared.{ApiFlightWithSplits, MilliDate, StaffMovement}
+import drt.shared.Crunch.CrunchState
+import drt.shared.StaffMovement
 import japgolly.scalajs.react.ScalaComponent
-import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js
-import scala.util.Try
 
 object Debug {
 
@@ -32,7 +26,7 @@ object Debug {
           m.workloadPot,
           m.queueCrunchResults,
           m.simulationResult,
-          m.flightsWithSplitsPot,
+          m.crunchStatePot,
           m.loadingState
         )
       )
@@ -43,10 +37,10 @@ object Debug {
           Pot[Workloads],
           RootModel.PortCrunchResults,
           RootModel.PortSimulationResults,
-          Pot[FlightsWithSplits],
+          Pot[CrunchState],
           LoadingState
         )]) => {
-        val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, potFlights, loadingState) = staffingMP()
+        val (potShifts, potFixedPoints, staffMovements, potWorkloads, tqcr, simulationResult, crunchState, loadingState) = staffingMP()
 
         if (dom.window.hasOwnProperty("debug")) {
           <.table(
@@ -56,7 +50,7 @@ object Debug {
             <.tr(<.th("Terminal queue Crunch Results"), <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), tqcr.toString()))),
             <.tr(<.th("Simulation Result"), <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), simulationResult.toString()))),
             <.tr(<.th("workloads"), potWorkloads.renderReady(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
-            <.tr(<.th("flights with splits"), potFlights.renderReady(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
+            <.tr(<.th("crunch State"), crunchState.renderReady(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
             <.tr(<.th("loading state"), s"$loadingState")
           )
         } else {

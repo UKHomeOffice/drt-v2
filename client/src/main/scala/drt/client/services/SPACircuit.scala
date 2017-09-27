@@ -1,27 +1,22 @@
 package drt.client.services
 
-
-import java.nio.ByteBuffer
-
 import autowire._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.{SPAMain, TableViewUtils}
+import drt.client.TableViewUtils
+import drt.client.actions.Actions._
+import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.HandyStuff._
-import drt.client.services.RootModel.{FlightCode, QueueCrunchResults, mergeTerminalQueues}
-import drt.shared.FlightsApi.{TerminalName, _}
-import drt.shared._
-import boopickle.Default._
-import diode.ActionResult.NoChange
+
+import boopickle.Default._ //Don't remove this import
+
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.JSDateConversions.SDate.JSSDate
-import drt.shared.PassengerSplits.{FlightNotFound, VoyagePaxSplits}
-import drt.client.components.TerminalDeploymentsTable.TerminalDeploymentsRow
-import drt.client.actions.Actions._
-import drt.client.components.{FlightsWithSplitsTable, LoadingState}
+import drt.client.services.RootModel.{QueueCrunchResults, mergeTerminalQueues}
+import drt.shared.Crunch.CrunchState
+import drt.shared.FlightsApi.{TerminalName, _}
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 
@@ -81,11 +76,10 @@ case class Workloads(workloads: Map[TerminalName, Map[QueueName, QueuePaxAndWork
 case class TimeRangeHours(start: Int = 0, end: Int = 24)
 
 case class RootModel(
-                      motd: Pot[String] = Empty,
+                      crunchStatePot: Pot[CrunchState] = Empty,
                       workloadPot: Pot[Workloads] = Empty,
                       queueCrunchResults: RootModel.PortCrunchResults = Map(),
                       simulationResult: RootModel.PortSimulationResults = Map(),
-                      flightsWithSplitsPot: Pot[FlightsWithSplits] = Empty,
                       airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                       airportConfig: Pot[AirportConfig] = Empty,
                       minutesInASlot: Int = 15,
@@ -141,12 +135,10 @@ case class RootModel(
   override def toString: String =
     s"""
        |RootModel(
-       |motd: $motd
        |paxload: $workloadPot
        |queueCrunchResults: $queueCrunchResults
        |userDeskRec: $staffDeploymentsByTerminalAndQueue
        |simulationResult: $simulationResult
-       |flights: $flightsWithSplitsPot
        |airportInfos: $airportInfos
        |)
      """.stripMargin
@@ -331,16 +323,8 @@ class SimulationHandler[M](
 
 case class GetLatestCrunch(terminalName: TerminalName, queueName: QueueName) extends Action
 
-case class RequestFlights() extends Action
-
-case class UpdateFlights(flights: Flights) extends Action
-
-case class UpdateFlightsWithSplits(flights: FlightsWithSplits) extends Action
-
-case class UpdateFlightPaxSplits(splitsEither: Either[FlightNotFound, VoyagePaxSplits]) extends Action
-
-class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[FlightsWithSplits]]) extends LoggingActionHandler(modelRW) {
-  val flightsRequestFrequency = 60 seconds
+class CrunchStateHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[CrunchState]]) extends LoggingActionHandler(modelRW) {
+  val crunchStateRequestFrequency = 60 seconds
   val reRequestDelay = 20 seconds
 
   def pointInTimeMillis = pointInTime.value.map(m => {
@@ -349,63 +333,32 @@ class FlightsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Mode
   }).getOrElse(0L)
 
   protected def handle = {
-    case RequestFlights() =>
-      log.info(s"Requesting flights for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
-      val x = AjaxClient[Api].flightsWithSplits(pointInTimeMillis, 0).call().map {
-        case Right(fs) =>
-          log.info(s"Got ${fs.flights.length} flights!")
-          UpdateFlightsAndContinuePolling(fs)
-        case Left(FlightsNotReady()) =>
-          log.info(s"Flights not ready")
-          RequestFlightsAfter(reRequestDelay)
+    case GetCrunchState() =>
+      log.info(s"Requesting crunchState for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
+      val x = AjaxClient[Api].getCrunchState(pointInTimeMillis).call().map {
+        case Some(cs) =>
+          log.info(s"Got ${cs.flights.size} flights!")
+          UpdateCrunchStateAndContinuePolling(cs)
+        case None =>
+          log.info(s"CrunchState not ready")
+          GetCrunchStateAfter(reRequestDelay)
       }
       effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
 
-    case UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) =>
-      val requestFlightsAfterDelay = Effect(Future(RequestFlights())).after(flightsRequestFrequency)
-      val updateFlights = Effect(Future(UpdateFlightsWithSplits(flights)))
-      effectOnly(updateFlights + requestFlightsAfterDelay)
+    case UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) =>
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchStateRequestFrequency)
+      val updateCrunchState = Effect(Future(UpdateCrunchState(crunchState)))
+      effectOnly(updateCrunchState + getCrunchStateAfterDelay)
 
-    case RequestFlightsAfter(delay) =>
+    case GetCrunchStateAfter(delay) =>
       log.info(s"Re-requesting flights")
-      val requestFlightsAfterDelay = Effect(Future(RequestFlights())).after(delay)
-      effectOnly(requestFlightsAfterDelay)
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
+      effectOnly(getCrunchStateAfterDelay)
 
-    case UpdateFlightsWithSplits(flightsWithSplits) =>
-      log.info(s"client got ${flightsWithSplits.flights.length} flights")
-      val flights = flightsWithSplits.flights.map(_.apiFlight)
+    case UpdateCrunchState(crunchState) =>
+      log.info(s"client got ${crunchState.flights.size} flights (from CrunchState)")
 
-      val result = if (value.isReady) {
-        val oldFlights = value.get
-        val oldFlightsSet = oldFlights.flights.toSet
-        val newFlightsSet = flightsWithSplits.flights.toSet
-        if (oldFlightsSet != newFlightsSet) {
-          val airportCodes = flights.map(_.Origin).toSet
-          val airportInfos = Effect(Future(GetAirportInfos(airportCodes)))
-
-          val getWorkloads = Effect(Future {
-            log.info("flights Have changed - re-requesting workloads")
-            GetWorkloads("", "")
-          })
-
-          val allEffects = (airportInfos >> getWorkloads) + Effect(Future(HideLoader()))
-          updated(Ready(flightsWithSplits), allEffects)
-        } else {
-          log.info("no changes to flights")
-          //          effectOnly(Effect(Future(HideLoader())))
-          effectOnly(Effect(Future(HideLoader())))
-        }
-      } else {
-        val airportCodes = flights.map(_.Origin).toSet
-        updated(Ready(flightsWithSplits), Effect(Future(HideLoader())) + Effect(Future(GetAirportInfos(airportCodes))))
-      }
-      result
-    case UpdateFlightPaxSplits(Left(failure)) =>
-      log.info(s"Did not find flightPaxSplits for ${failure}")
-      noChange
-    case UpdateFlightPaxSplits(Right(result)) =>
-      log.info(s"Found flightPaxSplits ${result}")
-      effectOnly(Effect(Future(HideLoader())))
+      updated(Ready(crunchState), Effect(Future(HideLoader())))
   }
 }
 
@@ -591,9 +544,6 @@ class ShiftsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Model
     case SetShifts(shifts: String) =>
       updated(Ready(shifts), Effect(Future(RunAllSimulations())))
 
-    case SaveShifts(shifts: String) =>
-      AjaxClient[Api].saveShifts(shifts).call()
-      effectOnly(Effect(Future(SetShifts(shifts))))
 
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
@@ -736,13 +686,13 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
     case SetPointInTime(pointInTime) =>
       log.info(s"Set client point in time: $pointInTime")
       val sdatePointInTime = SDate(MilliDate(pointInTime))
-      val nextRequests = Effect(Future(RequestFlights())) + Effect(Future(GetShifts())) +
+      val nextRequests = Effect(Future(GetCrunchState())) + Effect(Future(GetShifts())) +
         Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements()))
       updated(Option(sdatePointInTime), nextRequests)
 
     case SetPointInTimeToLive() =>
       log.info(s"Set client point in time to live")
-      val nextRequest = Effect(Future(RequestFlights()))
+      val nextRequest = Effect(Future(GetCrunchState()))
       updated(None, nextRequest)
   }
 }
@@ -792,7 +742,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       })),
       new CrunchHandler(zoom(_.pointInTime), totalQueues, zoomRW(m => m.queueCrunchResults)((m, v) => m.copy(queueCrunchResults = v)), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.airportConfig)),
       new SimulationHandler(zoom(_.airportConfig), gotAllQueueCrunches, zoom(_.shiftsRaw), zoom(_.fixedPointsRaw), zoom(_.staffMovements), zoom(_.staffDeploymentsByTerminalAndQueue), zoom(_.workloadPot), zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
-      new FlightsHandler(zoom(_.pointInTime), zoomRW(_.flightsWithSplitsPot)((m, v) => m.copy(flightsWithSplitsPot = v))),
+      new CrunchStateHandler(zoom(_.pointInTime), zoomRW(_.crunchStatePot)((m, v) => m.copy(crunchStatePot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoom(_.pointInTime), zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
@@ -835,10 +785,6 @@ case class UpdateTerminalSimulation(terminalName: TerminalName, terminalSimulati
 case class GetTerminalCrunch(terminalName: TerminalName) extends Action
 
 case class UpdateTerminalCrunchResult(terminalName: TerminalName, terminalCrunchResults: Map[QueueName, CrunchResult]) extends Action
-
-case class RequestFlightsAfter(delay: FiniteDuration) extends Action
-
-case class UpdateFlightsAndContinuePolling(flights: FlightsWithSplits) extends Action
 
 case class GetWorkloadsAfter(delay: FiniteDuration) extends Action
 

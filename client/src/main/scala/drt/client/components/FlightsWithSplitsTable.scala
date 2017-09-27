@@ -18,10 +18,10 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = (Arrival) => Int
 
-  case class Props(flightsWithSplits: FlightsWithSplits, bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
 
   implicit val propsReuse = Reusability.by((props: Props) => {
-    props.flightsWithSplits.flights.map(af => {
+    props.flightsWithSplits.map(af => {
       (af.splits.hashCode(),
         af.apiFlight.Status,
         af.apiFlight.Gate,
@@ -46,7 +46,7 @@ object FlightsWithSplitsTable {
 
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
-      val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits.flights)
+      val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod

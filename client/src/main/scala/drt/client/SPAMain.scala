@@ -7,7 +7,7 @@ import drt.client.components.{GlobalStyles, Layout, TerminalComponent, Terminals
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
 import drt.client.services.RootModel.QueueCrunchResults
-import drt.client.services.{DeskRecTimeslot, RequestFlights, SPACircuit}
+import drt.client.services.{DeskRecTimeslot, SPACircuit}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
@@ -214,7 +214,7 @@ object SPAMain extends js.JSApp {
   def requestInitialActions() = {
     val initActions = Seq(
       GetAirportConfig(),
-      RequestFlights(),
+      GetCrunchState(),
       GetShifts(),
       GetFixedPoints(),
       GetStaffMovements(),
