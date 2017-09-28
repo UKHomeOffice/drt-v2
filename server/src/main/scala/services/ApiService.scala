@@ -15,7 +15,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.Codec
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 trait AirportToCountryLike {
   lazy val airportInfo: Map[String, AirportInfo] = {
@@ -72,17 +72,13 @@ abstract class ApiService(val airportConfig: AirportConfig,
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def crunchStateActor: AskableActorRef
+
   def actorSystem: ActorSystem
 
   def askableCacheActorRef: AskableActorRef
 
   def airportConfiguration(): AirportConfig = airportConfig
 
-  def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-    crunchStateActor.ask(GetState)(new Timeout(30 second)).map {
-      case None => None
-      case Some(cs: CrunchState) => Option(cs)
-    }
-  }
+  def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]]
 }
 
