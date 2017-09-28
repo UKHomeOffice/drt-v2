@@ -304,10 +304,14 @@ class Application @Inject()(
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetState)
-    val portCrunchResult = cacheActorRef ? query
+    val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
       case Some(cs: CrunchState) => Option(cs)
       case _ => None
+    }.recover {
+      case t =>
+        log.warning(s"Didn't get a point-in-time CrunchState: $t")
+        None
     }
   }
 
