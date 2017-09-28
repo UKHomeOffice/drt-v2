@@ -3,14 +3,11 @@ package services
 import java.io.InputStream
 import javax.script.{ScriptEngine, ScriptEngineManager}
 
-import drt.shared.Simulations.QueueSimulationResult
 import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.LoggerFactory
-import drt.shared._
 
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-import scala.util.{Failure, Success, Try}
+import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.util.Try
 
 case class OptimizerConfig(sla: Int)
 
@@ -27,7 +24,7 @@ object TryRenjin {
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
 
-  def runSimulationOfWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): QueueSimulationResult = {
+  def runSimulationOfWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.processWork(workloads, desks, config)
   }
@@ -55,11 +52,11 @@ object TryRenjin {
       tryCrunchRes
     }
 
-    def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): QueueSimulationResult = {
+    def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
       loadOptimiserScript
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
-      QueueSimulationResult(desks.zipWithIndex.map(t => DeskRec(t._2, t._1)).toList, runSimulation(desks, "desks", config).toList)
+      runSimulation(desks, "desks", config).toList
     }
 
     def runSimulation(deskRecsScala: Seq[Int], desks: String, config: OptimizerConfig): Seq[Int] = {

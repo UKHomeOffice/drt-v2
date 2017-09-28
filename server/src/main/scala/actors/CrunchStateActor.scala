@@ -3,8 +3,7 @@ package actors
 import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
-import controllers.GetTerminalCrunch
-import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchMinute, CrunchState}
 import drt.shared.FlightsApi._
 import drt.shared._
 import server.protobuf.messages.CrunchState._
@@ -13,8 +12,6 @@ import services.graphstages.Crunch._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
-
-case object GetFlights
 
 class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
   override def persistenceId: String = "crunch-state"
@@ -55,29 +52,6 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case GetState =>
       sender() ! state
 
-    case GetFlights =>
-      state match {
-        case Some(CrunchState(_, _, flights, _)) =>
-          sender() ! FlightsWithSplits(flights.toList)
-        case None => FlightsNotReady
-      }
-
-    case GetPortWorkload =>
-      state match {
-        case Some(CrunchState(_, _, _, crunchMinutes)) =>
-          sender() ! PortLoads(portWorkload(crunchMinutes))
-        case None =>
-          sender() ! WorkloadsNotReady()
-      }
-
-    case GetTerminalCrunch(terminalName) =>
-      state match {
-        case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
-          sender() ! TerminalCrunchResult(queueCrunchResults(terminalName, startMillis, crunchMinutes).toList)
-        case _ =>
-          sender() ! TerminalCrunchResult(List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]())
-      }
-
     case SaveSnapshotSuccess(md) =>
       log.info(s"Snapshot success $md")
 
@@ -85,7 +59,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       log.info(s"Snapshot failed $md\n$cause")
 
     case u =>
-      log.warning(s"unexpected message $u")
+      log.warning(s"Received unexpected message $u")
   }
 
   def setStateFromSnapshot(snapshot: Any): Unit = {
@@ -184,47 +158,6 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       saveSnapshot(snapshotMessage)
     }
   }
-
-  def portWorkload(crunchMinutes: Set[CrunchMinute]): Map[TerminalName, Map[QueueName, (List[WL], IndexedSeq[Pax])]] = crunchMinutes
-    .groupBy(_.terminalName)
-    .map {
-      case (tn, tms) =>
-        val terminalLoads = tms
-          .groupBy(_.queueName)
-          .map {
-            case (qn, qms) =>
-              val sortedCms = qms.toList.sortBy(_.minute)
-              val paxLoad = sortedCms.map {
-                case CrunchMinute(_, _, m, pl, _, _, _, _, _, _, _) => Pax(m, pl)
-              }.toIndexedSeq
-              val workLoad = sortedCms.map {
-                case CrunchMinute(_, _, m, _, wl, _, _, _, _, _, _) => WL(m, wl)
-              }
-              (qn, (workLoad, paxLoad))
-          }
-        (tn, terminalLoads)
-    }
-
-  def queueCrunchResults(terminalName: TerminalName,
-                         startMillis: MillisSinceEpoch,
-                         crunchMinutes: Set[CrunchMinute]): Seq[(QueueName, Either[NoCrunchAvailable, CrunchResult])] = crunchMinutes
-    .groupBy(_.terminalName).getOrElse(terminalName, Set[CrunchMinute]())
-    .groupBy(_.queueName)
-    .map {
-      case (qn, qms) =>
-        if (qms.nonEmpty) {
-          val sortedCms = qms.toList.sortBy(_.minute)
-          val desks = sortedCms.map {
-            case CrunchMinute(_, _, _, _, _, dr, _, _, _, _, _) => dr
-          }.toIndexedSeq
-          val waits = sortedCms.map {
-            case CrunchMinute(_, _, _, _, _, _, wt, _, _, _, _) => wt
-          }
-          (qn, Right(CrunchResult(startMillis, oneMinuteMillis, desks, waits)))
-        } else {
-          (qn, Left(NoCrunchAvailable()))
-        }
-    }.toList
 
   def oneDayOfMinutes: Range = 0 until 1440
 
