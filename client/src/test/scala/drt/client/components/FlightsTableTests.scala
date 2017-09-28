@@ -1,12 +1,7 @@
 package drt.client.components
 
-import diode.ActionResult.ModelUpdate
 import diode.data.{Pot, Ready}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{DrtCircuit, RootModel, SPACircuit}
-import drt.client.services.TerminalDeploymentTests.TestAirportConfig
-import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^

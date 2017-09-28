@@ -162,7 +162,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def airportConfiguration(): AirportConfig = airportConfig
 
   def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-    crunchStateActor.ask(GetState)(new Timeout(1 second)).map {
+    crunchStateActor.ask(GetState)(new Timeout(30 second)).map {
       case None => None
       case Some(cs: CrunchState) => Option(cs)
     }
