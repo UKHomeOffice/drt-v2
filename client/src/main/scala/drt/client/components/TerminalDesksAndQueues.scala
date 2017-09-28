@@ -1,6 +1,5 @@
 package drt.client.components
 
-import drt.client.TableViewUtils.queueDisplayName
 import drt.client.services.JSDateConversions
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
@@ -9,6 +8,12 @@ import japgolly.scalajs.react.vdom.html_<^.{<, VdomElement, _}
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 
 object TerminalDesksAndQueues {
+
+  val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
+    Queues.FastTrack -> "Fast Track",
+    Queues.Transfer -> "Tx")
+
+  def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
 
   case class Props(crunchState: CrunchState, airportConfig: AirportConfig, terminalName: TerminalName)
   case class State(showActuals: Boolean = false)

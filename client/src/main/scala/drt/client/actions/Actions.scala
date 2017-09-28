@@ -3,7 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
-import drt.client.services.{DeskRecTimeslot, StaffAssignment, TimeRangeHours}
+import drt.client.services.{StaffAssignment, TimeRangeHours}
 import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi._
 import drt.shared._
@@ -21,19 +21,9 @@ object Actions {
 
   case class UpdateCrunchState(crunchState: CrunchState) extends Action
 
-  case class UpdateDeskRecsTime(terminalName: TerminalName, queueName: QueueName, item: DeskRecTimeslot) extends Action
-
-  case class UpdateWorkloads(workloads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads]) extends Action
-
-  case class GetWorkloads(begin: String, end: String) extends Action
-
   case class GetAirportConfig() extends Action
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
-
-  case class RunAllSimulations() extends Action
-
-  case class RunSimulation(terminalName: TerminalName, queueName: QueueName, desks: List[Int]) extends Action
 
   case class SetFixedPoints(fixedPoints: String, terminalName: Option[String]) extends Action
 
@@ -57,10 +47,6 @@ object Actions {
 
   case class GetStaffMovements() extends Action
 
-  case class GetActualDeskStats() extends Action
-
-  case class SetActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]]) extends Action
-
   case class SetPointInTime(value: Long) extends Action
 
   case class SetPointInTimeToLive() extends Action
@@ -70,5 +56,13 @@ object Actions {
   case class ShowLoader(message: String) extends Action
 
   case class HideLoader() extends Action
+
+  case class GetAirportInfos(code: Set[String]) extends Action
+
+  case class GetAirportInfo(code: String) extends Action
+
+  case class UpdateAirportInfo(code: String, info: Option[AirportInfo]) extends Action
+
+  case class UpdateAirportInfos(infos: Map[String, AirportInfo]) extends Action
 
 }
