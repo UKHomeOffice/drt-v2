@@ -8,7 +8,6 @@ import services.SDate
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
-
   def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {
     FlightWithSplitsMessage(
       Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
@@ -17,9 +16,10 @@ object FlightMessageConversion {
 
   def apiSplitsToMessage(s: ApiSplits): SplitMessage = {
     SplitMessage(
-      s.splits.map(paxTypeAndQueueCountToMessage).toList,
-      Option(s.source),
-      Option(s.splitStyle.name)
+      paxTypeAndQueueCount = s.splits.map(paxTypeAndQueueCountToMessage).toList,
+      source = Option(s.source),
+      eventType = s.eventType,
+      style = Option(s.splitStyle.name)
     )
   }
 

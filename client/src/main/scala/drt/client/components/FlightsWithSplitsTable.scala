@@ -147,12 +147,12 @@ object FlightTableRow {
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
       Try {
-        val flightSplitsList: Set[ApiSplits] = flightWithSplits.splits
-
-        def sourceDisplayName(name: String) = Map(SplitSources.AdvPaxInfo -> "Live",
-          SplitSources.ApiSplitsWithCsvPercentage -> "Live",
-          SplitSources.Historical -> "Historical"
-        ).getOrElse(name, name)
+        def sourceDisplayName(splits: ApiSplits) =
+          splits match {
+            case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
+            case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
+            case _ => "n/a"
+          }
 
         def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
           val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
@@ -164,12 +164,13 @@ object FlightTableRow {
             sourceDisplay)
         }
 
+        val bestSplits = flightWithSplits.bestSplits.toSet
         //todo - we need to lift this splitsComponent code out somewhere more useful
-        val splitsComponents = flightSplitsList.take(1).map {
+        val splitsComponents = bestSplits.map {
           flightSplits => {
             val splitStyle = flightSplits.splitStyle
             val source = flightSplits.source.toLowerCase
-            val sourceDisplay = sourceDisplayName(flightSplits.source)
+            val sourceDisplay = sourceDisplayName(flightSplits)
             val vdomElement: VdomElement = splitStyle match {
               case PaxNumbers => {
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
@@ -188,7 +189,7 @@ object FlightTableRow {
                 }).toMap
                 GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
               }
-              case UndefinedSplitStyle => <.div("")
+              case UndefinedSplitStyle => <.div(s"${splitStyle}")
             }
             vdomElement
           }

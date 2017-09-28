@@ -85,16 +85,29 @@ class CrunchStateHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: 
       effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
 
     case UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) =>
+
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchStateRequestFrequency)
       val updateCrunchState = Effect(Future(UpdateCrunchState(crunchState)))
-      effectOnly(updateCrunchState + getCrunchStateAfterDelay)
+      val effects = getCrunchStateAfterDelay + updateCrunchState
 
-    case GetCrunchStateAfter(delay) =>
+      val oldCodes = value.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
+      val newCodes = crunchState.flights.map(_.apiFlight.Origin)
+      val unseenCodes = newCodes -- oldCodes
+      val allEffects = if (unseenCodes.nonEmpty) {
+        log.info(s"Requesting airport infos. Got unseen origin ports: ${unseenCodes.mkString(",")}")
+        effects + Effect(Future(GetAirportInfos(newCodes)))
+      } else effects
+
+      effectOnly(allEffects)
+
+    case GetCrunchStateAfter(delay)
+    =>
       log.info(s"Re-requesting flights")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
       effectOnly(getCrunchStateAfterDelay)
 
-    case UpdateCrunchState(crunchState) =>
+    case UpdateCrunchState(crunchState)
+    =>
       log.info(s"client got ${crunchState.flights.size} flights (from CrunchState)")
 
       updated(Ready(crunchState), Effect(Future(HideLoader())))

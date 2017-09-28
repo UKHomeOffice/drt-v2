@@ -6,6 +6,7 @@ import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
+import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.immutable._
 import scala.concurrent.Future
@@ -67,7 +68,29 @@ object ApiSplits {
   def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.map(_.paxCount).sum
 }
 
-case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits])
+case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits]) {
+  def bestSplits: Option[ApiSplits] = {
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
+    val historicalSplits = splits.find(_.source == SplitSources.Historical)
+    val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
+
+    apiSplitsDc match {
+      case s@Some(_) => s
+      case None => apiSplitsCi match {
+        case s@Some(_) => s
+        case None => historicalSplits match {
+          case s@Some(_) => s
+          case None => terminalSplits match {
+            case s@Some(_) => s
+            case None => None
+          }
+        }
+      }
+    }
+  }
+}
+
 
 case class FlightsNotReady()
 

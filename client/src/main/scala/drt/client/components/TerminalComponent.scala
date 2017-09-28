@@ -127,8 +127,8 @@ object TerminalContentComponent {
       vdomElementFromComponent(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
         <.span(
           proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
-          proxy().renderEmpty(<.span(portCode)),
-          proxy().renderPending((n) => <.span(portCode)))
+          proxy().renderEmpty(<.span(portCode))
+        )
       })
     }.recover {
       case e =>
