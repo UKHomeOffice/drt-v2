@@ -47,6 +47,7 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
       val shifts = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
       updateState(shifts)
       onUpdateState(shifts)
+
     case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) =>
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
   }
@@ -57,7 +58,6 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
       sender() ! state.shifts
 
     case GetShifts =>
-
 
     case data: String =>
       if (data != state.shifts) {
