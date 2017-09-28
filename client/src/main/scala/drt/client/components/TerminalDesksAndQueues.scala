@@ -10,10 +10,8 @@ import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 
 object TerminalDesksAndQueues {
 
-
   case class Props(crunchState: CrunchState, airportConfig: AirportConfig, terminalName: TerminalName)
   case class State(showActuals: Boolean = false)
-
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialState[State](State(false))
@@ -37,7 +35,6 @@ object TerminalDesksAndQueues {
               val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
               val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
 
-
               queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
             }
             else queueCells
@@ -52,8 +49,6 @@ object TerminalDesksAndQueues {
         import JSDateConversions._
         val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(minute), SDate(minute).addHours(1), "left", "-")()
         val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(minute), SDate(minute).addHours(1), "left", "+")()
-
-
 
         val pcpTds = List(<.td(^.className := s"total-deployed $ragClass", totalRequired),
           <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", totalDeployed), upMovementPopup)))
@@ -110,7 +105,6 @@ object TerminalDesksAndQueues {
         else headings
       }
 
-
       def subHeadingLevel2(queueNames: Seq[QueueName]) = {
         val queueSubHeadings = queueNames.flatMap {
           case queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)
@@ -126,7 +120,6 @@ object TerminalDesksAndQueues {
       val defaultNumberOfQueues = 3
       val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
       val colsClass = s"cols-${queueNames.length}$showActsClassSuffix"
-
 
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
