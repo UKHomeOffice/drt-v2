@@ -242,7 +242,8 @@ object TerminalContentComponent {
       <.div(
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals"), ^.onClick --> t.modState(_ => State("arrivals"))),
-          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues"), ^.onClick --> t.modState(_ => State("queues"))),
+          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#queues", "Desks & Queues Old"), ^.onClick --> t.modState(_ => State("queues"))),
+          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#desksAndQueues", "Desks & Queues"), ^.onClick --> t.modState(_ => State("desksAndQueues"))),
           <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#staffing", "Staffing"), ^.onClick --> t.modState(_ => State("staffing")))
         ),
         <.div(^.className := "tab-content",
@@ -272,6 +273,14 @@ object TerminalContentComponent {
                 props.timeRangeHours
               )
               TerminalDeploymentsTable.terminalDeploymentsComponent(deploymentProps)
+            } else ""
+          ),
+          <.div(^.id := "desksAndQueues", ^.className := "tab-pane fade terminal-desk-recs-container",
+            if (state.activeTab == "desksAndQueues") {
+              props.crunchStatePot.renderReady( crunchState => {
+
+                TerminalDesksAndQueues(TerminalDesksAndQueues.Props(crunchState, props.airportConfig, props.terminalName))
+              })
             } else ""
           ),
           <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",

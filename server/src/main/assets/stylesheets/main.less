@@ -331,7 +331,7 @@ table.user-desk-recs > tbody > tr > td.date-field {
   text-align: left;
 }
 
-table.user-desk-recs.cols-2, table.user-desk-recs.cols-4 {
+table.user-desk-recs.cols-2 {
   thead th:nth-child(1) {
   width: 180px;
   }
@@ -360,6 +360,24 @@ table.user-desk-recs.cols-5-with-actuals thead th {
 }
 
 table.user-desk-recs.cols-5-with-actuals {
+  thead th:nth-child(1) {
+  width: 60px;
+  }
+
+  tbody td:nth-child(1) {
+  width: 60px;
+  }
+}
+
+table.user-desk-recs.cols-4-with-actuals tbody td, table.user-desk-recs.cols-4-with-actuals thead th {
+  width: 47px;
+}
+
+table.user-desk-recs.cols-4-with-actuals thead th {
+  font-size: 11px
+}
+
+table.user-desk-recs.cols-4-with-actuals {
   thead th:nth-child(1) {
   width: 60px;
   }

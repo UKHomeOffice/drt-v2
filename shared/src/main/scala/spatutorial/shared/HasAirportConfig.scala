@@ -15,6 +15,8 @@ object Queues {
   val NonEeaDesk = "nonEeaDesk"
   val FastTrack = "fastTrack"
   val Transfer = "transfer"
+
+  val queueOrder = List(EeaDesk, EGate, NonEeaDesk, FastTrack)
 }
 
 sealed trait PaxType {

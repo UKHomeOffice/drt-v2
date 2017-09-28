@@ -1,17 +1,14 @@
 package drt.client.components
 
-import diode.data.{Pot, Ready}
+import diode.data.Pot
 import diode.react._
 import drt.client.TableViewUtils
 import drt.client.TableViewUtils._
-import drt.client.actions.Actions.HideLoader
 import drt.client.logger._
 import drt.client.services.HandyStuff.QueueStaffDeployments
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.RootModel.QueueCrunchResults
 import drt.client.services._
 import drt.shared.Crunch.CrunchState
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.Simulations.QueueSimulationResult
 import drt.shared._
 import japgolly.scalajs.react._
@@ -26,7 +23,6 @@ import scala.scalajs.js.Date
 import scala.util.Try
 
 object TerminalDeploymentsTable {
-  // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   sealed trait QueueDeploymentsRow {
