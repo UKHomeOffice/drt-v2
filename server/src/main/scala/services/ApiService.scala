@@ -93,7 +93,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
                           val fixedPointsActor: ActorRef,
                           val staffMovementsActor: ActorRef)
   extends Api
-    with FlightsService
     with AirportToCountryLike
     with ShiftPersistence
     with FixedPointPersistence
@@ -107,57 +106,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def actorSystem: ActorSystem
 
   def askableCacheActorRef: AskableActorRef
-
-  override def getWorkloads(pointInTime: Long): Future[Either[WorkloadsNotReady, PortLoads]] = {
-    val workloadsFuture = if (pointInTime > 0) {
-      val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime.toLong), airportConfig.queues), GetPortWorkload)
-      askableCacheActorRef ? query
-    } else {
-      crunchStateActor ? GetPortWorkload
-    }
-
-    workloadsFuture.recover {
-      case e: Throwable =>
-        log.info(s"Didn't get the workloads: $e")
-        WorkloadsNotReady()
-    }.map {
-      case WorkloadsNotReady() =>
-        log.info(s"Got WorkloadsNotReady")
-        Left(WorkloadsNotReady())
-      case PortLoads(workloads) =>
-        log.info(s"Got the workloads")
-        workloads.foreach {
-          case (tn, tl) => tl.foreach {
-            case (qn, (wl, pl)) => log.info(s"workloads: $tn/$qn wl: ${wl.length}, pl: ${pl.length} ")
-          }
-        }
-        Right(PortLoads(workloads))
-    }
-  }
-
-  override def processWork(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
-    Try {
-      WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads, desks)
-    }.recover {
-      case f =>
-        log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
-        QueueSimulationResult(List(), Nil)
-    }.get
-  }
-
-  def getTerminalSimulations(terminalName: TerminalName, workloads: Map[QueueName, List[Double]], desks: Map[QueueName, List[Int]]): TerminalSimulationResultsFull = {
-    airportConfig.queues.getOrElse(terminalName, Seq()).collect {
-      case queueName if queueName != Queues.Transfer =>
-        val queueSimResults = Try {
-          WorkloadSimulation.processWork(airportConfig)(terminalName, queueName, workloads.getOrElse(queueName, List()), desks.getOrElse(queueName, List()))
-        }.recover {
-          case f =>
-            log.error(s"Simulation failed on $terminalName/$queueName with $workloads and $desks", f)
-            QueueSimulationResult(List(), Nil)
-        }.get
-        queueName -> queueSimResults
-    }.toMap
-  }
 
   def airportConfiguration(): AirportConfig = airportConfig
 

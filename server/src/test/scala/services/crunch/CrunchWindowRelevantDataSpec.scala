@@ -1,6 +1,6 @@
 package services.crunch
 
-import actors.{GetFlights, GetPortWorkload}
+import actors.{GetPortWorkload, GetState}
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
@@ -56,11 +56,14 @@ class CrunchWindowRelevantDataSpec extends CrunchTestLike {
       testProbe.expectMsgAnyClassOf(classOf[CrunchState])
 
 
-      val result = Await.result(askableCrunchStateTestActor.ask(GetFlights)(new Timeout(1 second)), 1 second).asInstanceOf[FlightsWithSplits]
+      val eventualCrunchState = askableCrunchStateTestActor.ask(GetState)(new Timeout(1 second)).map {
+        case CrunchState(_, _, fs, _) => fs
+      }
+      val result = Await.result(eventualCrunchState, 1 second)
 
       val expected = ApiFlightWithSplits(flightInsideCrunch, Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0)), SplitSources.TerminalAverage, None, Percentage)))
 
-      result.flights === List(expected)
+      result === List(expected)
     }
 
     "Given two flights one reaching PCP before the crunch start time and one after " +

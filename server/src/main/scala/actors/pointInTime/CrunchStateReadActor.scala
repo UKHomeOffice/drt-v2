@@ -1,10 +1,8 @@
 package actors.pointInTime
 
-import actors.{CrunchStateActor, GetFlights, GetPortWorkload}
+import actors.{CrunchStateActor, GetState}
 import akka.persistence.{RecoveryCompleted, _}
-import controllers.GetTerminalCrunch
-import drt.shared.Crunch.{CrunchMinutes, CrunchState}
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
 
@@ -39,41 +37,11 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
     case SaveSnapshotSuccess =>
       log.info("Saved CrunchState Snapshot")
 
-    case GetFlights =>
-      log.info(s"Received GetFlights message")
-      state match {
-        case Some(CrunchState(_, _, flights, _)) =>
-          log.info(s"Found ${flights.size} flights")
-          sender() ! FlightsWithSplits(flights.toList)
-        case None =>
-          log.info(s"No CrunchState available")
-          sender() ! FlightsNotReady()
-      }
+    case GetState =>
+      sender() ! state
 
-    case GetPortWorkload =>
-      state match {
-        case Some(CrunchState(_, _, _, crunchMinutes)) =>
-          sender() ! PortLoads(portWorkload(crunchMinutes))
-        case None =>
-          sender() ! WorkloadsNotReady()
-      }
-
-    case GetTerminalCrunch(terminalName) =>
-      state match {
-        case Some(CrunchState(startMillis, _, _, crunchMinutes)) =>
-          sender() ! TerminalCrunchResult(queueCrunchResults(terminalName, startMillis, crunchMinutes).toList)
-        case _ =>
-          sender() ! TerminalCrunchResult(List[(QueueName, Either[NoCrunchAvailable, CrunchResult])]())
-      }
-
-    case GetCrunchMinutes =>
-      log.info("Sending crunch minutes")
-      state.map(_.crunchMinutes) match {
-        case Some(cms) => sender() ! CrunchMinutes(cms)
-        case None => CrunchMinutes(Set())
-      }
-    case other =>
-      log.info(s"Sent an unknown message: $other")
+    case u =>
+      log.warning(s"Received unexpected message $u")
   }
 
   override def recovery: Recovery = {
