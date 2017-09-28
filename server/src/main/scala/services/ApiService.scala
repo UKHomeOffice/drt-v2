@@ -1,18 +1,15 @@
 package services
 
-import actors.pointInTime.CrunchStateReadActor
-import actors.{CachableActorQuery, GetPortWorkload, GetState}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import actors.GetState
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
-import drt.shared.FlightsApi._
-import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.immutable.{List, Map, Seq}
+import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -58,34 +55,6 @@ trait AirportToCountryLike {
 
 object AirportToCountry extends AirportToCountryLike {
 
-}
-
-object WorkloadSimulation {
-  def processWork(airportConfig: AirportConfig)(terminalName: TerminalName, queueName: QueueName, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
-    val optimizerConfig = OptimizerConfig(airportConfig.slaByQueue(queueName))
-
-    if (queueName == "eGate")
-      eGateSimulationResultForBanksAndWorkload(optimizerConfig, workloads, desks)
-    else
-      simulationResultForDesksAndWorkload(optimizerConfig, workloads, desks)
-  }
-
-  val gatesPerBank = 5
-  val blockSize = 15
-  val fillByBlockSize = List.fill[Int](blockSize) _
-
-  def simulationResultForDesksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desks: List[Int]): QueueSimulationResult = {
-    val desksPerMinute: List[Int] = desks.flatMap(x => fillByBlockSize(x))
-
-    TryRenjin.runSimulationOfWork(workloads, desksPerMinute, optimizerConfig)
-  }
-
-  def eGateSimulationResultForBanksAndWorkload(optimizerConfig: OptimizerConfig, workloads: List[Double], desksPerBlock: List[Int]): QueueSimulationResult = {
-    val egatesPerMinute: List[Int] = desksPerBlock.flatMap(d => fillByBlockSize(d * gatesPerBank))
-    val simulationResult = TryRenjin.runSimulationOfWork(workloads, egatesPerMinute, optimizerConfig)
-    val crunchRecBanksPerMinute = simulationResult.recommendedDesks.map(d => DeskRec(d.time, d.desks / gatesPerBank))
-    simulationResult.copy(recommendedDesks = crunchRecBanksPerMinute)
-  }
 }
 
 abstract class ApiService(val airportConfig: AirportConfig,

@@ -3,12 +3,11 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions._
-import drt.client.logger._
 import drt.client.services.FixedPoints._
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{MilliDate, SDateLike, StaffMovement, WorkloadsHelpers}
+import drt.shared.{MilliDate, SDateLike, StaffMovement}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.Div
@@ -23,6 +22,7 @@ object DateRange {
 }
 
 object TerminalStaffing {
+  val oneMinute = 60000L
 
   case class Props(terminalName: TerminalName)
 
@@ -150,7 +150,7 @@ object TerminalStaffing {
 
   def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
     val timeMinPlusOneDay = startOfDay.addDays(1)
-    val daysWorthOf15Minutes = startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (WorkloadsHelpers.oneMinute * 15)
+    val daysWorthOf15Minutes = startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (oneMinute * 15)
     daysWorthOf15Minutes
   }
 

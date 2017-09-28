@@ -5,8 +5,7 @@ import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
-import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
+import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -14,7 +13,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch.{haveWorkloadsChanged, _}
+import services.graphstages.Crunch._
 import services.workloadcalculator.PaxLoadCalculator.Load
 import services.{FastTrackPercentages, SDate}
 

@@ -1,11 +1,8 @@
 package drt.shared
 
-import java.util.Date
-
 import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
-import drt.shared.Simulations.{QueueSimulationResult, TerminalSimulationResultsFull}
 import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.immutable._
@@ -226,62 +223,16 @@ case class CrunchResult(
                          recommendedDesks: IndexedSeq[Int],
                          waitTimes: Seq[Int])
 
-case class NoCrunchAvailable()
-
-object Simulations {
-
-  case class QueueSimulationResult(recommendedDesks: List[DeskRec], waitTimes: List[Int])
-
-  type TerminalSimulationResultsFull = Map[QueueName, QueueSimulationResult]
-}
+case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 object FlightsApi {
-
   case class Flights(flights: List[Arrival])
 
   case class FlightsWithSplits(flights: List[ApiFlightWithSplits])
 
-  type QueuePaxAndWorkLoads = (Seq[WL], Seq[Pax])
-
-  type PortPaxAndWorkLoads[L] = Map[TerminalName, Map[QueueName, L]]
-
   type TerminalName = String
 
   type QueueName = String
-}
-
-case class AirportInfo(airportName: String, city: String, country: String, code: String)
-
-trait WorkloadsHelpers {
-  val oneMinute = 60000L
-}
-
-object WorkloadsHelpers extends WorkloadsHelpers
-
-case class WorkloadResponse(terminals: Seq[TerminalWorkload])
-
-case class TerminalWorkload(terminalName: String,
-                            queues: Seq[QueuePaxAndWorkLoads])
-
-trait Time {
-  def time: Long
-}
-
-case class WL(time: Long, workload: Double) extends Time
-
-case class Pax(time: Long, pax: Double) extends Time
-
-case class WorkloadsNotReady()
-
-case class DeskRec(time: Long, desks: Int)
-
-case class WorkloadTimeslot(time: Long, workload: Double, pax: Int, desRec: Int, waitTimes: Int)
-
-
-object PassengerQueueTypes {
-  def egatePercentage = 0.6d
-
-  type PaxTypeAndQueueCounts = List[SplitsPaxTypeAndQueueCount]
 }
 
 sealed trait SplitCounts
@@ -290,6 +241,8 @@ case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, pa
 
 object PassengerSplits {
   type QueueType = String
+
+  type PaxTypeAndQueueCounts = List[SplitsPaxTypeAndQueueCount]
 
   case class SplitsPaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
 
@@ -305,13 +258,9 @@ object PassengerSplits {
 
 }
 
-case class PortLoads(loads: PortPaxAndWorkLoads[QueuePaxAndWorkLoads])
-
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 
 case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
-
-case class TerminalCrunchResult(queuesAndCrunchResults: List[(QueueName, Either[NoCrunchAvailable, CrunchResult])])
 
 object Crunch {
   type MillisSinceEpoch = Long
@@ -339,9 +288,7 @@ object Crunch {
 
 }
 
-//todo the size of this api is already upsetting me, can we make it smaller while keeping autowiring?
 trait Api {
-
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]

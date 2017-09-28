@@ -6,7 +6,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{MilliDate, SDateLike, Simulations, StaffMovement}
+import drt.shared.{MilliDate, SDateLike, StaffMovement}
 import org.slf4j.LoggerFactory
 import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
@@ -105,15 +105,14 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
           case cs@ CrunchState(_, _, _, crunchMinutes) =>
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = crunchMinutesWithDeployments.groupBy(_.terminalName).flatMap {
-              case (tn, tcms) =>
+              case (_, tcms) =>
                 val minutes = tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
                     val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
                     val workLoads = minWlSd.map { case (_, wl, _) => wl }.toList
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
                     val config = OptimizerConfig(slaByQueue(qn))
-                    val queueSimResult: Simulations.QueueSimulationResult = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
-                    val simWaits = queueSimResult.waitTimes
+                    val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
                     qcms.toSeq.sortBy(_.minute).zipWithIndex.map {
                       case (cm, idx) => cm.copy(deployedWait = Option(simWaits(idx)))
                     }.toSet

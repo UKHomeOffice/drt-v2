@@ -1,7 +1,6 @@
 package passengersplits.core
 
-import drt.shared.PassengerQueueTypes.PaxTypeAndQueueCounts
-import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
+import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxType
 import drt.shared.PaxTypes._
 import org.slf4j.LoggerFactory
