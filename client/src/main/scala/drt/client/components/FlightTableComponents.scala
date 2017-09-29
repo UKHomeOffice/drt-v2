@@ -4,8 +4,9 @@ import diode.data.{Pot, Ready}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared._
-import japgolly.scalajs.react.vdom.TagMod
+import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.html.{Div, Span}
 
 import scala.scalajs.js
 import scala.util.Try
@@ -43,12 +44,12 @@ object FlightTableComponents {
   }
 
   def originComponent(originMapper: (String) => (String)): js.Function = (props: js.Dynamic) => {
-    val mod: TagMod = ^.title := originMapper(props.data.toString())
+    val mod: TagMod = ^.title := originMapper(props.data.toString)
     <.span(props.data.toString(), mod).render
   }
 
   def dateTimeComponent(): js.Function = (props: js.Dynamic) => {
-    val dt = props.data.toString()
+    val dt = props.data.toString
     if (dt != "") {
       localDateTimeWithPopup(dt)
     } else {
@@ -56,11 +57,11 @@ object FlightTableComponents {
     }
   }
 
-  def localDateTimeWithPopup(dt: String) = {
+  def localDateTimeWithPopup(dt: String): TagMod = {
     if (dt.isEmpty) <.span() else localTimePopup(dt)
   }
 
-  def localTimePopup(dt: String) = {
+  def localTimePopup(dt: String): VdomElement = {
     val p = Try {
       val sdate = SDate.parse(dt)
       sdateLocalTimePopup(sdate)
@@ -78,7 +79,7 @@ object FlightTableComponents {
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  def pcpTimeRange(arrival: Arrival, bestPax: (Arrival) => Int) = {
+  def pcpTimeRange(arrival: Arrival, bestPax: (Arrival) => Int): TagOf[Div] = {
     val sdateFrom = SDate(MilliDate(arrival.PcpTime))
     val sdateTo = SDate(MilliDate(arrival.PcpTime + millisToDisembark(bestPax(arrival))))
     <.div(
@@ -88,25 +89,25 @@ object FlightTableComponents {
     )
   }
 
-  def sdateLocalTimePopup(sdate: SDateLike) = {
-    val hhmm = f"${sdate.getHours}%02d:${sdate.getMinutes}%02d"
+  def sdateLocalTimePopup(sdate: SDateLike): TagOf[Span] = {
+    val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
     val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
     <.span(hhmm, titlePopup)
   }
 
-  def millisDelta(time1: String, time2: String) = {
+  def millisDelta(time1: String, time2: String): Long = {
     SDate.parse(time1).millisSinceEpoch - SDate.parse(time2).millisSinceEpoch
   }
 
 
-  def asOffset(delta: Long, range: Double) = {
+  def asOffset(delta: Long, range: Double): Double = {
     if (delta == 0) 0d else {
       val aggression = 1.0019
       val deltaTranslate = 1700
       val scaledDelta = 1.0 * delta / 1000
       val isLate = delta < 0
       if (isLate) {
-        (range / (1 + Math.pow(aggression, (scaledDelta + deltaTranslate))))
+        range / (1 + Math.pow(aggression, scaledDelta + deltaTranslate))
       }
       else {
         -(range / (1 + Math.pow(aggression, -1.0 * (scaledDelta - deltaTranslate))))
@@ -114,7 +115,7 @@ object FlightTableComponents {
     }
   }
 
-  def dateStringAsLocalDisplay(dt: String) = dt match {
+  def dateStringAsLocalDisplay(dt: String): String = dt match {
     case "" => ""
     case some => SDate.parse(dt).toLocalDateTimeString()
   }
@@ -190,7 +191,7 @@ object FlightTableComponents {
     } else {
       val delta = millisDelta(sch, act)
       val deltaTooltip = {
-        val dm = (delta / 60000)
+        val dm = delta / 60000
         Math.abs(dm) + s"mins ${deltaMessage(delta)}"
       }
       val actPct = schPct + asOffset(delta, 150.0)
@@ -200,7 +201,7 @@ object FlightTableComponents {
     }
   }
 
-  def deltaMessage(actDelta: Long) = {
+  def deltaMessage(actDelta: Long): String = {
     val actClass = actDelta match {
       case d if d < 0 => "late"
       case d if d == 0 => "on-time"
@@ -209,5 +210,5 @@ object FlightTableComponents {
     actClass
   }
 
-  val uniqueArrivalsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight)) _
+  val uniqueArrivalsWithCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
 }

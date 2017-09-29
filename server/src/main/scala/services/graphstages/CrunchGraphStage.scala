@@ -4,7 +4,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
@@ -18,12 +18,9 @@ import services.workloadcalculator.PaxLoadCalculator.Load
 import services.{FastTrackPercentages, SDate}
 
 import scala.collection.immutable.{Map, Seq}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
-class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
+class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                        slas: Map[QueueName, Int],
                        minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                        procTimes: Map[PaxTypeAndQueue, Double],
@@ -52,13 +49,13 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     val log: Logger = LoggerFactory.getLogger("CrunchGraphStage")
 
     override def preStart(): Unit = {
-      initialFlightsFuture.onSuccess {
-        case flights =>
+      optionalInitialFlights match {
+        case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+        case _ =>
+          log.info(s"Did not receive any flights to initialise with")
       }
-      Await.ready(initialFlightsFuture, 10 seconds)
-
       super.preStart()
     }
 

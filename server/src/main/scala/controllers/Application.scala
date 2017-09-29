@@ -23,6 +23,8 @@ import services.graphstages.Crunch.midnightThisMorning
 import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage, VoyageManifestsGraphStage}
 
 import scala.collection.immutable.Map
+import scala.concurrent.Await
+import scala.util.{Failure, Success}
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
@@ -104,12 +106,34 @@ trait SystemActors {
   val askableCrunchStateActor: AskableActorRef = crunchStateActor
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
-  val initialFlightsFuture: Future[List[ApiFlightWithSplits]] = askableCrunchStateActor.ask(GetState)(new Timeout(10 seconds)).map {
-    case CrunchState(_, _, flights, _) => flights.toList
-    case _ => List()
+  val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
+
+  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
+
+  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
+  val shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+
+  val crunchStateFuture = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
+    case Some(cs: CrunchState) => Option(cs)
+    case _ => None
   }
+
+  crunchStateFuture.onComplete {
+    case Success(Some(cs: CrunchState)) => Option(cs)
+    case Success(None) => None
+    case Failure(t) => None
+  }
+
+  log.info(s"Awaiting CrunchStateActor response")
+  val optionalCrunchState = Await.result(crunchStateFuture, 1 minute)
+  log.info(s"Got CrunchStateActor response")
+
   val crunchFlow = new CrunchGraphStage(
-    initialFlightsFuture,
+    optionalCrunchState.map(cs => FlightsWithSplits(cs.flights.toList)),
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
     airportConfig.defaultProcessingTimes.head._2,
@@ -122,22 +146,7 @@ trait SystemActors {
     1440
   )
 
-  val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
-
-  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
-
-  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
-  val shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  def initialCrunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(10 seconds)).map {
-    case None => None
-    case Some(cs: CrunchState) => Option(cs)
-  }
-
-  val staffingGraphStage = new StaffingStage(initialCrunchStateFuture, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
+  val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
 
   val (_, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
     flightsSource(mockProd, airportConfig.portCode),

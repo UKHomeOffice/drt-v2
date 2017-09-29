@@ -5,6 +5,7 @@ import akka.actor._
 import akka.persistence._
 import drt.shared.Crunch.{CrunchMinute, CrunchState}
 import drt.shared.FlightsApi._
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
@@ -32,7 +33,14 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       val newState = stateFromDiff(cdm, state)
       newState match {
         case None => log.info(s"Recovery: state is None")
-        case Some(s) => log.info(s"Recovery: state contains ${s.flights.size} flights and ${s.crunchMinutes.size} crunch minutes")
+        case Some(s) =>
+          val apiCount = s.flights.count(f => f.splits.exists {
+            case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => true
+            case _ => false
+          })
+          log.info(s"Recovery: state contains ${s.flights.size} flights " +
+          s"with ${apiCount} Api splits " +
+          s"and ${s.crunchMinutes.size} crunch minutes")
       }
       state = newState
 
@@ -73,7 +81,12 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   }
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[CrunchState]): Option[CrunchState] = {
+    log.info(s"Unpacking CrunchDiffMessage")
     val diff = crunchDiffFromMessage(cdm)
+    log.info(s"Unpacked CrunchDiffMessage - ${diff.crunchMinuteRemovals.size} crunch minute removals, " +
+      s"${diff.crunchMinuteUpdates.size} crunch minute updates, " +
+      s"${diff.flightRemovals.size} flight removals, " +
+      s"${diff.flightUpdates.size} flight updates")
     val newState = existingState match {
       case None =>
         log.info(s"Creating an empty CrunchState to apply CrunchDiff")

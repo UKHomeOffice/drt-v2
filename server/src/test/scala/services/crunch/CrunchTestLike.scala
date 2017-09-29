@@ -8,7 +8,7 @@ import akka.testkit.{TestKit, TestProbe}
 import controllers.PaxFlow
 import controllers.SystemActors.SplitsProvider
 import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
@@ -75,7 +75,7 @@ class CrunchTestLike
     implicit val actorSystem = system
 
     def crunchFlow = new CrunchGraphStage(
-      initialFlightsFuture = Future(List[ApiFlightWithSplits]()),
+      optionalInitialFlights = None,
       slas = slaByQueue,
       minMaxDesks = minMaxDesks,
       procTimes = procTimes,
@@ -88,7 +88,7 @@ class CrunchTestLike
       minutesToCrunch = minutesToCrunch
     )
 
-    def staffingStage = new StaffingStage(Future[Option[CrunchState]](None), minMaxDesks, slaByQueue)
+    def staffingStage = new StaffingStage(None, minMaxDesks, slaByQueue)
 
     val (fs, ms, _, _, _, _, _, _) = RunnableCrunchGraph[M, ActorRef](
       flightsSource,

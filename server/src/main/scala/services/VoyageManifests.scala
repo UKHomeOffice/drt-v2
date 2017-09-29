@@ -5,39 +5,34 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.ZipInputStream
 
 import akka.NotUsed
-import akka.actor.{ActorLogging, ActorRef, ActorSystem}
-import akka.pattern.AskableActorRef
+import akka.actor.{ActorLogging, ActorSystem}
 import akka.persistence._
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
-import akka.stream.{ActorMaterializer, Attributes, Outlet, SourceShape}
-import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
-import akka.util.{ByteString, Timeout}
+import akka.util.ByteString
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.language.postfixOps
 import scala.util.Success
 import scala.util.matching.Regex
-import scala.language.postfixOps
 
 
 case class UpdateLatestZipFilename(filename: String)
 
 case object GetLatestZipFilename
 
-
-
 class VoyageManifestsActor extends PersistentActor with ActorLogging {
-  var latestZipFilename = "drt_dq_170912"
+  var latestZipFilename = "drt_dq_170928"
   val snapshotInterval = 100
 
   override def persistenceId: String = "VoyageManifests"
@@ -46,12 +41,16 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
     case recoveredLZF: String =>
       log.info(s"Recovery received $recoveredLZF")
       latestZipFilename = recoveredLZF
+
     case SnapshotOffer(md, ss) =>
       log.info(s"Recovery received SnapshotOffer($md, $ss)")
       ss match {
         case lzf: String => latestZipFilename = lzf
         case u => log.info(s"Received unexpected snapshot data: $u")
       }
+
+    case RecoveryCompleted =>
+      log.info(s"Recovery completed")
   }
 
   override def receiveCommand: Receive = {
@@ -69,9 +68,6 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
     case GetLatestZipFilename =>
       log.info(s"Received GetLatestZipFilename request. Sending $latestZipFilename")
       sender() ! latestZipFilename
-
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")

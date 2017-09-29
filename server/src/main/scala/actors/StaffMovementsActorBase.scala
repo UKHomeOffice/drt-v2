@@ -50,12 +50,6 @@ class StaffMovementsActorBase extends PersistentActor
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
       onUpdateState(state.staffMovements)
-
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Save snapshot success: $md")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val receiveCommand: Receive = {
@@ -73,6 +67,12 @@ class StaffMovementsActorBase extends PersistentActor
       } else {
         log.info(s"No changes to staff movements. Not persisting")
       }
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
 
     case u =>
       log.info(s"unhandled message: $u")

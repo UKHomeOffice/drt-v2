@@ -281,27 +281,21 @@ object Crunch {
   }
 
   def applyCrunchDiff(diff: CrunchDiff, cms: Set[CrunchMinute]): Set[CrunchMinute] = {
-    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms) {
-      case (soFar, removal) => soFar.filterNot {
-        case CrunchMinute(tn, qn, m, _, _, _, _, _, _, _, _) => removal.terminalName == tn && removal.queueName == qn && removal.minute == m
-      }
+    val withoutRemovals = cms.filterNot {
+      case cm => diff.crunchMinuteRemovals.contains(RemoveCrunchMinute(cm.terminalName, cm.queueName, cm.minute))
     }
     val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals.map(crunchMinuteToTqmCm).toMap) {
-      case (soFar, ncm) =>
-        soFar.updated((ncm.terminalName, ncm.queueName, ncm.minute), ncm)
+      case (soFar, ncm) => soFar.updated((ncm.terminalName, ncm.queueName, ncm.minute), ncm)
     }
     withoutRemovalsWithUpdates.values.toSet
   }
 
   def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
-    val withoutRemovals = diff.flightRemovals.foldLeft(flights) {
-      case (soFar, removal) => soFar.filterNot {
-        f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
-      }
+    val withoutRemovals = flights.filterNot {
+      case cm => diff.flightRemovals.contains(RemoveFlight(cm.apiFlight.FlightID))
     }
     val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
-      case (soFar, flight) =>
-        soFar.updated(flight.apiFlight.FlightID, flight)
+      case (soFar, flight) => soFar.updated(flight.apiFlight.FlightID, flight)
     }
     withoutRemovalsWithUpdates.values.toSet
   }
