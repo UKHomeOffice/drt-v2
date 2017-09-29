@@ -44,7 +44,7 @@ trait StaffMovementsPersistence {
 
     val eventualStaffMovements = staffMovementsFuture.collect {
       case StaffMovements(sm) =>
-        actorSystem.log.info(s"Retrieved staff movements from actor: $sm")
+        actorSystem.log.info(s"Retrieved staff movements from actor")
         sm
       case _ => List()
     }

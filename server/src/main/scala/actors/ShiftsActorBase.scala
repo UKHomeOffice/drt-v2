@@ -50,6 +50,16 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
 
     case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) =>
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
+
+    case RecoveryCompleted =>
+      log.info("RecoveryCompleted")
+      onUpdateState(state.shifts)
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val receiveCommand: Receive = {

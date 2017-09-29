@@ -20,7 +20,7 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
 class StaffMovementsActor(subscriber: ActorRef) extends StaffMovementsActorBase {
   override def onUpdateState(data: StaffMovements) = {
     log.info(s"Telling subscriber about updated staff movements")
-    subscriber ! data
+    subscriber ! data.staffMovements
   }
 }
 
@@ -47,6 +47,16 @@ class StaffMovementsActorBase extends PersistentActor
 
     case SnapshotOffer(_, snapshot: StaffMovementsStateSnapshotMessage) =>
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
+
+    case RecoveryCompleted =>
+      log.info("RecoveryCompleted")
+      onUpdateState(state.staffMovements)
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val receiveCommand: Receive = {

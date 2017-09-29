@@ -53,47 +53,47 @@ class VoyageManifestsGraphStage(advPaxInfo: VoyageManifestsProvider, voyageManif
     })
 
     def fetchAndPushManifests(lzf: String): Unit = {
-        log.info(s"Fetching manifests from files newer than $lzf")
-        val manifestsFuture = advPaxInfo.manifestsFuture(lzf)
-        manifestsFuture.onSuccess {
-          case ms =>
-            log.info(s"manifestsFuture Success")
-            val nextFetchMaxFilename = if (ms.nonEmpty) {
-              val maxFilename = ms.map(_._1).max
-              latestZipFilename = Option(maxFilename)
-              log.info(s"Set latestZipFilename to '$latestZipFilename'")
+      log.info(s"Fetching manifests from files newer than $lzf")
+      val manifestsFuture = advPaxInfo.manifestsFuture(lzf)
+      manifestsFuture.onSuccess {
+        case ms =>
+          log.info(s"manifestsFuture Success")
+          val nextFetchMaxFilename = if (ms.nonEmpty) {
+            val maxFilename = ms.map(_._1).max
+            latestZipFilename = Option(maxFilename)
+            log.info(s"Set latestZipFilename to '$latestZipFilename'")
 
-              val vms = ms.map(_._2).toSet
-              vms -- manifestsState match {
-                case newOnes if newOnes.isEmpty =>
-                  log.info(s"No new manifests")
-                case newOnes =>
-                  log.info(s"${newOnes.size} manifests to push")
-                  manifestsToPush = Option(newOnes)
-                  manifestsState = manifestsState ++ newOnes
-              }
-
-              manifestsToPush match {
-                case None =>
-                  log.info(s"No manifests to push")
-                case Some(manifests) =>
-                  log.info(s"Pushing ${manifests.size} manifests")
-                  push(out, VoyageManifests(manifests))
-                  manifestsToPush = None
-              }
-              maxFilename
-            } else {
-              log.info(s"No manifests received")
-              lzf
+            val vms = ms.map(_._2).toSet
+            vms -- manifestsState match {
+              case newOnes if newOnes.isEmpty =>
+                log.info(s"No new manifests")
+              case newOnes =>
+                log.info(s"${newOnes.size} manifests to push")
+                manifestsToPush = Option(newOnes)
+                manifestsState = manifestsState ++ newOnes
             }
-            fetchAndPushManifests(nextFetchMaxFilename)
 
-        }
-        manifestsFuture.onFailure {
-          case t =>
-            log.info(s"manifestsFuture Failure: $t")
-            fetchAndPushManifests(lzf)
-        }
+            manifestsToPush match {
+              case None =>
+                log.info(s"No manifests to push")
+              case Some(manifests) =>
+                log.info(s"Pushing ${manifests.size} manifests")
+                push(out, VoyageManifests(manifests))
+                manifestsToPush = None
+            }
+            maxFilename
+          } else {
+            log.info(s"No manifests received")
+            lzf
+          }
+          fetchAndPushManifests(nextFetchMaxFilename)
+
+      }
+      manifestsFuture.onFailure {
+        case t =>
+          log.info(s"manifestsFuture Failure: $t")
+          fetchAndPushManifests(lzf)
+      }
     }
   }
 }

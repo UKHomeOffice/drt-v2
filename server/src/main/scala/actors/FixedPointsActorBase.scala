@@ -34,10 +34,19 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
     case fixedPointsMessage: FixedPointsMessage =>
       val fp = fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList)
       updateState(fp)
-      onUpdateState(fp)
 
     case SnapshotOffer(_, snapshot: FixedPointsStateSnapshotMessage) =>
       state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
+
+    case RecoveryCompleted =>
+      log.info("RecoveryCompleted")
+      onUpdateState(state.fixedPoints)
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val snapshotInterval = 1

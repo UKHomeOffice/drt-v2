@@ -8,7 +8,6 @@ import japgolly.scalajs.react.vdom.html_<^.{<, VdomElement, _}
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 
 object TerminalDesksAndQueues {
-
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
     Queues.FastTrack -> "Fast Track",
     Queues.Transfer -> "Tx")
@@ -67,18 +66,19 @@ object TerminalDesksAndQueues {
           val startMinute = group.map(_._1).min
           val queueCrunchMinutes = Queues.queueOrder.collect {
             case qn if byQueueName.contains(qn) =>
+              val queueMinutes = byQueueName(qn)
               CrunchMinute(
                 props.terminalName,
                 qn,
                 startMinute,
-                byQueueName(qn).map(_.paxLoad).sum,
-                byQueueName(qn).map(_.workLoad).sum,
-                byQueueName(qn).map(_.deskRec).max,
-                byQueueName(qn).map(_.waitTime).max,
-                Option(byQueueName(qn).map(_.deployedDesks.getOrElse(0)).max),
-                Option(byQueueName(qn).map(_.deployedWait.getOrElse(0)).max),
-                Option(byQueueName(qn).map(_.actDesks.getOrElse(0)).max),
-                Option(byQueueName(qn).map(_.actWait.getOrElse(0)).max)
+                queueMinutes.map(_.paxLoad).sum,
+                queueMinutes.map(_.workLoad).sum,
+                queueMinutes.map(_.deskRec).max,
+                queueMinutes.map(_.waitTime).max,
+                Option(queueMinutes.map(_.deployedDesks.getOrElse(0)).max),
+                Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
+                Option(queueMinutes.map(_.actDesks.getOrElse(0)).max),
+                Option(queueMinutes.map(_.actWait.getOrElse(0)).max)
               )
           }
           (startMinute, queueCrunchMinutes)

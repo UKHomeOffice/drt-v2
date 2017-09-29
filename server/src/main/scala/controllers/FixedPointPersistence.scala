@@ -41,7 +41,7 @@ trait FixedPointPersistence {
 
     val fixedPointsCollected = fixedPointsFuture.collect {
       case fixedPoints: String =>
-        log.info(s"Retrieved fixedPoints from actor ($actor): $fixedPoints")
+        log.info(s"Retrieved fixedPoints from actor")
         fixedPoints
     }
     fixedPointsCollected
