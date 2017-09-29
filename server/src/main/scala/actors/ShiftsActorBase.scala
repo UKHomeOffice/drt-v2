@@ -37,7 +37,6 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
 
   def updateState(shifts: String): Unit = {
     state = state.updated(data = shifts)
-    onUpdateState(shifts)
   }
 
   def onUpdateState(data: String) = {}
@@ -46,7 +45,6 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
     case shiftsMessage: ShiftsMessage =>
       val shifts = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
       updateState(shifts)
-      onUpdateState(shifts)
 
     case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) =>
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
@@ -72,6 +70,7 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
     case data: String =>
       if (data != state.shifts) {
         updateState(data)
+        onUpdateState(data)
         val createdAt = SDate.now()
         log.info(s"Shifts updated. Saving snapshot")
         saveSnapshot(ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.shifts, createdAt)))

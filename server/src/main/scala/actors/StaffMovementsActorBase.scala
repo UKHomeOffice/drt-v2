@@ -43,7 +43,6 @@ class StaffMovementsActorBase extends PersistentActor
     case smm: StaffMovementsMessage =>
       val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
       updateState(sm)
-      onUpdateState(sm)
 
     case SnapshotOffer(_, snapshot: StaffMovementsStateSnapshotMessage) =>
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))

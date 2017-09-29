@@ -28,6 +28,8 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
 
   var state = FixedPointsState("")
 
+  val snapshotInterval = 1
+
   import FixedPointsMessageParser._
 
   val receiveRecover: Receive = {
@@ -48,8 +50,6 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
   }
-
-  val snapshotInterval = 1
 
   val receiveCommand: Receive = {
     case GetState =>
