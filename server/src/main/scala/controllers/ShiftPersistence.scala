@@ -41,7 +41,7 @@ trait ShiftPersistence {
 
     val shiftsCollected = shiftsFuture.collect {
       case shifts: String =>
-        log.info(s"Retrieved shifts from actor ($actor): $shifts")
+        log.info(s"Retrieved shifts from actor")
         shifts
     }
     shiftsCollected

@@ -72,8 +72,10 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
 
     case RecoveryCompleted =>
       log.info(s"Recovery completed")
+
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
+
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
   }

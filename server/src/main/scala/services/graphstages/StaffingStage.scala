@@ -12,6 +12,7 @@ import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -106,7 +107,7 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = crunchMinutesWithDeployments.groupBy(_.terminalName).flatMap {
               case (_, tcms) =>
-                val minutes = tcms.groupBy(_.queueName).flatMap {
+                tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
                     val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
                     val workLoads = minWlSd.map { case (_, wl, _) => wl }.toList
@@ -116,8 +117,7 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
                     qcms.toSeq.sortBy(_.minute).zipWithIndex.map {
                       case (cm, idx) => cm.copy(deployedWait = Option(simWaits(idx)))
                     }.toSet
-                }
-                minutes
+                }.toSet
             }.toSet
             cs.copy(crunchMinutes = crunchMinutesWithSimulation)
         }
@@ -125,7 +125,7 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
         if (isAvailable(outCrunch)) pushAndPull()
       }
 
-      val staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
+      def staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
         val rawShiftsString = shifts.getOrElse("")
         val rawFixedPointsString = fixedPoints.getOrElse("")
         val myMovements = movements.getOrElse(Seq())
@@ -169,9 +169,14 @@ case class StaffAssignment(name: String, terminalName: TerminalName, startDt: Mi
 }
 
 object StaffDeploymentCalculator {
+  val log = LoggerFactory.getLogger(getClass)
+
   type Deployer = (Seq[(String, Int)], Int, Map[String, (Int, Int)]) => Seq[(String, Int)]
 
-  def addDeployments(crunchMinutes: Set[CrunchMinute], deployer: Deployer, available: (MillisSinceEpoch, QueueName) => Int, minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]) = crunchMinutes
+  def addDeployments(crunchMinutes: Set[CrunchMinute],
+                     deployer: Deployer,
+                     available: (MillisSinceEpoch, QueueName) => Int,
+                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]) = crunchMinutes
     .groupBy(_.terminalName)
     .flatMap {
       case (tn, tcrs) =>
@@ -187,7 +192,6 @@ object StaffDeploymentCalculator {
                   val maxDesks = desksForHourOfDayInUKLocalTime(minute, minMaxList._2)
                   (qn, (minDesks, maxDesks))
               }
-
               val deploymentsAndQueueNames: Map[String, Int] = deployer(deskRecAndQueueNames, available(minute, tn), minMaxByQueue).toMap
               mcrs.map(cm => cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))
           }.toSet
