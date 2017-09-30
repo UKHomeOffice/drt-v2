@@ -4,7 +4,7 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, TimeRangeHours}
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.{CrunchState, CrunchUpdates}
 import drt.shared.FlightsApi._
 import drt.shared._
 
@@ -17,9 +17,15 @@ object Actions {
 
   case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
 
+  case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
+
   case class GetCrunchStateAfter(duration: FiniteDuration) extends Action
 
-  case class UpdateCrunchState(crunchState: CrunchState) extends Action
+  case class GetCrunchUpdatesAfter(duration: FiniteDuration) extends Action
+
+  case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
+
+  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
 
   case class GetAirportConfig() extends Action
 

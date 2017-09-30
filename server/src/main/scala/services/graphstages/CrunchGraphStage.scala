@@ -102,7 +102,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
-              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
+              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths, Option(SDate.now().millisSinceEpoch))
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
 
@@ -212,7 +212,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     def crunch(crunchRequest: CrunchRequest): Option[CrunchState] = {
       log.info(s"CrunchRequestFlights: ${crunchRequest.flights.length}")
       val relevantFlights = crunchRequest.flights.filter {
-        case ApiFlightWithSplits(flight, _) =>
+        case ApiFlightWithSplits(flight, _, _) =>
           validPortTerminals.contains(flight.Terminal) &&
             flight.PcpTime >= crunchRequest.crunchStart &&
             !domesticPorts.contains(flight.Origin)

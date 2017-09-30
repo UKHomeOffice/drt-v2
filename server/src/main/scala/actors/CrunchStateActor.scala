@@ -3,7 +3,7 @@ package actors
 import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
-import drt.shared.Crunch.{CrunchMinute, CrunchState}
+import drt.shared.Crunch.{CrunchMinute, CrunchState, CrunchUpdates}
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -39,8 +39,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
             case _ => false
           })
           log.info(s"Recovery: state contains ${s.flights.size} flights " +
-          s"with ${apiCount} Api splits " +
-          s"and ${s.crunchMinutes.size} crunch minutes")
+            s"with ${apiCount} Api splits " +
+            s"and ${s.crunchMinutes.size} crunch minutes")
       }
       state = newState
 
@@ -59,6 +59,22 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     case GetState =>
       sender() ! state
+
+    case GetUpdatesSince(millis) =>
+      val updates = state match {
+        case Some(cs) =>
+          val updatedFlights = cs.flights.filter(f => f.lastUpdated.getOrElse(1L) > millis)
+          val updatedMinutes = cs.crunchMinutes.filter(cm => cm.lastUpdated.getOrElse(1L) > millis)
+          if (updatedFlights.nonEmpty || updatedMinutes.nonEmpty) {
+            val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val minutesLatest = if (updatedMinutes.nonEmpty) updatedMinutes.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val latestUpdate = Math.max(flightsLatest, minutesLatest)
+            log.info(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
+            Option(CrunchUpdates(latestUpdate, updatedFlights, updatedMinutes))
+          } else None
+        case None => None
+      }
+      sender() ! updates
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Snapshot success $md")
@@ -207,7 +223,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = {
     ApiFlightWithSplits(
       FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
-      fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet
+      fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
+      None
     )
   }
 }

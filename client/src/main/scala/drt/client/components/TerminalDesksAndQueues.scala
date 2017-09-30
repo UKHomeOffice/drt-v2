@@ -1,63 +1,89 @@
 package drt.client.components
 
+import drt.client.components.TerminalDesksAndQueues.{queueActualsColour, queueColour}
 import drt.client.services.JSDateConversions
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{AirportConfig, MilliDate, Queues}
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomElement, _}
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+
+object TerminalDesksAndQueuesRow {
+  case class Props(minuteMillis: MillisSinceEpoch, queueMinutes: List[CrunchMinute], airportConfig: AirportConfig, terminalName: TerminalName, showActuals: Boolean)
+
+  implicit val rowPropsReuse: Reusability[Props] = Reusability.by((props: Props) => {
+    props.queueMinutes.hashCode
+  })
+
+  val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
+    .render_P((props) => {
+      val crunchMinutesByQueue = props.queueMinutes.map(qm => Tuple2(qm.queueName, qm)).toMap
+      val queueTds = crunchMinutesByQueue.flatMap {
+        case (qn, cm) =>
+          val queueCells = List(
+            <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}"),
+            <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.map(Math.round(_)).getOrElse("-")}"),
+            <.td(^.className := queueColour(qn), ^.title := s"With Rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}")
+          )
+          if (props.showActuals) {
+            val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
+            val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
+
+            queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
+          }
+          else queueCells
+      }
+      val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
+      val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
+      val ragClass = totalRequired.toDouble / totalDeployed match {
+        case diff if diff >= 1 => "red"
+        case diff if diff >= 0.75 => "amber"
+        case _ => ""
+      }
+      import JSDateConversions._
+      val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
+      val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
+
+      val pcpTds = List(<.td(^.className := s"total-deployed $ragClass", totalRequired),
+        <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", totalDeployed), upMovementPopup)))
+      <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
+    })
+    .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
+    .configure(Reusability.shouldComponentUpdate)
+    .build
+
+  def apply(props: Props): VdomElement = component(props)
+}
 
 object TerminalDesksAndQueues {
   val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
     Queues.FastTrack -> "Fast Track",
     Queues.Transfer -> "Tx")
 
-  def queueDisplayName(name: String) = queueDisplayNames.getOrElse(name, name)
+  def queueDisplayName(name: String): QueueName = queueDisplayNames.getOrElse(name, name)
+
+  def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+
+  def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
   case class Props(crunchState: CrunchState, airportConfig: AirportConfig, terminalName: TerminalName)
+
   case class State(showActuals: Boolean = false)
+
+  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
+    val lastUpdatedCm = props.crunchState.crunchMinutes.map(_.lastUpdated)
+    val lastUpdatedFs = props.crunchState.flights.map(_.lastUpdated)
+    (lastUpdatedCm, lastUpdatedFs)
+  })
+
+  implicit val stateReuse: Reusability[State] = Reusability.by((state: State) => {
+    state.showActuals
+  })
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialState[State](State(false))
     .renderPS((scope, props, state) => {
-
-      def queueColour(queueName: String): String = queueName + "-user-desk-rec"
-      def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
-
-      def renderRow(mCm: (MillisSinceEpoch, List[CrunchMinute])) = {
-        val crunchMinutesByQueue = mCm._2.map(qm => Tuple2(qm.queueName, qm)).toMap
-        val minute = mCm._1
-
-        val queueTds = crunchMinutesByQueue.flatMap {
-          case (qn, cm) =>
-            val queueCells = List(
-              <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}"),
-              <.td(^.className := queueColour(qn),^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.map(Math.round(_)).getOrElse("-")}"),
-              <.td(^.className := queueColour(qn),^.title := s"With Rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}")
-            )
-            if (state.showActuals) {
-              val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
-              val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
-
-              queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
-            }
-            else queueCells
-        }
-        val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
-        val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
-        val ragClass = totalRequired.toDouble / totalDeployed match {
-          case diff if diff >= 1 => "red"
-          case diff if diff >= 0.75 => "amber"
-          case _ => ""
-        }
-        import JSDateConversions._
-        val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(minute), SDate(minute).addHours(1), "left", "-")()
-        val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(minute), SDate(minute).addHours(1), "left", "+")()
-
-        val pcpTds = List(<.td(^.className := s"total-deployed $ragClass", totalRequired),
-          <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", totalDeployed), upMovementPopup)))
-        <.tr((<.td(SDate(MilliDate(minute)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
-      }
 
       def groupBy15(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])]) = {
         val groupSize = 15
@@ -122,7 +148,6 @@ object TerminalDesksAndQueues {
         list
       }
 
-      val defaultNumberOfQueues = 3
       val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
       val colsClass = s"cols-${queueNames.length}$showActsClassSuffix"
 
@@ -161,9 +186,14 @@ object TerminalDesksAndQueues {
             ^.display := "block",
             ^.overflow := "scroll",
             ^.height := "500px",
-            terminalCrunchMinutes.map(renderRow).toTagMod))
+            terminalCrunchMinutes.map {
+              case (millis, minutes) =>
+                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, props.airportConfig, props.terminalName, state.showActuals)
+                TerminalDesksAndQueuesRow(rowProps)
+            }.toTagMod))
       )
     })
+    .componentDidMount((p) => Callback.log("TerminalDesksAndQueues did mount"))
     .build
 
   def apply(props: Props): VdomElement = component(props)

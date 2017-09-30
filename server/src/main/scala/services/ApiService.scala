@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
-import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -80,5 +80,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def airportConfiguration(): AirportConfig = airportConfig
 
   def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]]
+
+  def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 }
 

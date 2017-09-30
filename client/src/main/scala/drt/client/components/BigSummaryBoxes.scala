@@ -1,8 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain
 import drt.client.components.FlightComponents._
-import drt.client.components.FlightComponents.SplitsGraph._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared._
@@ -22,7 +20,7 @@ object BigSummaryBoxes {
   }
 
   def bestFlightSplitPax(bestFlightPax: (Arrival) => Int): PartialFunction[ApiFlightWithSplits, Double] = {
-    case ApiFlightWithSplits(flight, splits) =>
+    case ApiFlightWithSplits(flight, splits, _) =>
       splits.find { case api@ApiSplits(_, _, _, t) => t == PaxNumbers } match {
         case None => bestFlightPax(flight)
         case Some(apiSplits) => apiSplits.totalExcludingTransferPax
@@ -55,8 +53,8 @@ object BigSummaryBoxes {
 
 
   def bestFlightSplits(bestFlightPax: (Arrival) => Int): (ApiFlightWithSplits) => Set[(PaxTypeAndQueue, Double)] = {
-    case ApiFlightWithSplits(_, s) if s.isEmpty => Set()
-    case ApiFlightWithSplits(flight, splits) =>
+    case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
+    case ApiFlightWithSplits(flight, splits, _) =>
       if (splits.exists { case ApiSplits(_, _, _, t) => t == PaxNumbers }) {
         splits.find { case ApiSplits(_, _, _, t) => t == PaxNumbers } match {
           case None => Set()

@@ -5,8 +5,7 @@ import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import japgolly.scalajs.react.{CtorType, _}
-import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
@@ -21,20 +20,7 @@ object FlightsWithSplitsTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits], bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    props.flightsWithSplits.map(af => {
-      (af.splits.hashCode(),
-        af.apiFlight.Status,
-        af.apiFlight.Gate,
-        af.apiFlight.Stand,
-        af.apiFlight.SchDT,
-        af.apiFlight.EstDT,
-        af.apiFlight.ActDT,
-        af.apiFlight.EstChoxDT,
-        af.apiFlight.ActChoxDT,
-        af.apiFlight.PcpTime,
-        af.apiFlight.ActPax
-      )
-    })
+    props.flightsWithSplits.map(_.lastUpdated)
   })
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
@@ -117,20 +103,7 @@ object FlightTableRow {
                    bestPax: (Arrival) => Int
                   )
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    (props.flightWithSplits.splits.hashCode(),
-      props.flightWithSplits.apiFlight.Status,
-      props.flightWithSplits.apiFlight.Gate,
-      props.flightWithSplits.apiFlight.Stand,
-      props.flightWithSplits.apiFlight.SchDT,
-      props.flightWithSplits.apiFlight.EstDT,
-      props.flightWithSplits.apiFlight.ActDT,
-      props.flightWithSplits.apiFlight.EstChoxDT,
-      props.flightWithSplits.apiFlight.ActChoxDT,
-      props.flightWithSplits.apiFlight.PcpTime,
-      props.flightWithSplits.apiFlight.ActPax
-    )
-  })
+  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => props.flightWithSplits.lastUpdated)
   implicit val stateReuse: Reusability[RowState] = Reusability.caseClass[RowState]
 
   case class RowState(hasChanged: Boolean)

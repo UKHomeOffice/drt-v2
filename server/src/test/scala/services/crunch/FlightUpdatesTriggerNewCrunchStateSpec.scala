@@ -55,7 +55,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     fs ! inputFlightsAfter
 
     val flightsAfterUpdate = testProbe.expectMsgAnyClassOf(classOf[CrunchState]) match {
-      case CrunchState(_, _, f, _) => f
+      case CrunchState(_, _, flights, _) => flights.map(_.copy(lastUpdated = None))
     }
 
     val expectedFlights = Set(ApiFlightWithSplits(

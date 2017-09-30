@@ -2,6 +2,7 @@ package actors
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
@@ -15,6 +16,8 @@ case class ShiftsState(shifts: String) {
 }
 
 case object GetState
+
+case class GetUpdatesSince(millis: MillisSinceEpoch)
 
 case object GetShifts
 

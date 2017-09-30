@@ -15,7 +15,7 @@ import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import drt.shared.Crunch.{CrunchMinutes, CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchMinutes, CrunchState, CrunchUpdates, MillisSinceEpoch}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
 import services.SDate
@@ -302,6 +302,19 @@ class Application @Inject()(
       }
     }
 
+    def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+      val crunchStateFuture = crunchStateActor.ask(GetUpdatesSince(sinceMillis))(new Timeout(5 seconds))
+
+      crunchStateFuture.map {
+        case Some(cu: CrunchUpdates) => Option(cu)
+        case _ => None
+      } recover {
+        case t =>
+          log.warn(s"Didn't get a CrunchUpdates: $t")
+          None
+      }
+    }
+
     override def askableCacheActorRef: AskableActorRef = cacheActorRef
 
     override def crunchStateActor: AskableActorRef = ctrl.crunchStateActor
@@ -369,7 +382,7 @@ class Application @Inject()(
 
   def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
     implicit request =>
-      println(s"Request path: $path")
+      log.debug(s"Request path: $path")
 
       // get the request body as ByteString
       val b = request.body.asBytes(parse.UNLIMITED).get
