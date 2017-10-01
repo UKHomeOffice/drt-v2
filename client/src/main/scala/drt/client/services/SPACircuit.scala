@@ -128,7 +128,6 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
       effectOnly(allEffects)
 
     case GetCrunchUpdatesAfter(delay) =>
-      log.info(s"Requesting CrunchUpdates")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
       effectOnly(getCrunchStateAfterDelay + Effect(Future(HideLoader())))
 
