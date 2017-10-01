@@ -6,7 +6,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{MilliDate, SDateLike, StaffMovement}
+import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
@@ -54,7 +54,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         override def onPush(): Unit = {
           log.info(s"inCrunch onPush() - setting crunchStateOption")
           grabAllAvailable()
-          runSimulationAndPush()
+          runSimulationAndPush(5)
         }
       })
 
@@ -62,7 +62,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         override def onPush(): Unit = {
           log.info(s"inShifts onPush() - setting shifts")
           grabAllAvailable()
-          runSimulationAndPush()
+          runSimulationAndPush(5)
         }
       })
 
@@ -70,7 +70,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         override def onPush(): Unit = {
           log.info(s"inFixedPoints onPush() - setting fixedPoints")
           grabAllAvailable()
-          runSimulationAndPush()
+          runSimulationAndPush(5)
         }
       })
 
@@ -78,7 +78,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         override def onPush(): Unit = {
           log.info(s"inMovements onPush() - setting movements")
           grabAllAvailable()
-          runSimulationAndPush()
+          runSimulationAndPush(5)
         }
       })
 
@@ -101,7 +101,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         }
       }
 
-      def runSimulationAndPush(): Unit = {
+      def runSimulationAndPush(eGateBankSize: Int): Unit = {
         log.info(s"Running simulation")
 
         crunchStateWithSimulation = crunchStateOption.map {
@@ -112,7 +112,10 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
                 tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
                     val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
-                    val workLoads = minWlSd.map { case (_, wl, _) => wl }.toList
+                    val workLoads = minWlSd.map {
+                      case (_, wl, _) if qn == Queues.EGate => wl / eGateBankSize
+                      case (_, wl, _) => wl
+                    }.toList
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
                     val config = OptimizerConfig(slaByQueue(qn))
                     val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
