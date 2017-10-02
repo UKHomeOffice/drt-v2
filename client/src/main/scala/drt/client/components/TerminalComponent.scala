@@ -48,7 +48,7 @@ object TerminalComponent {
             props.terminalName,
             model.airportInfos,
             model.timeRangeHours,
-            model.pointInTime.getOrElse(SDate.today())
+            model.pointInTime.getOrElse(SDate.midnightThisMorning())
           )
           <.div(
             SnapshotSelector(SnapshotSelector.Props(model.pointInTime, props.terminalName)),

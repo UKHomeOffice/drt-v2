@@ -4,7 +4,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
@@ -18,12 +18,9 @@ import services.workloadcalculator.PaxLoadCalculator.Load
 import services.{FastTrackPercentages, SDate}
 
 import scala.collection.immutable.{Map, Seq}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
-class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
+class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                        slas: Map[QueueName, Int],
                        minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                        procTimes: Map[PaxTypeAndQueue, Double],
@@ -39,8 +36,8 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
   val inFlights: Inlet[Flights] = Inlet[Flights]("Flights.in")
   val inSplits: Inlet[VoyageManifests] = Inlet[VoyageManifests]("Splits.in")
-  val out: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
-  override val shape = new FanInShape2(inFlights, inSplits, out)
+  val crunchOut: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
+  override val shape = new FanInShape2(inFlights, inSplits, crunchOut)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
@@ -52,25 +49,26 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     val log: Logger = LoggerFactory.getLogger("CrunchGraphStage")
 
     override def preStart(): Unit = {
-      initialFlightsFuture.onSuccess {
-        case flights =>
+      optionalInitialFlights match {
+        case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+        case _ =>
+          log.warn(s"Did not receive any flights to initialise with")
       }
-      Await.ready(initialFlightsFuture, 10 seconds)
-
       super.preStart()
     }
 
-    setHandler(out, new OutHandler {
+    setHandler(crunchOut, new OutHandler {
       override def onPull(): Unit = {
-        log.info(s"onPull called")
+        log.debug(s"crunchOut onPull called")
         crunchStateOption match {
           case Some(crunchState) =>
-            push(out, crunchState)
+            log.debug(s"Pushing CrunchState")
+            push(crunchOut, crunchState)
             crunchStateOption = None
           case None =>
-            log.info(s"No CrunchState to push")
+            log.debug(s"No CrunchState to push")
         }
         if (!hasBeenPulled(inSplits)) pull(inSplits)
         if (!hasBeenPulled(inFlights)) pull(inFlights)
@@ -79,10 +77,15 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
     setHandler(inFlights, new InHandler {
       override def onPush(): Unit = {
+        log.debug(s"inFlights onPush called")
         val incomingFlights = grab(inFlights)
 
         log.info(s"Grabbed ${incomingFlights.flights.length} flights")
-        val updatedFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
+        val updatedFromFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
+
+        val updatedFlights = if (isAvailable(inSplits)) {
+          updateFlightsWithManifests(grab(inSplits).manifests, updatedFromFlights)
+        } else updatedFromFlights
 
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights
@@ -97,6 +100,28 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
       }
     })
 
+    setHandler(inSplits, new InHandler {
+      override def onPush(): Unit = {
+        log.debug(s"inSplits onPush called")
+        val vms = grab(inSplits)
+
+        log.info(s"Grabbed ${vms.manifests.size} manifests")
+        val updatedFromSplits = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
+
+        val updatedFlights = if (isAvailable(inFlights)) {
+          updateFlightsFromIncoming(grab(inFlights), updatedFromSplits)
+        } else updatedFromSplits
+
+        if (flightsByFlightId != updatedFlights) {
+          flightsByFlightId = updatedFlights
+          log.info(s"Requesting crunch for ${flightsByFlightId.size} flights after splits update")
+          crunchAndUpdateState(flightsByFlightId.values.toList)
+        } else log.info(s"No splits updates")
+
+        if (!hasBeenPulled(inSplits)) pull(inSplits)
+      }
+    })
+
     def updateFlightsFromIncoming(incomingFlights: Flights, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       val updatedFlights = incomingFlights.flights.foldLeft[Map[Int, ApiFlightWithSplits]](existingFlightsById) {
         case (flightsSoFar, updatedFlight) =>
@@ -105,7 +130,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
-              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths)
+              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths, Option(SDate.now().millisSinceEpoch))
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
 
@@ -113,9 +138,7 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
 
-            case _ =>
-              log.info(s"No update to flight ${updatedFlightWithPcp.IATA}")
-              flightsSoFar
+            case _ => flightsSoFar
           }
       }
       updatedFlights
@@ -147,23 +170,6 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
           }
       }
     }
-
-    setHandler(inSplits, new InHandler {
-      override def onPush(): Unit = {
-        val vms = grab(inSplits)
-
-        log.info(s"Grabbed ${vms.manifests.size} manifests")
-        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
-
-        if (flightsByFlightId != updatedFlights) {
-          flightsByFlightId = updatedFlights
-          log.info(s"Requesting crunch for ${flightsByFlightId.size} flights after splits update")
-          crunchAndUpdateState(flightsByFlightId.values.toList)
-        } else log.info(s"No splits updates")
-
-        if (!hasBeenPulled(inSplits)) pull(inSplits)
-      }
-    })
 
     def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
@@ -201,11 +207,8 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
       val crunchRequest = CrunchRequest(flightsToCrunch, crunchStartDateProvider(), minutesToCrunch)
 
-      log.info(s"processing crunchRequest - ${crunchRequest.flights.length} flights")
-      val newCrunchStateOption = crunch(crunchRequest)
-
-      log.info(s"setting crunchStateOption")
-      crunchStateOption = newCrunchStateOption
+      log.info(s"Processing CrunchRequest for ${crunchRequest.flights.length} flights")
+      crunchStateOption = crunch(crunchRequest)
 
       pushStateIfReady()
 
@@ -213,15 +216,14 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
     }
 
     def crunch(crunchRequest: CrunchRequest): Option[CrunchState] = {
-      log.info(s"CrunchRequestFlights: ${crunchRequest.flights.length}")
       val relevantFlights = crunchRequest.flights.filter {
-        case ApiFlightWithSplits(flight, _) =>
+        case ApiFlightWithSplits(flight, _, _) =>
           validPortTerminals.contains(flight.Terminal) &&
             flight.PcpTime >= crunchRequest.crunchStart &&
             !domesticPorts.contains(flight.Origin)
       }
       val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
-      log.info(s"${uniqueFlights.length} unique flights to crunch")
+      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares, domestics and pcp time outside crunch window")
       val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
@@ -235,12 +237,11 @@ class CrunchGraphStage(initialFlightsFuture: Future[List[ApiFlightWithSplits]],
 
     def pushStateIfReady(): Unit = {
       crunchStateOption match {
-        case None =>
-          log.info(s"We have no state yet. Nothing to push")
+        case None => log.info(s"We have no CrunchState yet. Nothing to push")
         case Some(crunchState) =>
-          if (isAvailable(out)) {
-            log.info(s"pushing csd ${crunchState.crunchFirstMinuteMillis}")
-            push(out, crunchState)
+          if (isAvailable(crunchOut)) {
+            log.info(s"Pushing CrunchState")
+            push(crunchOut, crunchState)
             crunchStateOption = None
           }
       }

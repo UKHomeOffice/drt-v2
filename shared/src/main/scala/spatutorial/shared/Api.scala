@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.SplitRatiosNs.SplitSources
@@ -65,7 +65,10 @@ object ApiSplits {
   def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.map(_.paxCount).sum
 }
 
-case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits]) {
+case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastUpdated: Option[MillisSinceEpoch] = None) {
+  def equals(candidate: ApiFlightWithSplits): Boolean = {
+    this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+  }
   def bestSplits: Option[ApiSplits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
@@ -226,6 +229,7 @@ case class CrunchResult(
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 object FlightsApi {
+
   case class Flights(flights: List[Arrival])
 
   case class FlightsWithSplits(flights: List[ApiFlightWithSplits])
@@ -282,9 +286,15 @@ object Crunch {
                            deployedDesks: Option[Int] = None,
                            deployedWait: Option[Int] = None,
                            actDesks: Option[Int] = None,
-                           actWait: Option[Int] = None)
+                           actWait: Option[Int] = None,
+                           lastUpdated: Option[MillisSinceEpoch] = None) {
+    def equals(candidate: CrunchMinute): Boolean =
+      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+  }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
+
+  case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute])
 
 }
 
@@ -297,17 +307,19 @@ trait Api {
 
   def saveShifts(rawShifts: String): Unit
 
-  def getShifts(pointIntTime: Long): Future[String]
+  def getShifts(pointIntTime: MillisSinceEpoch): Future[String]
 
   def saveFixedPoints(rawFixedPoints: String): Unit
 
-  def getFixedPoints(pointIntTime: Long): Future[String]
+  def getFixedPoints(pointIntTime: MillisSinceEpoch): Future[String]
 
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
-  def getStaffMovements(pointIntTime: Long): Future[Seq[StaffMovement]]
+  def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def getActualDeskStats(pointInTime: Long): Future[ActualDeskStats]
+  def getActualDeskStats(pointInTime: MillisSinceEpoch): Future[ActualDeskStats]
 
-  def getCrunchState(pointInTime: Long): Future[Option[CrunchState]]
+  def getCrunchState(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
+
+  def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 }

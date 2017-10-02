@@ -2,9 +2,10 @@ package actors
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
+import akka.stream.scaladsl.{SourceQueue, SourceQueueWithComplete}
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import services.SDate
 
@@ -15,10 +16,10 @@ case class FixedPointsState(fixedPoints: String) {
   def updated(data: String): FixedPointsState = copy(fixedPoints = data)
 }
 
-class FixedPointsActor(subscriber: ActorRef) extends FixedPointsActorBase {
-  override def onUpdateState(data: String) = {
-    log.info(s"Telling subscriber about updated fixed points")
-    subscriber ! data
+class FixedPointsActor(subscriber: SourceQueueWithComplete[String]) extends FixedPointsActorBase {
+  override def onUpdateState(data: String): Unit = {
+    log.info(s"Telling subscriber about updated fixed points: $data")
+    subscriber.offer(data)
   }
 }
 
@@ -43,12 +44,6 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
       onUpdateState(state.fixedPoints)
-
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Save snapshot success: $md")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val receiveCommand: Receive = {
@@ -67,11 +62,17 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
     case _: String =>
       log.info(s"No changes to fixed points. Not persisting")
 
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
+
     case u =>
       log.info(s"unhandled message: $u")
   }
 
-  def onUpdateState(fp: String) = {}
+  def onUpdateState(fp: String): Unit = {}
 
   def updateState(data: String): Unit = {
     state = state.updated(data)
@@ -88,13 +89,13 @@ object FixedPointsMessageParser {
     }.toOption
   }
 
-  def dateString(timestamp: Long) = {
+  def dateString(timestamp: Long): String = {
     import services.SDate.implicits._
 
     MilliDate(timestamp).ddMMyyString
   }
 
-  def timeString(timestamp: Long) = {
+  def timeString(timestamp: Long): String = {
     import services.SDate.implicits._
 
     val date = MilliDate(timestamp)
@@ -118,7 +119,7 @@ object FixedPointsMessageParser {
     }
   }
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def fixedPointStringToFixedPointMessage(fixedPoint: String): Option[FixedPointMessage] = {
     val strings: immutable.Seq[String] = fixedPoint.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)

@@ -4,6 +4,7 @@ import java.util.UUID
 
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{MilliDate, SDateLike, StaffMovement}
 
@@ -79,17 +80,17 @@ object JSDateConversions {
     def apply(dateString: String): SDateLike = new Date(dateString)
     def parse(dateString: String): SDateLike = new Date(dateString)
 
-    def today(): SDateLike = {
+    def midnightThisMorning(): SDateLike = {
       val d = new Date()
       d.setHours(0)
       d.setMinutes(0)
+      d.setSeconds(0)
       d.setMilliseconds(0)
       JSSDate(d)
     }
 
     def now(): SDateLike = {
-      val d = new Date()
-      JSSDate(d)
+      JSSDate(new Date())
     }
   }
 }

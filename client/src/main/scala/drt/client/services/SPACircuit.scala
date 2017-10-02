@@ -9,11 +9,10 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi.{TerminalName, _}
 import drt.shared._
-
-import boopickle.Default._ //Don't remove this import
+import boopickle.Default._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
@@ -25,24 +24,22 @@ import scala.util.{Failure, Success, Try}
 
 case class TimeRangeHours(start: Int = 0, end: Int = 24)
 
-case class RootModel(
-                      crunchStatePot: Pot[CrunchState] = Empty,
-                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                      airportConfig: Pot[AirportConfig] = Empty,
-                      shiftsRaw: Pot[String] = Empty,
-                      fixedPointsRaw: Pot[String] = Empty,
-                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
-                      pointInTime: Option[SDateLike] = None,
-                      timeRangeFilter: TimeRangeHours = TimeRangeHours(),
-                      loadingState: LoadingState = LoadingState()
-                    )
-
+case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
+                     crunchStatePot: Pot[CrunchState] = Empty,
+                     airportInfos: Map[String, Pot[AirportInfo]] = Map(),
+                     airportConfig: Pot[AirportConfig] = Empty,
+                     shiftsRaw: Pot[String] = Empty,
+                     fixedPointsRaw: Pot[String] = Empty,
+                     staffMovements: Pot[Seq[StaffMovement]] = Empty,
+                     pointInTime: Option[SDateLike] = None,
+                     timeRangeFilter: TimeRangeHours = TimeRangeHours(),
+                     loadingState: LoadingState = LoadingState())
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
   override def handleAction(model: M, action: Any): Option[ActionResult[M]] = {
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
-        f.getCause() match {
+        f.getCause match {
           case null => log.error(s"no cause")
           case c => log.error(s"Exception from $getClass  ${c.getMessage}")
         }
@@ -63,35 +60,65 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 }
 
-class CrunchStateHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[CrunchState]]) extends LoggingActionHandler(modelRW) {
-  val crunchStateRequestFrequency = 10 seconds
-  val reRequestDelay = 20 seconds
+class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
+                              latestUpdate: ModelR[M, MillisSinceEpoch],
+                              modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
+  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
-  def pointInTimeMillis = pointInTime.value.map(m => {
-    m.millisSinceEpoch
-  }).getOrElse(0L)
+  def pointInTimeMillis: Option[MillisSinceEpoch] = pointInTime.value.map(_.millisSinceEpoch)
+  def pointInTimeString: String = SDate(MilliDate(pointInTimeMillis.get)).toLocalDateTimeString()
+
+  def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 
   protected def handle = {
-    case GetCrunchState() =>
-      log.info(s"Requesting crunchState for point in time ${SDate(MilliDate(pointInTimeMillis)).toLocalDateTimeString} - $pointInTime")
-      val x = AjaxClient[Api].getCrunchState(pointInTimeMillis).call().map {
-        case Some(cs) =>
-          log.info(s"Got ${cs.flights.size} flights!")
-          UpdateCrunchStateAndContinuePolling(cs)
+    case GetCrunchState() if pointInTimeMillis.isEmpty =>
+      log.info(s"Requesting CrunchUpdates")
+      val x = AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call().map {
+        case Some(cu) =>
+          log.info(s"Got ${cu.flights.size} flights, ${cu.minutes.size} minutes")
+          UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
         case None =>
-          log.info(s"CrunchState not ready")
-          GetCrunchStateAfter(reRequestDelay)
+          GetCrunchUpdatesAfter(crunchUpdatesRequestFrequency)
       }
       effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
 
-    case UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) =>
+    case GetCrunchState() if pointInTimeMillis.isDefined =>
+      log.info(s"Requesting crunchState for point in time $pointInTimeString")
 
-      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchStateRequestFrequency)
-      val updateCrunchState = Effect(Future(UpdateCrunchState(crunchState)))
+      val x = AjaxClient[Api].getCrunchState(pointInTimeMillis.get).call().map {
+        case Some(cs) =>
+          log.info(s"Got ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
+          UpdateCrunchStateFromCrunchState(cs)
+        case None =>
+          log.info(s"CrunchState not available")
+          GetCrunchStateAfter(crunchUpdatesRequestFrequency)
+      }
+      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
+
+    case GetCrunchStateAfter(delay) =>
+      log.info(s"Re-requesting CrunchState for point in time $pointInTimeString")
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
+      effectOnly(getCrunchStateAfterDelay)
+
+    case UpdateCrunchStateFromCrunchState(crunchState: CrunchState) =>
+      val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
+      val newCodes = crunchState.flights.map(_.apiFlight.Origin)
+      val unseenCodes = newCodes -- oldCodes
+      val allEffects = if (unseenCodes.nonEmpty) {
+        log.info(s"Requesting airport infos. Got unseen origin ports: ${unseenCodes.mkString(",")}")
+        Effect(Future(GetAirportInfos(newCodes))) + Effect(Future(HideLoader()))
+      } else {
+        Effect(Future(HideLoader()))
+      }
+      updated((Ready(crunchState), 0L), allEffects)
+
+    case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
+      val updateCrunchState = Effect(Future(UpdateCrunchStateFromUpdates(crunchUpdates)))
       val effects = getCrunchStateAfterDelay + updateCrunchState
 
-      val oldCodes = value.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
-      val newCodes = crunchState.flights.map(_.apiFlight.Origin)
+      val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
+      val newCodes = crunchUpdates.flights.map(_.apiFlight.Origin)
       val unseenCodes = newCodes -- oldCodes
       val allEffects = if (unseenCodes.nonEmpty) {
         log.info(s"Requesting airport infos. Got unseen origin ports: ${unseenCodes.mkString(",")}")
@@ -100,17 +127,52 @@ class CrunchStateHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: 
 
       effectOnly(allEffects)
 
-    case GetCrunchStateAfter(delay)
-    =>
-      log.info(s"Re-requesting flights")
+    case GetCrunchUpdatesAfter(delay) =>
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
-      effectOnly(getCrunchStateAfterDelay)
+      effectOnly(getCrunchStateAfterDelay + Effect(Future(HideLoader())))
 
-    case UpdateCrunchState(crunchState)
-    =>
-      log.info(s"client got ${crunchState.flights.size} flights (from CrunchState)")
+    case UpdateCrunchStateFromUpdates(crunchUpdates) =>
+      log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
 
-      updated(Ready(crunchState), Effect(Future(HideLoader())))
+      val someStateExists = value._1.isReady
+
+      val newState = if (someStateExists) {
+        val existingState = value._1.get
+        updateStateFromUpdates(crunchUpdates, existingState)
+      } else newStateFromUpdates(crunchUpdates)
+
+      updated((Ready(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+  }
+
+  def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
+    CrunchState(0L, 0, crunchUpdates.flights, crunchUpdates.minutes)
+  }
+
+  def updateStateFromUpdates(crunchUpdates: CrunchUpdates, existingState: CrunchState): CrunchState = {
+    val lastMidnightMillis = SDate.midnightThisMorning().millisSinceEpoch
+    val flights = updateAndTrimFlights(crunchUpdates, existingState, lastMidnightMillis)
+    val minutes = updateAndTrimMinutes(crunchUpdates, existingState, lastMidnightMillis)
+    CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
+  }
+
+  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[Crunch.CrunchMinute] = {
+    val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= keepFromMillis)
+    val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
+    val minutes = crunchUpdates.minutes.foldLeft(existingMinutesByTqm) {
+      case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.queueName, newCm.minute), newCm)
+    }.values.toSet
+    minutes
+  }
+
+  def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[ApiFlightWithSplits] = {
+    val thirtyMinutesMillis = 30 * 60000
+    val relevantFlights = existingState.flights.filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime)
+    val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
+      case (soFar, newFlight) =>
+        val withoutOldFlight = soFar.filterNot(_.apiFlight.FlightID == newFlight.apiFlight.FlightID)
+        withoutOldFlight + newFlight
+    }
+    flights
   }
 }
 
@@ -177,7 +239,7 @@ object FixedPoints {
     }).mkString("\n")
   }
 
-  def removeTerminalNameAndDate(rawFixedPoints: String) = {
+  def removeTerminalNameAndDate(rawFixedPoints: String): String = {
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withTerminal = line.split(",").toList.map(_.trim)
       val withOutTerminal = withTerminal match {
@@ -189,8 +251,8 @@ object FixedPoints {
     lines.mkString("\n")
   }
 
-  def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String) = {
-    val today: SDateLike = SDate.today
+  def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String): String = {
+    val today: SDateLike = SDate.midnightThisMorning
     val todayString = today.ddMMyyString
 
     val lines = rawFixedPoints.split("\n").toList.map(line => {
@@ -297,13 +359,13 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  def timeProvider() = new Date().getTime.toLong
+  def timeProvider(): MillisSinceEpoch = new Date().getTime.toLong
 
   override protected def initialModel = RootModel()
 
-  override val actionHandler = {
+  override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
-      new CrunchStateHandler(zoom(_.pointInTime), zoomRW(_.crunchStatePot)((m, v) => m.copy(crunchStatePot = v))),
+      new CrunchUpdatesHandler(zoom(_.pointInTime), zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(zoom(_.pointInTime), zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
@@ -315,7 +377,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     )
 
     val loggedhandlers: HandlerFunction = (model, update) => {
-      log.debug(s"functional handler for ${update.toString.take(100)}")
       composedhandlers(model, update)
     }
 

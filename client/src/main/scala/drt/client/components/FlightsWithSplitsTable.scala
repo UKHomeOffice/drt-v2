@@ -3,7 +3,6 @@ package drt.client.components
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import japgolly.scalajs.react._
@@ -20,21 +19,8 @@ object FlightsWithSplitsTable {
 
   case class Props(flightsWithSplits: List[ApiFlightWithSplits], bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
 
-  implicit val propsReuse = Reusability.by((props: Props) => {
-    props.flightsWithSplits.map(af => {
-      (af.splits.hashCode(),
-        af.apiFlight.Status,
-        af.apiFlight.Gate,
-        af.apiFlight.Stand,
-        af.apiFlight.SchDT,
-        af.apiFlight.EstDT,
-        af.apiFlight.ActDT,
-        af.apiFlight.EstChoxDT,
-        af.apiFlight.ActChoxDT,
-        af.apiFlight.PcpTime,
-        af.apiFlight.ActPax
-      )
-    })
+  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
+    props.flightsWithSplits.map(_.lastUpdated)
   })
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
@@ -71,7 +57,7 @@ object FlightsWithSplitsTable {
               )),
               <.tbody(
                 sortedFlights.zipWithIndex.map {
-                  case ((flightWithSplits, codeShares), idx) => {
+                  case ((flightWithSplits, codeShares), idx) =>
                     FlightTableRow.tableRow(FlightTableRow.Props(
                       flightWithSplits, codeShares, idx,
                       timelineComponent = timelineComponent,
@@ -81,7 +67,6 @@ object FlightsWithSplitsTable {
                       bestPax = bestPax,
                       splitsQueueOrder = props.queueOrder
                     ))
-                  }
                 }.toTagMod)))
         else
           <.div("No flights in this time period")
@@ -89,7 +74,7 @@ object FlightsWithSplitsTable {
         case Success(s) => s
         case Failure(f) =>
           log.error(s"failure in table render $f")
-          <.div(s"render failure ${f}")
+          <.div(s"render failure $f")
       }
     })
     .configure(Reusability.shouldComponentUpdate)
@@ -118,21 +103,8 @@ object FlightTableRow {
                    bestPax: (Arrival) => Int
                   )
 
-  implicit val propsReuse = Reusability.by((props: Props) => {
-    (props.flightWithSplits.splits.hashCode(),
-      props.flightWithSplits.apiFlight.Status,
-      props.flightWithSplits.apiFlight.Gate,
-      props.flightWithSplits.apiFlight.Stand,
-      props.flightWithSplits.apiFlight.SchDT,
-      props.flightWithSplits.apiFlight.EstDT,
-      props.flightWithSplits.apiFlight.ActDT,
-      props.flightWithSplits.apiFlight.EstChoxDT,
-      props.flightWithSplits.apiFlight.ActChoxDT,
-      props.flightWithSplits.apiFlight.PcpTime,
-      props.flightWithSplits.apiFlight.ActPax
-    )
-  })
-  implicit val stateReuse = Reusability.caseClass[RowState]
+  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => props.flightWithSplits.lastUpdated)
+  implicit val stateReuse: Reusability[RowState] = Reusability.caseClass[RowState]
 
   case class RowState(hasChanged: Boolean)
 
@@ -151,7 +123,7 @@ object FlightTableRow {
           splits match {
             case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
             case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
-            case _ => "n/a"
+            case _ => "Port Average"
           }
 
         def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
@@ -172,15 +144,14 @@ object FlightTableRow {
             val source = flightSplits.source.toLowerCase
             val sourceDisplay = sourceDisplayName(flightSplits)
             val vdomElement: VdomElement = splitStyle match {
-              case PaxNumbers => {
+              case PaxNumbers =>
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
                 val splitStyleUnitLabe = "pax"
                 val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
                   case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
                 }).toMap
                 GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
-              }
-              case Percentage => {
+              case Percentage =>
                 val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
                 val splitStyle = flightSplits.splitStyle
                 val splitStyleUnitLabe = "%"
@@ -188,8 +159,7 @@ object FlightTableRow {
                   case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
                 }).toMap
                 GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
-              }
-              case UndefinedSplitStyle => <.div(s"${splitStyle}")
+              case UndefinedSplitStyle => <.div(s"$splitStyle")
             }
             vdomElement
           }
@@ -217,7 +187,7 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {
         case e => log.error(s"couldn't make flight row $e")
-          <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace().mkString(",")}")
+          <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace.mkString(",")}")
       }.get
     }
 

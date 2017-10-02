@@ -3,8 +3,9 @@ package actors
 import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
-import drt.shared.Crunch.{CrunchMinute, CrunchState}
+import drt.shared.Crunch.{CrunchMinute, CrunchState, CrunchUpdates}
 import drt.shared.FlightsApi._
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
@@ -32,7 +33,14 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
       val newState = stateFromDiff(cdm, state)
       newState match {
         case None => log.info(s"Recovery: state is None")
-        case Some(s) => log.info(s"Recovery: state contains ${s.flights.size} flights and ${s.crunchMinutes.size} crunch minutes")
+        case Some(s) =>
+          val apiCount = s.flights.count(f => f.splits.exists {
+            case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => true
+            case _ => false
+          })
+          log.info(s"Recovery: state contains ${s.flights.size} flights " +
+            s"with ${apiCount} Api splits " +
+            s"and ${s.crunchMinutes.size} crunch minutes")
       }
       state = newState
 
@@ -51,6 +59,22 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     case GetState =>
       sender() ! state
+
+    case GetUpdatesSince(millis) =>
+      val updates = state match {
+        case Some(cs) =>
+          val updatedFlights = cs.flights.filter(f => f.lastUpdated.getOrElse(1L) > millis)
+          val updatedMinutes = cs.crunchMinutes.filter(cm => cm.lastUpdated.getOrElse(1L) > millis)
+          if (updatedFlights.nonEmpty || updatedMinutes.nonEmpty) {
+            val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val minutesLatest = if (updatedMinutes.nonEmpty) updatedMinutes.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val latestUpdate = Math.max(flightsLatest, minutesLatest)
+            log.info(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
+            Option(CrunchUpdates(latestUpdate, updatedFlights, updatedMinutes))
+          } else None
+        case None => None
+      }
+      sender() ! updates
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Snapshot success $md")
@@ -73,7 +97,12 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   }
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[CrunchState]): Option[CrunchState] = {
+    log.info(s"Unpacking CrunchDiffMessage")
     val diff = crunchDiffFromMessage(cdm)
+    log.info(s"Unpacked CrunchDiffMessage - ${diff.crunchMinuteRemovals.size} crunch minute removals, " +
+      s"${diff.crunchMinuteUpdates.size} crunch minute updates, " +
+      s"${diff.flightRemovals.size} flight removals, " +
+      s"${diff.flightUpdates.size} flight updates")
     val newState = existingState match {
       case None =>
         log.info(s"Creating an empty CrunchState to apply CrunchDiff")
@@ -113,13 +142,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToRemove, crunchesToUpdate)
 
     val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
-    if (cmsFromDiff != newState.crunchMinutes) {
-      log.error(s"new CrunchMinutes do not match update from diff")
-    }
     val flightsFromDiff = applyFlightsWithSplitsDiff(diff, existingState.flights)
-    if (flightsFromDiff != newState.flights) {
-      log.error(s"new Flights do not match update from diff")
-    }
 
     val diffToPersist = CrunchDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
@@ -194,7 +217,8 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
   def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = {
     ApiFlightWithSplits(
       FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
-      fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet
+      fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
+      None
     )
   }
 }

@@ -57,7 +57,7 @@ class CrunchMinuteSpec() extends CrunchTestLike {
       val newCm = Set(CrunchMinute("T1", Queues.EeaDesk, 60000L, 1, 30, 1, 0))
 
       val (toRemove, toUpdate) = crunchMinutesDiff(oldCm, newCm)
-      val updatedCm = applyCrunchDiff(CrunchDiff(Set(), Set(), toRemove, toUpdate), oldCm)
+      val updatedCm = applyCrunchDiff(CrunchDiff(Set(), Set(), toRemove, toUpdate), oldCm).map(_.copy(lastUpdated = None))
 
       val expected = Set(CrunchMinute("T1", Queues.EeaDesk, 60000L, 1, 30, 1, 0))
 

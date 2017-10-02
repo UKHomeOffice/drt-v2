@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, DiagnosticActorLogging}
 import akka.persistence._
+import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{MilliDate, StaffMovement}
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.SDate
@@ -17,10 +18,10 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
 }
 
 
-class StaffMovementsActor(subscriber: ActorRef) extends StaffMovementsActorBase {
+class StaffMovementsActor(subscriber: SourceQueueWithComplete[Seq[StaffMovement]]) extends StaffMovementsActorBase {
   override def onUpdateState(data: StaffMovements) = {
     log.info(s"Telling subscriber about updated staff movements")
-    subscriber ! data.staffMovements
+    subscriber.offer(data.staffMovements)
   }
 }
 
@@ -50,12 +51,6 @@ class StaffMovementsActorBase extends PersistentActor
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
       onUpdateState(state.staffMovements)
-
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Save snapshot success: $md")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val receiveCommand: Receive = {
@@ -73,6 +68,12 @@ class StaffMovementsActorBase extends PersistentActor
       } else {
         log.info(s"No changes to staff movements. Not persisting")
       }
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
 
     case u =>
       log.info(s"unhandled message: $u")

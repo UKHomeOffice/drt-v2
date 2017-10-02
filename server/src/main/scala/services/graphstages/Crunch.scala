@@ -144,7 +144,7 @@ object Crunch {
 
   def flightsToFlightSplitMinutes(procTimes: Map[PaxTypeAndQueue, Double])(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
     flightsWithSplits.map {
-      case ApiFlightWithSplits(flight, splits) => (flight.FlightID, flightToFlightSplitMinutes(flight, splits, procTimes))
+      case ApiFlightWithSplits(flight, splits, _) => (flight.FlightID, flightToFlightSplitMinutes(flight, splits, procTimes))
     }.toMap
   }
 
@@ -255,7 +255,7 @@ object Crunch {
     val newIds = newFlightsById.keys.toSet
     val toRemove = (oldIds -- newIds).map(RemoveFlight)
     val toUpdate = newFlightsById.collect {
-      case (id, cm) if oldFlightsById.get(id).isEmpty || cm != oldFlightsById(id) => cm
+      case (id, f) if oldFlightsById.get(id).isEmpty || !f.equals(oldFlightsById(id)) => f
     }.toSet
 
     Tuple2(toRemove, toUpdate)
@@ -270,7 +270,7 @@ object Crunch {
       case (tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
     }
     val toUpdate = newTqmToCm.collect {
-      case (k, cm) if oldTqmToCm.get(k).isEmpty || cm != oldTqmToCm(k) => cm
+      case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
     }.toSet
 
     Tuple2(toRemove, toUpdate)
@@ -281,27 +281,23 @@ object Crunch {
   }
 
   def applyCrunchDiff(diff: CrunchDiff, cms: Set[CrunchMinute]): Set[CrunchMinute] = {
-    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms) {
-      case (soFar, removal) => soFar.filterNot {
-        case CrunchMinute(tn, qn, m, _, _, _, _, _, _, _, _) => removal.terminalName == tn && removal.queueName == qn && removal.minute == m
-      }
+    val nowMillis = SDate.now().millisSinceEpoch
+    val withoutRemovals = cms.filterNot {
+      case cm => diff.crunchMinuteRemovals.contains(RemoveCrunchMinute(cm.terminalName, cm.queueName, cm.minute))
     }
     val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals.map(crunchMinuteToTqmCm).toMap) {
-      case (soFar, ncm) =>
-        soFar.updated((ncm.terminalName, ncm.queueName, ncm.minute), ncm)
+      case (soFar, ncm) => soFar.updated((ncm.terminalName, ncm.queueName, ncm.minute), ncm.copy(lastUpdated = Option(nowMillis)))
     }
     withoutRemovalsWithUpdates.values.toSet
   }
 
   def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
-    val withoutRemovals = diff.flightRemovals.foldLeft(flights) {
-      case (soFar, removal) => soFar.filterNot {
-        f: ApiFlightWithSplits => removal.flightId == f.apiFlight.FlightID
-      }
+    val nowMillis = SDate.now().millisSinceEpoch
+    val withoutRemovals = flights.filterNot {
+      case cm => diff.flightRemovals.contains(RemoveFlight(cm.apiFlight.FlightID))
     }
     val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
-      case (soFar, flight) =>
-        soFar.updated(flight.apiFlight.FlightID, flight)
+      case (soFar, flight) => soFar.updated(flight.apiFlight.FlightID, flight.copy(lastUpdated = Option(nowMillis)))
     }
     withoutRemovalsWithUpdates.values.toSet
   }

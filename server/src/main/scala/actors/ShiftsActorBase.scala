@@ -2,6 +2,8 @@ package actors
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
+import akka.stream.scaladsl.SourceQueueWithComplete
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
@@ -16,12 +18,14 @@ case class ShiftsState(shifts: String) {
 
 case object GetState
 
+case class GetUpdatesSince(millis: MillisSinceEpoch)
+
 case object GetShifts
 
-class ShiftsActor(subscriber: ActorRef) extends ShiftsActorBase {
+class ShiftsActor(subscriber: SourceQueueWithComplete[String]) extends ShiftsActorBase {
   override def onUpdateState(data: String) = {
     log.info(s"Telling subscriber about updated shifts")
-    subscriber ! data
+    subscriber.offer(data)
   }
 }
 
@@ -52,12 +56,6 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
       onUpdateState(state.shifts)
-
-    case SaveSnapshotSuccess(md) =>
-      log.info(s"Save snapshot success: $md")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
   }
 
   val receiveCommand: Receive = {
@@ -77,6 +75,12 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
       } else {
         log.info(s"No changes to shifts. Not persisting")
       }
+
+    case SaveSnapshotSuccess(md) =>
+      log.info(s"Save snapshot success: $md")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.info(s"Save snapshot failure: $md, $cause")
 
     case u =>
       log.info(s"unhandled message: $u")

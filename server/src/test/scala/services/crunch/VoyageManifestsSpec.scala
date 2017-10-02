@@ -40,7 +40,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
     val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef](
+      runCrunchGraph[ActorRef, ActorRef](
         procTimes = Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
@@ -69,7 +69,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers)
     )
     val splitsSet = flights.head match {
-      case ApiFlightWithSplits(_, s) => s
+      case ApiFlightWithSplits(_, s, _) => s
     }
 
     splitsSet === expectedSplits
@@ -98,7 +98,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
     val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef](
+      runCrunchGraph[ActorRef, ActorRef](
         procTimes = Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
@@ -132,7 +132,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
     val splitsSet = flights.head match {
-      case ApiFlightWithSplits(_, s) => s
+      case ApiFlightWithSplits(_, s, _) => s
     }
 
     val queues = crunchMinutes.groupBy(_.queueName).keys.toSet

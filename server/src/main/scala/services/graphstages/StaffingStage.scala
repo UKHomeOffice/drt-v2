@@ -6,20 +6,16 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{MilliDate, SDateLike, StaffMovement}
-import org.slf4j.LoggerFactory
+import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
+import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
-import scala.collection.immutable
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
+class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
   extends GraphStage[FanInShape4[CrunchState, String, String, Seq[StaffMovement], CrunchState]] {
   val inCrunch: Inlet[CrunchState] = Inlet[CrunchState]("CrunchStateWithoutSimulations.in")
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
@@ -27,16 +23,16 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
   val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchStateWithSimulations.out")
 
-  val allInlets = List(inCrunch, inShifts, inFixedPoints, inMovements)
+  val allInlets = List(inShifts, inFixedPoints, inMovements, inCrunch)
 
   var crunchStateOption: Option[CrunchState] = None
-  var shifts: Option[String] = None
-  var fixedPoints: Option[String] = None
-  var movements: Option[Seq[StaffMovement]] = None
+  var shiftsOption: Option[String] = None
+  var fixedPointsOption: Option[String] = None
+  var movementsOption: Option[Seq[StaffMovement]] = None
 
   var crunchStateWithSimulation: Option[CrunchState] = None
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def shape: FanInShape4[CrunchState, String, String, Seq[StaffMovement], CrunchState] =
     new FanInShape4(inCrunch, inShifts, inFixedPoints, inMovements, outCrunch)
@@ -44,73 +40,82 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
     new GraphStageLogic(shape) {
       override def preStart(): Unit = {
-        initialCrunchStateFuture.onSuccess {
-          case initialCrunchStateOption =>
+        initialOptionalCrunchState match {
+          case Some(initialCrunchState: CrunchState) =>
             log.info(s"Received initial crunchState")
-            crunchStateOption = initialCrunchStateOption
+            crunchStateOption = Option(initialCrunchState)
+          case _ => log.info(s"Didn't receive any initial CrunchState")
         }
-        Await.ready(initialCrunchStateFuture, 10 seconds)
 
         super.preStart()
       }
 
       setHandler(inCrunch, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inCrunch onPush() - setting crunchStateOption")
-          crunchStateOption = Option(grab(inCrunch))
-          runSimulationAndPush()
+          grabAllAvailable()
+          runSimulationAndPush(5)
         }
       })
 
       setHandler(inShifts, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inShifts onPush() - setting shifts")
-          shifts = Option(grab(inShifts))
-          runSimulationAndPush()
+          grabAllAvailable()
+          runSimulationAndPush(5)
         }
       })
 
       setHandler(inFixedPoints, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inFixedPoints onPush() - setting fixedPoints")
-          fixedPoints = Option(grab(inFixedPoints))
-          runSimulationAndPush()
+          grabAllAvailable()
+          runSimulationAndPush(5)
         }
       })
 
       setHandler(inMovements, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inMovements onPush() - setting movements")
-          movements = Option(grab(inMovements))
-          runSimulationAndPush()
+          grabAllAvailable()
+          runSimulationAndPush(5)
         }
       })
 
-      def pushAndPull() = {
-        crunchStateWithSimulation match {
-          case None =>
-            log.info(s"Nothing to push")
-          case Some(cs) =>
-            log.info(s"Pushing CrunchStateWithSimulation")
-            push(outCrunch, cs)
-            crunchStateWithSimulation = None
-        }
+      setHandler(outCrunch, new OutHandler {
+        override def onPull(): Unit = pushAndPull()
+      })
 
-        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
+      def grabAllAvailable(): Unit = {
+        if (isAvailable(inShifts)) {
+          log.info(s"Grabbing available inShifts")
+          shiftsOption = Option(grab(inShifts))
+        }
+        if (isAvailable(inFixedPoints)) {
+          log.info(s"Grabbing available inFixedPoints")
+          fixedPointsOption = Option(grab(inFixedPoints))
+        }
+        if (isAvailable(inMovements)) {
+          log.info(s"Grabbing available inMovements")
+          movementsOption = Option(grab(inMovements))
+        }
+        if (isAvailable(inCrunch)) {
+          log.info(s"Grabbing available inCrunch")
+          crunchStateOption = Option(grab(inCrunch))
+        }
       }
 
-      def runSimulationAndPush() = {
-        log.info(s"Running simulation")
+      def runSimulationAndPush(eGateBankSize: Int): Unit = {
+        log.info(s"Running simulations")
 
         crunchStateWithSimulation = crunchStateOption.map {
-          case cs@ CrunchState(_, _, _, crunchMinutes) =>
+          case cs@CrunchState(_, _, _, crunchMinutes) =>
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = crunchMinutesWithDeployments.groupBy(_.terminalName).flatMap {
               case (_, tcms) =>
                 tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
                     val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
-                    val workLoads = minWlSd.map { case (_, wl, _) => wl }.toList
+                    val workLoads = minWlSd.map {
+                      case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
+                      case (_, wl, _) => wl
+                    }.toList
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
                     val config = OptimizerConfig(slaByQueue(qn))
                     val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
@@ -122,13 +127,28 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
             cs.copy(crunchMinutes = crunchMinutesWithSimulation)
         }
 
-        if (isAvailable(outCrunch)) pushAndPull()
+        pushAndPull()
+      }
+
+      def pushAndPull(): Unit = {
+        if (isAvailable(outCrunch))
+          crunchStateWithSimulation match {
+            case None =>
+              log.info(s"Nothing to push")
+            case Some(cs) =>
+              log.info(s"Pushing CrunchStateWithSimulation")
+              push(outCrunch, cs)
+              crunchStateWithSimulation = None
+          }
+        else log.info(s"outCrunch not available to push")
+
+        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
       }
 
       def staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
-        val rawShiftsString = shifts.getOrElse("")
-        val rawFixedPointsString = fixedPoints.getOrElse("")
-        val myMovements = movements.getOrElse(Seq())
+        val rawShiftsString = shiftsOption.getOrElse("")
+        val rawFixedPointsString = fixedPointsOption.getOrElse("")
+        val myMovements = movementsOption.getOrElse(Seq())
 
         val myShifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
         val myFixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
@@ -144,16 +164,12 @@ class StaffingStage(initialCrunchStateFuture: Future[Option[CrunchState]], minMa
           StaffMovements.terminalStaffAt(ss, fps)(myMovements)
         }
       }
-
-      setHandler(outCrunch, new OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"outCrunch onPull() called")
-          pushAndPull()
-        }
-      })
     }
   }
 
+  def adjustEgateWorkload(eGateBankSize: Int, wl: Double): Double = {
+    wl / eGateBankSize
+  }
 }
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
@@ -169,14 +185,14 @@ case class StaffAssignment(name: String, terminalName: TerminalName, startDt: Mi
 }
 
 object StaffDeploymentCalculator {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   type Deployer = (Seq[(String, Int)], Int, Map[String, (Int, Int)]) => Seq[(String, Int)]
 
   def addDeployments(crunchMinutes: Set[CrunchMinute],
                      deployer: Deployer,
                      available: (MillisSinceEpoch, QueueName) => Int,
-                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]) = crunchMinutes
+                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]): Set[CrunchMinute] = crunchMinutes
     .groupBy(_.terminalName)
     .flatMap {
       case (tn, tcrs) =>
@@ -216,7 +232,7 @@ object StaffDeploymentCalculator {
     }
   }
 
-  def deploymentWithinBounds(min: Int, max: Int, ideal: Int, staffAvailable: Int) = {
+  def deploymentWithinBounds(min: Int, max: Int, ideal: Int, staffAvailable: Int): Int = {
     val best = if (ideal < min) min
     else if (ideal > max) max
     else ideal

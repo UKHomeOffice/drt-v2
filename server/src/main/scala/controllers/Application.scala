@@ -10,12 +10,12 @@ import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import drt.shared.Crunch.{CrunchMinutes, CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
 import services.SDate
@@ -23,6 +23,8 @@ import services.graphstages.Crunch.midnightThisMorning
 import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage, VoyageManifestsGraphStage}
 
 import scala.collection.immutable.Map
+import scala.concurrent.Await
+import scala.util.{Failure, Success}
 //import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
@@ -104,12 +106,36 @@ trait SystemActors {
   val askableCrunchStateActor: AskableActorRef = crunchStateActor
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
-  val initialFlightsFuture: Future[List[ApiFlightWithSplits]] = askableCrunchStateActor.ask(GetState)(new Timeout(10 seconds)).map {
-    case CrunchState(_, _, flights, _) => flights.toList
-    case _ => List()
+  val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
+
+  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
+
+  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
+  val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
+  val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
+  val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
+
+  val crunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
+    case Some(cs: CrunchState) => Option(cs)
+    case _ => None
   }
+
+  crunchStateFuture.onComplete {
+    case Success(Some(cs: CrunchState)) => Option(cs)
+    case Success(None) => None
+    case Failure(t) =>
+      log.warn(s"Failed to get an initial CrunchState: $t")
+      None
+  }
+
+  log.info(s"Awaiting CrunchStateActor response")
+  val optionalCrunchState: Option[CrunchState] = Await.result(crunchStateFuture, 1 minute)
+  log.info(s"Got CrunchStateActor response")
+
   val crunchFlow = new CrunchGraphStage(
-    initialFlightsFuture,
+    optionalCrunchState.map(cs => FlightsWithSplits(cs.flights.toList)),
     airportConfig.slaByQueue,
     airportConfig.minMaxDesksByTerminalQueue,
     airportConfig.defaultProcessingTimes.head._2,
@@ -122,25 +148,11 @@ trait SystemActors {
     1440
   )
 
-  val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
-
-  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
-
-  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
-  val shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  def initialCrunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(10 seconds)).map {
-    case None => None
-    case Some(cs: CrunchState) => Option(cs)
-  }
-
-  val staffingGraphStage = new StaffingStage(initialCrunchStateFuture, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
-
-  val (_, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
-    flightsSource(mockProd, airportConfig.portCode),
+  val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
+  val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) =
+    RunnableCrunchGraph[SourceQueueWithComplete[Flights], NotUsed, SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]]](
+    flightsQueueSource,
     manifestsSource,
     shiftsSource,
     fixedPointsSource,
@@ -149,6 +161,8 @@ trait SystemActors {
     crunchFlow,
     crunchStateActor
   ).run()(actorMaterializer)
+
+  flightsSource(mockProd, airportConfig.portCode).runForeach(f => flightsInput.offer(f))(actorMaterializer)
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
@@ -161,14 +175,15 @@ trait SystemActors {
   def flightWalkTimeProvider(flight: Arrival): Millis
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
-    portCode match {
+    val feed = portCode match {
       case "LHR" =>
-        LHRFlightFeed().map(Flights)
+        LHRFlightFeed()
       case "EDI" =>
-        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights)
+        createChromaFlightFeed(prodMock).chromaEdiFlights()
       case _ =>
-        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights)
+        createChromaFlightFeed(prodMock).chromaVanillaFlights()
     }
+    feed.map(Flights)
   }
 
   def createChromaFlightFeed(prodMock: String): ChromaFlightFeed = {
@@ -293,6 +308,19 @@ class Application @Inject()(
       }
     }
 
+    def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+      val crunchStateFuture = crunchStateActor.ask(GetUpdatesSince(sinceMillis))(new Timeout(5 seconds))
+
+      crunchStateFuture.map {
+        case Some(cu: CrunchUpdates) => Option(cu)
+        case _ => None
+      } recover {
+        case t =>
+          log.warn(s"Didn't get a CrunchUpdates: $t")
+          None
+      }
+    }
+
     override def askableCacheActorRef: AskableActorRef = cacheActorRef
 
     override def crunchStateActor: AskableActorRef = ctrl.crunchStateActor
@@ -360,7 +388,7 @@ class Application @Inject()(
 
   def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
     implicit request =>
-      println(s"Request path: $path")
+      log.debug(s"Request path: $path")
 
       // get the request body as ByteString
       val b = request.body.asBytes(parse.UNLIMITED).get
