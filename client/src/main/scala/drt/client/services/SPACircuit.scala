@@ -150,7 +150,6 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
 
   def updateStateFromUpdates(crunchUpdates: CrunchUpdates, existingState: CrunchState): CrunchState = {
     val lastMidnightMillis = SDate.midnightThisMorning().millisSinceEpoch
-    log.info(s"lastMidnightMillis: $lastMidnightMillis")
     val flights = updateAndTrimFlights(crunchUpdates, existingState, lastMidnightMillis)
     val minutes = updateAndTrimMinutes(crunchUpdates, existingState, lastMidnightMillis)
     CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
