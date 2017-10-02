@@ -155,8 +155,8 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
     CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
   }
 
-  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, lastMidnightMillis: MillisSinceEpoch): Set[Crunch.CrunchMinute] = {
-    val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= lastMidnightMillis)
+  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[Crunch.CrunchMinute] = {
+    val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= keepFromMillis)
     val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
     val minutes = crunchUpdates.minutes.foldLeft(existingMinutesByTqm) {
       case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.queueName, newCm.minute), newCm)
@@ -164,8 +164,9 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
     minutes
   }
 
-  def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: CrunchState, lastMidnightMillis: MillisSinceEpoch): Set[ApiFlightWithSplits] = {
-    val relevantFlights = existingState.flights.filter(lastMidnightMillis - 30 * 60000 <= _.apiFlight.PcpTime)
+  def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[ApiFlightWithSplits] = {
+    val thirtyMinutesMillis = 30 * 60000
+    val relevantFlights = existingState.flights.filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime)
     val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
       case (soFar, newFlight) =>
         val withoutOldFlight = soFar.filterNot(_.apiFlight.FlightID == newFlight.apiFlight.FlightID)

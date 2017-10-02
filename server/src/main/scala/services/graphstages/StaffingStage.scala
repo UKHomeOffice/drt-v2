@@ -113,7 +113,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
                   case (qn, qcms) =>
                     val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
                     val workLoads = minWlSd.map {
-                      case (_, wl, _) if qn == Queues.EGate => wl / eGateBankSize
+                      case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
                       case (_, wl, _) => wl
                     }.toList
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
@@ -167,6 +167,9 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
     }
   }
 
+  def adjustEgateWorkload(eGateBankSize: Int, wl: Double): Double = {
+    wl / eGateBankSize
+  }
 }
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
