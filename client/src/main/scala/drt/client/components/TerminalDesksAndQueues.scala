@@ -2,14 +2,18 @@ package drt.client.components
 
 import drt.client.components.TerminalDesksAndQueues.{queueActualsColour, queueColour}
 import drt.client.services.JSDateConversions
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{AirportConfig, MilliDate, Queues}
+import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomElement, _}
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
+import scala.scalajs.js.Date
+
 object TerminalDesksAndQueuesRow {
+
   case class Props(minuteMillis: MillisSinceEpoch, queueMinutes: List[CrunchMinute], airportConfig: AirportConfig, terminalName: TerminalName, showActuals: Boolean)
 
   implicit val rowPropsReuse: Reusability[Props] = Reusability.by((props: Props) => {

@@ -17,7 +17,7 @@ import scala.scalajs.js.Date
 import scala.util.{Success, Try}
 
 object DateRange {
-  val start = SDate.today()
+  val start = SDate.midnightThisMorning()
   val end = start.addDays(1)
 }
 
@@ -84,7 +84,7 @@ object TerminalStaffing {
         val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
         val fps = StaffAssignmentServiceWithoutDates(successfulTerminalFixedPoints)
         val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss, fps)(movements) _
-        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.today), staffWithShiftsAndMovementsAt)
+        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning), staffWithShiftsAndMovementsAt)
       }
     )
   }

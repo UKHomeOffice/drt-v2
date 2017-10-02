@@ -2,7 +2,7 @@ package services.crunch
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import controllers.PaxFlow
@@ -56,7 +56,7 @@ class CrunchTestLike
   val firstPaxOffMillis = 180000L
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
-  def runCrunchGraph[M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
+  def runCrunchGraph[FM, M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                      slaByQueue: Map[QueueName, Int] = slaByQueue,
                      minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]] = minMaxDesks,
                      queues: Map[TerminalName, Seq[QueueName]] = queues,
@@ -67,7 +67,7 @@ class CrunchTestLike
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      crunchStartDateProvider: () => MillisSinceEpoch,
                      minutesToCrunch: Int = 30)
-                    (flightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, AskableActorRef) = {
+                    (flightsSource: Source[Flights, FM], manifestsSource: Source[VoyageManifests, M]): (FM, M, AskableActorRef) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -90,7 +90,7 @@ class CrunchTestLike
 
     def staffingStage = new StaffingStage(None, minMaxDesks, slaByQueue)
 
-    val (fs, ms, _, _, _, _, _, _) = RunnableCrunchGraph[M, ActorRef](
+    val (fs, ms, _, _, _, _, _, _) = RunnableCrunchGraph[FM, M, ActorRef](
       flightsSource,
       manifestsSource,
       Source.actorRef(1, OverflowStrategy.dropHead),

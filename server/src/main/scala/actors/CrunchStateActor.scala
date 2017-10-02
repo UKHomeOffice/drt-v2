@@ -142,13 +142,7 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToRemove, crunchesToUpdate)
 
     val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
-    if (cmsFromDiff != newState.crunchMinutes) {
-      log.error(s"new CrunchMinutes do not match update from diff")
-    }
     val flightsFromDiff = applyFlightsWithSplitsDiff(diff, existingState.flights)
-    if (flightsFromDiff != newState.flights) {
-      log.error(s"new Flights do not match update from diff")
-    }
 
     val diffToPersist = CrunchDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),

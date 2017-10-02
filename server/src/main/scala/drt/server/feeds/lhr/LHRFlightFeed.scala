@@ -2,7 +2,7 @@ package drt.server.feeds.lhr
 
 import akka.NotUsed
 import akka.actor.Cancellable
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, SourceQueue}
 import com.typesafe.config.ConfigFactory
 import drt.chroma.DiffingStage
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}

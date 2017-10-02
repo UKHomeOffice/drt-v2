@@ -36,7 +36,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
     val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef](
+      runCrunchGraph[ActorRef, ActorRef](
         procTimes = Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60

@@ -23,7 +23,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
   val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchStateWithSimulations.out")
 
-  val allInlets = List(inCrunch, inShifts, inFixedPoints, inMovements)
+  val allInlets = List(inShifts, inFixedPoints, inMovements, inCrunch)
 
   var crunchStateOption: Option[CrunchState] = None
   var shiftsOption: Option[String] = None
@@ -55,6 +55,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           log.info(s"inCrunch onPush() - setting crunchStateOption")
           grabAllAvailable()
           runSimulationAndPush(5)
+          log.info(s"inCrunch onPush() - finished")
         }
       })
 
@@ -63,6 +64,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           log.info(s"inShifts onPush() - setting shifts")
           grabAllAvailable()
           runSimulationAndPush(5)
+          log.info(s"inShifts onPush() - finished")
         }
       })
 
@@ -71,6 +73,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           log.info(s"inFixedPoints onPush() - setting fixedPoints")
           grabAllAvailable()
           runSimulationAndPush(5)
+          log.info(s"inFixedPoints onPush() - finished")
         }
       })
 
@@ -79,14 +82,19 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           log.info(s"inMovements onPush() - setting movements")
           grabAllAvailable()
           runSimulationAndPush(5)
+          log.info(s"inMovements onPush() - finished")
+        }
+      })
+
+      setHandler(outCrunch, new OutHandler {
+        override def onPull(): Unit = {
+          log.info(s"outCrunch onPull() - called")
+          pushAndPull()
+          log.info(s"outCrunch onPull() - finished")
         }
       })
 
       def grabAllAvailable(): Unit = {
-        if (isAvailable(inCrunch)) {
-          log.info(s"Grabbing available inCrunch")
-          crunchStateOption = Option(grab(inCrunch))
-        }
         if (isAvailable(inShifts)) {
           log.info(s"Grabbing available inShifts")
           shiftsOption = Option(grab(inShifts))
@@ -98,6 +106,10 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         if (isAvailable(inMovements)) {
           log.info(s"Grabbing available inMovements")
           movementsOption = Option(grab(inMovements))
+        }
+        if (isAvailable(inCrunch)) {
+          log.info(s"Grabbing available inCrunch")
+          crunchStateOption = Option(grab(inCrunch))
         }
       }
 
@@ -142,10 +154,14 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           }
         else log.info(s"outCrunch not available to push")
 
-        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) {
-          log.info(s"Pulling inlet ${inlet.toString}")
-          pull(inlet)
-        })
+        allInlets.foreach(inlet =>
+          if (!hasBeenPulled(inlet)) {
+            log.info(s"Pulling inlet ${inlet.toString}")
+            pull(inlet)
+          } else if (isAvailable(inlet)) {
+            log.info(s"Inlet $inlet available to grab")
+          }
+        )
       }
 
       def staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
@@ -167,13 +183,6 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           StaffMovements.terminalStaffAt(ss, fps)(myMovements)
         }
       }
-
-      setHandler(outCrunch, new OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"outCrunch onPull() called")
-          pushAndPull()
-        }
-      })
     }
   }
 

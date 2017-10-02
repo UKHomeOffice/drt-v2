@@ -2,6 +2,7 @@ package actors
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
+import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
@@ -21,10 +22,10 @@ case class GetUpdatesSince(millis: MillisSinceEpoch)
 
 case object GetShifts
 
-class ShiftsActor(subscriber: ActorRef) extends ShiftsActorBase {
+class ShiftsActor(subscriber: SourceQueueWithComplete[String]) extends ShiftsActorBase {
   override def onUpdateState(data: String) = {
     log.info(s"Telling subscriber about updated shifts")
-    subscriber ! data
+    subscriber.offer(data)
   }
 }
 

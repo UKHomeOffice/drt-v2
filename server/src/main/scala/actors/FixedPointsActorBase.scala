@@ -2,6 +2,7 @@ package actors
 
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
+import akka.stream.scaladsl.{SourceQueue, SourceQueueWithComplete}
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.{Logger, LoggerFactory}
@@ -15,10 +16,10 @@ case class FixedPointsState(fixedPoints: String) {
   def updated(data: String): FixedPointsState = copy(fixedPoints = data)
 }
 
-class FixedPointsActor(subscriber: ActorRef) extends FixedPointsActorBase {
+class FixedPointsActor(subscriber: SourceQueueWithComplete[String]) extends FixedPointsActorBase {
   override def onUpdateState(data: String): Unit = {
-    log.info(s"Telling subscriber about updated fixed points")
-    subscriber ! data
+    log.info(s"Telling subscriber about updated fixed points: $data")
+    subscriber.offer(data)
   }
 }
 

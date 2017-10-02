@@ -75,7 +75,7 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
       log.info(s"Requesting CrunchUpdates")
       val x = AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call().map {
         case Some(cu) =>
-          log.info(s"Got ${cu.flights.size} flights!")
+          log.info(s"Got ${cu.flights.size} flights, ${cu.minutes.size} minutes")
           UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
         case None =>
           GetCrunchUpdatesAfter(crunchUpdatesRequestFrequency)
@@ -134,23 +134,45 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
     case UpdateCrunchStateFromUpdates(crunchUpdates) =>
       log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
 
-      val newState = value._1.isReady match {
-        case true =>
-          val existingState = value._1.get
-          val flights = crunchUpdates.flights.foldLeft(existingState.flights) {
-            case (soFar, newFlight) =>
-              val withoutOldFlight = soFar.filterNot(_.apiFlight.FlightID == newFlight.apiFlight.FlightID)
-              withoutOldFlight + newFlight
-          }
-          val existingMinutes = existingState.crunchMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
-          val minutes = crunchUpdates.minutes.foldLeft(existingMinutes) {
-            case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.queueName, newCm.minute), newCm)
-          }.values.toSet
-          CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
-        case _ => CrunchState(0L, 0, crunchUpdates.flights, crunchUpdates.minutes)
-      }
+      val someStateExists = value._1.isReady
+
+      val newState = if (someStateExists) {
+        val existingState = value._1.get
+        updateStateFromUpdates(crunchUpdates, existingState)
+      } else newStateFromUpdates(crunchUpdates)
 
       updated((Ready(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+  }
+
+  def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
+    CrunchState(0L, 0, crunchUpdates.flights, crunchUpdates.minutes)
+  }
+
+  def updateStateFromUpdates(crunchUpdates: CrunchUpdates, existingState: CrunchState): CrunchState = {
+    val lastMidnightMillis = SDate.midnightThisMorning().millisSinceEpoch
+    log.info(s"lastMidnightMillis: $lastMidnightMillis")
+    val flights = updateAndTrimFlights(crunchUpdates, existingState, lastMidnightMillis)
+    val minutes = updateAndTrimMinutes(crunchUpdates, existingState, lastMidnightMillis)
+    CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
+  }
+
+  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, lastMidnightMillis: MillisSinceEpoch): Set[Crunch.CrunchMinute] = {
+    val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= lastMidnightMillis)
+    val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
+    val minutes = crunchUpdates.minutes.foldLeft(existingMinutesByTqm) {
+      case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.queueName, newCm.minute), newCm)
+    }.values.toSet
+    minutes
+  }
+
+  def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: CrunchState, lastMidnightMillis: MillisSinceEpoch): Set[ApiFlightWithSplits] = {
+    val relevantFlights = existingState.flights.filter(lastMidnightMillis - 30 * 60000 <= _.apiFlight.PcpTime)
+    val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
+      case (soFar, newFlight) =>
+        val withoutOldFlight = soFar.filterNot(_.apiFlight.FlightID == newFlight.apiFlight.FlightID)
+        withoutOldFlight + newFlight
+    }
+    flights
   }
 }
 
@@ -230,7 +252,7 @@ object FixedPoints {
   }
 
   def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String): String = {
-    val today: SDateLike = SDate.today
+    val today: SDateLike = SDate.midnightThisMorning
     val todayString = today.ddMMyyString
 
     val lines = rawFixedPoints.split("\n").toList.map(line => {

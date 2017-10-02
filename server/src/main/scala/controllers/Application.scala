@@ -10,12 +10,12 @@ import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import drt.shared.Crunch.{CrunchMinutes, CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
 import services.SDate
@@ -113,11 +113,11 @@ trait SystemActors {
   val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
 
   val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
-  val shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  val fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead)
-  val staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead)
+  val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
+  val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
+  val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
 
-  val crunchStateFuture = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
+  val crunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
     case Some(cs: CrunchState) => Option(cs)
     case _ => None
   }
@@ -125,11 +125,13 @@ trait SystemActors {
   crunchStateFuture.onComplete {
     case Success(Some(cs: CrunchState)) => Option(cs)
     case Success(None) => None
-    case Failure(t) => None
+    case Failure(t) =>
+      log.warn(s"Failed to get an initial CrunchState: $t")
+      None
   }
 
   log.info(s"Awaiting CrunchStateActor response")
-  val optionalCrunchState = Await.result(crunchStateFuture, 1 minute)
+  val optionalCrunchState: Option[CrunchState] = Await.result(crunchStateFuture, 1 minute)
   log.info(s"Got CrunchStateActor response")
 
   val crunchFlow = new CrunchGraphStage(
@@ -147,9 +149,9 @@ trait SystemActors {
   )
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
-
-  val (_, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
-    flightsSource(mockProd, airportConfig.portCode),
+  val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
+    flightsQueueSource,
     manifestsSource,
     shiftsSource,
     fixedPointsSource,
@@ -158,6 +160,8 @@ trait SystemActors {
     crunchFlow,
     crunchStateActor
   ).run()(actorMaterializer)
+
+  flightsSource(mockProd, airportConfig.portCode, flightsInput).runForeach(f => flightsInput.offer(f))(actorMaterializer)
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
@@ -169,15 +173,20 @@ trait SystemActors {
 
   def flightWalkTimeProvider(flight: Arrival): Millis
 
-  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
-    portCode match {
+  def flightsSource(prodMock: String, portCode: String, flightsQueue: SourceQueueWithComplete[Flights]): Source[Flights, Cancellable] = {
+    val feed = portCode match {
       case "LHR" =>
-        LHRFlightFeed().map(Flights)
+        LHRFlightFeed()
       case "EDI" =>
-        createChromaFlightFeed(prodMock).chromaEdiFlights().map(Flights)
+        createChromaFlightFeed(prodMock).chromaEdiFlights()
       case _ =>
-        createChromaFlightFeed(prodMock).chromaVanillaFlights().map(Flights)
+        createChromaFlightFeed(prodMock).chromaVanillaFlights()
     }
+    feed.map(f => {
+      val flights = Flights(f)
+//      flightsQueue.offer(flights)
+      flights
+    })
   }
 
   def createChromaFlightFeed(prodMock: String): ChromaFlightFeed = {
