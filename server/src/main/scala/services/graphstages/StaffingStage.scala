@@ -52,46 +52,34 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
 
       setHandler(inCrunch, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inCrunch onPush() - setting crunchStateOption")
           grabAllAvailable()
           runSimulationAndPush(5)
-          log.info(s"inCrunch onPush() - finished")
         }
       })
 
       setHandler(inShifts, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inShifts onPush() - setting shifts")
           grabAllAvailable()
           runSimulationAndPush(5)
-          log.info(s"inShifts onPush() - finished")
         }
       })
 
       setHandler(inFixedPoints, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inFixedPoints onPush() - setting fixedPoints")
           grabAllAvailable()
           runSimulationAndPush(5)
-          log.info(s"inFixedPoints onPush() - finished")
         }
       })
 
       setHandler(inMovements, new InHandler {
         override def onPush(): Unit = {
-          log.info(s"inMovements onPush() - setting movements")
           grabAllAvailable()
           runSimulationAndPush(5)
-          log.info(s"inMovements onPush() - finished")
         }
       })
 
       setHandler(outCrunch, new OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"outCrunch onPull() - called")
-          pushAndPull()
-          log.info(s"outCrunch onPull() - finished")
-        }
+        override def onPull(): Unit = pushAndPull()
       })
 
       def grabAllAvailable(): Unit = {
@@ -114,7 +102,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
       }
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {
-        log.info(s"Running simulation")
+        log.info(s"Running simulations")
 
         crunchStateWithSimulation = crunchStateOption.map {
           case cs@CrunchState(_, _, _, crunchMinutes) =>
@@ -154,14 +142,7 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
           }
         else log.info(s"outCrunch not available to push")
 
-        allInlets.foreach(inlet =>
-          if (!hasBeenPulled(inlet)) {
-            log.info(s"Pulling inlet ${inlet.toString}")
-            pull(inlet)
-          } else if (isAvailable(inlet)) {
-            log.info(s"Inlet $inlet available to grab")
-          }
-        )
+        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
       }
 
       def staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {

@@ -32,7 +32,14 @@ case class UpdateLatestZipFilename(filename: String)
 case object GetLatestZipFilename
 
 class VoyageManifestsActor extends PersistentActor with ActorLogging {
-  var latestZipFilename = "drt_dq_170928"
+  var latestZipFilename = defaultLatestZipFilename
+
+  private def defaultLatestZipFilename = {
+    val yesterday = SDate.now().addDays(-1)
+    val yymmddYesterday = f"${yesterday.getFullYear() - 2000}%02d${yesterday.getMonth()}%02d${yesterday.getDate()}%02d"
+    s"drt_dq_$yymmddYesterday"
+  }
+
   val snapshotInterval = 100
 
   override def persistenceId: String = "VoyageManifests"

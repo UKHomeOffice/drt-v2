@@ -150,7 +150,8 @@ trait SystemActors {
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
-  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) = RunnableCrunchGraph(
+  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) =
+    RunnableCrunchGraph[SourceQueueWithComplete[Flights], NotUsed, SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]]](
     flightsQueueSource,
     manifestsSource,
     shiftsSource,
@@ -161,7 +162,7 @@ trait SystemActors {
     crunchStateActor
   ).run()(actorMaterializer)
 
-  flightsSource(mockProd, airportConfig.portCode, flightsInput).runForeach(f => flightsInput.offer(f))(actorMaterializer)
+  flightsSource(mockProd, airportConfig.portCode).runForeach(f => flightsInput.offer(f))(actorMaterializer)
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
@@ -173,7 +174,7 @@ trait SystemActors {
 
   def flightWalkTimeProvider(flight: Arrival): Millis
 
-  def flightsSource(prodMock: String, portCode: String, flightsQueue: SourceQueueWithComplete[Flights]): Source[Flights, Cancellable] = {
+  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
       case "LHR" =>
         LHRFlightFeed()
@@ -182,11 +183,7 @@ trait SystemActors {
       case _ =>
         createChromaFlightFeed(prodMock).chromaVanillaFlights()
     }
-    feed.map(f => {
-      val flights = Flights(f)
-//      flightsQueue.offer(flights)
-      flights
-    })
+    feed.map(Flights)
   }
 
   def createChromaFlightFeed(prodMock: String): ChromaFlightFeed = {

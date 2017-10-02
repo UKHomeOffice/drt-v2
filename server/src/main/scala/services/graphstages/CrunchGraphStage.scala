@@ -36,8 +36,8 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
   val inFlights: Inlet[Flights] = Inlet[Flights]("Flights.in")
   val inSplits: Inlet[VoyageManifests] = Inlet[VoyageManifests]("Splits.in")
-  val out: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
-  override val shape = new FanInShape2(inFlights, inSplits, out)
+  val crunchOut: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
+  override val shape = new FanInShape2(inFlights, inSplits, crunchOut)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
@@ -54,40 +54,30 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
         case _ =>
-          log.info(s"Did not receive any flights to initialise with")
+          log.warn(s"Did not receive any flights to initialise with")
       }
       super.preStart()
     }
 
-    setHandler(out, new OutHandler {
+    setHandler(crunchOut, new OutHandler {
       override def onPull(): Unit = {
-        log.info(s"crunchOut onPull called")
+        log.debug(s"crunchOut onPull called")
         crunchStateOption match {
           case Some(crunchState) =>
-            log.info(s"Pushing CrunchState")
-            push(out, crunchState)
+            log.debug(s"Pushing CrunchState")
+            push(crunchOut, crunchState)
             crunchStateOption = None
           case None =>
-            log.info(s"No CrunchState to push")
+            log.debug(s"No CrunchState to push")
         }
-        if (!hasBeenPulled(inSplits)) {
-          log.info(s"Pulling inSplits")
-          pull(inSplits)
-        } else if (isAvailable(inSplits)) {
-          log.info(s"Inlet inSplits available to grab")
-        }
-        if (!hasBeenPulled(inFlights)) {
-          log.info(s"Pulling inFlights")
-          pull(inFlights)
-        } else if (isAvailable(inFlights)) {
-          log.info(s"Inlet inFlights available to grab")
-        }
+        if (!hasBeenPulled(inSplits)) pull(inSplits)
+        if (!hasBeenPulled(inFlights)) pull(inFlights)
       }
     })
 
     setHandler(inFlights, new InHandler {
       override def onPush(): Unit = {
-        log.info(s"inFlights onPush called")
+        log.debug(s"inFlights onPush called")
         val incomingFlights = grab(inFlights)
 
         log.info(s"Grabbed ${incomingFlights.flights.length} flights")
@@ -106,16 +96,13 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           log.info(s"No flight updates")
         }
 
-        if (!hasBeenPulled(inFlights)) {
-          log.info(s"Pulling inFlights")
-          pull(inFlights)
-        }
+        if (!hasBeenPulled(inFlights)) pull(inFlights)
       }
     })
 
     setHandler(inSplits, new InHandler {
       override def onPush(): Unit = {
-        log.info(s"inSplits onPush called")
+        log.debug(s"inSplits onPush called")
         val vms = grab(inSplits)
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
@@ -131,10 +118,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           crunchAndUpdateState(flightsByFlightId.values.toList)
         } else log.info(s"No splits updates")
 
-        if (!hasBeenPulled(inSplits)) {
-          log.info(s"Pulling inSplits")
-          pull(inSplits)
-        }
+        if (!hasBeenPulled(inSplits)) pull(inSplits)
       }
     })
 
@@ -154,9 +138,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
               flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
 
-            case _ =>
-              log.info(s"No update to flight ${updatedFlightWithPcp.IATA}")
-              flightsSoFar
+            case _ => flightsSoFar
           }
       }
       updatedFlights
@@ -225,11 +207,8 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
       val crunchRequest = CrunchRequest(flightsToCrunch, crunchStartDateProvider(), minutesToCrunch)
 
-      log.info(s"processing crunchRequest - ${crunchRequest.flights.length} flights")
-      val newCrunchStateOption = crunch(crunchRequest)
-
-      log.info(s"setting crunchStateOption")
-      crunchStateOption = newCrunchStateOption
+      log.info(s"Processing CrunchRequest for ${crunchRequest.flights.length} flights")
+      crunchStateOption = crunch(crunchRequest)
 
       pushStateIfReady()
 
@@ -237,7 +216,6 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
 
     def crunch(crunchRequest: CrunchRequest): Option[CrunchState] = {
-      log.info(s"CrunchRequestFlights: ${crunchRequest.flights.length}")
       val relevantFlights = crunchRequest.flights.filter {
         case ApiFlightWithSplits(flight, _, _) =>
           validPortTerminals.contains(flight.Terminal) &&
@@ -245,7 +223,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
             !domesticPorts.contains(flight.Origin)
       }
       val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
-      log.info(s"${uniqueFlights.length} unique flights to crunch")
+      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares, domestics and pcp time outside crunch window")
       val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
@@ -259,12 +237,11 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
     def pushStateIfReady(): Unit = {
       crunchStateOption match {
-        case None =>
-          log.info(s"We have no state yet. Nothing to push")
+        case None => log.info(s"We have no CrunchState yet. Nothing to push")
         case Some(crunchState) =>
-          if (isAvailable(out)) {
+          if (isAvailable(crunchOut)) {
             log.info(s"Pushing CrunchState")
-            push(out, crunchState)
+            push(crunchOut, crunchState)
             crunchStateOption = None
           }
       }

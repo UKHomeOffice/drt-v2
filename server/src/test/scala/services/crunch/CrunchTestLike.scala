@@ -90,7 +90,7 @@ class CrunchTestLike
 
     def staffingStage = new StaffingStage(None, minMaxDesks, slaByQueue)
 
-    val (fs, ms, _, _, _, _, _, _) = RunnableCrunchGraph[FM, M, ActorRef](
+    val (fs, ms, _, _, _, _, _, _) = RunnableCrunchGraph[FM, M, ActorRef, ActorRef](
       flightsSource,
       manifestsSource,
       Source.actorRef(1, OverflowStrategy.dropHead),

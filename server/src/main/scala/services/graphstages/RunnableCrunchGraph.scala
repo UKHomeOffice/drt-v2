@@ -11,15 +11,15 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
 object RunnableCrunchGraph {
 
-  def apply[FS, M, SM](
+  def apply[FS, M, SM, SMM](
                 flightsSource: Source[Flights, FS],
                 voyageManifestsSource: Source[VoyageManifests, M],
                 shiftsSource: Source[String, SM],
                 fixedPointsSource: Source[String, SM],
-                staffMovementsSource: Source[Seq[StaffMovement], SM],
+                staffMovementsSource: Source[Seq[StaffMovement], SMM],
                 staffingStage: StaffingStage,
                 cruncher: CrunchGraphStage,
-                crunchStateActor: ActorRef): RunnableGraph[(FS, M, SM, SM, SM, NotUsed, NotUsed, NotUsed)] = {
+                crunchStateActor: ActorRef): RunnableGraph[(FS, M, SM, SM, SMM, NotUsed, NotUsed, NotUsed)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
