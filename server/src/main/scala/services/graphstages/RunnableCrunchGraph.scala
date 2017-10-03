@@ -3,23 +3,25 @@ package services.graphstages
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.ClosedShape
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.FlightsApi.Flights
-import drt.shared.StaffMovement
+import drt.shared.{ActualDeskStats, StaffMovement}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
 
 object RunnableCrunchGraph {
 
-  def apply[FS, M, SM, SMM](
+  def apply[FS, M, SM, SMM, SAD](
                 flightsSource: Source[Flights, FS],
                 voyageManifestsSource: Source[VoyageManifests, M],
                 shiftsSource: Source[String, SM],
                 fixedPointsSource: Source[String, SM],
                 staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
                 staffingStage: StaffingStage,
                 cruncher: CrunchGraphStage,
-                crunchStateActor: ActorRef): RunnableGraph[(FS, M, SM, SM, SMM, NotUsed, NotUsed, NotUsed)] = {
+                actualDesks: ActualDesksAndWaitTimesGraphStage,
+                crunchStateActor: ActorRef): RunnableGraph[(FS, M, SM, SM, SMM, SAD, NotUsed, NotUsed, NotUsed, NotUsed)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -30,10 +32,12 @@ object RunnableCrunchGraph {
       shiftsSource,
       fixedPointsSource,
       staffMovementsSource,
+      actualDesksAndWaitTimesSource,
       cruncher,
       staffingStage,
-      crunchSink)((_, _, _, _, _, _, _, _)) { implicit builder =>
-      (flights, manifests, shifts, fixedpoints, movements, crunch, staffing, crunchSink) =>
+      actualDesks,
+      crunchSink)((_, _, _, _, _, _, _, _, _, _)) { implicit builder =>
+      (flights, manifests, shifts, fixedpoints, movements, actuals, crunch, staffing, actualDesks, crunchSink) =>
         flights ~> crunch.in0
         manifests ~> crunch.in1
 
@@ -42,7 +46,10 @@ object RunnableCrunchGraph {
         fixedpoints ~> staffing.in2
         movements ~> staffing.in3
 
-        staffing.out ~> crunchSink
+        staffing.out ~> actualDesks.in0
+        actuals ~> actualDesks.in1
+
+        actualDesks.out ~> crunchSink
 
         ClosedShape
     })

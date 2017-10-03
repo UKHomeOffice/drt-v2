@@ -208,7 +208,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
         val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-        val (fs, ms, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+        val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
 
         fs ! flights
         Thread.sleep(250L)

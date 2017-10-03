@@ -50,7 +50,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
       ) _
 
-    val (fs, ms, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
 
     ms ! inputManifests
     Thread.sleep(250L)
@@ -109,7 +109,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
       ) _
 
-    val (fs, ms, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
 
     ms ! inputManifestsCi
     Thread.sleep(250L)

@@ -7,6 +7,7 @@ import javax.net.ssl._
 
 import akka.actor.{ActorLogging, ActorRef, ActorSystem}
 import akka.persistence.{PersistentActor, Recovery, SnapshotOffer, SnapshotSelectionCriteria}
+import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.Deskstats.{PortDeskStats, QueueDeskStats, TerminalDeskStats}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -133,14 +134,14 @@ object Deskstats {
     }
   }
 
-  def startBlackjack(csvUrl: String, actualDesksActor: ActorRef, interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
+  def startBlackjack(csvUrl: String, actualDesksActor: SourceQueueWithComplete[ActualDeskStats], interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
     val initialDelay1Second = 1 * 1000
 
     actorSystem.scheduler.schedule(
       initialDelay1Second milliseconds,
       interval) {
       val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
-      actualDesksActor ! ActualDeskStats(actDesks)
+      actualDesksActor.offer(ActualDeskStats(actDesks))
     }
   }
 

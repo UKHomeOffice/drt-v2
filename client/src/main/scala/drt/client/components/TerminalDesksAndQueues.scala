@@ -17,7 +17,7 @@ object TerminalDesksAndQueuesRow {
   case class Props(minuteMillis: MillisSinceEpoch, queueMinutes: List[CrunchMinute], airportConfig: AirportConfig, terminalName: TerminalName, showActuals: Boolean)
 
   implicit val rowPropsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    props.queueMinutes.hashCode
+    (props.queueMinutes.hashCode, props.showActuals)
   })
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
