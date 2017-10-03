@@ -1,7 +1,6 @@
 package controllers
 
 import java.nio.ByteBuffer
-import java.util.UUID
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -25,7 +24,6 @@ import services.graphstages._
 import scala.collection.immutable.Map
 import scala.concurrent.Await
 import scala.util.{Failure, Success}
-//import controllers.Deskstats.log
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
@@ -81,13 +79,11 @@ object PaxFlow {
   def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch)
                              (walkTimeProvider: FlightWalkTime)
                              (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
-
 }
 
 object SystemActors {
   type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
-
 
 trait SystemActors {
   self: AirportConfProvider =>
@@ -153,7 +149,7 @@ trait SystemActors {
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
   val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 
-  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput,_, _, _, _) =
+  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput, _, _, _, _) =
     RunnableCrunchGraph[SourceQueueWithComplete[Flights], NotUsed, SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats]](
       flightsQueueSource,
       manifestsSource,
@@ -170,7 +166,6 @@ trait SystemActors {
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
-  val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
     val threeMinutesInterval = 3 * 60 * 1000
@@ -271,7 +266,6 @@ class Application @Inject()(
   val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
 
-
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     SDate(date.millisSinceEpoch - oneDayInMillis)
@@ -282,16 +276,6 @@ class Application @Inject()(
     override implicit val timeout: Timeout = Timeout(5 seconds)
 
     def actorSystem: ActorSystem = system
-
-    def getActualDeskStats(pointInTime: Long): Future[ActualDeskStats] = {
-      val actor: AskableActorRef = if (pointInTime > 0) {
-        val DeskstatsReadActorProps = Props(classOf[DeskstatsReadActor], SDate(pointInTime))
-        actorSystem.actorOf(DeskstatsReadActorProps, "crunchStateReadActor" + UUID.randomUUID().toString)
-      } else actualDesksActor
-
-      val futureDesks = actor ? GetActualDeskStats()
-      futureDesks.map(_.asInstanceOf[ActualDeskStats])
-    }
 
     def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
       if (pointIntTime > 0) {
@@ -418,5 +402,3 @@ class Application @Inject()(
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)
-
-object CrunchStateNotAvailable

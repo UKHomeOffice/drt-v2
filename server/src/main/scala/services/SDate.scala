@@ -52,33 +52,19 @@ object SDate {
     fmt.print(dt)
   }
 
-  def parseString(dateTime: String): MilliDate = {
-    MilliDate(apply(dateTime, DateTimeZone.UTC).millisSinceEpoch)
-  }
+  def parseString(dateTime: String): MilliDate = MilliDate(apply(dateTime, DateTimeZone.UTC).millisSinceEpoch)
 
-  def apply(dateTime: String): SDateLike = {
-    JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
-  }
+  def apply(dateTime: String): SDateLike = JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
 
-  def apply(dateTime: String, timeZone: DateTimeZone): SDateLike = {
-    JodaSDate(new DateTime(dateTime, timeZone))
-  }
+  def apply(dateTime: String, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime, timeZone))
 
-  def apply(millis: Long): SDateLike = {
-    JodaSDate(new DateTime(millis, DateTimeZone.UTC))
-  }
+  def apply(millis: Long): SDateLike = JodaSDate(new DateTime(millis, DateTimeZone.UTC))
 
-  def apply(millis: MilliDate): SDateLike = {
-    JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))
-  }
+  def apply(millis: MilliDate): SDateLike = JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))
 
-  def now(): JodaSDate = {
-    JodaSDate(new DateTime(DateTimeZone.UTC))
-  }
+  def now(): JodaSDate = JodaSDate(new DateTime(DateTimeZone.UTC))
 
-  def now(dtz: DateTimeZone): JodaSDate = {
-    JodaSDate(new DateTime(dtz))
-  }
+  def now(dtz: DateTimeZone): JodaSDate = JodaSDate(new DateTime(dtz))
 
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 }
