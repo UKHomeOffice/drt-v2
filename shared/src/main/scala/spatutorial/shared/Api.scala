@@ -317,8 +317,6 @@ trait Api {
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def getActualDeskStats(pointInTime: MillisSinceEpoch): Future[ActualDeskStats]
-
   def getCrunchState(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
 
   def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
