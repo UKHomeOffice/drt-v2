@@ -20,7 +20,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
 import services.SDate
 import services.graphstages.Crunch.midnightThisMorning
-import services.graphstages.{CrunchGraphStage, RunnableCrunchGraph, StaffingStage, VoyageManifestsGraphStage}
+import services.graphstages._
 
 import scala.collection.immutable.Map
 import scala.concurrent.Await
@@ -115,6 +115,7 @@ trait SystemActors {
   val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
   val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
   val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
+  val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](100, OverflowStrategy.backpressure)
   val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
 
   val crunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
@@ -149,26 +150,35 @@ trait SystemActors {
   )
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
+  val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
   val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
-  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, _, _, _) =
-    RunnableCrunchGraph[SourceQueueWithComplete[Flights], NotUsed, SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]]](
-    flightsQueueSource,
-    manifestsSource,
-    shiftsSource,
-    fixedPointsSource,
-    staffMovementsSource,
-    staffingGraphStage,
-    crunchFlow,
-    crunchStateActor
-  ).run()(actorMaterializer)
 
+  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput,_, _, _, _) =
+    RunnableCrunchGraph[SourceQueueWithComplete[Flights], NotUsed, SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats]](
+      flightsQueueSource,
+      manifestsSource,
+      shiftsSource,
+      fixedPointsSource,
+      staffMovementsSource,
+      actualDesksAndQueuesSource,
+      staffingGraphStage,
+      crunchFlow,
+      actualDesksAndQueuesStage,
+      crunchStateActor
+    ).run()(actorMaterializer)
   flightsSource(mockProd, airportConfig.portCode).runForeach(f => flightsInput.offer(f))(actorMaterializer)
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
-  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], staffMovementsInput))
-
   val actualDesksActor: ActorRef = system.actorOf(Props[DeskstatsActor])
+
+  if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
+    val threeMinutesInterval = 3 * 60 * 1000
+
+    Deskstats.startBlackjack(csvUrl, actualDesksAndQueuesInput, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
+  })
+
+  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], staffMovementsInput))
 
   def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
@@ -195,11 +205,9 @@ trait SystemActors {
   }
 }
 
-
 trait AirportConfiguration {
   def airportConfig: AirportConfig
 }
-
 
 trait AirportConfProvider extends AirportConfiguration {
   val portCode: String = ConfigFactory.load().getString("portcode").toUpperCase
@@ -262,13 +270,7 @@ class Application @Inject()(
 
   val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
-  if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
-    val threeMinutesInterval = 3 * 60 * 1000
 
-    import SDate.implicits._
-
-    Deskstats.startBlackjack(csvUrl, actualDesksActor, threeMinutesInterval milliseconds, previousDay(SDate.now()))
-  })
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
