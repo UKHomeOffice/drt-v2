@@ -104,14 +104,10 @@ trait SystemActors {
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
 
-  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
-
-  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
   val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
   val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
   val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](100, OverflowStrategy.backpressure)
+  val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
   val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
 
   val crunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
@@ -149,8 +145,8 @@ trait SystemActors {
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
   val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 
-  val (flightsInput, _, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput, _, _, _, _) =
-    RunnableCrunchGraph[SourceQueueWithComplete[Flights], NotUsed, SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats]](
+  val (flightsInput, manifestsInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput, _, _, _, _) =
+    RunnableCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats]](
       flightsQueueSource,
       manifestsSource,
       shiftsSource,
@@ -172,6 +168,11 @@ trait SystemActors {
 
     Deskstats.startBlackjack(csvUrl, actualDesksAndQueuesInput, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
   })
+
+  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode, manifestsInput, voyageManifestsActor)
+  advPaxInfoProvider.start()
 
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], staffMovementsInput))
 
