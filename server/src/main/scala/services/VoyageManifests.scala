@@ -5,18 +5,20 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.ZipInputStream
 
 import akka.NotUsed
-import akka.actor.{ActorLogging, ActorSystem}
+import akka.actor.{ActorLogging, ActorRef, ActorSystem}
+import akka.pattern.AskableActorRef
 import akka.persistence._
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source, StreamConverters}
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete, StreamConverters}
 import akka.util.ByteString
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
+import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -25,7 +27,7 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.Success
 import scala.util.matching.Regex
-
+import scala.concurrent.duration._
 
 case class UpdateLatestZipFilename(filename: String)
 
@@ -62,7 +64,7 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
 
   override def receiveCommand: Receive = {
     case UpdateLatestZipFilename(updatedLZF) if updatedLZF != latestZipFilename =>
-      log.info(s"Received update: $updatedLZF")
+      log.info(s"Received update - latest zip file is: $updatedLZF")
       latestZipFilename = updatedLZF
 
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
@@ -81,12 +83,16 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
+    case other =>
+      log.info(s"Received unexpected message $other")
   }
 }
 
-case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portCode: String) {
+case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], fileNameActorStore: ActorRef) {
   implicit val actorSystem = ActorSystem("AdvPaxInfo")
   implicit val materializer = ActorMaterializer()
+
+  var manifestsState: Set[VoyageManifest] = Set()
 
   val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
@@ -102,6 +108,52 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
       }
       .mapConcat(jsons => jsons)
       .runWith(Sink.seq[(String, VoyageManifest)])
+  }
+
+  def start() = {
+    val askableFileNameActorStore: AskableActorRef = fileNameActorStore
+    askableFileNameActorStore.ask(GetLatestZipFilename)(new Timeout(5 seconds)).map {
+      case name: String => fetchAndPushManifests(name)
+    }
+  }
+
+  def fetchAndPushManifests(lzf: String): Unit = {
+    log.info(s"Fetching manifests from files newer than $lzf")
+    val mf = manifestsFuture(lzf)
+    var latestZipFilename = Option(lzf)
+    mf.onSuccess {
+      case ms =>
+        log.info(s"manifestsFuture Success")
+        val nextFetchMaxFilename = if (ms.nonEmpty) {
+          val maxFilename = ms.map(_._1).max
+          val vms = ms.map(_._2).toSet
+          val newManifests = vms -- manifestsState
+          if (newManifests.nonEmpty) {
+            manifestsState = manifestsState ++ newManifests
+            log.info(s"${newManifests.size} manifests offered")
+            manifestsSource.offer(VoyageManifests(newManifests))
+          } else {
+            log.info(s"No new manifests")
+          }
+          maxFilename
+        } else {
+          log.info(s"No manifests received")
+          lzf
+        }
+        log.info("Waiting 1 minute before polling for more manifests")
+        Thread.sleep(60000)
+        log.info(s"Set latestZipFilename to '$latestZipFilename'")
+        fileNameActorStore ! UpdateLatestZipFilename(nextFetchMaxFilename)
+
+        fetchAndPushManifests(nextFetchMaxFilename)
+    }
+    mf.onFailure {
+      case t =>
+        log.error(s"Failed to fetch manifests, trying again after 5 minutes: $t")
+        Thread.sleep(300000)
+        log.info(s"About to retry fetching new maniftests")
+        fetchAndPushManifests(lzf)
+    }
   }
 
   def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed]): Seq[(String, VoyageManifest)] = {

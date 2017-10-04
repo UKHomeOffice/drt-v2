@@ -43,14 +43,14 @@ object Deskstats {
     }
   }
 
-  def startBlackjack(csvUrl: String, actualDesksActor: SourceQueueWithComplete[ActualDeskStats], interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
+  def startBlackjack(csvUrl: String, actualDesksSource: SourceQueueWithComplete[ActualDeskStats], interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
     val initialDelay1Second = 1 * 1000
 
     actorSystem.scheduler.schedule(
       initialDelay1Second milliseconds,
       interval) {
       val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
-      actualDesksActor.offer(ActualDeskStats(actDesks))
+      actualDesksSource.offer(ActualDeskStats(actDesks))
     }
   }
 
