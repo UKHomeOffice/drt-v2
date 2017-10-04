@@ -15,8 +15,10 @@ import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import net.schmizz.sshj.sftp.SFTPClient
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
+import server.feeds.acl.AclFeed.sftpClient
 import services.SDate
 import services.graphstages.Crunch.midnightThisMorning
 import services.graphstages._
@@ -91,6 +93,13 @@ trait SystemActors {
   implicit val system: ActorSystem
 
   val config: Configuration
+
+
+  val ftpServer = ConfigFactory.load.getString("acl.host")
+  val username = ConfigFactory.load.getString("acl.username")
+  val path = ConfigFactory.load.getString("acl.keypath")
+
+  val sftp: SFTPClient = sftpClient(ftpServer, username, path)
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 

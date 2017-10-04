@@ -99,7 +99,9 @@ object Settings {
     "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
     "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.4.18.1" % "test",
 
-  "joda-time" % "joda-time" % "2.9.4") :::
+    "com.hierynomus" % "sshj" % "0.19.1",
+
+    "joda-time" % "joda-time" % "2.9.4") :::
     List("io.spray" %% "spray-client" % versions.sprayVersion,
       "io.spray" %% "spray-routing" % versions.sprayVersion,
       "io.spray" %% "spray-json" % "1.3.2",
