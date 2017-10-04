@@ -1,6 +1,5 @@
 package services.graphstages
 
-import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.ClosedShape
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
@@ -10,46 +9,52 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
 
 object RunnableCrunchGraph {
-
-  def apply[FS, M, SM, SMM, SAD](
-                flightsSource: Source[Flights, FS],
-                voyageManifestsSource: Source[VoyageManifests, M],
-                shiftsSource: Source[String, SM],
-                fixedPointsSource: Source[String, SM],
-                staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                staffingStage: StaffingStage,
-                cruncher: CrunchGraphStage,
-                actualDesks: ActualDesksAndWaitTimesGraphStage,
-                crunchStateActor: ActorRef): RunnableGraph[(FS, M, SM, SM, SMM, SAD, NotUsed, NotUsed, NotUsed, NotUsed)] = {
+  def apply[SA, SVM, SS, SFP, SMM, SAD](
+                                  baseArrivalsSource: Source[Flights, SA],
+                                  liveArrivalsSource: Source[Flights, SA],
+                                  voyageManifestsSource: Source[VoyageManifests, SVM],
+                                  shiftsSource: Source[String, SS],
+                                  fixedPointsSource: Source[String, SFP],
+                                  staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                  actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                                  staffingStage: StaffingStage,
+                                  arrivalsStage: ArrivalsGraphStage,
+                                  cruncher: CrunchGraphStage,
+                                  actualDesksStage: ActualDesksAndWaitTimesGraphStage,
+                                  crunchStateActor: ActorRef): RunnableGraph[(SA, SA, SVM, SS, SFP, SMM, SAD)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     RunnableGraph.fromGraph(GraphDSL.create(
-      flightsSource,
+      baseArrivalsSource,
+      liveArrivalsSource,
       voyageManifestsSource,
       shiftsSource,
       fixedPointsSource,
       staffMovementsSource,
-      actualDesksAndWaitTimesSource,
-      cruncher,
-      staffingStage,
-      actualDesks,
-      crunchSink)((_, _, _, _, _, _, _, _, _, _)) { implicit builder =>
-      (flights, manifests, shifts, fixedpoints, movements, actuals, crunch, staffing, actualDesks, crunchSink) =>
-        flights ~> crunch.in0
+      actualDesksAndWaitTimesSource)((_, _, _, _, _, _, _)) { implicit builder =>
+      (baseArrivals, liveArrivals, manifests, shifts, fixedPoints, movements, actuals) =>
+        val arrivals = builder.add(arrivalsStage)
+        val crunch = builder.add(cruncher)
+        val staffing = builder.add(staffingStage)
+        val addActuals = builder.add(actualDesksStage)
+
+        baseArrivals ~> arrivals.in0
+        liveArrivals ~> arrivals.in1
+
+        arrivals.out ~> crunch.in0
         manifests ~> crunch.in1
 
         crunch.out ~> staffing.in0
         shifts ~> staffing.in1
-        fixedpoints ~> staffing.in2
+        fixedPoints ~> staffing.in2
         movements ~> staffing.in3
 
-        staffing.out ~> actualDesks.in0
-        actuals ~> actualDesks.in1
+        staffing.out ~> addActuals.in0
+        actuals ~> addActuals.in1
 
-        actualDesks.out ~> crunchSink
+        addActuals.out ~> crunchSink
 
         ClosedShape
     })

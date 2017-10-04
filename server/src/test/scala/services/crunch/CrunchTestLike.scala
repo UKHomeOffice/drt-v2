@@ -93,7 +93,7 @@ class CrunchTestLike
 
     def actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
 
-    val (fs, ms, _, _, _, ds, _, _, _, _) = RunnableCrunchGraph[FM, M, ActorRef, ActorRef, ActorRef](
+    val (fs, ms, _, _, _, ds) = RunnableCrunchGraph[FM, M, ActorRef, ActorRef, ActorRef](
       flightsSource,
       manifestsSource,
       Source.actorRef(1, OverflowStrategy.dropHead),

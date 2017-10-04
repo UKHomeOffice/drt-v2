@@ -120,9 +120,26 @@ case class Arrival(
                     LastKnownPax: Option[Int] = None) {
   lazy val ICAO = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA = Arrival.standardiseFlightCode(rawIATA)
+
+  lazy val flightNumber = {
+    val bestCode = (IATA, ICAO) match {
+      case (iata, _) if iata != "" => iata
+      case (_, icao) if icao != "" => icao
+      case _ => ""
+    }
+
+    bestCode match {
+      case Arrival.flightCodeRegex(_, fn, _) => fn.toInt
+      case _ => 0
+    }
+  }
+
+  lazy val uniqueId = s"$Terminal$Scheduled$flightNumber}"
 }
 
 object Arrival {
+  val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+
   def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
 
   def standardiseFlightCode(flightCode: String): String = {
@@ -130,55 +147,56 @@ object Arrival {
 
     flightCode match {
       case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"$operator${flightNumber.toInt}%04d$suffix"
+        val number = f"${flightNumber.toInt}%04d"
+        f"$operator$number$suffix"
       case _ => flightCode
     }
   }
 }
 
 //This is used for handling historic snapshots, do not change or remove.
-@SerialVersionUID(2414259893568926057L)
-case class ApiFlight(
-                      Operator: String,
-                      Status: String,
-                      EstDT: String,
-                      ActDT: String,
-                      EstChoxDT: String,
-                      ActChoxDT: String,
-                      Gate: String,
-                      Stand: String,
-                      MaxPax: Int,
-                      ActPax: Int,
-                      TranPax: Int,
-                      RunwayID: String,
-                      BaggageReclaimId: String,
-                      FlightID: Int,
-                      AirportID: String,
-                      Terminal: String,
-                      rawICAO: String,
-                      rawIATA: String,
-                      Origin: String,
-                      SchDT: String,
-                      PcpTime: Long) {
-
-  lazy val ICAO: String = ApiFlight.standardiseFlightCode(rawICAO)
-  lazy val IATA: String = ApiFlight.standardiseFlightCode(rawIATA)
-
-
-}
-
-object ApiFlight {
-
-  def standardiseFlightCode(flightCode: String): String = {
-    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
-
-    flightCode match {
-      case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"$operator${flightNumber.toInt}%04d$suffix"
-      case _ => flightCode
-    }
-  }
-}
+//@SerialVersionUID(2414259893568926057L)
+//case class ApiFlight(
+//                      Operator: String,
+//                      Status: String,
+//                      EstDT: String,
+//                      ActDT: String,
+//                      EstChoxDT: String,
+//                      ActChoxDT: String,
+//                      Gate: String,
+//                      Stand: String,
+//                      MaxPax: Int,
+//                      ActPax: Int,
+//                      TranPax: Int,
+//                      RunwayID: String,
+//                      BaggageReclaimId: String,
+//                      FlightID: Int,
+//                      AirportID: String,
+//                      Terminal: String,
+//                      rawICAO: String,
+//                      rawIATA: String,
+//                      Origin: String,
+//                      SchDT: String,
+//                      PcpTime: Long) {
+//
+//  lazy val ICAO: String = ApiFlight.standardiseFlightCode(rawICAO)
+//  lazy val IATA: String = ApiFlight.standardiseFlightCode(rawIATA)
+//
+//
+//}
+//
+//object ApiFlight {
+//
+//  def standardiseFlightCode(flightCode: String): String = {
+//    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+//
+//    flightCode match {
+//      case flightCodeRegex(operator, flightNumber, suffix) =>
+//        f"$operator${flightNumber.toInt}%04d$suffix"
+//      case _ => flightCode
+//    }
+//  }
+//}
 
 
 trait SDateLike {

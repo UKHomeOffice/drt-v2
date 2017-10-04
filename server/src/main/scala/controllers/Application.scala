@@ -113,10 +113,14 @@ trait SystemActors {
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
 
+  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode)
+
+  val manifestsSource: Source[VoyageManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(advPaxInfoProvider, voyageManifestsActor))
   val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
   val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
   val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](100, OverflowStrategy.backpressure)
-  val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
   val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
 
   val crunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
@@ -152,22 +156,32 @@ trait SystemActors {
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
-  val flightsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+  val arrivalsStage = new ArrivalsGraphStage()
+  val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+  val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 
-  val (flightsInput, manifestsInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput, _, _, _, _) =
-    RunnableCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats]](
-      flightsQueueSource,
-      manifestsSource,
-      shiftsSource,
-      fixedPointsSource,
-      staffMovementsSource,
-      actualDesksAndQueuesSource,
-      staffingGraphStage,
-      crunchFlow,
-      actualDesksAndQueuesStage,
-      crunchStateActor
-    ).run()(actorMaterializer)
-  flightsSource(mockProd, airportConfig.portCode).runForeach(f => flightsInput.offer(f))(actorMaterializer)
+  val (baseArrivalsInput, liveArrivalsInput, manifestsInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) =
+    RunnableCrunchGraph[
+      SourceQueueWithComplete[Flights],
+      SourceQueueWithComplete[Flights],
+      NotUsed,
+      SourceQueueWithComplete[String],
+      SourceQueueWithComplete[Seq[StaffMovement]],
+      SourceQueueWithComplete[ActualDeskStats]](
+    baseArrivalsQueueSource,
+    liveArrivalsQueueSource,
+    manifestsSource,
+    shiftsSource,
+    fixedPointsSource,
+    staffMovementsSource,
+    actualDesksAndQueuesSource,
+    staffingGraphStage,
+    arrivalsStage,
+    crunchFlow,
+    actualDesksAndQueuesStage,
+    crunchStateActor
+  ).run()(actorMaterializer)
+  flightsSource(mockProd, airportConfig.portCode).runForeach(f => liveArrivalsInput.offer(f))(actorMaterializer)
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))

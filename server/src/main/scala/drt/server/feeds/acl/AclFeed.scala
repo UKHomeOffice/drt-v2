@@ -8,7 +8,6 @@ import drt.shared.Arrival
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.xfer.InMemoryDestFile
-import passengersplits.core.ZipUtils.UnzippedFileContent
 import services.SDate
 
 import scala.collection.JavaConverters._
@@ -17,7 +16,6 @@ import scala.util.{Success, Try}
 
 
 object AclFeed {
-
   def sftpClient(ftpServer: String, username: String, path: String): SFTPClient = {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
@@ -72,11 +70,11 @@ object AclFeed {
 
     val zis: ZipInputStream = new ZipInputStream(new ByteArrayInputStream(outputStream.toByteArray))
 
-    val csvContent: String = unzipStream(zis).map(_.content).toList.head
+    val csvContent: String = unzipStream(zis).toList.head
     csvContent
   }
 
-  def unzipStream(zipInputStream: ZipInputStream): Seq[UnzippedFileContent] = {
+  def unzipStream(zipInputStream: ZipInputStream): Seq[String] = {
     try {
       unzipAllFilesInStream(zipInputStream).toList
     } finally {
@@ -84,18 +82,18 @@ object AclFeed {
     }
   }
 
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream): Stream[UnzippedFileContent] = {
+  def unzipAllFilesInStream(unzippedStream: ZipInputStream): Stream[String] = {
     unzipAllFilesInStream(unzippedStream, Option(unzippedStream.getNextEntry))
   }
 
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[UnzippedFileContent] = {
+  def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[String] = {
     zipEntryOption match {
       case None => Stream.empty
       case Some(zipEntry) =>
         val name: String = zipEntry.getName
         val entry: String = getZipEntry(unzippedStream)
         val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
-        UnzippedFileContent(name, entry) #::
+        entry #::
           unzipAllFilesInStream(unzippedStream, maybeEntry1)
     }
   }
