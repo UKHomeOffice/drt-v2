@@ -18,7 +18,7 @@ import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import net.schmizz.sshj.sftp.SFTPClient
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
-import server.feeds.acl.AclFeed.sftpClient
+import server.feeds.acl.AclFeed._
 import services.SDate
 import services.graphstages.Crunch.midnightThisMorning
 import services.graphstages._
@@ -35,6 +35,7 @@ import drt.shared.{AirportConfig, Api, Arrival, _}
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
+import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
@@ -100,6 +101,7 @@ trait SystemActors {
   val path = ConfigFactory.load.getString("acl.keypath")
 
   val sftp: SFTPClient = sftpClient(ftpServer, username, path)
+  val aclArrivals = arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, airportConfig.portCode)))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -163,25 +165,28 @@ trait SystemActors {
   val (baseArrivalsInput, liveArrivalsInput, manifestsInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) =
     RunnableCrunchGraph[
       SourceQueueWithComplete[Flights],
-      SourceQueueWithComplete[Flights],
-      NotUsed,
+      SourceQueueWithComplete[VoyageManifests],
+      SourceQueueWithComplete[String],
       SourceQueueWithComplete[String],
       SourceQueueWithComplete[Seq[StaffMovement]],
-      SourceQueueWithComplete[ActualDeskStats]](
-    baseArrivalsQueueSource,
-    liveArrivalsQueueSource,
-    manifestsSource,
-    shiftsSource,
-    fixedPointsSource,
-    staffMovementsSource,
-    actualDesksAndQueuesSource,
-    staffingGraphStage,
-    arrivalsStage,
-    crunchFlow,
-    actualDesksAndQueuesStage,
-    crunchStateActor
-  ).run()(actorMaterializer)
+      SourceQueueWithComplete[ActualDeskStats]
+      ](
+      baseArrivalsSource = baseArrivalsQueueSource,
+      liveArrivalsSource = liveArrivalsQueueSource,
+      voyageManifestsSource = manifestsSource,
+      shiftsSource = shiftsSource,
+      fixedPointsSource = fixedPointsSource,
+      staffMovementsSource = staffMovementsSource,
+      actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
+      staffingStage = staffingGraphStage,
+      arrivalsStage = arrivalsStage,
+      cruncher = crunchFlow,
+      actualDesksStage = actualDesksAndQueuesStage,
+      crunchStateActor = crunchStateActor
+    ).run()(actorMaterializer)
+
   flightsSource(mockProd, airportConfig.portCode).runForeach(f => liveArrivalsInput.offer(f))(actorMaterializer)
+  baseArrivalsInput.offer(Flights(aclArrivals))
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))

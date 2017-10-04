@@ -30,6 +30,7 @@ class ArrivalsGraphStage()
         log.info(s"inBase onPush() grabbing base flights")
         val incomingBase = grab(inBase).flights.toSet
         toPush = mergeArrivals(incomingBase, liveArrivals)
+        pushIfAvailable(toPush, outMerged)
       }
     })
 
@@ -38,12 +39,22 @@ class ArrivalsGraphStage()
         log.info(s"inLive onPush() grabbing live flights")
         val incomingLive = grab(inLive).flights.toSet
         toPush = mergeArrivals(baseArrivals, incomingLive)
+        pushIfAvailable(toPush, outMerged)
       }
     })
 
     setHandler(outMerged, new OutHandler {
       override def onPull(): Unit = {
-        toPush match {
+        pushIfAvailable(toPush, outMerged)
+
+        if (!hasBeenPulled(inLive)) pull(inLive)
+        if (!hasBeenPulled(inBase)) pull(inBase)
+      }
+    })
+
+    def pushIfAvailable(arrivalsToPush: Option[Flights], outlet: Outlet[Flights]) = {
+      if (isAvailable(outlet)) {
+        arrivalsToPush match {
           case None =>
             log.info(s"No updated arrivals to push")
           case Some(flights) =>
@@ -51,11 +62,8 @@ class ArrivalsGraphStage()
             push(outMerged, flights)
             toPush = None
         }
-
-        if (!hasBeenPulled(inLive)) pull(inLive)
-        if (!hasBeenPulled(inBase)) pull(inBase)
-      }
-    })
+      } else log.info(s"outMerged not available to push")
+    }
 
     def mergeArrivals(base: Set[Arrival], live: Set[Arrival]): Option[Flights] = {
       val baseById = base.map(a => (a.uniqueId, a)).toMap
