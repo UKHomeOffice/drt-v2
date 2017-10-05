@@ -43,7 +43,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
@@ -79,7 +79,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
+        runCrunchGraph[NotUsed](
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch
         ) _
@@ -110,7 +110,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
+        runCrunchGraph[NotUsed](
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
           procTimes = procTimes,
@@ -152,7 +152,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val testProbe = TestProbe()
         val runnableGraphDispatcher =
-          runCrunchGraph[NotUsed, NotUsed](
+          runCrunchGraph[NotUsed](
             procTimes = procTimes,
             testProbe = testProbe,
             crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch,
@@ -189,7 +189,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val testProbe = TestProbe()
         val runnableGraphDispatcher =
-          runCrunchGraph[ActorRef, ActorRef](
+          runCrunchGraph[ActorRef](
             procTimes = procTimes,
             testProbe = testProbe,
             crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch,

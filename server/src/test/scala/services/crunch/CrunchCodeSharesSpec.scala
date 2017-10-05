@@ -31,7 +31,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
+        runCrunchGraph[NotUsed](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         ) _
@@ -63,7 +63,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
+        runCrunchGraph[NotUsed](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         ) _
@@ -102,7 +102,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
+        runCrunchGraph[NotUsed](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
           minutesToCrunch = 120

@@ -161,7 +161,8 @@ object TerminalContentComponent {
 
               <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
-                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalName)
+                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalName).take(5000)
+
                 val flightsInRange = filterFlightsByRange(props.dayToDisplay, props.timeRangeHours, terminalFlights.toList)
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, bestPax, queueOrder))

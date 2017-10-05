@@ -28,8 +28,8 @@ class ArrivalsGraphStage()
     setHandler(inBase, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inBase onPush() grabbing base flights")
-        val incomingBase = grab(inBase).flights.toSet
-        toPush = mergeArrivals(incomingBase, liveArrivals)
+        baseArrivals = grab(inBase).flights.toSet
+        toPush = mergeArrivals(baseArrivals, liveArrivals)
         pushIfAvailable(toPush, outMerged)
       }
     })
@@ -37,8 +37,8 @@ class ArrivalsGraphStage()
     setHandler(inLive, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inLive onPush() grabbing live flights")
-        val incomingLive = grab(inLive).flights.toSet
-        toPush = mergeArrivals(baseArrivals, incomingLive)
+        liveArrivals = grab(inLive).flights.toSet
+        toPush = mergeArrivals(baseArrivals, liveArrivals)
         pushIfAvailable(toPush, outMerged)
       }
     })
@@ -66,11 +66,15 @@ class ArrivalsGraphStage()
     }
 
     def mergeArrivals(base: Set[Arrival], live: Set[Arrival]): Option[Flights] = {
-      val baseById = base.map(a => (a.uniqueId, a)).toMap
+      val baseById: Map[String, Arrival] = base.map(a => (a.uniqueId, a)).toMap
       val updatedMerged = live.foldLeft(baseById) {
         case (mergedSoFar, liveArrival) =>
           val baseArrival = mergedSoFar.getOrElse(liveArrival.uniqueId, liveArrival)
-          val mergedArrival = liveArrival.copy(rawIATA = baseArrival.rawIATA, rawICAO = baseArrival.rawICAO)
+          val mergedArrival = liveArrival.copy(
+            rawIATA = baseArrival.rawIATA,
+            rawICAO = baseArrival.rawICAO,
+            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else baseArrival.ActPax
+          )
           mergedSoFar.updated(liveArrival.uniqueId, mergedArrival)
       }
       updatedMerged.values.toSet -- merged.values.toSet match {

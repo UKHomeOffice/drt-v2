@@ -42,7 +42,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
+        runCrunchGraph[NotUsed](
           procTimes = procTimes,
           slaByQueue = slaByQueue,
           minMaxDesks = minMaxDesks,

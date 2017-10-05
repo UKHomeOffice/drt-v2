@@ -17,7 +17,7 @@ import passengersplits.AkkaPersistTestConfig
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch._
-import services.graphstages.{ActualDesksAndWaitTimesGraphStage, CrunchGraphStage, RunnableCrunchGraph, StaffingStage}
+import services.graphstages._
 
 import scala.collection.immutable.{List, Seq, Set}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -57,7 +57,7 @@ class CrunchTestLike
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
 
-  def runCrunchGraph[FM, M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
+  def runCrunchGraph[M](procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                             slaByQueue: Map[QueueName, Int] = slaByQueue,
                             minMaxDesks: Map[QueueName, Map[QueueName, (List[Int], List[Int])]] = minMaxDesks,
                             queues: Map[TerminalName, Seq[QueueName]] = queues,
@@ -68,7 +68,7 @@ class CrunchTestLike
                             pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                             crunchStartDateProvider: () => MillisSinceEpoch,
                             minutesToCrunch: Int = 30)
-                           (flightsSource: Source[Flights, FM], manifestsSource: Source[VoyageManifests, M]): (FM, M, AskableActorRef, ActorRef) = {
+                           (flightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, AskableActorRef, ActorRef) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -90,20 +90,22 @@ class CrunchTestLike
     )
 
     def staffingStage = new StaffingStage(None, minMaxDesks, slaByQueue)
-
+    def arrivalsStage = new ArrivalsGraphStage()
     def actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
 
-    val (fs, ms, _, _, _, ds) = RunnableCrunchGraph[FM, M, ActorRef, ActorRef, ActorRef](
-      flightsSource,
-      manifestsSource,
-      Source.actorRef(1, OverflowStrategy.dropHead),
-      Source.actorRef(1, OverflowStrategy.dropHead),
-      Source.actorRef(1, OverflowStrategy.dropHead),
-      Source.actorRef(1, OverflowStrategy.dropHead),
-      staffingStage,
-      crunchFlow,
-      actualDesksAndQueuesStage,
-      crunchStateActor
+    val (fs, ms, _, _, _, _, ds) = RunnableCrunchGraph[M, M, ActorRef, ActorRef, ActorRef, ActorRef](
+      baseArrivalsSource = flightsSource,
+      liveArrivalsSource = flightsSource,
+      voyageManifestsSource = manifestsSource,
+      shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead),
+      fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead),
+      staffMovementsSource = Source.actorRef(1, OverflowStrategy.dropHead),
+      actualDesksAndWaitTimesSource = Source.actorRef(1, OverflowStrategy.dropHead),
+      staffingStage = staffingStage,
+      arrivalsStage = arrivalsStage,
+      cruncher = crunchFlow,
+      actualDesksStage = actualDesksAndQueuesStage,
+      crunchStateActor = crunchStateActor
     ).run()(actorMaterializer)
 
     val askableCrunchStateActor: AskableActorRef = crunchStateActor

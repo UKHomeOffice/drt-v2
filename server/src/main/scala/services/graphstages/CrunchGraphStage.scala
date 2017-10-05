@@ -81,11 +81,11 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         val incomingFlights = grab(inArrivals)
 
         log.info(s"Grabbed ${incomingFlights.flights.length} flights")
-        val updatedFromFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
+        val updatedFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
 
-        val updatedFlights = if (isAvailable(inManifests)) {
-          updateFlightsWithManifests(grab(inManifests).manifests, updatedFromFlights)
-        } else updatedFromFlights
+//        val updatedFlights = if (isAvailable(inManifests)) {
+//          updateFlightsWithManifests(grab(inManifests).manifests, updatedFromFlights)
+//        } else updatedFromFlights
 
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights
@@ -106,11 +106,11 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         val vms = grab(inManifests)
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
-        val updatedFromSplits = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
+        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
-        val updatedFlights = if (isAvailable(inArrivals)) {
-          updateFlightsFromIncoming(grab(inArrivals), updatedFromSplits)
-        } else updatedFromSplits
+//        val updatedFlights = if (isAvailable(inArrivals)) {
+//          updateFlightsFromIncoming(grab(inArrivals), updatedFromSplits)
+//        } else updatedFromSplits
 
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights
@@ -229,8 +229,6 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
       val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
-
-      flightsByFlightId = newFlightsById
 
       Option(newCrunchState)
     }

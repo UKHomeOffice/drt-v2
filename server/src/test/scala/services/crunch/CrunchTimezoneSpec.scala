@@ -56,7 +56,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         val testProbe = TestProbe()
         val runnableGraphDispatcher =
-          runCrunchGraph[NotUsed, NotUsed](
+          runCrunchGraph[NotUsed](
             procTimes = procTimes,
             testProbe = testProbe,
             crunchStartDateProvider = () => SDate("2017-05-31T23:00Z").millisSinceEpoch,
