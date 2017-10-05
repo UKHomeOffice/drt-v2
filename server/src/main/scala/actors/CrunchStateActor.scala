@@ -3,7 +3,7 @@ package actors
 import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
-import drt.shared.Crunch.{CrunchMinute, CrunchState, CrunchUpdates}
+import drt.shared.Crunch.{CrunchMinute, CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -60,11 +60,14 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
     case GetState =>
       sender() ! state
 
-    case GetUpdatesSince(millis) =>
+    case GetCrunchState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
+      sender() ! stateForPeriod(start, end)
+
+    case GetUpdatesSince(millis, start, end) =>
       val updates = state match {
         case Some(cs) =>
-          val updatedFlights = cs.flights.filter(f => f.lastUpdated.getOrElse(1L) > millis)
-          val updatedMinutes = cs.crunchMinutes.filter(cm => cm.lastUpdated.getOrElse(1L) > millis)
+          val updatedFlights = cs.flights.filter(f => f.lastUpdated.getOrElse(1L) > millis && start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end)
+          val updatedMinutes = cs.crunchMinutes.filter(cm => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end)
           if (updatedFlights.nonEmpty || updatedMinutes.nonEmpty) {
             val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
             val minutesLatest = if (updatedMinutes.nonEmpty) updatedMinutes.map(_.lastUpdated.getOrElse(1L)).max else 0L
@@ -84,6 +87,15 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
 
     case u =>
       log.warning(s"Received unexpected message $u")
+  }
+
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch) = {
+    state.map {
+      case CrunchState(0L, 0, flights, minutes) => CrunchState(0L, 0,
+        flights.filter(f => start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end),
+        minutes.filter(m => start <= m.minute && m.minute < end)
+      )
+    }
   }
 
   def setStateFromSnapshot(snapshot: Any): Unit = {

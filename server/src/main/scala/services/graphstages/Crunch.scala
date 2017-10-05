@@ -39,7 +39,7 @@ object Crunch {
     vn
   }
 
-  def midnightThisMorning(): MillisSinceEpoch = {
+  def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
     crunchStartDate

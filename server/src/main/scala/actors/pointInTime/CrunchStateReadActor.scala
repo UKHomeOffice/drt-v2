@@ -1,7 +1,8 @@
 package actors.pointInTime
 
-import actors.{CrunchStateActor, GetState}
+import actors.{CrunchStateActor, GetCrunchState, GetState}
 import akka.persistence.{RecoveryCompleted, _}
+import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
@@ -39,6 +40,9 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
 
     case GetState =>
       sender() ! state
+
+    case GetCrunchState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
+      sender() ! stateForPeriod(start, end)
 
     case u =>
       log.warning(s"Received unexpected message $u")

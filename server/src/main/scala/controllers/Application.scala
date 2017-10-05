@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.NotUsed
 import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
@@ -14,40 +13,35 @@ import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
-import net.schmizz.sshj.sftp.SFTPClient
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import play.api.http.HttpEntity
-import server.feeds.acl.AclFeed._
-import services.SDate
-import services.graphstages.Crunch.midnightThisMorning
-import services.graphstages._
-
-import scala.collection.immutable.Map
-import scala.concurrent.Await
-import scala.util.{Failure, Success}
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
+import net.schmizz.sshj.sftp.SFTPClient
 import org.joda.time.chrono.ISOChronology
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import server.feeds.acl.AclFeed
+import server.feeds.acl.AclFeed._
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services._
+import services.{SDate, _}
+import services.graphstages.Crunch.{midnightThisMorning, oneHourMillis, getLocalLastMidnight}
+import services.graphstages._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
 
@@ -149,7 +143,7 @@ trait SystemActors {
     airportConfig.defaultPaxSplits,
     historicalSplitsProvider,
     pcpArrivalTimeCalculator,
-    midnightThisMorning,
+    midnightThisMorning _,
     1440
   )
 
@@ -307,7 +301,9 @@ class Application @Inject()(
       if (pointIntTime > 0) {
         crunchStateAtPointInTime(pointIntTime)
       } else {
-        val crunchStateFuture = crunchStateActor.ask(GetState)(new Timeout(5 seconds))
+        val startMillis = midnightThisMorning - oneHourMillis * 3
+        val endMillis = midnightThisMorning + oneHourMillis * 30
+        val crunchStateFuture = crunchStateActor.ask(GetCrunchState(startMillis, endMillis))(new Timeout(5 seconds))
 
         crunchStateFuture.map {
           case Some(cs: CrunchState) => Option(cs)
@@ -321,7 +317,9 @@ class Application @Inject()(
     }
 
     def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-      val crunchStateFuture = crunchStateActor.ask(GetUpdatesSince(sinceMillis))(new Timeout(5 seconds))
+      val startMillis = midnightThisMorning - oneHourMillis * 3
+      val endMillis = midnightThisMorning + oneHourMillis * 30
+      val crunchStateFuture = crunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(5 seconds))
 
       crunchStateFuture.map {
         case Some(cu: CrunchUpdates) => Option(cu)
@@ -343,7 +341,10 @@ class Application @Inject()(
   }
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetState)
+    val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
+    val startMillis = relativeLastMidnight - oneHourMillis * 3
+    val endMillis = relativeLastMidnight + oneHourMillis * 30
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetCrunchState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
       case Some(cs: CrunchState) => Option(cs)

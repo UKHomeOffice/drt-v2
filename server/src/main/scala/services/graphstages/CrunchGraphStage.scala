@@ -29,7 +29,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                        portSplits: SplitRatios,
                        csvSplitsProvider: SplitsProvider,
                        pcpArrivalTime: (Arrival) => MilliDate,
-                       crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning,
+                       crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
                        minutesToCrunch: Int
                       )
   extends GraphStage[FanInShape2[Flights, VoyageManifests, CrunchState]] {

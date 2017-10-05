@@ -37,7 +37,9 @@ class ArrivalsGraphStage()
     setHandler(inLive, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inLive onPush() grabbing live flights")
-        liveArrivals = grab(inLive).flights.toSet
+        liveArrivals = grab(inLive).flights.foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
+          case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
+        }.values.toSet
         toPush = mergeArrivals(baseArrivals, liveArrivals)
         pushIfAvailable(toPush, outMerged)
       }
