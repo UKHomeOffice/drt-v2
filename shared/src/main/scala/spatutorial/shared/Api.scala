@@ -134,7 +134,7 @@ case class Arrival(
     }
   }
 
-  lazy val uniqueId = s"$Terminal$Scheduled$flightNumber}"
+  lazy val uniqueId = s"$Terminal$Scheduled$flightNumber}".hashCode
 }
 
 object Arrival {

@@ -172,7 +172,7 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
     val relevantFlights = existingState.flights.filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime)
     val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
       case (soFar, newFlight) =>
-        val withoutOldFlight = soFar.filterNot(_.apiFlight.FlightID == newFlight.apiFlight.FlightID)
+        val withoutOldFlight = soFar.filterNot(_.apiFlight.uniqueId == newFlight.apiFlight.uniqueId)
         withoutOldFlight + newFlight
     }
     flights

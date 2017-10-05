@@ -66,7 +66,7 @@ class ArrivalsGraphStage()
     }
 
     def mergeArrivals(base: Set[Arrival], live: Set[Arrival]): Option[Flights] = {
-      val baseById: Map[String, Arrival] = base.map(a => (a.uniqueId, a)).toMap
+      val baseById: Map[Int, Arrival] = base.map(a => (a.uniqueId, a)).toMap
       val updatedMerged = live.foldLeft(baseById) {
         case (mergedSoFar, liveArrival) =>
           val baseArrival = baseById.getOrElse(liveArrival.uniqueId, liveArrival)

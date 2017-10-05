@@ -144,7 +144,7 @@ object Crunch {
 
   def flightsToFlightSplitMinutes(procTimes: Map[PaxTypeAndQueue, Double])(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
     flightsWithSplits.map {
-      case ApiFlightWithSplits(flight, splits, _) => (flight.FlightID, flightToFlightSplitMinutes(flight, splits, procTimes))
+      case ApiFlightWithSplits(flight, splits, _) => (flight.uniqueId, flightToFlightSplitMinutes(flight, splits, procTimes))
     }.toMap
   }
 
@@ -228,7 +228,7 @@ object Crunch {
                         splitStyle: SplitStyle): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
     val splitWorkLoadInMinute = splitPaxInMinute * procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
-    FlightSplitMinute(flight.FlightID, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
+    FlightSplitMinute(flight.uniqueId, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
   }
 
   def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[QueueLoadMinute] = {
@@ -249,8 +249,8 @@ object Crunch {
   }
 
   def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
-    val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
-    val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+    val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
+    val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
     val oldIds = oldFlightsById.keys.toSet
     val newIds = newFlightsById.keys.toSet
     val toRemove = (oldIds -- newIds).map(RemoveFlight)
@@ -294,10 +294,10 @@ object Crunch {
   def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
     val nowMillis = SDate.now().millisSinceEpoch
     val withoutRemovals = flights.filterNot {
-      case cm => diff.flightRemovals.contains(RemoveFlight(cm.apiFlight.FlightID))
+      case cm => diff.flightRemovals.contains(RemoveFlight(cm.apiFlight.uniqueId))
     }
-    val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
-      case (soFar, flight) => soFar.updated(flight.apiFlight.FlightID, flight.copy(lastUpdated = Option(nowMillis)))
+    val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap) {
+      case (soFar, flight) => soFar.updated(flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis)))
     }
     withoutRemovalsWithUpdates.values.toSet
   }

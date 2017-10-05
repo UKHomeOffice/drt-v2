@@ -52,7 +52,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -126,17 +126,17 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val updatedFlights = incomingFlights.flights.foldLeft[Map[Int, ApiFlightWithSplits]](existingFlightsById) {
         case (flightsSoFar, updatedFlight) =>
           val updatedFlightWithPcp = updatedFlight.copy(PcpTime = pcpArrivalTime(updatedFlight).millisSinceEpoch)
-          flightsSoFar.get(updatedFlightWithPcp.FlightID) match {
+          flightsSoFar.get(updatedFlightWithPcp.uniqueId) match {
             case None =>
               log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
               val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths, Option(SDate.now().millisSinceEpoch))
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
-              flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
+              flightsSoFar.updated(updatedFlightWithPcp.uniqueId, newFlightWithAvailableSplits)
 
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
               log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
-              flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
+              flightsSoFar.updated(updatedFlightWithPcp.uniqueId, existingFlight.copy(apiFlight = updatedFlightWithPcp))
 
             case _ => flightsSoFar
           }
@@ -224,7 +224,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
       val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
       log.info(s"${uniqueFlights.length} unique flights after filtering for code shares, domestics and pcp time outside crunch window")
-      val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
+      val newFlightsById = uniqueFlights.map(f => (f.apiFlight.uniqueId, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val crunchStart = crunchRequest.crunchStart
       val numberOfMinutes = crunchRequest.numberOfMinutes
