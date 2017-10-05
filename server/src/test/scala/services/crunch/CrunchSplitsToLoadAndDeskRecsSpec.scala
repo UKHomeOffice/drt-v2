@@ -53,7 +53,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             SplitRatio(eeaMachineReadableToEGate, egSplit)
           )) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 2)
@@ -84,7 +84,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch
         ) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -122,7 +122,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             )
           )) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = workLoadsFromCrunchState(result, 5)
@@ -161,7 +161,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               SplitRatio(eeaMachineReadableToDesk, 0.25)
             ))) _
 
-        runnableGraphDispatcher(Source(flights), Source(List()))
+        runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
         val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
         val resultSummary = paxLoadsFromCrunchState(result, 5)
@@ -206,9 +206,11 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ))
 
 
+        val baseFlights = Source.actorRef(1, OverflowStrategy.dropBuffer)
         val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
         val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-        val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+
+        val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlights, flightsSource, manifestsSource)
 
         fs ! flights
         Thread.sleep(250L)

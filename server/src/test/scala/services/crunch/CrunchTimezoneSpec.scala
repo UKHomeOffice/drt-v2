@@ -64,7 +64,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             minutesToCrunch = 120
           ) _
 
-        runnableGraphDispatcher(Source(flights), Source(List()))
+        runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
         val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
         val resultSummary = deskRecsFromCrunchState(result, 120)

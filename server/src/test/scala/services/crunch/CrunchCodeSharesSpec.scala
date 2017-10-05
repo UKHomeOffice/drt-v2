@@ -36,7 +36,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         ) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 15)
 
@@ -68,7 +68,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         ) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)
@@ -108,7 +108,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           minutesToCrunch = 120
         ) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 30)

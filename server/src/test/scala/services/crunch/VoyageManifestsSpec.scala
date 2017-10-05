@@ -36,6 +36,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
     ))
 
+    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
@@ -50,7 +51,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
       ) _
 
-    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+    val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource,flightsSource, manifestsSource)
 
     ms ! inputManifests
     Thread.sleep(250L)
@@ -94,6 +95,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
     ))
 
+    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
@@ -109,7 +111,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
       ) _
 
-    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+    val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
 
     ms ! inputManifestsCi
     Thread.sleep(250L)

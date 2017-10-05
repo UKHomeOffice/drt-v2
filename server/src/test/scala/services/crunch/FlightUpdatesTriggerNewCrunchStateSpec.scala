@@ -32,6 +32,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     val updatedArrival = flight.copy(ActPax = 50)
     val inputFlightsAfter = Flights(List(updatedArrival))
 
+    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
@@ -46,7 +47,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
         crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
       ) _
 
-    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
+    val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
 
     fs ! inputFlightsBefore
 

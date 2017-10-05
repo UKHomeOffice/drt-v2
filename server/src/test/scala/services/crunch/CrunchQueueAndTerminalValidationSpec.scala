@@ -41,7 +41,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
             SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
           )) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = paxLoadsFromCrunchState(result, 1).flatMap(_._2.keys)
@@ -73,7 +73,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
       ) _
 
-    runnableGraphDispatcher(Source(flights), Source(List()))
+    runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
     val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
     val resultSummary = paxLoadsFromCrunchState(result, 30)

@@ -9,6 +9,7 @@ import server.feeds.acl.AclFeed._
 
 class AclSpec extends Specification {
   "Looking at flights" >> {
+    skipped("Integration test for ACL - requires SSL certificate to run")
     val ftpServer = ConfigFactory.load.getString("acl.host")
     val username = ConfigFactory.load.getString("acl.username")
     val path = ConfigFactory.load.getString("acl.keypath")

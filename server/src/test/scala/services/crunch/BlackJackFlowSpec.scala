@@ -29,6 +29,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val flights = Flights(List(flight))
 
+    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
@@ -43,7 +44,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
       ) _
 
-    val (fs, ms, _, ds) = runnableGraphDispatcher(flightsSource, manifestsSource)
+    val (_, fs, ms, _, ds) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
 
     fs ! flights
     testProbe.expectMsgAnyClassOf(classOf[CrunchState])

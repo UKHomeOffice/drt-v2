@@ -54,7 +54,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
             SplitRatio(eeaMachineReadableToEGate, 0.5)
           )) _
 
-      runnableGraphDispatcher(Source(flights), Source(List()))
+      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
       val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
       val resultSummary = deskRecsFromCrunchState(result, 15)

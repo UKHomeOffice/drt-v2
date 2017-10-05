@@ -69,7 +69,7 @@ class ArrivalsGraphStage()
       val baseById: Map[String, Arrival] = base.map(a => (a.uniqueId, a)).toMap
       val updatedMerged = live.foldLeft(baseById) {
         case (mergedSoFar, liveArrival) =>
-          val baseArrival = mergedSoFar.getOrElse(liveArrival.uniqueId, liveArrival)
+          val baseArrival = baseById.getOrElse(liveArrival.uniqueId, liveArrival)
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,

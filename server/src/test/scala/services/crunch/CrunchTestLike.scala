@@ -68,7 +68,7 @@ class CrunchTestLike
                             pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                             crunchStartDateProvider: () => MillisSinceEpoch,
                             minutesToCrunch: Int = 30)
-                           (flightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, AskableActorRef, ActorRef) = {
+                           (baseFlightsSource: Source[Flights, M], liveFlightsSource: Source[Flights, M], manifestsSource: Source[VoyageManifests, M]): (M, M, M, AskableActorRef, ActorRef) = {
     val crunchStateActor = system.actorOf(Props(classOf[CrunchStateTestActor], queues, testProbe.ref), name = "crunch-state-actor")
 
     val actorMaterializer = ActorMaterializer()
@@ -93,9 +93,9 @@ class CrunchTestLike
     def arrivalsStage = new ArrivalsGraphStage()
     def actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
 
-    val (fs, ms, _, _, _, _, ds) = RunnableCrunchGraph[M, M, ActorRef, ActorRef, ActorRef, ActorRef](
-      baseArrivalsSource = flightsSource,
-      liveArrivalsSource = flightsSource,
+    val (bfs, lfs, ms, _, _, _, ds) = RunnableCrunchGraph[M, M, ActorRef, ActorRef, ActorRef, ActorRef](
+      baseArrivalsSource = baseFlightsSource,
+      liveArrivalsSource = liveFlightsSource,
       voyageManifestsSource = manifestsSource,
       shiftsSource = Source.actorRef(1, OverflowStrategy.dropHead),
       fixedPointsSource = Source.actorRef(1, OverflowStrategy.dropHead),
@@ -110,7 +110,7 @@ class CrunchTestLike
 
     val askableCrunchStateActor: AskableActorRef = crunchStateActor
 
-    (fs, ms, askableCrunchStateActor, ds)
+    (bfs, lfs, ms, askableCrunchStateActor, ds)
   }
 
   def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {
