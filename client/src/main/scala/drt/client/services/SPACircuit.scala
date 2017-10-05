@@ -9,7 +9,7 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchMinutes, CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi.{TerminalName, _}
 import drt.shared._
 import boopickle.Default._
@@ -126,6 +126,9 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
       } else effects
 
       effectOnly(allEffects)
+
+    case SetCrunchPending() =>
+      updated((Pending(), 0L))
 
     case GetCrunchUpdatesAfter(delay) =>
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
@@ -330,12 +333,12 @@ class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends Logg
       log.info(s"Set client point in time: $pointInTime")
       val sdatePointInTime = SDate(MilliDate(pointInTime))
       val nextRequests = Effect(Future(GetCrunchState())) + Effect(Future(GetShifts())) +
-        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements()))
+        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements())) + Effect(Future(SetCrunchPending()))
       updated(Option(sdatePointInTime), nextRequests)
 
     case SetPointInTimeToLive() =>
       log.info(s"Set client point in time to live")
-      val nextRequest = Effect(Future(GetCrunchState()))
+      val nextRequest = Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
       updated(None, nextRequest)
   }
 }

@@ -4,7 +4,7 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, TimeRangeHours}
-import drt.shared.Crunch.{CrunchState, CrunchUpdates}
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared._
 
@@ -14,6 +14,8 @@ import scala.concurrent.duration.FiniteDuration
 object Actions {
 
   case class GetCrunchState() extends Action
+
+  case class SetCrunchPending() extends Action
 
   case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
 
