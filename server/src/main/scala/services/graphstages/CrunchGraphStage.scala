@@ -20,6 +20,8 @@ import services.{FastTrackPercentages, SDate}
 import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps
 
+case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
+
 class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                        slas: Map[QueueName, Int],
                        minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
@@ -32,12 +34,12 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                        crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
                        minutesToCrunch: Int
                       )
-  extends GraphStage[FanInShape2[Flights, VoyageManifests, CrunchState]] {
+  extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, CrunchState]] {
 
-  val inArrivals: Inlet[Flights] = Inlet[Flights]("Flights.in")
-  val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("Splits.in")
-  val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
-  override val shape = new FanInShape2(inArrivals, inManifests, outCrunch)
+  val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
+  val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("SplitsIn.in")
+  val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchStateOut.out")
+  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outCrunch)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
@@ -71,21 +73,17 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
             log.debug(s"No CrunchState to push")
         }
         if (!hasBeenPulled(inManifests)) pull(inManifests)
-        if (!hasBeenPulled(inArrivals)) pull(inArrivals)
+        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
       }
     })
 
-    setHandler(inArrivals, new InHandler {
+    setHandler(inArrivalsDiff, new InHandler {
       override def onPush(): Unit = {
         log.debug(s"inFlights onPush called")
-        val incomingFlights = grab(inArrivals)
+        val arrivalsDiff = grab(inArrivalsDiff)
 
-        log.info(s"Grabbed ${incomingFlights.flights.length} flights")
-        val updatedFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
-
-//        val updatedFlights = if (isAvailable(inManifests)) {
-//          updateFlightsWithManifests(grab(inManifests).manifests, updatedFromFlights)
-//        } else updatedFromFlights
+        log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
+        val updatedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights
@@ -96,7 +94,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           log.info(s"No flight updates")
         }
 
-        if (!hasBeenPulled(inArrivals)) pull(inArrivals)
+        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
       }
     })
 
@@ -108,10 +106,6 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
-//        val updatedFlights = if (isAvailable(inArrivals)) {
-//          updateFlightsFromIncoming(grab(inArrivals), updatedFromSplits)
-//        } else updatedFromSplits
-
         if (flightsByFlightId != updatedFlights) {
           flightsByFlightId = updatedFlights
           log.info(s"Requesting crunch for ${flightsByFlightId.size} flights after splits update")
@@ -122,8 +116,11 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
     })
 
-    def updateFlightsFromIncoming(incomingFlights: Flights, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-      val updatedFlights = incomingFlights.flights.foldLeft[Map[Int, ApiFlightWithSplits]](existingFlightsById) {
+    def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+      val afterRemovals = existingFlightsById.filterNot {
+        case (id, _) => arrivalsDiff.toRemove.contains(id)
+      }
+      val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
         case (flightsSoFar, updatedFlight) =>
           val updatedFlightWithPcp = updatedFlight.copy(PcpTime = pcpArrivalTime(updatedFlight).millisSinceEpoch)
           flightsSoFar.get(updatedFlightWithPcp.uniqueId) match {

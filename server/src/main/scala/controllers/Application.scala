@@ -103,12 +103,15 @@ trait SystemActors {
 
   val actorMaterializer = ActorMaterializer()
 
+  val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
+  val askableBaseArrivalsActor: AskableActorRef = baseArrivalsActor
+  val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
+  val askableLiveArrivalsActor: AskableActorRef = liveArrivalsActor
   val crunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-state-actor")
   val askableCrunchStateActor: AskableActorRef = crunchStateActor
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
-
 
   val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
   val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
@@ -128,6 +131,32 @@ trait SystemActors {
       log.warn(s"Failed to get an initial CrunchState: $t")
       None
   }
+
+  val baseArrivalsFuture: Future[Set[Arrival]] = askableBaseArrivalsActor.ask(GetState)(new Timeout(1 minute)).map {
+    case ArrivalsState(arrivals) => arrivals.values.toSet
+    case _ => Set[Arrival]()
+  }
+
+  baseArrivalsFuture.onComplete {
+    case Success(arrivals) => arrivals
+    case Failure(t) =>
+      log.warn(s"Failed to get an initial base ArrivalsState: $t")
+      Set[Arrival]()
+  }
+
+  val liveArrivalsFuture: Future[Set[Arrival]] = askableLiveArrivalsActor.ask(GetState)(new Timeout(1 minute)).map {
+    case ArrivalsState(arrivals) => arrivals.values.toSet
+    case _ => Set[Arrival]()
+  }
+
+  liveArrivalsFuture.onComplete {
+    case Success(arrivals) => arrivals
+    case Failure(t) =>
+      log.warn(s"Failed to get an initial live ArrivalsState: $t")
+      Set[Arrival]()
+  }
+  val initialBaseArrivals: Set[Arrival] = Await.result(baseArrivalsFuture, 1 minute)
+  val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
 
   log.info(s"Awaiting CrunchStateActor response")
   val optionalCrunchState: Option[CrunchState] = Await.result(crunchStateFuture, 1 minute)
@@ -149,7 +178,7 @@ trait SystemActors {
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
-  val arrivalsStage = new ArrivalsGraphStage()
+  val arrivalsStage = new ArrivalsGraphStage(initialBaseArrivals, initialLiveArrivals, baseArrivalsActor, liveArrivalsActor)
   val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
   val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 

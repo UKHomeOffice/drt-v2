@@ -31,7 +31,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed](
+        runCrunchGraph[NotUsed, NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
@@ -68,7 +68,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
     val testProbe = TestProbe()
     val runnableGraphDispatcher =
-      runCrunchGraph[NotUsed](procTimes = procTimes,
+      runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
         testProbe = testProbe,
         crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
       ) _
