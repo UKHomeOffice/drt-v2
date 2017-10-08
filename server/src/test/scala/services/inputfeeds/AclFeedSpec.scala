@@ -187,93 +187,46 @@ class AclFeedSpec extends CrunchTestLike {
       flightsResult === expected
     }
 
-//    "Given one ACL arrival followed by one live arrival and initial arrivals which don't match them " +
-//      "When I ask for a crunch " +
-//      "Then I should only see the ACL & live arrivals, not the initial arrivals" >> {
-//      val initialScheduledForecast = "2017-01-01T00:05Z"
-//      val initialScheduledLive = "2017-01-01T00:00Z"
-//
-//      val newScheduledForecast = "2017-01-01T00:15Z"
-//      val newScheduledLive = "2017-01-01T00:10Z"
-//
-//      val initialForecastArrival = ArrivalGenerator.apiFlight(flightId = 1, actPax = 150, schDt = initialScheduledForecast, iata = "BA0001", status = "forecast")
-//      val initialLiveArrival = ArrivalGenerator.apiFlight(flightId = 2, actPax = 99, schDt = initialScheduledLive, iata = "BA0002", status = "scheduled")
-//      val initialArrivals = FlightsWithSplits(List(ApiFlightWithSplits(initialForecastArrival, Set()), ApiFlightWithSplits(initialLiveArrival, Set())))
-//
-//      val newForecast = ArrivalGenerator.apiFlight(flightId = 1, actPax = 150, schDt = newScheduledForecast, iata = "BA0001", status = "forecast")
-//      val forecastFlights = Flights(List(newForecast))
-//
-//      val newLive = ArrivalGenerator.apiFlight(flightId = 2, actPax = 99, schDt = newScheduledLive, iata = "BA0002", status = "estimated")
-//      val liveFlights = Flights(List(newLive))
-//
-//      val testProbe = TestProbe()
-//
-//      val runnableGraphDispatcher =
-//        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](
-//          initialBaseArrivals = Option(initialArrivals),
-//          testProbe = testProbe,
-//          crunchStartDateProvider = () => getLocalLastMidnight(SDate(initialScheduledLive)).millisSinceEpoch
-//        ) _
-//      val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
-//      val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
-//      val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
-//      val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
-//
-//      bf.offer(forecastFlights)
-//      testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-//
-//      lf.offer(liveFlights)
-//      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-//
-//      val flightsResult = result.flights.map(_.apiFlight)
-//      val expected = Set(newForecast, newLive)
-//
-//      flightsResult === expected
-//    }
-//
-//    "Given one live arrival followed by one ACL arrival and initial arrivals which don't match them " +
-//      "When I ask for a crunch " +
-//      "Then I should only see the ACL & live arrivals, not the initial arrivals" >> {
-//      val initialScheduledForecast = "2017-01-01T00:05Z"
-//      val initialScheduledLive = "2017-01-01T00:00Z"
-//
-//      val newScheduledForecast = "2017-01-01T00:15Z"
-//      val newScheduledLive = "2017-01-01T00:10Z"
-//
-//      val initialForecastArrival = ArrivalGenerator.apiFlight(flightId = 1, actPax = 150, schDt = initialScheduledForecast, iata = "BA0001", status = "forecast")
-//      val initialLiveArrival = ArrivalGenerator.apiFlight(flightId = 2, actPax = 99, schDt = initialScheduledLive, iata = "BA0002", status = "scheduled")
-//      val initialArrivals = FlightsWithSplits(List(ApiFlightWithSplits(initialForecastArrival, Set()), ApiFlightWithSplits(initialLiveArrival, Set())))
-//
-//      val newForecast = ArrivalGenerator.apiFlight(flightId = 1, actPax = 150, schDt = newScheduledForecast, iata = "BA0001", status = "forecast")
-//      val forecastFlights = Flights(List(newForecast))
-//
-//      val newLive = ArrivalGenerator.apiFlight(flightId = 2, actPax = 99, schDt = newScheduledLive, iata = "BA0002", status = "estimated")
-//      val liveFlights = Flights(List(newLive))
-//
-//      val testProbe = TestProbe()
-//
-//      val runnableGraphDispatcher =
-//        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](
-//          initialBaseArrivals = Option(initialArrivals),
-//          testProbe = testProbe,
-//          crunchStartDateProvider = () => getLocalLastMidnight(SDate(initialScheduledLive)).millisSinceEpoch
-//        ) _
-//      val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
-//      val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
-//      val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
-//      val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
-//
-//      lf.offer(liveFlights)
-//      testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-//
-//      bf.offer(forecastFlights)
-//      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-//
-//      val flightsResult = result.flights.map(_.apiFlight)
-//      val expected = Set(newForecast, newLive)
-//
-//      flightsResult === expected
-//    }
+    "Given one ACL arrival followed by one live arrival and initial arrivals which don't match them " +
+      "When I ask for a crunch " +
+      "Then I should only see the new ACL & live arrivals plus the initial live arrival" >> {
+      val scheduledLive = "2017-01-01T00:00Z"
+
+      val initialAcl1 = ArrivalGenerator.apiFlight(actPax = 150, schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
+      val initialAcl2 = ArrivalGenerator.apiFlight(actPax = 151, schDt = "2017-01-01T00:15Z", iata = "BA0002", status = "forecast")
+      val initialAcl = Set(initialAcl1, initialAcl2)
+      val initialLive = Set(ArrivalGenerator.apiFlight(actPax = 99, schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "scheduled"))
+
+      val newAcl = Set(
+        ArrivalGenerator.apiFlight(actPax = 105, schDt = "2017-01-01T00:07Z", iata = "BA0001"))
+      val newLive = Set(
+        ArrivalGenerator.apiFlight(actPax = 105, schDt = "2017-01-01T00:06Z", iata = "BAW0001"))
+
+      val testProbe = TestProbe()
+
+      val runnableGraphDispatcher =
+        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](
+          initialBaseArrivals = initialAcl,
+          initialLiveArrivals = initialLive,
+          testProbe = testProbe,
+          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduledLive)).millisSinceEpoch
+        ) _
+      val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
+      val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
+      val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
+      val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
+
+      bf.offer(Flights(newAcl.toList))
+      testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
+
+      lf.offer(Flights(newLive.toList))
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
+
+      val flightsResult = result.flights.map(_.apiFlight)
+      val expected = newAcl ++ newLive ++ initialLive
+
+      flightsResult === expected
+    }
   }
 
   "Looking at flights" >> {
@@ -306,5 +259,4 @@ class AclFeedSpec extends CrunchTestLike {
 
     true
   }
-
 }
