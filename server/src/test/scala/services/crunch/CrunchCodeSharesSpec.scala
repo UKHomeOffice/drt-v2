@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.{CrunchState, PortState}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
@@ -37,8 +37,8 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         ) _
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-      val resultSummary = paxLoadsFromCrunchState(result, 15)
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val resultSummary = paxLoadsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
@@ -70,8 +70,8 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-      val resultSummary = paxLoadsFromCrunchState(result, 30)
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val resultSummary = paxLoadsFromPortState(result, 30)
 
       val expected = Map(
         "T1" -> Map(Queues.EeaDesk -> Seq(
@@ -110,8 +110,8 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-      val resultSummary = paxLoadsFromCrunchState(result, 30)
+      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val resultSummary = paxLoadsFromPortState(result, 30)
 
       val expected = Map(
         "T1" -> Map(Queues.EeaDesk -> Seq(

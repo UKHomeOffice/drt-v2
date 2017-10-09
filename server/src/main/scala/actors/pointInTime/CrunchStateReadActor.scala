@@ -1,8 +1,8 @@
 package actors.pointInTime
 
-import actors.{CrunchStateActor, GetCrunchState, GetState}
+import actors.{CrunchStateActor, GetPortState, GetState}
 import akka.persistence.{RecoveryCompleted, _}
-import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
@@ -36,12 +36,12 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
 
   override def receiveCommand: Receive = {
     case SaveSnapshotSuccess =>
-      log.info("Saved CrunchState Snapshot")
+      log.info("Saved PortState Snapshot")
 
     case GetState =>
       sender() ! state
 
-    case GetCrunchState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
+    case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
       sender() ! stateForPeriod(start, end)
 
     case u =>

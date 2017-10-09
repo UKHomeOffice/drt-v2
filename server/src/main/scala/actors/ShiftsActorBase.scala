@@ -18,7 +18,7 @@ case class ShiftsState(shifts: String) {
 
 case object GetState
 
-case class GetCrunchState(from: MillisSinceEpoch, to: MillisSinceEpoch)
+case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)
 

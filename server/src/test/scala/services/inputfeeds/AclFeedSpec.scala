@@ -6,8 +6,8 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.Crunch.PortState
+import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import net.schmizz.sshj.sftp.SFTPClient
@@ -74,8 +74,8 @@ class AclFeedSpec extends CrunchTestLike {
         ) _
 
       runnableGraphDispatcher(Source(aclFlight), Source(List()), Source(List()))
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-      val flightsResult = result.flights.map(_.apiFlight)
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val flightsResult = result.flights.values.map(_.apiFlight)
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"))
 
@@ -86,10 +86,9 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see the one flight in the CrunchState with the ACL flightcode and live chox" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val aclFlight = List(Flights(List(
-        ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001")
-      )))
-      val liveFlight = ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BAW001", actChoxDt = "2017-01-01T00:30Z")
+      val aclFlight = ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001")
+      val aclFlights = Flights(List(aclFlight))
+      val liveFlight = ArrivalGenerator.apiFlight(flightId = 1, actPax = 20, schDt = scheduled, iata = "BAW001", actChoxDt = "2017-01-01T00:30Z")
       val liveFlights = Flights(List(liveFlight))
 
       val fiveMinutes = 600d / 60
@@ -97,17 +96,22 @@ class AclFeedSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
       val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
+        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](procTimes = procTimes,
           testProbe = testProbe,
           crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
         ) _
 
-      runnableGraphDispatcher(Source(aclFlight), Source(List(liveFlights)), Source(List()))
-      testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
-      val flightsResult = result.flights.map(_.apiFlight)
+      val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
+      val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
+      val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
+      val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
+      bf.offer(aclFlights)
+      testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      lf.offer(liveFlights)
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val flightsResult = result.flights.values.map(_.apiFlight)
 
-      val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001", actChoxDt = "2017-01-01T00:30Z"))
+      val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
 
       flightsResult === expected
     }
@@ -142,9 +146,9 @@ class AclFeedSpec extends CrunchTestLike {
 
       bf.offer(Flights(newAcl.toList))
 
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
-      val flightsResult = result.flights.map(_.apiFlight)
+      val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = initialLive ++ newAcl
 
       flightsResult === expected
@@ -179,9 +183,9 @@ class AclFeedSpec extends CrunchTestLike {
 
       lf.offer(Flights(newLive.toList))
 
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
-      val flightsResult = result.flights.map(_.apiFlight)
+      val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newLive.map(_.copy(rawIATA = "BA0001")) + initialAcl2
 
       flightsResult === expected
@@ -217,12 +221,12 @@ class AclFeedSpec extends CrunchTestLike {
       val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
 
       bf.offer(Flights(newAcl.toList))
-      testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
+      testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
       lf.offer(Flights(newLive.toList))
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[CrunchState])
+      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
-      val flightsResult = result.flights.map(_.apiFlight)
+      val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newAcl ++ newLive ++ initialLive
 
       flightsResult === expected

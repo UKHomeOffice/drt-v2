@@ -5,7 +5,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
@@ -51,12 +51,12 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
 
     fs ! inputFlightsBefore
 
-    testProbe.expectMsgAnyClassOf(classOf[CrunchState])
+    testProbe.expectMsgAnyClassOf(classOf[PortState])
 
     fs ! inputFlightsAfter
 
-    val flightsAfterUpdate = testProbe.expectMsgAnyClassOf(classOf[CrunchState]) match {
-      case CrunchState(_, _, flights, _) => flights.map(_.copy(lastUpdated = None))
+    val flightsAfterUpdate = testProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+      case PortState(flights, _) => flights.values.map(_.copy(lastUpdated = None))
     }
 
     val expectedFlights = Set(ApiFlightWithSplits(

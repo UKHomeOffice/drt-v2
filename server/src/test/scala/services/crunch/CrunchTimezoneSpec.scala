@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
@@ -66,8 +66,8 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-        val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
-        val resultSummary = deskRecsFromCrunchState(result, 120)
+        val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
+        val resultSummary = deskRecsFromPortState(result, 120)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

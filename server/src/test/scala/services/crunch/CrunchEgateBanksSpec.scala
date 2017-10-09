@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -56,8 +56,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-      val resultSummary = deskRecsFromCrunchState(result, 15)
+      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val resultSummary = deskRecsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7),

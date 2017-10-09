@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -43,8 +43,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-      val resultSummary = paxLoadsFromCrunchState(result, 1).flatMap(_._2.keys)
+      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val resultSummary = paxLoadsFromPortState(result, 1).flatMap(_._2.keys)
 
       val expected = Set(Queues.EeaDesk)
 
@@ -75,8 +75,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
     runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-    val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-    val resultSummary = paxLoadsFromCrunchState(result, 30)
+    val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+    val resultSummary = paxLoadsFromPortState(result, 30)
 
     val expected = Map(
       "T1" -> Map(Queues.EeaDesk -> Seq(

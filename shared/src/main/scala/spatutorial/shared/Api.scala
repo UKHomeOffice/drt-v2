@@ -69,6 +69,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
   def equals(candidate: ApiFlightWithSplits): Boolean = {
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
+
   def bestSplits: Option[ApiSplits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
@@ -287,27 +288,30 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 object Crunch {
   type MillisSinceEpoch = Long
 
-  case class CrunchState(
-                          crunchFirstMinuteMillis: MillisSinceEpoch,
-                          numberOfMinutes: Int,
-                          flights: Set[ApiFlightWithSplits],
-                          crunchMinutes: Set[CrunchMinute])
+  case class CrunchState(crunchFirstMinuteMillis: MillisSinceEpoch,
+                         numberOfMinutes: Int,
+                         flights: Set[ApiFlightWithSplits],
+                         crunchMinutes: Set[CrunchMinute])
 
-  case class CrunchMinute(
-                           terminalName: TerminalName,
-                           queueName: QueueName,
-                           minute: MillisSinceEpoch,
-                           paxLoad: Double,
-                           workLoad: Double,
-                           deskRec: Int,
-                           waitTime: Int,
-                           deployedDesks: Option[Int] = None,
-                           deployedWait: Option[Int] = None,
-                           actDesks: Option[Int] = None,
-                           actWait: Option[Int] = None,
-                           lastUpdated: Option[MillisSinceEpoch] = None) {
+  case class PortState(flights: Map[Int, ApiFlightWithSplits],
+                       crunchMinutes: Map[Int, CrunchMinute])
+
+  case class CrunchMinute(terminalName: TerminalName,
+                          queueName: QueueName,
+                          minute: MillisSinceEpoch,
+                          paxLoad: Double,
+                          workLoad: Double,
+                          deskRec: Int,
+                          waitTime: Int,
+                          deployedDesks: Option[Int] = None,
+                          deployedWait: Option[Int] = None,
+                          actDesks: Option[Int] = None,
+                          actWait: Option[Int] = None,
+                          lastUpdated: Option[MillisSinceEpoch] = None) {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
+    lazy val key = s"$terminalName$queueName$minute".hashCode
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])

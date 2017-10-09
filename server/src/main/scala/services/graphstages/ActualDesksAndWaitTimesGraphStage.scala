@@ -2,21 +2,21 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.Crunch.{CrunchMinute, CrunchState}
+import drt.shared.Crunch.{CrunchMinute, PortState}
 import drt.shared.{ActualDeskStats, DeskStat}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.language.postfixOps
 
-class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[CrunchState, ActualDeskStats, CrunchState]] {
-  val inCrunch: Inlet[CrunchState] = Inlet[CrunchState]("CrunchStateWithoutActualDesks.in")
+class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortState, ActualDeskStats, PortState]] {
+  val inCrunch: Inlet[PortState] = Inlet[PortState]("PortStateWithoutActualDesks.in")
   val inDeskStats: Inlet[ActualDeskStats] = Inlet[ActualDeskStats]("ActualDesks.in")
-  val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchStateWithActualDesks.out")
+  val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateWithActualDesks.out")
   override val shape = new FanInShape2(inCrunch, inDeskStats, outCrunch)
 
-  var crunchStateOption: Option[CrunchState] = None
+  var portStateOption: Option[PortState] = None
   var actualDesksOption: Option[ActualDeskStats] = None
-  var crunchStateWithActualDeskStats: Option[CrunchState] = None
+  var portStateWithActualDeskStats: Option[PortState] = None
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -27,7 +27,7 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[CrunchS
     setHandler(inCrunch, new InHandler {
       override def onPush(): Unit = {
         grabBoth()
-        crunchStateWithActualDeskStats = addActualsIfAvailable()
+        portStateWithActualDeskStats = addActualsIfAvailable()
         pushAndPull()
       }
     })
@@ -35,7 +35,7 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[CrunchS
     setHandler(inDeskStats, new InHandler {
       override def onPush(): Unit = {
         grabBoth()
-        crunchStateWithActualDeskStats = addActualsIfAvailable()
+        portStateWithActualDeskStats = addActualsIfAvailable()
         pushAndPull()
       }
     })
@@ -48,11 +48,11 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[CrunchS
 
     def pushAndPull() = {
       if (isAvailable(outCrunch)) {
-        crunchStateWithActualDeskStats match {
+        portStateWithActualDeskStats match {
           case Some(cs) =>
             log.info(s"Pushing out crunch")
             push(outCrunch, cs)
-            crunchStateWithActualDeskStats = None
+            portStateWithActualDeskStats = None
           case None =>
             log.info(s"Nothing to push")
         }
@@ -69,16 +69,16 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[CrunchS
 
       if (isAvailable(inCrunch)) {
         log.info(s"Grabbing available inCrunch")
-        crunchStateOption = Option(grab(inCrunch))
+        portStateOption = Option(grab(inCrunch))
       }
     }
 
-    def addActualsIfAvailable() = (actualDesksOption, crunchStateOption) match {
+    def addActualsIfAvailable() = (actualDesksOption, portStateOption) match {
       case (Some(ad), Some(cs)) =>
-        log.info("Got actuals, adding to CrunchState")
+        log.info("Got actuals, adding to PortState")
         Option(addActualsToCrunchMinutes(ad, cs))
       case _ =>
-        crunchStateOption
+        portStateOption
     }
   }
 }
@@ -86,8 +86,8 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[CrunchS
 object ActualDesksAndWaitTimesGraphStage {
   val fifteenMins = 15 * 60000
 
-  def addActualsToCrunchMinutes(act: ActualDeskStats, cs: CrunchState): CrunchState = {
-    val crunchMinutesWithActuals = cs.crunchMinutes.map((cm: CrunchMinute) => {
+  def addActualsToCrunchMinutes(act: ActualDeskStats, ps: PortState): PortState = {
+    val crunchMinutesWithActuals = ps.crunchMinutes.values.map((cm: CrunchMinute) => {
       val deskStat: Option[DeskStat] = act.desks
         .get(cm.terminalName)
         .flatMap(_.get(cm.queueName)).flatMap(qds => {
@@ -95,8 +95,8 @@ object ActualDesksAndWaitTimesGraphStage {
           case (time, ds: DeskStat) => ds
         }
       })
-      cm.copy(actDesks = deskStat.flatMap(_.desks), actWait = deskStat.flatMap(_.waitTime))
-    })
-    cs.copy(crunchMinutes = crunchMinutesWithActuals)
+      (cm.key, cm.copy(actDesks = deskStat.flatMap(_.desks), actWait = deskStat.flatMap(_.waitTime)))
+    }).toMap
+    ps.copy(crunchMinutes = crunchMinutesWithActuals)
   }
 }

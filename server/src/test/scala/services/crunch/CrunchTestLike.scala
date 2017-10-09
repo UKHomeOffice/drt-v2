@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import controllers.SystemActors.SplitsProvider
-import drt.shared.Crunch.{CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchState, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -86,17 +86,22 @@ class CrunchTestLike
       minMaxDesks = minMaxDesks,
       procTimes = procTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-      validPortTerminals = validTerminals,
       portSplits = portSplits,
       csvSplitsProvider = csvSplitsProvider,
+      crunchStartDateProvider = crunchStartDateProvider)
+
+    def staffingStage = new StaffingStage(
+      initialFlightsWithSplits.map(fs => PortState(fs.flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map())),
+      minMaxDesks,
+      slaByQueue)
+
+    def arrivalsStage = new ArrivalsGraphStage(
+      initialBaseArrivals = initialBaseArrivals,
+      initialLiveArrivals = initialLiveArrivals,
+      baseArrivalsActor = baseArrivalsActor,
+      liveArrivalsActor = liveArrivalsActor,
       pcpArrivalTime = pcpArrivalTime,
-      crunchStartDateProvider = crunchStartDateProvider,
-      minutesToCrunch = minutesToCrunch
-    )
-
-    def staffingStage = new StaffingStage(initialFlightsWithSplits.map(fs => CrunchState(0L, 0, fs.flights.toSet, Set())), minMaxDesks, slaByQueue)
-
-    def arrivalsStage = new ArrivalsGraphStage(initialBaseArrivals, initialLiveArrivals, baseArrivalsActor, liveArrivalsActor)
+      validPortTerminals = validTerminals)
 
     def actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
 
@@ -121,10 +126,12 @@ class CrunchTestLike
   }
 
   def initialiseAndSendFlights(flightsWithSplits: List[ApiFlightWithSplits], subscriber: ActorRef, startTime: MillisSinceEpoch, numberOfMinutes: Int): Unit = {
-    subscriber ! CrunchRequest(flightsWithSplits, startTime, numberOfMinutes)
+    subscriber ! CrunchRequest(flightsWithSplits, startTime)
   }
 
-  def paxLoadsFromCrunchState(crunchState: CrunchState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = crunchState.crunchMinutes
+  def paxLoadsFromPortState(portState: PortState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = portState
+    .crunchMinutes
+    .values
     .groupBy(_.terminalName)
     .map {
       case (tn, tms) =>
@@ -139,7 +146,9 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def allWorkLoadsFromCrunchState(crunchState: CrunchState): Map[TerminalName, Map[QueueName, List[Double]]] = crunchState.crunchMinutes
+  def allWorkLoadsFromPortState(portState: PortState): Map[TerminalName, Map[QueueName, List[Double]]] = portState
+    .crunchMinutes
+    .values
     .groupBy(_.terminalName)
     .map {
       case (tn, tms) =>
@@ -154,7 +163,9 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def workLoadsFromCrunchState(crunchState: CrunchState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = crunchState.crunchMinutes
+  def workLoadsFromPortState(portState: PortState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = portState
+    .crunchMinutes
+    .values
     .groupBy(_.terminalName)
     .map {
       case (tn, tms) =>
@@ -169,7 +180,9 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def deskRecsFromCrunchState(crunchState: CrunchState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Int]]] = crunchState.crunchMinutes
+  def deskRecsFromPortState(portState: PortState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Int]]] = portState
+    .crunchMinutes
+    .values
     .groupBy(_.terminalName)
     .map {
       case (tn, tms) =>

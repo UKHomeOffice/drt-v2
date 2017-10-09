@@ -3,18 +3,22 @@ package services.graphstages
 import akka.actor.ActorRef
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.ArrivalsState
+import services.graphstages.Crunch.midnightThisMorning
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps
 
 class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
-                        initialLiveArrivals: Set[Arrival],
-                        baseArrivalsActor: ActorRef,
-                        liveArrivalsActor: ActorRef)
+                         initialLiveArrivals: Set[Arrival],
+                         baseArrivalsActor: ActorRef,
+                         liveArrivalsActor: ActorRef,
+                         pcpArrivalTime: (Arrival) => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
+                         validPortTerminals: Set[String])
   extends GraphStage[FanInShape2[Flights, Flights, ArrivalsDiff]] {
 
   val inBaseArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsBase.in")
@@ -39,8 +43,10 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inBaseArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inBase onPush() grabbing base flights")
-        baseArrivals = grab(inBaseArrivals).flights.toSet
+        baseArrivals = grabAndSetPcp(inBaseArrivals)
+
         baseArrivalsActor ! ArrivalsState(baseArrivals.map(a => (a.uniqueId, a)).toMap)
+
         val newMerged = mergeArrivals(baseArrivals, liveArrivals)
         toPush = arrivalsDiff(merged, newMerged)
         pushIfAvailable(toPush, outArrivalsDiff)
@@ -50,10 +56,13 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inLiveArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inLive onPush() grabbing live flights")
-        liveArrivals = grab(inLiveArrivals).flights.foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
-          case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
-        }.values.toSet
+        liveArrivals = grabAndSetPcp(inLiveArrivals)
+          .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
+            case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
+          }.values.toSet
+
         liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
+
         val newMerged = mergeArrivals(baseArrivals, liveArrivals)
         toPush = arrivalsDiff(merged, newMerged)
         pushIfAvailable(toPush, outArrivalsDiff)
@@ -68,6 +77,23 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
       }
     })
+
+    def grabAndSetPcp(arrivals: Inlet[Flights]): Set[Arrival] = {
+      grab(arrivals)
+        .flights
+        .filterNot {
+          case f if !isFlightRelevant(f) =>
+            log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${f.SchDT}, ${f.Origin}")
+            true
+          case _ => false
+        }
+        .map(f => f.copy(PcpTime = pcpArrivalTime(f).millisSinceEpoch))
+        .toSet
+    }
+
+    def isFlightRelevant(flight: Arrival) =
+      validPortTerminals.contains(flight.Terminal) && !domesticPorts.contains(flight.Origin)
+
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {
       if (isAvailable(outlet)) {
@@ -91,8 +117,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
-            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else baseArrival.ActPax
-          )
+            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else baseArrival.ActPax)
           mergedSoFar.updated(liveArrival.uniqueId, mergedArrival)
       }
     }
@@ -119,4 +144,30 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       optionalArrivalsDiff
     }
   }
+
+  val domesticPorts = Seq(
+    "ABB", "ABZ", "ACI", "ADV", "ADX", "AYH",
+    "BBP", "BBS", "BEB", "BEQ", "BEX", "BFS", "BHD", "BHX", "BLK", "BLY", "BOH", "BOL", "BQH", "BRF", "BRR", "BRS", "BSH", "BUT", "BWF", "BWY", "BYT", "BZZ",
+    "CAL", "CAX", "CBG", "CEG", "CFN", "CHE", "CLB", "COL", "CRN", "CSA", "CVT", "CWL",
+    "DCS", "DGX", "DND", "DOC", "DSA", "DUB",
+    "EDI", "EMA", "ENK", "EOI", "ESH", "EWY", "EXT",
+    "FAB", "FEA", "FFD", "FIE", "FKH", "FLH", "FOA", "FSS", "FWM", "FZO",
+    "GCI", "GLA", "GLO", "GQJ", "GSY", "GWY", "GXH",
+    "HAW", "HEN", "HLY", "HOY", "HRT", "HTF", "HUY", "HYC",
+    "IIA", "ILY", "INQ", "INV", "IOM", "IOR", "IPW", "ISC",
+    "JER",
+    "KIR", "KKY", "KNF", "KOI", "KRH", "KYN",
+    "LBA", "LCY", "LDY", "LEQ", "LGW", "LHR", "LKZ", "LMO", "LON", "LPH", "LPL", "LSI", "LTN", "LTR", "LWK", "LYE", "LYM", "LYX",
+    "MAN", "MHZ", "MME", "MSE",
+    "NCL", "NDY", "NHT", "NNR", "NOC", "NQT", "NQY", "NRL", "NWI",
+    "OBN", "ODH", "OHP", "OKH", "ORK", "ORM", "OUK", "OXF",
+    "PIK", "PLH", "PME", "PPW", "PSL", "PSV", "PZE",
+    "QCY", "QFO", "QLA", "QUG",
+    "RAY", "RCS",
+    "SCS", "SDZ", "SEN", "SKL", "SNN", "SOU", "SOY", "SQZ", "STN", "SWI", "SWS", "SXL", "SYY", "SZD",
+    "TRE", "TSO", "TTK",
+    "UHF", "ULL", "UNT", "UPV",
+    "WAT", "WEM", "WEX", "WFD", "WHS", "WIC", "WOB", "WRY", "WTN", "WXF",
+    "YEO"
+  )
 }

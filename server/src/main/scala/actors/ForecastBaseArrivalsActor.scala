@@ -36,7 +36,7 @@ abstract class ArrivalsActor extends PersistentActor with ActorLogging {
       arrivalsState = ArrivalsState(withUpdates)
 
     case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md, $ss)")
+      log.info(s"Recovery received SnapshotOffer($md)")
       ss match {
         case snMessage: FlightStateSnapshotMessage =>
           arrivalsState = arrivalsStateFromSnapshotMessage(snMessage)

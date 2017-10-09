@@ -16,7 +16,7 @@ import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
@@ -31,7 +31,7 @@ import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.{SDate, _}
-import services.graphstages.Crunch.{midnightThisMorning, oneHourMillis, getLocalLastMidnight}
+import services.graphstages.Crunch.{getLocalLastMidnight, midnightThisMorning, oneHourMillis}
 import services.graphstages._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
@@ -99,7 +99,15 @@ trait SystemActors {
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-  val pcpArrivalTimeCalculator: (Arrival) => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(flightWalkTimeProvider)
+
+  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
+  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
+  def walkTimeProvider(flight: Arrival): Millis =
+    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
+
+  def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
   val actorMaterializer = ActorMaterializer()
 
@@ -119,13 +127,13 @@ trait SystemActors {
   val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](100, OverflowStrategy.backpressure)
   val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
 
-  val crunchStateFuture: Future[Option[CrunchState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
-    case Some(cs: CrunchState) => Option(cs)
+  val crunchStateFuture: Future[Option[PortState]] = askableCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
+    case Some(ps: PortState) => Option(ps)
     case _ => None
   }
 
   crunchStateFuture.onComplete {
-    case Success(Some(cs: CrunchState)) => Option(cs)
+    case Success(Some(cs)) => Option(cs)
     case Success(None) => None
     case Failure(t) =>
       log.warn(s"Failed to get an initial CrunchState: $t")
@@ -159,26 +167,29 @@ trait SystemActors {
   val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
 
   log.info(s"Awaiting CrunchStateActor response")
-  val optionalCrunchState: Option[CrunchState] = Await.result(crunchStateFuture, 1 minute)
+  val optionalCrunchState: Option[PortState] = Await.result(crunchStateFuture, 1 minute)
   log.info(s"Got CrunchStateActor response")
 
-  val crunchFlow = new CrunchGraphStage(
-    optionalCrunchState.map(cs => FlightsWithSplits(cs.flights.toList)),
-    airportConfig.slaByQueue,
-    airportConfig.minMaxDesksByTerminalQueue,
-    airportConfig.defaultProcessingTimes.head._2,
-    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-    airportConfig.terminalNames.toSet,
-    airportConfig.defaultPaxSplits,
-    historicalSplitsProvider,
-    pcpArrivalTimeCalculator,
-    midnightThisMorning _,
-    1440
-  )
+  val crunchFlow: CrunchGraphStage = new CrunchGraphStage(
+    optionalInitialFlights = optionalCrunchState.map(cs => FlightsWithSplits(cs.flights.values.toList)),
+    slas = airportConfig.slaByQueue,
+    minMaxDesks = airportConfig.minMaxDesksByTerminalQueue,
+    procTimes = airportConfig.defaultProcessingTimes.head._2,
+    groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
+    portSplits = airportConfig.defaultPaxSplits,
+    csvSplitsProvider = historicalSplitsProvider,
+    crunchStartDateProvider = midnightThisMorning _)
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
-  val arrivalsStage = new ArrivalsGraphStage(initialBaseArrivals, initialLiveArrivals, baseArrivalsActor, liveArrivalsActor)
+
+  val arrivalsStage = new ArrivalsGraphStage(
+    initialBaseArrivals = initialBaseArrivals,
+    initialLiveArrivals = initialLiveArrivals,
+    baseArrivalsActor = baseArrivalsActor,
+    liveArrivalsActor = liveArrivalsActor,
+    pcpArrivalTime = pcpArrivalTimeCalculator,
+    validPortTerminals = airportConfig.terminalNames.toSet)
   val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
   val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 
@@ -226,7 +237,7 @@ trait SystemActors {
 
   def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
-  def flightWalkTimeProvider(flight: Arrival): Millis
+  //  def flightWalkTimeProvider(flight: Arrival): Millis
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
@@ -278,14 +289,6 @@ trait ProdPassengerSplitProviders {
   private implicit val timeout = Timeout(250 milliseconds)
 }
 
-trait ProdWalkTimesProvider {
-  self: AirportConfProvider =>
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-
-  def flightWalkTimeProvider(flight: Arrival): Millis = gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
-}
-
 trait ImplicitTimeoutProvider {
   implicit val timeout = Timeout(1 second)
 }
@@ -300,8 +303,7 @@ class Application @Inject()(
   extends Controller
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with SystemActors with ImplicitTimeoutProvider
-    with ProdWalkTimesProvider {
+    with SystemActors with ImplicitTimeoutProvider {
   ctrl =>
   val log: LoggingAdapter = system.log
 
@@ -332,10 +334,10 @@ class Application @Inject()(
       } else {
         val startMillis = midnightThisMorning - oneHourMillis * 3
         val endMillis = midnightThisMorning + oneHourMillis * 30
-        val crunchStateFuture = crunchStateActor.ask(GetCrunchState(startMillis, endMillis))(new Timeout(5 seconds))
+        val crunchStateFuture = crunchStateActor.ask(GetPortState(startMillis, endMillis))(new Timeout(5 seconds))
 
         crunchStateFuture.map {
-          case Some(cs: CrunchState) => Option(cs)
+          case Some(PortState(f, m)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
           case _ => None
         } recover {
           case t =>
@@ -373,10 +375,10 @@ class Application @Inject()(
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
     val startMillis = relativeLastMidnight - oneHourMillis * 3
     val endMillis = relativeLastMidnight + oneHourMillis * 30
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetCrunchState(startMillis, endMillis))
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
-      case Some(cs: CrunchState) => Option(cs)
+      case Some(PortState(f, m)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
       case _ => None
     }.recover {
       case t =>

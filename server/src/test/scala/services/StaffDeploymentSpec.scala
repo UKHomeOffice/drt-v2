@@ -27,11 +27,11 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.EeaDesk, 0, 5),
       crunchMinute("T1", Queues.NonEeaDesk, 0, 10),
       crunchMinute("T1", Queues.EGate, 0, 12)
-    )
+    ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
     val available: (Long, String) => Int = (_, _) => 25
 
-    val result = addDeployments(crunchMinutes, deployer, available, minMaxDesks)
+    val result = addDeployments(crunchMinutes, deployer, available, minMaxDesks).values.toSet
 
     val expected = Set(
       crunchMinute("T1", Queues.EeaDesk, 0, 5, Some(4)),
@@ -50,11 +50,11 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.NonEeaDesk, 0, 10),
       crunchMinute("T1", Queues.EeaDesk, 60000, 2),
       crunchMinute("T1", Queues.NonEeaDesk, 60000, 15)
-    )
+    ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
     val available: (Long, String) => Int = (_, _) => 25
 
-    val result = addDeployments(crunchMinutes, deployer, available, minMaxDesks)
+    val result = addDeployments(crunchMinutes, deployer, available, minMaxDesks).values.toSet
 
     val expected = Set(
       crunchMinute("T1", Queues.EeaDesk, 0, 5, Some(8)),
@@ -78,11 +78,11 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T2", Queues.NonEeaDesk, 0, 9),
       crunchMinute("T2", Queues.EeaDesk, 60000, 8),
       crunchMinute("T2", Queues.NonEeaDesk, 60000, 18)
-    )
+    ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
     val available: (Long, String) => Int = (_, _) => 25
 
-    val result = addDeployments(crunchMinutes, deployer, available, minMaxDesks)
+    val result = addDeployments(crunchMinutes, deployer, available, minMaxDesks).values.toSet
 
     val expected = Set(
       crunchMinute("T1", Queues.EeaDesk, 0, 5, Some(8)),

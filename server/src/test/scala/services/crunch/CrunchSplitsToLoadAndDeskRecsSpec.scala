@@ -5,19 +5,18 @@ import akka.actor.ActorRef
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
-
-import scala.concurrent.duration._
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch.getLocalLastMidnight
 import services.SDate
+import services.graphstages.Crunch.getLocalLastMidnight
 
 import scala.collection.immutable.{List, Seq}
+import scala.concurrent.duration._
 
 
 class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
@@ -55,8 +54,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
-      val resultSummary = paxLoadsFromCrunchState(result, 2)
+      val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
+      val resultSummary = paxLoadsFromPortState(result, 2)
 
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
@@ -86,8 +85,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-      val resultSummary = paxLoadsFromCrunchState(result, 5)
+      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val resultSummary = paxLoadsFromPortState(result, 5)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
 
@@ -124,8 +123,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-      val resultSummary = workLoadsFromCrunchState(result, 5)
+      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val resultSummary = workLoadsFromPortState(result, 5)
 
 
       val expected = Map("T1" -> Map(
@@ -163,8 +162,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
 
-        val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-        val resultSummary = paxLoadsFromCrunchState(result, 5)
+        val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+        val resultSummary = paxLoadsFromPortState(result, 5)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
@@ -213,12 +212,11 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlights, flightsSource, manifestsSource)
 
         fs ! flights
-        Thread.sleep(250L)
-        ms ! voyageManifests
+        testProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
 
-        testProbe.expectMsgAnyClassOf(5 seconds, classOf[CrunchState])
-        val result = testProbe.expectMsgAnyClassOf(classOf[CrunchState])
-        val resultSummary = paxLoadsFromCrunchState(result, 5)
+        ms ! voyageManifests
+        val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+        val resultSummary = paxLoadsFromPortState(result, 5)
 
         val expected = Map("T1" -> Map(
           Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
