@@ -179,7 +179,7 @@ object TerminalDesksAndQueues {
       <.div(
         if (props.airportConfig.hasActualDeskStats) {
           <.div(<.input.checkbox(^.checked := state.showActuals, ^.onChange ==> toggleShowActuals, ^.id := "show-actuals"),
-            <.label(^.`for` := "show-actuals", "Show actual desks & wait times"))
+            <.label(^.`for` := "show-actuals", "Show BlackJack Data"))
         } else "",
         <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
           <.thead(
