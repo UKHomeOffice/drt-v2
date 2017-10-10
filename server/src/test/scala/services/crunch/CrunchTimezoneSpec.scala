@@ -59,9 +59,9 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           runCrunchGraph[NotUsed, NotUsed](
             procTimes = procTimes,
             testProbe = testProbe,
-            crunchStartDateProvider = () => SDate("2017-05-31T23:00Z").millisSinceEpoch,
-            minMaxDesks = minMaxDesks,
-            minutesToCrunch = 120
+            crunchStartDateProvider = (_) => SDate("2017-05-31T23:00Z"),
+            crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120),
+            minMaxDesks = minMaxDesks
           ) _
 
         runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))

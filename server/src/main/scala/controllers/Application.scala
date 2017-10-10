@@ -17,11 +17,13 @@ import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch, PortState}
+import services.graphstages.Crunch._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import net.schmizz.sshj.sftp.SFTPClient
 import org.joda.time.chrono.ISOChronology
+import org.slf4j.LoggerFactory
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HttpEntity
 import play.api.mvc._
@@ -31,7 +33,6 @@ import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.{SDate, _}
-import services.graphstages.Crunch.{getLocalLastMidnight, midnightThisMorning, oneHourMillis}
 import services.graphstages._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
@@ -58,6 +59,8 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 }
 
 object PaxFlow {
+  val log = LoggerFactory.getLogger(getClass)
+
   def makeFlightPaxFlowCalculator(splitRatioForFlight: (Arrival) => Option[SplitRatios],
                                   bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, bestPax)
@@ -88,7 +91,6 @@ trait SystemActors {
   implicit val system: ActorSystem
 
   val config: Configuration
-
 
   val ftpServer = ConfigFactory.load.getString("acl.host")
   val username = ConfigFactory.load.getString("acl.username")
@@ -136,7 +138,7 @@ trait SystemActors {
     case Success(Some(cs)) => Option(cs)
     case Success(None) => None
     case Failure(t) =>
-      log.warn(s"Failed to get an initial CrunchState: $t")
+      system.log.warning(s"Failed to get an initial CrunchState: $t")
       None
   }
 
@@ -148,7 +150,7 @@ trait SystemActors {
   baseArrivalsFuture.onComplete {
     case Success(arrivals) => arrivals
     case Failure(t) =>
-      log.warn(s"Failed to get an initial base ArrivalsState: $t")
+      system.log.warning(s"Failed to get an initial base ArrivalsState: $t")
       Set[Arrival]()
   }
 
@@ -160,15 +162,15 @@ trait SystemActors {
   liveArrivalsFuture.onComplete {
     case Success(arrivals) => arrivals
     case Failure(t) =>
-      log.warn(s"Failed to get an initial live ArrivalsState: $t")
+      system.log.warning(s"Failed to get an initial live ArrivalsState: $t")
       Set[Arrival]()
   }
   val initialBaseArrivals: Set[Arrival] = Await.result(baseArrivalsFuture, 1 minute)
   val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
 
-  log.info(s"Awaiting CrunchStateActor response")
+  system.log.info(s"Awaiting CrunchStateActor response")
   val optionalCrunchState: Option[PortState] = Await.result(crunchStateFuture, 1 minute)
-  log.info(s"Got CrunchStateActor response")
+  system.log.info(s"Got CrunchStateActor response")
 
   val crunchFlow: CrunchGraphStage = new CrunchGraphStage(
     optionalInitialFlights = optionalCrunchState.map(cs => FlightsWithSplits(cs.flights.values.toList)),
@@ -178,7 +180,9 @@ trait SystemActors {
     groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
     portSplits = airportConfig.defaultPaxSplits,
     csvSplitsProvider = historicalSplitsProvider,
-    crunchStartDateProvider = midnightThisMorning _)
+    crunchStartFromFirstPcp = getLocalLastMidnight,
+    crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
+    earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 30))
 
   val staffingGraphStage = new StaffingStage(optionalCrunchState, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
@@ -328,12 +332,21 @@ class Application @Inject()(
 
     def actorSystem: ActorSystem = system
 
-    def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-      if (pointIntTime > 0) {
-        crunchStateAtPointInTime(pointIntTime)
+    def getCrunchState(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+      if (0 < pointInTime && pointInTime < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
+        crunchStateAtPointInTime(pointInTime)
       } else {
-        val startMillis = midnightThisMorning - oneHourMillis * 3
-        val endMillis = midnightThisMorning + oneHourMillis * 30
+        val (startMillis, endMillis) = pointInTime match {
+          case pit if pit < getLocalNextMidnight(SDate.now).millisSinceEpoch =>
+            val firstMinute = midnightThisMorning - oneHourMillis * 3
+            val lastMinute = midnightThisMorning + oneHourMillis * 30
+            (firstMinute, lastMinute)
+          case pit =>
+            val firstMinute = getLocalLastMidnight(SDate(pit)).millisSinceEpoch - oneHourMillis * 3
+            val lastMinute = getLocalNextMidnight(SDate(pit)).millisSinceEpoch + oneHourMillis * 6
+            (firstMinute, lastMinute)
+        }
+
         val crunchStateFuture = crunchStateActor.ask(GetPortState(startMillis, endMillis))(new Timeout(5 seconds))
 
         crunchStateFuture.map {

@@ -70,7 +70,8 @@ class AclFeedSpec extends CrunchTestLike {
       val runnableGraphDispatcher =
         runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
         ) _
 
       runnableGraphDispatcher(Source(aclFlight), Source(List()), Source(List()))
@@ -98,7 +99,8 @@ class AclFeedSpec extends CrunchTestLike {
       val runnableGraphDispatcher =
         runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](procTimes = procTimes,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
         ) _
 
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
@@ -137,7 +139,8 @@ class AclFeedSpec extends CrunchTestLike {
           initialBaseArrivals = initialACL,
           initialLiveArrivals = initialLive,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduledLive)).millisSinceEpoch
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
         ) _
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
@@ -174,7 +177,8 @@ class AclFeedSpec extends CrunchTestLike {
           initialBaseArrivals = initialAcl,
           initialLiveArrivals = initialLive,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduledLive)).millisSinceEpoch
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
         ) _
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
@@ -213,7 +217,8 @@ class AclFeedSpec extends CrunchTestLike {
           initialBaseArrivals = initialAcl,
           initialLiveArrivals = initialLive,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduledLive)).millisSinceEpoch
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
         ) _
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)

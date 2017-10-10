@@ -44,7 +44,8 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
         ),
         queues = Map("T1" -> Seq(EeaDesk, EGate)),
         testProbe = testProbe,
-        crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
+        crunchStartDateProvider = (_) => SDate(scheduled),
+        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
       ) _
 
     val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)

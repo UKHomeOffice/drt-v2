@@ -45,7 +45,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         runCrunchGraph[NotUsed, NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           portSplits = SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, edSplit),
@@ -68,11 +69,11 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
     "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
       "When I ask for queue loads " +
       "Then I should see two eea desk queue loads containing the 2 passengers and their proc time" >> {
-      val scheduled1 = "2017-01-01T00:00Z"
+      val scheduled = "2017-01-01T00:00Z"
       val scheduled2 = "2017-01-01T00:01Z"
 
       val flights = List(Flights(List(
-        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled1, iata = "BA0001", terminal = "T1", actPax = 1),
+        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1),
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled2, iata = "SA123", terminal = "T1", actPax = 1)
       )))
 
@@ -80,7 +81,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val runnableGraphDispatcher =
         runCrunchGraph[NotUsed, NotUsed](
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
         ) _
 
       runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
@@ -111,7 +113,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val runnableGraphDispatcher =
         runCrunchGraph[NotUsed, NotUsed](
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           procTimes = procTimes,
           portSplits = SplitRatios(
             SplitSources.TerminalAverage,
@@ -139,10 +142,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       "Given a flight with 20 passengers and one CSV split of 25% to eea desk " +
         "When request a crunch " +
         "Then I should see a pax load of 5 (20 * 0.25)" >> {
-        val scheduled1 = "2017-01-01T00:00Z"
+        val scheduled = "2017-01-01T00:00Z"
 
         val flights = List(Flights(List(
-          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled1, iata = "BA0001", terminal = "T1", actPax = 20)
+          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
         )))
 
         val procTimes: Map[PaxTypeAndQueue, Double] = Map(
@@ -154,7 +157,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           runCrunchGraph[NotUsed, NotUsed](
             procTimes = procTimes,
             testProbe = testProbe,
-            crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch,
+            crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+            crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
             csvSplitsProvider = _ => Option(SplitRatios(
               SplitSources.Historical,
               SplitRatio(eeaMachineReadableToDesk, 0.25)
@@ -176,10 +180,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         "When I crunch " +
         "I should see pax loads calculated from the api splits, ie 1 pax in first minute not 10 " >> {
 
-        val scheduled1 = "2017-01-01T00:00Z"
+        val scheduled = "2017-01-01T00:00Z"
 
         val flights = Flights(List(
-          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled1, iata = "BA0001", terminal = "T1", actPax = 10, airportId = "LHR")
+          ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10, airportId = "LHR")
         ))
 
         val procTimes: Map[PaxTypeAndQueue, Double] = Map(
@@ -191,7 +195,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           runCrunchGraph[ActorRef, ActorRef](
             procTimes = procTimes,
             testProbe = testProbe,
-            crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled1)).millisSinceEpoch,
+            crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+            crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
             csvSplitsProvider = _ => Option(SplitRatios(
               SplitSources.Historical,
               SplitRatio(eeaMachineReadableToDesk, 0.5)

@@ -34,7 +34,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         runCrunchGraph[NotUsed, NotUsed](
           procTimes = procTimes,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           portSplits = SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 1),
@@ -70,7 +71,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     val runnableGraphDispatcher =
       runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
         testProbe = testProbe,
-        crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       ) _
 
     runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))

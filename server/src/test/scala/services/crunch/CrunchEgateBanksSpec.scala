@@ -47,7 +47,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           slaByQueue = slaByQueue,
           minMaxDesks = minMaxDesks,
           testProbe = testProbe,
-          crunchStartDateProvider = () => getLocalLastMidnight(SDate(scheduled)).millisSinceEpoch,
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           portSplits = SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),

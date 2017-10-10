@@ -256,6 +256,21 @@ object Crunch {
     SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
 
+  def earliestAndLatestAffectedPcpTimeFromFlights(maxDays: Int)(existingFlights: Set[ApiFlightWithSplits], updatedFlights: Set[ApiFlightWithSplits]): Option[(SDateLike, SDateLike)] = {
+    val differences: Set[ApiFlightWithSplits] = updatedFlights -- existingFlights
+    val latestPcpTimes = differences
+      .toList
+      .sortBy(_.apiFlight.PcpTime)
+      .map(_.apiFlight.PcpTime)
+
+    if (latestPcpTimes.nonEmpty) {
+      Option(SDate(latestPcpTimes.head), SDate(latestPcpTimes.reverse.head)) match {
+        case Some((e, l)) if (l.millisSinceEpoch - e.millisSinceEpoch) / oneDayMillis <= maxDays => Some((e, l))
+        case Some((e, _)) => Some(e, e.addDays(maxDays))
+      }
+    } else None
+  }
+
   def flightsDiff(oldFlightsById: Map[Int, ApiFlightWithSplits], newFlightsById: Map[Int, ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
     val oldIds = oldFlightsById.keys.toSet
     val newIds = newFlightsById.keys.toSet

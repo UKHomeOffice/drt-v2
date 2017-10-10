@@ -43,8 +43,10 @@ object TryRenjin {
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
         log.info("about to crunch in R")
+        val startTime = SDate.now().millisSinceEpoch
         engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
-        log.info("crunched in R")
+        val durationMillis = SDate.now().millisSinceEpoch - startTime
+        log.info(f"crunched in R in ${durationMillis.toDouble / 1000}%.2f seconds")
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
         OptimizerCrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))

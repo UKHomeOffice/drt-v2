@@ -67,8 +67,8 @@ class CrunchTestLike
                               portSplits: SplitRatios = defaultPaxSplits,
                               csvSplitsProvider: SplitsProvider = (a: Arrival) => None,
                               pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
-                              crunchStartDateProvider: () => MillisSinceEpoch,
-                              minutesToCrunch: Int = 30)
+                              crunchStartDateProvider: (SDateLike) => SDateLike,
+                              crunchEndDateProvider: (SDateLike) => SDateLike)
                        (baseFlightsSource: Source[Flights, SA],
                         liveFlightsSource: Source[Flights, SA],
                         manifestsSource: Source[VoyageManifests, SVM]): (SA, SA, SVM, AskableActorRef, ActorRef) = {
@@ -88,7 +88,9 @@ class CrunchTestLike
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
       portSplits = portSplits,
       csvSplitsProvider = csvSplitsProvider,
-      crunchStartDateProvider = crunchStartDateProvider)
+      crunchStartFromFirstPcp = crunchStartDateProvider,
+      crunchEndFromLastPcp = crunchEndDateProvider,
+      earliestAndLatestAffectedPcpTime = (_, _) => Some((SDate.now(), SDate.now())))
 
     def staffingStage = new StaffingStage(
       initialFlightsWithSplits.map(fs => PortState(fs.flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map())),

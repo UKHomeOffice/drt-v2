@@ -49,12 +49,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ),
         queues = Map("T1" -> Seq(EeaDesk, EGate)),
         testProbe = testProbe,
-        crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
+        crunchStartDateProvider = (_) => SDate(scheduled),
+        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
       ) _
 
     val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource,flightsSource, manifestsSource)
 
     ms ! inputManifests
+    Thread.sleep(200L)
     fs ! inputFlights
     val flights = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
       case PortState(f, _) => f
@@ -106,13 +108,16 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
         testProbe = testProbe,
-        crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
+        crunchStartDateProvider = (_) => SDate(scheduled),
+        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
       ) _
 
     val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
 
     ms ! inputManifestsCi
+    Thread.sleep(100L)
     ms ! inputManifestsDc
+    Thread.sleep(100L)
     fs ! inputFlights
     val (flights, crunchMinutes) = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
       case PortState(f, c) => (f, c)

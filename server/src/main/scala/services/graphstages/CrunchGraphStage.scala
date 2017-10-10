@@ -29,8 +29,9 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                        groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
                        portSplits: SplitRatios,
                        csvSplitsProvider: SplitsProvider,
-                       crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _
-                      )
+                       crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
+                       crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
+                       earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)])
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
@@ -91,18 +92,20 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     })
 
     def crunchIfAppropriate(updatedFlights: Map[Int, ApiFlightWithSplits], existingFlights: Map[Int, ApiFlightWithSplits]): Unit = {
-      val latestPcpTimes = latestChangedPcpTime(existingFlights.values.toSet, updatedFlights.values.toSet)
-      log.info(s"${existingFlights}")
-      log.info(s"${updatedFlights}")
-      log.info(s"Latest PCP times: ${latestPcpTimes}")
-      latestPcpTimes.foreach(pcpTime => {
-        val latestPcpSdate = SDate(pcpTime)
-        val crunchEnd = getLocalNextMidnight(latestPcpSdate)
-        log.info(s"Crunch end: ${crunchEnd.toLocalDateTimeString()} - latest PCP arrival: ${latestPcpSdate.toLocalDateTimeString()}")
-        val flightsInCrunchWindow = updatedFlights.values.toList.filter(_.apiFlight.PcpTime < crunchEnd.millisSinceEpoch)
-        log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
-        crunchAndUpdateState(flightsInCrunchWindow, crunchEnd)
-      })
+      val earliestAndLatest = earliestAndLatestAffectedPcpTime(existingFlights.values.toSet, updatedFlights.values.toSet)
+      log.info(s"Latest PCP times: ${earliestAndLatest}")
+      earliestAndLatest.foreach {
+        case (earliest, latest) =>
+          val crunchStart = crunchStartFromFirstPcp(earliest)
+          val crunchEnd = crunchEndFromLastPcp(latest)
+          log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
+
+          val flightsInCrunchWindow = updatedFlights.values.toList.filter(f => isFlightInTimeWindow(f, crunchStart, crunchEnd))
+
+          log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
+          portStateOption = crunch(flightsInCrunchWindow, crunchStart.millisSinceEpoch, crunchEnd.millisSinceEpoch)
+          pushStateIfReady()
+      }
     }
 
     setHandler(inManifests, new InHandler {
@@ -127,7 +130,6 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
-      log.info(s"${afterRemovals.size} flights after removals")
       val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
         case (flightsSoFar, updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
@@ -207,17 +209,13 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
     }
 
-    def crunchAndUpdateState(flightsToCrunch: List[ApiFlightWithSplits], crunchEnd: SDateLike): Unit = {
-      log.info(s"Processing CrunchRequest for ${flightsToCrunch.length} flights")
-      portStateOption = crunch(flightsToCrunch, crunchStartDateProvider(), crunchEnd.millisSinceEpoch)
+    def crunchAndUpdateState(flightsToCrunch: List[ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Unit = {
 
-      pushStateIfReady()
     }
 
     def crunch(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch): Option[PortState] = {
-      log.info(s"${flights.length} flights before checking relevance")
       val uniqueFlights = groupFlightsByCodeShares(flights).map(_._1)
-      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares, domestics and pcp time outside crunch window")
+      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
       val newFlightsById = uniqueFlights.map(f => (f.apiFlight.uniqueId, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val numberOfMinutes = ((crunchEnd - crunchStart) / 60000).toInt
@@ -386,15 +384,8 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
   }
 
-  def latestChangedPcpTime(existingFlights: Set[ApiFlightWithSplits], updatedFlights: Set[ApiFlightWithSplits]): List[MillisSinceEpoch] = {
-    val differences: Set[ApiFlightWithSplits] = updatedFlights -- existingFlights
-    val latestPcpTime = differences
-      .toList
-      .sortBy(_.apiFlight.PcpTime)
-      .reverse
-      .take(1)
-      .map(_.apiFlight.PcpTime)
-    latestPcpTime
+  def isFlightInTimeWindow(f: ApiFlightWithSplits, crunchStart: SDateLike, crunchEnd: SDateLike): Boolean = {
+    crunchStart.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < crunchEnd.millisSinceEpoch
   }
 
   def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest): Boolean = {
