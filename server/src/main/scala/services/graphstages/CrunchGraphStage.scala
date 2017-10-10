@@ -99,11 +99,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           val crunchStart = crunchStartFromFirstPcp(earliest)
           val crunchEnd = crunchEndFromLastPcp(latest)
           log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
-
-          val flightsInCrunchWindow = updatedFlights.values.toList.filter(f => isFlightInTimeWindow(f, crunchStart, crunchEnd))
-
-          log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
-          portStateOption = crunch(flightsInCrunchWindow, crunchStart.millisSinceEpoch, crunchEnd.millisSinceEpoch)
+          portStateOption = crunch(updatedFlights, crunchStart, crunchEnd)
           pushStateIfReady()
       }
     }
@@ -209,20 +205,18 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
     }
 
-    def crunchAndUpdateState(flightsToCrunch: List[ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Unit = {
-
-    }
-
-    def crunch(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, crunchEnd: MillisSinceEpoch): Option[PortState] = {
-      val uniqueFlights = groupFlightsByCodeShares(flights).map(_._1)
+    def crunch(flights: Map[Int, ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Option[PortState] = {
+      val flightsInCrunchWindow = flights.values.toList.filter(f => isFlightInTimeWindow(f, crunchStart, crunchEnd))
+      log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
+      val uniqueFlights = groupFlightsByCodeShares(flightsInCrunchWindow).map(_._1)
       log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
       val newFlightsById = uniqueFlights.map(f => (f.apiFlight.uniqueId, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
-      val numberOfMinutes = ((crunchEnd - crunchStart) / 60000).toInt
+      val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
       log.info(s"Crunching $numberOfMinutes minutes")
-      val newPortState = portStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
+      val crunchMinutes = crunchMinutesFromFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
 
-      Option(newPortState)
+      Option(PortState(flights, crunchMinutes))
     }
 
     def pushStateIfReady(): Unit = {
@@ -237,13 +231,13 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
     }
 
-    def portStateFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
-                                        numberOfMinutes: Int,
-                                        flightsById: Map[Int, ApiFlightWithSplits],
-                                        fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]): PortState = {
+    def crunchMinutesFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
+                                            numberOfMinutes: Int,
+                                            flightsById: Map[Int, ApiFlightWithSplits],
+                                            fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
       val crunchResults: Map[Int, CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
 
-      PortState(flightsById, crunchResults)
+      crunchResults
     }
 
     def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
