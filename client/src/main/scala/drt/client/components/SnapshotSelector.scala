@@ -1,9 +1,7 @@
 package drt.client.components
 
-import diode.Effect
 import diode.react.ModelProxy
-import drt.client.actions.Actions.{SetPointInTime, SetPointInTimeToLive, ShowLoader}
-import drt.client.components.TerminalDesksAndQueuesRow.Props
+import drt.client.actions.Actions.{SetPointInTime, ShowLoader}
 import drt.client.logger.LoggerFactory
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -11,28 +9,32 @@ import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
-import org.scalajs.dom
 
-import scala.concurrent.Future
 import scala.scalajs.js.Date
 
 object SnapshotSelector {
+
+  val earliestAvailable = SDate(2017, 10, 6)
 
   val log = LoggerFactory.getLogger("SnapshotSelector")
 
   case class Props(dateSelected: Option[SDateLike], terminalName: String)
 
-  case class State(live: Boolean, showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
+  case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def snapshotDateTime = SDate(year, month + 1, day, hours, minutes)
   }
 
   val today = new Date()
-  val initialState = State(true, false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+  val initialState = State(false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
 
   def formRow(label: String, xs: TagMod*) = {
     <.div(^.className := "form-group row",
       <.label(label, ^.className := "col-sm-1 col-form-label"),
       <.div(^.className := "col-sm-8", xs.toTagMod))
+  }
+
+  def isLaterThanEarliest(dateTime: SDateLike) = {
+    dateTime.millisSinceEpoch > earliestAvailable.millisSinceEpoch
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(_.dateSelected.map(_.millisSinceEpoch))
@@ -43,9 +45,9 @@ object SnapshotSelector {
       p => {
         p.dateSelected match {
           case Some(dateSelected) =>
-            State(false, false, dateSelected.getDate(), dateSelected.getMonth(), dateSelected.getFullYear(), dateSelected.getHours(), dateSelected.getMinutes())
+            State(true, dateSelected.getDate(), dateSelected.getMonth(), dateSelected.getFullYear(), dateSelected.getHours(), dateSelected.getMinutes())
           case None =>
-            State(true, false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+            State(true, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
         }
       }
     )
@@ -55,7 +57,7 @@ object SnapshotSelector {
       )
       pointInTimeRCP((pointInTimeMP: ModelProxy[Option[SDateLike]]) => {
 
-        val pointInTime = pointInTimeMP()
+        val pointInTimeOption = pointInTimeMP()
         val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zipWithIndex
         val days = Seq.range(1, 31)
         val years = Seq.range(2017, today.getFullYear() + 1)
@@ -64,9 +66,8 @@ object SnapshotSelector {
         val minutes = Seq.range(0, 60)
 
         def drawSelect(values: Seq[String], names: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
-          log.info(s"drawSelect: $state")
           val nameValues = values.zip(names)
-          <.select(^.defaultValue := defaultValue.toString,
+          <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
             ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))),
             nameValues.map {
               case (name, value) => <.option(^.value := value, name)
@@ -75,60 +76,52 @@ object SnapshotSelector {
 
         def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
+        def isValidSnapshotDate = isLaterThanEarliest(state.snapshotDateTime) && isInPast
+
         def selectPointInTime = (e: ReactEventFromInput) => {
-          SPACircuit.dispatch(ShowLoader(s"Loading snapshot for ${state.snapshotDateTime.prettyDateTime()}..."))
-          SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.millisSinceEpoch))
-          scope.modState(_.copy(live = false, showDatePicker = false))
+          if (isValidSnapshotDate) {
+            SPACircuit.dispatch(ShowLoader(s"Loading snapshot for ${state.snapshotDateTime.prettyDateTime()}..."))
+            SPACircuit.dispatch(SetPointInTime(state.snapshotDateTime.millisSinceEpoch))
+            scope.modState(_.copy(showDatePicker = false))
+          } else {
+            scope.modState(_.copy(showDatePicker = true))
+          }
         }
 
-        def backToLive = (e: ReactEventFromInput) => {
-          SPACircuit.dispatch(ShowLoader(s"Loading live flights and desks..."))
-          SPACircuit.dispatch(SetPointInTimeToLive())
-          scope.modState(_.copy(live = true, showDatePicker = false))
+        def isInPast = {
+          state.snapshotDateTime.millisSinceEpoch < SDate.now().millisSinceEpoch
         }
 
         <.div(
           <.div(
             if (state.showDatePicker) {
+              val errorMessage = if (!isInPast) <.div(^.className := "error-message", "Please select a date in the past") else if
+              (!isLaterThanEarliest(state.snapshotDateTime)) <.div(^.className := "error-message", s"Earliest available is ${earliestAvailable.prettyDateTime()}") else <.div()
+
               <.div(
                 <.div(
-                  <.div(^.className := "form-group row",
-                    <.label("Choose Date and Time", ^.className := "col-sm-1 col-form-label"),
-                    <.div(^.className := "col-sm-8",
-                      List(
-                        drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt)),
-                        drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt)),
-                        drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt)),
-                        drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt)),
-                        drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt)),
-                        <.input.button(^.value := "Load snapshot", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime),
-                        <.input.button(^.value := "Back to live", ^.className := "btn btn-success", ^.onClick ==> backToLive)
-                      ).toTagMod)
-                  )
-                ))
+                  <.div(^.className := "form-group row snapshot-selector",
+                    List(
+                      <.div(^.className := "col-sm-3 no-gutters", <.label("Choose Snapshot", ^.className := "col-form-label")),
+                      <.div(^.className := "col-sm-2 no-gutters", drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt))),
+                      <.div(^.className := "col-sm-1 no-gutters", drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt))),
+                      <.div(^.className := "col-sm-2 no-gutters", drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt))),
+                      <.div(^.className := "col-sm-1 no-gutters", drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt))),
+                      <.div(^.className := "col-sm-1 no-gutters", drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt))),
+                      <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime)),
+                      errorMessage
+                    ).toTagMod
+                  )))
             } else {
               <.div(^.className := "form-group row",
-                if (!scope.state.live) {
-                  List(
-                    <.div(s"Showing Snapshot at: ${state.snapshotDateTime.prettyDateTime()}", ^.className := "popover-trigger", ^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true)))),
-                    <.input.button(^.value := "Back to live", ^.className := "btn btn-success", ^.onClick ==> backToLive)
-                  ).toTagMod
-                } else {
-                  <.div(^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))), ^.className := "popover-trigger", "Show Snapshot")
-                },
-                <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank"),
-                <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${state.snapshotDateTime.millisSinceEpoch}/${props.terminalName}", ^.target := "_blank")
+                <.div(s"Showing Snapshot at: ${state.snapshotDateTime.prettyDateTime()}", ^.className := "popover-trigger",
+                  ^.onClick ==> ((e: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))))
               )
-            }
-
-          )
-
-        )
+            }))
       })
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
-
 
   def apply(props: Props): VdomElement = component(props)
 }

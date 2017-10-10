@@ -330,8 +330,8 @@ class StaffMovementsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelR
 class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetPointInTime(pointInTime) =>
-      log.info(s"Set client point in time: $pointInTime")
       val sdatePointInTime = SDate(MilliDate(pointInTime))
+      log.info(s"Set client point in time: ${sdatePointInTime.prettyDateTime()}")
       val nextRequests = Effect(Future(GetCrunchState())) + Effect(Future(GetShifts())) +
         Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements())) + Effect(Future(SetCrunchPending()))
       updated(Option(sdatePointInTime), nextRequests)
