@@ -148,6 +148,8 @@
   z-index: 1;
 }
 
+
+
 .staff-deployment-adjustment-container .container {
   display: block;
   font-size: medium;
@@ -174,6 +176,37 @@
   left: -24em;
   top: 58%;
 
+}
+
+.date-selector {
+  width: 682px;
+  padding-top: 2%;
+  margin-left: 1.5%;
+}
+
+.snapshot-selector {
+  width: 550px;
+  padding-top: 2%;
+  margin-left: 0.5%;
+}
+
+.snapshot-selector .error-message {
+  position: relative;
+  float: left;
+  left: 39em;
+  top: -2.5em;
+  border: 1px solid red;
+  border-radius: 3px;
+  padding: 7px;
+}
+.date-selector .error-message {
+  position: relative;
+  float: left;
+  left: 43em;
+  top: -2.5em;
+  border: 1px solid red;
+  border-radius: 3px;
+  padding: 7px;
 }
 
 .date-time-picker-container .container{
@@ -878,4 +911,16 @@ th h2 {
 
 #terminal-summary-boxes {
   height: 160px;
+}
+
+.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+  padding: inherit;
+
+  > .col,
+  > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+  }
 }
