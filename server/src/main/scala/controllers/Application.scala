@@ -85,6 +85,14 @@ object SystemActors {
   type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
 
+class CrunchRelayActor(subscriber: SourceQueueWithComplete[PortState]) extends Actor with ActorLogging {
+  override def receive: Receive = {
+    case ps: PortState =>
+      log.info(s"Received a PortState. Sending to subscriber")
+      subscriber.offer(ps)
+  }
+}
+
 trait SystemActors {
   self: AirportConfProvider =>
 
@@ -196,8 +204,22 @@ trait SystemActors {
     validPortTerminals = airportConfig.terminalNames.toSet)
   val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
   val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+  val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](0, OverflowStrategy.backpressure)
 
-  val (baseArrivalsInput, liveArrivalsInput, manifestsInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) =
+  val (crunchInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) = RunnableSimulationGraph(
+    crunchStateActor = crunchStateActor,
+    crunchSource = crunchSource,
+    shiftsSource = shiftsSource,
+    fixedPointsSource = fixedPointsSource,
+    staffMovementsSource = staffMovementsSource,
+    actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
+    staffingStage = staffingGraphStage,
+    actualDesksStage = actualDesksAndQueuesStage
+  ).run()(actorMaterializer)
+
+  val crunchRelayActor: ActorRef = system.actorOf(Props(classOf[CrunchRelayActor], crunchInput), name = "crunch-relay-actor")
+
+  val (baseArrivalsInput, liveArrivalsInput, manifestsInput) =
     RunnableCrunchGraph[
       SourceQueueWithComplete[Flights],
       SourceQueueWithComplete[VoyageManifests],
@@ -209,15 +231,9 @@ trait SystemActors {
       baseArrivalsSource = baseArrivalsQueueSource,
       liveArrivalsSource = liveArrivalsQueueSource,
       voyageManifestsSource = manifestsSource,
-      shiftsSource = shiftsSource,
-      fixedPointsSource = fixedPointsSource,
-      staffMovementsSource = staffMovementsSource,
-      actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
-      staffingStage = staffingGraphStage,
       arrivalsStage = arrivalsStage,
       cruncher = crunchFlow,
-      actualDesksStage = actualDesksAndQueuesStage,
-      crunchStateActor = crunchStateActor
+      crunchSinkActor = crunchRelayActor
     ).run()(actorMaterializer)
 
   flightsSource(mockProd, airportConfig.portCode).runForeach(f => liveArrivalsInput.offer(f))(actorMaterializer)

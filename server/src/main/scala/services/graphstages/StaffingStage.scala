@@ -102,29 +102,35 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
       }
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {
-        log.info(s"Running simulations")
 
-        portStateWithSimulation = portStateOption.map {
-          case cs@PortState(_, crunchMinutes) =>
+        portStateWithSimulation = portStateOption match {
+          case None =>
+            log.info(s"No crunch to run simulations on")
+            None
+          case Some(cs@PortState(_, crunchMinutes)) =>
+            log.info(s"Running simulations")
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
               case (_, tcms) =>
                 tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
-                    val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
+                    val crunchMinutes = qcms.toSeq.sortBy(_.minute).take(2880)
+                    val minWlSd = crunchMinutes.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
                     val workLoads = minWlSd.map {
                       case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
                       case (_, wl, _) => wl
                     }.toList
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
                     val config = OptimizerConfig(slaByQueue(qn))
+                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
                     val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
-                    qcms.toSeq.sortBy(_.minute).zipWithIndex.map {
+                    log.info(s"Finished running simulation")
+                    crunchMinutes.sortBy(_.minute).zipWithIndex.map {
                       case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
                     }
                 }
             }
-            cs.copy(crunchMinutes = crunchMinutesWithSimulation)
+            Option(cs.copy(crunchMinutes = crunchMinutesWithSimulation))
         }
 
         pushAndPull()
