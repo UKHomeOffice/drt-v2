@@ -160,9 +160,9 @@ class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends Pe
         PortState(Map(), Map())
       case Some(s) => s
     }
-    val (crunchesToRemove, crunchesToUpdate) = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
+    val (_, crunchesToUpdate) = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
     val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
-    val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToRemove, crunchesToUpdate)
+    val diff = CrunchDiff(flightsToRemove, flightsToUpdate, Set(), crunchesToUpdate)
 
     val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
     val flightsFromDiff = applyFlightsWithSplitsDiff(diff, existingState.flights)
