@@ -1,6 +1,5 @@
 package services
 
-import actors.GetState
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
@@ -15,7 +14,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.Codec
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 trait AirportToCountryLike {
   lazy val airportInfo: Map[String, AirportInfo] = {
@@ -41,9 +40,8 @@ trait AirportToCountryLike {
   def airportInfoByAirportCode(code: String) = Future(airportInfo.get(code))
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]] = Future {
-    val res = codes.map(code =>
-      (code, airportInfo.get(code))
-    )
+    val res = codes.map(code => (code, airportInfo.get(code)))
+
     val successes: Set[(String, AirportInfo)] = res collect {
       case (code, Some(ai)) =>
         (code, ai)
@@ -71,7 +69,8 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def crunchStateActor: AskableActorRef
+  def liveCrunchStateActor: AskableActorRef
+  def forecastCrunchStateActor: AskableActorRef
 
   def actorSystem: ActorSystem
 
@@ -79,7 +78,9 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def airportConfiguration(): AirportConfig = airportConfig
 
-  def getCrunchState(pointIntTime: MillisSinceEpoch): Future[Option[CrunchState]]
+  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
+
+  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 
   def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 }

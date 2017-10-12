@@ -1,8 +1,7 @@
 package drt.client.components
 
 import diode.data.{Pending, Pot}
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, TimeRangeHours}
+import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
 import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
@@ -18,7 +17,7 @@ object TerminalComponent {
                             crunchStatePot: Pot[CrunchState],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
-                            pointInTime: Option[SDateLike],
+                            viewMode: ViewMode,
                             timeRangeHours: TimeRangeHours
                           )
 
@@ -27,7 +26,7 @@ object TerminalComponent {
       model.crunchStatePot,
       model.airportConfig,
       model.airportInfos.getOrElse(props.terminalName, Pending()),
-      model.pointInTime,
+      model.viewMode,
       model.timeRangeFilter
     ))
 
@@ -41,10 +40,10 @@ object TerminalComponent {
             props.terminalName,
             model.airportInfos,
             model.timeRangeHours,
-            () => model.pointInTime.getOrElse(SDate.midnightThisMorning())
+            model.viewMode
           )
           <.div(
-            SnapshotSelector(SnapshotSelector.Props(model.pointInTime, props.terminalName)),
+            SnapshotSelector(SnapshotSelector.Props()),
             TerminalContentComponent(terminalContentProps)
           )
         }
@@ -61,7 +60,7 @@ object TerminalComponent {
         model.crunchStatePot,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalName, Pending()),
-        model.pointInTime,
+        model.viewMode,
         model.timeRangeFilter
       ))
       modelRCP(modelMP => {
@@ -74,8 +73,8 @@ object TerminalComponent {
               props.terminalName,
               model.airportInfos,
               model.timeRangeHours,
-              model.pointInTime.getOrElse(SDate.midnightThisMorning())
-            )))
+              model.viewMode)
+            ))
         }))
       })
     })

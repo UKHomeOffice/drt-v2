@@ -339,7 +339,9 @@ trait Api {
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def getCrunchState(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
+  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
+
+  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
 
   def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 }
