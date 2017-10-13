@@ -32,7 +32,8 @@ object RunnableArrivalsGraph {
   }
 }
 
-object RunnableCrunchGraph {
+object
+RunnableCrunchGraph {
   def apply[SAD, SVM](
                        arrivalsSource: Source[ArrivalsDiff, SAD],
                        voyageManifestsSource: Source[VoyageManifests, SVM],
