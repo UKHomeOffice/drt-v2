@@ -74,16 +74,17 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 }
 
-class CrunchUpdatesHandler[M](viewMode: ViewMode,
+class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
                               latestUpdate: ModelR[M, MillisSinceEpoch],
                               modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
-  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
+  val crunchUpdatesRequestFrequency: FiniteDuration = 20 seconds
 
   def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 
   protected def handle = {
     case GetCrunchState() =>
-      val eventualAction = viewMode match {
+      log.info(s"VM: Getting crunch state for viewmode: ${viewMode()}")
+      val eventualAction = viewMode() match {
         case ViewLive() =>
           log.info(s"Requesting CrunchUpdates")
           AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call().map {
@@ -113,7 +114,7 @@ class CrunchUpdatesHandler[M](viewMode: ViewMode,
       effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(eventualAction))
 
     case GetCrunchStateAfter(delay) =>
-      log.info(s"Re-requesting CrunchState for point in time ${viewMode.time.prettyDateTime()}")
+      log.info(s"Re-requesting CrunchState for point in time ${viewMode().time.prettyDateTime()}")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
       effectOnly(getCrunchStateAfterDelay)
 
@@ -220,7 +221,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
   }
 }
 
-class ShiftsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetShifts(shifts: String) =>
       updated(Ready(shifts))
@@ -232,7 +233,7 @@ class ShiftsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[String]]) ext
       val shiftsEffect = Effect(Future(GetShifts())).after(300 seconds)
 
 
-      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode.millis).call().map(res => SetShifts(res)))
+      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call().map(res => SetShifts(res)))
       effectOnly(apiCallEffect + shiftsEffect)
   }
 }
@@ -286,7 +287,7 @@ object FixedPoints {
   }
 }
 
-class FixedPointsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetFixedPoints(fixedPoints: String, terminalName: Option[String]) =>
       if (terminalName.isDefined)
@@ -303,12 +304,12 @@ class FixedPointsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[String]]
     case GetFixedPoints() =>
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
 
-      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(viewMode.millis).call().map(res => SetFixedPoints(res, None)))
+      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(viewMode().millis).call().map(res => SetFixedPoints(res, None)))
       effectOnly(apiCallEffect + fixedPointsEffect)
   }
 }
 
-class StaffMovementsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
+class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
       if (value.isReady) {
@@ -329,7 +330,7 @@ class StaffMovementsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[Seq[S
     case GetStaffMovements() =>
       val movementsEffect = Effect(Future(GetStaffMovements())).after(60 seconds)
 
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode.millis).call().map(res => SetStaffMovements(res)))
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call().map(res => SetStaffMovements(res)))
       effectOnly(apiCallEffect + movementsEffect)
     case SaveStaffMovements(terminalName) =>
       if (value.isReady) {
@@ -342,7 +343,8 @@ class StaffMovementsHandler[M](viewMode: ViewMode, modelRW: ModelRW[M, Pot[Seq[S
 class ViewModeHandler[M](modelRW: ModelRW[M, ViewMode]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetViewMode(mode) =>
-      log.info(s"Set client mode to $mode")
+
+      log.info(s"VM: Set client mode from $value to $mode")
       val nextRequest = Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
       updated(mode, nextRequest)
   }
@@ -371,7 +373,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override protected def initialModel = RootModel()
 
-  def currentViewMode = zoom(_.viewMode).value
+  def currentViewMode(): ViewMode =  zoom(_.viewMode).value
 
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
