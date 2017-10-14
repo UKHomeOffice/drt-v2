@@ -1,7 +1,7 @@
 package services.graphstages
 
 import akka.actor.ActorRef
-import akka.stream.ClosedShape
+import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
@@ -32,12 +32,10 @@ object RunnableArrivalsGraph {
   }
 }
 
-object
-RunnableCrunchGraph {
+object RunnableCrunchGraph {
   def apply[SAD, SVM](
                        arrivalsSource: Source[ArrivalsDiff, SAD],
                        voyageManifestsSource: Source[VoyageManifests, SVM],
-                       arrivalsStage: ArrivalsGraphStage,
                        cruncher: CrunchGraphStage,
                        simulationQueueSubscriber: SourceQueueWithComplete[PortState]
                      ): RunnableGraph[(SAD, SVM)] = {
@@ -52,7 +50,7 @@ RunnableCrunchGraph {
         arrivals.out ~> crunch.in0
         manifests ~> crunch.in1
 
-        crunch.out ~> Sink.foreach[PortState](simulationQueueSubscriber.offer(_))
+        crunch.out ~> Sink.foreach[PortState](simulationQueueSubscriber.offer)
 
         ClosedShape
     })
@@ -60,23 +58,23 @@ RunnableCrunchGraph {
 }
 
 object RunnableForecastCrunchGraph {
-  def apply[SAD, SVM](
+  def apply[SAD](
                        arrivalsSource: Source[ArrivalsDiff, SAD],
-                       voyageManifestsSource: Source[VoyageManifests, SVM],
-                       arrivalsStage: ArrivalsGraphStage,
                        cruncher: CrunchGraphStage,
                        crunchSinkActor: ActorRef
-                     ): RunnableGraph[(SAD, SVM)] = {
+                     ): RunnableGraph[SAD] = {
+
+    val dummyManifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.dropHead)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    RunnableGraph.fromGraph(GraphDSL.create(arrivalsSource,
-      voyageManifestsSource)((_, _)) { implicit builder =>
-      (arrivals, manifests) =>
+    RunnableGraph.fromGraph(GraphDSL.create(arrivalsSource) { implicit builder =>
+      arrivals =>
         val crunch = builder.add(cruncher)
+        val dummyManifests = builder.add(dummyManifestsSource)
 
         arrivals.out ~> crunch.in0
-        manifests ~> crunch.in1
+        dummyManifests ~> crunch.in1
 
         crunch.out ~> Sink.actorRef(crunchSinkActor, "complete")
 

@@ -59,22 +59,22 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see that flight in the CrunchState" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val aclFlight = List(Flights(List(
+      val aclFlight = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001")
-      )))
+      ))
 
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
-      runnableGraphDispatcher(Source(aclFlight), Source(List()), Source(List()))
+      runnableGraphDispatcher.baseArrivalsInput.offer(aclFlight)
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val flightsResult = result.flights.values.map(_.apiFlight)
 
@@ -96,20 +96,19 @@ class AclFeedSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](procTimes = procTimes,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
-      val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
-      bf.offer(aclFlights)
+      runnableGraphDispatcher.baseArrivalsInput.offer(aclFlights)
       testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
-      lf.offer(liveFlights)
+      runnableGraphDispatcher.liveArrivalsInput.offer(liveFlights)
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val flightsResult = result.flights.values.map(_.apiFlight)
 
@@ -134,20 +133,18 @@ class AclFeedSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
 
-      val runnableGraphDispatcher =
-        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](
-          initialBaseArrivals = initialACL,
-          initialLiveArrivals = initialLive,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        initialBaseArrivals = initialACL,
+        initialLiveArrivals = initialLive,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
+      )
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
-      val (bf, _, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
 
-      bf.offer(Flights(newAcl.toList))
+      runnableGraphDispatcher.baseArrivalsInput.offer(Flights(newAcl.toList))
 
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
@@ -172,20 +169,18 @@ class AclFeedSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
 
-      val runnableGraphDispatcher =
-        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](
-          initialBaseArrivals = initialAcl,
-          initialLiveArrivals = initialLive,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        initialBaseArrivals = initialAcl,
+        initialLiveArrivals = initialLive,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
+      )
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
-      val (_, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
 
-      lf.offer(Flights(newLive.toList))
+      runnableGraphDispatcher.liveArrivalsInput.offer(Flights(newLive.toList))
 
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
@@ -212,23 +207,21 @@ class AclFeedSpec extends CrunchTestLike {
 
       val testProbe = TestProbe()
 
-      val runnableGraphDispatcher =
-        runCrunchGraph[SourceQueueWithComplete[Flights], SourceQueueWithComplete[VoyageManifests]](
-          initialBaseArrivals = initialAcl,
-          initialLiveArrivals = initialLive,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        initialBaseArrivals = initialAcl,
+        initialLiveArrivals = initialLive,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
+      )
       val baseInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val liveInput = Source.queue[Flights](1, OverflowStrategy.backpressure)
       val manifestsInput = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
-      val (bf, lf, _, _, _) = runnableGraphDispatcher(baseInput, liveInput, manifestsInput)
 
-      bf.offer(Flights(newAcl.toList))
+      runnableGraphDispatcher.baseArrivalsInput.offer(Flights(newAcl.toList))
       testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
-      lf.offer(Flights(newLive.toList))
+      runnableGraphDispatcher.liveArrivalsInput.offer(Flights(newLive.toList))
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet

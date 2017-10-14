@@ -1,8 +1,5 @@
 package services.crunch
 
-import akka.actor.ActorRef
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
@@ -36,28 +33,22 @@ class VoyageManifestsSpec extends CrunchTestLike {
         PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"))
       ))
     ))
-
-    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
-    val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef, ActorRef](
-        procTimes = Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60
-        ),
-        queues = Map("T1" -> Seq(EeaDesk, EGate)),
-        testProbe = testProbe,
-        crunchStartDateProvider = (_) => SDate(scheduled),
-        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-      ) _
+    val runnableGraphDispatcher = runCrunchGraph(
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      testProbe = testProbe,
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+    )
 
-    val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource,flightsSource, manifestsSource)
-
-    ms ! inputManifests
+    runnableGraphDispatcher.manifestsInput.offer(inputManifests)
     Thread.sleep(200L)
-    fs ! inputFlights
+    runnableGraphDispatcher.liveArrivalsInput.offer(inputFlights)
+
     val flights = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
       case PortState(f, _) => f
     }
@@ -94,31 +85,25 @@ class VoyageManifestsSpec extends CrunchTestLike {
         passengerInfoJson("USA", "P", "USA")
       ))
     ))
-
-    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
-    val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef, ActorRef](
-        procTimes = Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60,
-          nonVisaNationalToDesk -> 25d / 60
-        ),
-        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
-        testProbe = testProbe,
-        crunchStartDateProvider = (_) => SDate(scheduled),
-        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-      ) _
+    val runnableGraphDispatcher = runCrunchGraph(
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        nonVisaNationalToDesk -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
+      testProbe = testProbe,
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+    )
 
-    val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
+    runnableGraphDispatcher.manifestsInput.offer(inputManifestsCi)
+    Thread.sleep(100L)
+    runnableGraphDispatcher.manifestsInput.offer(inputManifestsDc)
+    Thread.sleep(100L)
+    runnableGraphDispatcher.liveArrivalsInput.offer(inputFlights)
 
-    ms ! inputManifestsCi
-    Thread.sleep(100L)
-    ms ! inputManifestsDc
-    Thread.sleep(100L)
-    fs ! inputFlights
     val (flights, crunchMinutes) = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
       case PortState(f, c) => (f, c)
     }

@@ -34,13 +34,8 @@ trait StaffMovementsPersistence {
 
   def getStaffMovements(pointInTime: MillisSinceEpoch): Future[Seq[StaffMovement]] = {
     log.info(s"getStaffMovements($pointInTime)")
-    val actor: AskableActorRef = if (pointInTime > 0) {
-      log.info(s"Creating StaffMovementsReadActor for $pointInTime")
-      val staffMovementsReadActorProps = Props(classOf[StaffMovementsReadActor], SDate(pointInTime))
-      actorSystem.actorOf(staffMovementsReadActorProps, "staffMovementsReadActor" + UUID.randomUUID().toString)
-    } else staffMovementsActor
 
-    val staffMovementsFuture = actor ? GetState
+    val staffMovementsFuture = staffMovementsActor ? GetState
 
     val eventualStaffMovements = staffMovementsFuture.collect {
       case StaffMovements(sm) =>

@@ -31,13 +31,8 @@ trait ShiftPersistence {
 
   def getShifts(pointInTime: MillisSinceEpoch): Future[String] = {
     log.info(s"getShifts($pointInTime)")
-    val actor: AskableActorRef = if (pointInTime > 0) {
-      log.info(s"Creating ShiftsReadActor for $pointInTime")
-      val shiftsReadActorProps = Props(classOf[ShiftsReadActor], SDate(pointInTime))
-      actorSystem.actorOf(shiftsReadActorProps, "shiftsReadActor" + UUID.randomUUID().toString)
-    } else shiftsActor
 
-    val shiftsFuture = actor ? GetState
+    val shiftsFuture = shiftsActor ? GetState
 
     val shiftsCollected = shiftsFuture.collect {
       case shifts: String =>

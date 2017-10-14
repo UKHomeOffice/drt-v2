@@ -22,7 +22,8 @@ import scala.language.postfixOps
 
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
-class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
+class CrunchGraphStage(name: String,
+                       optionalInitialFlights: Option[FlightsWithSplits],
                        slas: Map[QueueName, Int],
                        minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                        procTimes: Map[PaxTypeAndQueue, Double],
@@ -45,7 +46,7 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
     var portStateOption: Option[PortState] = None
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       optionalInitialFlights match {

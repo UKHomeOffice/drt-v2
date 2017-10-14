@@ -21,23 +21,23 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see workload representing only the flight with the highest passenger numbers" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"),
         ArrivalGenerator.apiFlight(flightId = 2, actPax = 10, schDt = scheduled, iata = "FR8819")
-      )))
+      ))
 
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 15)
 
@@ -53,24 +53,24 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled15 = "2017-01-01T00:15Z"
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15),
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled00, iata = "FR8819", terminal = "T1", actPax = 10),
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled15, iata = "EZ1010", terminal = "T2", actPax = 12)
-      )))
+      ))
 
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
       val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 30)
@@ -94,23 +94,23 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15),
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled00, iata = "FR8819", terminal = "XXX", actPax = 10)
-      )))
+      ))
 
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](procTimes = procTimes,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
+      )
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 30)

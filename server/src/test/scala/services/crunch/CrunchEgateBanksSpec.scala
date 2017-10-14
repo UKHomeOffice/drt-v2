@@ -26,9 +26,9 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 20)
-      )))
+      ))
 
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(
@@ -41,21 +41,20 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
-          procTimes = procTimes,
-          slaByQueue = slaByQueue,
-          minMaxDesks = minMaxDesks,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          portSplits = SplitRatios(
-            SplitSources.TerminalAverage,
-            SplitRatio(eeaMachineReadableToDesk, 0.5),
-            SplitRatio(eeaMachineReadableToEGate, 0.5)
-          )) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        slaByQueue = slaByQueue,
+        minMaxDesks = minMaxDesks,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+        portSplits = SplitRatios(
+          SplitSources.TerminalAverage,
+          SplitRatio(eeaMachineReadableToDesk, 0.5),
+          SplitRatio(eeaMachineReadableToEGate, 0.5)
+        ))
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
       val resultSummary = deskRecsFromPortState(result, 15)

@@ -1,8 +1,5 @@
 package services.crunch
 
-import akka.actor.ActorRef
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
@@ -31,30 +28,23 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     val inputFlightsBefore = Flights(List(flight))
     val updatedArrival = flight.copy(ActPax = 50)
     val inputFlightsAfter = Flights(List(updatedArrival))
-
-    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
-    val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef, ActorRef](
-        procTimes = Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60
-        ),
-        queues = Map("T1" -> Seq(EeaDesk, EGate)),
-        testProbe = testProbe,
-        crunchStartDateProvider = (_) => SDate(scheduled),
-        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-      ) _
+    val runnableGraphDispatcher = runCrunchGraph(
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      testProbe = testProbe,
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+    )
 
-    val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
-
-    fs ! inputFlightsBefore
+    runnableGraphDispatcher.liveArrivalsInput.offer(inputFlightsBefore)
 
     testProbe.expectMsgAnyClassOf(classOf[PortState])
 
-    fs ! inputFlightsAfter
+    runnableGraphDispatcher.liveArrivalsInput.offer(inputFlightsAfter)
 
     val flightsAfterUpdate = testProbe.expectMsgAnyClassOf(classOf[PortState]) match {
       case PortState(flights, _) => flights.values.map(_.copy(lastUpdated = None))

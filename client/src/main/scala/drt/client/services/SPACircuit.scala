@@ -77,7 +77,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
                               latestUpdate: ModelR[M, MillisSinceEpoch],
                               modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
-  val crunchUpdatesRequestFrequency: FiniteDuration = 20 seconds
+  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 

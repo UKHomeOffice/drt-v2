@@ -164,7 +164,8 @@ trait SystemActors {
   //  val optionalCrunchState: Option[PortState] = Await.result(crunchStateFuture, 1 minute)
   system.log.info(s"Got CrunchStateActor response")
 
-  def crunchFlow(maxDays: Int): CrunchGraphStage = new CrunchGraphStage(
+  def crunchFlow(name: String, maxDays: Int): CrunchGraphStage = new CrunchGraphStage(
+    name = name,
     optionalInitialFlights = None,
     slas = airportConfig.slaByQueue,
     minMaxDesks = airportConfig.minMaxDesksByTerminalQueue,
@@ -207,23 +208,18 @@ trait SystemActors {
   ).run()(actorMaterializer)
 
   val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-  val (liveArrivalsCrunchInput, manifestsInput) =
-    RunnableCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
+  val (liveArrivalsCrunchInput, manifestsInput) = RunnableCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
       arrivalsSource = liveArrivalsDiffQueueSource,
       voyageManifestsSource = manifestsSource,
-      arrivalsStage = arrivalsStage,
-      cruncher = crunchFlow(maxDays = 2),
+      cruncher = crunchFlow("live", maxDays = 2),
       simulationQueueSubscriber = liveCrunchInput
     ).run()(actorMaterializer)
 
   val forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
 
-  val (forecastArrivalsCrunchInput, _) =
-    RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
+  val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
       arrivalsSource = forecastArrivalsDiffQueueSource,
-      voyageManifestsSource = manifestsSource,
-      arrivalsStage = arrivalsStage,
-      cruncher = crunchFlow(maxDays = 180),
+      cruncher = crunchFlow("forecast", maxDays = 10),
       crunchSinkActor = forecastCrunchStateActor
     ).run()(actorMaterializer)
 
@@ -254,8 +250,6 @@ trait SystemActors {
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], staffMovementsInput))
 
   def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
-
-  //  def flightWalkTimeProvider(flight: Arrival): Millis
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
@@ -304,11 +298,11 @@ trait ProdPassengerSplitProviders {
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
     Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
 
-  private implicit val timeout = Timeout(250 milliseconds)
+  private implicit val timeout: Timeout = Timeout(250 milliseconds)
 }
 
 trait ImplicitTimeoutProvider {
-  implicit val timeout = Timeout(1 second)
+  implicit val timeout: Timeout = Timeout(1 second)
 }
 
 class Application @Inject()(

@@ -47,24 +47,23 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         val scheduled = "2017-06-01T00:00Z"
 
-        val flights = List(Flights(List(
+        val flights = Flights(List(
           ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1)
-        )))
+        ))
 
         val fiveMinutes = 600d / 60
         val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher =
-          runCrunchGraph[NotUsed, NotUsed](
-            procTimes = procTimes,
-            testProbe = testProbe,
-            crunchStartDateProvider = (_) => SDate("2017-05-31T23:00Z"),
-            crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120),
-            minMaxDesks = minMaxDesks
-          ) _
+        val runnableGraphDispatcher = runCrunchGraph(
+          procTimes = procTimes,
+          testProbe = testProbe,
+          crunchStartDateProvider = (_) => SDate("2017-05-31T23:00Z"),
+          crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120),
+          minMaxDesks = minMaxDesks
+        )
 
-        runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+        runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
         val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
         val resultSummary = deskRecsFromPortState(result, 120)

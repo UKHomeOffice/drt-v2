@@ -1,9 +1,5 @@
 package services.crunch
 
-import akka.NotUsed
-import akka.actor.ActorRef
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
@@ -32,28 +28,27 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val edSplit = 0.25
       val egSplit = 0.75
 
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
-      )))
+      ))
 
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(
         eeaMachineReadableToDesk -> 20d / 60,
         eeaMachineReadableToEGate -> 35d / 60)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
-          procTimes = procTimes,
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          portSplits = SplitRatios(
-            SplitSources.TerminalAverage,
-            SplitRatio(eeaMachineReadableToDesk, edSplit),
-            SplitRatio(eeaMachineReadableToEGate, egSplit)
-          )) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        procTimes = procTimes,
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+        portSplits = SplitRatios(
+          SplitSources.TerminalAverage,
+          SplitRatio(eeaMachineReadableToDesk, edSplit),
+          SplitRatio(eeaMachineReadableToEGate, egSplit)
+        ))
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
       val result = testProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 2)
@@ -72,20 +67,19 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
       val scheduled2 = "2017-01-01T00:01Z"
 
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1),
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled2, iata = "SA123", terminal = "T1", actPax = 1)
-      )))
+      ))
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-        ) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 5)
@@ -100,9 +94,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       "Then I should see the correct loads for each queue" >> {
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = List(Flights(List(
+      val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 100)
-      )))
+      ))
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(
         eeaMachineReadableToDesk -> 0.25,
         eeaMachineReadableToEGate -> 0.3,
@@ -110,21 +104,20 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       )
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher =
-        runCrunchGraph[NotUsed, NotUsed](
-          testProbe = testProbe,
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          procTimes = procTimes,
-          portSplits = SplitRatios(
-            SplitSources.TerminalAverage,
-            List(SplitRatio(eeaMachineReadableToDesk, 0.25),
-              SplitRatio(eeaMachineReadableToEGate, 0.25),
-              SplitRatio(eeaNonMachineReadableToDesk, 0.5)
-            )
-          )) _
+      val runnableGraphDispatcher = runCrunchGraph(
+        testProbe = testProbe,
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+        procTimes = procTimes,
+        portSplits = SplitRatios(
+          SplitSources.TerminalAverage,
+          List(SplitRatio(eeaMachineReadableToDesk, 0.25),
+            SplitRatio(eeaMachineReadableToEGate, 0.25),
+            SplitRatio(eeaNonMachineReadableToDesk, 0.5)
+          )
+        ))
 
-      runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
       val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
       val resultSummary = workLoadsFromPortState(result, 5)
@@ -144,27 +137,26 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         "Then I should see a pax load of 5 (20 * 0.25)" >> {
         val scheduled = "2017-01-01T00:00Z"
 
-        val flights = List(Flights(List(
+        val flights = Flights(List(
           ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
-        )))
+        ))
 
         val procTimes: Map[PaxTypeAndQueue, Double] = Map(
           eeaMachineReadableToDesk -> 20d / 60,
           eeaMachineReadableToEGate -> 35d / 60)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher =
-          runCrunchGraph[NotUsed, NotUsed](
-            procTimes = procTimes,
-            testProbe = testProbe,
-            crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-            crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-            csvSplitsProvider = _ => Option(SplitRatios(
-              SplitSources.Historical,
-              SplitRatio(eeaMachineReadableToDesk, 0.25)
-            ))) _
+        val runnableGraphDispatcher = runCrunchGraph(
+          procTimes = procTimes,
+          testProbe = testProbe,
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+          csvSplitsProvider = _ => Option(SplitRatios(
+            SplitSources.Historical,
+            SplitRatio(eeaMachineReadableToDesk, 0.25)
+          )))
 
-        runnableGraphDispatcher(Source(List()), Source(flights), Source(List()))
+        runnableGraphDispatcher.liveArrivalsInput.offer(flights)
 
         val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
         val resultSummary = paxLoadsFromPortState(result, 5)
@@ -191,17 +183,16 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 35d / 60)
 
         val testProbe = TestProbe()
-        val runnableGraphDispatcher =
-          runCrunchGraph[ActorRef, ActorRef](
-            procTimes = procTimes,
-            testProbe = testProbe,
-            crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-            crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-            csvSplitsProvider = _ => Option(SplitRatios(
-              SplitSources.Historical,
-              SplitRatio(eeaMachineReadableToDesk, 0.5)
-            ))
-          ) _
+        val runnableGraphDispatcher = runCrunchGraph(
+          procTimes = procTimes,
+          testProbe = testProbe,
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+          csvSplitsProvider = _ => Option(SplitRatios(
+            SplitSources.Historical,
+            SplitRatio(eeaMachineReadableToDesk, 0.5)
+          ))
+        )
 
         val voyageManifests = VoyageManifests(Set(
           VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
@@ -209,17 +200,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         ))
 
-
-        val baseFlights = Source.actorRef(1, OverflowStrategy.dropBuffer)
-        val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-        val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-
-        val (_, fs, ms, _, _) = runnableGraphDispatcher(baseFlights, flightsSource, manifestsSource)
-
-        fs ! flights
+        runnableGraphDispatcher.baseArrivalsInput.offer(flights)
         testProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
 
-        ms ! voyageManifests
+        runnableGraphDispatcher.manifestsInput.offer(voyageManifests)
         val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
         val resultSummary = paxLoadsFromPortState(result, 5)
 

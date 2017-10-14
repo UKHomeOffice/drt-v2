@@ -1,8 +1,5 @@
 package services.crunch
 
-import akka.actor.ActorRef
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
@@ -28,34 +25,28 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val flights = Flights(List(flight))
-
-    val baseFlightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
     val testProbe = TestProbe()
-    val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef, ActorRef](
-        procTimes = Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60
-        ),
-        queues = Map("T1" -> Seq(EeaDesk, EGate)),
-        testProbe = testProbe,
-        crunchStartDateProvider = (_) => SDate(scheduled),
-        crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-      ) _
+    val testableCrunchGraph = runCrunchGraph(
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      testProbe = testProbe,
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+    )
 
-    val (_, fs, ms, _, ds) = runnableGraphDispatcher(baseFlightsSource, flightsSource, manifestsSource)
-
-    fs ! flights
+    testableCrunchGraph.baseArrivalsInput.offer(flights)
     testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
-    ds ! ActualDeskStats(Map(
-    "T1" -> Map(
-          EeaDesk -> Map(
-            SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
-            SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
-      ))))
+    val deskStats = ActualDeskStats(Map(
+      "T1" -> Map(
+        EeaDesk -> Map(
+          SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
+          SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
+        ))))
+    testableCrunchGraph.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = testProbe.expectMsgAnyClassOf(classOf[PortState]) match {
       case PortState(_, c) => c
