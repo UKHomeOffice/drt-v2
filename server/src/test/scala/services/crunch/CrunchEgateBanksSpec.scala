@@ -41,11 +41,10 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher = runCrunchGraph(
+      val crunch = runCrunchGraph(
         procTimes = procTimes,
         slaByQueue = slaByQueue,
         minMaxDesks = minMaxDesks,
-        testProbe = testProbe,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
         portSplits = SplitRatios(
@@ -54,9 +53,9 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           SplitRatio(eeaMachineReadableToEGate, 0.5)
         ))
 
-      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
+      crunch.liveArrivalsInput.offer(flights)
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
       val resultSummary = deskRecsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(

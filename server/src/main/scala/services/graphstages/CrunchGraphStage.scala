@@ -92,19 +92,6 @@ class CrunchGraphStage(name: String,
       }
     })
 
-    def crunchIfAppropriate(updatedFlights: Map[Int, ApiFlightWithSplits], existingFlights: Map[Int, ApiFlightWithSplits]): Unit = {
-      val earliestAndLatest = earliestAndLatestAffectedPcpTime(existingFlights.values.toSet, updatedFlights.values.toSet)
-      log.info(s"Latest PCP times: ${earliestAndLatest}")
-      earliestAndLatest.foreach {
-        case (earliest, latest) =>
-          val crunchStart = crunchStartFromFirstPcp(earliest)
-          val crunchEnd = crunchEndFromLastPcp(latest)
-          log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
-          portStateOption = crunch(updatedFlights, crunchStart, crunchEnd)
-          pushStateIfReady()
-      }
-    }
-
     setHandler(inManifests, new InHandler {
       override def onPush(): Unit = {
         log.debug(s"inSplits onPush called")
@@ -112,6 +99,7 @@ class CrunchGraphStage(name: String,
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
+        log.info(s"updatedFlights: $updatedFlights")
 
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
@@ -121,6 +109,19 @@ class CrunchGraphStage(name: String,
         if (!hasBeenPulled(inManifests)) pull(inManifests)
       }
     })
+
+    def crunchIfAppropriate(updatedFlights: Map[Int, ApiFlightWithSplits], existingFlights: Map[Int, ApiFlightWithSplits]): Unit = {
+      val earliestAndLatest = earliestAndLatestAffectedPcpTime(existingFlights.values.toSet, updatedFlights.values.toSet)
+      log.info(s"Latest PCP times: $earliestAndLatest")
+      earliestAndLatest.foreach {
+        case (earliest, latest) =>
+          val crunchStart = crunchStartFromFirstPcp(earliest)
+          val crunchEnd = crunchEndFromLastPcp(latest)
+          log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
+          portStateOption = crunch(updatedFlights, crunchStart, crunchEnd)
+          pushStateIfReady()
+      }
+    }
 
     def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${existingFlightsById.size} existing flights")

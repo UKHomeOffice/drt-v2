@@ -30,15 +30,14 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher = runCrunchGraph(
+      val crunch = runCrunchGraph(
         procTimes = procTimes,
-        testProbe = testProbe,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      crunch.liveArrivalsInput.offer(flights)
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
@@ -63,16 +62,15 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher = runCrunchGraph(
+      val crunch = runCrunchGraph(
         procTimes = procTimes,
-        testProbe = testProbe,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
+      crunch.liveArrivalsInput.offer(flights)
 
-      val result = testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 30)
 
       val expected = Map(
@@ -103,16 +101,15 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val testProbe = TestProbe()
-      val runnableGraphDispatcher = runCrunchGraph(
+      val crunch = runCrunchGraph(
         procTimes = procTimes,
-        testProbe = testProbe,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
       )
 
-      runnableGraphDispatcher.liveArrivalsInput.offer(flights)
+      crunch.liveArrivalsInput.offer(flights)
 
-      val result = testProbe.expectMsgAnyClassOf(classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 30)
 
       val expected = Map(

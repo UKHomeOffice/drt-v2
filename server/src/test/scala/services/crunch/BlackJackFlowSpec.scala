@@ -26,19 +26,18 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val flights = Flights(List(flight))
     val testProbe = TestProbe()
-    val testableCrunchGraph = runCrunchGraph(
+    val crunch = runCrunchGraph(
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaMachineReadableToEGate -> 25d / 60
       ),
       queues = Map("T1" -> Seq(EeaDesk, EGate)),
-      testProbe = testProbe,
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    testableCrunchGraph.baseArrivalsInput.offer(flights)
-    testProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.baseArrivalsInput.offer(flights)
+    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(
@@ -46,9 +45,9 @@ class BlackJackFlowSpec extends CrunchTestLike {
           SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
           SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
         ))))
-    testableCrunchGraph.actualDesksAndQueuesInput.offer(deskStats)
+    crunch.actualDesksAndQueuesInput.offer(deskStats)
 
-    val crunchMinutes = testProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+    val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
       case PortState(_, c) => c
     }
     val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {

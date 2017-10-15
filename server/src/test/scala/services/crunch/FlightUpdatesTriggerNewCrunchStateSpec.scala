@@ -29,24 +29,23 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     val updatedArrival = flight.copy(ActPax = 50)
     val inputFlightsAfter = Flights(List(updatedArrival))
     val testProbe = TestProbe()
-    val runnableGraphDispatcher = runCrunchGraph(
+    val crunch = runCrunchGraph(
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaMachineReadableToEGate -> 25d / 60
       ),
       queues = Map("T1" -> Seq(EeaDesk, EGate)),
-      testProbe = testProbe,
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    runnableGraphDispatcher.liveArrivalsInput.offer(inputFlightsBefore)
+    crunch.liveArrivalsInput.offer(inputFlightsBefore)
 
-    testProbe.expectMsgAnyClassOf(classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
 
-    runnableGraphDispatcher.liveArrivalsInput.offer(inputFlightsAfter)
+    crunch.liveArrivalsInput.offer(inputFlightsAfter)
 
-    val flightsAfterUpdate = testProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
       case PortState(flights, _) => flights.values.map(_.copy(lastUpdated = None))
     }
 
