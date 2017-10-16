@@ -160,10 +160,6 @@ trait SystemActors {
   val initialBaseArrivals: Set[Arrival] = Await.result(baseArrivalsFuture, 1 minute)
   val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
 
-  system.log.info(s"Awaiting CrunchStateActor response")
-  //  val optionalCrunchState: Option[PortState] = Await.result(crunchStateFuture, 1 minute)
-  system.log.info(s"Got CrunchStateActor response")
-
   def crunchFlow(name: String, maxDays: Int): CrunchGraphStage = new CrunchGraphStage(
     name = name,
     optionalInitialFlights = None,
@@ -342,24 +338,12 @@ class Application @Inject()(
 
     def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
       if (isHistoricDate(day)) {
-        crunchStateAtPointInTime(day)
+        crunchStateForEndOfDay(day)
       } else if (day < getLocalNextMidnight(SDate.now).millisSinceEpoch) {
-        log.warn(s"Trying to load live CrunchState from Forecast Actor.")
+        log.error(s"Trying to load live CrunchState from Forecast Actor.")
         Future(None)
       } else {
-        val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch - oneHourMillis * 3
-        val lastMinute = getLocalNextMidnight(SDate(day)).millisSinceEpoch + oneHourMillis * 6
-
-        val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(5 seconds))
-
-        crunchStateFuture.map {
-          case Some(PortState(f, m)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
-          case _ => None
-        } recover {
-          case t =>
-            log.warn(s"Didn't get a CrunchState: $t")
-            None
-        }
+        crunchStateForDayInForcast(day)
       }
     }
 
@@ -387,6 +371,22 @@ class Application @Inject()(
     override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
     override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+  }
+
+  def crunchStateForDayInForcast(day: MillisSinceEpoch) = {
+    val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
+    val lastMinute = getLocalNextMidnight(SDate(day)).millisSinceEpoch
+
+    val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(5 seconds))
+
+    crunchStateFuture.map {
+      case Some(PortState(f, m)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
+      case _ => None
+    } recover {
+      case t =>
+        log.warning(s"Didn't get a CrunchState: $t")
+        None
+    }
   }
 
   private def isHistoricDate(day: MillisSinceEpoch) = {

@@ -6,7 +6,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, AirportInfo, SDateLike}
+import drt.shared.{AirportConfig, AirportInfo}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -56,7 +56,7 @@ object TerminalDisplayModeComponent {
               DatePickerComponent(DatePickerComponent.Props(props.viewMode, props.terminalName)),
               TerminalContentComponent(terminalContentProps)
             ) else <.div(
-              SnapshotSelector(SnapshotSelector.Props()),
+              SnapshotSelector(),
               TerminalContentComponent(terminalContentProps)
             )
           })))

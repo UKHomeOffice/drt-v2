@@ -43,7 +43,7 @@ object TerminalComponent {
             model.viewMode
           )
           <.div(
-            SnapshotSelector(SnapshotSelector.Props()),
+            SnapshotSelector(),
             TerminalContentComponent(terminalContentProps)
           )
         }

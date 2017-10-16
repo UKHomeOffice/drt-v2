@@ -1,6 +1,5 @@
 package drt.client.components
 
-import diode.react.ModelProxy
 import drt.client.actions.Actions.{SetViewMode, ShowLoader}
 import drt.client.logger.LoggerFactory
 import drt.client.services.JSDateConversions.SDate
@@ -109,5 +108,5 @@ object SnapshotSelector {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(props: Props): VdomElement = component(props)
+  def apply(): VdomElement = component(Props())
 }
