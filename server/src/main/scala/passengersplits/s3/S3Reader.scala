@@ -5,29 +5,27 @@ import java.nio.file.{Path => JPath}
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 
-import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
-import akka.event.LoggingAdapter
+import akka.NotUsed
+import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.stream._
 import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, MaxInFlightRequestStrategy}
-import akka.stream.scaladsl.{Flow, Sink, Source, StreamConverters}
-import akka.{Done, NotUsed}
+import akka.stream.scaladsl.{Source, StreamConverters}
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
-import passengersplits._
-import passengersplits.core.ZipUtils.UnzippedFileContent
-import passengersplits.core.{Core, CoreActors, CoreLogging, ZipUtils}
 import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.core.ZipUtils
+import passengersplits.core.ZipUtils.UnzippedFileContent
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
-import scala.concurrent.duration.{FiniteDuration, _}
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 trait FilenameProvider {
 

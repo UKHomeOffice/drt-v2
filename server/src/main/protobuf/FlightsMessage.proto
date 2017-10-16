@@ -1,18 +1,7 @@
 package server.protobuf.messages;
 
-message FlightsMessage {
-    repeated FlightMessage flightMessages = 1;
-    optional int64 CreatedAt = 2;
-}
-
 message FlightStateSnapshotMessage {
     repeated FlightMessage flightMessages = 1;
-    repeated FlightLastKnownPaxMessage lastKnownPax = 2;
-}
-
-message FlightLastKnownPaxMessage {
-    optional string flightKey = 1;
-    optional int32 lastKnownPax = 2;
 }
 
 message FlightMessage {
@@ -38,4 +27,10 @@ message FlightMessage {
     optional int64 EstimatedChox = 20;
     optional int64 ActualChox = 21;
     optional int32 LastKnownPax = 22;
+}
+
+message FlightsDiffMessage {
+    optional int64 createdAt = 1;
+    repeated int32 removals = 2;
+    repeated FlightMessage updates = 3;
 }

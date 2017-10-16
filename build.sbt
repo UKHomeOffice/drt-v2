@@ -93,7 +93,6 @@ lazy val server = (project in file("server"))
 
     Resolver.bintrayRepo("mfglabs", "maven"),
     Resolver.bintrayRepo("dwhjames", "maven"),
-    "release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local",
     Resolver.defaultLocal),
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)

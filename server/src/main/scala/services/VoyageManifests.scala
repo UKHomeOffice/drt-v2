@@ -74,6 +74,10 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
         log.info(s"Persisting VoyageManifests latestZipFilename $latestZipFilename")
         context.system.eventStream.publish(lzf)
       }
+
+    case UpdateLatestZipFilename(updatedLZF) if updatedLZF == latestZipFilename =>
+      log.info(s"Received update - latest zip file is: $updatedLZF - no change")
+
     case GetLatestZipFilename =>
       log.info(s"Received GetLatestZipFilename request. Sending $latestZipFilename")
       sender() ! latestZipFilename
@@ -83,6 +87,7 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
+
     case other =>
       log.info(s"Received unexpected message $other")
   }

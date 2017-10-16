@@ -1,11 +1,12 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{SetPointInTime, SetPointInTimeToLive}
-import drt.client.services.{SPACircuit, TimeRangeHours}
+import drt.client.actions.Actions.SetViewMode
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services._
 import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, AirportInfo, SDateLike}
+import drt.shared.{AirportConfig, AirportInfo}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -16,7 +17,7 @@ object TerminalDisplayModeComponent {
                    terminalName: TerminalName,
                    airportInfoPot: Pot[AirportInfo],
                    timeRangeHours: TimeRangeHours,
-                   dayToDisplay: SDateLike)
+                   viewMode: ViewMode)
 
   case class State(activeTab: String)
 
@@ -30,7 +31,7 @@ object TerminalDisplayModeComponent {
         props.terminalName,
         props.airportInfoPot,
         props.timeRangeHours,
-        () => props.dayToDisplay
+        props.viewMode
       )
 
       val liveDataClass = if (state.activeTab == "liveData") "active" else ""
@@ -39,12 +40,12 @@ object TerminalDisplayModeComponent {
       <.div(
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := liveDataClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-            SPACircuit.dispatch(SetPointInTimeToLive())
+            SPACircuit.dispatch(SetViewMode(ViewLive()))
             scope.modState(_ => State("liveData"))
           }),
           <.li(^.className := snapshotDataClass,
             <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-              SPACircuit.dispatch(SetPointInTime(props.dayToDisplay.millisSinceEpoch))
+              SPACircuit.dispatch(SetViewMode(ViewPointInTime(SDate.now())))
               scope.modState(_ => State("snapshot"))
             }
           )
@@ -52,10 +53,10 @@ object TerminalDisplayModeComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
             if (state.activeTab == "liveData") <.div(
-              DatePickerComponent(DatePickerComponent.Props(Option(props.dayToDisplay), props.terminalName)),
+              DatePickerComponent(DatePickerComponent.Props(props.viewMode, props.terminalName)),
               TerminalContentComponent(terminalContentProps)
             ) else <.div(
-              SnapshotSelector(SnapshotSelector.Props(None, props.terminalName)),
+              SnapshotSelector(),
               TerminalContentComponent(terminalContentProps)
             )
           })))

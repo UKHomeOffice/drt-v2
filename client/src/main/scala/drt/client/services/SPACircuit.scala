@@ -24,6 +24,20 @@ import scala.util.{Failure, Success, Try}
 
 case class TimeRangeHours(start: Int = 0, end: Int = 24)
 
+sealed trait ViewMode {
+  def millis: MillisSinceEpoch = time.millisSinceEpoch
+
+  def time: SDateLike
+}
+
+case class ViewLive() extends ViewMode {
+  def time = SDate.now()
+}
+
+case class ViewPointInTime(time: SDateLike) extends ViewMode
+
+case class ViewDay(time: SDateLike) extends ViewMode
+
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
@@ -31,7 +45,7 @@ case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      shiftsRaw: Pot[String] = Empty,
                      fixedPointsRaw: Pot[String] = Empty,
                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
-                     pointInTime: Option[SDateLike] = None,
+                     viewMode: ViewMode = ViewLive(),
                      timeRangeFilter: TimeRangeHours = TimeRangeHours(),
                      loadingState: LoadingState = LoadingState())
 
@@ -60,43 +74,47 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 }
 
-class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
+class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
                               latestUpdate: ModelR[M, MillisSinceEpoch],
                               modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
-  def pointInTimeMillis: Option[MillisSinceEpoch] = pointInTime.value.map(_.millisSinceEpoch)
-  def pointInTimeString: String = SDate(MilliDate(pointInTimeMillis.get)).toLocalDateTimeString()
-
   def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 
   protected def handle = {
-    case GetCrunchState() if pointInTimeMillis.isEmpty =>
-      log.info(s"Requesting CrunchUpdates")
-      val x = AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call().map {
-        case Some(cu) =>
-          log.info(s"Got ${cu.flights.size} flights, ${cu.minutes.size} minutes")
-          UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
-        case None =>
-          GetCrunchUpdatesAfter(crunchUpdatesRequestFrequency)
-      }
-      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
+    case GetCrunchState() =>
+      log.info(s"VM: Getting crunch state for viewmode: ${viewMode()}")
+      val eventualAction = viewMode() match {
+        case ViewLive() =>
+          log.info(s"Requesting CrunchUpdates")
+          AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call().map {
+            case Some(cu) =>
+              log.info(s"Got ${cu.flights.size} flights, ${cu.minutes.size} minutes")
+              UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
+            case None =>
+              GetCrunchUpdatesAfter(crunchUpdatesRequestFrequency)
+          }
 
-    case GetCrunchState() if pointInTimeMillis.isDefined =>
-      log.info(s"Requesting crunchState for point in time $pointInTimeString")
+        case vm =>
+          log.info(s"Requesting crunchState for point in time ${vm.time.prettyDateTime()}")
 
-      val x = AjaxClient[Api].getCrunchState(pointInTimeMillis.get).call().map {
-        case Some(cs) =>
-          log.info(s"Got ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
-          UpdateCrunchStateFromCrunchState(cs)
-        case None =>
-          log.info(s"CrunchState not available")
-          GetCrunchStateAfter(crunchUpdatesRequestFrequency)
+          val call = vm match {
+            case ViewPointInTime(time) => AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
+            case ViewDay(time) => AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
+          }
+          call.map {
+            case Some(cs) =>
+              log.info(s"Got ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
+              UpdateCrunchStateFromCrunchState(cs)
+            case None =>
+              log.info(s"CrunchState not available")
+              GetCrunchStateAfter(crunchUpdatesRequestFrequency)
+          }
       }
-      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(x))
+      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(eventualAction))
 
     case GetCrunchStateAfter(delay) =>
-      log.info(s"Re-requesting CrunchState for point in time $pointInTimeString")
+      log.info(s"Re-requesting CrunchState for point in time ${viewMode().time.prettyDateTime()}")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
       effectOnly(getCrunchStateAfterDelay)
 
@@ -172,7 +190,7 @@ class CrunchUpdatesHandler[M](pointInTime: ModelR[M, Option[SDateLike]],
     val relevantFlights = existingState.flights.filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime)
     val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
       case (soFar, newFlight) =>
-        val withoutOldFlight = soFar.filterNot(_.apiFlight.FlightID == newFlight.apiFlight.FlightID)
+        val withoutOldFlight = soFar.filterNot(_.apiFlight.uniqueId == newFlight.apiFlight.uniqueId)
         withoutOldFlight + newFlight
     }
     flights
@@ -203,7 +221,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
   }
 }
 
-class ShiftsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetShifts(shifts: String) =>
       updated(Ready(shifts))
@@ -214,9 +232,8 @@ class ShiftsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: Model
     case GetShifts() =>
       val shiftsEffect = Effect(Future(GetShifts())).after(300 seconds)
 
-      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
 
-      val apiCallEffect = Effect(AjaxClient[Api].getShifts(pointInTimeMillis).call().map(res => SetShifts(res)))
+      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call().map(res => SetShifts(res)))
       effectOnly(apiCallEffect + shiftsEffect)
   }
 }
@@ -270,7 +287,7 @@ object FixedPoints {
   }
 }
 
-class FixedPointsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle = {
     case SetFixedPoints(fixedPoints: String, terminalName: Option[String]) =>
       if (terminalName.isDefined)
@@ -287,14 +304,12 @@ class FixedPointsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: 
     case GetFixedPoints() =>
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
 
-      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
-
-      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(pointInTimeMillis).call().map(res => SetFixedPoints(res, None)))
+      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(viewMode().millis).call().map(res => SetFixedPoints(res, None)))
       effectOnly(apiCallEffect + fixedPointsEffect)
   }
 }
 
-class StaffMovementsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
+class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
       if (value.isReady) {
@@ -315,9 +330,7 @@ class StaffMovementsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelR
     case GetStaffMovements() =>
       val movementsEffect = Effect(Future(GetStaffMovements())).after(60 seconds)
 
-      def pointInTimeMillis = pointInTime.value.map(_.millisSinceEpoch).getOrElse(0L)
-
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(pointInTimeMillis).call().map(res => SetStaffMovements(res)))
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call().map(res => SetStaffMovements(res)))
       effectOnly(apiCallEffect + movementsEffect)
     case SaveStaffMovements(terminalName) =>
       if (value.isReady) {
@@ -327,19 +340,13 @@ class StaffMovementsHandler[M](pointInTime: ModelR[M, Option[SDateLike]], modelR
   }
 }
 
-class PointInTimeHandler[M](modelRW: ModelRW[M, Option[SDateLike]]) extends LoggingActionHandler(modelRW) {
+class ViewModeHandler[M](modelRW: ModelRW[M, ViewMode]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetPointInTime(pointInTime) =>
-      val sdatePointInTime = SDate(MilliDate(pointInTime))
-      log.info(s"Set client point in time: ${sdatePointInTime.prettyDateTime()}")
-      val nextRequests = Effect(Future(GetCrunchState())) + Effect(Future(GetShifts())) +
-        Effect(Future(GetFixedPoints())) + Effect(Future(GetStaffMovements())) + Effect(Future(SetCrunchPending()))
-      updated(Option(sdatePointInTime), nextRequests)
+    case SetViewMode(mode) =>
 
-    case SetPointInTimeToLive() =>
-      log.info(s"Set client point in time to live")
+      log.info(s"VM: Set client mode from $value to $mode")
       val nextRequest = Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
-      updated(None, nextRequest)
+      updated(mode, nextRequest)
   }
 }
 
@@ -366,15 +373,17 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override protected def initialModel = RootModel()
 
+  def currentViewMode(): ViewMode =  zoom(_.viewMode).value
+
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
-      new CrunchUpdatesHandler(zoom(_.pointInTime), zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
+      new CrunchUpdatesHandler(currentViewMode, zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
-      new ShiftsHandler(zoom(_.pointInTime), zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
-      new FixedPointsHandler(zoom(_.pointInTime), zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
-      new StaffMovementsHandler(zoom(_.pointInTime), zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new PointInTimeHandler(zoomRW(_.pointInTime)((m, v) => m.copy(pointInTime = v))),
+      new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
+      new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
+      new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
+      new ViewModeHandler(zoomRW(_.viewMode)((m, v) => m.copy(viewMode = v))),
       new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v)))
     )
@@ -386,9 +395,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     loggedhandlers
   }
 
-  def pointInTimeMillis: Long = {
-    zoom(_.pointInTime).value.map(_.millisSinceEpoch).getOrElse(0L)
-  }
+  def pointInTimeMillis: MillisSinceEpoch = zoom(_.viewMode).value.millis
 }
 
 object SPACircuit extends DrtCircuit

@@ -1,9 +1,8 @@
 package drt.client.components
 
-import drt.client.actions.Actions.{SetPointInTime, SetPointInTimeToLive}
+import drt.client.actions.Actions.SetViewMode
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
@@ -12,7 +11,7 @@ import scala.scalajs.js.Date
 
 object DatePickerComponent {
 
-  case class Props(dateSelected: Option[SDateLike], terminalName: String)
+  case class Props(viewMode: ViewMode, terminalName: String)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
@@ -27,19 +26,13 @@ object DatePickerComponent {
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.dateSelected.map(_.millisSinceEpoch))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(_.viewMode.millis)
   implicit val stateReuse: Reusability[State] = Reusability.by(s => (s.day, s.month, s.year, s.hours, s.minutes).hashCode())
 
   val component = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps(
-      p => {
-        p.dateSelected match {
-          case Some(ds) =>
-            State(false, ds.getDate(), ds.getMonth(), ds.getFullYear(), 23, 59)
-          case None =>
-            State(false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
-        }
-      }
+      p =>
+        State(false, p.viewMode.time.getDate(), p.viewMode.time.getMonth(), p.viewMode.time.getFullYear(), p.viewMode.time.getHours(), p.viewMode.time.getMinutes())
     )
     .renderPS((scope, props, state) => {
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
@@ -60,25 +53,25 @@ object DatePickerComponent {
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def selectPointInTime = (e: ReactEventFromInput) => {
-        SPACircuit.dispatch(SetPointInTime(state.selectedDateTime.millisSinceEpoch))
+        SPACircuit.dispatch(SetViewMode(ViewDay(state.selectedDateTime)))
         scope.modState(_.copy(showDatePicker = false))
       }
 
       def selectYesterday = (e: ReactEventFromInput) => {
         val yesterday = SDate.midnightThisMorning().addMinutes(-1)
-        SPACircuit.dispatch(SetPointInTime(yesterday.millisSinceEpoch))
+        SPACircuit.dispatch(SetViewMode(ViewDay(yesterday)))
         scope.modState(_.copy(true, yesterday.getDate(), yesterday.getMonth(), yesterday.getFullYear(), yesterday.getHours(), yesterday.getMinutes()))
       }
 
       def selectTomorrow = (e: ReactEventFromInput) => {
         val tomorrow = SDate.midnightThisMorning().addDays(2).addMinutes(-1)
-        SPACircuit.dispatch(SetPointInTime(tomorrow.millisSinceEpoch))
+        SPACircuit.dispatch(SetViewMode(ViewDay(tomorrow)))
         scope.modState(_.copy(true, tomorrow.getDate(), tomorrow.getMonth(), tomorrow.getFullYear(), tomorrow.getHours(), tomorrow.getMinutes()))
       }
 
       def selectToday = (e: ReactEventFromInput) => {
         val now = SDate.now()
-        SPACircuit.dispatch(SetPointInTimeToLive())
+        SPACircuit.dispatch(SetViewMode(ViewLive()))
         scope.modState(_.copy(true, now.getDate(), now.getMonth(), now.getFullYear(), now.getHours(), now.getMinutes()))
       }
 

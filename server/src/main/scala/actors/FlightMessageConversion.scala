@@ -2,12 +2,20 @@ package actors
 
 import drt.shared._
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
-import server.protobuf.messages.FlightsMessage.FlightMessage
-import services.SDate
+import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage}
+import services.{ArrivalsState, SDate}
 
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
+
+  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage) = {
+    ArrivalsState(snMessage.flightMessages.map(fm => {
+      val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
+      (arrival.uniqueId, arrival)
+    }).toMap)
+  }
+
   def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {
     FlightWithSplitsMessage(
       Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),

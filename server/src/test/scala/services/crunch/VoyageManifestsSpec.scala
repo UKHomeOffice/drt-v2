@@ -1,11 +1,7 @@
 package services.crunch
 
-import akka.actor.ActorRef
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
@@ -16,6 +12,7 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import services.SDate
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 
 class VoyageManifestsSpec extends CrunchTestLike {
@@ -35,30 +32,22 @@ class VoyageManifestsSpec extends CrunchTestLike {
         PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"))
       ))
     ))
+    val crunchGraphs = runCrunchGraph(
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+    )
 
-    val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val testProbe = TestProbe()
-    val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef, ActorRef](
-        procTimes = Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60
-        ),
-        queues = Map("T1" -> Seq(EeaDesk, EGate)),
-        testProbe = testProbe,
-        crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
-      ) _
+    crunchGraphs.manifestsInput.offer(inputManifests)
+    Thread.sleep(200L)
+    crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
-
-    ms ! inputManifests
-    Thread.sleep(250L)
-
-    fs ! inputFlights
-
-    val flights = testProbe.expectMsgAnyClassOf(classOf[CrunchState]) match {
-      case CrunchState(_, _, f, _) => f
+    val flights = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+      case PortState(f, _) => f
     }
 
     val expectedSplits = Set(
@@ -69,7 +58,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers)
     )
     val splitsSet = flights.head match {
-      case ApiFlightWithSplits(_, s, _) => s
+      case (_, ApiFlightWithSplits(_, s, _)) => s
     }
 
     splitsSet === expectedSplits
@@ -93,34 +82,24 @@ class VoyageManifestsSpec extends CrunchTestLike {
         passengerInfoJson("USA", "P", "USA")
       ))
     ))
+    val crunchGraphs: CrunchGraph = runCrunchGraph(
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60,
+        nonVisaNationalToDesk -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+    )
 
-    val flightsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val manifestsSource = Source.actorRef(1, OverflowStrategy.dropBuffer)
-    val testProbe = TestProbe()
-    val runnableGraphDispatcher =
-      runCrunchGraph[ActorRef, ActorRef](
-        procTimes = Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60,
-          nonVisaNationalToDesk -> 25d / 60
-        ),
-        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
-        testProbe = testProbe,
-        crunchStartDateProvider = () => SDate(scheduled).millisSinceEpoch
-      ) _
+    crunchGraphs.manifestsInput.offer(inputManifestsCi)
+    Thread.sleep(100L)
+    crunchGraphs.manifestsInput.offer(inputManifestsDc)
+    Thread.sleep(100L)
+    crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val (fs, ms, _, _) = runnableGraphDispatcher(flightsSource, manifestsSource)
-
-    ms ! inputManifestsCi
-    Thread.sleep(250L)
-    ms ! inputManifestsDc
-    Thread.sleep(250L)
-
-    fs ! inputFlights
-
-    val (flights, crunchMinutes) = testProbe.expectMsgAnyClassOf(classOf[CrunchState]) match {
-      case CrunchState(_, _, f, c) => (f, c)
-    }
+    val portState = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
     val expectedSplits = Set(
       ApiSplits(Set(
@@ -131,11 +110,11 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ApiSplits(Set(
         ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
-    val splitsSet = flights.head match {
-      case ApiFlightWithSplits(_, s, _) => s
+    val splitsSet = portState.flights.head match {
+      case (_, ApiFlightWithSplits(_, s, _)) => s
     }
 
-    val queues = crunchMinutes.groupBy(_.queueName).keys.toSet
+    val queues = portState.crunchMinutes.values.groupBy(_.queueName).keys.toSet
     val expectedQueues = Set(NonEeaDesk)
 
     (splitsSet, queues) === Tuple2(expectedSplits, expectedQueues)

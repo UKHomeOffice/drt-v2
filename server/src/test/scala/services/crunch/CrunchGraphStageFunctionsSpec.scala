@@ -4,7 +4,7 @@ import actors._
 import akka.actor._
 import akka.stream._
 import akka.testkit.TestKit
-import drt.shared.Crunch.CrunchState
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
@@ -17,9 +17,9 @@ import scala.collection.immutable.{List, Seq}
 
 
 class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef) extends CrunchStateActor(queues) {
-  override def updateStateFromCrunchState(cs: CrunchState): Unit = {
+  override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
-    super.updateStateFromCrunchState(cs)
+    super.updateStateFromPortState(cs)
 
     probe ! state.get
   }

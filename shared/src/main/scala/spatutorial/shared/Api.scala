@@ -69,6 +69,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
   def equals(candidate: ApiFlightWithSplits): Boolean = {
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
+
   def bestSplits: Option[ApiSplits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
@@ -120,9 +121,26 @@ case class Arrival(
                     LastKnownPax: Option[Int] = None) {
   lazy val ICAO = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA = Arrival.standardiseFlightCode(rawIATA)
+
+  lazy val flightNumber = {
+    val bestCode = (IATA, ICAO) match {
+      case (iata, _) if iata != "" => iata
+      case (_, icao) if icao != "" => icao
+      case _ => ""
+    }
+
+    bestCode match {
+      case Arrival.flightCodeRegex(_, fn, _) => fn.toInt
+      case _ => 0
+    }
+  }
+
+  lazy val uniqueId = s"$Terminal$Scheduled$flightNumber}".hashCode
 }
 
 object Arrival {
+  val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+
   def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
 
   def standardiseFlightCode(flightCode: String): String = {
@@ -130,55 +148,56 @@ object Arrival {
 
     flightCode match {
       case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"$operator${flightNumber.toInt}%04d$suffix"
+        val number = f"${flightNumber.toInt}%04d"
+        f"$operator$number$suffix"
       case _ => flightCode
     }
   }
 }
 
 //This is used for handling historic snapshots, do not change or remove.
-@SerialVersionUID(2414259893568926057L)
-case class ApiFlight(
-                      Operator: String,
-                      Status: String,
-                      EstDT: String,
-                      ActDT: String,
-                      EstChoxDT: String,
-                      ActChoxDT: String,
-                      Gate: String,
-                      Stand: String,
-                      MaxPax: Int,
-                      ActPax: Int,
-                      TranPax: Int,
-                      RunwayID: String,
-                      BaggageReclaimId: String,
-                      FlightID: Int,
-                      AirportID: String,
-                      Terminal: String,
-                      rawICAO: String,
-                      rawIATA: String,
-                      Origin: String,
-                      SchDT: String,
-                      PcpTime: Long) {
-
-  lazy val ICAO: String = ApiFlight.standardiseFlightCode(rawICAO)
-  lazy val IATA: String = ApiFlight.standardiseFlightCode(rawIATA)
-
-
-}
-
-object ApiFlight {
-
-  def standardiseFlightCode(flightCode: String): String = {
-    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
-
-    flightCode match {
-      case flightCodeRegex(operator, flightNumber, suffix) =>
-        f"$operator${flightNumber.toInt}%04d$suffix"
-      case _ => flightCode
-    }
-  }
-}
+//@SerialVersionUID(2414259893568926057L)
+//case class ApiFlight(
+//                      Operator: String,
+//                      Status: String,
+//                      EstDT: String,
+//                      ActDT: String,
+//                      EstChoxDT: String,
+//                      ActChoxDT: String,
+//                      Gate: String,
+//                      Stand: String,
+//                      MaxPax: Int,
+//                      ActPax: Int,
+//                      TranPax: Int,
+//                      RunwayID: String,
+//                      BaggageReclaimId: String,
+//                      FlightID: Int,
+//                      AirportID: String,
+//                      Terminal: String,
+//                      rawICAO: String,
+//                      rawIATA: String,
+//                      Origin: String,
+//                      SchDT: String,
+//                      PcpTime: Long) {
+//
+//  lazy val ICAO: String = ApiFlight.standardiseFlightCode(rawICAO)
+//  lazy val IATA: String = ApiFlight.standardiseFlightCode(rawIATA)
+//
+//
+//}
+//
+//object ApiFlight {
+//
+//  def standardiseFlightCode(flightCode: String): String = {
+//    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+//
+//    flightCode match {
+//      case flightCodeRegex(operator, flightNumber, suffix) =>
+//        f"$operator${flightNumber.toInt}%04d$suffix"
+//      case _ => flightCode
+//    }
+//  }
+//}
 
 
 trait SDateLike {
@@ -269,27 +288,30 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 object Crunch {
   type MillisSinceEpoch = Long
 
-  case class CrunchState(
-                          crunchFirstMinuteMillis: MillisSinceEpoch,
-                          numberOfMinutes: Int,
-                          flights: Set[ApiFlightWithSplits],
-                          crunchMinutes: Set[CrunchMinute])
+  case class CrunchState(crunchFirstMinuteMillis: MillisSinceEpoch,
+                         numberOfMinutes: Int,
+                         flights: Set[ApiFlightWithSplits],
+                         crunchMinutes: Set[CrunchMinute])
 
-  case class CrunchMinute(
-                           terminalName: TerminalName,
-                           queueName: QueueName,
-                           minute: MillisSinceEpoch,
-                           paxLoad: Double,
-                           workLoad: Double,
-                           deskRec: Int,
-                           waitTime: Int,
-                           deployedDesks: Option[Int] = None,
-                           deployedWait: Option[Int] = None,
-                           actDesks: Option[Int] = None,
-                           actWait: Option[Int] = None,
-                           lastUpdated: Option[MillisSinceEpoch] = None) {
+  case class PortState(flights: Map[Int, ApiFlightWithSplits],
+                       crunchMinutes: Map[Int, CrunchMinute])
+
+  case class CrunchMinute(terminalName: TerminalName,
+                          queueName: QueueName,
+                          minute: MillisSinceEpoch,
+                          paxLoad: Double,
+                          workLoad: Double,
+                          deskRec: Int,
+                          waitTime: Int,
+                          deployedDesks: Option[Int] = None,
+                          deployedWait: Option[Int] = None,
+                          actDesks: Option[Int] = None,
+                          actWait: Option[Int] = None,
+                          lastUpdated: Option[MillisSinceEpoch] = None) {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
+    lazy val key = s"$terminalName$queueName$minute".hashCode
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
@@ -317,7 +339,9 @@ trait Api {
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def getCrunchState(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
+  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
+
+  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
 
   def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 }

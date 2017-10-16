@@ -21,13 +21,15 @@ object Crunch {
 
   case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
+  case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
+    lazy val key = s"$terminalName$queueName$minute".hashCode
+  }
 
   case class RemoveFlight(flightId: Int)
 
   case class CrunchDiff(flightRemovals: Set[RemoveFlight], flightUpdates: Set[ApiFlightWithSplits], crunchMinuteRemovals: Set[RemoveCrunchMinute], crunchMinuteUpdates: Set[CrunchMinute])
 
-  case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch, numberOfMinutes: Int)
+  case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
   val oneMinuteMillis: MillisSinceEpoch = 60000L
   val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
@@ -39,7 +41,7 @@ object Crunch {
     vn
   }
 
-  def midnightThisMorning(): MillisSinceEpoch = {
+  def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
     crunchStartDate
@@ -74,7 +76,7 @@ object Crunch {
                                portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
                                slas: Map[QueueName, Int],
                                minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                               eGateBankSize: Int): Set[CrunchMinute] = {
+                               eGateBankSize: Int): Map[Int, CrunchMinute] = {
     val crunchEnd = crunchStartMillis + (numberOfMinutes * oneMinuteMillis)
 
     portWorkloads.flatMap {
@@ -102,15 +104,15 @@ object Crunch {
                   val workLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._2
                   CrunchMinute(tn, qn, minuteMillis, paxLoad, workLoad, deskRecs(minuteIdx), waitTimes(minuteIdx))
                 }).toSet
-                crunchMinutes
+                crunchMinutes.map(cm => (cm.key, cm)).toMap
               case _ =>
-                Set[CrunchMinute]()
+                Map[Int, CrunchMinute]()
             }
 
             queueCrunchMinutes
         }
         terminalCrunchMinutes
-    }.toSet
+    }
   }
 
   def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
@@ -144,7 +146,7 @@ object Crunch {
 
   def flightsToFlightSplitMinutes(procTimes: Map[PaxTypeAndQueue, Double])(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
     flightsWithSplits.map {
-      case ApiFlightWithSplits(flight, splits, _) => (flight.FlightID, flightToFlightSplitMinutes(flight, splits, procTimes))
+      case ApiFlightWithSplits(flight, splits, _) => (flight.uniqueId, flightToFlightSplitMinutes(flight, splits, procTimes))
     }.toMap
   }
 
@@ -228,7 +230,7 @@ object Crunch {
                         splitStyle: SplitStyle): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
     val splitWorkLoadInMinute = splitPaxInMinute * procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
-    FlightSplitMinute(flight.FlightID, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
+    FlightSplitMinute(flight.uniqueId, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
   }
 
   def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[QueueLoadMinute] = {
@@ -248,9 +250,28 @@ object Crunch {
     SDate(localMidnight, DateTimeZone.forID("Europe/London"))
   }
 
-  def flightsDiff(oldFlights: Set[ApiFlightWithSplits], newFlights: Set[ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
-    val oldFlightsById = oldFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
-    val newFlightsById = newFlights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+  def getLocalNextMidnight(now: SDateLike): SDateLike = {
+    val nextDay = now.addDays(1)
+    val localMidnight = s"${nextDay.getFullYear()}-${nextDay.getMonth()}-${nextDay.getDate()}T00:00"
+    SDate(localMidnight, DateTimeZone.forID("Europe/London"))
+  }
+
+  def earliestAndLatestAffectedPcpTimeFromFlights(maxDays: Int)(existingFlights: Set[ApiFlightWithSplits], updatedFlights: Set[ApiFlightWithSplits]): Option[(SDateLike, SDateLike)] = {
+    val differences: Set[ApiFlightWithSplits] = updatedFlights -- existingFlights
+    val latestPcpTimes = differences
+      .toList
+      .sortBy(_.apiFlight.PcpTime)
+      .map(_.apiFlight.PcpTime)
+
+    if (latestPcpTimes.nonEmpty) {
+      Option(SDate(latestPcpTimes.head), SDate(latestPcpTimes.reverse.head)) match {
+        case Some((e, l)) if (l.millisSinceEpoch - e.millisSinceEpoch) / oneDayMillis <= maxDays => Some((e, l))
+        case Some((e, _)) => Some(e, e.addDays(maxDays))
+      }
+    } else None
+  }
+
+  def flightsDiff(oldFlightsById: Map[Int, ApiFlightWithSplits], newFlightsById: Map[Int, ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
     val oldIds = oldFlightsById.keys.toSet
     val newIds = newFlightsById.keys.toSet
     val toRemove = (oldIds -- newIds).map(RemoveFlight)
@@ -261,11 +282,9 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinutesDiff(oldCm: Set[CrunchMinute], newCm: Set[CrunchMinute]): (Set[RemoveCrunchMinute], Set[CrunchMinute]) = {
-    val oldTqmToCm = oldCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
-    val newTqmToCm = newCm.map(cm => crunchMinuteToTqmCm(cm)).toMap
-    val oldKeys = oldTqmToCm.keys.toSet
-    val newKeys = newTqmToCm.keys.toSet
+  def crunchMinutesDiff(oldTqmToCm: Map[Int, CrunchMinute], newTqmToCm: Map[Int, CrunchMinute]): (Set[RemoveCrunchMinute], Set[CrunchMinute]) = {
+    val oldKeys = oldTqmToCm.values.map(cm => Tuple3(cm.terminalName, cm.queueName, cm.minute)).toSet
+    val newKeys = newTqmToCm.values.map(cm => Tuple3(cm.terminalName, cm.queueName, cm.minute)).toSet
     val toRemove = (oldKeys -- newKeys).map {
       case (tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
     }
@@ -280,51 +299,25 @@ object Crunch {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
-  def applyCrunchDiff(diff: CrunchDiff, cms: Set[CrunchMinute]): Set[CrunchMinute] = {
+  def applyCrunchDiff(diff: CrunchDiff, cms: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
     val nowMillis = SDate.now().millisSinceEpoch
-    val withoutRemovals = cms.filterNot {
-      case cm => diff.crunchMinuteRemovals.contains(RemoveCrunchMinute(cm.terminalName, cm.queueName, cm.minute))
+    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms) {
+      case (soFar, removeCm) => soFar - removeCm.key
     }
-    val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals.map(crunchMinuteToTqmCm).toMap) {
-      case (soFar, ncm) => soFar.updated((ncm.terminalName, ncm.queueName, ncm.minute), ncm.copy(lastUpdated = Option(nowMillis)))
+    val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals) {
+      case (soFar, ncm) => soFar.updated(ncm.key, ncm.copy(lastUpdated = Option(nowMillis)))
     }
-    withoutRemovalsWithUpdates.values.toSet
+    withoutRemovalsWithUpdates
   }
 
-  def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
+  def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val nowMillis = SDate.now().millisSinceEpoch
-    val withoutRemovals = flights.filterNot {
-      case cm => diff.flightRemovals.contains(RemoveFlight(cm.apiFlight.FlightID))
+    val withoutRemovals = diff.flightRemovals.foldLeft(flights) {
+      case (soFar, removeFlight) => soFar - removeFlight.flightId
     }
-    val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap) {
-      case (soFar, flight) => soFar.updated(flight.apiFlight.FlightID, flight.copy(lastUpdated = Option(nowMillis)))
+    val withoutRemovalsWithUpdates = diff.flightUpdates.foldLeft(withoutRemovals) {
+      case (soFar, flight) => soFar.updated(flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis)))
     }
-    withoutRemovalsWithUpdates.values.toSet
+    withoutRemovalsWithUpdates
   }
-
-  val domesticPorts = Seq(
-    "ABB", "ABZ", "ACI", "ADV", "ADX", "AYH",
-    "BBP", "BBS", "BEB", "BEQ", "BEX", "BFS", "BHD", "BHX", "BLK", "BLY", "BOH", "BOL", "BQH", "BRF", "BRR", "BRS", "BSH", "BUT", "BWF", "BWY", "BYT", "BZZ",
-    "CAL", "CAX", "CBG", "CEG", "CFN", "CHE", "CLB", "COL", "CRN", "CSA", "CVT", "CWL",
-    "DCS", "DGX", "DND", "DOC", "DSA", "DUB",
-    "EDI", "EMA", "ENK", "EOI", "ESH", "EWY", "EXT",
-    "FAB", "FEA", "FFD", "FIE", "FKH", "FLH", "FOA", "FSS", "FWM", "FZO",
-    "GCI", "GLA", "GLO", "GQJ", "GSY", "GWY", "GXH",
-    "HAW", "HEN", "HLY", "HOY", "HRT", "HTF", "HUY", "HYC",
-    "IIA", "ILY", "INQ", "INV", "IOM", "IOR", "IPW", "ISC",
-    "JER",
-    "KIR", "KKY", "KNF", "KOI", "KRH", "KYN",
-    "LBA", "LCY", "LDY", "LEQ", "LGW", "LHR", "LKZ", "LMO", "LON", "LPH", "LPL", "LSI", "LTN", "LTR", "LWK", "LYE", "LYM", "LYX",
-    "MAN", "MHZ", "MME", "MSE",
-    "NCL", "NDY", "NHT", "NNR", "NOC", "NQT", "NQY", "NRL", "NWI",
-    "OBN", "ODH", "OHP", "OKH", "ORK", "ORM", "OUK", "OXF",
-    "PIK", "PLH", "PME", "PPW", "PSL", "PSV", "PZE",
-    "QCY", "QFO", "QLA", "QUG",
-    "RAY", "RCS",
-    "SCS", "SDZ", "SEN", "SKL", "SNN", "SOU", "SOY", "SQZ", "STN", "SWI", "SWS", "SXL", "SYY", "SZD",
-    "TRE", "TSO", "TTK",
-    "UHF", "ULL", "UNT", "UPV",
-    "WAT", "WEM", "WEX", "WFD", "WHS", "WIC", "WOB", "WRY", "WTN", "WXF",
-    "YEO"
-  )
 }

@@ -7,7 +7,7 @@ import services.SDate
 object ArrivalGenerator {
 
   def apiFlight(
-                 flightId: Int,
+                 flightId: Int = 0,
                  iata: String = "",
                  icao: String = "",
                  schDt: String = "",

@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
+import drt.shared.Crunch.{CrunchMinute, PortState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
@@ -15,36 +15,36 @@ import services.{OptimizerConfig, SDate, TryRenjin}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
-  extends GraphStage[FanInShape4[CrunchState, String, String, Seq[StaffMovement], CrunchState]] {
-  val inCrunch: Inlet[CrunchState] = Inlet[CrunchState]("CrunchStateWithoutSimulations.in")
+class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
+  extends GraphStage[FanInShape4[PortState, String, String, Seq[StaffMovement], PortState]] {
+  val inCrunch: Inlet[PortState] = Inlet[PortState]("PortStateWithoutSimulations.in")
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
   val inFixedPoints: Inlet[String] = Inlet[String]("FixedPoints.in")
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
-  val outCrunch: Outlet[CrunchState] = Outlet[CrunchState]("CrunchStateWithSimulations.out")
+  val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateWithSimulations.out")
 
   val allInlets = List(inShifts, inFixedPoints, inMovements, inCrunch)
 
-  var crunchStateOption: Option[CrunchState] = None
+  var portStateOption: Option[PortState] = None
   var shiftsOption: Option[String] = None
   var fixedPointsOption: Option[String] = None
   var movementsOption: Option[Seq[StaffMovement]] = None
 
-  var crunchStateWithSimulation: Option[CrunchState] = None
+  var portStateWithSimulation: Option[PortState] = None
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def shape: FanInShape4[CrunchState, String, String, Seq[StaffMovement], CrunchState] =
+  override def shape: FanInShape4[PortState, String, String, Seq[StaffMovement], PortState] =
     new FanInShape4(inCrunch, inShifts, inFixedPoints, inMovements, outCrunch)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
     new GraphStageLogic(shape) {
       override def preStart(): Unit = {
-        initialOptionalCrunchState match {
-          case Some(initialCrunchState: CrunchState) =>
-            log.info(s"Received initial crunchState")
-            crunchStateOption = Option(initialCrunchState)
-          case _ => log.info(s"Didn't receive any initial CrunchState")
+        initialOptionalPortState match {
+          case Some(initialPortState: PortState) =>
+            log.info(s"Received initial portState")
+            portStateOption = Option(initialPortState)
+          case _ => log.info(s"Didn't receive any initial PortState")
         }
 
         super.preStart()
@@ -97,34 +97,40 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
         }
         if (isAvailable(inCrunch)) {
           log.info(s"Grabbing available inCrunch")
-          crunchStateOption = Option(grab(inCrunch))
+          portStateOption = Option(grab(inCrunch))
         }
       }
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {
-        log.info(s"Running simulations")
 
-        crunchStateWithSimulation = crunchStateOption.map {
-          case cs@CrunchState(_, _, _, crunchMinutes) =>
+        portStateWithSimulation = portStateOption match {
+          case None =>
+            log.info(s"No crunch to run simulations on")
+            None
+          case Some(cs@PortState(_, crunchMinutes)) =>
+            log.info(s"Running simulations")
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
-            val crunchMinutesWithSimulation = crunchMinutesWithDeployments.groupBy(_.terminalName).flatMap {
+            val crunchMinutesWithSimulation = crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
               case (_, tcms) =>
                 tcms.groupBy(_.queueName).flatMap {
                   case (qn, qcms) =>
-                    val minWlSd = qcms.toSeq.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks)).sortBy(_._1)
+                    val crunchMinutes = qcms.toSeq.sortBy(_.minute).take(2880)
+                    val minWlSd = crunchMinutes.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
                     val workLoads = minWlSd.map {
                       case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
                       case (_, wl, _) => wl
                     }.toList
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
                     val config = OptimizerConfig(slaByQueue(qn))
+                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
                     val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
-                    qcms.toSeq.sortBy(_.minute).zipWithIndex.map {
-                      case (cm, idx) => cm.copy(deployedWait = Option(simWaits(idx)))
-                    }.toSet
-                }.toSet
-            }.toSet
-            cs.copy(crunchMinutes = crunchMinutesWithSimulation)
+                    log.info(s"Finished running simulation")
+                    crunchMinutes.sortBy(_.minute).zipWithIndex.map {
+                      case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
+                    }
+                }
+            }
+            Option(cs.copy(crunchMinutes = crunchMinutesWithSimulation))
         }
 
         pushAndPull()
@@ -132,13 +138,13 @@ class StaffingStage(initialOptionalCrunchState: Option[CrunchState], minMaxDesks
 
       def pushAndPull(): Unit = {
         if (isAvailable(outCrunch))
-          crunchStateWithSimulation match {
+          portStateWithSimulation match {
             case None =>
               log.info(s"Nothing to push")
             case Some(cs) =>
-              log.info(s"Pushing CrunchStateWithSimulation")
+              log.info(s"Pushing PortStateWithSimulation")
               push(outCrunch, cs)
-              crunchStateWithSimulation = None
+              portStateWithSimulation = None
           }
         else log.info(s"outCrunch not available to push")
 
@@ -189,14 +195,15 @@ object StaffDeploymentCalculator {
 
   type Deployer = (Seq[(String, Int)], Int, Map[String, (Int, Int)]) => Seq[(String, Int)]
 
-  def addDeployments(crunchMinutes: Set[CrunchMinute],
+  def addDeployments(crunchMinutes: Map[Int, CrunchMinute],
                      deployer: Deployer,
                      available: (MillisSinceEpoch, QueueName) => Int,
-                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]): Set[CrunchMinute] = crunchMinutes
+                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]): Map[Int, CrunchMinute] = crunchMinutes
+    .values
     .groupBy(_.terminalName)
     .flatMap {
       case (tn, tcrs) =>
-        val terminalByMinute: Set[CrunchMinute] = tcrs
+        val terminalByMinute: Map[Int, CrunchMinute] = tcrs
           .groupBy(_.minute)
           .flatMap {
             case (minute, mcrs) =>
@@ -209,10 +216,10 @@ object StaffDeploymentCalculator {
                   (qn, (minDesks, maxDesks))
               }
               val deploymentsAndQueueNames: Map[String, Int] = deployer(deskRecAndQueueNames, available(minute, tn), minMaxByQueue).toMap
-              mcrs.map(cm => cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))
-          }.toSet
+              mcrs.map(cm => (cm.key, cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))).toMap
+          }
         terminalByMinute
-    }.toSet
+    }
 
   def queueRecsToDeployments(round: Double => Int)
                             (queueRecs: Seq[(String, Int)], staffAvailable: Int, minMaxDesks: Map[String, (Int, Int)]): Seq[(String, Int)] = {

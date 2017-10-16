@@ -31,13 +31,8 @@ trait FixedPointPersistence {
 
   def getFixedPoints(pointInTime: MillisSinceEpoch): Future[String] = {
     log.info(s"getFixedPoints($pointInTime)")
-    val actor: AskableActorRef = if (pointInTime > 0) {
-      log.info(s"Creating FixedPointsReadActor for $pointInTime")
-      val fixedPointsReadActorProps = Props(classOf[FixedPointsReadActor], SDate(pointInTime))
-      actorSystem.actorOf(fixedPointsReadActorProps, "fixedPointsReadActor" + UUID.randomUUID().toString)
-    } else fixedPointsActor
 
-    val fixedPointsFuture = actor ? GetState
+    val fixedPointsFuture = fixedPointsActor ? GetState
 
     val fixedPointsCollected = fixedPointsFuture.collect {
       case fixedPoints: String =>

@@ -3,8 +3,8 @@ package services.graphstages
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
-import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.Crunch.{CrunchMinute, MillisSinceEpoch, PortState}
+import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
@@ -20,127 +20,131 @@ import services.{FastTrackPercentages, SDate}
 import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps
 
-class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
+case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
+
+class CrunchGraphStage(name: String,
+                       optionalInitialFlights: Option[FlightsWithSplits],
                        slas: Map[QueueName, Int],
                        minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                        procTimes: Map[PaxTypeAndQueue, Double],
                        groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                       validPortTerminals: Set[String],
                        portSplits: SplitRatios,
                        csvSplitsProvider: SplitsProvider,
-                       pcpArrivalTime: (Arrival) => MilliDate,
-                       crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning,
-                       minutesToCrunch: Int
-                      )
-  extends GraphStage[FanInShape2[Flights, VoyageManifests, CrunchState]] {
+                       crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
+                       crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
+                       earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)])
+  extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
-  val inFlights: Inlet[Flights] = Inlet[Flights]("Flights.in")
-  val inSplits: Inlet[VoyageManifests] = Inlet[VoyageManifests]("Splits.in")
-  val crunchOut: Outlet[CrunchState] = Outlet[CrunchState]("CrunchState.out")
-  override val shape = new FanInShape2(inFlights, inSplits, crunchOut)
+  val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
+  val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("SplitsIn.in")
+  val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateOut.out")
+  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outCrunch)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
 
-    var crunchStateOption: Option[CrunchState] = None
-    var crunchRunning = false
+    var portStateOption: Option[PortState] = None
 
-    val log: Logger = LoggerFactory.getLogger("CrunchGraphStage")
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.FlightID, f)).toMap
+          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
       super.preStart()
     }
 
-    setHandler(crunchOut, new OutHandler {
+    setHandler(outCrunch, new OutHandler {
       override def onPull(): Unit = {
         log.debug(s"crunchOut onPull called")
-        crunchStateOption match {
-          case Some(crunchState) =>
-            log.debug(s"Pushing CrunchState")
-            push(crunchOut, crunchState)
-            crunchStateOption = None
+        portStateOption match {
+          case Some(portState) =>
+            log.debug(s"Pushing PortState")
+            push(outCrunch, portState)
+            portStateOption = None
           case None =>
-            log.debug(s"No CrunchState to push")
+            log.debug(s"No PortState to push")
         }
-        if (!hasBeenPulled(inSplits)) pull(inSplits)
-        if (!hasBeenPulled(inFlights)) pull(inFlights)
+        if (!hasBeenPulled(inManifests)) pull(inManifests)
+        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
       }
     })
 
-    setHandler(inFlights, new InHandler {
+    setHandler(inArrivalsDiff, new InHandler {
       override def onPush(): Unit = {
         log.debug(s"inFlights onPush called")
-        val incomingFlights = grab(inFlights)
+        val arrivalsDiff = grab(inArrivalsDiff)
 
-        log.info(s"Grabbed ${incomingFlights.flights.length} flights")
-        val updatedFromFlights = updateFlightsFromIncoming(incomingFlights, flightsByFlightId)
-
-        val updatedFlights = if (isAvailable(inSplits)) {
-          updateFlightsWithManifests(grab(inSplits).manifests, updatedFromFlights)
-        } else updatedFromFlights
+        log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
+        val updatedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
+          crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-          log.info(s"Requesting crunch for ${flightsByFlightId.size} flights after flights update")
-          crunchAndUpdateState(flightsByFlightId.values.toList)
-        }
-        else {
-          log.info(s"No flight updates")
-        }
+        } else log.info(s"No flight updates")
 
-        if (!hasBeenPulled(inFlights)) pull(inFlights)
+        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
       }
     })
 
-    setHandler(inSplits, new InHandler {
+    setHandler(inManifests, new InHandler {
       override def onPush(): Unit = {
         log.debug(s"inSplits onPush called")
-        val vms = grab(inSplits)
+        val vms = grab(inManifests)
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
-        val updatedFromSplits = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
-
-        val updatedFlights = if (isAvailable(inFlights)) {
-          updateFlightsFromIncoming(grab(inFlights), updatedFromSplits)
-        } else updatedFromSplits
+        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
         if (flightsByFlightId != updatedFlights) {
+          crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-          log.info(s"Requesting crunch for ${flightsByFlightId.size} flights after splits update")
-          crunchAndUpdateState(flightsByFlightId.values.toList)
         } else log.info(s"No splits updates")
 
-        if (!hasBeenPulled(inSplits)) pull(inSplits)
+        if (!hasBeenPulled(inManifests)) pull(inManifests)
       }
     })
 
-    def updateFlightsFromIncoming(incomingFlights: Flights, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-      val updatedFlights = incomingFlights.flights.foldLeft[Map[Int, ApiFlightWithSplits]](existingFlightsById) {
-        case (flightsSoFar, updatedFlight) =>
-          val updatedFlightWithPcp = updatedFlight.copy(PcpTime = pcpArrivalTime(updatedFlight).millisSinceEpoch)
-          flightsSoFar.get(updatedFlightWithPcp.FlightID) match {
-            case None =>
-              log.info(s"Adding new flight ${updatedFlightWithPcp.IATA}")
-              val ths = terminalAndHistoricSplits(updatedFlightWithPcp)
-              val newFlightWithSplits = ApiFlightWithSplits(updatedFlightWithPcp, ths, Option(SDate.now().millisSinceEpoch))
-              val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
-              flightsSoFar.updated(updatedFlightWithPcp.FlightID, newFlightWithAvailableSplits)
+    def crunchIfAppropriate(updatedFlights: Map[Int, ApiFlightWithSplits], existingFlights: Map[Int, ApiFlightWithSplits]): Unit = {
+      val earliestAndLatest = earliestAndLatestAffectedPcpTime(existingFlights.values.toSet, updatedFlights.values.toSet)
+      log.info(s"Latest PCP times: $earliestAndLatest")
+      earliestAndLatest.foreach {
+        case (earliest, latest) =>
+          val crunchStart = crunchStartFromFirstPcp(earliest)
+          val crunchEnd = crunchEndFromLastPcp(latest)
+          log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
+          portStateOption = crunch(updatedFlights, crunchStart, crunchEnd)
+          pushStateIfReady()
+      }
+    }
 
-            case Some(existingFlight) if existingFlight.apiFlight != updatedFlightWithPcp =>
-              log.info(s"Updating flight ${updatedFlightWithPcp.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlightWithPcp.PcpTime}")
-              flightsSoFar.updated(updatedFlightWithPcp.FlightID, existingFlight.copy(apiFlight = updatedFlightWithPcp))
+    def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+      log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${existingFlightsById.size} existing flights")
+      val afterRemovals = existingFlightsById.filterNot {
+        case (id, _) => arrivalsDiff.toRemove.contains(id)
+      }
+      val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
+        case (flightsSoFar, updatedFlight) =>
+          flightsSoFar.get(updatedFlight.uniqueId) match {
+            case None =>
+              log.info(s"Adding new flight ${updatedFlight.IATA} / ${updatedFlight.SchDT} with key ${updatedFlight.uniqueId}")
+              val ths = terminalAndHistoricSplits(updatedFlight)
+              val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
+              val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
+              flightsSoFar.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits)
+
+            case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
+              log.info(s"Updating flight ${updatedFlight.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlight.PcpTime}")
+              flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight))
 
             case _ => flightsSoFar
           }
       }
+      log.info(s"${updatedFlights.size} flights after updates")
       updatedFlights
     }
 
@@ -202,68 +206,49 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
     }
 
-    def crunchAndUpdateState(flightsToCrunch: List[ApiFlightWithSplits]): Unit = {
-      crunchRunning = true
-
-      val crunchRequest = CrunchRequest(flightsToCrunch, crunchStartDateProvider(), minutesToCrunch)
-
-      log.info(s"Processing CrunchRequest for ${crunchRequest.flights.length} flights")
-      crunchStateOption = crunch(crunchRequest)
-
-      pushStateIfReady()
-
-      crunchRunning = false
-    }
-
-    def crunch(crunchRequest: CrunchRequest): Option[CrunchState] = {
-      val relevantFlights = crunchRequest.flights.filter {
-        case ApiFlightWithSplits(flight, _, _) =>
-          validPortTerminals.contains(flight.Terminal) &&
-            flight.PcpTime >= crunchRequest.crunchStart &&
-            !domesticPorts.contains(flight.Origin)
-      }
-      val uniqueFlights = groupFlightsByCodeShares(relevantFlights).map(_._1)
-      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares, domestics and pcp time outside crunch window")
-      val newFlightsById = uniqueFlights.map(f => (f.apiFlight.FlightID, f)).toMap
+    def crunch(flights: Map[Int, ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Option[PortState] = {
+      val flightsInCrunchWindow = flights.values.toList.filter(f => isFlightInTimeWindow(f, crunchStart, crunchEnd))
+      log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
+      val uniqueFlights = groupFlightsByCodeShares(flightsInCrunchWindow).map(_._1)
+      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
+      val newFlightsById = uniqueFlights.map(f => (f.apiFlight.uniqueId, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
-      val crunchStart = crunchRequest.crunchStart
-      val numberOfMinutes = crunchRequest.numberOfMinutes
-      val newCrunchState = crunchStateFromFlightSplitMinutes(crunchStart, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
+      val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
+      log.info(s"Crunching $numberOfMinutes minutes")
+      val crunchMinutes = crunchMinutesFromFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
 
-      flightsByFlightId = newFlightsById
-
-      Option(newCrunchState)
+      Option(PortState(flights, crunchMinutes))
     }
 
     def pushStateIfReady(): Unit = {
-      crunchStateOption match {
-        case None => log.info(s"We have no CrunchState yet. Nothing to push")
-        case Some(crunchState) =>
-          if (isAvailable(crunchOut)) {
-            log.info(s"Pushing CrunchState")
-            push(crunchOut, crunchState)
-            crunchStateOption = None
+      portStateOption match {
+        case None => log.info(s"We have no PortState yet. Nothing to push")
+        case Some(portState) =>
+          if (isAvailable(outCrunch)) {
+            log.info(s"Pushing PortState")
+            push(outCrunch, portState)
+            portStateOption = None
           }
       }
     }
 
-    def crunchStateFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
-                                          numberOfMinutes: Int,
-                                          flightsById: Map[Int, ApiFlightWithSplits],
-                                          fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]): CrunchState = {
-      val crunchResults: Set[CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
+    def crunchMinutesFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
+                                            numberOfMinutes: Int,
+                                            flightsById: Map[Int, ApiFlightWithSplits],
+                                            fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
+      val crunchResults: Map[Int, CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
 
-      CrunchState(crunchStart, numberOfMinutes, flightsById.values.toSet, crunchResults)
+      crunchResults
     }
 
-    def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[CrunchMinute] = {
+    def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
       val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
       val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
 
       val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, numberOfMinutes)(wlByQueue)
       val eGateBankSize = 5
 
-      val crunchResults: Set[CrunchMinute] = workloadsToCrunchMinutes(crunchStart, numberOfMinutes, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
+      val crunchResults = workloadsToCrunchMinutes(crunchStart, numberOfMinutes, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
       crunchResults
     }
 
@@ -392,6 +377,10 @@ class CrunchGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
       ptqcwithCsvEgatesFastTrack
     }
+  }
+
+  def isFlightInTimeWindow(f: ApiFlightWithSplits, crunchStart: SDateLike, crunchEnd: SDateLike): Boolean = {
+    crunchStart.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < crunchEnd.millisSinceEpoch
   }
 
   def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest): Boolean = {

@@ -6,7 +6,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, TimeRangeHours}
+import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
 import drt.shared.Crunch.CrunchState
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
@@ -26,7 +26,7 @@ object TerminalContentComponent {
                     terminalName: TerminalName,
                     airportInfoPot: Pot[AirportInfo],
                     timeRangeHours: TimeRangeHours,
-                    dayToDisplay: () => SDateLike
+                    viewMode: ViewMode
                   ) {
     lazy val hash = {
       val depsHash = crunchStatePot.map(
@@ -95,8 +95,8 @@ object TerminalContentComponent {
       val queueOrder = props.airportConfig.queueOrder
 
       <.div(
-        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.dayToDisplay().millisSinceEpoch}/${props.terminalName}", ^.target := "_blank"),
-        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.dayToDisplay().millisSinceEpoch}/${props.terminalName}", ^.target := "_blank"),
+        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.viewMode.millis}/${props.terminalName}", ^.target := "_blank"),
+        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.viewMode.millis}/${props.terminalName}", ^.target := "_blank"),
         TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours())),
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals"), ^.onClick --> t.modState(_ => State("arrivals"))),
@@ -110,7 +110,7 @@ object TerminalContentComponent {
               <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalName)
-                val flightsInRange = filterFlightsByRange(props.dayToDisplay(), props.timeRangeHours, terminalFlights.toList)
+                val flightsInRange = filterFlightsByRange(props.viewMode.time, props.timeRangeHours, terminalFlights.toList)
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, bestPax, queueOrder))
               }))
