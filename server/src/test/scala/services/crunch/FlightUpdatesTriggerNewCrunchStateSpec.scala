@@ -28,7 +28,6 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     val inputFlightsBefore = Flights(List(flight))
     val updatedArrival = flight.copy(ActPax = 50)
     val inputFlightsAfter = Flights(List(updatedArrival))
-    val testProbe = TestProbe()
     val crunch = runCrunchGraph(
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,

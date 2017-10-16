@@ -40,7 +40,6 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20)))))
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
-      val testProbe = TestProbe()
       val crunch = runCrunchGraph(
         procTimes = procTimes,
         slaByQueue = slaByQueue,
