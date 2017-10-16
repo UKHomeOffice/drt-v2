@@ -9,6 +9,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 
 import scala.collection.immutable.Seq

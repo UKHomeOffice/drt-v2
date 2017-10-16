@@ -61,8 +61,6 @@ object TerminalDisplayModeComponent {
             )
           })))
     })
-    .componentDidUpdate(p => Callback.log("Updating Terminal Component"))
-    .componentDidMount(p => Callback.log("Updating Terminal Component"))
     .build
 
   def apply(props: Props): VdomElement = {

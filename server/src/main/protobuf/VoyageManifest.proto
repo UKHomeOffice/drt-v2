@@ -1,19 +1,30 @@
 package server.protobuf.messages;
 
-message AdvancePassengerInfoStateSnapshotMessage {
-    repeated VoyageManifestMessage voyageManifestMessages = 1;
+message VoyageManifestStateSnapshotMessage {
+    optional string latestFilename = 1;
+    repeated VoyageManifestMessage manifestMessages = 2;
+}
+
+message VoyageManifestLatestFileNameMessage {
+    optional int64 createdAt = 1;
+    optional string latestFilename = 2;
+}
+
+message VoyageManifestsMessage {
+    optional int64 createdAt = 1;
+    repeated VoyageManifestMessage manifestMessages = 2;
 }
 
 message VoyageManifestMessage {
-    optional string eventCode = 1;
-    optional string arrivalPortCode = 2;
-    optional string departurePortCode = 3;
-    optional string voyageNumber = 4;
-    optional string carrierCode = 5;
-    optional string scheduledDateOfArrival = 6;
-    optional string scheduledTimeOfArrival = 7;
-    repeated PassengerInfoJsonMessage passengerList = 8;
-    optional int64 createdAt = 9;
+    optional int64 createdAt = 1;
+    optional string eventCode = 2;
+    optional string arrivalPortCode = 3;
+    optional string departurePortCode = 4;
+    optional string voyageNumber = 5;
+    optional string carrierCode = 6;
+    optional string scheduledDateOfArrival = 7;
+    optional string scheduledTimeOfArrival = 8;
+    repeated PassengerInfoJsonMessage passengerList = 9;
 }
 
 message PassengerInfoJsonMessage {

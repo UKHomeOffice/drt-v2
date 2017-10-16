@@ -14,8 +14,8 @@ import services.graphstages.Crunch._
 import scala.collection.immutable._
 import scala.language.postfixOps
 
-class CrunchStateActor(portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
-  override def persistenceId: String = "crunch-state"
+class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
+  override def persistenceId: String = s"$name-crunch-state"
 
   var state: Option[PortState] = None
 

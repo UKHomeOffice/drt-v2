@@ -1,14 +1,12 @@
 package services.crunch
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -39,6 +37,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
         ))
 
+//      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.liveArrivalsInput.offer(flights)
 
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])

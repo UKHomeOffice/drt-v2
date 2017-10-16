@@ -85,6 +85,7 @@ class CrunchTestLike
 
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
                      initialLiveArrivals: Set[Arrival] = Set(),
+                     initialManifests: VoyageManifests = VoyageManifests(Set()),
                      initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                      procTimes: Map[PaxTypeAndQueue, Double] = procTimes,
                      slaByQueue: Map[QueueName, Int] = slaByQueue,
@@ -167,6 +168,8 @@ class CrunchTestLike
 
     val askableLiveCrunchStateActor: AskableActorRef = liveActorRef
     val askableForecastCrunchStateActor: AskableActorRef = forecastActorRef
+
+    manifestsInput.offer(initialManifests)
 
     CrunchGraph(
       baseArrivalsInput = baseArrivalsInput,

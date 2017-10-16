@@ -85,14 +85,6 @@ object SystemActors {
   type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
 
-class CrunchRelayActor(subscriber: SourceQueueWithComplete[PortState]) extends Actor with ActorLogging {
-  override def receive: Receive = {
-    case ps: PortState =>
-      log.info(s"Received a PortState. Sending to subscriber")
-      subscriber.offer(ps)
-  }
-}
-
 trait SystemActors {
   self: AirportConfProvider =>
 
@@ -125,8 +117,8 @@ trait SystemActors {
   val askableBaseArrivalsActor: AskableActorRef = baseArrivalsActor
   val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
   val askableLiveArrivalsActor: AskableActorRef = liveArrivalsActor
-  val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-live-state-actor")
-  val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.queues), name = "crunch-forecast-state-actor")
+  val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "live", airportConfig.queues), name = "crunch-live-state-actor")
+  val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "forecast", airportConfig.queues), name = "crunch-forecast-state-actor")
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
 
   val chroma = ChromaFlightFeed(system.log, ProdChroma(system))

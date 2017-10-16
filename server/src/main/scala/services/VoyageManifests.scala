@@ -4,6 +4,7 @@ import java.io.InputStream
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.ZipInputStream
 
+import actors.GetState
 import akka.NotUsed
 import akka.actor.{ActorLogging, ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
@@ -18,7 +19,8 @@ import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
+import server.protobuf.messages.VoyageManifest._
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -33,10 +35,14 @@ case class UpdateLatestZipFilename(filename: String)
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor extends PersistentActor with ActorLogging {
-  var latestZipFilename = defaultLatestZipFilename
+case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename: String)
 
-  private def defaultLatestZipFilename = {
+class VoyageManifestsActor extends PersistentActor with ActorLogging {
+  var state = VoyageManifestState(
+    manifests = Set(),
+    latestZipFilename = defaultLatestZipFilename)
+
+  def defaultLatestZipFilename: String = {
     val yesterday = SDate.now().addDays(-1)
     val yymmddYesterday = f"${yesterday.getFullYear() - 2000}%02d${yesterday.getMonth()}%02d${yesterday.getDate()}%02d"
     s"drt_dq_$yymmddYesterday"
@@ -49,12 +55,32 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
   override def receiveRecover: Receive = {
     case recoveredLZF: String =>
       log.info(s"Recovery received $recoveredLZF")
-      latestZipFilename = recoveredLZF
+      state = state.copy(latestZipFilename = recoveredLZF)
+
+    case m@VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
+      log.info(s"Recovery received $m")
+      state = state.copy(latestZipFilename = latestFilename)
+
+    case VoyageManifestsMessage(_, manifestMessages) =>
+      val updatedManifests = manifestMessages
+        .map(voyageManifestFromMessage)
+        .toSet -- state.manifests
+      log.info(s"Recovery received ${updatedManifests.size} updated manifests")
+
+      state = newStateFromManifests(state.manifests, updatedManifests)
 
     case SnapshotOffer(md, ss) =>
       log.info(s"Recovery received SnapshotOffer($md, $ss)")
       ss match {
-        case lzf: String => latestZipFilename = lzf
+        case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
+          log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
+          val updatedStateWithManifests = newStateFromManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
+          state = updatedStateWithManifests.copy(latestZipFilename = latestFilename)
+
+        case lzf: String =>
+          log.info(s"Updating state from latestZipFilename $lzf")
+          state = state.copy(latestZipFilename = lzf)
+
         case u => log.info(s"Received unexpected snapshot data: $u")
       }
 
@@ -62,25 +88,46 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
       log.info(s"Recovery completed")
   }
 
+  def newStateFromManifests(existingManifests: Set[VoyageManifest], manifestUpdates: Set[VoyageManifest]): VoyageManifestState = {
+    state.copy(manifests = existingManifests ++ manifestUpdates)
+  }
+
   override def receiveCommand: Receive = {
-    case UpdateLatestZipFilename(updatedLZF) if updatedLZF != latestZipFilename =>
+    case UpdateLatestZipFilename(updatedLZF) if updatedLZF != state.latestZipFilename =>
       log.info(s"Received update - latest zip file is: $updatedLZF")
-      latestZipFilename = updatedLZF
+      state = state.copy(latestZipFilename = updatedLZF)
 
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"Saving VoyageManifests latestZipFilename snapshot $latestZipFilename")
-        saveSnapshot(latestZipFilename)
-      } else persist(latestZipFilename) { lzf =>
-        log.info(s"Persisting VoyageManifests latestZipFilename $latestZipFilename")
+        log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
+        saveSnapshot(stateToMessage(state))
+      } else persist(latestFilenameToMessage(state.latestZipFilename)) { lzf =>
+        log.info(s"Persisting VoyageManifests latestZipFilename ${lzf.latestFilename.getOrElse("")}")
         context.system.eventStream.publish(lzf)
       }
 
-    case UpdateLatestZipFilename(updatedLZF) if updatedLZF == latestZipFilename =>
+    case UpdateLatestZipFilename(updatedLZF) if updatedLZF == state.latestZipFilename =>
       log.info(s"Received update - latest zip file is: $updatedLZF - no change")
 
+    case VoyageManifests(updatedManifests) =>
+      log.info(s"Received ${updatedManifests.size} updated manifests")
+
+      state = newStateFromManifests(state.manifests, updatedManifests)
+
+      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+        log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
+        saveSnapshot(stateToMessage(state))
+      } else persist(voyageManifestsToMessage(updatedManifests)) { vmm =>
+        log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
+        context.system.eventStream.publish(vmm)
+      }
+
+    case GetState =>
+      log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")
+      sender() ! state
+
     case GetLatestZipFilename =>
-      log.info(s"Received GetLatestZipFilename request. Sending $latestZipFilename")
-      sender() ! latestZipFilename
+      log.info(s"Received GetLatestZipFilename request. Sending ${state.latestZipFilename}")
+      sender() ! state.latestZipFilename
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -91,11 +138,85 @@ class VoyageManifestsActor extends PersistentActor with ActorLogging {
     case other =>
       log.info(s"Received unexpected message $other")
   }
+
+  private def voyageManifestsToMessage(updatedManifests: Set[VoyageManifest]) = {
+    VoyageManifestsMessage(
+      Option(SDate.now().millisSinceEpoch),
+      updatedManifests.map(voyageManifestToMessage).toList
+    )
+  }
+
+  def latestFilenameToMessage(filename: String): VoyageManifestLatestFileNameMessage = {
+    VoyageManifestLatestFileNameMessage(
+      createdAt = Option(SDate.now.millisSinceEpoch),
+      latestFilename = Option(filename))
+  }
+
+  def passengerInfoToMessage(pi: PassengerInfoJson): PassengerInfoJsonMessage = {
+    PassengerInfoJsonMessage(
+      documentType = pi.DocumentType,
+      documentIssuingCountryCode = Option(pi.DocumentIssuingCountryCode),
+      eeaFlag = Option(pi.EEAFlag),
+      age = pi.Age,
+      disembarkationPortCode = pi.DisembarkationPortCode,
+      inTransitFlag = Option(pi.InTransitFlag),
+      disembarkationPortCountryCode = pi.DisembarkationPortCountryCode,
+      nationalityCountryCode = pi.NationalityCountryCode
+    )
+  }
+
+  def voyageManifestToMessage(vm: VoyageManifest): VoyageManifestMessage = {
+    VoyageManifestMessage(
+      createdAt = Option(SDate.now().millisSinceEpoch),
+      eventCode = Option(vm.EventCode),
+      arrivalPortCode = Option(vm.ArrivalPortCode),
+      departurePortCode = Option(vm.DeparturePortCode),
+      voyageNumber = Option(vm.VoyageNumber),
+      carrierCode = Option(vm.CarrierCode),
+      scheduledDateOfArrival = Option(vm.ScheduledDateOfArrival),
+      scheduledTimeOfArrival = Option(vm.ScheduledTimeOfArrival),
+      passengerList = vm.PassengerList.map(passengerInfoToMessage)
+    )
+  }
+
+  def stateToMessage(s: VoyageManifestState): VoyageManifestStateSnapshotMessage = {
+    VoyageManifestStateSnapshotMessage(Option(s.latestZipFilename), stateVoyageManifestsToMessages(s.manifests))
+  }
+
+  def stateVoyageManifestsToMessages(manifests: Set[VoyageManifest]): Seq[VoyageManifestMessage] = {
+    manifests.map(voyageManifestToMessage).toList
+  }
+
+  def passengerInfoFromMessage(m: PassengerInfoJsonMessage): PassengerInfoJson = {
+    PassengerInfoJson(
+      DocumentType = m.documentType,
+      DocumentIssuingCountryCode = m.documentIssuingCountryCode.getOrElse(""),
+      EEAFlag = m.eeaFlag.getOrElse(""),
+      Age = m.age,
+      DisembarkationPortCode = m.disembarkationPortCode,
+      InTransitFlag = m.inTransitFlag.getOrElse(""),
+      DisembarkationPortCountryCode = m.disembarkationPortCountryCode,
+      NationalityCountryCode = m.nationalityCountryCode
+    )
+  }
+
+  def voyageManifestFromMessage(m: VoyageManifestMessage): VoyageManifest = {
+    VoyageManifest(
+      EventCode = m.eventCode.getOrElse(""),
+      ArrivalPortCode = m.arrivalPortCode.getOrElse(""),
+      DeparturePortCode = m.departurePortCode.getOrElse(""),
+      VoyageNumber = m.voyageNumber.getOrElse(""),
+      CarrierCode = m.carrierCode.getOrElse(""),
+      ScheduledDateOfArrival = m.scheduledDateOfArrival.getOrElse(""),
+      ScheduledTimeOfArrival = m.scheduledTimeOfArrival.getOrElse(""),
+      PassengerList = m.passengerList.toList.map(passengerInfoFromMessage)
+    )
+  }
 }
 
-case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], fileNameActorStore: ActorRef) {
-  implicit val actorSystem = ActorSystem("AdvPaxInfo")
-  implicit val materializer = ActorMaterializer()
+case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], voyageManifestsActor: ActorRef) {
+  implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   var manifestsState: Set[VoyageManifest] = Set()
 
@@ -115,18 +236,20 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
       .runWith(Sink.seq[(String, VoyageManifest)])
   }
 
-  def start() = {
-    val askableFileNameActorStore: AskableActorRef = fileNameActorStore
-    askableFileNameActorStore.ask(GetLatestZipFilename)(new Timeout(5 seconds)).map {
-      case name: String => fetchAndPushManifests(name)
+  def start(): Future[Unit] = {
+    val askableActor: AskableActorRef = voyageManifestsActor
+    askableActor.ask(GetState)(new Timeout(5 seconds)).map {
+      case VoyageManifestState(manifests, latestFilename) =>
+        manifestsState = manifests
+        log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
+        manifestsSource.offer(VoyageManifests(manifests))
+        fetchAndPushManifests(latestFilename)
     }
   }
 
-  def fetchAndPushManifests(lzf: String): Unit = {
-    log.info(s"Fetching manifests from files newer than $lzf")
-    val mf = manifestsFuture(lzf)
-    var latestZipFilename = Option(lzf)
-    mf.onSuccess {
+  def fetchAndPushManifests(startingFilename: String): Unit = {
+    log.info(s"Fetching manifests from files newer than $startingFilename")
+    manifestsFuture(startingFilename).onSuccess {
       case ms =>
         log.info(s"manifestsFuture Success")
         val nextFetchMaxFilename = if (ms.nonEmpty) {
@@ -143,21 +266,22 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
           maxFilename
         } else {
           log.info(s"No manifests received")
-          lzf
+          startingFilename
         }
         log.info("Waiting 1 minute before polling for more manifests")
         Thread.sleep(60000)
-        log.info(s"Set latestZipFilename to '$latestZipFilename'")
-        fileNameActorStore ! UpdateLatestZipFilename(nextFetchMaxFilename)
+        log.info(s"Set latestZipFilename to '$nextFetchMaxFilename'")
+        voyageManifestsActor ! UpdateLatestZipFilename(nextFetchMaxFilename)
+        voyageManifestsActor ! VoyageManifests(manifestsState)
 
         fetchAndPushManifests(nextFetchMaxFilename)
     }
-    mf.onFailure {
+    manifestsFuture(startingFilename).onFailure {
       case t =>
         log.error(s"Failed to fetch manifests, trying again after 5 minutes: $t")
         Thread.sleep(300000)
         log.info(s"About to retry fetching new maniftests")
-        fetchAndPushManifests(lzf)
+        fetchAndPushManifests(startingFilename)
     }
   }
 

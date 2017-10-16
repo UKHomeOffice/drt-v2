@@ -1,13 +1,11 @@
 package services.crunch
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.{CrunchState, PortState}
+import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -36,6 +34,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       )
 
       crunch.liveArrivalsInput.offer(flights)
+
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 15)
 

@@ -41,20 +41,18 @@ class CrunchGraphStage(name: String,
   override val shape = new FanInShape2(inArrivalsDiff, inManifests, outCrunch)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-    var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
-    var waitingForArrivals = true
-    var waitingForManifests = true
+    var flightsByFlightId: Option[Map[Int, ApiFlightWithSplits]] = None
+    var manifestsBuffer: Option[Map[String, Set[VoyageManifest]]] = None
 
     var portStateOption: Option[PortState] = None
 
-    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+    val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
     override def preStart(): Unit = {
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
+          flightsByFlightId = Option(flights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap)
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -64,18 +62,13 @@ class CrunchGraphStage(name: String,
     setHandler(outCrunch, new OutHandler {
       override def onPull(): Unit = {
         log.debug(s"crunchOut onPull called")
-        if (!waitingForManifests && !waitingForArrivals) {
-          portStateOption match {
-            case Some(portState) =>
-              log.debug(s"Pushing PortState")
-              push(outCrunch, portState)
-              portStateOption = None
-            case None =>
-              log.debug(s"No PortState to push")
-          }
-        } else {
-          if (waitingForArrivals) log.info(s"Waiting for arrivals")
-          if (waitingForManifests) log.info(s"Waiting for manifests")
+        portStateOption match {
+          case Some(portState) =>
+            log.debug(s"Pushing PortState")
+            push(outCrunch, portState)
+            portStateOption = None
+          case None =>
+            log.debug(s"No PortState to push")
         }
         if (!hasBeenPulled(inManifests)) pull(inManifests)
         if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
@@ -86,14 +79,16 @@ class CrunchGraphStage(name: String,
       override def onPush(): Unit = {
         log.debug(s"inFlights onPush called")
         val arrivalsDiff = grab(inArrivalsDiff)
-        waitingForArrivals = false
 
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
-        val updatedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
 
-        if (flightsByFlightId != updatedFlights) {
-          crunchIfAppropriate(updatedFlights, flightsByFlightId)
-          flightsByFlightId = updatedFlights
+        val existingFlightsById = flightsByFlightId.getOrElse(Map())
+
+        val updatedFlightsById = updateFlightsFromIncoming(arrivalsDiff, existingFlightsById)
+
+        if (flightsByFlightId != updatedFlightsById) {
+          crunchIfAppropriate(updatedFlightsById, existingFlightsById)
+          flightsByFlightId = Option(updatedFlightsById)
         } else log.info(s"No flight updates")
 
         if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
@@ -104,14 +99,19 @@ class CrunchGraphStage(name: String,
       override def onPush(): Unit = {
         log.debug(s"inSplits onPush called")
         val vms = grab(inManifests)
-        waitingForManifests = false
+        manifestsBuffer
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
-        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
 
-        if (flightsByFlightId != updatedFlights) {
-          crunchIfAppropriate(updatedFlights, flightsByFlightId)
-          flightsByFlightId = updatedFlights
+        val existingFlightsById = flightsByFlightId.getOrElse(Map())
+
+        val updatedFlightsById = updateFlightsWithManifests(vms.manifests, existingFlightsById)
+
+        if (flightsByFlightId != updatedFlightsById) {
+          updatedFlightsById.foreach(ufs => {
+            crunchIfAppropriate(ufs, existingFlightsById)
+            flightsByFlightId = updatedFlightsById
+          })
         } else log.info(s"No splits updates")
 
         if (!hasBeenPulled(inManifests)) pull(inManifests)
@@ -161,31 +161,36 @@ class CrunchGraphStage(name: String,
       val arrival = newFlightWithSplits.apiFlight
       val vmIdx = s"${Crunch.flightVoyageNumberPadded(arrival)}-${arrival.Scheduled}"
 
-      val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
+      val newFlightWithAvailableSplits = manifestsBuffer match {
         case None => newFlightWithSplits
-        case Some(vm) =>
-          log.info(s"Found buffered manifest to apply to new flight")
-          manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
-          log.info(s"Removed applied manifest from buffer")
-          removeManifestsOlderThan(twoDaysAgo)
-          updateFlightWithManifests(vm, newFlightWithSplits)
+        case Some(mb) => mb.get(vmIdx) match {
+          case None => newFlightWithSplits
+          case Some(vm) =>
+            log.info(s"Found buffered manifest to apply to new flight")
+            manifestsBuffer = Option(mb.filterNot { case (idx, _) => idx == vmIdx })
+            log.info(s"Removed applied manifest from buffer")
+            removeManifestsOlderThan(twoDaysAgo)
+            updateFlightWithManifests(vm, newFlightWithSplits)
+        }
       }
+
       newFlightWithAvailableSplits
     }
 
     def removeManifestsOlderThan(thresholdMillis: MillisSinceEpoch): Unit = {
-      manifestsBuffer = manifestsBuffer.filter {
-        case (_, vmsInBuffer) =>
-          val vmsToKeep = vmsInBuffer.filter(vm => isNewerThan(thresholdMillis, vm))
-          vmsToKeep match {
-            case vms if vms.nonEmpty => true
-            case _ => false
-          }
-      }
+      manifestsBuffer = manifestsBuffer.map(
+        _.filter {
+          case (_, vmsInBuffer) =>
+            val vmsToKeep = vmsInBuffer.filter(vm => isNewerThan(thresholdMillis, vm))
+            vmsToKeep match {
+              case vms if vms.nonEmpty => true
+              case _ => false
+            }
+        })
     }
 
-    def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-      manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
+    def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Option[Map[Int, ApiFlightWithSplits]] = {
+      flightsByFlightId.map(fs => manifests.foldLeft[Map[Int, ApiFlightWithSplits]](fs) {
         case (flightsSoFar, newManifest) =>
           val vmMillis = newManifest.scheduleArrivalDateTime match {
             case None => 0L
@@ -204,15 +209,15 @@ class CrunchGraphStage(name: String,
             case None =>
               log.info(s"Stashing VoyageManifest in case flight is seen later")
               val idx = s"${newManifest.VoyageNumber}-$vmMillis"
-              val existingManifests = manifestsBuffer.getOrElse(idx, Set())
+              val existingManifests = manifestsBuffer.getOrElse(Map()).getOrElse(idx, Set())
               val updatedManifests = existingManifests + newManifest
-              manifestsBuffer = manifestsBuffer.updated(idx, updatedManifests)
+              manifestsBuffer = manifestsBuffer.map(_.updated(idx, updatedManifests))
               flightsSoFar
             case Some(Tuple2(id, f)) =>
               val updatedFlight = updateFlightWithManifest(f, newManifest)
               flightsSoFar.updated(id, updatedFlight)
           }
-      }
+      })
     }
 
     def crunch(flights: Map[Int, ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Option[PortState] = {
@@ -230,7 +235,7 @@ class CrunchGraphStage(name: String,
     }
 
     def pushStateIfReady(): Unit = {
-      if (!waitingForManifests && !waitingForArrivals) {
+      if (manifestsBuffer.isDefined && flightsByFlightId.isDefined)
         portStateOption match {
           case None => log.info(s"We have no PortState yet. Nothing to push")
           case Some(portState) =>
@@ -240,10 +245,7 @@ class CrunchGraphStage(name: String,
               portStateOption = None
             }
         }
-      } else {
-        if (waitingForArrivals) log.info(s"Waiting for arrivals")
-        if (waitingForManifests) log.info(s"Waiting for manifests")
-      }
+      else log.info(s"Not ready to push as we haven't received both manifests and arrivals yet")
     }
 
     def crunchMinutesFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
