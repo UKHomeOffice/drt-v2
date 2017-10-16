@@ -29,7 +29,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
-      val testProbe = TestProbe()
       val crunch = runCrunchGraph(
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
@@ -61,7 +60,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
-      val testProbe = TestProbe()
       val crunch = runCrunchGraph(
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
@@ -100,7 +98,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val fiveMinutes = 600d / 60
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
-      val testProbe = TestProbe()
       val crunch = runCrunchGraph(
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),

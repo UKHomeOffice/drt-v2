@@ -99,7 +99,6 @@ class CrunchGraphStage(name: String,
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
-        log.info(s"updatedFlights: $updatedFlights")
 
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)

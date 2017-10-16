@@ -25,7 +25,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val flights = Flights(List(flight))
-    val testProbe = TestProbe()
     val crunch = runCrunchGraph(
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,
