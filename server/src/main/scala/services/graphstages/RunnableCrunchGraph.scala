@@ -58,11 +58,9 @@ object RunnableCrunchGraph {
 }
 
 object RunnableForecastCrunchGraph {
-  def apply[SAD](
-                       arrivalsSource: Source[ArrivalsDiff, SAD],
-                       cruncher: CrunchGraphStage,
-                       crunchSinkActor: ActorRef
-                     ): RunnableGraph[SAD] = {
+  def apply[SAD](arrivalsSource: Source[ArrivalsDiff, SAD],
+                 cruncher: CrunchGraphStage,
+                 crunchSinkActor: ActorRef): RunnableGraph[SAD] = {
 
     val dummyManifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.dropHead)
 
@@ -84,15 +82,14 @@ object RunnableForecastCrunchGraph {
 }
 
 object RunnableSimulationGraph {
-  def apply[SC, SA, SVM, SS, SFP, SMM, SAD](
-                                             crunchSource: Source[PortState, SC],
-                                             shiftsSource: Source[String, SS],
-                                             fixedPointsSource: Source[String, SFP],
-                                             staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                             actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                                             staffingStage: StaffingStage,
-                                             actualDesksStage: ActualDesksAndWaitTimesGraphStage,
-                                             crunchStateActor: ActorRef): RunnableGraph[(SC, SS, SFP, SMM, SAD)] = {
+  def apply[SC, SA, SVM, SS, SFP, SMM, SAD](crunchSource: Source[PortState, SC],
+                                            shiftsSource: Source[String, SS],
+                                            fixedPointsSource: Source[String, SFP],
+                                            staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                            actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                                            staffingStage: StaffingStage,
+                                            actualDesksStage: ActualDesksAndWaitTimesGraphStage,
+                                            crunchStateActor: ActorRef): RunnableGraph[(SC, SS, SFP, SMM, SAD)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
     import akka.stream.scaladsl.GraphDSL.Implicits._

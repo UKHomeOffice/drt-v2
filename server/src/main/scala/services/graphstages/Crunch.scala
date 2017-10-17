@@ -10,7 +10,7 @@ import services._
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
-import scala.util.Success
+import scala.util.{Failure, Success, Try}
 
 object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -71,48 +71,78 @@ object Crunch {
     }
   }
 
-  def workloadsToCrunchMinutes(crunchStartMillis: MillisSinceEpoch,
-                               numberOfMinutes: Int,
+  def workloadsToCrunchMinutes(numberOfMinutes: Int,
                                portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
                                slas: Map[QueueName, Int],
                                minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                                eGateBankSize: Int): Map[Int, CrunchMinute] = {
-    val crunchEnd = crunchStartMillis + (numberOfMinutes * oneMinuteMillis)
-
     portWorkloads.flatMap {
       case (tn, terminalWorkloads) =>
         val terminalCrunchMinutes = terminalWorkloads.flatMap {
           case (qn, queueWorkloads) =>
-            val workloadMinutes = qn match {
-              case Queues.EGate => queueWorkloads.map(_._2._2 / eGateBankSize)
-              case _ => queueWorkloads.map(_._2._2)
-            }
-            val loadByMillis = queueWorkloads.toMap
-            val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
-            val sla = slas.getOrElse(qn, 0)
-            val queueMinMaxDesks = minMaxDesks.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
-            val crunchMinutes = crunchStartMillis until crunchEnd by oneMinuteMillis
-            val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
-            val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
-            val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-
-            val queueCrunchMinutes = triedResult match {
-              case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
-                val crunchMinutes = (0 until numberOfMinutes).map(minuteIdx => {
-                  val minuteMillis = crunchStartMillis + (minuteIdx * oneMinuteMillis)
-                  val paxLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._1
-                  val workLoad = loadByMillis.getOrElse(minuteMillis, (0d, 0d))._2
-                  CrunchMinute(tn, qn, minuteMillis, paxLoad, workLoad, deskRecs(minuteIdx), waitTimes(minuteIdx))
-                }).toSet
-                crunchMinutes.map(cm => (cm.key, cm)).toMap
-              case _ =>
-                Map[Int, CrunchMinute]()
-            }
-
-            queueCrunchMinutes
+            crunchQueueWorkloads(numberOfMinutes, slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads)
         }
         terminalCrunchMinutes
     }
+  }
+
+  def crunchQueueWorkloads(numberOfMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]) = {
+    val minutesInADay = 1440
+    val warmUp = 120
+    val minutesInACrunchDay = minutesInADay + warmUp
+
+    val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloads
+      .sortBy(_._1)
+      .sliding(minutesInACrunchDay, minutesInADay)
+      .flatMap(wl => {
+        crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
+          .toList
+          .sortBy(_._2.minute)
+          .drop(warmUp)
+      })
+      .toMap
+    queueCrunchMinutes
+  }
+
+  def crunchMinutes(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
+    val numberOfMinutes = queueWorkloads.length
+    val loadByMillis = queueWorkloads.toMap
+    val triedResult: Try[OptimizerCrunchResult] = optimiserCrunchResult(slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads)
+    val crunchStartMillis = queueWorkloads.map(_._1).min
+    val queueCrunchMinutes = triedResult match {
+      case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
+        val crunchMinutes = (0 until numberOfMinutes).map(minuteIdx => {
+          val minuteMillis = crunchStartMillis + (minuteIdx * oneMinuteMillis)
+          val paxLoad = loadByMillis.mapValues(_._1).getOrElse(minuteMillis, 0d)
+          val workLoad = loadByMillis.mapValues(_._2).getOrElse(minuteMillis, 0d)
+          CrunchMinute(tn, qn, minuteMillis, paxLoad, workLoad, deskRecs(minuteIdx), waitTimes(minuteIdx))
+        })
+        crunchMinutes.map(cm => (cm.key, cm)).toMap
+      case Failure(t) =>
+        log.info(s"Crunch failed: $t")
+        Map[Int, CrunchMinute]()
+    }
+    queueCrunchMinutes
+  }
+
+  def optimiserCrunchResult(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]) = {
+    val crunchStartMillis = queueWorkloads.map(_._1).min
+    val crunchEnd = queueWorkloads.map(_._1).max
+    val crunchMinutes = crunchStartMillis to crunchEnd by oneMinuteMillis
+
+    log.info(s"Crunching window ${crunchMinutes.length} ${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEnd).toISOString()}")
+
+    val workloadMinutes = qn match {
+      case Queues.EGate => queueWorkloads.map(_._2._2 / eGateBankSize)
+      case _ => queueWorkloads.map(_._2._2)
+    }
+    val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
+    val sla = slas.getOrElse(qn, 0)
+    val queueMinMaxDesks = minMaxDesks.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
+    val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
+    val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
+    val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+    triedResult
   }
 
   def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {

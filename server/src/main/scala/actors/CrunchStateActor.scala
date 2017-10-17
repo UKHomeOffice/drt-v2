@@ -21,8 +21,6 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
 
   val snapshotInterval = 100
 
-  val oneDayMinutes = 1440
-
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
       log.info(s"Recovery: received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
@@ -203,8 +201,6 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
       saveSnapshot(snapshotMessage)
     }
   }
-
-  def oneDayOfMinutes: Range = 0 until 1440
 
   def portStateToSnapshotMessage(portState: PortState) = CrunchStateSnapshotMessage(
     Option(0L),
