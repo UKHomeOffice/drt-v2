@@ -152,7 +152,7 @@ trait SystemActors {
   val initialBaseArrivals: Set[Arrival] = Await.result(baseArrivalsFuture, 1 minute)
   val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
 
-  def crunchFlow(name: String, maxDays: Int): CrunchGraphStage = new CrunchGraphStage(
+  def crunchStage(name: String, maxDays: Int): CrunchGraphStage = new CrunchGraphStage(
     name = name,
     optionalInitialFlights = None,
     slas = airportConfig.slaByQueue,
@@ -168,7 +168,7 @@ trait SystemActors {
   val staffingGraphStage = new StaffingStage(None, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
 
-  val arrivalsStage = new ArrivalsGraphStage(
+  def arrivalsStage = new ArrivalsGraphStage(
     initialBaseArrivals = initialBaseArrivals,
     initialLiveArrivals = initialLiveArrivals,
     baseArrivalsActor = baseArrivalsActor,
@@ -176,13 +176,13 @@ trait SystemActors {
     pcpArrivalTime = pcpArrivalTimeCalculator,
     validPortTerminals = airportConfig.terminalNames.toSet)
 
-  val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
-  val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
-  val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](0, OverflowStrategy.backpressure)
-  val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
-  val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
-  val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](100, OverflowStrategy.backpressure)
-  val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
+  val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
+  val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
+  val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](10, OverflowStrategy.backpressure)
+  val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
+  val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
+  val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
+  val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
 
   val (liveCrunchInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) = RunnableSimulationGraph(
     crunchStateActor = liveCrunchStateActor,
@@ -199,7 +199,7 @@ trait SystemActors {
   val (liveArrivalsCrunchInput, manifestsInput) = RunnableCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
       arrivalsSource = liveArrivalsDiffQueueSource,
       voyageManifestsSource = manifestsSource,
-      cruncher = crunchFlow("live", maxDays = 2),
+      cruncher = crunchStage("live", maxDays = 2),
       simulationQueueSubscriber = liveCrunchInput
     ).run()(actorMaterializer)
 
@@ -207,7 +207,7 @@ trait SystemActors {
 
   val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
       arrivalsSource = forecastArrivalsDiffQueueSource,
-      cruncher = crunchFlow("forecast", maxDays = 10),
+      cruncher = crunchStage("forecast", maxDays = 10),
       crunchSinkActor = forecastCrunchStateActor
     ).run()(actorMaterializer)
 

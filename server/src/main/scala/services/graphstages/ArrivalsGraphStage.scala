@@ -49,6 +49,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
         mergeAndPush(baseArrivals, liveArrivals)
 
+        if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
       }
     })
 
@@ -63,6 +64,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
         liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
 
         mergeAndPush(baseArrivals, liveArrivals)
+
+        if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
       }
     })
 

@@ -71,16 +71,6 @@ class CrunchTestLike
 
   def liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
 
-  def crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](0, OverflowStrategy.backpressure)
-
-  def shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
-
-  def fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](100, OverflowStrategy.backpressure)
-
-  def staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
-
-  def forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-
   def testProbe(name: String) = TestProbe(name = name)
 
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
@@ -121,44 +111,51 @@ class CrunchTestLike
       crunchEndFromLastPcp = crunchEndDateProvider,
       earliestAndLatestAffectedPcpTime = (_, _) => Some((SDate.now(), SDate.now())))
 
-    val forecastProbe = testProbe("forecast")
-    val forecastActorRef = forecastCrunchStateActor(forecastProbe)
-    val forecastArrivalsCrunchInput =
-      RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
-        arrivalsSource = forecastArrivalsDiffQueueSource,
-        cruncher = crunchFlow("forecast"),
-        crunchSinkActor = forecastActorRef
-      ).run()(actorMaterializer)
-
-    val staffingGraphStage = new StaffingStage(None, minMaxDesks, slaByQueue)
-    val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
-
-    val liveProbe = testProbe("live")
-    val liveActorRef = liveCrunchStateActor(liveProbe)
-    val actualDesksAndQueuesSource = Source.queue[ActualDeskStats](0, OverflowStrategy.backpressure)
-    val (liveCrunchInput, _, _, _, actualDesksAndQueuesInput) = RunnableSimulationGraph(
-      crunchStateActor = liveActorRef,
-      crunchSource = crunchSource,
-      shiftsSource = shiftsSource,
-      fixedPointsSource = fixedPointsSource,
-      staffMovementsSource = staffMovementsSource,
-      actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
-      staffingStage = staffingGraphStage,
-      actualDesksStage = actualDesksAndQueuesStage
-    ).run()(actorMaterializer)
-
-    val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-
-    val manifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.backpressure)
-    val (liveArrivalsCrunchInput, manifestsInput) = RunnableCrunchGraph(
-      arrivalsSource = liveArrivalsDiffQueueSource,
-      voyageManifestsSource = manifestsSource,
-      cruncher = crunchFlow("live"),
-      simulationQueueSubscriber = liveCrunchInput
-    ).run()(actorMaterializer)
-
     val baseFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val liveFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val manifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.backpressure)
+
+    val liveArrivalsDiffQueueSource = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
+    val forecastArrivalsDiffQueueSource = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
+
+    val crunchSource = Source.queue[PortState](0, OverflowStrategy.backpressure)
+
+    val shiftsSource = Source.queue[String](100, OverflowStrategy.backpressure)
+    val fixedPointsSource = Source.queue[String](100, OverflowStrategy.backpressure)
+    val staffMovementsSource = Source.queue[Seq[StaffMovement]](100, OverflowStrategy.backpressure)
+    val actualDesksAndQueuesSource = Source.queue[ActualDeskStats](0, OverflowStrategy.backpressure)
+
+    val forecastProbe = testProbe("forecast")
+    val forecastActorRef = forecastCrunchStateActor(forecastProbe)
+
+    val forecastArrivalsCrunchInput = RunnableForecastCrunchGraph(
+    arrivalsSource = forecastArrivalsDiffQueueSource,
+    cruncher = crunchFlow("forecast"),
+    crunchSinkActor = forecastActorRef
+    ).run()(actorMaterializer)
+    val staffingGraphStage = new StaffingStage(None, minMaxDesks, slaByQueue)
+    val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
+    val liveProbe = testProbe("live")
+
+    val liveActorRef = liveCrunchStateActor(liveProbe)
+
+    val (liveCrunchInput, _, _, _, actualDesksAndQueuesInput) = RunnableSimulationGraph(
+    crunchStateActor = liveActorRef,
+    crunchSource = crunchSource,
+    shiftsSource = shiftsSource,
+    fixedPointsSource = fixedPointsSource,
+    staffMovementsSource = staffMovementsSource,
+    actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
+    staffingStage = staffingGraphStage,
+    actualDesksStage = actualDesksAndQueuesStage
+    ).run()(actorMaterializer)
+    val (liveArrivalsCrunchInput, manifestsInput) = RunnableCrunchGraph(
+    arrivalsSource = liveArrivalsDiffQueueSource,
+    voyageManifestsSource = manifestsSource,
+    cruncher = crunchFlow("live"),
+    simulationQueueSubscriber = liveCrunchInput
+    ).run()(actorMaterializer)
+
     val (baseArrivalsInput, liveArrivalsInput) = RunnableArrivalsGraph(
       baseFlightsSource,
       liveFlightsSource,
