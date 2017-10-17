@@ -11,7 +11,7 @@ import scala.collection.immutable._
 
 case object GetCrunchMinutes
 
-class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor(queues) {
+class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor("historic", queues) {
   override val receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
       log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")

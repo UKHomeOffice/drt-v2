@@ -55,6 +55,8 @@ object VoyageManifestParser {
     private def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
 
     def summary: String = s"$DeparturePortCode->$ArrivalPortCode/$CarrierCode$VoyageNumber@$scheduleDateTimeString"
+
+    def arrivalHash: Int = s"$VoyageNumber-${scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)}".hashCode
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {

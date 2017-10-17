@@ -43,6 +43,8 @@ class CrunchGraphStage(name: String,
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
+    var waitingForArrivals = true
+    var waitingForManifests = true
 
     var portStateOption: Option[PortState] = None
 
@@ -62,13 +64,18 @@ class CrunchGraphStage(name: String,
     setHandler(outCrunch, new OutHandler {
       override def onPull(): Unit = {
         log.debug(s"crunchOut onPull called")
-        portStateOption match {
-          case Some(portState) =>
-            log.debug(s"Pushing PortState")
-            push(outCrunch, portState)
-            portStateOption = None
-          case None =>
-            log.debug(s"No PortState to push")
+        if (!waitingForManifests && !waitingForArrivals) {
+          portStateOption match {
+            case Some(portState) =>
+              log.debug(s"Pushing PortState")
+              push(outCrunch, portState)
+              portStateOption = None
+            case None =>
+              log.debug(s"No PortState to push")
+          }
+        } else {
+          if (waitingForArrivals) log.info(s"Waiting for arrivals")
+          if (waitingForManifests) log.info(s"Waiting for manifests")
         }
         if (!hasBeenPulled(inManifests)) pull(inManifests)
         if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
@@ -79,6 +86,7 @@ class CrunchGraphStage(name: String,
       override def onPush(): Unit = {
         log.debug(s"inFlights onPush called")
         val arrivalsDiff = grab(inArrivalsDiff)
+        waitingForArrivals = false
 
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
         val updatedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
@@ -96,6 +104,7 @@ class CrunchGraphStage(name: String,
       override def onPush(): Unit = {
         log.debug(s"inSplits onPush called")
         val vms = grab(inManifests)
+        waitingForManifests = false
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
@@ -221,14 +230,19 @@ class CrunchGraphStage(name: String,
     }
 
     def pushStateIfReady(): Unit = {
-      portStateOption match {
-        case None => log.info(s"We have no PortState yet. Nothing to push")
-        case Some(portState) =>
-          if (isAvailable(outCrunch)) {
-            log.info(s"Pushing PortState")
-            push(outCrunch, portState)
-            portStateOption = None
-          }
+      if (!waitingForManifests && !waitingForArrivals) {
+        portStateOption match {
+          case None => log.info(s"We have no PortState yet. Nothing to push")
+          case Some(portState) =>
+            if (isAvailable(outCrunch)) {
+              log.info(s"Pushing PortState")
+              push(outCrunch, portState)
+              portStateOption = None
+            }
+        }
+      } else {
+        if (waitingForArrivals) log.info(s"Waiting for arrivals")
+        if (waitingForManifests) log.info(s"Waiting for manifests")
       }
     }
 

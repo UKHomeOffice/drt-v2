@@ -72,6 +72,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
+      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlight)
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val flightsResult = result.flights.values.map(_.apiFlight)
@@ -99,6 +100,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
+      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlights)
       crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       crunch.liveArrivalsInput.offer(liveFlights)
@@ -132,6 +134,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
+      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
 
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
@@ -162,6 +165,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
+      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.liveArrivalsInput.offer(Flights(newLive.toList))
 
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
@@ -194,6 +198,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
+      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
       crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 

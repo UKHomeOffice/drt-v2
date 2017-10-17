@@ -47,9 +47,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
         baseArrivalsActor ! ArrivalsState(baseArrivals.map(a => (a.uniqueId, a)).toMap)
 
-        val newMerged = mergeArrivals(baseArrivals, liveArrivals)
-        toPush = arrivalsDiff(merged, newMerged)
-        pushIfAvailable(toPush, outArrivalsDiff)
+        mergeAndPush(baseArrivals, liveArrivals)
+
       }
     })
 
@@ -63,11 +62,16 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
         liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
 
-        val newMerged = mergeArrivals(baseArrivals, liveArrivals)
-        toPush = arrivalsDiff(merged, newMerged)
-        pushIfAvailable(toPush, outArrivalsDiff)
+        mergeAndPush(baseArrivals, liveArrivals)
       }
     })
+
+    def mergeAndPush(baseArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
+      val newMerged = mergeArrivals(baseArrivals, liveArrivals)
+      toPush = arrivalsDiff(merged, newMerged)
+      pushIfAvailable(toPush, outArrivalsDiff)
+      merged = newMerged
+    }
 
     setHandler(outArrivalsDiff, new OutHandler {
       override def onPull(): Unit = {

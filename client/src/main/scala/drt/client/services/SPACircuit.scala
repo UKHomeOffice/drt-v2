@@ -83,7 +83,6 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
 
   protected def handle = {
     case GetCrunchState() =>
-      log.info(s"VM: Getting crunch state for viewmode: ${viewMode()}")
       val eventualAction = viewMode() match {
         case ViewLive() =>
           log.info(s"Requesting CrunchUpdates")

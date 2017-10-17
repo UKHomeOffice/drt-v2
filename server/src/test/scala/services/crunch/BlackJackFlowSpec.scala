@@ -1,13 +1,12 @@
 package services.crunch
 
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.{ActualDeskStats, DeskStat}
-import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifests}
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -19,12 +18,19 @@ class BlackJackFlowSpec extends CrunchTestLike {
   sequential
 
   "Given a CrunchGraph when the blackjack CSV is updated " +
-    "Then the updated blackjack numbers sould appear in the PortState" >> {
+    "Then the updated blackjack numbers should appear in the PortState" >> {
 
     val scheduled = "2017-01-01T00:00Z"
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val flights = Flights(List(flight))
+    val deskStats = ActualDeskStats(Map(
+      "T1" -> Map(
+        EeaDesk -> Map(
+          SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
+          SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
+        ))))
+
     val crunch = runCrunchGraph(
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,
@@ -37,13 +43,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     crunch.baseArrivalsInput.offer(flights)
     crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
-
-    val deskStats = ActualDeskStats(Map(
-      "T1" -> Map(
-        EeaDesk -> Map(
-          SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
-          SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
-        ))))
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
