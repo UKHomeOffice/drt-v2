@@ -10,6 +10,7 @@ import services._
 import services.workloadcalculator.PaxLoadCalculator._
 
 import scala.collection.immutable.{Map, Seq}
+import scala.collection.parallel.immutable.ParMap
 import scala.util.{Failure, Success, Try}
 
 object Crunch {
@@ -95,12 +96,15 @@ object Crunch {
       .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
 
     val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
+      .toList
+      .par
       .flatMap(wl => {
         crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
           .toList
           .sortBy(_._2.minute)
           .drop(warmUpMinutes)
       })
+      .toList
       .toMap
     queueCrunchMinutes
   }
@@ -131,7 +135,7 @@ object Crunch {
     val crunchEnd = queueWorkloads.map(_._1).max
     val crunchMinutes = crunchStartMillis to crunchEnd by oneMinuteMillis
 
-    log.info(s"Crunching window ${crunchMinutes.length} ${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEnd).toISOString()}")
+    log.info(s"Crunching $tn/$qn ${crunchMinutes.length} minutes: ${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEnd).toISOString()}")
 
     val workloadMinutes = qn match {
       case Queues.EGate => queueWorkloads.map(_._2._2 / eGateBankSize)
