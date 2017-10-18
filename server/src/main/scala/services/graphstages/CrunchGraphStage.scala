@@ -32,7 +32,8 @@ class CrunchGraphStage(name: String,
                        csvSplitsProvider: SplitsProvider,
                        crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                        crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
-                       earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)])
+                       earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
+                       manifestsUsed: Boolean = true)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
@@ -43,8 +44,8 @@ class CrunchGraphStage(name: String,
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
-    var waitingForArrivals = true
-    var waitingForManifests = true
+    var waitingForArrivals: Boolean = true
+    var waitingForManifests: Boolean = manifestsUsed
 
     var portStateOption: Option[PortState] = None
 

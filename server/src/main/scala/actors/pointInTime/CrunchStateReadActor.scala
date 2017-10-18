@@ -31,7 +31,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       log.info(s"Recovered successfully")
 
     case u =>
-      log.warning(s"unexpected message: $u")
+      log.warn(s"unexpected message: $u")
   }
 
   override def receiveCommand: Receive = {
@@ -45,7 +45,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
       sender() ! stateForPeriod(start, end)
 
     case u =>
-      log.warning(s"Received unexpected message $u")
+      log.warn(s"Received unexpected message $u")
   }
 
   override def recovery: Recovery = {

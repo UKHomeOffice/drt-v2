@@ -22,7 +22,7 @@ object Crunch {
   case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
-    lazy val key = s"$terminalName$queueName$minute".hashCode
+    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
   }
 
   case class RemoveFlight(flightId: Int)
@@ -86,14 +86,16 @@ object Crunch {
     }
   }
 
-  def crunchQueueWorkloads(numberOfMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]) = {
-    val minutesInADay = 1440
+  def crunchQueueWorkloads(numberOfMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
+    val minutesInACrunch = 1440
     val warmUp = 120
-    val minutesInACrunchDay = minutesInADay + warmUp
+    val minutesInACrunchWithWarmUp = minutesInACrunch + warmUp
 
-    val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloads
+    val queueWorkloadsByCrunchPeriod = queueWorkloads
       .sortBy(_._1)
-      .sliding(minutesInACrunchDay, minutesInADay)
+      .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+
+    val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
       .flatMap(wl => {
         crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
           .toList
@@ -125,7 +127,7 @@ object Crunch {
     queueCrunchMinutes
   }
 
-  def optimiserCrunchResult(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]) = {
+  def optimiserCrunchResult(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Try[OptimizerCrunchResult] = {
     val crunchStartMillis = queueWorkloads.map(_._1).min
     val crunchEnd = queueWorkloads.map(_._1).max
     val crunchMinutes = crunchStartMillis to crunchEnd by oneMinuteMillis
