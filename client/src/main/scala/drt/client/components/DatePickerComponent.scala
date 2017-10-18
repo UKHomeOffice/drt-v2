@@ -1,9 +1,12 @@
 package drt.client.components
 
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetViewMode
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 
@@ -11,7 +14,11 @@ import scala.scalajs.js.Date
 
 object DatePickerComponent {
 
-  case class Props(viewMode: ViewMode, terminalName: String)
+  case class Props(
+                    viewMode: ViewMode,
+                    router: RouterCtl[Loc],
+                    terminalPageTab: TerminalPageTabLoc
+                  )
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
@@ -43,7 +50,7 @@ object DatePickerComponent {
       val minutes = Seq.range(0, 60)
 
       def drawSelect(names: Seq[String], values: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
-        <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString, ^.value := defaultValue.toString,
+        <.select(^.className := "form-control", ^.value := defaultValue.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))),
           values.zip(names).map {
             case (name, value) => <.option(^.value := value, name)
@@ -52,25 +59,35 @@ object DatePickerComponent {
 
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
+      def updateUrlWithDate(date: Option[SDateLike]) = {
+        props.router.set(props.terminalPageTab.copy(date = date.map(_.toLocalDateTimeString()))).runNow()
+      }
+
       def selectPointInTime = (e: ReactEventFromInput) => {
+        updateUrlWithDate(Option(state.selectedDateTime))
         SPACircuit.dispatch(SetViewMode(ViewDay(state.selectedDateTime)))
         scope.modState(_.copy(showDatePicker = false))
       }
 
       def selectYesterday = (e: ReactEventFromInput) => {
         val yesterday = SDate.midnightThisMorning().addMinutes(-1)
+        updateUrlWithDate(Option(yesterday))
+
         SPACircuit.dispatch(SetViewMode(ViewDay(yesterday)))
         scope.modState(_.copy(true, yesterday.getDate(), yesterday.getMonth(), yesterday.getFullYear(), yesterday.getHours(), yesterday.getMinutes()))
       }
 
       def selectTomorrow = (e: ReactEventFromInput) => {
         val tomorrow = SDate.midnightThisMorning().addDays(2).addMinutes(-1)
+        updateUrlWithDate(Option(tomorrow))
+
         SPACircuit.dispatch(SetViewMode(ViewDay(tomorrow)))
         scope.modState(_.copy(true, tomorrow.getDate(), tomorrow.getMonth(), tomorrow.getFullYear(), tomorrow.getHours(), tomorrow.getMinutes()))
       }
 
       def selectToday = (e: ReactEventFromInput) => {
         val now = SDate.now()
+        updateUrlWithDate(None)
         SPACircuit.dispatch(SetViewMode(ViewLive()))
         scope.modState(_.copy(true, now.getDate(), now.getMonth(), now.getFullYear(), now.getHours(), now.getMinutes()))
       }

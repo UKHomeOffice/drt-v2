@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalDepsLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.TerminalName
@@ -13,7 +13,7 @@ object Navbar {
     val airportConfigRCP = SPACircuit.connect(m => m.airportConfig)
 
     def currentTerminalOption(page: Loc): Option[TerminalName] = page match {
-      case p: TerminalDepsLoc => Option(p.id)
+      case p: TerminalPageTabLoc => Option(p.terminal)
       case _ => None
     }
 

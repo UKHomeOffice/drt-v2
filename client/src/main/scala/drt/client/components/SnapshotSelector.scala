@@ -1,11 +1,13 @@
 package drt.client.components
 
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.{SetViewMode, ShowLoader}
 import drt.client.logger.LoggerFactory
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 
@@ -17,7 +19,7 @@ object SnapshotSelector {
 
   val log = LoggerFactory.getLogger("SnapshotSelector")
 
-  case class Props()
+  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def snapshotDateTime = SDate(year, month + 1, day, hours, minutes)
@@ -40,16 +42,27 @@ object SnapshotSelector {
   implicit val propsReuse: Reusability[Props] = Reusability.always
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
-    .initialState(
-      State(true, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+    .initialStateFromProps(
+      p =>
+        p.terminalPageTab.date match {
+          case Some(dateString) =>
+            val snapshotDate = SDate(dateString)
+            State(false, snapshotDate.getDate(), snapshotDate.getMonth(), snapshotDate.getFullYear(), snapshotDate.getHours(), snapshotDate.getMinutes())
+          case None =>
+            State(true, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+        }
     )
-    .renderS((scope, state) => {
+    .renderPS((scope, props, state) => {
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zipWithIndex
       val days = Seq.range(1, 31)
       val years = Seq.range(2017, today.getFullYear() + 1)
       val hours = Seq.range(0, 24)
 
       val minutes = Seq.range(0, 60)
+
+      def updateUrlWithDate(date: Option[SDateLike]) = {
+        props.router.set(props.terminalPageTab.copy(date = date.map(_.toLocalDateTimeString()))).runNow()
+      }
 
       def drawSelect(values: Seq[String], names: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
         val nameValues = values.zip(names)
@@ -66,7 +79,7 @@ object SnapshotSelector {
 
       def selectPointInTime = (e: ReactEventFromInput) => {
         if (isValidSnapshotDate) {
-          SPACircuit.dispatch(ShowLoader(s"Loading snapshot for ${state.snapshotDateTime.prettyDateTime()}..."))
+          updateUrlWithDate(Option(state.snapshotDateTime))
           SPACircuit.dispatch(SetViewMode(ViewPointInTime(state.snapshotDateTime)))
           scope.modState(_.copy(showDatePicker = false))
         } else {
@@ -108,5 +121,5 @@ object SnapshotSelector {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(): VdomElement = component(Props())
+  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc): VdomElement = component(Props(router, page))
 }
