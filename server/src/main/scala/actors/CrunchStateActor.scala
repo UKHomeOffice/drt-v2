@@ -165,9 +165,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
     val diff = CrunchDiff(flightsToRemove, flightsToUpdate, Set(), crunchesToUpdate)
 
-    log.info(s"applying ${crunchesToUpdate.size} updated minutes to ${existingState.crunchMinutes.size} existing minutes")
     val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
-    log.info(s"${cmsFromDiff.size} minutes after applying update")
     val flightsFromDiff = applyFlightsWithSplitsDiff(diff, existingState.flights)
 
     val diffToPersist = CrunchDiffMessage(

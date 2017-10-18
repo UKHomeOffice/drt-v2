@@ -33,7 +33,8 @@ class CrunchGraphStage(name: String,
                        crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                        crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                        earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
-                       manifestsUsed: Boolean = true)
+                       manifestsUsed: Boolean = true,
+                       warmUpMinutes: Int = 120)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
@@ -250,10 +251,10 @@ class CrunchGraphStage(name: String,
       val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
       val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
 
-      val fullWlByTerminalAndQueue = queueMinutesForPeriod(crunchStart - 120*60000, numberOfMinutes+120)(wlByQueue)
+      val fullWlByTerminalAndQueue = queueMinutesForPeriod(crunchStart - warmUpMinutes * oneMinuteMillis, numberOfMinutes + warmUpMinutes)(wlByQueue)
       val eGateBankSize = 5
 
-      workloadsToCrunchMinutes(numberOfMinutes+120, fullWlByTerminalAndQueue, slas, minMaxDesks, eGateBankSize)
+      workloadsToCrunchMinutes(warmUpMinutes, fullWlByTerminalAndQueue, slas, minMaxDesks, eGateBankSize)
     }
 
     def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {

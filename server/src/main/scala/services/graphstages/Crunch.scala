@@ -71,7 +71,7 @@ object Crunch {
     }
   }
 
-  def workloadsToCrunchMinutes(numberOfMinutes: Int,
+  def workloadsToCrunchMinutes(warmUpMinutes: Int,
                                portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
                                slas: Map[QueueName, Int],
                                minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
@@ -80,16 +80,15 @@ object Crunch {
       case (tn, terminalWorkloads) =>
         val terminalCrunchMinutes = terminalWorkloads.flatMap {
           case (qn, queueWorkloads) =>
-            crunchQueueWorkloads(numberOfMinutes, slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads)
+            crunchQueueWorkloads(warmUpMinutes, slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads)
         }
         terminalCrunchMinutes
     }
   }
 
-  def crunchQueueWorkloads(numberOfMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
+  def crunchQueueWorkloads(warmUpMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
     val minutesInACrunch = 1440
-    val warmUp = 120
-    val minutesInACrunchWithWarmUp = minutesInACrunch + warmUp
+    val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
 
     val queueWorkloadsByCrunchPeriod = queueWorkloads
       .sortBy(_._1)
@@ -100,7 +99,7 @@ object Crunch {
         crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
           .toList
           .sortBy(_._2.minute)
-          .drop(warmUp)
+          .drop(warmUpMinutes)
       })
       .toMap
     queueCrunchMinutes
