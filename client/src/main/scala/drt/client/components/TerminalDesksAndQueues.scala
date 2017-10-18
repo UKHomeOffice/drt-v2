@@ -88,7 +88,6 @@ object TerminalDesksAndQueues {
   val component = ScalaComponent.builder[Props]("Loader")
     .initialState[State](State(false))
     .renderPS((scope, props, state) => {
-
       def groupBy15(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])]) = {
         val groupSize = 15
         crunchMinutes.grouped(groupSize).toList.map(group => {

@@ -3,7 +3,8 @@ package drt.client
 import drt.client.actions.Actions._
 import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalsDashboardPage}
 import drt.client.logger._
-import drt.client.services.SPACircuit
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.{SPACircuit, ViewDay, ViewLive, ViewPointInTime}
 import japgolly.scalajs.react.WebpackRequire
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
@@ -18,7 +19,12 @@ object SPAMain extends js.JSApp {
 
   sealed trait Loc
 
-  case class TerminalDepsLoc(id: String) extends Loc
+  case class TerminalPageTabLoc(
+                                 terminal: String,
+                                 mode: String = "current",
+                                 tab: String = "arrivals",
+                                 date: Option[String] = None
+                               ) extends Loc
 
   case class TerminalsDashboardLoc(hours: Int) extends Loc
 
@@ -34,7 +40,7 @@ object SPAMain extends js.JSApp {
     initActions.foreach(SPACircuit.dispatch(_))
   }
 
-  val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
+  val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
     val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
@@ -42,9 +48,13 @@ object SPAMain extends js.JSApp {
       dynRenderR((page: TerminalsDashboardLoc, ctl) => {
         TerminalsDashboardPage(page.hours)
       })
-    val terminal: dsl.Rule = dynamicRouteCT("#terminal" / string("[a-zA-Z0-9]+").caseClass[TerminalDepsLoc]) ~>
-      dynRenderR((page: TerminalDepsLoc, _) => {
-        val props = TerminalComponent.Props(terminalName = page.id)
+    val terminal: dsl.Rule = dynamicRouteCT(("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option).caseClassDebug[TerminalPageTabLoc]) ~>
+      dynRenderR((page: TerminalPageTabLoc, router) => {
+        log.info(s"Got this page: $page")
+
+        updateModelFromUri(page)
+
+        val props = TerminalComponent.Props(terminalPageTab = page, router)
         TerminalComponent(props)
       })
 
@@ -55,6 +65,23 @@ object SPAMain extends js.JSApp {
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
+
+  def viewModeFromModelAndUrl(page: TerminalPageTabLoc) = {
+    val vm = page match {
+      case TerminalPageTabLoc(_, "current", _, Some(dateString)) =>
+        ViewDay(SDate(dateString))
+      case TerminalPageTabLoc(_, "snapshot", _, dateStringOption) =>
+        ViewPointInTime(dateStringOption.map(SDate(_)).getOrElse(SDate.now()))
+      case _ =>
+        ViewLive()
+    }
+
+    vm
+  }
+
+  def updateModelFromUri(page: TerminalPageTabLoc) = {
+    SPACircuit.dispatch(SetViewMode(viewModeFromModelAndUrl(page)))
+  }
 
   def require(): Unit = {
     WebpackRequire.React

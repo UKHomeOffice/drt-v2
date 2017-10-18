@@ -2,15 +2,16 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.ModelProxy
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
 import drt.shared.Crunch.CrunchState
-import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
@@ -23,10 +24,11 @@ object TerminalContentComponent {
   case class Props(
                     crunchStatePot: Pot[CrunchState],
                     airportConfig: AirportConfig,
-                    terminalName: TerminalName,
+                    terminalPageTab: TerminalPageTabLoc,
                     airportInfoPot: Pot[AirportInfo],
                     timeRangeHours: TimeRangeHours,
-                    viewMode: ViewMode
+                    viewMode: ViewMode,
+                    router: RouterCtl[Loc]
                   ) {
     lazy val hash = {
       val depsHash = crunchStatePot.map(
@@ -94,39 +96,60 @@ object TerminalContentComponent {
       val bestPax = ArrivalHelper.bestPax _
       val queueOrder = props.airportConfig.queueOrder
 
+      val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
+      val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
+      val staffingActive = if (state.activeTab == "staffing") "active" else ""
+
+      val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
+      val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
+      val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
+
       <.div(
-        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.viewMode.millis}/${props.terminalName}", ^.target := "_blank"),
-        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.viewMode.millis}/${props.terminalName}", ^.target := "_blank"),
+        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
+        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
         TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours())),
         <.ul(^.className := "nav nav-tabs",
-          <.li(^.className := "active", <.a(VdomAttr("data-toggle") := "tab", ^.href := "#arrivals", "Arrivals"), ^.onClick --> t.modState(_ => State("arrivals"))),
-          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#desksAndQueues", "Desks & Queues"), ^.onClick --> t.modState(_ => State("desksAndQueues"))),
-          <.li(<.a(VdomAttr("data-toggle") := "tab", ^.href := "#staffing", "Staffing"), ^.onClick --> t.modState(_ => State("staffing")))
+          <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
+            props.router.set(props.terminalPageTab.copy(tab="arrivals")).runNow()
+            t.modState(_ => State("arrivals"))
+          }),
+          <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
+            props.router.set(props.terminalPageTab.copy(tab="desksAndQueues")).runNow()
+            t.modState(_ => State("desksAndQueues"))
+          }),
+          <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
+            props.router.set(props.terminalPageTab.copy(tab="staffing")).runNow()
+            t.modState(_ => State("staffing"))
+          })
         ),
         <.div(^.className := "tab-content",
-          <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
+          <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
             if (state.activeTab == "arrivals") {
+              log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
-                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalName)
+                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
                 val flightsInRange = filterFlightsByRange(props.viewMode.time, props.timeRangeHours, terminalFlights.toList)
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, bestPax, queueOrder))
               }))
             } else ""
           }),
-          <.div(^.id := "desksAndQueues", ^.className := "tab-pane fade terminal-desk-recs-container",
+          <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive", ^.href := "#desksAndQueues",
             if (state.activeTab == "desksAndQueues") {
+              log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.renderReady(crunchState => {
-
-                TerminalDesksAndQueues(TerminalDesksAndQueues.Props(crunchState, props.airportConfig, props.terminalName))
+                log.info(s"rendering ready d and q")
+                TerminalDesksAndQueues(TerminalDesksAndQueues.Props(crunchState, props.airportConfig, props.terminalPageTab.terminal))
               })
             } else ""
           ),
-          <.div(^.id := "staffing", ^.className := "tab-pane fade terminal-staffing-container",
+          <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive", ^.href := "#staffing",
+
             if (state.activeTab == "staffing") {
-              TerminalStaffing(TerminalStaffing.Props(props.terminalName))
+              log.info(s"Rendering staffing $state")
+              TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal))
             } else ""
           )))
 
@@ -137,7 +160,7 @@ object TerminalContentComponent {
   implicit val stateReuse = Reusability.caseClass[State]
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
-    .initialState(State("arrivals"))
+    .initialStateFromProps(p => State(p.terminalPageTab.tab))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount((p) => {
       Callback.log(s"terminal component didMount")
