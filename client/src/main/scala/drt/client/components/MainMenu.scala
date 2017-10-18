@@ -34,7 +34,7 @@ object MainMenu {
       case PotReady =>
         airportConfigPotMP().get.terminalNames.zipWithIndex.map {
           case (tn, idx) =>
-            MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalDepsLoc(tn))
+            MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalPageTabLoc(tn))
         }.toList
       case _ =>
         List()
