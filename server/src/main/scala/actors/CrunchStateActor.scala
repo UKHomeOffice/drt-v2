@@ -7,6 +7,7 @@ import drt.shared.Crunch._
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import org.slf4j.LoggerFactory
 import server.protobuf.messages.CrunchState._
 import services.SDate
 import services.graphstages.Crunch._
@@ -14,14 +15,14 @@ import services.graphstages.Crunch._
 import scala.collection.immutable._
 import scala.language.postfixOps
 
-class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor with ActorLogging {
+class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor {
   override def persistenceId: String = s"$name-crunch-state"
+
+  val log = LoggerFactory.getLogger(s"$name-$getClass")
 
   var state: Option[PortState] = None
 
   val snapshotInterval = 100
-
-  val oneDayMinutes = 1440
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
@@ -92,7 +93,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
       log.info(s"Snapshot failed $md\n$cause")
 
     case u =>
-      log.warning(s"Received unexpected message $u")
+      log.warn(s"Received unexpected message $u")
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch) = {
@@ -203,8 +204,6 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
       saveSnapshot(snapshotMessage)
     }
   }
-
-  def oneDayOfMinutes: Range = 0 until 1440
 
   def portStateToSnapshotMessage(portState: PortState) = CrunchStateSnapshotMessage(
     Option(0L),

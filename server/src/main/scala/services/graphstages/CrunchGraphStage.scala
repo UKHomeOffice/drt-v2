@@ -32,7 +32,9 @@ class CrunchGraphStage(name: String,
                        csvSplitsProvider: SplitsProvider,
                        crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                        crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
-                       earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)])
+                       earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
+                       manifestsUsed: Boolean = true,
+                       warmUpMinutes: Int = 120)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
@@ -43,8 +45,8 @@ class CrunchGraphStage(name: String,
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
-    var waitingForArrivals = true
-    var waitingForManifests = true
+    var waitingForArrivals: Boolean = true
+    var waitingForManifests: Boolean = manifestsUsed
 
     var portStateOption: Option[PortState] = None
 
@@ -220,11 +222,10 @@ class CrunchGraphStage(name: String,
       log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
       val uniqueFlights = groupFlightsByCodeShares(flightsInCrunchWindow).map(_._1)
       log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
-      val newFlightsById = uniqueFlights.map(f => (f.apiFlight.uniqueId, f)).toMap
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
       val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
       log.info(s"Crunching $numberOfMinutes minutes")
-      val crunchMinutes = crunchMinutesFromFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightsById, newFlightSplitMinutesByFlight)
+      val crunchMinutes = crunchFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightSplitMinutesByFlight)
 
       Option(PortState(flights, crunchMinutes))
     }
@@ -246,24 +247,14 @@ class CrunchGraphStage(name: String,
       }
     }
 
-    def crunchMinutesFromFlightSplitMinutes(crunchStart: MillisSinceEpoch,
-                                            numberOfMinutes: Int,
-                                            flightsById: Map[Int, ApiFlightWithSplits],
-                                            fsmsByFlightId: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
-      val crunchResults: Map[Int, CrunchMinute] = crunchFlightSplitMinutes(crunchStart, numberOfMinutes, fsmsByFlightId)
-
-      crunchResults
-    }
-
     def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
       val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
       val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
 
-      val fullWlByQueue: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]] = queueMinutesForPeriod(crunchStart, numberOfMinutes)(wlByQueue)
+      val fullWlByTerminalAndQueue = queueMinutesForPeriod(crunchStart - warmUpMinutes * oneMinuteMillis, numberOfMinutes + warmUpMinutes)(wlByQueue)
       val eGateBankSize = 5
 
-      val crunchResults = workloadsToCrunchMinutes(crunchStart, numberOfMinutes, fullWlByQueue, slas, minMaxDesks, eGateBankSize)
-      crunchResults
+      workloadsToCrunchMinutes(warmUpMinutes, fullWlByTerminalAndQueue, slas, minMaxDesks, eGateBankSize)
     }
 
     def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {

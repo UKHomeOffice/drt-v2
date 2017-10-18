@@ -152,7 +152,7 @@ trait SystemActors {
   val initialBaseArrivals: Set[Arrival] = Await.result(baseArrivalsFuture, 1 minute)
   val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
 
-  def crunchStage(name: String, maxDays: Int): CrunchGraphStage = new CrunchGraphStage(
+  def crunchStage(name: String, maxDays: Int, manifestsUsed: Boolean = true): CrunchGraphStage = new CrunchGraphStage(
     name = name,
     optionalInitialFlights = None,
     slas = airportConfig.slaByQueue,
@@ -163,7 +163,8 @@ trait SystemActors {
     csvSplitsProvider = historicalSplitsProvider,
     crunchStartFromFirstPcp = getLocalLastMidnight,
     crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-    earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays))
+    earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
+    manifestsUsed = manifestsUsed)
 
   val staffingGraphStage = new StaffingStage(None, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
   val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
@@ -199,7 +200,7 @@ trait SystemActors {
   val (liveArrivalsCrunchInput, manifestsInput) = RunnableCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
       arrivalsSource = liveArrivalsDiffQueueSource,
       voyageManifestsSource = manifestsSource,
-      cruncher = crunchStage("live", maxDays = 2),
+      cruncher = crunchStage(name = "live", maxDays = 2),
       simulationQueueSubscriber = liveCrunchInput
     ).run()(actorMaterializer)
 
@@ -207,7 +208,7 @@ trait SystemActors {
 
   val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
       arrivalsSource = forecastArrivalsDiffQueueSource,
-      cruncher = crunchStage("forecast", maxDays = 10),
+      cruncher = crunchStage(name = "forecast", maxDays = 360, manifestsUsed = false),
       crunchSinkActor = forecastCrunchStateActor
     ).run()(actorMaterializer)
 

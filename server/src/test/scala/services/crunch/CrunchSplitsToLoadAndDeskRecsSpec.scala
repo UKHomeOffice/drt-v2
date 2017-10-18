@@ -1,6 +1,5 @@
 package services.crunch
 
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.Flights

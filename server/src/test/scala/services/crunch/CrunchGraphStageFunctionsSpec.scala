@@ -1,10 +1,8 @@
 package services.crunch
 
-import actors._
 import akka.actor._
 import akka.stream._
 import akka.testkit.TestKit
-import drt.shared.Crunch.PortState
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
@@ -15,15 +13,6 @@ import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 
-
-class CrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef) extends CrunchStateActor("test", queues) {
-  override def updateStateFromPortState(cs: PortState): Unit = {
-    log.info(s"calling parent updateState...")
-    super.updateStateFromPortState(cs)
-
-    probe ! state.get
-  }
-}
 
 class CrunchGraphStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
   isolated

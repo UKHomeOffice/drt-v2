@@ -5,22 +5,25 @@ import actors.GetState
 import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.Arrival
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 
 case class ArrivalsState(arrivals: Map[Int, Arrival])
 
 class ForecastBaseArrivalsActor extends ArrivalsActor {
-  override def persistenceId: String = getClass.getName
+  override def persistenceId: String = s"live-${getClass.getName}"
+  val log: Logger = LoggerFactory.getLogger(getClass)
 }
 
 class LiveArrivalsActor extends ArrivalsActor {
-  override def persistenceId: String = getClass.getName
+  override def persistenceId: String = s"forecast-${getClass.getName}"
+  val log: Logger = LoggerFactory.getLogger(getClass)
 }
 
-abstract class ArrivalsActor extends PersistentActor with ActorLogging {
+abstract class ArrivalsActor extends PersistentActor {
   var arrivalsState: ArrivalsState = ArrivalsState(Map())
-
   val snapshotInterval = 100
+  val log: Logger
 
   override def receiveRecover: Receive = {
     case diffsMessage: FlightsDiffMessage =>

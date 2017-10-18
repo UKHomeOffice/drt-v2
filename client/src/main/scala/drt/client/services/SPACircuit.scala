@@ -113,7 +113,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(eventualAction))
 
     case GetCrunchStateAfter(delay) =>
-      log.info(s"Re-requesting CrunchState for point in time ${viewMode().time.prettyDateTime()}")
+      log.info(s"Re-requesting CrunchState for ${viewMode().time.prettyDateTime()}")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
       effectOnly(getCrunchStateAfterDelay)
 
