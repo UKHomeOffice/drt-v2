@@ -32,7 +32,7 @@
     "elemental": "v0.5.14",
     "highlight.js": "8.9.1",
     "jquery": "^1.11.1",
-    "jsdom": "^9.11.0",
+    "jsdom": "9.9.0",
     "log4javascript": "^1.4.15",
     "ls": "^0.2.1",
     "material-ui": "v0.15.2",
