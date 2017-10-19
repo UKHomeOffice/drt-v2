@@ -8,7 +8,7 @@ import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
@@ -17,32 +17,30 @@ import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch, PortState}
-import services.graphstages.Crunch._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, TerminalName}
+import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
-import net.schmizz.sshj.sftp.SFTPClient
 import org.joda.time.chrono.ISOChronology
-import org.slf4j.LoggerFactory
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import server.feeds.acl.AclFeed._
+import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.{SDate, _}
-import services.graphstages.{RunnableArrivalsGraph, _}
+import services.crunch.CrunchSystem
+import services.crunch.CrunchSystem.CrunchProps
+import services.graphstages.Crunch._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
+import services.{SDate, _}
 
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
 
@@ -59,7 +57,7 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 }
 
 object PaxFlow {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def makeFlightPaxFlowCalculator(splitRatioForFlight: (Arrival) => Option[SplitRatios],
                                   bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
@@ -85,6 +83,7 @@ object SystemActors {
   type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
 
+
 trait SystemActors {
   self: AirportConfProvider =>
 
@@ -92,153 +91,49 @@ trait SystemActors {
 
   val config: Configuration
 
-  val ftpServer = ConfigFactory.load.getString("acl.host")
-  val username = ConfigFactory.load.getString("acl.username")
-  val path = ConfigFactory.load.getString("acl.keypath")
+  val maxDaysToCrunch: Int = ConfigFactory.load.getString("crunch.forecast.max_days").toInt
+  val aclPollMinutes: Int = ConfigFactory.load.getString("crunch.forecast.poll_minutes").toInt
 
-  val sftp: SFTPClient = sftpClient(ftpServer, username, path)
-  val aclArrivals = arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, airportConfig.portCode)))
+  val ftpServer: String = ConfigFactory.load.getString("acl.host")
+  val username: String = ConfigFactory.load.getString("acl.username")
+  val path: String = ConfigFactory.load.getString("acl.keypath")
+
+  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode)
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
-
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-
-  def walkTimeProvider(flight: Arrival): Millis =
-    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
-
-  def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
-
   val actorMaterializer = ActorMaterializer()
 
-  val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
-  val askableBaseArrivalsActor: AskableActorRef = baseArrivalsActor
-  val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
-  val askableLiveArrivalsActor: AskableActorRef = liveArrivalsActor
+  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
   val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "live", airportConfig.queues), name = "crunch-live-state-actor")
   val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "forecast", airportConfig.queues), name = "crunch-forecast-state-actor")
-  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
+  val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
-  val chroma = ChromaFlightFeed(system.log, ProdChroma(system))
+  val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(system, airportConfig, pcpArrivalTimeCalculator, historicalSplitsProvider, liveCrunchStateActor, forecastCrunchStateActor, maxDaysToCrunch))
 
-  val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
+  val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], crunchInputs.shifts))
+  val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], crunchInputs.fixedPoints))
+  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], crunchInputs.staffMovements))
 
+  flightsSource(mockProd, airportConfig.portCode)
+    .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
 
-  val baseArrivalsFuture: Future[Set[Arrival]] = askableBaseArrivalsActor.ask(GetState)(new Timeout(1 minute)).map {
-    case ArrivalsState(arrivals) => arrivals.values.toSet
-    case _ => Set[Arrival]()
+  system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
+    crunchInputs.baseArrivals.offer(aclFeed.arrivals)
   }
-
-  baseArrivalsFuture.onComplete {
-    case Success(arrivals) => arrivals
-    case Failure(t) =>
-      system.log.warning(s"Failed to get an initial base ArrivalsState: $t")
-      Set[Arrival]()
-  }
-
-  val liveArrivalsFuture: Future[Set[Arrival]] = askableLiveArrivalsActor.ask(GetState)(new Timeout(1 minute)).map {
-    case ArrivalsState(arrivals) => arrivals.values.toSet
-    case _ => Set[Arrival]()
-  }
-
-  liveArrivalsFuture.onComplete {
-    case Success(arrivals) => arrivals
-    case Failure(t) =>
-      system.log.warning(s"Failed to get an initial live ArrivalsState: $t")
-      Set[Arrival]()
-  }
-  val initialBaseArrivals: Set[Arrival] = Await.result(baseArrivalsFuture, 1 minute)
-  val initialLiveArrivals: Set[Arrival] = Await.result(liveArrivalsFuture, 1 minute)
-
-  def crunchStage(name: String, maxDays: Int, manifestsUsed: Boolean = true): CrunchGraphStage = new CrunchGraphStage(
-    name = name,
-    optionalInitialFlights = None,
-    slas = airportConfig.slaByQueue,
-    minMaxDesks = airportConfig.minMaxDesksByTerminalQueue,
-    procTimes = airportConfig.defaultProcessingTimes.head._2,
-    groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-    portSplits = airportConfig.defaultPaxSplits,
-    csvSplitsProvider = historicalSplitsProvider,
-    crunchStartFromFirstPcp = getLocalLastMidnight,
-    crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-    earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
-    manifestsUsed = manifestsUsed)
-
-  val staffingGraphStage = new StaffingStage(None, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue)
-  val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
-
-  def arrivalsStage = new ArrivalsGraphStage(
-    initialBaseArrivals = initialBaseArrivals,
-    initialLiveArrivals = initialLiveArrivals,
-    baseArrivalsActor = baseArrivalsActor,
-    liveArrivalsActor = liveArrivalsActor,
-    pcpArrivalTime = pcpArrivalTimeCalculator,
-    validPortTerminals = airportConfig.terminalNames.toSet)
-
-  val baseArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
-  val liveArrivalsQueueSource: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
-  val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](10, OverflowStrategy.backpressure)
-  val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
-  val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
-  val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
-  val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
-
-  val (liveCrunchInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) = RunnableSimulationGraph(
-    crunchStateActor = liveCrunchStateActor,
-    crunchSource = crunchSource,
-    shiftsSource = shiftsSource,
-    fixedPointsSource = fixedPointsSource,
-    staffMovementsSource = staffMovementsSource,
-    actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
-    staffingStage = staffingGraphStage,
-    actualDesksStage = actualDesksAndQueuesStage
-  ).run()(actorMaterializer)
-
-  val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-  val (liveArrivalsCrunchInput, manifestsInput) = RunnableCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
-      arrivalsSource = liveArrivalsDiffQueueSource,
-      voyageManifestsSource = manifestsSource,
-      cruncher = crunchStage(name = "live", maxDays = 2),
-      simulationQueueSubscriber = liveCrunchInput
-    ).run()(actorMaterializer)
-
-  val forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-
-  val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
-      arrivalsSource = forecastArrivalsDiffQueueSource,
-      cruncher = crunchStage(name = "forecast", maxDays = 360, manifestsUsed = false),
-      crunchSinkActor = forecastCrunchStateActor
-    ).run()(actorMaterializer)
-
-  val (baseArrivalsInput, liveArrivalsInput) = RunnableArrivalsGraph[SourceQueueWithComplete[Flights]](
-    baseArrivalsQueueSource,
-    liveArrivalsQueueSource,
-    arrivalsStage,
-    List(liveArrivalsCrunchInput, forecastArrivalsCrunchInput)
-  ).run()(actorMaterializer)
-
-  flightsSource(mockProd, airportConfig.portCode).runForeach(f => liveArrivalsInput.offer(f))(actorMaterializer)
-  baseArrivalsInput.offer(Flights(aclArrivals))
-
-  val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], shiftsInput))
-  val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], fixedPointsInput))
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
     val threeMinutesInterval = 3 * 60 * 1000
-
-    Deskstats.startBlackjack(csvUrl, actualDesksAndQueuesInput, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
+    Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
   })
 
   val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
   val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
-  val advPaxInfoProvider = VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode, manifestsInput, voyageManifestsActor)
-  advPaxInfoProvider.start()
 
-  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], staffMovementsInput))
+  VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
 
-  def historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
@@ -251,6 +146,12 @@ trait SystemActors {
     }
     feed.map(Flights)
   }
+
+  def walkTimeProvider(flight: Arrival): Millis =
+    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
+
+  def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
   def createChromaFlightFeed(prodMock: String): ChromaFlightFeed = {
     val fetcher = prodMock match {
@@ -294,13 +195,11 @@ trait ImplicitTimeoutProvider {
   implicit val timeout: Timeout = Timeout(1 second)
 }
 
-class Application @Inject()(
-                             implicit val config: Configuration,
-                             implicit val mat: Materializer,
-                             env: Environment,
-                             override val system: ActorSystem,
-                             ec: ExecutionContext
-                           )
+class Application @Inject()(implicit val config: Configuration,
+                            implicit val mat: Materializer,
+                            env: Environment,
+                            override val system: ActorSystem,
+                            ec: ExecutionContext)
   extends Controller
     with AirportConfProvider
     with ProdPassengerSplitProviders
@@ -317,56 +216,58 @@ class Application @Inject()(
 
   val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
-
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  val createApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
+  object ApiService {
+    def apply(airportConfig: AirportConfig, shiftsActor: ActorRef, fixedPointsActor: ActorRef, staffMovementsActor: ActorRef) =
+      new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
 
-    override implicit val timeout: Timeout = Timeout(5 seconds)
+        override implicit val timeout: Timeout = Timeout(5 seconds)
 
-    def actorSystem: ActorSystem = system
+        def actorSystem: ActorSystem = system
 
-    def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
-      if (isHistoricDate(day)) {
-        crunchStateForEndOfDay(day)
-      } else if (day < getLocalNextMidnight(SDate.now).millisSinceEpoch) {
-        log.error(s"Trying to load live CrunchState from Forecast Actor.")
-        Future(None)
-      } else {
-        crunchStateForDayInForcast(day)
+        def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
+          if (isHistoricDate(day)) {
+            crunchStateForEndOfDay(day)
+          } else if (day < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
+            log.error(s"Trying to load live CrunchState from Forecast Actor.")
+            Future(None)
+          } else {
+            crunchStateForDayInForecast(day)
+          }
+        }
+
+        override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+          crunchStateAtPointInTime(pointInTime)
+        }
+
+        def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+          val startMillis = midnightThisMorning - oneHourMillis * 3
+          val endMillis = midnightThisMorning + oneHourMillis * 30
+          val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(5 seconds))
+
+          crunchStateFuture.map {
+            case Some(cu: CrunchUpdates) => Option(cu)
+            case _ => None
+          } recover {
+            case t =>
+              log.warn(s"Didn't get a CrunchUpdates: $t")
+              None
+          }
+        }
+
+        override def askableCacheActorRef: AskableActorRef = cacheActorRef
+
+        override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
+
+        override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
       }
-    }
-
-    override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-      crunchStateAtPointInTime(pointInTime)
-    }
-
-    def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-      val startMillis = midnightThisMorning - oneHourMillis * 3
-      val endMillis = midnightThisMorning + oneHourMillis * 30
-      val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(5 seconds))
-
-      crunchStateFuture.map {
-        case Some(cu: CrunchUpdates) => Option(cu)
-        case _ => None
-      } recover {
-        case t =>
-          log.warn(s"Didn't get a CrunchUpdates: $t")
-          None
-      }
-    }
-
-    override def askableCacheActorRef: AskableActorRef = cacheActorRef
-
-    override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
-
-    override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
   }
 
-  def crunchStateForDayInForcast(day: MillisSinceEpoch) = {
+  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = getLocalNextMidnight(SDate(day)).millisSinceEpoch
 
@@ -382,7 +283,7 @@ class Application @Inject()(
     }
   }
 
-  private def isHistoricDate(day: MillisSinceEpoch) = {
+  def isHistoricDate(day: MillisSinceEpoch): Boolean = {
     day < getLocalNextMidnight(SDate.now()).millisSinceEpoch
   }
 
@@ -491,7 +392,7 @@ class Application @Inject()(
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
-      val router = Router.route[Api](createApiService)
+      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
@@ -513,3 +414,4 @@ class Application @Inject()(
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)
+

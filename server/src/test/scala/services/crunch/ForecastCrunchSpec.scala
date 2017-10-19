@@ -41,7 +41,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     val expectedLive = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
     val expectedForecast = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
 
-    (liveSummary, forecastSummary) === (expectedLive, expectedForecast)
+    (liveSummary, forecastSummary) === Tuple2(expectedLive, expectedForecast)
   }
 
 }

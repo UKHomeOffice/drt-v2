@@ -5,15 +5,21 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.xfer.InMemoryDestFile
+import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import services.SDate
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Success, Try}
 
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: String) {
+  val sftp: SFTPClient = sftpClient(ftpServer, username, path)
+  def arrivals: Flights = Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode))))
+}
 
 object AclFeed {
   def sftpClient(ftpServer: String, username: String, path: String): SFTPClient = {

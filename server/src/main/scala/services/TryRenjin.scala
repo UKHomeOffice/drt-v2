@@ -42,7 +42,6 @@ object TryRenjin {
         engine.put("weight_pax", 0.05)
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
-        log.info("about to crunch in R")
         val startTime = SDate.now().millisSinceEpoch
         engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
         val durationMillis = SDate.now().millisSinceEpoch - startTime
