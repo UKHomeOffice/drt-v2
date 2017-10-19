@@ -96,15 +96,15 @@ object Crunch {
       .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
 
     val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
-      .toList
-      .par
+//      .toList
+//      .par
       .flatMap(wl => {
         crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
           .toList
           .sortBy(_._2.minute)
           .drop(warmUpMinutes)
       })
-      .toList
+//      .toList
       .toMap
     queueCrunchMinutes
   }
