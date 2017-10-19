@@ -16,7 +16,7 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor {
-  override def persistenceId: String = s"$name-crunch-state"
+  override def persistenceId: String = name
 
   val log = LoggerFactory.getLogger(s"$name-$getClass")
 
