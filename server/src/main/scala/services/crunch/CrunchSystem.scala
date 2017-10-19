@@ -51,8 +51,6 @@ object CrunchSystem {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(props: CrunchProps): CrunchSystem = {
-//    implicit val actorSystem: ActorSystem = props.system
-//    implicit val actorMaterializer: ActorMaterializer = ActorMaterializer()
 
     val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
     val liveArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
