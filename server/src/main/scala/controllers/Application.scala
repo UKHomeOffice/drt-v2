@@ -16,7 +16,7 @@ import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch, PortState}
+import drt.shared.Crunch._
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
@@ -43,7 +43,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
-
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -82,7 +81,6 @@ object PaxFlow {
 object SystemActors {
   type SplitsProvider = (Arrival) => Option[SplitRatios]
 }
-
 
 trait SystemActors {
   self: AirportConfProvider =>
@@ -133,7 +131,6 @@ trait SystemActors {
   val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
 
   VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
-
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
@@ -308,7 +305,18 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  private def portStatePeriodAtPointInTime(startMillis: Millis, endMillis: Millis, pointInTime: Millis) = {
+  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[Map[Millis, List[ForecastTimeSlot]]]] = {
+
+    val crunchStateFuture = forecastCrunchStateActor.ask(
+      GetPortState(startDay, SDate(startDay).addDays(7).millisSinceEpoch)
+    )(new Timeout(5 seconds))
+
+    crunchStateFuture.map {
+      case Some(PortState(_, m)) => Option(Forecast.rollUpForWeek(m.values.toSet, terminal))
+    }
+  }
+
+  def portStatePeriodAtPointInTime(startMillis: Millis, endMillis: Millis, pointInTime: Millis) = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
@@ -410,6 +418,22 @@ class Application @Inject()(implicit val config: Configuration,
           log.info(s"CLIENT - $msg")
       }
       Ok("")
+  }
+}
+
+object Forecast {
+
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName) = {
+    groupByX(15)(crunchMinutesByTerminalMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
+      .map {
+        case (millis, cms) =>
+          cms.foldLeft(
+            ForecastTimeSlot(millis, 0, 0))(
+            (fts, cm) => fts
+              .copy(available = fts.available + cm.deployedDesks.getOrElse(0), required = fts.required + cm.deskRec)
+          )
+      }
+      .groupBy(x => getLocalLastMidnight(SDate(x.startMillis)).millisSinceEpoch)
   }
 }
 

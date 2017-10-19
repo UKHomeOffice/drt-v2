@@ -273,6 +273,39 @@ object Crunch {
 
   case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute])
 
+  case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
+
+  def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]) = {
+    crunchMinutes.grouped(groupSize).toList.map(group => {
+      val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
+      val startMinute = group.map(_._1).min
+      val queueCrunchMinutes = queueOrder.collect {
+        case qn if byQueueName.contains(qn) =>
+          val queueMinutes = byQueueName(qn)
+          CrunchMinute(
+            terminalName,
+            qn,
+            startMinute,
+            queueMinutes.map(_.paxLoad).sum,
+            queueMinutes.map(_.workLoad).sum,
+            queueMinutes.map(_.deskRec).max,
+            queueMinutes.map(_.waitTime).max,
+            Option(queueMinutes.map(_.deployedDesks.getOrElse(0)).max),
+            Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
+            Option(queueMinutes.map(_.actDesks.getOrElse(0)).max),
+            Option(queueMinutes.map(_.actWait.getOrElse(0)).max)
+          )
+      }
+      (startMinute, queueCrunchMinutes)
+    })
+  }
+
+  def crunchMinutesByTerminalMinute(minutes: Set[CrunchMinute], terminalName: TerminalName) = minutes
+    .filter(_.terminalName == terminalName)
+    .groupBy(_.minute)
+    .toList
+    .sortBy(_._1)
+
 }
 
 trait Api {
