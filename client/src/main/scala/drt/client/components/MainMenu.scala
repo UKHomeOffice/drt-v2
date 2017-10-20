@@ -1,10 +1,8 @@
 package drt.client.components
 
 import diode.data.Pot
-import diode.data.PotState.PotReady
-import diode.react.{ModelProxy, ReactConnectProxy}
+import diode.react.ReactConnectProxy
 import drt.client.SPAMain._
-import drt.client.components.Bootstrap.CommonStyle
 import drt.client.components.Icon._
 import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
@@ -15,7 +13,6 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.LI
 
 import scala.collection.immutable
-import scalacss.ScalaCssReact._
 
 object MainMenu {
   // shorthand for styles
@@ -29,16 +26,11 @@ object MainMenu {
     MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
   )
 
-  def menuItems(airportConfigPotMP: ModelProxy[Pot[AirportConfig]]) = {
-    val terminalDepsMenuItems = airportConfigPotMP().state match {
-      case PotReady =>
-        airportConfigPotMP().get.terminalNames.zipWithIndex.map {
-          case (tn, idx) =>
-            MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalPageTabLoc(tn))
-        }.toList
-      case _ =>
-        List()
-    }
+  def menuItems(airportConfig: AirportConfig) = {
+    val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
+      case (tn, idx) =>
+        MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalPageTabLoc(tn))
+    }.toList
 
     staticMenuItems ::: terminalDepsMenuItems
   }
@@ -46,11 +38,12 @@ object MainMenu {
   private class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
       val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
+
       airportConfigPotRCP(airportConfigPotMP => {
         <.div(
           airportConfigPotMP().renderReady(airportConfig => {
 
-            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfigPotMP)) yield {
+            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig)) yield {
               val classes = Seq(("active", props.currentLoc == item.location))
               <.li(^.key := item.idx, ^.classSet(classes: _*),
                 props.router.link(item.location)(item.icon, " ", item.label(props)))
