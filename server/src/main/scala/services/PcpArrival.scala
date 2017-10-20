@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.Crunch.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{Arrival, MilliDate}
 import org.slf4j.LoggerFactory
@@ -50,7 +51,7 @@ object PcpArrival {
     walkTimeMillis(roundTimesToNearestMinute(walkTimes)) _
   }
 
-  private def roundTimesToNearestMinute(walkTimes: Map[(String, String), Millis]) = {
+  private def roundTimesToNearestMinute(walkTimes: Map[(String, String), MillisSinceEpoch]) = {
     /*
     times must be rounded to the nearest minute because
     a) any more precision than that is nonsense
@@ -60,14 +61,13 @@ object PcpArrival {
   }
 
   import Math.round
-  def timeToNearestMinute(t: Millis) = round(t / 60000d) * 60000
+  def timeToNearestMinute(t: MillisSinceEpoch) = round(t / 60000d) * 60000
 
   type GateOrStand = String
-  type Millis = Long
-  type GateOrStandWalkTime = (GateOrStand, TerminalName) => Option[Millis]
+  type GateOrStandWalkTime = (GateOrStand, TerminalName) => Option[MillisSinceEpoch]
   type FlightPcpArrivalTimeCalculator = (Arrival) => MilliDate
 
-  def walkTimeMillis(walkTimes: Map[(String, String), Long])(from: String, terminal: String): Option[Millis] = {
+  def walkTimeMillis(walkTimes: Map[(String, String), Long])(from: String, terminal: String): Option[MillisSinceEpoch] = {
     walkTimes.get((from, terminal))
   }
 
@@ -86,14 +86,14 @@ object PcpArrival {
 
   def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
                                     standWalkTimesProvider: GateOrStandWalkTime,
-                                    defaultWalkTimeMillis: Millis)(flight: Arrival): Millis = {
+                                    defaultWalkTimeMillis: MillisSinceEpoch)(flight: Arrival): MillisSinceEpoch = {
     val walkTime = standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
       gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
     log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
     walkTime
   }
 
-  def bestChoxTime(timeToChoxMillis: Long, flight: Arrival): Option[Millis] = {
+  def bestChoxTime(timeToChoxMillis: Long, flight: Arrival): Option[MillisSinceEpoch] = {
     def parseMillis(s: => String) = if (s != "") Option(SDate.parseString(s).millisSinceEpoch) else None
 
     def addTimeToChox(s: String) = parseMillis(s).map(_ + timeToChoxMillis)

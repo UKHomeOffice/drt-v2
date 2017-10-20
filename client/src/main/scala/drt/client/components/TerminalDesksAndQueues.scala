@@ -88,31 +88,7 @@ object TerminalDesksAndQueues {
   val component = ScalaComponent.builder[Props]("Loader")
     .initialState[State](State(false))
     .renderPS((scope, props, state) => {
-      def groupBy15(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])]) = {
-        val groupSize = 15
-        crunchMinutes.grouped(groupSize).toList.map(group => {
-          val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
-          val startMinute = group.map(_._1).min
-          val queueCrunchMinutes = Queues.queueOrder.collect {
-            case qn if byQueueName.contains(qn) =>
-              val queueMinutes = byQueueName(qn)
-              CrunchMinute(
-                props.terminalName,
-                qn,
-                startMinute,
-                queueMinutes.map(_.paxLoad).sum,
-                queueMinutes.map(_.workLoad).sum,
-                queueMinutes.map(_.deskRec).max,
-                queueMinutes.map(_.waitTime).max,
-                Option(queueMinutes.map(_.deployedDesks.getOrElse(0)).max),
-                Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
-                Option(queueMinutes.map(_.actDesks.getOrElse(0)).max),
-                Option(queueMinutes.map(_.actWait.getOrElse(0)).max)
-              )
-          }
-          (startMinute, queueCrunchMinutes)
-        })
-      }
+      def groupBy15 = Crunch.groupByX(15) _
 
       val queueNames = props.airportConfig.queues(props.terminalName).collect {
         case queueName: String if queueName != Queues.Transfer => queueName
@@ -164,11 +140,11 @@ object TerminalDesksAndQueues {
 
       val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 2, "PCP")
 
-      val terminalCrunchMinutes = groupBy15(props.crunchState.crunchMinutes
-        .filter(_.terminalName == props.terminalName)
-        .groupBy(_.minute)
-        .toSeq
-        .sortBy(_._1))
+      val terminalCrunchMinutes = groupBy15(
+        Crunch.terminalCrunchMinutesByMinute(props.crunchState.crunchMinutes, props.terminalName),
+        props.terminalName,
+        Queues.queueOrder
+      )
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
