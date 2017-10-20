@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
@@ -33,6 +33,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
     ))
     val crunchGraphs = runCrunchGraph(
+      now = () => SDate(scheduled),
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaMachineReadableToEGate -> 25d / 60
@@ -83,6 +84,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
     ))
     val crunchGraphs: CrunchGraph = runCrunchGraph(
+      now = () => SDate(scheduled),
       procTimes = Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaMachineReadableToEGate -> 25d / 60,

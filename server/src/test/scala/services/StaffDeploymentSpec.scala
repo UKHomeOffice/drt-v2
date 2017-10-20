@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.Crunch.CrunchMinute
+import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.Queues
 import org.specs2.mutable.Specification

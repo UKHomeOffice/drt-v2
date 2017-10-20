@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.components.TerminalDesksAndQueues.{queueActualsColour, queueColour}
 import drt.client.services.JSDateConversions
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Crunch.{CrunchMinute, CrunchState, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -88,7 +88,7 @@ object TerminalDesksAndQueues {
   val component = ScalaComponent.builder[Props]("Loader")
     .initialState[State](State(false))
     .renderPS((scope, props, state) => {
-      def groupBy15 = Crunch.groupByX(15) _
+      def groupBy15 = CrunchApi.groupByX(15) _
 
       val queueNames = props.airportConfig.queues(props.terminalName).collect {
         case queueName: String if queueName != Queues.Transfer => queueName
@@ -141,7 +141,7 @@ object TerminalDesksAndQueues {
       val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 2, "PCP")
 
       val terminalCrunchMinutes = groupBy15(
-        Crunch.terminalCrunchMinutesByMinute(props.crunchState.crunchMinutes, props.terminalName),
+        CrunchApi.terminalCrunchMinutesByMinute(props.crunchState.crunchMinutes, props.terminalName),
         props.terminalName,
         Queues.queueOrder
       )

@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -36,6 +36,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         eeaMachineReadableToEGate -> 35d / 60)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
@@ -70,6 +71,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       ))
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
@@ -99,6 +101,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       )
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
@@ -139,6 +142,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 35d / 60)
 
         val crunch = runCrunchGraph(
+          now = () => SDate(scheduled),
           procTimes = procTimes,
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
@@ -174,6 +178,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 35d / 60)
 
         val crunch = runCrunchGraph(
+          now = () => SDate(scheduled),
           procTimes = procTimes,
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),

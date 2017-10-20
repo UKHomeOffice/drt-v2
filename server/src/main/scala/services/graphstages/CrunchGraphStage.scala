@@ -3,22 +3,24 @@ package services.graphstages
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
-import drt.shared.Crunch.{CrunchMinute, MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch._
-import services.workloadcalculator.PaxLoadCalculator.Load
-import services.{FastTrackPercentages, SDate}
+import services.graphstages.Crunch.{log, _}
+import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
+import services._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
@@ -33,6 +35,9 @@ class CrunchGraphStage(name: String,
                        crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                        crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                        earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
+                       expireAfterMillis: Long,
+                       now: () => SDateLike,
+                       maxDaysToCrunch: Int,
                        manifestsUsed: Boolean = true,
                        warmUpMinutes: Int = 120)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
@@ -56,7 +61,10 @@ class CrunchGraphStage(name: String,
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
+          flightsByFlightId = purgeExpiredArrivals(
+            flights
+              .map(f => Tuple2(f.apiFlight.uniqueId, f))
+              .toMap)
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -91,7 +99,8 @@ class CrunchGraphStage(name: String,
         waitingForArrivals = false
 
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
-        val updatedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
+
+        val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
 
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
@@ -110,6 +119,8 @@ class CrunchGraphStage(name: String,
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
+
+        manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
 
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
@@ -138,7 +149,12 @@ class CrunchGraphStage(name: String,
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
+      val latestCrunchMinute = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
       val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
+        case (flightsSoFar, updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
+          val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
+          log.info(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
+          flightsSoFar
         case (flightsSoFar, updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
             case None =>
@@ -155,8 +171,13 @@ class CrunchGraphStage(name: String,
             case _ => flightsSoFar
           }
       }
+
       log.info(s"${updatedFlights.size} flights after updates")
-      updatedFlights
+
+      val minusExpired = purgeExpiredArrivals(updatedFlights)
+      log.info(s"${minusExpired.size} flights after removing expired")
+
+      minusExpired
     }
 
     def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {
@@ -255,6 +276,182 @@ class CrunchGraphStage(name: String,
       val eGateBankSize = 5
 
       workloadsToCrunchMinutes(warmUpMinutes, fullWlByTerminalAndQueue, slas, minMaxDesks, eGateBankSize)
+    }
+
+    def workloadsToCrunchMinutes(warmUpMinutes: Int,
+                                 portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
+                                 slas: Map[QueueName, Int],
+                                 minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+                                 eGateBankSize: Int): Map[Int, CrunchMinute] = {
+      portWorkloads.flatMap {
+        case (tn, terminalWorkloads) =>
+          val terminalCrunchMinutes = terminalWorkloads.flatMap {
+            case (qn, queueWorkloads) =>
+              crunchQueueWorkloads(warmUpMinutes, slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads)
+          }
+          terminalCrunchMinutes
+      }
+    }
+
+    def crunchQueueWorkloads(warmUpMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
+      val minutesInACrunch = 1440
+      val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
+
+      val queueWorkloadsByCrunchPeriod = queueWorkloads
+        .sortBy(_._1)
+        .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+
+      val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
+        .flatMap(wl => {
+          crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
+            .toList
+            .sortBy(_._2.minute)
+            .drop(warmUpMinutes)
+        })
+        .toMap
+      queueCrunchMinutes
+    }
+
+    def crunchMinutes(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
+      val numberOfMinutes = queueWorkloads.length
+      val loadByMillis = queueWorkloads.toMap
+      val triedResult: Try[OptimizerCrunchResult] = optimiserCrunchResult(slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads)
+
+      val crunchStartMillis = queueWorkloads.map(_._1).min
+      val queueCrunchMinutes = triedResult match {
+        case Success(OptimizerCrunchResult(deskRecs, waitTimes)) =>
+          val crunchMinutes = (0 until numberOfMinutes).map(minuteIdx => {
+            val minuteMillis = crunchStartMillis + (minuteIdx * oneMinuteMillis)
+            val paxLoad = loadByMillis.mapValues(_._1).getOrElse(minuteMillis, 0d)
+            val workLoad = loadByMillis.mapValues(_._2).getOrElse(minuteMillis, 0d)
+            CrunchMinute(tn, qn, minuteMillis, paxLoad, workLoad, deskRecs(minuteIdx), waitTimes(minuteIdx))
+          })
+          crunchMinutes.map(cm => (cm.key, cm)).toMap
+        case Failure(t) =>
+          log.info(s"Crunch failed: $t")
+          Map[Int, CrunchMinute]()
+      }
+      queueCrunchMinutes
+    }
+
+    def optimiserCrunchResult(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Try[OptimizerCrunchResult] = {
+      val crunchStartMillis = queueWorkloads.map(_._1).min
+      val crunchEnd = queueWorkloads.map(_._1).max
+      val crunchMinutes = crunchStartMillis to crunchEnd by oneMinuteMillis
+
+      log.info(s"Crunching $tn/$qn ${crunchMinutes.length} minutes: ${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEnd).toISOString()}")
+
+      val workloadMinutes = qn match {
+        case Queues.EGate => queueWorkloads.map(_._2._2 / eGateBankSize)
+        case _ => queueWorkloads.map(_._2._2)
+      }
+      val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
+      val sla = slas.getOrElse(qn, 0)
+      val queueMinMaxDesks = minMaxDesks.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
+      val minDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
+      val maxDesks = crunchMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
+      val triedResult = TryRenjin.crunch(workloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+      triedResult
+    }
+
+    def queueMinutesForPeriod(startTime: Long, numberOfMinutes: Int)
+                             (terminal: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]]): Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Double, Double))]]] = {
+      val endTime = startTime + numberOfMinutes * oneMinuteMillis
+
+      terminal.mapValues(queue => {
+        queue.mapValues(queueWorkloadMinutes => {
+          (startTime until endTime by oneMinuteMillis).map(minuteMillis =>
+            (minuteMillis, queueWorkloadMinutes.getOrElse(minuteMillis, (0d, 0d)))).toList
+        })
+      })
+    }
+
+    def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[QueueLoadMinute]): Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = {
+      val portLoads = queueWorkloadMinutes.groupBy(_.terminalName)
+
+      portLoads.mapValues(terminalLoads => {
+        val queueLoads = terminalLoads.groupBy(_.queueName)
+        queueLoads
+          .mapValues(_.map(qwl =>
+            (qwl.minute, (qwl.paxLoad, qwl.workLoad))
+          ).toMap)
+      })
+    }
+
+    def flightsToFlightSplitMinutes(procTimes: Map[PaxTypeAndQueue, Double])(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
+      flightsWithSplits.map {
+        case ApiFlightWithSplits(flight, splits, _) => (flight.uniqueId, flightToFlightSplitMinutes(flight, splits, procTimes))
+      }.toMap
+    }
+
+    def flightToFlightSplitMinutes(flight: Arrival,
+                                   splits: Set[ApiSplits],
+                                   procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {
+      val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+      val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
+      val historicalSplits = splits.find(_.source == SplitSources.Historical)
+      val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
+
+      val splitsToUseOption = apiSplitsDc match {
+        case s@Some(_) => s
+        case None => apiSplitsCi match {
+          case s@Some(_) => s
+          case None => historicalSplits match {
+            case s@Some(_) => s
+            case None => terminalSplits match {
+              case s@Some(_) => s
+              case None =>
+                log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
+                None
+            }
+          }
+        }
+      }
+
+      splitsToUseOption.map(splitsToUse => {
+        val totalPax = splitsToUse.splitStyle match {
+          case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
+          case Percentage => ArrivalHelper.bestPax(flight)
+          case UndefinedSplitStyle => 0
+        }
+        val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
+          case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
+          case Percentage => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
+          case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
+        }
+
+        minutesForHours(flight.PcpTime, 1)
+          .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
+          .flatMap {
+            case (minuteMillis, flightPaxInMinute) =>
+              splitRatios
+                .filterNot(_.queueType == Queues.Transfer)
+                .map(apiSplit => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplit, splitsToUse.splitStyle))
+          }.toSet
+      }).getOrElse(Set())
+    }
+
+    def flightSplitMinute(flight: Arrival,
+                          procTimes: Map[PaxTypeAndQueue, Load],
+                          minuteMillis: MillisSinceEpoch,
+                          flightPaxInMinute: Int,
+                          apiSplitRatio: ApiPaxTypeAndQueueCount,
+                          splitStyle: SplitStyle): FlightSplitMinute = {
+      val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
+      val splitWorkLoadInMinute = splitPaxInMinute * procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
+      FlightSplitMinute(flight.uniqueId, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
+    }
+
+    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[QueueLoadMinute] = {
+      flightToFlightSplitMinutes
+        .values
+        .flatten
+        .groupBy(s => (s.terminalName, s.queueName, s.minute)).map {
+        case ((terminalName, queueName, minute), fsms) =>
+          val paxLoad = fsms.map(_.paxLoad).sum
+          val workLoad = fsms.map(_.workLoad).sum
+          QueueLoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
+      }.toSet
     }
 
     def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {
@@ -382,6 +579,33 @@ class CrunchGraphStage(name: String,
       val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
       ptqcwithCsvEgatesFastTrack
     }
+  }
+
+  def purgeExpiredManifests(manifests: Map[String, Set[VoyageManifest]]): Map[String, Set[VoyageManifest]] = {
+    val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
+    manifests
+      .mapValues(_.filterNot(m => {
+        val shouldGo = expired(m)
+        if (shouldGo)
+          log.info(s"Purging expired manifest ${m.scheduleArrivalDateTime.getOrElse(SDate.now().toLocalDateTimeString())}")
+        shouldGo
+      }))
+      .filterNot { case (_, ms) => ms.isEmpty }
+  }
+
+  def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+    val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime)
+    arrivals
+      .filterNot { case (_, a) =>
+        val shouldGo = expired(a)
+        if (shouldGo)
+          log.info(s"Purging expired arrival ${a.apiFlight.IATA} with PCP ${SDate(a.apiFlight.PcpTime).toLocalDateTimeString()}")
+        shouldGo
+      }
+  }
+
+  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = {
+    Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
   }
 
   def isFlightInTimeWindow(f: ApiFlightWithSplits, crunchStart: SDateLike, crunchEnd: SDateLike): Boolean = {

@@ -4,7 +4,7 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, TimeRangeHours, ViewMode}
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared._
 

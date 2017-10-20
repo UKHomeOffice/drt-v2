@@ -2,20 +2,21 @@ package actors.pointInTime
 
 import actors.{CrunchStateActor, GetPortState, GetState}
 import akka.persistence.{RecoveryCompleted, _}
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
+import services.graphstages.Crunch
 
 import scala.collection.immutable._
 
 case object GetCrunchMinutes
 
-class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor("crunch-state", queues) {
+class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]]) extends CrunchStateActor("crunch-state", queues, () => pointInTime, 2 * Crunch.oneDayMillis) {
   override val receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
       log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
-      setStateFromSnapshot(snapshot)
+      setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
 
     case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _, _) =>
       createdAtOption match {

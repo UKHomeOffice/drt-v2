@@ -6,7 +6,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
@@ -67,6 +67,7 @@ class AclFeedSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
@@ -95,6 +96,7 @@ class AclFeedSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
@@ -128,6 +130,7 @@ class AclFeedSpec extends CrunchTestLike {
 
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduledLive),
         initialBaseArrivals = initialACL,
         initialLiveArrivals = initialLive,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
@@ -159,6 +162,7 @@ class AclFeedSpec extends CrunchTestLike {
         ArrivalGenerator.apiFlight(actPax = 105, schDt = "2017-01-01T00:05Z", estDt = "2017-01-01T00:06Z", iata = "BAW0001", status = "estimated"))
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduledLive),
         initialBaseArrivals = initialAcl,
         initialLiveArrivals = initialLive,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
@@ -192,6 +196,7 @@ class AclFeedSpec extends CrunchTestLike {
         ArrivalGenerator.apiFlight(actPax = 105, schDt = "2017-01-01T00:06Z", iata = "BAW0001"))
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduledLive),
         initialBaseArrivals = initialAcl,
         initialLiveArrivals = initialLive,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),

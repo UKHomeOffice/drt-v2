@@ -4,7 +4,7 @@ import java.util.UUID
 
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.JSDateConversions.SDate.JSSDate
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{MilliDate, SDateLike, StaffMovement}
 

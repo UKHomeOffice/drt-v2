@@ -3,11 +3,11 @@ package services.graphstages
 import akka.actor.ActorRef
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.ArrivalsState
+import services.{ArrivalsState, SDate}
 import services.graphstages.Crunch.midnightThisMorning
 
 import scala.collection.immutable.{Map, Seq}
@@ -18,7 +18,9 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
                          baseArrivalsActor: ActorRef,
                          liveArrivalsActor: ActorRef,
                          pcpArrivalTime: (Arrival) => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
-                         validPortTerminals: Set[String])
+                         validPortTerminals: Set[String],
+                         expireAfterMillis: Long,
+                         now: () => SDateLike)
   extends GraphStage[FanInShape2[Flights, Flights, ArrivalsDiff]] {
 
   val inBaseArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsBase.in")
@@ -56,10 +58,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inLiveArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inLive onPush() grabbing live flights")
-        liveArrivals = grabAndSetPcp(inLiveArrivals)
-          .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
-            case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
-          }.values.toSet
+
+        liveArrivals = updateAndPurge(grabAndSetPcp(inLiveArrivals))
 
         liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
 
@@ -69,8 +69,32 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       }
     })
 
+    def updateAndPurge(updates: Set[Arrival]): Set[Arrival] = {
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      updates
+        .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
+          case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
+        }
+        .values
+        .filterNot(a => {
+          val shouldGo = expired(a)
+          if (shouldGo)
+            log.info(s"Purging expired arrival ${a.IATA} with PCP ${SDate(a.PcpTime).toLocalDateTimeString()}")
+          shouldGo
+        })
+        .toSet
+    }
+
     def mergeAndPush(baseArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+
       val newMerged = mergeArrivals(baseArrivals, liveArrivals)
+        .filterNot { case (_, a) =>
+          val shouldGo = expired(a)
+          if (shouldGo)
+            log.info(s"Purging expired arrival ${a.IATA} with PCP ${SDate(a.PcpTime).toLocalDateTimeString()}")
+          shouldGo
+        }
       toPush = arrivalsDiff(merged, newMerged)
       pushIfAvailable(toPush, outArrivalsDiff)
       merged = newMerged
@@ -86,7 +110,9 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     })
 
     def grabAndSetPcp(arrivals: Inlet[Flights]): Set[Arrival] = {
-      grab(arrivals)
+      val grabbedArrivals = grab(arrivals)
+      log.info(s"Grabbed ${grabbedArrivals.flights.length} arrivals")
+      grabbedArrivals
         .flights
         .filterNot {
           case f if !isFlightRelevant(f) =>
@@ -98,7 +124,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
         .toSet
     }
 
-    def isFlightRelevant(flight: Arrival) =
+    def isFlightRelevant(flight: Arrival): Boolean =
       validPortTerminals.contains(flight.Terminal) && !domesticPorts.contains(flight.Origin)
 
 

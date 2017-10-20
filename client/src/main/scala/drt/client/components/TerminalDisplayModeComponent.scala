@@ -5,7 +5,7 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetViewMode
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.Crunch.CrunchState
+import drt.shared.CrunchApi.CrunchState
 import drt.shared.{AirportConfig, AirportInfo}
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl

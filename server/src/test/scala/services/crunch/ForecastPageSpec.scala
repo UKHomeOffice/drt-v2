@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Crunch, Queues}
+import drt.shared.{CrunchApi, Queues}
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 
 class ForecastPageSpec() extends CrunchTestLike {
 
-  import Crunch._
+  import CrunchApi._
 
   "Given a forecast arriving on 2017-01-02T00:00Z with 1 pax and on 2017-01-03T00:00Z with 1 pax and 0 min desks" +
     "When I ask for a week of forecast beginning 2017-01-02T00:00Z" >> {
@@ -25,6 +25,7 @@ class ForecastPageSpec() extends CrunchTestLike {
     val forecastFlights = Flights(List(forecastArrivalDay1, forecastArrivalDay2))
 
     val crunch = runCrunchGraph(
+      now = () => SDate(weekbeginning),
       minMaxDesks = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addDays(3))
