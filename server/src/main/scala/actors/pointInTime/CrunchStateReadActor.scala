@@ -15,7 +15,7 @@ class CrunchStateReadActor(pointInTime: SDateLike, queues: Map[TerminalName, Seq
   override val receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
       log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
-      setStateFromSnapshot(snapshot)
+      setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
 
     case cdm@ CrunchDiffMessage(createdAtOption, _, _, _, _, _) =>
       createdAtOption match {

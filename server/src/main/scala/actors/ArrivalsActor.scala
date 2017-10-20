@@ -22,7 +22,7 @@ class LiveArrivalsActor extends ArrivalsActor {
 
 abstract class ArrivalsActor extends PersistentActor {
   var arrivalsState: ArrivalsState = ArrivalsState(Map())
-  val snapshotInterval = 100
+  val snapshotInterval = 500
   val log: Logger
 
   override def receiveRecover: Receive = {
@@ -88,13 +88,14 @@ abstract class ArrivalsActor extends PersistentActor {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val diffMessage = FlightsDiffMessage(Option(SDate.now().millisSinceEpoch), removalKeys.toSeq, updateMessages)
 
-    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-      log.info(s"Saving ArrivalsState snapshot")
-      val snapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
-      saveSnapshot(snapshotMessage)
-    } else persist(diffMessage) { dm =>
+    persist(diffMessage) { dm =>
       log.info(s"Persisting FlightsDiff with ${diffMessage.removals.length} removals & ${diffMessage.updates.length} updates")
       context.system.eventStream.publish(dm)
+      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+        log.info(s"Saving ArrivalsState snapshot")
+        val snapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
+        saveSnapshot(snapshotMessage)
+      }
     }
   }
 }

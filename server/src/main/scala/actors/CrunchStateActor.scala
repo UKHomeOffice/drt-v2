@@ -7,7 +7,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import services.SDate
 import services.graphstages.Crunch._
@@ -18,11 +18,11 @@ import scala.language.postfixOps
 class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor {
   override def persistenceId: String = name
 
-  val log = LoggerFactory.getLogger(s"$name-$getClass")
+  val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
   var state: Option[PortState] = None
 
-  val snapshotInterval = 100
+  val snapshotInterval = 1000
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
@@ -42,7 +42,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
             }
           }
           log.info(s"Recovery: state contains ${s.flights.size} flights " +
-            s"with ${apiCount} Api splits " +
+            s"with $apiCount Api splits " +
             s"and ${s.crunchMinutes.size} crunch minutes")
       }
       state = newState
@@ -96,7 +96,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
       log.warn(s"Received unexpected message $u")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch) = {
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = {
     state.map {
       case PortState(fs, ms) => PortState(
         flights = fs.filter {
@@ -110,11 +110,11 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     }
   }
 
-  def setStateFromSnapshot(snapshot: Any): Unit = {
+  def setStateFromSnapshot(snapshot: Any, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshot match {
       case sm@CrunchStateSnapshotMessage(_, _, _, _) =>
         log.info(s"Using snapshot to restore")
-        state = Option(snapshotMessageToState(sm))
+        state = Option(snapshotMessageToState(sm, timeWindowEnd))
       case somethingElse =>
         log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
     }
@@ -212,12 +212,23 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     portState.crunchMinutes.values.toList.map(crunchMinuteToMessage)
   )
 
-  def snapshotMessageToState(sm: CrunchStateSnapshotMessage) = {
+  def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortState = {
     log.info(s"Unwrapping flights messages")
-    val flights = sm.flightWithSplits.map(fm => {
-      val fws = flightWithSplitsFromMessage(fm)
-      (fws.apiFlight.uniqueId, fws)
-    }).toMap
+    val flights = optionalTimeWindowEnd match {
+      case None =>
+        sm.flightWithSplits.map(fwsm => {
+          val fws = flightWithSplitsFromMessage(fwsm)
+          (fws.apiFlight.uniqueId, fws)
+        }).toMap
+      case Some(timeWindowEnd) =>
+        val windowEndMillis = timeWindowEnd.millisSinceEpoch
+        sm.flightWithSplits.collect {
+          case fwsm if fwsm.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
+            val fws = flightWithSplitsFromMessage(fwsm)
+            (fws.apiFlight.uniqueId, fws)
+        }.toMap
+    }
+
     log.info(s"Unwrapping minutes messages")
     val minutes = sm.crunchMinutes.map(cmm => {
       val cm = crunchMinuteFromMessage(cmm)

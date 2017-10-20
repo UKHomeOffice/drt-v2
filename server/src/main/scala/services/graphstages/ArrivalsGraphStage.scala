@@ -58,18 +58,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inLiveArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inLive onPush() grabbing live flights")
-        val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
 
-        liveArrivals = grabAndSetPcp(inLiveArrivals)
-          .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
-            case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
-          }
-          .values
-          .filterNot(a => {
-            log.info(s"Purging expired arrival ${a.IATA}")
-            expired(a)
-          })
-          .toSet
+        liveArrivals = updateAndPurge(grabAndSetPcp(inLiveArrivals))
 
         liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
 
@@ -79,13 +69,31 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       }
     })
 
+    def updateAndPurge(updates: Set[Arrival]): Set[Arrival] = {
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      updates
+        .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
+          case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
+        }
+        .values
+        .filterNot(a => {
+          val shouldGo = expired(a)
+          if (shouldGo)
+            log.info(s"Purging expired arrival ${a.IATA} with PCP ${SDate(a.PcpTime).toLocalDateTimeString()}")
+          shouldGo
+        })
+        .toSet
+    }
+
     def mergeAndPush(baseArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
 
       val newMerged = mergeArrivals(baseArrivals, liveArrivals)
         .filterNot { case (_, a) =>
-          log.info(s"Purging expired arrival ${a.IATA}")
-          expired(a)
+          val shouldGo = expired(a)
+          if (shouldGo)
+            log.info(s"Purging expired arrival ${a.IATA} with PCP ${SDate(a.PcpTime).toLocalDateTimeString()}")
+          shouldGo
         }
       toPush = arrivalsDiff(merged, newMerged)
       pushIfAvailable(toPush, outArrivalsDiff)
@@ -102,7 +110,9 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     })
 
     def grabAndSetPcp(arrivals: Inlet[Flights]): Set[Arrival] = {
-      grab(arrivals)
+      val grabbedArrivals = grab(arrivals)
+      log.info(s"Grabbed ${grabbedArrivals.flights.length} arrivals")
+      grabbedArrivals
         .flights
         .filterNot {
           case f if !isFlightRelevant(f) =>

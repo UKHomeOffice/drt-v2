@@ -43,7 +43,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       state = newStateFromManifests(state.manifests, updatedManifests)
 
     case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md, $ss)")
+      log.info(s"Recovery received SnapshotOffer($md)")
       ss match {
         case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
           log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
@@ -64,9 +64,12 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
   def newStateFromManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): VoyageManifestState = {
     val expired: VoyageManifest => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (vm: VoyageManifest) => vm.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
     val minusExpired = existing.filterNot(m => {
-      val vmDate = m.scheduleArrivalDateTime.getOrElse(SDate.now()).toLocalDateTimeString()
-      log.info(s"Purging expired VoyageManifest ${vmDate}")
-      expired(m)
+      val shouldGo = expired(m)
+      if (shouldGo) {
+        val vmDate = m.scheduleArrivalDateTime.getOrElse(SDate.now()).toLocalDateTimeString()
+        log.info(s"Purging expired VoyageManifest ${vmDate}")
+      }
+      shouldGo
     })
     val withUpdates = minusExpired ++ updates
     state.copy(manifests = withUpdates)
@@ -77,12 +80,13 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       log.info(s"Received update - latest zip file is: $updatedLZF")
       state = state.copy(latestZipFilename = updatedLZF)
 
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
-        saveSnapshot(stateToMessage(state))
-      } else persist(latestFilenameToMessage(state.latestZipFilename)) { lzf =>
+      persist(latestFilenameToMessage(state.latestZipFilename)) { lzf =>
         log.info(s"Persisting VoyageManifests latestZipFilename ${lzf.latestFilename.getOrElse("")}")
         context.system.eventStream.publish(lzf)
+        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+          log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
+          saveSnapshot(stateToMessage(state))
+        }
       }
 
     case UpdateLatestZipFilename(updatedLZF) if updatedLZF == state.latestZipFilename =>
@@ -93,12 +97,13 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
 
       state = newStateFromManifests(state.manifests, updatedManifests)
 
-      if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
-        saveSnapshot(stateToMessage(state))
-      } else persist(voyageManifestsToMessage(updatedManifests)) { vmm =>
+      persist(voyageManifestsToMessage(updatedManifests)) { vmm =>
         log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
         context.system.eventStream.publish(vmm)
+        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+          log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
+          saveSnapshot(stateToMessage(state))
+        }
       }
 
     case GetState =>
