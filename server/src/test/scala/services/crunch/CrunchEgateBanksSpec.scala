@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -42,6 +42,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         slaByQueue = slaByQueue,
         minMaxDesks = minMaxDesks,

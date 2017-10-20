@@ -3,7 +3,7 @@ package services.graphstages
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
-import drt.shared.Crunch.{CrunchMinute, MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
@@ -33,6 +33,9 @@ class CrunchGraphStage(name: String,
                        crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                        crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                        earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
+                       expireAfterMillis: Long,
+                       now: () => SDateLike,
+                       maxDaysToCrunch: Int,
                        manifestsUsed: Boolean = true,
                        warmUpMinutes: Int = 120)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
@@ -56,7 +59,10 @@ class CrunchGraphStage(name: String,
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = flights.map(f => Tuple2(f.apiFlight.uniqueId, f)).toMap
+          flightsByFlightId = purgeExpiredArrivals(
+            flights
+              .map(f => Tuple2(f.apiFlight.uniqueId, f))
+              .toMap)
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -91,7 +97,8 @@ class CrunchGraphStage(name: String,
         waitingForArrivals = false
 
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
-        val updatedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
+
+        val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
 
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
@@ -110,6 +117,8 @@ class CrunchGraphStage(name: String,
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
+
+        manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
 
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
@@ -138,7 +147,12 @@ class CrunchGraphStage(name: String,
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
+      val latestCrunchMinute = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
       val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
+        case (flightsSoFar, updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
+          val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
+          log.info(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
+          flightsSoFar
         case (flightsSoFar, updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
             case None =>
@@ -155,8 +169,13 @@ class CrunchGraphStage(name: String,
             case _ => flightsSoFar
           }
       }
+
       log.info(s"${updatedFlights.size} flights after updates")
-      updatedFlights
+
+      val minusExpired = purgeExpiredArrivals(updatedFlights)
+      log.info(s"${minusExpired.size} flights after removing expired")
+
+      minusExpired
     }
 
     def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {
@@ -382,6 +401,29 @@ class CrunchGraphStage(name: String,
       val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
       ptqcwithCsvEgatesFastTrack
     }
+  }
+
+  def purgeExpiredManifests(manifests: Map[String, Set[VoyageManifest]]): Map[String, Set[VoyageManifest]] = {
+    val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
+    manifests
+      .mapValues(_.filterNot(m => {
+        log.info(s"Purging expired manifest ${m.scheduleArrivalDateTime.getOrElse(SDate.now().toLocalDateTimeString())}")
+        expired(m)
+      }))
+      .filterNot { case (_, ms) => ms.isEmpty }
+  }
+
+  def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+    val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime)
+    arrivals
+      .filterNot { case (_, a) =>
+        log.info(s"Purging expired arrival ${a.apiFlight.IATA}")
+        expired(a)
+      }
+  }
+
+  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = {
+    Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
   }
 
   def isFlightInTimeWindow(f: ApiFlightWithSplits, crunchStart: SDateLike, crunchEnd: SDateLike): Boolean = {

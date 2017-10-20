@@ -3,7 +3,7 @@ package actors
 import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
-import drt.shared.Crunch._
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._

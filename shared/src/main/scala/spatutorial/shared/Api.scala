@@ -1,8 +1,7 @@
 package drt.shared
 
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi._
-import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.immutable._
@@ -119,10 +118,10 @@ case class Arrival(
                     Scheduled: Long,
                     PcpTime: Long,
                     LastKnownPax: Option[Int] = None) {
-  lazy val ICAO = Arrival.standardiseFlightCode(rawICAO)
-  lazy val IATA = Arrival.standardiseFlightCode(rawIATA)
+  lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
+  lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
 
-  lazy val flightNumber = {
+  lazy val flightNumber: Int = {
     val bestCode = (IATA, ICAO) match {
       case (iata, _) if iata != "" => iata
       case (_, icao) if icao != "" => icao
@@ -135,11 +134,11 @@ case class Arrival(
     }
   }
 
-  lazy val uniqueId = s"$Terminal$Scheduled$flightNumber}".hashCode
+  lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
 }
 
 object Arrival {
-  val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
+  val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
 
   def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
 
@@ -240,7 +239,7 @@ case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 
 case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 
-object Crunch {
+object CrunchApi {
   type MillisSinceEpoch = Long
 
   case class CrunchState(crunchFirstMinuteMillis: MillisSinceEpoch,
@@ -266,7 +265,7 @@ object Crunch {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key = s"$terminalName$queueName$minute".hashCode
+    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])

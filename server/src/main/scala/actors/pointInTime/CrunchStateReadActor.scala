@@ -2,7 +2,7 @@ package actors.pointInTime
 
 import actors.{CrunchStateActor, GetPortState, GetState}
 import akka.persistence.{RecoveryCompleted, _}
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.CrunchDiffMessage

@@ -8,7 +8,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers._
 import drt.services.AirportConfigHelpers
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}

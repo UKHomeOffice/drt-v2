@@ -7,14 +7,14 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.Timeout
 import controllers.SystemActors.SplitsProvider
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
 import services.graphstages._
-import services.{ArrivalsState, ForecastBaseArrivalsActor, LiveArrivalsActor}
+import services.{ArrivalsState, ForecastBaseArrivalsActor, LiveArrivalsActor, SDate}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -80,7 +80,9 @@ object CrunchSystem {
     baseArrivalsActor = baseArrivalsActor,
     liveArrivalsActor = liveArrivalsActor,
     pcpArrivalTime = pcpArrival,
-    validPortTerminals = airportConfig.terminalNames.toSet)
+    validPortTerminals = airportConfig.terminalNames.toSet,
+    expireAfterMillis = 2 * Crunch.oneDayMillis,
+    now = () => SDate.now())
 
   def crunchStage(name: String, maxDays: Int, manifestsUsed: Boolean = true, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider): CrunchGraphStage = new CrunchGraphStage(
     name = name,
@@ -93,6 +95,9 @@ object CrunchSystem {
     csvSplitsProvider = historicalSplitsProvider,
     crunchStartFromFirstPcp = getLocalLastMidnight,
     crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
+    expireAfterMillis = 2 * Crunch.oneDayMillis,
+    now = () => SDate.now(),
+    maxDaysToCrunch = maxDays,
     earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
     manifestsUsed = manifestsUsed)
 

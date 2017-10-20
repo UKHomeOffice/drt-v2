@@ -16,7 +16,7 @@ import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
-import drt.shared.Crunch._
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
@@ -91,6 +91,8 @@ trait SystemActors {
 
   val maxDaysToCrunch: Int = ConfigFactory.load.getString("crunch.forecast.max_days").toInt
   val aclPollMinutes: Int = ConfigFactory.load.getString("crunch.forecast.poll_minutes").toInt
+  val expireAfterMillis: Long = 2 * oneDayMillis
+  val now: () => SDateLike = () => SDate.now()
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
   val username: String = ConfigFactory.load.getString("acl.username")
@@ -104,7 +106,7 @@ trait SystemActors {
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
   val actorMaterializer = ActorMaterializer()
 
-  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor]), name = "voyage-manifests-actor")
+  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis), name = "voyage-manifests-actor")
   val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "crunch-state", airportConfig.queues), name = "crunch-live-state-actor")
   val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "forecast-crunch-state", airportConfig.queues), name = "crunch-forecast-state-actor")
   val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider

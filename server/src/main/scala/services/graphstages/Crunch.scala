@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.Crunch.{CrunchMinute, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -354,5 +354,10 @@ object Crunch {
       case (soFar, flight) => soFar.updated(flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis)))
     }
     withoutRemovalsWithUpdates
+  }
+
+  def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: (A) => MillisSinceEpoch)(toCompare: A): Boolean = {
+    val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
+    ageInMillis > expireAfterMillis
   }
 }

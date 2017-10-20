@@ -1,6 +1,6 @@
 package services.crunch
 
-import drt.shared.Crunch.CrunchMinute
+import drt.shared.CrunchApi.CrunchMinute
 import org.specs2.mutable.Specification
 import services.CSVData
 

@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.SDate
@@ -25,6 +25,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     val forecastFlights = Flights(List(forecastArrival))
 
     val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(forecast)).addMinutes(30))
 

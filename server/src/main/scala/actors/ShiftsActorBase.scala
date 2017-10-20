@@ -3,7 +3,7 @@ package actors
 import akka.actor.{ActorLogging, ActorRef}
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}

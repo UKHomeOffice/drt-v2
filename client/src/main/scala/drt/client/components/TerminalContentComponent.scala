@@ -8,7 +8,7 @@ import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
-import drt.shared.Crunch.CrunchState
+import drt.shared.CrunchApi.CrunchState
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl

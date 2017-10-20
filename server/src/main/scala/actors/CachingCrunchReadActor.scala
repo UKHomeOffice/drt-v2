@@ -8,8 +8,8 @@ import akka.util.Timeout
 import services.SDate
 import spray.caching.{Cache, LruCache}
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -17,7 +17,6 @@ case class CachableActorQuery(props: Props, query: Any)
 
 class CachingCrunchReadActor extends Actor with ActorLogging {
 
-  import akka.pattern.pipe
   import context.dispatcher
 
   implicit val timeout = Timeout(60 seconds)

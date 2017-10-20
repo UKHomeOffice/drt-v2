@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Ready
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
-import drt.shared.Crunch.CrunchState
+import drt.shared.CrunchApi.CrunchState
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -287,7 +287,7 @@ object BigSummaryBoxTests extends TestSuite {
             val bestPaxFn = ArrivalHelper.bestPax _
             "AND we have a flight " - {
               "AND it has no splits " - {
-                "AND it has 100 act pax AND it has 60 tranprax" - {
+                "AND it has 100 act pax AND it has 60 transpax" - {
                   "Then we get pcpPax of 40 " - {
                     val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, TranPax = 60, PcpTime = mkMillis("2017-05-01T12:05Z"))
                     val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Set())

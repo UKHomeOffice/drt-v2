@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
-import drt.shared.Crunch.CrunchState
+import drt.shared.CrunchApi.CrunchState
 import drt.shared.StaffMovement
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._

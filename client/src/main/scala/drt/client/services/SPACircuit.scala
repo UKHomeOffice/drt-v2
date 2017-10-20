@@ -9,7 +9,7 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Crunch.{CrunchMinutes, CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinutes, CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared.FlightsApi.{TerminalName, _}
 import drt.shared._
 import boopickle.Default._
@@ -175,7 +175,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
     CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
   }
 
-  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[Crunch.CrunchMinute] = {
+  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.CrunchMinute] = {
     val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= keepFromMillis)
     val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
     val minutes = crunchUpdates.minutes.foldLeft(existingMinutesByTqm) {

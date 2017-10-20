@@ -7,12 +7,12 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import controllers.SystemActors.SplitsProvider
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -58,7 +58,7 @@ class CrunchTestLike
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   val oneMinute = 60000
   val validTerminals = Set("T1", "T2")
@@ -105,10 +105,11 @@ class CrunchTestLike
                      queues: Map[TerminalName, Seq[QueueName]] = queues,
                      validTerminals: Set[String] = validTerminals,
                      portSplits: SplitRatios = defaultPaxSplits,
-                     csvSplitsProvider: SplitsProvider = (a: Arrival) => None,
+                     csvSplitsProvider: SplitsProvider = (_) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      crunchStartDateProvider: (SDateLike) => SDateLike,
-                     crunchEndDateProvider: (SDateLike) => SDateLike): CrunchGraph = {
+                     crunchEndDateProvider: (SDateLike) => SDateLike,
+                     now: () => SDateLike): CrunchGraph = {
 
     val actorMaterializer = ActorMaterializer()
 
@@ -118,7 +119,9 @@ class CrunchTestLike
       baseArrivalsActor = baseArrivalsActor,
       liveArrivalsActor = liveArrivalsActor,
       pcpArrivalTime = pcpArrivalTime,
-      validPortTerminals = validTerminals)
+      validPortTerminals = validTerminals,
+      expireAfterMillis = 2 * Crunch.oneDayMillis,
+      now = now)
 
     def crunchStage(name: String, manifestsUsed: Boolean = true) = new CrunchGraphStage(
       name,
@@ -132,7 +135,10 @@ class CrunchTestLike
       crunchStartFromFirstPcp = crunchStartDateProvider,
       crunchEndFromLastPcp = crunchEndDateProvider,
       earliestAndLatestAffectedPcpTime = (_, _) => Some((SDate.now(), SDate.now())),
-      manifestsUsed = manifestsUsed)
+      expireAfterMillis = 2 * Crunch.oneDayMillis,
+      maxDaysToCrunch = 100,
+      manifestsUsed = manifestsUsed,
+      now = now)
 
     val baseFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val liveFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)

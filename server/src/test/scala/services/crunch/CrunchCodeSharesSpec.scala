@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.Crunch.PortState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
@@ -28,6 +28,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
@@ -60,6 +61,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
@@ -98,6 +100,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
         procTimes = procTimes,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)

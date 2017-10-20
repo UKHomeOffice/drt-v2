@@ -1,6 +1,6 @@
 package services.workloadcalculator
 
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{Arrival, _}
 

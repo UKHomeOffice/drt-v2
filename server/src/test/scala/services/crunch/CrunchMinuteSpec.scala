@@ -1,6 +1,6 @@
 package services.crunch
 
-import drt.shared.Crunch.CrunchMinute
+import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 import services.graphstages.Crunch._
 

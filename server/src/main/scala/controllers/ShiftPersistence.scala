@@ -7,7 +7,7 @@ import actors.pointInTime.ShiftsReadActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import services.SDate
 

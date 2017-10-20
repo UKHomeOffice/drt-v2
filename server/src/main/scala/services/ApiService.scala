@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
-import drt.shared.Crunch.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 

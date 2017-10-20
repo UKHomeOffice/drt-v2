@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.Crunch.MillisSinceEpoch
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{Arrival, MilliDate}
 import org.slf4j.LoggerFactory
