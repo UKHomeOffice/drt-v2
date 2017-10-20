@@ -5,7 +5,7 @@ import drt.client.components.{GlobalStyles, Layout, TerminalComponent, Terminals
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewDay, ViewLive, ViewPointInTime}
-import japgolly.scalajs.react.WebpackRequire
+import japgolly.scalajs.react.{Callback, WebpackRequire}
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 
@@ -52,15 +52,23 @@ object SPAMain extends js.JSApp {
       dynRenderR((page: TerminalPageTabLoc, router) => {
         log.info(s"Got this page: $page")
 
-        updateModelFromUri(page)
 
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         TerminalComponent(props)
       })
 
+
     val rule = home | terminal | terminalsDashboard
     rule.notFound(redirectToPage(TerminalsDashboardLoc(3))(Redirect.Replace))
-  }.renderWith(layout)
+  }
+    .onPostRender((prev, current) => Callback(
+      current match {
+        case page: TerminalPageTabLoc =>
+          updateModelFromUri(page)
+        case _ =>
+      }
+    ))
+    .renderWith(layout)
 
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
