@@ -384,31 +384,6 @@ class CrunchGraphStage(name: String,
       }.toMap
     }
 
-    def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {
-      val toRemove = oldSet.map(fsm => FlightSplitMinute(fsm.flightId, fsm.paxType, fsm.terminalName, fsm.queueName, -fsm.paxLoad, -fsm.workLoad, fsm.minute))
-      val addAndRemoveGrouped: Map[(Int, TerminalName, QueueName, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet
-        .union(toRemove)
-        .groupBy(fsm => (fsm.flightId, fsm.terminalName, fsm.queueName, fsm.minute, fsm.paxType))
-
-      addAndRemoveGrouped
-        .map {
-          case ((fid, tn, qn, m, pt), fsm) => FlightSplitDiff(fid, pt, tn, qn, fsm.map(_.paxLoad).sum, fsm.map(_.workLoad).sum, m)
-        }
-        .filterNot(fsd => fsd.paxLoad == 0 && fsd.workLoad == 0)
-        .toSet
-    }
-
-    def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[QueueLoadMinute]): Set[QueueLoadMinute] = {
-      queueLoadMinutes
-        .groupBy(qlm => (qlm.terminalName, qlm.queueName, qlm.minute))
-        .map {
-          case ((t, q, m), qlm) =>
-            val summedPaxLoad = qlm.map(_.paxLoad).sum
-            val summedWorkLoad = qlm.map(_.workLoad).sum
-            QueueLoadMinute(t, q, summedPaxLoad, summedWorkLoad, m)
-        }.toSet
-    }
-
     def flightToFlightSplitMinutes(flight: Arrival,
                                    splits: Set[ApiSplits],
                                    procTimes: Map[PaxTypeAndQueue, Double]): Set[FlightSplitMinute] = {

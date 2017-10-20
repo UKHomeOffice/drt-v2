@@ -107,8 +107,8 @@ trait SystemActors {
   val actorMaterializer = ActorMaterializer()
 
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis), name = "voyage-manifests-actor")
-  val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "crunch-state", airportConfig.queues), name = "crunch-live-state-actor")
-  val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "forecast-crunch-state", airportConfig.queues), name = "crunch-forecast-state-actor")
+  val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-live-state-actor")
+  val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-forecast-state-actor")
   val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(system, airportConfig, pcpArrivalTimeCalculator, historicalSplitsProvider, liveCrunchStateActor, forecastCrunchStateActor, maxDaysToCrunch))

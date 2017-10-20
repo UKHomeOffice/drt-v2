@@ -93,7 +93,7 @@ abstract class ArrivalsActor extends PersistentActor {
       context.system.eventStream.publish(dm)
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
         log.info(s"Saving ArrivalsState snapshot")
-        val snapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
+        val snapshotMessage: FlightStateSnapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
         saveSnapshot(snapshotMessage)
       }
     }

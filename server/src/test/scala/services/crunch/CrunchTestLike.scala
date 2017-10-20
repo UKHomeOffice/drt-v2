@@ -16,13 +16,15 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import services.graphstages.Crunch._
 import services.graphstages._
 import services.{ForecastBaseArrivalsActor, LiveArrivalsActor, SDate}
 
 import scala.collection.immutable.{List, Seq, Set}
 
 
-class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef) extends CrunchStateActor("live-test", queues) {
+class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
+  extends CrunchStateActor("live-test", queues, now, expireAfterMillis) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -31,7 +33,8 @@ class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe:
   }
 }
 
-class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef) extends CrunchStateActor("forecast-test", queues) {
+class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
+  extends CrunchStateActor("forecast-test", queues, now, expireAfterMillis) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -85,9 +88,9 @@ class CrunchTestLike
   val firstPaxOffMillis = 180000L
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
-  def liveCrunchStateActor(testProbe: TestProbe): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], queues, testProbe.ref), name = "crunch-live-state-actor")
+  def liveCrunchStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor")
 
-  def forecastCrunchStateActor(testProbe: TestProbe): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], queues, testProbe.ref), name = "crunch-forecast-state-actor")
+  def forecastCrunchStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-forecast-state-actor")
 
   def baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "forecast-base-arrivals-actor")
 
@@ -120,7 +123,7 @@ class CrunchTestLike
       liveArrivalsActor = liveArrivalsActor,
       pcpArrivalTime = pcpArrivalTime,
       validPortTerminals = validTerminals,
-      expireAfterMillis = 2 * Crunch.oneDayMillis,
+      expireAfterMillis = 2 * oneDayMillis,
       now = now)
 
     def crunchStage(name: String, manifestsUsed: Boolean = true) = new CrunchGraphStage(
@@ -135,7 +138,7 @@ class CrunchTestLike
       crunchStartFromFirstPcp = crunchStartDateProvider,
       crunchEndFromLastPcp = crunchEndDateProvider,
       earliestAndLatestAffectedPcpTime = (_, _) => Some((SDate.now(), SDate.now())),
-      expireAfterMillis = 2 * Crunch.oneDayMillis,
+      expireAfterMillis = 2 * oneDayMillis,
       maxDaysToCrunch = 100,
       manifestsUsed = manifestsUsed,
       now = now)
@@ -155,7 +158,7 @@ class CrunchTestLike
     val actualDesksAndQueuesSource = Source.queue[ActualDeskStats](0, OverflowStrategy.backpressure)
 
     val forecastProbe = testProbe("forecast")
-    val forecastActorRef = forecastCrunchStateActor(forecastProbe)
+    val forecastActorRef = forecastCrunchStateActor(forecastProbe, now)
 
     val forecastArrivalsCrunchInput = RunnableForecastCrunchGraph(
       arrivalsSource = forecastArrivalsDiffQueueSource,
@@ -166,7 +169,7 @@ class CrunchTestLike
     val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
     val liveProbe = testProbe("live")
 
-    val liveActorRef = liveCrunchStateActor(liveProbe)
+    val liveActorRef = liveCrunchStateActor(liveProbe, now)
 
     val (liveCrunchInput, _, _, _, actualDesksAndQueuesInput) = RunnableSimulationGraph(
       crunchStateActor = liveActorRef,

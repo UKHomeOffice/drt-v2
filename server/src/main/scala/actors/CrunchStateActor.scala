@@ -10,12 +10,13 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import services.SDate
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
 
-class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]]) extends PersistentActor {
+class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]], now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
@@ -32,19 +33,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     case cdm: CrunchDiffMessage =>
       log.info(s"Recovery: received CrunchDiffMessage")
       val newState = stateFromDiff(cdm, state)
-      newState match {
-        case None => log.info(s"Recovery: state is None")
-        case Some(s) =>
-          val apiCount = s.flights.count {
-            case (_, f) => f.splits.exists {
-              case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => true
-              case _ => false
-            }
-          }
-          log.info(s"Recovery: state contains ${s.flights.size} flights " +
-            s"with $apiCount Api splits " +
-            s"and ${s.crunchMinutes.size} crunch minutes")
-      }
+      logRecoveryState(newState)
       state = newState
 
     case RecoveryCompleted =>
@@ -53,6 +42,21 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")
   }
+
+  def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
+    case None => log.info(s"Recovery: state is None")
+    case Some(s) =>
+      val apiCount = s.flights.count {
+        case (_, f) => f.splits.exists {
+          case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => true
+          case _ => false
+        }
+      }
+      log.info(s"Recovery: state contains ${s.flights.size} flights " +
+        s"with $apiCount Api splits " +
+        s"and ${s.crunchMinutes.size} crunch minutes")
+  }
+
 
   override def receiveCommand: Receive = {
     case cs@PortState(_, _) =>
@@ -154,6 +158,20 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     )
   }
 
+  def purgeExpiredMinutes(crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
+    val expired: CrunchMinute => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: CrunchMinute) => cm.minute)
+    crunchMinutes
+      .filterNot {
+        case (_, cm) =>
+          val shouldGo = expired(cm)
+          if (shouldGo) {
+            val cmDate = SDate(cm.minute).toLocalDateTimeString()
+            log.info(s"Purging expired CrunchMinute $cmDate")
+          }
+          shouldGo
+      }
+  }
+
   def updateStateFromPortState(newState: PortState): Unit = {
     val existingState = state match {
       case None =>
@@ -165,7 +183,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
     val diff = CrunchDiff(flightsToRemove, flightsToUpdate, Set(), crunchesToUpdate)
 
-    val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
+    val cmsFromDiff = purgeExpiredMinutes(applyCrunchDiff(diff, existingState.crunchMinutes))
     val flightsFromDiff = applyFlightsWithSplitsDiff(diff, existingState.flights)
 
     val diffToPersist = CrunchDiffMessage(
@@ -184,7 +202,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
 
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
-      crunchMinutes = cmsFromDiff)
+      crunchMinutes = purgeExpiredMinutes(cmsFromDiff))
 
     state = Option(updatedState)
   }
