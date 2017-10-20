@@ -275,7 +275,7 @@ object Crunch {
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
-  def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]) = {
+  def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
       val startMinute = group.map(_._1).min
@@ -300,7 +300,7 @@ object Crunch {
     })
   }
 
-  def crunchMinutesByTerminalMinute(minutes: Set[CrunchMinute], terminalName: TerminalName) = minutes
+  def terminalCrunchMinutesByMinute(minutes: Set[CrunchMinute], terminalName: TerminalName): Seq[(MillisSinceEpoch, Set[CrunchMinute])] = minutes
     .filter(_.terminalName == terminalName)
     .groupBy(_.minute)
     .toList

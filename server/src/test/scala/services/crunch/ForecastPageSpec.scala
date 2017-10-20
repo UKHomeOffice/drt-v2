@@ -5,7 +5,8 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.{Crunch, Queues}
 import services.SDate
 import services.graphstages.Crunch._
-import scala.collection.immutable.List
+
+import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
 
 class ForecastPageSpec() extends CrunchTestLike {
@@ -32,7 +33,7 @@ class ForecastPageSpec() extends CrunchTestLike {
 
     val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
-    val weekOf15MinSlots: Map[MillisSinceEpoch, List[ForecastTimeSlot]] = Forecast.rollUpForWeek(forecastResult.crunchMinutes.values.toSet, "T1")
+    val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(forecastResult.crunchMinutes.values.toSet, "T1")
 
     "Then I should see 1 desk rec for the first slot of the first day" >> {
 
@@ -47,7 +48,7 @@ class ForecastPageSpec() extends CrunchTestLike {
       firstDayFirstHour === expected
     }
 
-    "Then I should see 1 desk rec first slot of the second day" >> {
+    "Then I should see 1 desk rec for the first slot of the second day" >> {
 
       val expected = List(
         ForecastTimeSlot(SDate("2017-01-03T00:00Z").millisSinceEpoch, 0, 1),

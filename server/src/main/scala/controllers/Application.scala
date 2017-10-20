@@ -144,7 +144,7 @@ trait SystemActors {
     feed.map(Flights)
   }
 
-  def walkTimeProvider(flight: Arrival): Millis =
+  def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
     gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis)(flight)
 
   def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
@@ -305,7 +305,7 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[Map[Millis, List[ForecastTimeSlot]]]] = {
+  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[Map[MillisSinceEpoch, Seq[ForecastTimeSlot]]]] = {
 
     val crunchStateFuture = forecastCrunchStateActor.ask(
       GetPortState(startDay, SDate(startDay).addDays(7).millisSinceEpoch)
@@ -316,7 +316,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def portStatePeriodAtPointInTime(startMillis: Millis, endMillis: Millis, pointInTime: Millis) = {
+  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch) = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
@@ -424,7 +424,7 @@ class Application @Inject()(implicit val config: Configuration,
 object Forecast {
 
   def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName) = {
-    groupByX(15)(crunchMinutesByTerminalMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
+    groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
         case (millis, cms) =>
           cms.foldLeft(

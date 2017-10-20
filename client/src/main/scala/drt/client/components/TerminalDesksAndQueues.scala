@@ -141,7 +141,7 @@ object TerminalDesksAndQueues {
       val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 2, "PCP")
 
       val terminalCrunchMinutes = groupBy15(
-        Crunch.crunchMinutesByTerminalMinute(props.crunchState.crunchMinutes, props.terminalName),
+        Crunch.terminalCrunchMinutesByMinute(props.crunchState.crunchMinutes, props.terminalName),
         props.terminalName,
         Queues.queueOrder
       )
