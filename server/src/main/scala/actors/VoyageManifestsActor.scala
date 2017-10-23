@@ -21,7 +21,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
     s"drt_dq_$yymmddYesterday"
   }
 
-  val snapshotInterval = 500
+  val snapshotInterval = 100
 
   override def persistenceId: String = "VoyageManifests"
 
