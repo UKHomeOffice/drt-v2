@@ -22,10 +22,10 @@ object SnapshotSelector {
   case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
-    def snapshotDateTime = SDate(year, month + 1, day, hours, minutes)
+    def snapshotDateTime = SDate(year, month, day, hours, minutes)
   }
 
-  val today = new Date()
+  val today = SDate.now()
   val initialState = State(false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
 
   def formRow(label: String, xs: TagMod*) = {
@@ -53,7 +53,7 @@ object SnapshotSelector {
         }
     )
     .renderPS((scope, props, state) => {
-      val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zipWithIndex
+      val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
       val days = Seq.range(1, 31)
       val years = Seq.range(2017, today.getFullYear() + 1)
       val hours = Seq.range(0, 24)
@@ -77,9 +77,10 @@ object SnapshotSelector {
 
       def isValidSnapshotDate = isLaterThanEarliest(state.snapshotDateTime) && isInPast
 
-      def selectPointInTime = (e: ReactEventFromInput) => {
+      def selectPointInTime = (_: ReactEventFromInput) => {
         if (isValidSnapshotDate) {
           updateUrlWithDate(Option(state.snapshotDateTime))
+          log.info(s"state.snapshotDateTime: ${state.snapshotDateTime.toLocalDateTimeString()}")
           SPACircuit.dispatch(SetViewMode(ViewPointInTime(state.snapshotDateTime)))
           scope.modState(_.copy(showDatePicker = false))
         } else {
