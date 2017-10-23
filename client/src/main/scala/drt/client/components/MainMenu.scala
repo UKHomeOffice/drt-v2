@@ -26,7 +26,7 @@ object MainMenu {
     MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
   )
 
-  def menuItems(airportConfig: AirportConfig) = {
+  def menuItems(airportConfig: AirportConfig): List[MenuItem] = {
     val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
         MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalPageTabLoc(tn))

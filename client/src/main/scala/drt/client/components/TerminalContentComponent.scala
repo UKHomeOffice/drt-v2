@@ -12,10 +12,11 @@ import drt.shared.CrunchApi.CrunchState
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 import org.scalajs.dom
+import org.scalajs.dom.html.Div
 
 import scala.util.Try
 
@@ -61,7 +62,7 @@ object TerminalContentComponent {
       case _ => false
     } else false
 
-    withinRange(a.apiFlight.SchDT) || withinRange(a.apiFlight.EstDT) || withinRange(a.apiFlight.ActDT) || withinRange(a.apiFlight.EstChoxDT) || withinRange(a.apiFlight.ActChoxDT) || withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString)
+    withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString())
   })
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
@@ -91,7 +92,7 @@ object TerminalContentComponent {
       originMapper,
       splitsGraphComponentColoured)(paxComp(843))
 
-    def render(props: Props, state: State) = {
+    def render(props: Props, state: State): TagOf[Div] = {
       val bestPax = ArrivalHelper.bestPax _
       val queueOrder = props.airportConfig.queueOrder
 

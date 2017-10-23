@@ -9,8 +9,8 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinutes, CrunchState, CrunchUpdates, MillisSinceEpoch}
-import drt.shared.FlightsApi.{TerminalName, _}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import boopickle.Default._
 
@@ -31,7 +31,7 @@ sealed trait ViewMode {
 }
 
 case class ViewLive() extends ViewMode {
-  def time = SDate.now()
+  def time: SDateLike = SDate.now()
 }
 
 case class ViewPointInTime(time: SDateLike) extends ViewMode
@@ -66,7 +66,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
 }
 
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
-  protected def handle = {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case _: GetAirportConfig =>
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig)))
     case UpdateAirportConfig(configHolder) =>
@@ -81,7 +81,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
 
   def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 
-  protected def handle = {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetCrunchState() =>
       val eventualAction = viewMode() match {
         case ViewLive() =>
@@ -200,7 +200,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
 class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map[String, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
   def mkPending = Pending(timeProvider())
 
-  override def handle = {
+  override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportInfos(codes) =>
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos)))
@@ -212,8 +212,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
         case None =>
           val stringToObject = value + (code -> Empty)
           updated(stringToObject, Effect(AjaxClient[Api].airportInfoByAirportCode(code).call().map(res => UpdateAirportInfo(code, res))))
-        case Some(v) =>
-          noChange
+        case Some(_) => noChange
       }
     case UpdateAirportInfo(code, Some(airportInfo)) =>
       val newValue = value + (code -> Ready(airportInfo))
@@ -222,7 +221,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 }
 
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
-  protected def handle = {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetShifts(shifts: String) =>
       updated(Ready(shifts))
 
@@ -263,7 +262,7 @@ object FixedPoints {
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withTerminal = line.split(",").toList.map(_.trim)
       val withOutTerminal = withTerminal match {
-        case fpName :: terminal :: date :: tail => fpName.toString :: tail
+        case fpName :: _ :: _ :: tail => fpName.toString :: tail
         case _ => Nil
       }
       withOutTerminal.mkString(", ")
@@ -272,7 +271,7 @@ object FixedPoints {
   }
 
   def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String): String = {
-    val today: SDateLike = SDate.midnightThisMorning
+    val today: SDateLike = SDate.midnightThisMorning()
     val todayString = today.ddMMyyString
 
     val lines = rawFixedPoints.split("\n").toList.map(line => {
@@ -288,7 +287,7 @@ object FixedPoints {
 }
 
 class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
-  protected def handle = {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFixedPoints(fixedPoints: String, terminalName: Option[String]) =>
       if (terminalName.isDefined)
         updated(Ready(fixedPoints))
