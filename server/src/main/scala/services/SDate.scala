@@ -58,6 +58,8 @@ object SDate {
 
   def apply(dateTime: String, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime, timeZone))
 
+  def apply(dateTime: SDateLike, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime.millisSinceEpoch, timeZone))
+
   def apply(millis: Long): SDateLike = JodaSDate(new DateTime(millis, DateTimeZone.UTC))
 
   def apply(millis: MilliDate): SDateLike = JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))

@@ -1,10 +1,10 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 
-import scala.collection.immutable._
+import scala.collection.immutable.{Map, _}
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
@@ -286,6 +286,9 @@ object CrunchApi {
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
+//  case class ForecastPeriod(days: Iterable[Iterable[ForecastTimeSlot]])
+  case class ForecastPeriod(days: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]])
+
   def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
@@ -343,4 +346,6 @@ trait Api {
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
 
   def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
+
+  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriod]]
 }

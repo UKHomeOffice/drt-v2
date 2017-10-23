@@ -41,8 +41,10 @@ object Crunch {
     vn
   }
 
+  val europeLondonTimeZone = DateTimeZone.forID("Europe/London")
+
   def midnightThisMorning: MillisSinceEpoch = {
-    val localNow = SDate(new DateTime(DateTimeZone.forID("Europe/London")).getMillis)
+    val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
     crunchStartDate
   }
@@ -59,14 +61,15 @@ object Crunch {
   }
 
   def getLocalLastMidnight(now: SDateLike): SDateLike = {
-    val localMidnight = s"${now.getFullYear()}-${now.getMonth()}-${now.getDate()}T00:00"
-    SDate(localMidnight, DateTimeZone.forID("Europe/London"))
+    val localNow = SDate(now, europeLondonTimeZone)
+    val localMidnight = s"${localNow.getFullYear()}-${localNow.getMonth()}-${localNow.getDate()}T00:00"
+    SDate(localMidnight, europeLondonTimeZone)
   }
 
   def getLocalNextMidnight(now: SDateLike): SDateLike = {
     val nextDay = now.addDays(1)
     val localMidnight = s"${nextDay.getFullYear()}-${nextDay.getMonth()}-${nextDay.getDate()}T00:00"
-    SDate(localMidnight, DateTimeZone.forID("Europe/London"))
+    SDate(localMidnight, europeLondonTimeZone)
   }
 
   def earliestAndLatestAffectedPcpTimeFromFlights(maxDays: Int)(existingFlights: Set[ApiFlightWithSplits], updatedFlights: Set[ApiFlightWithSplits]): Option[(SDateLike, SDateLike)] = {
@@ -168,7 +171,7 @@ object Crunch {
   }
 
   def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
-    val date = new DateTime(dateTimeMillis).withZone(DateTimeZone.forID("Europe/London"))
+    val date = new DateTime(dateTimeMillis).withZone(europeLondonTimeZone)
     desks(date.getHourOfDay)
   }
 

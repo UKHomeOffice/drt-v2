@@ -110,15 +110,15 @@ object TerminalContentComponent {
         TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours())),
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab="arrivals")).runNow()
+            props.router.set(props.terminalPageTab.copy(tab = "arrivals")).runNow()
             t.modState(_ => State("arrivals"))
           }),
           <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab="desksAndQueues")).runNow()
+            props.router.set(props.terminalPageTab.copy(tab = "desksAndQueues")).runNow()
             t.modState(_ => State("desksAndQueues"))
           }),
           <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab="staffing")).runNow()
+            props.router.set(props.terminalPageTab.copy(tab = "staffing")).runNow()
             t.modState(_ => State("staffing"))
           })
         ),
@@ -152,7 +152,6 @@ object TerminalContentComponent {
               TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal))
             } else ""
           )))
-
     }
   }
 

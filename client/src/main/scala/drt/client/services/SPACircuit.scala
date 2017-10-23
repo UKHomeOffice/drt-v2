@@ -1,6 +1,7 @@
 package drt.client.services
 
 import autowire._
+import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
@@ -9,10 +10,9 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, MillisSinceEpoch}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
-import boopickle.Default._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
@@ -40,6 +40,7 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
+                     forecastPeriodPot: Pot[ForecastPeriod] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                      airportConfig: Pot[AirportConfig] = Empty,
                      shiftsRaw: Pot[String] = Empty,
@@ -77,7 +78,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
                               latestUpdate: ModelR[M, MillisSinceEpoch],
                               modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
-  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
+  val crunchUpdatesRequestFrequency: FiniteDuration = 30 seconds
 
   def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 
@@ -377,6 +378,20 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
       updated(LoadingState(isLoading = false, ""))
   }
 }
+class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriod]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetForecastWeek(startDay, terminalName) =>
+      log.info(s"Requesting forecast week starting at ${startDay.toLocalDateTimeString()}")
+      val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call().map(res => SetForecastPeriod(res)))
+      updated(Pending(), apiCallEffect)
+    case SetForecastPeriod(Some(forecastPeriod)) =>
+      log.info(s"Received forecast period.")
+      updated(Ready(forecastPeriod))
+    case SetForecastPeriod(None) =>
+      log.info(s"No forecast available for requested dates")
+      updated(Unavailable)
+  }
+}
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
@@ -385,11 +400,12 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override protected def initialModel = RootModel()
 
-  def currentViewMode(): ViewMode =  zoom(_.viewMode).value
+  def currentViewMode(): ViewMode = zoom(_.viewMode).value
 
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
       new CrunchUpdatesHandler(currentViewMode, zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
+      new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),

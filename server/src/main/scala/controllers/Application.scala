@@ -36,7 +36,6 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
 
-import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -275,11 +274,31 @@ class Application @Inject()(implicit val config: Configuration,
           }
         }
 
+        def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriod]] = {
+
+          val midnight = getLocalLastMidnight(SDate(startDay))
+          val crunchStateFuture = forecastCrunchStateActor.ask(
+            GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
+          )(new Timeout(30 seconds))
+
+          crunchStateFuture.map {
+            case Some(PortState(_, m)) =>
+              val thing: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(m.values.toSet, terminal)
+
+              log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
+              Option(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, terminal)))
+            case None =>
+              log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
+              None
+          }
+        }
+
         override def askableCacheActorRef: AskableActorRef = cacheActorRef
 
         override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
         override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+
       }
   }
 
@@ -441,7 +460,7 @@ class Application @Inject()(implicit val config: Configuration,
 }
 
 object Forecast {
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
     groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
         case (millis, cms) =>
@@ -451,7 +470,7 @@ object Forecast {
               .copy(available = fts.available + cm.deployedDesks.getOrElse(0), required = fts.required + cm.deskRec)
           )
       }
-      .groupBy(x => getLocalLastMidnight(SDate(x.startMillis)).millisSinceEpoch)
+      .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
   }
 }
 

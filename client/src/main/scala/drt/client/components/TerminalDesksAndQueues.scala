@@ -14,6 +14,14 @@ import scala.scalajs.js.Date
 
 object TerminalDesksAndQueuesRow {
 
+  def ragStatus(totalRequired: Int, totalDeployed: Int) = {
+    totalRequired.toDouble / totalDeployed match {
+      case diff if diff >= 1 => "red"
+      case diff if diff >= 0.75 => "amber"
+      case _ => ""
+    }
+  }
+
   case class Props(minuteMillis: MillisSinceEpoch, queueMinutes: List[CrunchMinute], airportConfig: AirportConfig, terminalName: TerminalName, showActuals: Boolean)
 
   implicit val rowPropsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -40,11 +48,7 @@ object TerminalDesksAndQueuesRow {
       }
       val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
       val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
-      val ragClass = totalRequired.toDouble / totalDeployed match {
-        case diff if diff >= 1 => "red"
-        case diff if diff >= 0.75 => "amber"
-        case _ => ""
-      }
+      val ragClass = ragStatus(totalRequired, totalDeployed)
       import JSDateConversions._
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
@@ -56,6 +60,8 @@ object TerminalDesksAndQueuesRow {
     .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+
 
   def apply(props: Props): VdomElement = component(props)
 }
