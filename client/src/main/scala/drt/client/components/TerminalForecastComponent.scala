@@ -2,12 +2,18 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriod, ForecastTimeSlot}
-import drt.shared.MilliDate
+import drt.shared.{MilliDate, SDateLike}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 
 object TerminalForecastComponent {
+
+  def getNextMonday(start: SDateLike) = {
+    val monday = if(start.getDayOfWeek() == 1) start else start.addDays(8 - start.getDayOfWeek())
+
+    SDate(f"${monday.getFullYear()}-${monday.getMonth()}%02d-${monday.getDate()}%02dT00:00:00")
+  }
 
   case class Props(forecastPeriod: ForecastPeriod) {
 

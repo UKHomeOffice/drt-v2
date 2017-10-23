@@ -62,6 +62,8 @@ object JSDateConversions {
       def millisSinceEpoch: Long = date.getTime().toLong
 
       override def toISOString(): String = date.toISOString()
+
+      def getDayOfWeek(): Int = if (date.getDay() == 0) 7 else date.getDay()
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)

@@ -14,6 +14,8 @@ object SDate {
 
     import implicits._
 
+    def getDayOfWeek(): Int = dateTime.getDayOfWeek
+
     def getFullYear(): Int = dateTime.getYear
 
     def getMonth(): Int = dateTime.getMonthOfYear
