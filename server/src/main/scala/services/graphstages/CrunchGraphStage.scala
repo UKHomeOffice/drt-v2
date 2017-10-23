@@ -153,12 +153,12 @@ class CrunchGraphStage(name: String,
       val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
         case (flightsSoFar, updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
           val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
-          log.info(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
+          log.debug(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
           flightsSoFar
         case (flightsSoFar, updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
             case None =>
-              log.info(s"Adding new flight ${updatedFlight.IATA} / ${updatedFlight.SchDT} with key ${updatedFlight.uniqueId}")
+              log.debug(s"Adding new flight ${updatedFlight.IATA} / ${updatedFlight.SchDT} with key ${updatedFlight.uniqueId}")
               val ths = terminalAndHistoricSplits(updatedFlight)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
