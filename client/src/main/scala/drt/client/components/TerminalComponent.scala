@@ -2,8 +2,6 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.SetViewMode
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.CrunchState
 import drt.shared._
@@ -24,7 +22,7 @@ object TerminalComponent {
                             timeRangeHours: TimeRangeHours
                           )
 
-  def render(props: Props) = {
+  def render(props: Props): Unit = {
     val modelRCP = SPACircuit.connect(model => TerminalModel(
       model.crunchStatePot,
       model.airportConfig,
@@ -34,8 +32,8 @@ object TerminalComponent {
     ))
   }
 
-  implicit val pageReuse = Reusability.caseClass[TerminalPageTabLoc]
-  implicit val propsReuse = Reusability.caseClass[Props]
+  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.caseClass[TerminalPageTabLoc]
+  implicit val propsReuse: Reusability[Props] = Reusability.caseClass[Props]
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .renderPS(($, props, state) => {
@@ -56,7 +54,6 @@ object TerminalComponent {
               props.terminalPageTab,
               model.airportInfos,
               model.timeRangeHours,
-              model.viewMode,
               props.router)
             ))
         }))

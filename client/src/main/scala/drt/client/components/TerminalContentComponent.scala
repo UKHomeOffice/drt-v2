@@ -1,21 +1,22 @@
 package drt.client.components
 
 import diode.data.{Pending, Pot}
-import diode.react.ModelProxy
+import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
+import drt.client.services.{SPACircuit, TimeRangeHours}
 import drt.shared.CrunchApi.CrunchState
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 import org.scalajs.dom
+import org.scalajs.dom.html.Div
 
 import scala.util.Try
 
@@ -27,10 +28,9 @@ object TerminalContentComponent {
                     terminalPageTab: TerminalPageTabLoc,
                     airportInfoPot: Pot[AirportInfo],
                     timeRangeHours: TimeRangeHours,
-                    viewMode: ViewMode,
                     router: RouterCtl[Loc]
                   ) {
-    lazy val hash = {
+    lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]], Int, Int) = {
       val depsHash = crunchStatePot.map(
         cs => cs.crunchMinutes.toSeq.map(_.hashCode())
       ).toList.mkString("|")
@@ -54,7 +54,7 @@ object TerminalContentComponent {
     }
   }
 
-  def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]) = arrivals.filter(a => {
+  def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]): List[ApiFlightWithSplits] = arrivals.filter(a => {
 
     def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
       case s: SDateLike if s.ddMMyyString == date.ddMMyyString =>
@@ -62,12 +62,12 @@ object TerminalContentComponent {
       case _ => false
     } else false
 
-    withinRange(a.apiFlight.SchDT) || withinRange(a.apiFlight.EstDT) || withinRange(a.apiFlight.ActDT) || withinRange(a.apiFlight.EstChoxDT) || withinRange(a.apiFlight.ActChoxDT) || withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString)
+    withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString())
   })
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
-  def airportWrapper(portCode: String) = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
+  def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   def originMapper(portCode: String): VdomElement = {
     Try {
@@ -92,7 +92,7 @@ object TerminalContentComponent {
       originMapper,
       splitsGraphComponentColoured)(paxComp(843))
 
-    def render(props: Props, state: State) = {
+    def render(props: Props, state: State): TagOf[Div] = {
       val bestPax = ArrivalHelper.bestPax _
       val queueOrder = props.airportConfig.queueOrder
 
@@ -105,8 +105,8 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
 
       <.div(
-        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
+        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
+        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
         TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours())),
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
@@ -130,7 +130,7 @@ object TerminalContentComponent {
               <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
-                val flightsInRange = filterFlightsByRange(props.viewMode.time, props.timeRangeHours, terminalFlights.toList)
+                val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, props.timeRangeHours, terminalFlights.toList)
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, bestPax, queueOrder))
               }))
@@ -156,8 +156,8 @@ object TerminalContentComponent {
     }
   }
 
-  implicit val propsReuse = Reusability.by((_: Props).hash)
-  implicit val stateReuse = Reusability.caseClass[State]
+  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
+  implicit val stateReuse: Reusability[State] = Reusability.caseClass[State]
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.tab))

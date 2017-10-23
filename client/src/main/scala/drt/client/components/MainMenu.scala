@@ -26,7 +26,7 @@ object MainMenu {
     MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
   )
 
-  def menuItems(airportConfig: AirportConfig) = {
+  def menuItems(airportConfig: AirportConfig): List[MenuItem] = {
     val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
         MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalPageTabLoc(tn))
@@ -44,7 +44,11 @@ object MainMenu {
           airportConfigPotMP().renderReady(airportConfig => {
 
             val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig)) yield {
-              val classes = Seq(("active", props.currentLoc == item.location))
+              val active = (props.currentLoc, item.location) match {
+                case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
+                case (current, itemLoc) => current == itemLoc
+              }
+              val classes = Seq(("active", active))
               <.li(^.key := item.idx, ^.classSet(classes: _*),
                 props.router.link(item.location)(item.icon, " ", item.label(props)))
             }
