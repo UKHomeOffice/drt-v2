@@ -18,7 +18,6 @@ object TerminalDisplayModeComponent {
                    terminalPageTab: TerminalPageTabLoc,
                    airportInfoPot: Pot[AirportInfo],
                    timeRangeHours: TimeRangeHours,
-                   viewMode: ViewMode,
                    router: RouterCtl[Loc]
                   )
 
@@ -34,7 +33,6 @@ object TerminalDisplayModeComponent {
         props.terminalPageTab,
         props.airportInfoPot,
         props.timeRangeHours,
-        props.viewMode,
         props.router
       )
 
@@ -59,7 +57,7 @@ object TerminalDisplayModeComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
             if (state.activeTab == "current") <.div(
-              DatePickerComponent(DatePickerComponent.Props(props.viewMode, props.router, props.terminalPageTab)),
+              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab)),
               TerminalContentComponent(terminalContentProps)
             ) else <.div(
               SnapshotSelector(props.router, props.terminalPageTab),

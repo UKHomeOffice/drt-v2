@@ -100,6 +100,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
           val call = vm match {
             case ViewPointInTime(time) => AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
             case ViewDay(time) => AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
+            case _ => Future(None)
           }
           call.map {
             case Some(cs) =>
@@ -316,7 +317,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
         val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
         updated(Ready(updatedValue))
       } else noChange
-    case RemoveStaffMovement(idx, uUID) =>
+    case RemoveStaffMovement(_, uUID) =>
       if (value.isReady) {
         val terminalAffectedOption = value.get.find(_.uUID == uUID).map(_.terminalName)
         if (terminalAffectedOption.isDefined) {
@@ -331,7 +332,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
 
       val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call().map(res => SetStaffMovements(res)))
       effectOnly(apiCallEffect + movementsEffect)
-    case SaveStaffMovements(terminalName) =>
+    case SaveStaffMovements(_) =>
       if (value.isReady) {
         AjaxClient[Api].saveStaffMovements(value.get).call()
         noChange
@@ -339,13 +340,26 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
   }
 }
 
-class ViewModeHandler[M](modelRW: ModelRW[M, ViewMode]) extends LoggingActionHandler(modelRW) {
+class ViewModeHandler[M](viewModeMP: ModelRW[M, ViewMode], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeMP) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetViewMode(mode) =>
+    case SetViewMode(newMode) =>
+      log.info(s"VM: Set client newMode from $value to $newMode")
+      val currentMode = value
 
-      log.info(s"VM: Set client mode from $value to $mode")
-      val nextRequest = Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
-      updated(mode, nextRequest)
+      val effects = currentMode match {
+        case ViewLive() => Effect(Future(SetCrunchPending()))
+        case _ =>
+          val nextRequests = crunchStateMP.value match {
+            case Pending(_) =>
+              log.info(s"CrunchState Pending - not requesting again")
+              Effect(Future(SetCrunchPending()))
+            case _ =>
+              log.info(s"CrunchState not Pending so requesting")
+              Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
+          }
+          nextRequests
+      }
+      updated(newMode, effects)
   }
 }
 
@@ -382,7 +396,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(_.viewMode)((m, v) => m.copy(viewMode = v))),
+      new ViewModeHandler(zoomRW(_.viewMode)((m, v) => m.copy(viewMode = v)), zoom(_.crunchStatePot)),
       new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v)))
     )

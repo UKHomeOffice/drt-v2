@@ -56,7 +56,6 @@ object TerminalComponent {
               props.terminalPageTab,
               model.airportInfos,
               model.timeRangeHours,
-              model.viewMode,
               props.router)
             ))
         }))

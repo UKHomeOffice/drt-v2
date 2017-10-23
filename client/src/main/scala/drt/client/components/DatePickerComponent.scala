@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetViewMode
+import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.SDateLike
@@ -13,19 +14,15 @@ import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 import scala.scalajs.js.Date
 
 object DatePickerComponent {
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(
-                    viewMode: ViewMode,
-                    router: RouterCtl[Loc],
-                    terminalPageTab: TerminalPageTabLoc
-                  )
+  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
   }
 
-  val today = new Date()
-  val initialState = State(false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+  val today = SDate.now()
 
   def formRow(label: String, xs: TagMod*) = {
     <.div(^.className := "form-group row",
@@ -33,21 +30,25 @@ object DatePickerComponent {
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.viewMode.millis)
-  implicit val stateReuse: Reusability[State] = Reusability.by(s => (s.day, s.month, s.year, s.hours, s.minutes).hashCode())
+  implicit val propsReuse: Reusability[Props] = Reusability.by(_.terminalPageTab.viewMode.hashCode())
+  implicit val stateReuse: Reusability[State] = Reusability.caseClass[State]
 
   val component = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps(
-      p =>
-        State(false, p.viewMode.time.getDate(), p.viewMode.time.getMonth(), p.viewMode.time.getFullYear(), p.viewMode.time.getHours(), p.viewMode.time.getMinutes())
+      p => {
+        log.info(s"Setting state from $p")
+        val viewMode = p.terminalPageTab.viewMode
+        val time = viewMode.time
+        val initState = State(false, time.getDate(), time.getMonth(), time.getFullYear(), time.getHours(), time.getMinutes())
+        SPACircuit.dispatch(SetViewMode(viewMode))
+        log.info(s"initial state from props: $initState")
+        initState
+      }
     )
     .renderPS((scope, props, state) => {
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
       val days = Seq.range(1, 31)
       val years = Seq.range(2017, today.getFullYear() + 1)
-      val hours = Seq.range(0, 24)
-
-      val minutes = Seq.range(0, 60)
 
       def drawSelect(names: Seq[String], values: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
         <.select(^.className := "form-control", ^.value := defaultValue.toString,
@@ -65,30 +66,24 @@ object DatePickerComponent {
 
       def selectPointInTime = (e: ReactEventFromInput) => {
         updateUrlWithDate(Option(state.selectedDateTime))
-        SPACircuit.dispatch(SetViewMode(ViewDay(state.selectedDateTime)))
         scope.modState(_.copy(showDatePicker = false))
       }
 
       def selectYesterday = (e: ReactEventFromInput) => {
         val yesterday = SDate.midnightThisMorning().addMinutes(-1)
         updateUrlWithDate(Option(yesterday))
-
-        SPACircuit.dispatch(SetViewMode(ViewDay(yesterday)))
         scope.modState(_.copy(true, yesterday.getDate(), yesterday.getMonth(), yesterday.getFullYear(), yesterday.getHours(), yesterday.getMinutes()))
       }
 
       def selectTomorrow = (e: ReactEventFromInput) => {
         val tomorrow = SDate.midnightThisMorning().addDays(2).addMinutes(-1)
         updateUrlWithDate(Option(tomorrow))
-
-        SPACircuit.dispatch(SetViewMode(ViewDay(tomorrow)))
         scope.modState(_.copy(true, tomorrow.getDate(), tomorrow.getMonth(), tomorrow.getFullYear(), tomorrow.getHours(), tomorrow.getMinutes()))
       }
 
       def selectToday = (e: ReactEventFromInput) => {
         val now = SDate.now()
         updateUrlWithDate(None)
-        SPACircuit.dispatch(SetViewMode(ViewLive()))
         scope.modState(_.copy(true, now.getDate(), now.getMonth(), now.getFullYear(), now.getHours(), now.getMinutes()))
       }
 
@@ -109,9 +104,9 @@ object DatePickerComponent {
           <.div(
             <.label(^.className := "col-sm-1 no-gutters text-center", "or"),
             List(
-              <.div(^.className := "col-sm-1 no-gutters", drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt))),
-              <.div(^.className := "col-sm-2 no-gutters", drawSelect(months.map(_._2.toString), months.map(_._1.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt))),
-              <.div(^.className := "col-sm-1 no-gutters", drawSelect(years.map(_.toString), years.map(_.toString), state.year, (v: String) => (s: State) => s.copy(year = v.toInt))),
+              <.div(^.className := "col-sm-1 no-gutters", drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt))),
+              <.div(^.className := "col-sm-2 no-gutters", drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt))),
+              <.div(^.className := "col-sm-1 no-gutters", drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt))),
               <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate),
               errorMessage
             ).toTagMod))
