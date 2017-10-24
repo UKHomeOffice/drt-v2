@@ -77,7 +77,7 @@ class CrunchGraphStage(name: String,
         if (!waitingForManifests && !waitingForArrivals) {
           portStateOption match {
             case Some(portState) =>
-              log.debug(s"Pushing PortState")
+              log.info(s"Pushing PortState (ourCrunch)")
               push(outCrunch, portState)
               portStateOption = None
             case None =>
@@ -248,7 +248,7 @@ class CrunchGraphStage(name: String,
       log.info(s"Crunching $numberOfMinutes minutes")
       val crunchMinutes = crunchFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightSplitMinutesByFlight)
 
-      Option(PortState(flights, crunchMinutes))
+      Option(PortState(flights = flights, crunchMinutes = crunchMinutes, staffMinutes = Map()))
     }
 
     def pushStateIfReady(): Unit = {
@@ -257,7 +257,7 @@ class CrunchGraphStage(name: String,
           case None => log.info(s"We have no PortState yet. Nothing to push")
           case Some(portState) =>
             if (isAvailable(outCrunch)) {
-              log.info(s"Pushing PortState")
+              log.info(s"Pushing PortState (pushStateIfReady)")
               push(outCrunch, portState)
               portStateOption = None
             }

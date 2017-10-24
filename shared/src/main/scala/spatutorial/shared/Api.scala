@@ -251,8 +251,15 @@ object CrunchApi {
                        crunchMinutes: Map[Int, CrunchMinute],
                        staffMinutes: Map[Int, StaffMinute])
 
-  case class StaffMinute(terminalName: TerminalName, minute: MillisSinceEpoch, staff: Int) {
-    lazy val key: Int = s"$terminalName$minute$staff".hashCode
+  sealed trait Minute {
+    val minute: MillisSinceEpoch
+  }
+
+  case class StaffMinute(terminalName: TerminalName,
+                         minute: MillisSinceEpoch,
+                         staff: Int,
+                         lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+    lazy val key: Int = s"$terminalName$minute".hashCode
   }
 
   case class CrunchMinute(terminalName: TerminalName,
@@ -266,7 +273,7 @@ object CrunchApi {
                           deployedWait: Option[Int] = None,
                           actDesks: Option[Int] = None,
                           actWait: Option[Int] = None,
-                          lastUpdated: Option[MillisSinceEpoch] = None) {
+                          lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 

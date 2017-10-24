@@ -47,7 +47,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
-      case PortState(_, c) => c
+      case PortState(_, c, _) => c
     }
     val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
       (cm.actDesks, cm.actWait)

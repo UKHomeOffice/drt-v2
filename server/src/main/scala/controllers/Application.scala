@@ -36,6 +36,7 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
 
+import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -221,7 +222,23 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   object ApiService {
-    def apply(airportConfig: AirportConfig, shiftsActor: ActorRef, fixedPointsActor: ActorRef, staffMovementsActor: ActorRef) =
+    def apply(airportConfig: AirportConfig, shiftsActor: ActorRef, fixedPointsActor: ActorRef, staffMovementsActor: ActorRef): ApiService {
+      val timeout: Timeout
+
+      def liveCrunchStateActor: AskableActorRef
+
+      def actorSystem: ActorSystem
+
+      def forecastCrunchStateActor: AskableActorRef
+
+      def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
+
+      def askableCacheActorRef: AskableActorRef
+
+      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
+
+      def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
+    } =
       new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
 
         override implicit val timeout: Timeout = Timeout(5 seconds)
@@ -273,7 +290,7 @@ class Application @Inject()(implicit val config: Configuration,
     val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(5 seconds))
 
     crunchStateFuture.map {
-      case Some(PortState(f, m)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
+      case Some(PortState(f, m, _)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
       case _ => None
     } recover {
       case t =>
@@ -314,15 +331,15 @@ class Application @Inject()(implicit val config: Configuration,
     )(new Timeout(5 seconds))
 
     crunchStateFuture.map {
-      case Some(PortState(_, m)) => Option(Forecast.rollUpForWeek(m.values.toSet, terminal))
+      case Some(PortState(_, m, _)) => Option(Forecast.rollUpForWeek(m.values.toSet, terminal))
     }
   }
 
-  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch) = {
+  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
-      case Some(PortState(f, m)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
+      case Some(PortState(f, m, _)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
       case _ => None
     }.recover {
       case t =>
@@ -424,8 +441,7 @@ class Application @Inject()(implicit val config: Configuration,
 }
 
 object Forecast {
-
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName) = {
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
     groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
         case (millis, cms) =>

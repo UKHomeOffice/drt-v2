@@ -108,22 +108,26 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
           case None =>
             log.info(s"No crunch to run simulations on")
             None
-          case Some(cs@PortState(_, crunchMinutes, _)) =>
+          case Some(ps@PortState(_, crunchMinutes, _)) =>
             log.info(s"Running simulations")
-            val staffAvailable: Set[StaffMinute] = crunchMinutes
+            val staffMinutes: Map[Int, StaffMinute] = crunchMinutes
               .values
               .groupBy(_.terminalName)
               .flatMap {
                 case (tn, tcms) =>
                   val minutes = tcms.map(_.minute)
-                  (minutes.min to minutes.max)
+                  val minuteMillis = minutes.min to minutes.max by Crunch.oneMinuteMillis
+                  log.info(s"minuteMillis: $minuteMillis")
+                  minuteMillis
                     .map(m => {
                       val available = staffAvailableByTerminalAndQueue(m, tn)
-                      StaffMinute(tn, m, available)
+                      log.info(s"checking staff available at $m, $tn: $available")
+                      val staffMinute = StaffMinute(tn, m, available)
+                      (staffMinute.key, staffMinute)
                     })
-                    .toSet
+                    .toMap
               }
-              .toSet
+            log.info(s"Generated ${staffMinutes.size} staff minutes")
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffAvailableByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
               case (_, tcms) =>
@@ -145,7 +149,7 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
                     }
                 }
             }
-            Option(cs.copy(crunchMinutes = crunchMinutesWithSimulation))
+            Option(ps.copy(crunchMinutes = crunchMinutesWithSimulation, staffMinutes = staffMinutes))
         }
 
         pushAndPull()

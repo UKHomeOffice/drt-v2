@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -24,7 +24,10 @@ object Crunch {
 
   case class RemoveFlight(flightId: Int)
 
-  case class CrunchDiff(flightRemovals: Set[RemoveFlight], flightUpdates: Set[ApiFlightWithSplits], crunchMinuteRemovals: Set[RemoveCrunchMinute], crunchMinuteUpdates: Set[CrunchMinute])
+  case class CrunchDiff(flightRemovals: Set[RemoveFlight],
+                        flightUpdates: Set[ApiFlightWithSplits],
+                        crunchMinuteUpdates: Set[CrunchMinute],
+                        staffMinuteUpdates: Set[StaffMinute])
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
@@ -92,32 +95,40 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinutesDiff(oldTqmToCm: Map[Int, CrunchMinute], newTqmToCm: Map[Int, CrunchMinute]): (Set[RemoveCrunchMinute], Set[CrunchMinute]) = {
-    val oldKeys = oldTqmToCm.values.map(cm => Tuple3(cm.terminalName, cm.queueName, cm.minute)).toSet
-    val newKeys = newTqmToCm.values.map(cm => Tuple3(cm.terminalName, cm.queueName, cm.minute)).toSet
-    val toRemove = (oldKeys -- newKeys).map {
-      case (tn, qn, m) => RemoveCrunchMinute(tn, qn, m)
-    }
+  def crunchMinutesDiff(oldTqmToCm: Map[Int, CrunchMinute], newTqmToCm: Map[Int, CrunchMinute]): Set[CrunchMinute] = {
     val toUpdate = newTqmToCm.collect {
       case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
     }.toSet
 
-    Tuple2(toRemove, toUpdate)
+    toUpdate
+  }
+
+  def staffMinutesDiff(oldTqmToCm: Map[Int, StaffMinute], newTqmToCm: Map[Int, StaffMinute]): Set[StaffMinute] = {
+    val toUpdate = newTqmToCm.collect {
+      case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
+    }.toSet
+
+    toUpdate
   }
 
   def crunchMinuteToTqmCm(cm: CrunchMinute): ((TerminalName, QueueName, MillisSinceEpoch), CrunchMinute) = {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
-  def applyCrunchDiff(diff: CrunchDiff, cms: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
+  def applyCrunchDiff(diff: CrunchDiff, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
     val nowMillis = SDate.now().millisSinceEpoch
-    val withoutRemovals = diff.crunchMinuteRemovals.foldLeft(cms) {
-      case (soFar, removeCm) => soFar - removeCm.key
-    }
-    val withoutRemovalsWithUpdates = diff.crunchMinuteUpdates.foldLeft(withoutRemovals) {
+    val withUpdates = diff.crunchMinuteUpdates.foldLeft(crunchMinutes) {
       case (soFar, ncm) => soFar.updated(ncm.key, ncm.copy(lastUpdated = Option(nowMillis)))
     }
-    withoutRemovalsWithUpdates
+    withUpdates
+  }
+
+  def applyStaffDiff(diff: CrunchDiff, staffMinutes: Map[Int, StaffMinute]): Map[Int, StaffMinute] = {
+    val nowMillis = SDate.now().millisSinceEpoch
+    val withUpdates = diff.staffMinuteUpdates.foldLeft(staffMinutes) {
+      case (soFar, newStaffMinute) => soFar.updated(newStaffMinute.key, newStaffMinute.copy(lastUpdated = Option(nowMillis)))
+    }
+    withUpdates
   }
 
   def applyFlightsWithSplitsDiff(diff: CrunchDiff, flights: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
