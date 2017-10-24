@@ -77,7 +77,7 @@ class CrunchGraphStage(name: String,
         if (!waitingForManifests && !waitingForArrivals) {
           portStateOption match {
             case Some(portState) =>
-              log.info(s"Pushing PortState (ourCrunch)")
+              log.info(s"Pushing PortState (outCrunch)")
               push(outCrunch, portState)
               portStateOption = None
             case None =>

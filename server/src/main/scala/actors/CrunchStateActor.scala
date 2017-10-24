@@ -59,7 +59,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
 
 
   override def receiveCommand: Receive = {
-    case cs@PortState(_, _, _) =>
+    case cs: PortState =>
       log.info(s"Received PortState. storing")
       updateStateFromPortState(cs)
       saveSnapshotAtInterval(cs)
