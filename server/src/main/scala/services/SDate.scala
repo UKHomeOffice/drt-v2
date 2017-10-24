@@ -14,6 +14,8 @@ object SDate {
 
     import implicits._
 
+    def getDayOfWeek(): Int = dateTime.getDayOfWeek
+
     def getFullYear(): Int = dateTime.getYear
 
     def getMonth(): Int = dateTime.getMonthOfYear
@@ -57,6 +59,8 @@ object SDate {
   def apply(dateTime: String): SDateLike = JodaSDate(new DateTime(dateTime, DateTimeZone.UTC))
 
   def apply(dateTime: String, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime, timeZone))
+
+  def apply(dateTime: SDateLike, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime.millisSinceEpoch, timeZone))
 
   def apply(millis: Long): SDateLike = JodaSDate(new DateTime(millis, DateTimeZone.UTC))
 

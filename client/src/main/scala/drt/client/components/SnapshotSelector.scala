@@ -9,7 +9,7 @@ import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
 import scala.scalajs.js.Date
 
@@ -26,7 +26,6 @@ object SnapshotSelector {
   }
 
   val today = SDate.now()
-  val initialState = State(false, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
 
   def formRow(label: String, xs: TagMod*) = {
     <.div(^.className := "form-group row",
@@ -60,10 +59,6 @@ object SnapshotSelector {
 
       val minutes = Seq.range(0, 60)
 
-      def updateUrlWithDate(date: Option[SDateLike]) = {
-        props.router.set(props.terminalPageTab.copy(date = date.map(_.toLocalDateTimeString()))).runNow()
-      }
-
       def drawSelect(values: Seq[String], names: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
         val nameValues = values.zip(names)
         <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
@@ -79,10 +74,8 @@ object SnapshotSelector {
 
       def selectPointInTime = (_: ReactEventFromInput) => {
         if (isValidSnapshotDate) {
-          updateUrlWithDate(Option(state.snapshotDateTime))
           log.info(s"state.snapshotDateTime: ${state.snapshotDateTime.toLocalDateTimeString()}")
-          SPACircuit.dispatch(SetViewMode(ViewPointInTime(state.snapshotDateTime)))
-          scope.modState(_.copy(showDatePicker = false))
+          props.router.set(props.terminalPageTab.copy(date = Option(state.snapshotDateTime.toLocalDateTimeString)))
         } else {
           scope.modState(_.copy(showDatePicker = true))
         }

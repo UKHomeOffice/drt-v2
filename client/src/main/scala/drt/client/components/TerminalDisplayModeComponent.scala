@@ -2,14 +2,12 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.SetViewMode
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.CrunchState
 import drt.shared.{AirportConfig, AirportInfo}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 
 object TerminalDisplayModeComponent {
 
@@ -38,31 +36,51 @@ object TerminalDisplayModeComponent {
 
       val currentClass = if (state.activeTab == "current") "active" else ""
       val snapshotDataClass = if (state.activeTab == "snapshot") "active" else ""
+      val planningClass = if (state.activeTab == "planning") "active" else ""
+
+      val currentContentClass = if (state.activeTab == "current") "fade in active" else "fade out"
+      val snapshotContentClass = if (state.activeTab == "snapshot") "fade in active" else "fade out"
+      val planningContentClass = if (state.activeTab == "planning") "fade in active" else "fade out"
 
       <.div(
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-            SPACircuit.dispatch(SetViewMode(ViewLive()))
-            props.router.set(props.terminalPageTab.copy(mode="current", date = None)).runNow()
-            scope.modState(_ => State("current"))
+            props.router.set(props.terminalPageTab.copy(mode = "current", date = None))
           }),
           <.li(^.className := snapshotDataClass,
             <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(mode="snapshot", date = None)).runNow()
-              SPACircuit.dispatch(SetViewMode(ViewPointInTime(SDate.now())))
-              scope.modState(_ => State("snapshot"))
+              props.router.set(props.terminalPageTab.copy(mode = "snapshot", date = None))
+            }
+          ),
+          <.li(^.className := planningClass,
+            <.a(VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(mode = "planning", date = None))
             }
           )
         ),
         <.div(^.className := "tab-content",
-          <.div(^.id := "arrivals", ^.className := "tab-pane fade in active", {
+          <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
               DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab)),
               TerminalContentComponent(terminalContentProps)
-            ) else <.div(
+            ) else ""
+          }),
+          <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
+            if (state.activeTab == "snapshot") <.div(
               SnapshotSelector(props.router, props.terminalPageTab),
               TerminalContentComponent(terminalContentProps)
-            )
+            ) else ""
+          }),
+          <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
+            if (state.activeTab == "planning") {
+
+              val forecastRCP = SPACircuit.connect(_.forecastPeriodPot)
+              <.div(forecastRCP(forecastMP => {
+                <.div(forecastMP().renderReady(fp => {
+                  TerminalForecastComponent(TerminalForecastComponent.Props(fp, props.terminalPageTab, props.router))
+                }))
+              }))
+            } else ""
           })))
     })
     .build

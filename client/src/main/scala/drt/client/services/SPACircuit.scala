@@ -1,6 +1,7 @@
 package drt.client.services
 
 import autowire._
+import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
@@ -9,10 +10,9 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, MillisSinceEpoch}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
-import boopickle.Default._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
@@ -40,6 +40,7 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
+                     forecastPeriodPot: Pot[ForecastPeriod] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                      airportConfig: Pot[AirportConfig] = Empty,
                      shiftsRaw: Pot[String] = Empty,
@@ -111,7 +112,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
               GetCrunchStateAfter(crunchUpdatesRequestFrequency)
           }
       }
-      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(eventualAction))
+      effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
 
     case GetCrunchStateAfter(delay) =>
       log.info(s"Re-requesting CrunchState for ${viewMode().time.prettyDateTime()}")
@@ -146,6 +147,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       effectOnly(allEffects)
 
     case SetCrunchPending() =>
+      log.info(s"Clearing out the crunch stuff")
       updated((Pending(), 0L))
 
     case GetCrunchUpdatesAfter(delay) =>
@@ -345,20 +347,20 @@ class ViewModeHandler[M](viewModeMP: ModelRW[M, ViewMode], crunchStateMP: ModelR
       log.info(s"VM: Set client newMode from $value to $newMode")
       val currentMode = value
 
-      val effects = currentMode match {
-        case ViewLive() => Effect(Future(SetCrunchPending()))
+      val actionResult: ActionResult[M] = currentMode match {
+        case ViewLive() =>
+          updated(newMode)
         case _ =>
-          val nextRequests = crunchStateMP.value match {
+          crunchStateMP.value match {
             case Pending(_) =>
-              log.info(s"CrunchState Pending - not requesting again")
-              Effect(Future(SetCrunchPending()))
+              log.info(s"CrunchState Pending. No need to request")
+              updated(newMode)
             case _ =>
-              log.info(s"CrunchState not Pending so requesting")
-              Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
+              log.info(s"CrunchState not Pending. Requesting CrunchState")
+              updated(newMode, Effect(Future(GetCrunchState())))
           }
-          nextRequests
       }
-      updated(newMode, effects)
+      actionResult
   }
 }
 
@@ -378,6 +380,21 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
   }
 }
 
+class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriod]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetForecastWeek(startDay, terminalName) =>
+      log.info(s"Requesting forecast week starting at ${startDay.toLocalDateTimeString()}")
+      val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call().map(res => SetForecastPeriod(res)))
+      effectOnly(apiCallEffect)
+    case SetForecastPeriod(Some(forecastPeriod)) =>
+      log.info(s"Received forecast period.")
+      updated(Ready(forecastPeriod))
+    case SetForecastPeriod(None) =>
+      log.info(s"No forecast available for requested dates")
+      updated(Unavailable)
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -385,11 +402,12 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override protected def initialModel = RootModel()
 
-  def currentViewMode(): ViewMode =  zoom(_.viewMode).value
+  def currentViewMode(): ViewMode = zoom(_.viewMode).value
 
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
       new CrunchUpdatesHandler(currentViewMode, zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
+      new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
