@@ -78,7 +78,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
                               latestUpdate: ModelR[M, MillisSinceEpoch],
                               modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
-  val crunchUpdatesRequestFrequency: FiniteDuration = 30 seconds
+  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   def latestUpdateMillis: MillisSinceEpoch = latestUpdate.value
 
@@ -112,7 +112,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
               GetCrunchStateAfter(crunchUpdatesRequestFrequency)
           }
       }
-      effectOnly(Effect(Future(ShowLoader("Asking for new flights..."))) + Effect(eventualAction))
+      effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
 
     case GetCrunchStateAfter(delay) =>
       log.info(s"Re-requesting CrunchState for ${viewMode().time.prettyDateTime()}")
@@ -147,6 +147,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       effectOnly(allEffects)
 
     case SetCrunchPending() =>
+      log.info(s"Clearing out the crunch stuff")
       updated((Pending(), 0L))
 
     case GetCrunchUpdatesAfter(delay) =>
@@ -352,7 +353,7 @@ class ViewModeHandler[M](viewModeMP: ModelRW[M, ViewMode], crunchStateMP: ModelR
           val nextRequests = crunchStateMP.value match {
             case Pending(_) =>
               log.info(s"CrunchState Pending - not requesting again")
-              Effect(Future(SetCrunchPending()))
+              Effect(Future(ShowLoader("Still updating...")))
             case _ =>
               log.info(s"CrunchState not Pending so requesting")
               Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
@@ -383,7 +384,7 @@ class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriod]]) extends Loggi
     case GetForecastWeek(startDay, terminalName) =>
       log.info(s"Requesting forecast week starting at ${startDay.toLocalDateTimeString()}")
       val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call().map(res => SetForecastPeriod(res)))
-      updated(Pending(), apiCallEffect)
+      effectOnly(apiCallEffect)
     case SetForecastPeriod(Some(forecastPeriod)) =>
       log.info(s"Received forecast period.")
       updated(Ready(forecastPeriod))

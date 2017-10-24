@@ -77,7 +77,7 @@ case class AirportConfig(
 }
 
 object ArrivalHelper {
-  def bestPax(flight: Arrival) = {
+  def bestPax(flight: Arrival): Int = {
     val DefaultPax = 0
     (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
       case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid

@@ -5,7 +5,6 @@ import drt.client.actions.Actions.GetForecastWeek
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.{ForecastPeriod, ForecastTimeSlot}
-import drt.shared.FlightsApi.TerminalName
 import drt.shared.{MilliDate, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -42,13 +41,9 @@ object TerminalForecastComponent {
 
       def drawSelect(names: Seq[String], values: List[String], value: String) = {
         <.select(^.className := "form-control", ^.value := value.toString,
-          ^.onChange ==> ((e: ReactEventFromInput) => {
-            Callback {
-              val sd = SDate(e.target.value)
-              props.router.set(props.page.copy(date = Option(sd.toLocalDateTimeString()))).runNow()
-              SPACircuit.dispatch(GetForecastWeek(sd, props.page.terminal))
-            }
-          }),
+          ^.onChange ==> ((e: ReactEventFromInput) =>
+              props.router.set(props.page.copy(date = Option(SDate(e.target.value).toLocalDateTimeString())))
+          ),
           values.zip(names).map {
             case (value, name) => <.option(^.value := value.toString, name)
           }.toTagMod)
@@ -61,7 +56,7 @@ object TerminalForecastComponent {
             drawSelect(
               yearOfMondays.map(_.ddMMyyString),
               yearOfMondays.map(_.toISOString()).toList,
-              props.page.date.map(SDate(_).toISOString()).getOrElse(getNextMonday(SDate.now()).toISOString()))
+              defaultStartDate(props.page.date).toISOString())
           )
         ),
         <.table(^.className := "forecast",
@@ -92,6 +87,10 @@ object TerminalForecastComponent {
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  def defaultStartDate(dateStringOption: Option[String]) = {
+    dateStringOption.map(SDate(_)).getOrElse(getNextMonday(SDate.now()))
+  }
 
   def apply(props: Props): VdomElement = component(props)
 }

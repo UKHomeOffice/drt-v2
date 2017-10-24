@@ -35,7 +35,7 @@ import services.graphstages.Crunch._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
-
+import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -282,7 +282,7 @@ class Application @Inject()(implicit val config: Configuration,
           )(new Timeout(30 seconds))
 
           crunchStateFuture.map {
-            case Some(PortState(_, m)) =>
+            case Some(PortState(_, m, _)) =>
               val thing: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(m.values.toSet, terminal)
 
               log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
@@ -460,7 +460,7 @@ class Application @Inject()(implicit val config: Configuration,
 }
 
 object Forecast {
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
     groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
         case (millis, cms) =>

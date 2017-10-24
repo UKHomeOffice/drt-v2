@@ -1,7 +1,8 @@
 package drt.client
 
+import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalForecastComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -35,6 +36,14 @@ object SPAMain extends js.JSApp {
           ViewLive()
       }
     }
+
+    def updateRequired(p: TerminalPageTabLoc) = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
+
+    def loadAction: Action = mode match {
+      case "planning" =>
+        GetForecastWeek(TerminalForecastComponent.defaultStartDate(date), terminal)
+      case _ => SetViewMode(viewMode)
+    }
   }
 
   case class TerminalsDashboardLoc(hours: Int) extends Loc
@@ -60,20 +69,29 @@ object SPAMain extends js.JSApp {
         dynRenderR((page: TerminalsDashboardLoc, ctl) => {
           TerminalsDashboardPage(page.hours)
         })
-      val terminal: dsl.Rule = dynamicRouteCT(("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option).caseClassDebug[TerminalPageTabLoc]) ~>
+      val terminal: dsl.Rule = dynamicRouteCT(("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option).caseClass[TerminalPageTabLoc]) ~>
         dynRenderR((page: TerminalPageTabLoc, router) => {
-          log.info(s"Got this page: $page")
-
-
           val props = TerminalComponent.Props(terminalPageTab = page, router)
           TerminalComponent(props)
         })
-
 
       val rule = home | terminal | terminalsDashboard
       rule.notFound(redirectToPage(TerminalsDashboardLoc(3))(Redirect.Replace))
     }
     .renderWith(layout)
+    .onPostRender((prev, current) => {
+      Callback(
+        (prev, current) match {
+          case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
+            if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
+          case (_, c: TerminalPageTabLoc) =>
+            SPACircuit.dispatch(c.loadAction)
+          case _ =>
+        }
+      )
+    })
+
+
 
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
@@ -88,8 +106,6 @@ object SPAMain extends js.JSApp {
   @JSExport
   def main(): Unit = {
     require()
-
-    log.info(s"think the port is ${pathToThisApp.split("/")}")
     log.warn("Application starting")
 
     import scalacss.ScalaCssReact._

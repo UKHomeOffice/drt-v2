@@ -2,8 +2,6 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.{GetForecastWeek, SetViewMode}
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.CrunchState
 import drt.shared.{AirportConfig, AirportInfo}
@@ -47,22 +45,16 @@ object TerminalDisplayModeComponent {
       <.div(
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-            SPACircuit.dispatch(SetViewMode(ViewLive()))
-            props.router.set(props.terminalPageTab.copy(mode = "current", date = None)).runNow()
-            scope.modState(_ => State("current"))
+            props.router.set(props.terminalPageTab.copy(mode = "current", date = None))
           }),
           <.li(^.className := snapshotDataClass,
             <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(mode = "snapshot", date = None)).runNow()
-              SPACircuit.dispatch(SetViewMode(ViewPointInTime(SDate.now())))
-              scope.modState(_ => State("snapshot"))
+              props.router.set(props.terminalPageTab.copy(mode = "snapshot", date = None))
             }
           ),
           <.li(^.className := planningClass,
             <.a(VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
-              SPACircuit.dispatch(GetForecastWeek(SDate.now(), props.terminalPageTab.terminal))
-              props.router.set(props.terminalPageTab.copy(mode = "planning", date = None)).runNow()
-              scope.modState(_ => State("planning"))
+              props.router.set(props.terminalPageTab.copy(mode = "planning", date = None))
             }
           )
         ),
@@ -79,7 +71,7 @@ object TerminalDisplayModeComponent {
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
-          <.div(^.id := "snapshot", ^.className := s"tab-pane $planningContentClass", {
+          <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
             if (state.activeTab == "planning") {
 
               val forecastRCP = SPACircuit.connect(_.forecastPeriodPot)
