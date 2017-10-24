@@ -347,20 +347,20 @@ class ViewModeHandler[M](viewModeMP: ModelRW[M, ViewMode], crunchStateMP: ModelR
       log.info(s"VM: Set client newMode from $value to $newMode")
       val currentMode = value
 
-      val effects = currentMode match {
-        case ViewLive() => Effect(Future(SetCrunchPending()))
+      val actionResult: ActionResult[M] = currentMode match {
+        case ViewLive() =>
+          updated(newMode)
         case _ =>
-          val nextRequests = crunchStateMP.value match {
+          crunchStateMP.value match {
             case Pending(_) =>
-              log.info(s"CrunchState Pending - not requesting again")
-              Effect(Future(ShowLoader("Still updating...")))
+              log.info(s"CrunchState Pending. No need to request")
+              updated(newMode)
             case _ =>
-              log.info(s"CrunchState not Pending so requesting")
-              Effect(Future(GetCrunchState())) + Effect(Future(SetCrunchPending()))
+              log.info(s"CrunchState not Pending. Requesting CrunchState")
+              updated(newMode, Effect(Future(GetCrunchState())))
           }
-          nextRequests
       }
-      updated(newMode, effects)
+      actionResult
   }
 }
 
@@ -379,6 +379,7 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
       updated(LoadingState(isLoading = false, ""))
   }
 }
+
 class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriod]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetForecastWeek(startDay, terminalName) =>

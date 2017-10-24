@@ -292,7 +292,6 @@ object CrunchApi {
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
-//  case class ForecastPeriod(days: Iterable[Iterable[ForecastTimeSlot]])
   case class ForecastPeriod(days: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]])
 
   def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
