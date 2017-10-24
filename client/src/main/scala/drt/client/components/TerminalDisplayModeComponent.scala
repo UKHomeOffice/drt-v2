@@ -85,7 +85,7 @@ object TerminalDisplayModeComponent {
               val forecastRCP = SPACircuit.connect(_.forecastPeriodPot)
               <.div(forecastRCP(forecastMP => {
                 <.div(forecastMP().renderReady(fp => {
-                  TerminalForecastComponent(TerminalForecastComponent.Props(fp))
+                  TerminalForecastComponent(TerminalForecastComponent.Props(fp, props.terminalPageTab, props.router))
                 }))
               }))
             } else ""
