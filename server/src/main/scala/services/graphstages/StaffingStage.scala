@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.{CrunchMinute, PortState, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
@@ -12,6 +12,7 @@ import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
+import scala.collection.immutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -107,9 +108,23 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
           case None =>
             log.info(s"No crunch to run simulations on")
             None
-          case Some(cs@PortState(_, crunchMinutes)) =>
+          case Some(cs@PortState(_, crunchMinutes, _)) =>
             log.info(s"Running simulations")
-            val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
+            val staffAvailable: Set[StaffMinute] = crunchMinutes
+              .values
+              .groupBy(_.terminalName)
+              .flatMap {
+                case (tn, tcms) =>
+                  val minutes = tcms.map(_.minute)
+                  (minutes.min to minutes.max)
+                    .map(m => {
+                      val available = staffAvailableByTerminalAndQueue(m, tn)
+                      StaffMinute(tn, m, available)
+                    })
+                    .toSet
+              }
+              .toSet
+            val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffAvailableByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
               case (_, tcms) =>
                 tcms.groupBy(_.queueName).flatMap {
@@ -151,7 +166,7 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
         allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
       }
 
-      def staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
+      def staffAvailableByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
         val rawShiftsString = shiftsOption.getOrElse("")
         val rawFixedPointsString = fixedPointsOption.getOrElse("")
         val myMovements = movementsOption.getOrElse(Seq())

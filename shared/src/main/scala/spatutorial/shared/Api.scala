@@ -248,7 +248,12 @@ object CrunchApi {
                          crunchMinutes: Set[CrunchMinute])
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
-                       crunchMinutes: Map[Int, CrunchMinute])
+                       crunchMinutes: Map[Int, CrunchMinute],
+                       staffMinutes: Map[Int, StaffMinute])
+
+  case class StaffMinute(terminalName: TerminalName, minute: MillisSinceEpoch, staff: Int) {
+    lazy val key: Int = s"$terminalName$minute$staff".hashCode
+  }
 
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
