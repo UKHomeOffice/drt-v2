@@ -61,8 +61,6 @@ object TerminalDesksAndQueuesRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-
-
   def apply(props: Props): VdomElement = component(props)
 }
 

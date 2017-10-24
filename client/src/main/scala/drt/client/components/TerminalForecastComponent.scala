@@ -94,5 +94,3 @@ object TerminalForecastComponent {
 
   def apply(props: Props): VdomElement = component(props)
 }
-
-

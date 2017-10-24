@@ -91,8 +91,6 @@ object SPAMain extends js.JSApp {
       )
     })
 
-
-
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
