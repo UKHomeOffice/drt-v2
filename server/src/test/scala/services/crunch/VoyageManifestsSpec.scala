@@ -48,7 +48,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
     val flights = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
-      case PortState(f, _) => f
+      case PortState(f, _, _) => f
     }
 
     val expectedSplits = Set(

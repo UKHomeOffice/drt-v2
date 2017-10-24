@@ -112,7 +112,9 @@ class CrunchTestLike
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      crunchStartDateProvider: (SDateLike) => SDateLike,
                      crunchEndDateProvider: (SDateLike) => SDateLike,
-                     now: () => SDateLike): CrunchGraph = {
+                     now: () => SDateLike,
+                     shifts: String = ""
+                    ): CrunchGraph = {
 
     val actorMaterializer = ActorMaterializer()
 
@@ -171,7 +173,7 @@ class CrunchTestLike
 
     val liveActorRef = liveCrunchStateActor(liveProbe, now)
 
-    val (liveCrunchInput, _, _, _, actualDesksAndQueuesInput) = RunnableSimulationGraph(
+    val (liveCrunchInput, shiftsInput, _, _, actualDesksAndQueuesInput) = RunnableSimulationGraph(
       crunchStateActor = liveActorRef,
       crunchSource = crunchSource,
       shiftsSource = shiftsSource,
@@ -199,6 +201,7 @@ class CrunchTestLike
     val askableForecastCrunchStateActor: AskableActorRef = forecastActorRef
 
     manifestsInput.offer(initialManifests)
+    shiftsInput.offer(shifts)
 
     CrunchGraph(
       baseArrivalsInput = baseArrivalsInput,

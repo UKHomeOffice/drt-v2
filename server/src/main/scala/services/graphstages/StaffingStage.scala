@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.{CrunchMinute, PortState, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
@@ -12,6 +12,7 @@ import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
+import scala.collection.immutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -102,38 +103,60 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
       }
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {
-
         portStateWithSimulation = portStateOption match {
           case None =>
             log.info(s"No crunch to run simulations on")
             None
-          case Some(cs@PortState(_, crunchMinutes)) =>
+          case Some(ps@PortState(_, crunchMinutes, _)) =>
             log.info(s"Running simulations")
-            val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffDeploymentsByTerminalAndQueue, minMaxDesks)
-            val crunchMinutesWithSimulation = crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
-              case (_, tcms) =>
-                tcms.groupBy(_.queueName).flatMap {
-                  case (qn, qcms) =>
-                    val crunchMinutes = qcms.toSeq.sortBy(_.minute).take(2880)
-                    val minWlSd = crunchMinutes.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
-                    val workLoads = minWlSd.map {
-                      case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
-                      case (_, wl, _) => wl
-                    }.toList
-                    val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
-                    val config = OptimizerConfig(slaByQueue(qn))
-                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
-                    val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
-                    log.info(s"Finished running simulation")
-                    crunchMinutes.sortBy(_.minute).zipWithIndex.map {
-                      case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
-                    }
-                }
-            }
-            Option(cs.copy(crunchMinutes = crunchMinutesWithSimulation))
+            val staffMinutes: Map[Int, StaffMinute] = staffMinutesForCrunchMinutes(crunchMinutes)
+            val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffAvailableByTerminalAndQueue, minMaxDesks)
+            val crunchMinutesWithSimulation = addSimulationNumbers(crunchMinutesWithDeployments, eGateBankSize)
+            Option(ps.copy(crunchMinutes = crunchMinutesWithSimulation, staffMinutes = staffMinutes))
         }
 
         pushAndPull()
+      }
+
+      def addSimulationNumbers(crunchMinutesWithDeployments: Map[Int, CrunchMinute], eGateBankSize: Int): Map[Int, CrunchMinute] = {
+        crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
+          case (_, tcms) =>
+            tcms.groupBy(_.queueName).flatMap {
+              case (qn, qcms) =>
+                val crunchMinutes = qcms.toSeq.sortBy(_.minute).take(2880)
+                val minWlSd = crunchMinutes.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
+                val workLoads = minWlSd.map {
+                  case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
+                  case (_, wl, _) => wl
+                }.toList
+                val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
+                val config = OptimizerConfig(slaByQueue(qn))
+                log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
+                val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
+                log.info(s"Finished running simulation")
+                crunchMinutes.sortBy(_.minute).zipWithIndex.map {
+                  case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
+                }
+            }
+        }
+      }
+
+      def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute]): Map[Int, StaffMinute] = {
+        crunchMinutes
+          .values
+          .groupBy(_.terminalName)
+          .flatMap {
+            case (tn, tcms) =>
+              val minutes = tcms.map(_.minute)
+              val minuteMillis = minutes.min to minutes.max by Crunch.oneMinuteMillis
+              minuteMillis
+                .map(m => {
+                  val available = staffAvailableByTerminalAndQueue(m, tn)
+                  val staffMinute = StaffMinute(tn, m, available)
+                  (staffMinute.key, staffMinute)
+                })
+                .toMap
+          }
       }
 
       def pushAndPull(): Unit = {
@@ -151,7 +174,7 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
         allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
       }
 
-      def staffDeploymentsByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
+      def staffAvailableByTerminalAndQueue: (MillisSinceEpoch, TerminalName) => Int = {
         val rawShiftsString = shiftsOption.getOrElse("")
         val rawFixedPointsString = fixedPointsOption.getOrElse("")
         val myMovements = movementsOption.getOrElse(Seq())
