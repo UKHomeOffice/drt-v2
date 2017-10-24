@@ -110,7 +110,6 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
           case Some(ps@PortState(_, crunchMinutes, _)) =>
             log.info(s"Running simulations")
             val staffMinutes: Map[Int, StaffMinute] = staffMinutesForCrunchMinutes(crunchMinutes)
-            log.info(s"Generated ${staffMinutes.size} staff minutes")
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), staffAvailableByTerminalAndQueue, minMaxDesks)
             val crunchMinutesWithSimulation = addSimulationNumbers(crunchMinutesWithDeployments, eGateBankSize)
             Option(ps.copy(crunchMinutes = crunchMinutesWithSimulation, staffMinutes = staffMinutes))
