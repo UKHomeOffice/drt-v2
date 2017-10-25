@@ -2,15 +2,12 @@ package drt.client.components
 
 import drt.client.components.TerminalDesksAndQueues.{queueActualsColour, queueColour}
 import drt.client.services.JSDateConversions
-import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomElement, _}
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
-
-import scala.scalajs.js.Date
 
 object TerminalDesksAndQueuesRow {
 
