@@ -17,7 +17,7 @@ import controllers.SystemActors.SplitsProvider
 import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import org.joda.time.chrono.ISOChronology
@@ -472,6 +472,23 @@ class Application @Inject()(implicit val config: Configuration,
 }
 
 object Forecast {
+  def headLineFigures(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName) = {
+    forecastMinutes
+      .filter(_.terminalName == terminalName)
+      .groupBy(
+        cm => getLocalLastMidnight(SDate(cm.minute)).millisSinceEpoch
+      )
+      .mapValues(cm => {
+        cm.groupBy(_.queueName)
+          .mapValues(
+            cms => Tuple2(
+              Math.round(cms.map(_.paxLoad).sum).toInt,
+              Math.round(cms.map(_.workLoad).sum).toInt
+            )
+          )
+      })
+  }
+
   def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
     groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
