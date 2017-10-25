@@ -269,7 +269,7 @@ class Application @Inject()(implicit val config: Configuration,
       def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
         val startMillis = midnightThisMorning - oneHourMillis * 3
         val endMillis = midnightThisMorning + oneHourMillis * 30
-        val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(5 seconds))
+        val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(30 seconds))
 
         crunchStateFuture.map {
           case Some(cu: CrunchUpdates) => Option(cu)
@@ -313,7 +313,7 @@ class Application @Inject()(implicit val config: Configuration,
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = getLocalNextMidnight(SDate(day)).millisSinceEpoch
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(5 seconds))
+    val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
       case Some(PortState(f, m, _)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
