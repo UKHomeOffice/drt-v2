@@ -112,7 +112,14 @@ trait SystemActors {
   val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-forecast-state-actor")
   val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
 
-  val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(system, airportConfig, pcpArrivalTimeCalculator, historicalSplitsProvider, liveCrunchStateActor, forecastCrunchStateActor, maxDaysToCrunch))
+  val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
+    system = system,
+    airportConfig = airportConfig,
+    pcpArrival = pcpArrivalTimeCalculator,
+    historicalSplitsProvider = historicalSplitsProvider,
+    liveCrunchStateActor = liveCrunchStateActor,
+    forecastCrunchStateActor = forecastCrunchStateActor,
+    maxDaysToCrunch = maxDaysToCrunch))
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], crunchInputs.shifts))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], crunchInputs.fixedPoints))

@@ -16,10 +16,10 @@ case class FixedPointsState(fixedPoints: String) {
   def updated(data: String): FixedPointsState = copy(fixedPoints = data)
 }
 
-class FixedPointsActor(subscriber: SourceQueueWithComplete[String]) extends FixedPointsActorBase {
+class FixedPointsActor(subscribers: List[SourceQueueWithComplete[String]]) extends FixedPointsActorBase {
   override def onUpdateState(data: String): Unit = {
-    log.info(s"Telling subscriber about updated fixed points: $data")
-    subscriber.offer(data)
+    log.info(s"Telling subscribers about updated fixed points: $data")
+    subscribers.map(_.offer(data))
   }
 }
 
