@@ -35,6 +35,7 @@ import services.graphstages.Crunch._
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
+
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -237,69 +238,68 @@ class Application @Inject()(implicit val config: Configuration,
       def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 
       def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
-    } =
-      new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
+    } = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
 
-        override implicit val timeout: Timeout = Timeout(5 seconds)
+      override implicit val timeout: Timeout = Timeout(5 seconds)
 
-        def actorSystem: ActorSystem = system
+      def actorSystem: ActorSystem = system
 
-        def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
-          if (isHistoricDate(day)) {
-            crunchStateForEndOfDay(day)
-          } else if (day < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
-            log.error(s"Trying to load live CrunchState from Forecast Actor.")
-            Future(None)
-          } else {
-            crunchStateForDayInForecast(day)
-          }
+      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
+        if (isHistoricDate(day)) {
+          crunchStateForEndOfDay(day)
+        } else if (day < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
+          log.error(s"Trying to load live CrunchState from Forecast Actor.")
+          Future(None)
+        } else {
+          crunchStateForDayInForecast(day)
         }
-
-        override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-          crunchStateAtPointInTime(pointInTime)
-        }
-
-        def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-          val startMillis = midnightThisMorning - oneHourMillis * 3
-          val endMillis = midnightThisMorning + oneHourMillis * 30
-          val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(5 seconds))
-
-          crunchStateFuture.map {
-            case Some(cu: CrunchUpdates) => Option(cu)
-            case _ => None
-          } recover {
-            case t =>
-              log.warn(s"Didn't get a CrunchUpdates: $t")
-              None
-          }
-        }
-
-        def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriod]] = {
-
-          val midnight = getLocalLastMidnight(SDate(startDay))
-          val crunchStateFuture = forecastCrunchStateActor.ask(
-            GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
-          )(new Timeout(30 seconds))
-
-          crunchStateFuture.map {
-            case Some(PortState(_, m, _)) =>
-              val thing: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(m.values.toSet, terminal)
-
-              log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-              Option(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, terminal)))
-            case None =>
-              log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
-              None
-          }
-        }
-
-        override def askableCacheActorRef: AskableActorRef = cacheActorRef
-
-        override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
-
-        override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
-
       }
+
+      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+        crunchStateAtPointInTime(pointInTime)
+      }
+
+      def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+        val startMillis = midnightThisMorning - oneHourMillis * 3
+        val endMillis = midnightThisMorning + oneHourMillis * 30
+        val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(5 seconds))
+
+        crunchStateFuture.map {
+          case Some(cu: CrunchUpdates) => Option(cu)
+          case _ => None
+        } recover {
+          case t =>
+            log.warn(s"Didn't get a CrunchUpdates: $t")
+            None
+        }
+      }
+
+      def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriod]] = {
+
+        val midnight = getLocalLastMidnight(SDate(startDay))
+        val crunchStateFuture = forecastCrunchStateActor.ask(
+          GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
+        )(new Timeout(30 seconds))
+
+        crunchStateFuture.map {
+          case Some(PortState(_, m, _)) =>
+            val thing: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(m.values.toSet, terminal)
+
+            log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
+            Option(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, terminal)))
+          case None =>
+            log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
+            None
+        }
+      }
+
+      override def askableCacheActorRef: AskableActorRef = cacheActorRef
+
+      override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
+
+      override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+
+    }
   }
 
   def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
@@ -341,17 +341,6 @@ class Application @Inject()(implicit val config: Configuration,
     val pointInTime = endMillis + oneHourMillis * 3
 
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
-  }
-
-  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[Map[MillisSinceEpoch, Seq[ForecastTimeSlot]]]] = {
-
-    val crunchStateFuture = forecastCrunchStateActor.ask(
-      GetPortState(startDay, SDate(startDay).addDays(7).millisSinceEpoch)
-    )(new Timeout(5 seconds))
-
-    crunchStateFuture.map {
-      case Some(PortState(_, m, _)) => Option(Forecast.rollUpForWeek(m.values.toSet, terminal))
-    }
   }
 
   def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
@@ -397,6 +386,29 @@ class Application @Inject()(implicit val config: Configuration,
       case unexpected =>
         log.error(s"got the wrong thing: $unexpected")
         NotFound("")
+    }
+  }
+
+  def getForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
+
+    val startDayMidnight = getLocalLastMidnight(SDate(startDay.toLong))
+    val crunchStateFuture = forecastCrunchStateActor.ask(
+      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(7).millisSinceEpoch)
+    )(new Timeout(30 seconds))
+
+    val fileName = s"$terminal-planning-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
+    crunchStateFuture.map {
+      case Some(PortState(_, m, _)) =>
+        val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, terminal)))
+        Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          HttpEntity.Strict(ByteString(csvData), Option("application/csv")
+          )
+        )
+
+      case None =>
+        log.error(s"Missing planning data for ${startDayMidnight.ddMMyyString}")
+        NotFound(s"Sorry, no planning summary available for week starting ${startDayMidnight.ddMMyyString}")
     }
   }
 
@@ -475,4 +487,3 @@ object Forecast {
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)
-

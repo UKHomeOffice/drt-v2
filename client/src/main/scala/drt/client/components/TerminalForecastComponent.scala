@@ -1,15 +1,14 @@
 package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.GetForecastWeek
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.{ForecastPeriod, ForecastTimeSlot}
 import drt.shared.{MilliDate, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom
 
 import scala.collection.immutable.Seq
 
@@ -41,9 +40,9 @@ object TerminalForecastComponent {
 
       def drawSelect(names: Seq[String], values: List[String], value: String) = {
         <.select(^.className := "form-control", ^.value := value.toString,
-          ^.onChange ==> ((e: ReactEventFromInput) =>
-              props.router.set(props.page.copy(date = Option(SDate(e.target.value).toLocalDateTimeString())))
-          ),
+          ^.onChange ==> ((e: ReactEventFromInput) => {
+            props.router.set(props.page.copy(date = Option(SDate(e.target.value).toLocalDateTimeString())))
+          }),
           values.zip(names).map {
             case (value, name) => <.option(^.value := value.toString, name)
           }.toTagMod)
@@ -57,6 +56,14 @@ object TerminalForecastComponent {
               yearOfMondays.map(_.ddMMyyString),
               yearOfMondays.map(_.toISOString()).toList,
               defaultStartDate(props.page.date).toISOString())
+          )
+        ),
+        <.div(^.className := "export-links",
+          <.a(
+            "Export Week",
+            ^.className := "btn btn-link",
+            ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.date).millisSinceEpoch}/${props.page.terminal}",
+            ^.target := "_blank"
           )
         ),
         <.table(^.className := "forecast",

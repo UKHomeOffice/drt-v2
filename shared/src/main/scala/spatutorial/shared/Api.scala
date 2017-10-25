@@ -8,7 +8,6 @@ import scala.collection.immutable.{Map, _}
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
-
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"
   val deskEeaNonMachineReadable = "EEA NMR"
@@ -33,7 +32,6 @@ object FlightParsing {
     }
   }
 }
-
 
 sealed trait SplitStyle {
   def name: String = getClass.getSimpleName
@@ -160,6 +158,7 @@ trait SDateLike {
 
   /**
     * Days of the week 1 to 7 (Monday is 1)
+    *
     * @return
     */
   def getDayOfWeek(): Int
@@ -174,7 +173,7 @@ trait SDateLike {
 
   def getMinutes(): Int
 
-  def millisSinceEpoch: Long
+  def millisSinceEpoch: MillisSinceEpoch
 
   def toISOString(): String
 

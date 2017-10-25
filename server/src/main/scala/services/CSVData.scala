@@ -1,10 +1,31 @@
 package services
 
-import drt.shared.CrunchApi.CrunchMinute
+import drt.shared.CrunchApi.{CrunchMinute, ForecastPeriod, ForecastTimeSlot}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 
 object CSVData {
+  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod) = {
+    val sortedDays = forecastPeriod.days.toList.sortBy(_._1)
+    val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.transpose(_._2.take(96))
+
+    val headings1 = "," + sortedDays.map {
+      case (day, _) =>
+        s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
+    }.mkString(",,")
+    val headings2 = "Start Time," + sortedDays.map(_ => "Avail,Rec").mkString(",")
+
+    val data = byTimeSlot.map(row => {
+
+      s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," + row.map(
+        col => {
+          s"${col.available},${col.required}"
+        }).mkString(",")
+    }).mkString("\n")
+    
+    List(headings1, headings2, data).mkString("\n")
+  }
+
 
   def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], terminalName: TerminalName, queues: Seq[QueueName]) = {
     val colHeadings = List("Pax", "Wait", "Desks req")
