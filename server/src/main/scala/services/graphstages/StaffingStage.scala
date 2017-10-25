@@ -12,11 +12,10 @@ import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
-import scala.collection.immutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int])
+class StaffingStage(name: String, initialOptionalPortState: Option[PortState], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int], warmUpMinutes: Int)
   extends GraphStage[FanInShape4[PortState, String, String, Seq[StaffMovement], PortState]] {
   val inCrunch: Inlet[PortState] = Inlet[PortState]("PortStateWithoutSimulations.in")
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
@@ -33,7 +32,7 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
 
   var portStateWithSimulation: Option[PortState] = None
 
-  val log: Logger = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   override def shape: FanInShape4[PortState, String, String, Seq[StaffMovement], PortState] =
     new FanInShape4(inCrunch, inShifts, inFixedPoints, inMovements, outCrunch)
@@ -119,24 +118,38 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
       }
 
       def addSimulationNumbers(crunchMinutesWithDeployments: Map[Int, CrunchMinute], eGateBankSize: Int): Map[Int, CrunchMinute] = {
+        val minutesInACrunch = 1440
+        val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
+
         crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
-          case (_, tcms) =>
-            tcms.groupBy(_.queueName).flatMap {
-              case (qn, qcms) =>
-                val crunchMinutes = qcms.toSeq.sortBy(_.minute).take(2880)
-                val minWlSd = crunchMinutes.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
-                val workLoads = minWlSd.map {
-                  case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
-                  case (_, wl, _) => wl
-                }.toList
-                val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }.toList
-                val config = OptimizerConfig(slaByQueue(qn))
-                log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
-                val simWaits = TryRenjin.runSimulationOfWork(workLoads, deployedDesks, config)
-                log.info(s"Finished running simulation")
-                crunchMinutes.sortBy(_.minute).zipWithIndex.map {
-                  case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
-                }
+          case (_, tCrunchMinutes) =>
+            tCrunchMinutes.groupBy(_.queueName).flatMap {
+              case (qn, qCrunchMinutes) =>
+                qCrunchMinutes
+                  .toList
+                  .sortBy(_.minute)
+                  .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+                  .flatMap(cms => {
+                    val minWlSd = cms.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
+                    val workLoads = minWlSd.map {
+                      case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
+                      case (_, wl, _) => wl
+                    }
+                    val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }
+                    val config = OptimizerConfig(slaByQueue(qn))
+                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
+                    val simWaits = TryRenjin
+                      .runSimulationOfWork(workLoads, deployedDesks, config)
+                      .drop(warmUpMinutes)
+                    log.info(s"Finished running simulation. Dropping $warmUpMinutes minutes from ${cms.size} crunch minutes")
+                    cms
+                      .sortBy(_.minute)
+                      .drop(warmUpMinutes)
+                      .zipWithIndex
+                      .map {
+                        case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
+                      }
+                  })
             }
         }
       }
@@ -148,7 +161,10 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
           .flatMap {
             case (tn, tcms) =>
               val minutes = tcms.map(_.minute)
-              val minuteMillis = minutes.min to minutes.max by Crunch.oneMinuteMillis
+              val startMinuteMillis = minutes.min + (warmUpMinutes * Crunch.oneMinuteMillis)
+              val endMinuteMillis = minutes.max
+              val minuteMillis = startMinuteMillis to endMinuteMillis by Crunch.oneMinuteMillis
+              log.info(s"Getting ${minuteMillis.size} staff minutes")
               minuteMillis
                 .map(m => {
                   val available = staffAvailableByTerminalAndQueue(m, tn)
@@ -164,9 +180,9 @@ class StaffingStage(initialOptionalPortState: Option[PortState], minMaxDesks: Ma
           portStateWithSimulation match {
             case None =>
               log.info(s"Nothing to push")
-            case Some(cs) =>
+            case Some(ps) =>
               log.info(s"Pushing PortStateWithSimulation")
-              push(outCrunch, cs)
+              push(outCrunch, ps)
               portStateWithSimulation = None
           }
         else log.info(s"outCrunch not available to push")
@@ -225,12 +241,12 @@ object StaffDeploymentCalculator {
     .values
     .groupBy(_.terminalName)
     .flatMap {
-      case (tn, tcrs) =>
-        val terminalByMinute: Map[Int, CrunchMinute] = tcrs
+      case (tn, tCrunchMinutes) =>
+        val terminalByMinute: Map[Int, CrunchMinute] = tCrunchMinutes
           .groupBy(_.minute)
           .flatMap {
-            case (minute, mcrs) =>
-              val deskRecAndQueueNames: Seq[(QueueName, Int)] = mcrs.map(cm => (cm.queueName, cm.deskRec)).toSeq.sortBy(_._1)
+            case (minute, mCrunchMinutes) =>
+              val deskRecAndQueueNames: Seq[(QueueName, Int)] = mCrunchMinutes.map(cm => (cm.queueName, cm.deskRec)).toSeq.sortBy(_._1)
               val queueMinMaxDesks: Map[QueueName, (List[Int], List[Int])] = minMaxDesks.getOrElse(tn, Map())
               val minMaxByQueue: Map[QueueName, (Int, Int)] = queueMinMaxDesks.map {
                 case (qn, minMaxList) =>
@@ -239,7 +255,7 @@ object StaffDeploymentCalculator {
                   (qn, (minDesks, maxDesks))
               }
               val deploymentsAndQueueNames: Map[String, Int] = deployer(deskRecAndQueueNames, available(minute, tn), minMaxByQueue).toMap
-              mcrs.map(cm => (cm.key, cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))).toMap
+              mCrunchMinutes.map(cm => (cm.key, cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))).toMap
           }
         terminalByMinute
     }

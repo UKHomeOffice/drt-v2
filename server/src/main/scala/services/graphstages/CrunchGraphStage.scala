@@ -297,7 +297,7 @@ class CrunchGraphStage(name: String,
       val minutesInACrunch = 1440
       val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
 
-      val queueWorkloadsByCrunchPeriod = queueWorkloads
+      val queueWorkloadsByCrunchPeriod: Iterator[List[(MillisSinceEpoch, (Load, Load))]] = queueWorkloads
         .sortBy(_._1)
         .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
 
@@ -309,7 +309,8 @@ class CrunchGraphStage(name: String,
             .drop(warmUpMinutes)
         })
         .toMap
-      queueCrunchMinutes
+      val firstWarmUpMinutes = crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads.sortBy(_._1).take(warmUpMinutes))
+      firstWarmUpMinutes ++ queueCrunchMinutes
     }
 
     def crunchMinutes(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {

@@ -12,7 +12,7 @@ import scala.collection.immutable.List
 class StaffMinutesSpec extends CrunchTestLike {
   "Given a flight with one passenger " +
     "When I ask for the PortState " +
-    "Then I should see the staff available fir the duration of the triggered crunch" >> {
+    "Then I should see the staff available for the duration of the triggered crunch" >> {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(

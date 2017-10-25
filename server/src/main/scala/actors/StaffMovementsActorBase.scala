@@ -18,10 +18,10 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
 }
 
 
-class StaffMovementsActor(subscriber: SourceQueueWithComplete[Seq[StaffMovement]]) extends StaffMovementsActorBase {
+class StaffMovementsActor(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]]) extends StaffMovementsActorBase {
   override def onUpdateState(data: StaffMovements) = {
-    log.info(s"Telling subscriber about updated staff movements")
-    subscriber.offer(data.staffMovements)
+    log.info(s"Telling subscribers about updated staff movements")
+    subscribers.map(_.offer(data.staffMovements))
   }
 }
 

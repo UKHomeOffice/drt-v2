@@ -24,10 +24,10 @@ case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to:
 
 case object GetShifts
 
-class ShiftsActor(subscriber: SourceQueueWithComplete[String]) extends ShiftsActorBase {
+class ShiftsActor(subscribers: List[SourceQueueWithComplete[String]]) extends ShiftsActorBase {
   override def onUpdateState(data: String) = {
-    log.info(s"Telling subscriber about updated shifts")
-    subscriber.offer(data)
+    log.info(s"Telling subscribers about updated shifts")
+    subscribers.map(_.offer(data))
   }
 }
 
