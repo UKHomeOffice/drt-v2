@@ -211,7 +211,8 @@ object CrunchSystem {
   }
 
   def initialArrivals(arrivalsActor: AskableActorRef): Set[Arrival] = {
-    val arrivalsFuture: Future[Set[Arrival]] = arrivalsActor.ask(GetState)(new Timeout(5 minutes)).map {
+    val canWaitMinutes = 5
+    val arrivalsFuture: Future[Set[Arrival]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
       case ArrivalsState(arrivals) => arrivals.values.toSet
       case _ => Set[Arrival]()
     }
@@ -221,6 +222,6 @@ object CrunchSystem {
         log.warn(s"Failed to get an initial ArrivalsState: $t")
         Set[Arrival]()
     }
-    Await.result(arrivalsFuture, 1 minute)
+    Await.result(arrivalsFuture, canWaitMinutes minutes)
   }
 }
