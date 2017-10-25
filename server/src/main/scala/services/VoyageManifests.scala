@@ -60,7 +60,7 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
 
   def start(): Future[Unit] = {
     val askableActor: AskableActorRef = voyageManifestsActor
-    askableActor.ask(GetState)(new Timeout(5 seconds)).map {
+    askableActor.ask(GetState)(new Timeout(30 seconds)).map {
       case VoyageManifestState(manifests, latestFilename) =>
         manifestsState = manifests
         log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
