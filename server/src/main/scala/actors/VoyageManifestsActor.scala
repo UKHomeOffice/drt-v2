@@ -23,7 +23,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
 
   val snapshotInterval = 500
 
-  override def persistenceId: String = "VoyageManifests"
+  override def persistenceId: String = "voyage-manifests"
 
   override def receiveRecover: Receive = {
     case recoveredLZF: String =>
