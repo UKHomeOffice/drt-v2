@@ -130,6 +130,9 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
                   .sortBy(_.minute)
                   .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
                   .flatMap(cms => {
+                    val allMillis = cms.map(_.minute)
+                    val firstMinute = SDate(allMillis.min)
+                    val lastMinute = SDate(allMillis.max)
                     val minWlSd = cms.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
                     val workLoads = minWlSd.map {
                       case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
@@ -137,11 +140,11 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
                     }
                     val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }
                     val config = OptimizerConfig(slaByQueue(qn))
-                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks")
+                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks - ${firstMinute.toLocalDateTimeString()} to ${lastMinute.toLocalDateTimeString()}")
                     val simWaits = TryRenjin
                       .runSimulationOfWork(workLoads, deployedDesks, config)
                       .drop(warmUpMinutes)
-                    log.info(s"Finished running simulation. Dropping $warmUpMinutes minutes from ${cms.size} crunch minutes")
+                    log.info(s"Finished running simulation.")
                     cms
                       .sortBy(_.minute)
                       .drop(warmUpMinutes)

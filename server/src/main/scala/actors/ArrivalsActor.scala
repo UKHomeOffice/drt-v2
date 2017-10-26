@@ -11,12 +11,12 @@ import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapsh
 case class ArrivalsState(arrivals: Map[Int, Arrival])
 
 class ForecastBaseArrivalsActor extends ArrivalsActor {
-  override def persistenceId: String = s"live-${getClass.getName}"
+  override def persistenceId: String = s"${getClass.getName}-forecast-base"
   val log: Logger = LoggerFactory.getLogger(getClass)
 }
 
 class LiveArrivalsActor extends ArrivalsActor {
-  override def persistenceId: String = s"forecast-${getClass.getName}"
+  override def persistenceId: String = s"${getClass.getName}-live"
   val log: Logger = LoggerFactory.getLogger(getClass)
 }
 

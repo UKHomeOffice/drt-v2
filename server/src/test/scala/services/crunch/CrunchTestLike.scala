@@ -113,7 +113,8 @@ class CrunchTestLike
                      crunchStartDateProvider: (SDateLike) => SDateLike,
                      crunchEndDateProvider: (SDateLike) => SDateLike,
                      now: () => SDateLike,
-                     shifts: String = ""
+                     shifts: String = "",
+                     fixedPoints: String = ""
                     ): CrunchGraph = {
 
     val actorMaterializer = ActorMaterializer()
@@ -160,10 +161,10 @@ class CrunchTestLike
     val actualDesksAndQueuesSource = Source.queue[ActualDeskStats](0, OverflowStrategy.backpressure)
 
     val forecastProbe = testProbe("forecast")
-    val forecastStaffingGraphStage = new StaffingStage("forecast", None, minMaxDesks, slaByQueue, 120)
+    val forecastStaffingGraphStage = new StaffingStage(name = "forecast", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120)
     val forecastActorRef = forecastCrunchStateActor(forecastProbe, now)
 
-    val (forecastCrunchInput, forecastShiftsInput, _, _) = RunnableForecastSimulationGraph(
+    val (forecastCrunchInput, forecastShiftsInput, forecastFixedPointsInput, _) = RunnableForecastSimulationGraph(
       crunchSource = crunchSource,
       shiftsSource = shiftsSource,
       fixedPointsSource = fixedPointsSource,
@@ -177,13 +178,13 @@ class CrunchTestLike
       cruncher = crunchStage(name = "forecast", manifestsUsed = false),
       simulationQueueSubscriber = forecastCrunchInput
     ).run()(actorMaterializer)
-    val liveStaffingGraphStage = new StaffingStage("live", None, minMaxDesks, slaByQueue, 120)
+    val liveStaffingGraphStage = new StaffingStage(name = "live", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120)
     val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
     val liveProbe = testProbe("live")
 
     val liveActorRef = liveCrunchStateActor(liveProbe, now)
 
-    val (liveCrunchInput, liveShiftsInput, _, _, actualDesksAndQueuesInput) = RunnableLiveSimulationGraph(
+    val (liveCrunchInput, liveShiftsInput, liveFixedPointsInput, _, actualDesksAndQueuesInput) = RunnableLiveSimulationGraph(
       crunchStateActor = liveActorRef,
       crunchSource = crunchSource,
       shiftsSource = shiftsSource,
@@ -212,7 +213,10 @@ class CrunchTestLike
 
     manifestsInput.offer(initialManifests)
     liveShiftsInput.offer(shifts)
+    liveFixedPointsInput.offer(fixedPoints)
+
     forecastShiftsInput.offer(shifts)
+    forecastFixedPointsInput.offer(fixedPoints)
 
     CrunchGraph(
       baseArrivalsInput = baseArrivalsInput,
