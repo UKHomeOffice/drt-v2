@@ -30,15 +30,17 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
   var fixedPointsOption: Option[String] = None
   var movementsOption: Option[Seq[StaffMovement]] = None
 
+  var stateAwaitingPush = false
+
   var portStateWithSimulation: Option[PortState] = None
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   override def shape: FanInShape4[PortState, String, String, Seq[StaffMovement], PortState] =
     new FanInShape4(inCrunch, inShifts, inFixedPoints, inMovements, outCrunch)
-
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
     new GraphStageLogic(shape) {
+
       override def preStart(): Unit = {
         initialOptionalPortState match {
           case Some(initialPortState: PortState) =>
@@ -49,7 +51,6 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
 
         super.preStart()
       }
-
       setHandler(inCrunch, new InHandler {
         override def onPush(): Unit = {
           grabAllAvailable()
@@ -82,6 +83,23 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
         override def onPull(): Unit = pushAndPull()
       })
 
+
+      def mergePortState(portStateOption: Option[PortState], newState: PortState): PortState = {
+        portStateOption match {
+          case None => newState
+          case Some(existingState) =>
+            PortState(
+              flights = newState.flights,
+              crunchMinutes = newState.crunchMinutes.foldLeft(existingState.crunchMinutes) {
+                case (soFar, (idx, cm)) => soFar.updated(idx, cm)
+              },
+              staffMinutes = newState.staffMinutes.foldLeft(existingState.staffMinutes) {
+                case (soFar, (idx, sm)) => soFar.updated(idx, sm)
+              }
+            )
+        }
+      }
+
       def grabAllAvailable(): Unit = {
         if (isAvailable(inShifts)) {
           log.info(s"Grabbing available inShifts")
@@ -97,7 +115,8 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
         }
         if (isAvailable(inCrunch)) {
           log.info(s"Grabbing available inCrunch")
-          portStateOption = Option(grab(inCrunch))
+          portStateOption = Option(mergePortState(portStateOption, grab(inCrunch)))
+          stateAwaitingPush = true
         }
       }
 
@@ -113,6 +132,7 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
             val crunchMinutesWithSimulation = addSimulationNumbers(crunchMinutesWithDeployments, eGateBankSize)
             Option(ps.copy(crunchMinutes = crunchMinutesWithSimulation, staffMinutes = staffMinutes))
         }
+        stateAwaitingPush = true
 
         pushAndPull()
       }
@@ -180,13 +200,15 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
 
       def pushAndPull(): Unit = {
         if (isAvailable(outCrunch))
-          portStateWithSimulation match {
-            case None =>
-              log.info(s"Nothing to push")
-            case Some(ps) =>
+          (portStateWithSimulation, stateAwaitingPush) match {
+            case (None, _) =>
+              log.info(s"No state to push yet")
+            case (Some(_), false) =>
+              log.info(s"No updates to push")
+            case (Some(ps), true) =>
               log.info(s"Pushing PortStateWithSimulation")
               push(outCrunch, ps)
-              portStateWithSimulation = None
+              stateAwaitingPush = false
           }
         else log.info(s"outCrunch not available to push")
 
