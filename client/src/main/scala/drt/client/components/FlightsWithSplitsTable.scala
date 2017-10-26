@@ -188,9 +188,10 @@ object FlightTableRow {
           <.td(^.key := flight.FlightID.toString + "-pcptimefrom", pcpTimeRange(flight, props.bestPax)),
           <.td(^.key := flight.FlightID.toString + "-apipax", apiPax),
           <.td(^.key := flight.FlightID.toString + "-portpax", flight.ActPax),
+          <.td(^.key := flight.FlightID.toString + "-paxdiff", math.abs(flight.ActPax - apiPax)),
           <.td(^.key := flight.FlightID.toString + "-apitx", apiPax - apiExTransPax),
           <.td(^.key := flight.FlightID.toString + "-porttx", flight.TranPax),
-          <.td(^.key := flight.FlightID.toString + "-actpax", props.paxComponent(flight, apiSplits)),
+          <.td(^.key := flight.FlightID.toString + "-txdiff", math.abs(flight.TranPax - (apiPax - apiExTransPax))),
           <.td(^.key := flight.FlightID.toString + "-splits", splitsComponents.toTagMod))
       }.recover {
         case e => log.error(s"couldn't make flight row $e")
