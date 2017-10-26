@@ -17,8 +17,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.{Success, Try}
 
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: String) {
-  val sftp: SFTPClient = sftpClient(ftpServer, username, path)
-  def arrivals: Flights = Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode))))
+  def sftp: SFTPClient = sftpClient(ftpServer, username, path)
+  def arrivals: Flights = {
+    Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode))))
+  }
 }
 
 object AclFeed {
