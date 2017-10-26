@@ -46,6 +46,12 @@ class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], pr
 case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Flights],
                        liveArrivalsInput: SourceQueueWithComplete[Flights],
                        manifestsInput: SourceQueueWithComplete[VoyageManifests],
+                       liveShiftsInput: SourceQueueWithComplete[String],
+                       liveFixedPointsInput: SourceQueueWithComplete[String],
+                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
+                       forecastShiftsInput: SourceQueueWithComplete[String],
+                       forecastFixedPointsInput: SourceQueueWithComplete[String],
+                       forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
                        actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
                        askableLiveCrunchStateActor: AskableActorRef,
                        askableForecastCrunchStateActor: AskableActorRef,
@@ -112,6 +118,7 @@ class CrunchTestLike
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      crunchStartDateProvider: (SDateLike) => SDateLike,
                      crunchEndDateProvider: (SDateLike) => SDateLike,
+                     earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      shifts: String = "",
                      fixedPoints: String = ""
@@ -140,7 +147,7 @@ class CrunchTestLike
       csvSplitsProvider = csvSplitsProvider,
       crunchStartFromFirstPcp = crunchStartDateProvider,
       crunchEndFromLastPcp = crunchEndDateProvider,
-      earliestAndLatestAffectedPcpTime = (_, _) => Some((SDate.now(), SDate.now())),
+      earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTime,
       expireAfterMillis = 2 * oneDayMillis,
       maxDaysToCrunch = 100,
       manifestsUsed = manifestsUsed,
@@ -164,7 +171,7 @@ class CrunchTestLike
     val forecastStaffingGraphStage = new StaffingStage(name = "forecast", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, now = now, warmUpMinutes = 120, expireAfterMillis = 2 * oneDayMillis)
     val forecastActorRef = forecastCrunchStateActor(forecastProbe, now)
 
-    val (forecastCrunchInput, forecastShiftsInput, forecastFixedPointsInput, _) = RunnableForecastSimulationGraph(
+    val (forecastCrunchInput, forecastShiftsInput, forecastFixedPointsInput, forecastStaffMovementsInput) = RunnableForecastSimulationGraph(
       crunchSource = crunchSource,
       shiftsSource = shiftsSource,
       fixedPointsSource = fixedPointsSource,
@@ -184,7 +191,7 @@ class CrunchTestLike
 
     val liveActorRef = liveCrunchStateActor(liveProbe, now)
 
-    val (liveCrunchInput, liveShiftsInput, liveFixedPointsInput, _, actualDesksAndQueuesInput) = RunnableLiveSimulationGraph(
+    val (liveCrunchInput, liveShiftsInput, liveFixedPointsInput, liveStaffMovementsInput, actualDesksAndQueuesInput) = RunnableLiveSimulationGraph(
       crunchStateActor = liveActorRef,
       crunchSource = crunchSource,
       shiftsSource = shiftsSource,
@@ -222,6 +229,12 @@ class CrunchTestLike
       baseArrivalsInput = baseArrivalsInput,
       liveArrivalsInput = liveArrivalsInput,
       manifestsInput = manifestsInput,
+      liveShiftsInput = liveShiftsInput,
+      liveFixedPointsInput = liveFixedPointsInput,
+      liveStaffMovementsInput = liveStaffMovementsInput,
+      forecastShiftsInput = forecastShiftsInput,
+      forecastFixedPointsInput = forecastFixedPointsInput,
+      forecastStaffMovementsInput = forecastStaffMovementsInput,
       actualDesksAndQueuesInput = actualDesksAndQueuesInput,
       askableLiveCrunchStateActor = askableLiveCrunchStateActor,
       askableForecastCrunchStateActor = askableForecastCrunchStateActor,
