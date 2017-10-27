@@ -62,11 +62,9 @@ object TerminalDesksAndQueuesRow {
 }
 
 object TerminalDesksAndQueues {
-  val queueDisplayNames = Map(Queues.EeaDesk -> "EEA", Queues.NonEeaDesk -> "Non-EEA", Queues.EGate -> "e-Gates",
-    Queues.FastTrack -> "Fast Track",
-    Queues.Transfer -> "Tx")
 
-  def queueDisplayName(name: String): QueueName = queueDisplayNames.getOrElse(name, name)
+
+  def queueDisplayName(name: String): QueueName = Queues.queueDisplayNames.getOrElse(name, name)
 
   def queueColour(queueName: String): String = queueName + "-user-desk-rec"
 

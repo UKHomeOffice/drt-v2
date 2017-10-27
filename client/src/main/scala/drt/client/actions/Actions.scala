@@ -3,7 +3,7 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, TimeRangeHours, ViewMode}
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, ForecastPeriodWithHeadlines}
 import drt.shared.FlightsApi._
 import drt.shared._
 
@@ -30,7 +30,7 @@ object Actions {
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
-  case class SetForecastPeriod(forecastPeriodOption: Option[ForecastPeriod]) extends Action
+  case class SetForecastPeriod(forecastPeriodOption: Option[ForecastPeriodWithHeadlines]) extends Action
 
   case class GetAirportConfig() extends Action
 
