@@ -262,9 +262,12 @@ object CrunchApi {
 
   case class StaffMinute(terminalName: TerminalName,
                          minute: MillisSinceEpoch,
-                         staff: Int,
+                         shifts: Int,
+                         fixedPoints: Int,
+                         movements: Int,
                          lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
     lazy val key: Int = s"$terminalName$minute".hashCode
+    lazy val available = shifts + movements - fixedPoints
   }
 
   case class CrunchMinute(terminalName: TerminalName,
