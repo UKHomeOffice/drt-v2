@@ -10,7 +10,7 @@ import drt.client.actions.Actions._
 import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, MillisSinceEpoch}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 
@@ -40,7 +40,7 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
-                     forecastPeriodPot: Pot[ForecastPeriod] = Empty,
+                     forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                      airportConfig: Pot[AirportConfig] = Empty,
                      shiftsRaw: Pot[String] = Empty,
@@ -380,7 +380,7 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
   }
 }
 
-class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriod]]) extends LoggingActionHandler(modelRW) {
+class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetForecastWeek(startDay, terminalName) =>
       log.info(s"Requesting forecast week starting at ${startDay.toLocalDateTimeString()}")

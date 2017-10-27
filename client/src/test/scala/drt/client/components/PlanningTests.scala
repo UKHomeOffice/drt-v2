@@ -5,7 +5,7 @@ import utest.{TestSuite, _}
 
 object PlanningTests extends TestSuite {
 
-  import TerminalForecastComponent.getNextMonday
+  import TerminalPlanningComponent.getNextMonday
 
   def tests = TestSuite {
     "When getting the next Monday for a date" - {

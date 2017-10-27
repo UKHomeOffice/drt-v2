@@ -2,7 +2,7 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalForecastComponent, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -41,7 +41,7 @@ object SPAMain extends js.JSApp {
 
     def loadAction: Action = mode match {
       case "planning" =>
-        GetForecastWeek(TerminalForecastComponent.defaultStartDate(date), terminal)
+        GetForecastWeek(TerminalPlanningComponent.defaultStartDate(date), terminal)
       case _ => SetViewMode(viewMode)
     }
   }

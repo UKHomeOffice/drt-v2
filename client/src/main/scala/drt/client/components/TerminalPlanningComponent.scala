@@ -2,8 +2,8 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{ForecastPeriod, ForecastTimeSlot}
-import drt.shared.{MilliDate, SDateLike}
+import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot}
+import drt.shared.{MilliDate, Queues, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -12,7 +12,7 @@ import org.scalajs.dom
 
 import scala.collection.immutable.Seq
 
-object TerminalForecastComponent {
+object TerminalPlanningComponent {
 
   def getNextMonday(start: SDateLike) = {
     val monday = if (start.getDayOfWeek() == 1) start else start.addDays(8 - start.getDayOfWeek())
@@ -20,10 +20,10 @@ object TerminalForecastComponent {
     SDate(f"${monday.getFullYear()}-${monday.getMonth()}%02d-${monday.getDate()}%02dT00:00:00")
   }
 
-  case class Props(forecastPeriod: ForecastPeriod, page: TerminalPageTabLoc, router: RouterCtl[Loc]) {
+  case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) {
 
     def hash = {
-      forecastPeriod.days.toList.map {
+      forecastPeriod.forecast.days.toList.map {
         case (day, slots) => slots.hashCode
       }
     }.hashCode
@@ -35,7 +35,7 @@ object TerminalForecastComponent {
 
   val component = ScalaComponent.builder[Props]("TerminalForecast")
     .renderP((scope, props) => {
-      val sortedDays = props.forecastPeriod.days.toList.sortBy(_._1)
+      val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
       val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.transpose(_._2.take(96))
 
       def drawSelect(names: Seq[String], values: List[String], value: String) = {
@@ -60,30 +60,59 @@ object TerminalForecastComponent {
         ),
         <.div(^.className := "export-links",
           <.a(
+            "Export Headlines",
+            ^.className := "btn btn-link",
+            ^.href := s"${dom.window.location.pathname}/export/headlines/${defaultStartDate(props.page.date).millisSinceEpoch}/${props.page.terminal}",
+            ^.target := "_blank"
+          ),
+          <.a(
             "Export Week",
             ^.className := "btn btn-link",
             ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.date).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           )
         ),
+        <.h3("Headline Figures"),
+        <.table(^.className := "headlines",
+          <.thead(
+            <.tr(
+              <.th(^.className := "queue-heading"),
+              props.forecastPeriod.headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
+                day => <.th(s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}")
+              ).toTagMod
+            ), {
+              val groupedByQ = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.queue)
+              Queues.queueOrder.flatMap(q => groupedByQ.get(q).map(qhls => <.tr(
+                <.th(^.className := "queue-heading", s"${Queues.queueDisplayNames.getOrElse(q, q)}"), qhls.toList.sortBy(_.day).map(qhl => <.td(qhl.paxNos)).toTagMod
+              ))).toTagMod
+            }, {
+              val byDay = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.day).toList
+              List(
+                <.tr(^.className := "total", <.th(^.className := "queue-heading", "Total Pax"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.paxNos).sum)).toTagMod),
+                <.tr(^.className := "total", <.th(^.className := "queue-heading", "Workloads"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.workload).sum)).toTagMod)
+              ).toTagMod
+            }
+          )
+        ),
+        <.h3("Total desks required at each hour of the day"),
         <.table(^.className := "forecast",
           <.thead(
             <.tr(
-              <.th(^.className := "heading"), sortedDays.map {
+              <.th(^.colSpan := 2, ^.className := "heading"), sortedDays.map {
                 case (day, _) =>
                   <.th(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}")
               }.toTagMod
             ),
             <.tr(
-              <.th(^.className := "heading", "Time"), sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
+              <.th(^.colSpan := 2, ^.className := "heading", "Time"), sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
             )),
           <.tbody(
             byTimeSlot.map(row => {
               <.tr(
-                <.td(SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()), row.flatMap(
+                <.td(^.colSpan := 2, SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()),
+                row.flatMap(
                   col => {
                     val ragClass = TerminalDesksAndQueuesRow.ragStatus(col.required, col.available)
-
                     List(<.td(^.className := ragClass, col.available), <.td(col.required))
                   }).toTagMod
               )
