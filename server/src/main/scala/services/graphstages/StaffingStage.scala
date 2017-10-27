@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
@@ -12,10 +12,17 @@ import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
+import scala.collection.immutable.Map
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class StaffingStage(name: String, initialOptionalPortState: Option[PortState], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], slaByQueue: Map[QueueName, Int], warmUpMinutes: Int)
+class StaffingStage(name: String,
+                    initialOptionalPortState: Option[PortState],
+                    minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+                    slaByQueue: Map[QueueName, Int],
+                    warmUpMinutes: Int,
+                    now: () => SDateLike,
+                    expireAfterMillis: Long)
   extends GraphStage[FanInShape4[PortState, String, String, Seq[StaffMovement], PortState]] {
   val inCrunch: Inlet[PortState] = Inlet[PortState]("PortStateWithoutSimulations.in")
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
@@ -38,6 +45,7 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
 
   override def shape: FanInShape4[PortState, String, String, Seq[StaffMovement], PortState] =
     new FanInShape4(inCrunch, inShifts, inFixedPoints, inMovements, outCrunch)
+
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
     new GraphStageLogic(shape) {
 
@@ -45,12 +53,13 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
         initialOptionalPortState match {
           case Some(initialPortState: PortState) =>
             log.info(s"Received initial portState")
-            portStateOption = Option(initialPortState)
+            portStateOption = Option(removeExpiredMinutes(initialPortState))
           case _ => log.info(s"Didn't receive any initial PortState")
         }
 
         super.preStart()
       }
+
       setHandler(inCrunch, new InHandler {
         override def onPush(): Unit = {
           grabAllAvailable()
@@ -83,6 +92,12 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
         override def onPull(): Unit = pushAndPull()
       })
 
+      def removeExpiredMinutes(portState: PortState): PortState = {
+        portState.copy(
+          crunchMinutes = Crunch.purgeExpiredMinutes(portState.crunchMinutes, now, expireAfterMillis),
+          staffMinutes = Crunch.purgeExpiredMinutes(portState.staffMinutes, now, expireAfterMillis)
+        )
+      }
 
       def mergePortState(portStateOption: Option[PortState], newState: PortState): PortState = {
         portStateOption match {
@@ -118,6 +133,7 @@ class StaffingStage(name: String, initialOptionalPortState: Option[PortState], m
           portStateOption = Option(mergePortState(portStateOption, grab(inCrunch)))
           stateAwaitingPush = true
         }
+        portStateOption = portStateOption.map(removeExpiredMinutes)
       }
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {

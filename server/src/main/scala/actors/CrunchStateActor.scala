@@ -165,20 +165,6 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     )
   }
 
-  def purgeExpiredMinutes[M <: Minute](crunchMinutes: Map[Int, M]): Map[Int, M] = {
-    val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
-    crunchMinutes
-      .filterNot {
-        case (_, cm) =>
-          val shouldGo = expired(cm)
-          if (shouldGo) {
-            val cmDate = SDate(cm.minute).toLocalDateTimeString()
-            log.info(s"Purging expired CrunchMinute $cmDate")
-          }
-          shouldGo
-      }
-  }
-
   def updateStateFromPortState(newState: PortState): Unit = {
     val existingState = state match {
       case None =>
@@ -211,8 +197,8 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
 
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
-      crunchMinutes = purgeExpiredMinutes(cmsFromDiff),
-      staffMinutes = purgeExpiredMinutes(smsFromDiff)
+      crunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis),
+      staffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
     )
 
     state = Option(updatedState)
