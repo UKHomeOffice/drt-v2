@@ -50,6 +50,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
       case PortState(_, c, _) => c
     }
     val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
+      println(s"${SDate(cm.minute).toLocalDateTimeString()} - ${cm.actDesks} ${cm.actWait}")
       (cm.actDesks, cm.actWait)
     }).take(30)
 

@@ -8,7 +8,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.desksForHourOfDayInUKLocalTime
+import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, getLocalLastMidnight, getLocalNextMidnight}
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
@@ -21,6 +21,8 @@ class StaffingStage(name: String,
                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                     slaByQueue: Map[QueueName, Int],
                     warmUpMinutes: Int,
+                    crunchStart: (SDateLike) => SDateLike = getLocalLastMidnight,
+                    crunchEnd: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                     now: () => SDateLike,
                     expireAfterMillis: Long)
   extends GraphStage[FanInShape4[PortState, String, String, Seq[StaffMovement], PortState]] {
@@ -37,8 +39,9 @@ class StaffingStage(name: String,
   var fixedPointsOption: Option[String] = None
   var movementsOption: Option[Seq[StaffMovement]] = None
 
-  var stateAwaitingPush = false
+  var simulationWindow: Option[(SDateLike, SDateLike)] = None
 
+  var stateAwaitingPush = false
   var portStateWithSimulation: Option[PortState] = None
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
@@ -119,21 +122,80 @@ class StaffingStage(name: String,
         if (isAvailable(inShifts)) {
           log.info(s"Grabbing available inShifts")
           shiftsOption = Option(grab(inShifts))
+          simulationWindow = windowFromState(portStateOption)
         }
         if (isAvailable(inFixedPoints)) {
           log.info(s"Grabbing available inFixedPoints")
           fixedPointsOption = Option(grab(inFixedPoints))
+          simulationWindow = windowFromState(portStateOption)
         }
         if (isAvailable(inMovements)) {
           log.info(s"Grabbing available inMovements")
           movementsOption = Option(grab(inMovements))
+          simulationWindow = windowFromState(portStateOption)
         }
         if (isAvailable(inCrunch)) {
           log.info(s"Grabbing available inCrunch")
-          portStateOption = Option(mergePortState(portStateOption, grab(inCrunch)))
-          stateAwaitingPush = true
+          val incomingPortState = grab(inCrunch)
+          portStateOption = Option(mergePortState(portStateOption, incomingPortState))
+          simulationWindow = windowFromStateUpdate(incomingPortState)
         }
         portStateOption = portStateOption.map(removeExpiredMinutes)
+      }
+
+      def windowFromState(optionalPortState: Option[PortState]): Option[(SDateLike, SDateLike)] = {
+        optionalPortState match {
+          case None =>
+            log.info(s"window from state: None - no port state")
+            None
+          case Some(ps) =>
+            val minutesInOrder = ps
+              .crunchMinutes
+              .toList
+              .map {
+                case (_, cm) => cm.minute
+              }
+              .sortBy(identity)
+
+            if (minutesInOrder.isEmpty) {
+              log.info(s"window from state: None - no minutes (${ps.crunchMinutes.size})")
+              None
+            } else {
+              val window = Option((crunchStart(SDate(minutesInOrder.min)), crunchEnd(SDate(minutesInOrder.max))))
+              log.info(s"window from state: $window")
+              window
+            }
+        }
+      }
+
+      def windowFromStateUpdate(incomingPortState: PortState): Option[(SDateLike, SDateLike)] = {
+        log.info(s"incomingPortState minutes ${incomingPortState.crunchMinutes.size}")
+        val minutesInOrder = portStateOption match {
+          case None =>
+            incomingPortState
+              .crunchMinutes
+              .toList
+              .map {
+                case (_, cm) => cm.minute
+              }
+              .sortBy(identity)
+          case Some(existingPortState) =>
+            val updatedCrunchMinutes = incomingPortState.crunchMinutes.values.toSet -- existingPortState.crunchMinutes.values.toSet
+            log.info(s"updatedCrunchMinutes ${updatedCrunchMinutes.size}")
+            updatedCrunchMinutes
+              .toList
+              .map(_.minute)
+              .sortBy(identity)
+        }
+
+        if (minutesInOrder.isEmpty) {
+          log.info(s"window from update: None - no minutes")
+          None
+        } else {
+          val window = Option((crunchStart(SDate(minutesInOrder.min)), crunchEnd(SDate(minutesInOrder.max))))
+          log.info(s"window from update: $window")
+          window
+        }
       }
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {
@@ -154,43 +216,67 @@ class StaffingStage(name: String,
       }
 
       def addSimulationNumbers(crunchMinutesWithDeployments: Map[Int, CrunchMinute], eGateBankSize: Int): Map[Int, CrunchMinute] = {
-        val minutesInACrunch = 1440
-        val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
+        simulationWindow match {
+          case None =>
+            log.info(s"No window set. Not running a simulation")
+            val firstMinuteInState = crunchMinutesWithDeployments
+              .values
+              .toList
+              .minBy(_.minute)
+            val firstMinuteWithoutWarmUp = firstMinuteInState.minute + warmUpMinutes * Crunch.oneMinuteMillis
+            crunchMinutesWithDeployments.filter { case (_, cm) => firstMinuteWithoutWarmUp <= cm.minute }
+          case Some((start, end)) =>
+            log.info(s"Simulation window: ${start.toLocalDateTimeString()} -> ${end.toLocalDateTimeString()}")
+            val minutesInACrunch = 1440
+            val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
 
-        crunchMinutesWithDeployments.values.groupBy(_.terminalName).flatMap {
-          case (_, tCrunchMinutes) =>
-            tCrunchMinutes.groupBy(_.queueName).flatMap {
-              case (qn, qCrunchMinutes) =>
-                qCrunchMinutes
-                  .toList
-                  .sortBy(_.minute)
-                  .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
-                  .flatMap(cms => {
-                    val allMillis = cms.map(_.minute)
-                    val firstMinute = SDate(allMillis.min)
-                    val lastMinute = SDate(allMillis.max)
-                    val minWlSd = cms.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
-                    val workLoads = minWlSd.map {
-                      case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
-                      case (_, wl, _) => wl
-                    }
-                    val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }
-                    val config = OptimizerConfig(slaByQueue(qn))
-                    log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks - ${firstMinute.toLocalDateTimeString()} to ${lastMinute.toLocalDateTimeString()}")
-                    val simWaits = TryRenjin
-                      .runSimulationOfWork(workLoads, deployedDesks, config)
-                      .drop(warmUpMinutes)
-                    log.info(s"Finished running simulation.")
-                    cms
+            val crunchMinutesInWindow = crunchMinutesWithDeployments
+              .values
+              .filter(cm => {
+                val startIncWarmUp = start.millisSinceEpoch - warmUpMinutes * Crunch.oneMinuteMillis
+                startIncWarmUp <= cm.minute && cm.minute < end.millisSinceEpoch
+              })
+
+            crunchMinutesInWindow.groupBy(_.terminalName).flatMap {
+              case (_, tCrunchMinutes) =>
+                tCrunchMinutes.groupBy(_.queueName).flatMap {
+                  case (qn, qCrunchMinutes) =>
+                    qCrunchMinutes
+                      .toList
                       .sortBy(_.minute)
-                      .drop(warmUpMinutes)
-                      .zipWithIndex
-                      .map {
-                        case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
-                      }
-                  })
+                      .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+                      .flatMap(cms => {
+                        simulate(qn, cms, eGateBankSize)
+                      })
+                }
             }
         }
+
+      }
+
+      def simulate(qn: QueueName, cms: List[CrunchMinute], eGateBankSize: Int): List[(Int, CrunchMinute)] = {
+        val allMillis = cms.map(_.minute)
+        val firstMinute = SDate(allMillis.min)
+        val lastMinute = SDate(allMillis.max)
+        val minWlSd = cms.map(cm => Tuple3(cm.minute, cm.workLoad, cm.deployedDesks))
+        val workLoads = minWlSd.map {
+          case (_, wl, _) if qn == Queues.EGate => adjustEgateWorkload(eGateBankSize, wl)
+          case (_, wl, _) => wl
+        }
+        val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }
+        val config = OptimizerConfig(slaByQueue(qn))
+        log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks - ${firstMinute.toLocalDateTimeString()} to ${lastMinute.toLocalDateTimeString()}")
+        val simWaits = TryRenjin
+          .runSimulationOfWork(workLoads, deployedDesks, config)
+          .drop(warmUpMinutes)
+        log.info(s"Finished running simulation.")
+        cms
+          .sortBy(_.minute)
+          .drop(warmUpMinutes)
+          .zipWithIndex
+          .map {
+            case (cm, idx) => (cm.key, cm.copy(deployedWait = Option(simWaits(idx))))
+          }
       }
 
       def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute]): Map[Int, StaffMinute] = {

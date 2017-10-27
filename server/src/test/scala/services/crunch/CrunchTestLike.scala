@@ -262,6 +262,34 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
+  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinute: SDateLike): Map[TerminalName, Map[QueueName, List[Double]]] = {
+    val startFromMillis = startFromMinute.millisSinceEpoch
+
+    portState
+      .crunchMinutes
+      .values
+      .groupBy(_.terminalName)
+      .map {
+        case (tn, tms) =>
+          val terminalLoads = tms
+            .groupBy(_.queueName)
+            .map {
+              case (qn, qms) =>
+                val startIdx = qms
+                  .toList
+                  .sortBy(_.minute)
+                  .indexWhere(_.minute == startFromMillis)
+                val paxLoad = qms
+                  .toList
+                  .sortBy(_.minute)
+                  .map(_.paxLoad)
+                  .slice(startIdx, startIdx + minsToTake)
+                (qn, paxLoad)
+            }
+          (tn, terminalLoads)
+      }
+  }
+
   def allWorkLoadsFromPortState(portState: PortState): Map[TerminalName, Map[QueueName, List[Double]]] = portState
     .crunchMinutes
     .values
