@@ -168,7 +168,7 @@ class CrunchTestLike
     val actualDesksAndQueuesSource = Source.queue[ActualDeskStats](0, OverflowStrategy.backpressure)
 
     val forecastProbe = testProbe("forecast")
-    val forecastStaffingGraphStage = new StaffingStage(name = "forecast", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, now = now, warmUpMinutes = 120, expireAfterMillis = 2 * oneDayMillis)
+    val forecastStaffingGraphStage = new StaffingStage(name = "forecast", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, now = now, warmUpMinutes = 120, expireAfterMillis = 2 * oneDayMillis, crunchEnd = (_) => getLocalNextMidnight(SDate.now()))
     val forecastActorRef = forecastCrunchStateActor(forecastProbe, now)
 
     val (forecastCrunchInput, forecastShiftsInput, forecastFixedPointsInput, forecastStaffMovementsInput) = RunnableForecastSimulationGraph(
@@ -185,7 +185,7 @@ class CrunchTestLike
       cruncher = crunchStage(name = "forecast", manifestsUsed = false),
       simulationQueueSubscriber = forecastCrunchInput
     ).run()(actorMaterializer)
-    val liveStaffingGraphStage = new StaffingStage(name = "live", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120, now = now, expireAfterMillis = 2 * oneDayMillis)
+    val liveStaffingGraphStage = new StaffingStage(name = "live", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120, now = now, expireAfterMillis = 2 * oneDayMillis, crunchEnd = (_) => getLocalNextMidnight(SDate.now()))
     val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
     val liveProbe = testProbe("live")
 

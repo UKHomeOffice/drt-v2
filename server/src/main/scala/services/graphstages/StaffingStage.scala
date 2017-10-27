@@ -22,7 +22,7 @@ class StaffingStage(name: String,
                     slaByQueue: Map[QueueName, Int],
                     warmUpMinutes: Int,
                     crunchStart: (SDateLike) => SDateLike = getLocalLastMidnight,
-                    crunchEnd: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
+                    crunchEnd: (SDateLike) => SDateLike,// = (_) => getLocalNextMidnight(SDate.now()),
                     now: () => SDateLike,
                     expireAfterMillis: Long)
   extends GraphStage[FanInShape4[PortState, String, String, Seq[StaffMovement], PortState]] {
@@ -102,8 +102,8 @@ class StaffingStage(name: String,
         )
       }
 
-      def mergePortState(portStateOption: Option[PortState], newState: PortState): PortState = {
-        portStateOption match {
+      def mergePortState(existingPortStateOption: Option[PortState], newState: PortState): PortState = {
+        existingPortStateOption match {
           case None => newState
           case Some(existingState) =>
             PortState(
@@ -137,8 +137,8 @@ class StaffingStage(name: String,
         if (isAvailable(inCrunch)) {
           log.info(s"Grabbing available inCrunch")
           val incomingPortState = grab(inCrunch)
+          simulationWindow = windowFromStateUpdate(portStateOption, incomingPortState)
           portStateOption = Option(mergePortState(portStateOption, incomingPortState))
-          simulationWindow = windowFromStateUpdate(incomingPortState)
         }
         portStateOption = portStateOption.map(removeExpiredMinutes)
       }
@@ -162,15 +162,15 @@ class StaffingStage(name: String,
               None
             } else {
               val window = Option((crunchStart(SDate(minutesInOrder.min)), crunchEnd(SDate(minutesInOrder.max))))
-              log.info(s"window from state: $window")
+              log.info(s"window from state: $window (${SDate(minutesInOrder.min).toLocalDateTimeString()} - ${SDate(minutesInOrder.max).toLocalDateTimeString()})")
               window
             }
         }
       }
 
-      def windowFromStateUpdate(incomingPortState: PortState): Option[(SDateLike, SDateLike)] = {
+      def windowFromStateUpdate(existingPortStateOption: Option[PortState], incomingPortState: PortState): Option[(SDateLike, SDateLike)] = {
         log.info(s"incomingPortState minutes ${incomingPortState.crunchMinutes.size}")
-        val minutesInOrder = portStateOption match {
+        val minutesInOrder = existingPortStateOption match {
           case None =>
             incomingPortState
               .crunchMinutes
@@ -180,7 +180,9 @@ class StaffingStage(name: String,
               }
               .sortBy(identity)
           case Some(existingPortState) =>
-            val updatedCrunchMinutes = incomingPortState.crunchMinutes.values.toSet -- existingPortState.crunchMinutes.values.toSet
+            val newMinutes = incomingPortState.crunchMinutes.values.toSet
+            val existingMinutes = existingPortState.crunchMinutes.values.toSet
+            val updatedCrunchMinutes = newMinutes -- existingMinutes
             log.info(s"updatedCrunchMinutes ${updatedCrunchMinutes.size}")
             updatedCrunchMinutes
               .toList
