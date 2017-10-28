@@ -71,7 +71,8 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
 
   def fetchAndPushManifests(startingFilename: String): Unit = {
     log.info(s"Fetching manifests from files newer than $startingFilename")
-    manifestsFuture(startingFilename).onSuccess {
+    val vmFuture = manifestsFuture(startingFilename)
+    vmFuture.onSuccess {
       case ms =>
         log.info(s"manifestsFuture Success")
         val nextFetchMaxFilename = if (ms.nonEmpty) {
@@ -98,7 +99,7 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
 
         fetchAndPushManifests(nextFetchMaxFilename)
     }
-    manifestsFuture(startingFilename).onFailure {
+    vmFuture.onFailure {
       case t =>
         log.error(s"Failed to fetch manifests, trying again after 5 minutes: $t")
         Thread.sleep(300000)
