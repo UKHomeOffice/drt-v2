@@ -5,6 +5,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.SDate
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
@@ -113,20 +114,64 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.baseArrivalsInput.offer(forecastFlights)
     val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
-    val deployedStaff: Seq[Int] = forecastResult
+    val waitTimes: Seq[Int] = forecastResult
       .crunchMinutes
       .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
-      .map(cm => {
-        println(s"${SDate(cm.minute).toLocalDateTimeString()} ${cm.paxLoad} ${cm.deskRec} ${cm.waitTime}")
-        cm.waitTime
-      })
+      .map(_.waitTime)
 
-    val waitTimeOneMinuteBeforeMidnight = deployedStaff.head
-    val waitTimeOneMinuteAtMidnight = deployedStaff(1)
+    val waitTimeOneMinuteBeforeMidnight = waitTimes.head
+    val waitTimeOneMinuteAtMidnight = waitTimes(1)
 
     val expected = waitTimeOneMinuteBeforeMidnight + 1
 
     waitTimeOneMinuteAtMidnight === expected
   }
 
+  "Given a flight a live flight update after a forecast crunch & simulation, followed by a staffing change " +
+    "When I look at the simulation numbers in the forecast port state for the day after the live flight update " +
+    "Then I should see a corresponding deployed staff number " >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val forecast = "2017-01-03T00:00Z"
+
+    val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
+    val liveFlights = Flights(List(liveArrival))
+
+    val forecastArrival = ArrivalGenerator.apiFlight(schDt = forecast, iata = "BA0001", terminal = "T1", actPax = 20)
+    val forecastFlights = Flights(List(forecastArrival))
+
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+      crunchEndDateProvider = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
+      earliestAndLatestAffectedPcpTime = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),
+      shifts =
+        """shift a,T1,04/01/17,00:00,00:14,1
+          |shift b,T1,04/01/17,00:15,00:29,2
+        """.stripMargin)
+
+    crunch.liveArrivalsInput.offer(liveFlights)
+    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+
+    crunch.baseArrivalsInput.offer(forecastFlights)
+    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+
+    crunch.liveArrivalsInput.offer(Flights(List(liveArrival.copy(ActPax = 10))))
+    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+
+    crunch.forecastShiftsInput.offer("shift a,T1,03/01/17,00:00,00:29,5")
+    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+
+    val deployedStaff: Seq[Option[Int]] = forecastResult
+      .crunchMinutes
+      .values.toList.sortBy(_.minute).takeRight(1440).take(30)
+      .map(_.deployedDesks)
+
+    val expected = List.fill(30)(Some(5))
+
+    deployedStaff === expected
+  }
 }

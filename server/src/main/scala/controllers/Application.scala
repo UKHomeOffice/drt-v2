@@ -119,7 +119,8 @@ trait SystemActors {
     historicalSplitsProvider = historicalSplitsProvider,
     liveCrunchStateActor = liveCrunchStateActor,
     forecastCrunchStateActor = forecastCrunchStateActor,
-    maxDaysToCrunch = maxDaysToCrunch))
+    maxDaysToCrunch = maxDaysToCrunch,
+    expireAfterMillis = expireAfterMillis))
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], crunchInputs.shifts))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], crunchInputs.fixedPoints))
@@ -267,8 +268,8 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-        val startMillis = midnightThisMorning - oneHourMillis * 3
-        val endMillis = midnightThisMorning + oneHourMillis * 30
+        val startMillis = midnightThisMorning
+        val endMillis = midnightThisMorning + oneHourMillis * 24
         val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(30 seconds))
 
         crunchStateFuture.map {
