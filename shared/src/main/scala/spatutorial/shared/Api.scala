@@ -302,6 +302,12 @@ object CrunchApi {
 
   case class QueueHeadline(day: MillisSinceEpoch, queue: QueueName, paxNos: Int, workload: Int)
 
+  def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]) = {
+    staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
+      slot.map(_.minute).min -> slot.map(_.staff).min
+    }).toMap
+  }
+
   def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
