@@ -6,7 +6,7 @@ import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessag
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import server.protobuf.messages.ShiftMessage.ShiftStateSnapshotMessage
 import server.protobuf.messages.StaffMovementMessages.StaffMovementsStateSnapshotMessage
-import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage}
+import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
 
 class ProtoBufSerializer extends SerializerWithStringManifest {
   override def identifier: Int = 9001
@@ -22,6 +22,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val FlightStateSnapshot: String = classOf[FlightStateSnapshotMessage].getName
   final val VoyageManifestStateSnapshot: String = classOf[VoyageManifestStateSnapshotMessage].getName
   final val VoyageManifestLatestFileName: String = classOf[VoyageManifestLatestFileNameMessage].getName
+  final val VoyageManifests: String = classOf[VoyageManifestsMessage].getName
   final val VoyageManifest: String = classOf[VoyageManifestMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
@@ -35,6 +36,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: FlightStateSnapshotMessage => m.toByteArray
       case m: VoyageManifestStateSnapshotMessage => m.toByteArray
       case m: VoyageManifestLatestFileNameMessage => m.toByteArray
+      case m: VoyageManifestsMessage => m.toByteArray
       case m: VoyageManifestMessage => m.toByteArray
     }
   }
@@ -50,6 +52,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case FlightStateSnapshot => FlightStateSnapshotMessage.parseFrom(bytes)
       case VoyageManifestStateSnapshot => VoyageManifestStateSnapshotMessage.parseFrom(bytes)
       case VoyageManifestLatestFileName => VoyageManifestLatestFileNameMessage.parseFrom(bytes)
+      case VoyageManifests => VoyageManifestsMessage.parseFrom(bytes)
       case VoyageManifest => VoyageManifestMessage.parseFrom(bytes)
     }
   }
