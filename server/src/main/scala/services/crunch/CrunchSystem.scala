@@ -70,11 +70,11 @@ object CrunchSystem {
     val askableLiveCrunchStateActor: AskableActorRef = props.liveCrunchStateActor
     val askableForecastCrunchStateActor: AskableActorRef = props.forecastCrunchStateActor
 
-    val initialLiveCrunchState = Await.result(askableLiveCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
+    val initialLiveCrunchState = Await.result(askableLiveCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
       case ps: PortState => Option(ps)
       case _ => None
     }, 1 minute)
-    val initialForecastCrunchState = Await.result(askableForecastCrunchStateActor.ask(GetState)(new Timeout(1 minute)).map {
+    val initialForecastCrunchState = Await.result(askableForecastCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
       case ps: PortState => Option(ps)
       case _ => None
     }, 1 minute)
