@@ -290,11 +290,11 @@ class Application @Inject()(implicit val config: Configuration,
         )(new Timeout(30 seconds))
 
         crunchStateFuture.map {
-          case Some(PortState(_, m, _)) =>
+          case Some(PortState(_, m, s)) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
             Option(
               ForecastPeriodWithHeadlines(
-                ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, terminal)),
+                ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)),
                 Forecast.headLineFigures(m.values.toSet, terminal)
               )
             )
@@ -426,8 +426,8 @@ class Application @Inject()(implicit val config: Configuration,
 
     val fileName = s"$terminal-planning-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
     crunchStateFuture.map {
-      case Some(PortState(_, m, _)) =>
-        val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, terminal)))
+      case Some(PortState(_, m, s)) =>
+        val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv")
@@ -545,14 +545,15 @@ object Forecast {
     ForecastHeadlineFigures(headlines)
   }
 
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
+    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes)
     groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
         case (millis, cms) =>
           cms.foldLeft(
-            ForecastTimeSlot(millis, 0, 0))(
+            ForecastTimeSlot(millis,actualStaffByMinute.getOrElse(millis, 0), 0))(
             (fts, cm) => fts
-              .copy(available = fts.available + cm.deployedDesks.getOrElse(0), required = fts.required + cm.deskRec)
+              .copy(required = fts.required + cm.deskRec)
           )
       }
       .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
