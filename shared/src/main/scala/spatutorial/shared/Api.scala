@@ -304,7 +304,7 @@ object CrunchApi {
 
   def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]) = {
     staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
-      slot.map(_.minute).min -> slot.map(_.staff).min
+      slot.map(_.minute).min -> slot.map(_.available).min
     }).toMap
   }
 

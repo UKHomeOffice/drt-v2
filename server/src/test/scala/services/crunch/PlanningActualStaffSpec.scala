@@ -61,8 +61,8 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
     val staffMinutes: Set[StaffMinute] = ((0 to 58).map(index => {
 
-      StaffMinute("T1", index * 60000, 20, None)
-    }) :+ StaffMinute("T1", 59 * 60000, 10, None)).toSet
+      StaffMinute("T1", index * 60000, 20, 0, 0, None)
+    }) :+ StaffMinute("T1", 59 * 60000, 10, 0, 0, None)).toSet
 
     val staffAvailable: Map[MillisSinceEpoch, Int] = staffByTimeSlot(15)(staffMinutes)
 
