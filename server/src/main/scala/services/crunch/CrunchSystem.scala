@@ -73,11 +73,11 @@ object CrunchSystem {
     val initialLiveCrunchState = Await.result(askableLiveCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
       case ps: PortState => Option(ps)
       case _ => None
-    }, 1 minute)
+    }, 5 minutes)
     val initialForecastCrunchState = Await.result(askableForecastCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
       case ps: PortState => Option(ps)
       case _ => None
-    }, 1 minute)
+    }, 5 minutes)
 
     def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike) = new StaffingStage(
       name = name,
