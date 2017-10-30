@@ -213,7 +213,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
   }
 
   def staffMinuteToMessage(cm: StaffMinute): StaffMinuteMessage = {
-    StaffMinuteMessage(Option(cm.terminalName), Option(cm.minute), Option(cm.staff))
+    StaffMinuteMessage(terminalName = Option(cm.terminalName), minute = Option(cm.minute), shifts = Option(cm.shifts), fixedPoints = Option(cm.fixedPoints), movements = Option(cm.movements))
   }
 
   def saveSnapshotAtInterval(cs: PortState): Unit = {
@@ -281,7 +281,9 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
     StaffMinute(
       terminalName = smm.terminalName.getOrElse(""),
       minute = smm.minute.getOrElse(0L),
-      staff = smm.staff.getOrElse(0)
+      shifts = smm.shifts.getOrElse(0),
+      fixedPoints = smm.fixedPoints.getOrElse(0),
+      movements = smm.movements.getOrElse(0)
     )
   }
 

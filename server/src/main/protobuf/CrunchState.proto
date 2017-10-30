@@ -45,7 +45,11 @@ message CrunchMinuteMessage {
 message StaffMinuteMessage {
     optional string terminalName = 1;
     optional int64 minute = 2;
-    optional int32 staff = 3;
+    optional int32 shifts = 4;
+    optional int32 fixedPoints = 5;
+    optional int32 movements = 6;
+
+    optional int32 staff_OLD = 3;
 }
 
 message CrunchDiffMessage {
