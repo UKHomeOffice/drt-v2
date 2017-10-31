@@ -11,13 +11,12 @@ import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete, StreamConverters}
 import akka.util.{ByteString, Timeout}
-import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import services.graphstages.Crunch
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -36,7 +35,7 @@ case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename
 
 
 
-case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], voyageManifestsActor: ActorRef) {
+case class VoyageManifestsProvider(bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], voyageManifestsActor: ActorRef) {
   implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
@@ -72,6 +71,7 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
   def fetchAndPushManifests(startingFilename: String): Unit = {
     log.info(s"Fetching manifests from files newer than $startingFilename")
     val vmFuture = manifestsFuture(startingFilename)
+    val intervalSeconds = 60
     vmFuture.onSuccess {
       case ms =>
         log.info(s"manifestsFuture Success")
@@ -91,8 +91,8 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
           log.info(s"No manifests received")
           startingFilename
         }
-        log.info("Waiting 1 minute before polling for more manifests")
-        Thread.sleep(60000)
+        log.info(s"Waiting $intervalSeconds seconds before polling for more manifests")
+        Thread.sleep(intervalSeconds * Crunch.oneMinuteMillis)
         log.info(s"Set latestZipFilename to '$nextFetchMaxFilename'")
         voyageManifestsActor ! UpdateLatestZipFilename(nextFetchMaxFilename)
         voyageManifestsActor ! VoyageManifests(manifestsState)
@@ -101,9 +101,9 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
     }
     vmFuture.onFailure {
       case t =>
-        log.error(s"Failed to fetch manifests, trying again after 5 minutes: $t")
-        Thread.sleep(300000)
-        log.info(s"About to retry fetching new maniftests")
+        log.error(s"Failed to fetch manifests, trying again after $intervalSeconds seconds: $t")
+        Thread.sleep(intervalSeconds * Crunch.oneMinuteMillis)
+        log.info(s"About to retry fetching new manifests")
         fetchAndPushManifests(startingFilename)
     }
   }
@@ -156,14 +156,5 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
       }
   }
 
-  def s3Client: AmazonS3AsyncClient = {
-    val configuration: ClientConfiguration = new ClientConfiguration()
-    configuration.setSignerOverride("S3SignerType")
-    val provider: ProfileCredentialsProvider = new ProfileCredentialsProvider("drt-atmos")
-
-    val client = new AmazonS3AsyncClient(provider, configuration)
-    client.client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build)
-    client.client.setEndpoint(s3HostName)
-    client
-  }
+  def s3Client: AmazonS3AsyncClient = new AmazonS3AsyncClient(new ProfileCredentialsProvider("drt-prod-s3"))
 }

@@ -138,10 +138,9 @@ trait SystemActors {
     Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
   })
 
-  val bucket: String = config.getString("atmos.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val atmosHost: String = config.getString("atmos.s3.url").getOrElse(throw new Exception("You must set ATMOS_S3_URL"))
+  val bucket: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set ATMOS_S3_BUCKET for us to poll for AdvPaxInfo"))
 
-  VoyageManifestsProvider(atmosHost, bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
+  VoyageManifestsProvider(bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
 
   def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
