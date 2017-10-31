@@ -16,14 +16,12 @@ import services.graphstages.Crunch._
 import scala.collection.immutable._
 import scala.language.postfixOps
 
-class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]], now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor {
+class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[TerminalName, Seq[QueueName]], now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
   var state: Option[PortState] = None
-
-  val snapshotInterval = 1000
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
