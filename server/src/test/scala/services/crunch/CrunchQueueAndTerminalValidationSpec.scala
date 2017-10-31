@@ -38,7 +38,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
         ))
 
-//      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.liveArrivalsInput.offer(flights)
 
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
@@ -74,12 +73,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     crunch.liveArrivalsInput.offer(flights)
 
     val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
-    val resultSummary = paxLoadsFromPortState(result, 30)
+    val resultSummary = paxLoadsFromPortState(result, 1, SDate(scheduled))
 
-    val expected = Map(
-      "T1" -> Map(Queues.EeaDesk -> Seq(
-        15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
+    val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(15.0)))
 
     resultSummary === expected
   }

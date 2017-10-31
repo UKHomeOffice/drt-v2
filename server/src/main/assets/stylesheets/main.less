@@ -184,13 +184,18 @@ table.forecast tbody{
   width: 100%;
 }
 
+table.headlines {
+  display: block;
+  width: 100%;
+}
+
 table.forecast td.red{
   background-color: #d02d31;
 }
 table.forecast td.amber{
   background-color: #f47738;
 }
-table.forecast td {
+table.forecast td, table.headlines td {
   padding: 0.5em 0 0.5em 0;
   border: 1px solid #fff;
   border-width: 1px 0px 0px 1px !important;
@@ -198,24 +203,52 @@ table.forecast td {
   font-size: 1.0em;
   font-weight: normal;
   text-align: center;
+}
+table.forecast td{
   width: 5.5em;
 }
-table.forecast th.heading, th.sub-heading{
+table.headlines td {
+  width: 11em;
+}
+table.headlines th.queue-heading {
+  width: 6em;
+  font-size: small;
+  font-weight: bold;
+}
+
+table.forecast th.heading,table.headlines th, th.sub-heading{
   text-align: center;
   border-left: 1px solid #fff !important;
   border-bottom: 1px solid #fff;
   color: #000 !important;
-  font-weight: normal;
+  font-weight: bold;
   text-align: center;
   padding: 0.5em 0 0.5em 0;
   font-size: 1.1em;
-  width: 5em;
 }
+
+table.forecast th.heading, th.sub-heading{
+  width: 5em;
+  font-weight: bold;
+}
+
+table.headlines th{
+  width: 10em;
+  font-weight: bold;
+}
+
+
 
 table.forecast tr:nth-child(even) {
   background-color: #96c6e2;
 }
 table.forecast tr:nth-child(odd) {
+  background-color: #bedbec;
+}
+table.headlines tr:nth-child(even) {
+  background-color: #96c6e2;
+}
+table.headlines tr:nth-child(odd) {
   background-color: #bedbec;
 }
 

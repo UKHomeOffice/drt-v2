@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, Minute, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -178,5 +178,19 @@ object Crunch {
   def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: (A) => MillisSinceEpoch)(toCompare: A): Boolean = {
     val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
     ageInMillis > expireAfterMillis
+  }
+
+  def purgeExpiredMinutes[M <: Minute](minutes: Map[Int, M], now: () => SDateLike, expireAfterMillis: MillisSinceEpoch): Map[Int, M] = {
+    val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
+    minutes
+      .filterNot {
+        case (_, cm) =>
+          val shouldGo = expired(cm)
+          if (shouldGo) {
+            val cmDate = SDate(cm.minute).toLocalDateTimeString()
+            log.info(s"Purging expired CrunchMinute $cmDate")
+          }
+          shouldGo
+      }
   }
 }

@@ -73,11 +73,10 @@ object TerminalDisplayModeComponent {
           }),
           <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
             if (state.activeTab == "planning") {
-
               val forecastRCP = SPACircuit.connect(_.forecastPeriodPot)
               <.div(forecastRCP(forecastMP => {
                 <.div(forecastMP().renderReady(fp => {
-                  TerminalForecastComponent(TerminalForecastComponent.Props(fp, props.terminalPageTab, props.router))
+                  TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
                 }))
               }))
             } else ""

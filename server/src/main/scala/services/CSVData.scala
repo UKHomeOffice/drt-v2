@@ -1,28 +1,75 @@
 package services
 
-import drt.shared.CrunchApi.{CrunchMinute, ForecastPeriod, ForecastTimeSlot}
+import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, ForecastPeriod, ForecastTimeSlot}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 
+import scala.collection.immutable.{IndexedSeq, Seq}
+
 object CSVData {
+  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures) = {
+    val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
+      day => s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
+    ).mkString(",")
+
+    val queues: String = Queues.queueOrder.flatMap(
+      q => {
+        headlines.queueDayHeadlines.groupBy(_.queue).get(q).map(
+          qhls => (s"${Queues.queueDisplayNames.getOrElse(q, q)}" ::
+            qhls
+              .toList
+              .sortBy(_.day)
+              .map(qhl => qhl.paxNos.toString)
+            ).mkString(",")
+        )
+      }
+    ).mkString("\n")
+
+    val totalPax = "Total Pax," + headlines
+      .queueDayHeadlines
+      .groupBy(_.day)
+      .toList.sortBy(_._1)
+      .map(hl => hl._2.toList.map(_.paxNos).sum)
+      .mkString(",")
+
+    val totalWL = "Total Workload," + headlines
+      .queueDayHeadlines
+      .groupBy(_.day)
+      .toList.sortBy(_._1)
+      .map(hl => hl._2.toList.map(_.workload).sum)
+      .mkString(",")
+
+    List(headings, queues, totalPax, totalWL).mkString("\n")
+  }
+
   def forecastPeriodToCsv(forecastPeriod: ForecastPeriod) = {
     val sortedDays = forecastPeriod.days.toList.sortBy(_._1)
     val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.transpose(_._2.take(96))
 
     val headings1 = "," + sortedDays.map {
       case (day, _) =>
-        s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
+        s"${
+          SDate(MilliDate(day)).getDate()
+        }/${
+          SDate(MilliDate(day)).getMonth()
+        }"
     }.mkString(",,")
     val headings2 = "Start Time," + sortedDays.map(_ => "Avail,Rec").mkString(",")
 
     val data = byTimeSlot.map(row => {
 
-      s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," + row.map(
+      s"${
+        SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()
+      }" + "," + row.map(
         col => {
-          s"${col.available},${col.required}"
+          s"${
+            col.available
+          },${
+            col.required
+          }"
         }).mkString(",")
     }).mkString("\n")
-    
+
     List(headings1, headings2, data).mkString("\n")
   }
 

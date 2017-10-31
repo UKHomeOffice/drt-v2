@@ -17,6 +17,14 @@ object Queues {
   val Transfer = "transfer"
 
   val queueOrder = List(EeaDesk, EGate, NonEeaDesk, FastTrack)
+
+  val queueDisplayNames: Map[QueueName, String] = Map(
+    EeaDesk -> "EEA",
+    NonEeaDesk -> "Non-EEA",
+    EGate -> "e-Gates",
+    FastTrack -> "Fast Track",
+    Transfer -> "Tx"
+  )
 }
 
 sealed trait PaxType {

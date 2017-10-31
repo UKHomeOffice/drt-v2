@@ -1,7 +1,7 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, MillisSinceEpoch}
-import drt.shared.FlightsApi._
+import drt.shared.CrunchApi._
+import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.collection.immutable.{Map, _}
@@ -262,9 +262,12 @@ object CrunchApi {
 
   case class StaffMinute(terminalName: TerminalName,
                          minute: MillisSinceEpoch,
-                         staff: Int,
+                         shifts: Int,
+                         fixedPoints: Int,
+                         movements: Int,
                          lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
     lazy val key: Int = s"$terminalName$minute".hashCode
+    lazy val available = shifts + movements - fixedPoints
   }
 
   case class CrunchMinute(terminalName: TerminalName,
@@ -291,7 +294,19 @@ object CrunchApi {
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
+  case class ForecastPeriodWithHeadlines(forecast: ForecastPeriod, headlines: ForecastHeadlineFigures)
+
   case class ForecastPeriod(days: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]])
+
+  case class ForecastHeadlineFigures(queueDayHeadlines: Set[QueueHeadline])
+
+  case class QueueHeadline(day: MillisSinceEpoch, queue: QueueName, paxNos: Int, workload: Int)
+
+  def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]) = {
+    staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
+      slot.map(_.minute).min -> slot.map(_.available).min
+    }).toMap
+  }
 
   def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
@@ -351,5 +366,6 @@ trait Api {
 
   def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 
-  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriod]]
+  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
+
 }
