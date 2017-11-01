@@ -193,7 +193,8 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       DisembarkationPortCode = m.disembarkationPortCode,
       InTransitFlag = m.inTransitFlag.getOrElse(""),
       DisembarkationPortCountryCode = m.disembarkationPortCountryCode,
-      NationalityCountryCode = m.nationalityCountryCode
+      NationalityCountryCode = m.nationalityCountryCode,
+      PassengerIdentifier = None
     )
   }
 

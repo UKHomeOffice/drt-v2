@@ -130,7 +130,13 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
       case "LHR" => whenTransitMatters
       case _ => mostAirports
     }
-    val paxTypes = flight.PassengerList.map(passengerInfoFields).map(paxTypeFn)
+    val paxInManifest = flight.PassengerList
+    val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.PassengerIdentifier)
+    log.info(s"Manifest: grouped by PassengerIdentifier ${byIdGrouped.size} Vs ${paxInManifest.length}")
+    val uniquePax = if (byIdGrouped.nonEmpty) byIdGrouped.values.toList.collect {
+      case head :: _ => head
+    } else paxInManifest
+    val paxTypes = uniquePax.map(passengerInfoFields).map(paxTypeFn)
     distributeToQueues(paxTypes)
   }
 
