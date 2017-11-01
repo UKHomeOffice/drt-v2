@@ -95,9 +95,9 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
     case VoyageManifests(newManifests) =>
       log.info(s"Received ${newManifests.size} manifests")
 
-      state = newStateFromManifests(state.manifests, newManifests)
+      val updates = newManifests -- state.manifests
 
-      newManifests -- state.manifests match {
+      updates match {
         case updatedManifests if updatedManifests.nonEmpty =>
           persist(voyageManifestsToMessage(updatedManifests)) {
             vmm =>
@@ -115,6 +115,8 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
         case _ =>
           log.info(s"No changes to persist")
       }
+
+      state = newStateFromManifests(state.manifests, newManifests)
 
     case GetState =>
       log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")
