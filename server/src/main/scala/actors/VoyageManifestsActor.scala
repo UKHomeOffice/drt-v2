@@ -98,8 +98,6 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       state = newStateFromManifests(state.manifests, newManifests)
 
       newManifests -- state.manifests match {
-        case updatedManifests if updatedManifests.isEmpty =>
-          log.info(s"No changes to persist")
         case updatedManifests if updatedManifests.nonEmpty =>
           persist(voyageManifestsToMessage(updatedManifests)) {
             vmm =>
@@ -114,6 +112,8 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
                 saveSnapshot(stateToMessage(state))
               }
           }
+        case _ =>
+          log.info(s"No changes to persist")
       }
 
     case GetState =>
