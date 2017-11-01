@@ -96,16 +96,16 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
         voyageManifestsActor ! UpdateLatestZipFilename(nextFetchMaxFilename)
         voyageManifestsActor ! VoyageManifests(manifestsState)
 
-        fetchAndPushManifests(nextFetchMaxFilename)
-
         log.info(s"Waiting $intervalSeconds seconds before polling for more manifests")
-        Thread.sleep(intervalSeconds * Crunch.oneMinuteMillis)
-      case Failure(t) =>
-        handleFailure(startingFilename, intervalSeconds, t)
+        Thread.sleep(intervalSeconds * 1000)
+
+        fetchAndPushManifests(nextFetchMaxFilename)
+      case Failure(throwable) =>
+        handleFailure(startingFilename, intervalSeconds, throwable)
     }
     vmFuture.recover {
-      case t =>
-        handleFailure(startingFilename, intervalSeconds, t)
+      case throwable =>
+        handleFailure(startingFilename, intervalSeconds, throwable)
     }
   }
 
@@ -130,7 +130,7 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
 
   def handleFailure(startingFilename: String, intervalSeconds: Int, t: Throwable): Unit = {
     log.error(s"Failed to fetch manifests, trying again after $intervalSeconds seconds: $t")
-    Thread.sleep(intervalSeconds * Crunch.oneMinuteMillis)
+    Thread.sleep(intervalSeconds * 1000)
     log.info(s"About to retry fetching new manifests")
     fetchAndPushManifests(startingFilename)
   }
