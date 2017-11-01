@@ -51,7 +51,6 @@ object BigSummaryBoxes {
     })
   }
 
-
   def bestFlightSplits(bestFlightPax: (Arrival) => Int): (ApiFlightWithSplits) => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
     case ApiFlightWithSplits(flight, splits, _) =>
@@ -151,12 +150,12 @@ object BigSummaryBoxes {
           }.toTagMod))
 
       val nbsp = "\u00a0"
-      <.h3(
+      <.div(
         nbsp,
         <.span(
           // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
           <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
-            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)), sourceDisplay))
+            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, "")), sourceDisplay))
       )
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {

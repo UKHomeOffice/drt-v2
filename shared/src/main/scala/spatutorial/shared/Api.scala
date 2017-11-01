@@ -189,6 +189,8 @@ trait SDateLike {
 
   def prettyDateTime(): String = f"${getDate()}%02d-${getMonth()}%02d-${getFullYear()} ${getHours()}%02d:${getMinutes()}%02d"
 
+  def prettyTime(): String = f"${getHours()}%02d:${getMinutes()}%02d"
+
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }
 

@@ -86,22 +86,26 @@ object FlightComponents {
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.passengerType} > ${ptqc.queueType}"
 
   object SplitsGraph {
+
     case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)], tooltip: TagMod)
+
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._
       <.div(^.className := "splits",
         <.div(^.className := "splits-tooltip", <.div(tooltip)),
         <.div(^.className := "graph",
-          splits.map {
-            case (paxTypeAndQueue, paxCount) =>
-              val percentage: Double = paxCount.toDouble / splitTotal * 100
-              val label = paxTypeAndQueueString(paxTypeAndQueue)
-              <.div(
-                ^.className := "bar " + paxTypeAndQueue.queueType,
-                ^.height := s"${percentage}%",
-                ^.title := s"$paxCount $label")
-          }.toTagMod
-        ))
+          <.div(^.className := "bars",
+            splits.map {
+              case (paxTypeAndQueue, paxCount) =>
+                val percentage: Double = paxCount.toDouble / splitTotal * 100
+                val label = paxTypeAndQueueString(paxTypeAndQueue)
+                <.div(
+                  ^.className := "bar " + paxTypeAndQueue.queueType,
+                  ^.height := s"${percentage}%",
+                  ^.title := s"$paxCount $label")
+            }.toTagMod,
+            <.div(^.className := "bar-max bar")
+          )))
     }
   }
 
@@ -109,7 +113,7 @@ object FlightComponents {
     <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
       <.tbody(
         splits.map {
-      case (label, paxCount) => <.tr(<.td(s"$paxCount $label"))
-    }.toTagMod))
+          case (label, paxCount) => <.tr(<.td(s"$paxCount $label"))
+        }.toTagMod))
   }
 }
