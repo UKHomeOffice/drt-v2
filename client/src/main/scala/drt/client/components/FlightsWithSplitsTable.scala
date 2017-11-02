@@ -166,9 +166,7 @@ object FlightTableRow {
         }
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        val apiSplits = flightWithSplits.splits
-          .find(splits => splits.source == SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage)
-          .getOrElse(ApiSplits(Set(), "no splits - client", None))
+        val apiSplits = flightWithSplits.bestSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
 
         <.tr(^.key := flight.uniqueId.toString,
           hasChangedStyle,

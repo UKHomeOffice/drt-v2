@@ -125,18 +125,18 @@ object PassengerTypeCalculatorValues {
 object PassengerQueueCalculator extends PassengerQueueCalculator {
   val log = LoggerFactory.getLogger(getClass)
 
-  def convertVoyageManifestIntoPaxTypeAndQueueCounts(flight: VoyageManifestParser.VoyageManifest): List[SplitsPaxTypeAndQueueCount] = {
-    val paxTypeFn = flight.ArrivalPortCode match {
-      case "LHR" => whenTransitMatters
+  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[SplitsPaxTypeAndQueueCount] = {
+    val paxTypeFn = manifest.ArrivalPortCode match {
+      case "LHR" => whenTransitMatters(portCode)
       case _ => mostAirports
     }
-    val paxInManifest = flight.PassengerList
+    val paxInManifest = manifest.PassengerList
     val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.PassengerIdentifier)
-    log.info(s"Manifest: grouped by PassengerIdentifier ${byIdGrouped.size} Vs ${paxInManifest.length}")
-    val uniquePax = if (byIdGrouped.nonEmpty) byIdGrouped.values.toList.collect {
+    log.info(s"${manifest.EventCode} Manifest for ${manifest.flightCode}: grouped by PassengerIdentifier ${byIdGrouped.size} Vs ${paxInManifest.length}")
+    val uniquePax = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
       case head :: _ => head
     } else paxInManifest
-    val paxTypes = uniquePax.map(passengerInfoFields).map(paxTypeFn)
+    val paxTypes: Seq[PaxType] = uniquePax.map(passengerInfoFields).map(paxTypeFn)
     distributeToQueues(paxTypes)
   }
 
@@ -154,22 +154,25 @@ object PassengerTypeCalculator {
   val log = LoggerFactory.getLogger(getClass)
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(inTransitFlag: String, eeaFlag: String, documentCountry: String)
+  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, eeaFlag: String, documentCountry: String)
 
   def isEea(country: String) = EEACountries contains country
   def isNonMachineReadable(country: String) = nonMachineReadableCountries contains country
 
-  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode)
+  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode)
 
-  val transitMatters: PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo("Y", _, _) => Transit
+  def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
+    case PaxTypeInfo(_, "Y", _, _) => Transit
+    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode != portCode =>
+      log.info(s"Caught a transit - disembarking at $disembarkPortCode")
+      Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-      case PaxTypeInfo(_, _, country) if isEea(country) && isNonMachineReadable(country) => EeaNonMachineReadable
-      case PaxTypeInfo(_, _, country) if isEea(country) => EeaMachineReadable
-      case PaxTypeInfo(_, _, country) if !isEea(country) && isVisaNational(country) => VisaNational
-      case PaxTypeInfo(_, _, country) if !isEea(country) => NonVisaNational
+      case PaxTypeInfo(_, _, _, country) if isEea(country) && isNonMachineReadable(country) => EeaNonMachineReadable
+      case PaxTypeInfo(_, _, _, country) if isEea(country) => EeaMachineReadable
+      case PaxTypeInfo(_, _, _, country) if !isEea(country) && isVisaNational(country) => VisaNational
+      case PaxTypeInfo(_, _, _, country) if !isEea(country) => NonVisaNational
   }
 
   def isVisaNational(countryCode: String) = visaCountyCodes.contains(countryCode)
@@ -180,7 +183,7 @@ object PassengerTypeCalculator {
 
   val mostAirports = countryAndDocumentTypes orElse defaultToVisaNational
 
-  val whenTransitMatters = transitMatters orElse mostAirports
+  def whenTransitMatters(portCode: String) = transitMatters(portCode) orElse mostAirports
 
   case class Country(name: String, code3Letter: String, isVisaRequired: Boolean)
 

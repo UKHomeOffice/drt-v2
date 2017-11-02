@@ -26,6 +26,7 @@ case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
 class CrunchGraphStage(name: String,
                        optionalInitialFlights: Option[FlightsWithSplits],
+                       portCode: String,
                        slas: Map[QueueName, Int],
                        minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                        procTimes: Map[PaxTypeAndQueue, Double],
@@ -563,7 +564,7 @@ class CrunchGraphStage(name: String,
     }
 
     def paxTypeAndQueueCounts(manifest: VoyageManifest, f: ApiFlightWithSplits): ApiSplits = {
-      val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(manifest)
+      val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest)
       val sptqc: Set[SplitsPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
       val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = sptqc.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
       val withEgateAndFastTrack = addEgatesAndFastTrack(f, apiPaxTypeAndQueueCounts)

@@ -142,9 +142,10 @@ object CrunchSystem {
     expireAfterMillis = expireAfterMillis,
     now = () => SDate.now())
 
-  def crunchStage(name: String, maxDays: Int, manifestsUsed: Boolean = true, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider, expireAfterMillis: Long): CrunchGraphStage = new CrunchGraphStage(
+  def crunchStage(name: String, portCode: String, maxDays: Int, manifestsUsed: Boolean = true, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider, expireAfterMillis: Long): CrunchGraphStage = new CrunchGraphStage(
     name = name,
     optionalInitialFlights = None,
+    portCode = portCode,
     slas = airportConfig.slaByQueue,
     minMaxDesks = airportConfig.minMaxDesksByTerminalQueue,
     procTimes = airportConfig.defaultProcessingTimes.head._2,
@@ -204,7 +205,7 @@ object CrunchSystem {
     val (liveArrivalsCrunchInput, manifestsInput) = RunnableLiveCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
       arrivalsSource = liveArrivalsDiffQueueSource,
       voyageManifestsSource = manifestsSource,
-      cruncher = crunchStage(name = "live", maxDays = 2, airportConfig = airportConfig, historicalSplitsProvider = historicalSplitsProvider, expireAfterMillis = expireAfterMillis),
+      cruncher = crunchStage(name = "live", portCode = airportConfig.portCode, maxDays = 2, airportConfig = airportConfig, historicalSplitsProvider = historicalSplitsProvider, expireAfterMillis = expireAfterMillis),
       simulationQueueSubscriber = simulationSubscriber
     ).run()(ActorMaterializer())
 
@@ -215,7 +216,7 @@ object CrunchSystem {
     val forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
     val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
       arrivalsSource = forecastArrivalsDiffQueueSource,
-      cruncher = crunchStage(name = "forecast", maxDays = maxDaysToCrunch, manifestsUsed = false, airportConfig = airportConfig, historicalSplitsProvider, expireAfterMillis = expireAfterMillis),
+      cruncher = crunchStage(name = "forecast", portCode = airportConfig.portCode, maxDays = maxDaysToCrunch, manifestsUsed = false, airportConfig = airportConfig, historicalSplitsProvider, expireAfterMillis = expireAfterMillis),
       simulationQueueSubscriber = simulationSubscriber
     ).run()(ActorMaterializer())
 

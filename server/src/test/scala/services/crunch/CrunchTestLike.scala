@@ -121,7 +121,8 @@ class CrunchTestLike
                      earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      shifts: String = "",
-                     fixedPoints: String = ""
+                     fixedPoints: String = "",
+                     portCode: String = "STN"
                     ): CrunchGraph = {
 
     val actorMaterializer = ActorMaterializer()
@@ -136,9 +137,10 @@ class CrunchTestLike
       expireAfterMillis = 2 * oneDayMillis,
       now = now)
 
-    def crunchStage(name: String, manifestsUsed: Boolean = true) = new CrunchGraphStage(
+    def crunchStage(name: String, portCode: String, manifestsUsed: Boolean = true) = new CrunchGraphStage(
       name,
       optionalInitialFlights = initialFlightsWithSplits,
+      portCode = portCode,
       slas = slaByQueue,
       minMaxDesks = minMaxDesks,
       procTimes = procTimes,
@@ -182,7 +184,7 @@ class CrunchTestLike
 
     val forecastArrivalsCrunchInput = RunnableForecastCrunchGraph(
       arrivalsSource = forecastArrivalsDiffQueueSource,
-      cruncher = crunchStage(name = "forecast", manifestsUsed = false),
+      cruncher = crunchStage(name = "forecast", portCode = portCode, manifestsUsed = false),
       simulationQueueSubscriber = forecastCrunchInput
     ).run()(actorMaterializer)
     val liveStaffingGraphStage = new StaffingStage(name = "live", initialOptionalPortState = None, minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120, now = now, expireAfterMillis = 2 * oneDayMillis, crunchEnd = (_) => getLocalNextMidnight(SDate.now()))
@@ -204,7 +206,7 @@ class CrunchTestLike
     val (liveArrivalsCrunchInput, manifestsInput) = RunnableLiveCrunchGraph(
       arrivalsSource = liveArrivalsDiffQueueSource,
       voyageManifestsSource = manifestsSource,
-      cruncher = crunchStage(name = "live"),
+      cruncher = crunchStage(name = "live", portCode = portCode),
       simulationQueueSubscriber = liveCrunchInput
     ).run()(actorMaterializer)
 
