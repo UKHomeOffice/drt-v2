@@ -11,13 +11,12 @@ import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete, StreamConverters}
 import akka.util.{ByteString, Timeout}
-import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.services.s3.S3ClientOptions
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import services.graphstages.Crunch
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -25,7 +24,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Success
+import scala.util.{Failure, Success}
 import scala.util.matching.Regex
 
 case class UpdateLatestZipFilename(filename: String)
@@ -35,8 +34,7 @@ case object GetLatestZipFilename
 case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename: String)
 
 
-
-case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], voyageManifestsActor: ActorRef) {
+case class VoyageManifestsProvider(bucketName: String, portCode: String, manifestsSource: SourceQueueWithComplete[VoyageManifests], voyageManifestsActor: ActorRef) {
   implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
@@ -58,54 +56,83 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
       .runWith(Sink.seq[(String, VoyageManifest)])
   }
 
-  def start(): Future[Unit] = {
+  def start(): Unit = {
     val askableActor: AskableActorRef = voyageManifestsActor
-    askableActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case VoyageManifestState(manifests, latestFilename) =>
-        manifestsState = manifests
-        log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
-        manifestsSource.offer(VoyageManifests(manifests))
-        fetchAndPushManifests(latestFilename)
+    val futureVms = askableActor
+      .ask(GetState)(new Timeout(5 minutes))
+    futureVms
+      .onComplete {
+        case Success(something) =>
+          something match {
+            case VoyageManifestState(manifests, latestFilename) =>
+              manifestsState = manifests
+              log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
+              manifestsSource.offer(VoyageManifests(manifests))
+              fetchAndPushManifests(latestFilename)
+            case unexpected =>
+              log.warn(s"Received unexpected ${unexpected.getClass}")
+              fetchAndPushManifests("")
+          }
+        case Failure(t) =>
+          log.warn(s"Didn't receive voyage manifest state from actor: $t")
+          fetchAndPushManifests("")
+      }
+    futureVms.recover {
+      case t =>
+        log.warn(s"Didn't receive voyage manifest state from actor: $t")
+        fetchAndPushManifests("")
     }
   }
 
   def fetchAndPushManifests(startingFilename: String): Unit = {
     log.info(s"Fetching manifests from files newer than $startingFilename")
     val vmFuture = manifestsFuture(startingFilename)
-    vmFuture.onSuccess {
-      case ms =>
+    val intervalSeconds = 60
+    vmFuture.onComplete {
+      case Success(ms) =>
         log.info(s"manifestsFuture Success")
-        val nextFetchMaxFilename = if (ms.nonEmpty) {
-          val maxFilename = ms.map(_._1).max
-          val vms = ms.map(_._2).toSet
-          val newManifests = vms -- manifestsState
-          if (newManifests.nonEmpty) {
-            manifestsState = manifestsState ++ newManifests
-            log.info(s"${newManifests.size} manifests offered")
-            manifestsSource.offer(VoyageManifests(newManifests))
-          } else {
-            log.info(s"No new manifests")
-          }
-          maxFilename
-        } else {
-          log.info(s"No manifests received")
-          startingFilename
-        }
-        log.info("Waiting 1 minute before polling for more manifests")
-        Thread.sleep(60000)
-        log.info(s"Set latestZipFilename to '$nextFetchMaxFilename'")
+        val nextFetchMaxFilename = updateState(startingFilename, ms)
+        log.info(s"latestZipFilename: '$nextFetchMaxFilename'. ${manifestsState.size} manifests")
         voyageManifestsActor ! UpdateLatestZipFilename(nextFetchMaxFilename)
         voyageManifestsActor ! VoyageManifests(manifestsState)
 
+        log.info(s"Waiting $intervalSeconds seconds before polling for more manifests")
+        Thread.sleep(intervalSeconds * 1000)
+
         fetchAndPushManifests(nextFetchMaxFilename)
+      case Failure(throwable) =>
+        handleFailure(startingFilename, intervalSeconds, throwable)
     }
-    vmFuture.onFailure {
-      case t =>
-        log.error(s"Failed to fetch manifests, trying again after 5 minutes: $t")
-        Thread.sleep(300000)
-        log.info(s"About to retry fetching new maniftests")
-        fetchAndPushManifests(startingFilename)
+    vmFuture.recover {
+      case throwable =>
+        handleFailure(startingFilename, intervalSeconds, throwable)
     }
+  }
+
+  def updateState(startingFilename: String, ms: Seq[(String, VoyageManifest)]): String = {
+    if (ms.nonEmpty) {
+      val maxFilename = ms.map(_._1).max
+      val vms = ms.map(_._2).toSet
+      val newManifests = vms -- manifestsState
+      if (newManifests.nonEmpty) {
+        manifestsState = manifestsState ++ newManifests
+        log.info(s"${newManifests.size} manifests offered")
+        manifestsSource.offer(VoyageManifests(newManifests))
+      } else {
+        log.info(s"No new manifests")
+      }
+      maxFilename
+    } else {
+      log.info(s"No manifests received")
+      startingFilename
+    }
+  }
+
+  def handleFailure(startingFilename: String, intervalSeconds: Int, t: Throwable): Unit = {
+    log.error(s"Failed to fetch manifests, trying again after $intervalSeconds seconds: $t")
+    Thread.sleep(intervalSeconds * 1000)
+    log.info(s"About to retry fetching new manifests")
+    fetchAndPushManifests(startingFilename)
   }
 
   def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed]): Seq[(String, VoyageManifest)] = {
@@ -156,14 +183,5 @@ case class VoyageManifestsProvider(s3HostName: String, bucketName: String, portC
       }
   }
 
-  def s3Client: AmazonS3AsyncClient = {
-    val configuration: ClientConfiguration = new ClientConfiguration()
-    configuration.setSignerOverride("S3SignerType")
-    val provider: ProfileCredentialsProvider = new ProfileCredentialsProvider("drt-atmos")
-
-    val client = new AmazonS3AsyncClient(provider, configuration)
-    client.client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build)
-    client.client.setEndpoint(s3HostName)
-    client
-  }
+  def s3Client: AmazonS3AsyncClient = new AmazonS3AsyncClient(new ProfileCredentialsProvider("drt-prod-s3"))
 }

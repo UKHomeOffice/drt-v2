@@ -8,6 +8,7 @@ import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import services.SDate
@@ -27,6 +28,7 @@ object AclFeed {
   def sftpClient(ftpServer: String, username: String, path: String): SFTPClient = {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
+    ssh.addHostKeyVerifier(new PromiscuousVerifier())
     ssh.connect(ftpServer)
     ssh.authPublickey(username, path)
     ssh.setTimeout(0)

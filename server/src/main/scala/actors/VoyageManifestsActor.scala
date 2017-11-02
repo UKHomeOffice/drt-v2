@@ -35,10 +35,10 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       state = state.copy(latestZipFilename = latestFilename)
 
     case VoyageManifestsMessage(_, manifestMessages) =>
+      log.info(s"Recovery received ${manifestMessages.length} updated manifests")
       val updatedManifests = manifestMessages
         .map(voyageManifestFromMessage)
         .toSet -- state.manifests
-      log.info(s"Recovery received ${updatedManifests.size} updated manifests")
 
       state = newStateFromManifests(state.manifests, updatedManifests)
 
@@ -92,19 +92,31 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
     case UpdateLatestZipFilename(updatedLZF) if updatedLZF == state.latestZipFilename =>
       log.info(s"Received update - latest zip file is: $updatedLZF - no change")
 
-    case VoyageManifests(updatedManifests) =>
-      log.info(s"Received ${updatedManifests.size} updated manifests")
+    case VoyageManifests(newManifests) =>
+      log.info(s"Received ${newManifests.size} manifests")
 
-      state = newStateFromManifests(state.manifests, updatedManifests)
+      val updates = newManifests -- state.manifests
 
-      persist(voyageManifestsToMessage(updatedManifests)) { vmm =>
-        log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
-        context.system.eventStream.publish(vmm)
-        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-          log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
-          saveSnapshot(stateToMessage(state))
-        }
+      updates match {
+        case updatedManifests if updatedManifests.nonEmpty =>
+          persist(voyageManifestsToMessage(updatedManifests)) {
+            vmm =>
+              log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
+              context.system.eventStream.publish(vmm)
+              if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+                log.info(s"Saving VoyageManifests snapshot ${
+                  state.latestZipFilename
+                }, ${
+                  state.manifests.size
+                } manifests")
+                saveSnapshot(stateToMessage(state))
+              }
+          }
+        case _ =>
+          log.info(s"No changes to persist")
       }
+
+      state = newStateFromManifests(state.manifests, newManifests)
 
     case GetState =>
       log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")

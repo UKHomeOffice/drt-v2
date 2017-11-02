@@ -16,14 +16,12 @@ import services.graphstages.Crunch._
 import scala.collection.immutable._
 import scala.language.postfixOps
 
-class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName]], now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor {
+class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[TerminalName, Seq[QueueName]], now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
   var state: Option[PortState] = None
-
-  val snapshotInterval = 1000
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
@@ -37,7 +35,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
       state = newState
 
     case RecoveryCompleted =>
-      log.info("Finished restoring crunch state")
+      log.info("Recovery: Finished restoring crunch state")
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")
@@ -149,7 +147,7 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
         val stateWithDiffsApplied = Option(PortState(
           flights = applyFlightsWithSplitsDiff(diff, ps.flights),
           crunchMinutes = applyCrunchDiff(diff, ps.crunchMinutes),
-          staffMinutes = applyStaffDiff(diff, Map())))
+          staffMinutes = applyStaffDiff(diff, ps.staffMinutes)))
         log.info(s"Finished applying CrunchDiff to PortState")
         stateWithDiffsApplied
     }
@@ -195,10 +193,13 @@ class CrunchStateActor(name: String, portQueues: Map[TerminalName, Seq[QueueName
       context.system.eventStream.publish(diff)
     }
 
+    val filteredStaffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
+    val filteredCrunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis)
+    
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
-      crunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis),
-      staffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
+      crunchMinutes = filteredCrunchMinutes,
+      staffMinutes = filteredStaffMinutes
     )
 
     state = Option(updatedState)

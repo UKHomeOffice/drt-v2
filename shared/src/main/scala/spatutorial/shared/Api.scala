@@ -258,6 +258,7 @@ object CrunchApi {
 
   sealed trait Minute {
     val minute: MillisSinceEpoch
+    val lastUpdated: Option[MillisSinceEpoch]
   }
 
   case class StaffMinute(terminalName: TerminalName,
@@ -266,6 +267,9 @@ object CrunchApi {
                          fixedPoints: Int,
                          movements: Int,
                          lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+    def equals(candidate: StaffMinute): Boolean =
+      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
     lazy val key: Int = s"$terminalName$minute".hashCode
     lazy val available = shifts + movements - fixedPoints
   }
