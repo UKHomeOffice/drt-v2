@@ -35,7 +35,7 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
       state = newState
 
     case RecoveryCompleted =>
-      log.info("Finished restoring crunch state")
+      log.info("Recovery: Finished restoring crunch state")
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")
@@ -147,7 +147,7 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
         val stateWithDiffsApplied = Option(PortState(
           flights = applyFlightsWithSplitsDiff(diff, ps.flights),
           crunchMinutes = applyCrunchDiff(diff, ps.crunchMinutes),
-          staffMinutes = applyStaffDiff(diff, Map())))
+          staffMinutes = applyStaffDiff(diff, ps.staffMinutes)))
         log.info(s"Finished applying CrunchDiff to PortState")
         stateWithDiffsApplied
     }
@@ -193,10 +193,13 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
       context.system.eventStream.publish(diff)
     }
 
+    val filteredStaffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
+    val filteredCrunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis)
+    
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
-      crunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis),
-      staffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
+      crunchMinutes = filteredCrunchMinutes,
+      staffMinutes = filteredStaffMinutes
     )
 
     state = Option(updatedState)
