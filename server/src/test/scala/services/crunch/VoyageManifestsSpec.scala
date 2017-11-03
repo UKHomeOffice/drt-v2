@@ -29,7 +29,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val inputFlights = Flights(List(flight))
     val inputManifests = VoyageManifests(Set(
       VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"))
+        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
       ))
     ))
     val crunchGraphs = runCrunchGraph(
@@ -122,7 +122,99 @@ class VoyageManifestsSpec extends CrunchTestLike {
     (splitsSet, queues) === Tuple2(expectedSplits, expectedQueues)
   }
 
+  "Given a VoyageManifest and its arrival where the arrival has a different number of passengers to the manifest " +
+    "When I crunch the flight " +
+    "Then I should see the passenger loads corresponding to the manifest splits applied to the arrival's passengers" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = "LHR"
+
+    val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10)
+    val inputFlights = Flights(List(flight))
+    val inputManifests = VoyageManifests(Set(
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
+      ))
+    ))
+    val crunchGraphs = runCrunchGraph(
+      now = () => SDate(scheduled),
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
+      portCode = portCode
+    )
+
+    crunchGraphs.manifestsInput.offer(inputManifests)
+    Thread.sleep(200L)
+    crunchGraphs.liveArrivalsInput.offer(inputFlights)
+
+    val crunchMinutes = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+      case PortState(_, cm, _) => cm
+    }
+
+    val queuePax = crunchMinutes
+      .values
+      .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
+      .map(cm => (cm.queueName, cm.paxLoad))
+      .toMap
+
+    val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 10.0)
+
+    queuePax === expected
+  }
+
+  "Given a VoyageManifest and its arrival where the arrival has a different number of passengers to the manifest " +
+    "When I crunch the flight " +
+    "Then I should see the passenger loads corresponding to the manifest splits applied to the arrival's passengers" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = "LHR"
+
+    val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10, tranPax = 5)
+    val inputFlights = Flights(List(flight))
+    val inputManifests = VoyageManifests(Set(
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None),
+        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "Y", Some("GBR"), Option("GBR"), None),
+        PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("JFK"), "N", Some("GBR"), Option("GBR"), None)
+      ))
+    ))
+    val crunchGraphs = runCrunchGraph(
+      now = () => SDate(scheduled),
+      procTimes = Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaMachineReadableToEGate -> 25d / 60
+      ),
+      queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
+      crunchStartDateProvider = (_) => SDate(scheduled),
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
+      portCode = portCode
+    )
+
+    crunchGraphs.manifestsInput.offer(inputManifests)
+    Thread.sleep(200L)
+    crunchGraphs.liveArrivalsInput.offer(inputFlights)
+
+    val crunchMinutes = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+      case PortState(_, cm, _) => cm
+    }
+
+    val queuePax = crunchMinutes
+      .values
+      .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
+      .map(cm => (cm.queueName, cm.paxLoad))
+      .toMap
+
+    val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
+
+    queuePax === expected
+  }
+
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {
-    PassengerInfoJson(Some(documentType), issuingCountry, "", Some("22"), Some("LHR"), "N", Some("GBR"), Option(nationality))
+    PassengerInfoJson(Some(documentType), issuingCountry, "", Some("22"), Some("LHR"), "N", Some("GBR"), Option(nationality), None)
   }
 }

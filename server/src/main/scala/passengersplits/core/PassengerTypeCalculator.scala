@@ -95,6 +95,7 @@ object PassengerTypeCalculatorValues {
     val Switzerland = "CHE"
     val UK = "GBR"
   }
+
   import CountryCodes._
 
   lazy val EUCountries = {
@@ -152,27 +153,29 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
 
 object PassengerTypeCalculator {
   val log = LoggerFactory.getLogger(getClass)
+
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, eeaFlag: String, documentCountry: String)
+  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, documentCountry: String, documentType: Option[String])
 
   def isEea(country: String) = EEACountries contains country
+
   def isNonMachineReadable(country: String) = nonMachineReadableCountries contains country
 
-  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode)
+  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
 
   def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
     case PaxTypeInfo(_, "Y", _, _) => Transit
     case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode != portCode =>
-      log.info(s"Caught a transit - disembarking at $disembarkPortCode")
+      log.info(s"Caught a transit - disembarking at $disembarkPortCode (not $portCode)")
       Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-      case PaxTypeInfo(_, _, _, country) if isEea(country) && isNonMachineReadable(country) => EeaNonMachineReadable
-      case PaxTypeInfo(_, _, _, country) if isEea(country) => EeaMachineReadable
-      case PaxTypeInfo(_, _, _, country) if !isEea(country) && isVisaNational(country) => VisaNational
-      case PaxTypeInfo(_, _, _, country) if !isEea(country) => NonVisaNational
+    case PaxTypeInfo(_, _, country, Some(docType)) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
+    case PaxTypeInfo(_, _, country, _) if isEea(country) && isNonMachineReadable(country) => EeaNonMachineReadable
+    case PaxTypeInfo(_, _, country, _) if !isEea(country) && isVisaNational(country) => VisaNational
+    case PaxTypeInfo(_, _, country, _) if !isEea(country) => NonVisaNational
   }
 
   def isVisaNational(countryCode: String) = visaCountyCodes.contains(countryCode)
@@ -188,7 +191,7 @@ object PassengerTypeCalculator {
   case class Country(name: String, code3Letter: String, isVisaRequired: Boolean)
 
   lazy val loadedCountries = loadCountries()
-  lazy val countries = loadedCountries.collect{case Right(c) => c}
+  lazy val countries = loadedCountries.collect { case Right(c) => c }
   lazy val visaCountries = countries.filter(_.isVisaRequired)
   lazy val visaCountyCodes = visaCountries.map(_.code3Letter).toSet
 

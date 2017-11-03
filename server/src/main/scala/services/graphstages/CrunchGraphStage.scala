@@ -394,33 +394,29 @@ class CrunchGraphStage(name: String,
       val historicalSplits = splits.find(_.source == SplitSources.Historical)
       val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-      val splitsToUseOption = apiSplitsDc match {
-        case s@Some(_) => s
-        case None => apiSplitsCi match {
-          case s@Some(_) => s
-          case None => historicalSplits match {
-            case s@Some(_) => s
-            case None => terminalSplits match {
-              case s@Some(_) => s
-              case None =>
-                log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
-                None
-            }
-          }
-        }
+      val splitsToUseOption: Option[ApiSplits] = List(apiSplitsDc, apiSplitsCi, historicalSplits, terminalSplits).find {
+        case Some(_) => true
+        case _ => false
+      }.getOrElse {
+        log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
+        None
       }
 
       splitsToUseOption.map(splitsToUse => {
+        log.info(s"splitsToUse: $splitsToUse")
         val totalPax = splitsToUse.splitStyle match {
-          case PaxNumbers => splitsToUse.splits.map(qc => qc.paxCount).sum
-          case Percentage => ArrivalHelper.bestPax(flight)
           case UndefinedSplitStyle => 0
+          case _ => ArrivalHelper.bestPax(flight)
         }
         val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
-          case PaxNumbers => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalPax))
-          case Percentage => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
           case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
+          case PaxNumbers => {
+            val totalSplitsPax = splitsToUse.splits.filter(_.queueType != Queues.Transfer).map(_.paxCount).sum
+            splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
+          }
+          case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
         }
+        log.info(s"totalPax: $totalPax, splitRatios: $splitRatios")
 
         minutesForHours(flight.PcpTime, 1)
           .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
@@ -428,7 +424,7 @@ class CrunchGraphStage(name: String,
             case (minuteMillis, flightPaxInMinute) =>
               splitRatios
                 .filterNot(_.queueType == Queues.Transfer)
-                .map(apiSplit => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplit, splitsToUse.splitStyle))
+                .map(apiSplit => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplit, Percentage))
           }.toSet
       }).getOrElse(Set())
     }

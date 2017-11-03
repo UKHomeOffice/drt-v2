@@ -221,12 +221,18 @@ class StaffingStage(name: String,
         simulationWindow match {
           case None =>
             log.info(s"No window set. Not running a simulation")
-            val firstMinuteInState = crunchMinutesWithDeployments
-              .values
-              .toList
-              .minBy(_.minute)
-            val firstMinuteWithoutWarmUp = firstMinuteInState.minute + warmUpMinutes * Crunch.oneMinuteMillis
-            crunchMinutesWithDeployments.filter { case (_, cm) => firstMinuteWithoutWarmUp <= cm.minute }
+            crunchMinutesWithDeployments match {
+              case cm if cm.nonEmpty =>
+                val firstMinuteInState = crunchMinutesWithDeployments
+                  .values
+                  .toList
+                  .minBy(_.minute)
+                val firstMinuteWithoutWarmUp = firstMinuteInState.minute + warmUpMinutes * Crunch.oneMinuteMillis
+                crunchMinutesWithDeployments.filter {
+                  case (_, cm) => firstMinuteWithoutWarmUp <= cm.minute
+                }
+              case _ => Map()
+            }
           case Some((start, end)) =>
             log.info(s"Simulation window: ${start.toLocalDateTimeString()} -> ${end.toLocalDateTimeString()}")
             val minutesInACrunch = 1440
@@ -343,7 +349,7 @@ class StaffingStage(name: String,
           val successfulFixedPoints = myFixedPoints.collect { case Success(s) => s }
           val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
           val mm = StaffMovementsService(myMovements)
-          val available = StaffMovements.terminalStaffAt(ss, fps)(myMovements)_
+          val available = StaffMovements.terminalStaffAt(ss, fps)(myMovements) _
           Option(StaffSources(ss, fps, mm, available))
         }
       }
