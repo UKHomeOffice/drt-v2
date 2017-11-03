@@ -1,11 +1,13 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, groupByX, terminalCrunchMinutesByMinute}
+import drt.shared.CrunchApi.{CrunchMinute, groupByX, terminalCrunchMinutesByMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
+
+import scala.collection.immutable.Seq
 
 object DashboardComponent {
   def pcpHighest(cms: Seq[CrunchMinute]) = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad > cm2.paxLoad) cm1 else cm2)
@@ -20,8 +22,8 @@ object DashboardComponent {
     }).mapValues(_.toSet).toList.sortBy(_._1)
   }
 
-  def queueTotals(aggSplits: Map[PaxTypeAndQueue, Int]) = {
-    aggSplits.foldLeft(Map[QueueName, Int]())((map, ptqc) => {
+  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = {
+    splits.foldLeft(Map[QueueName, Int]())((map, ptqc) => {
       ptqc match {
         case (PaxTypeAndQueue(_, q), pax) =>
           map + (q -> (map.getOrElse(q, 0) + pax))
@@ -29,7 +31,13 @@ object DashboardComponent {
     })
   }
 
-  def windowStart(time: SDateLike) = {
+  def queuesFromPaxTypeAndQueue(ptq: List[PaxTypeAndQueue]): Seq[String] = {
+    ptq.map {
+      case PaxTypeAndQueue(_, q) => q
+    }.distinct
+  }
+
+  def windowStart(time: SDateLike): SDateLike = {
 
     val minutes = (time.getMinutes() / 15) * 15
 
@@ -40,7 +48,7 @@ object DashboardComponent {
     (cm1, cm2) => if (deployedRatio(cm1) > deployedRatio(cm2)) cm1 else cm2
   )
 
-  def deployedRatio(cm1: CrunchMinute) = {
+  def deployedRatio(cm1: CrunchMinute): Int = {
     cm1.deployedDesks match {
       case Some(deployed) =>
         cm1.deskRec / deployed
@@ -70,13 +78,11 @@ object DashboardComponent {
       val pressurePoint = worstTimeslot(crunchMinuteTimeSlots)
       val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
-      val splitsForPeriod = aggSplits(p.flights.toList)
+      val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
       val totalForQueuesInPeriod = queueTotals(splitsForPeriod)
 
 
-      val queueNames = p.queues.map {
-        case PaxTypeAndQueue(_, q) => q
-      }.distinct
+      val queueNames = queuesFromPaxTypeAndQueue(p.queues)
 
       <.div(^.className := "dashboard-summary container-fluid",
         <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",

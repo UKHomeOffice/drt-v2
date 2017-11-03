@@ -41,6 +41,7 @@ object SplitStyle {
   def apply(splitStyle: String): SplitStyle = splitStyle match {
     case "PaxNumbers$" => PaxNumbers
     case "Percentage$" => Percentage
+    case "Ratio" => Ratio
     case _ => UndefinedSplitStyle
   }
 }
@@ -48,6 +49,8 @@ object SplitStyle {
 case object PaxNumbers extends SplitStyle
 
 case object Percentage extends SplitStyle
+
+case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
@@ -88,7 +91,6 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     }
   }
 }
-
 
 case class FlightsNotReady()
 
