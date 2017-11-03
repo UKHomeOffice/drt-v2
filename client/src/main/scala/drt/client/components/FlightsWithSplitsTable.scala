@@ -132,7 +132,7 @@ object FlightTableRow {
             <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
             <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
-            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
+            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, Option(tt))),
             sourceDisplay)
         }
 

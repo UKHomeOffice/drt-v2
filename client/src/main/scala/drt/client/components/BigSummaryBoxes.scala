@@ -155,7 +155,7 @@ object BigSummaryBoxes {
         <.span(
           // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
           <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
-            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, "")), sourceDisplay))
+            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, None)), sourceDisplay))
       )
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {

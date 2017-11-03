@@ -87,12 +87,13 @@ object FlightComponents {
 
   object SplitsGraph {
 
-    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)], tooltip: TagMod)
+    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)], tooltipOption: Option[TagMod])
 
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._
       <.div(^.className := "splits",
-        <.div(^.className := "splits-tooltip", <.div(tooltip)),
+        tooltipOption.map(tooltip =>
+        <.div(^.className := "splits-tooltip", <.div(tooltip))).toList.toTagMod,
         <.div(^.className := "graph",
           <.div(^.className := "bars",
             splits.map {
