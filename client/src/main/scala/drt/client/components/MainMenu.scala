@@ -23,7 +23,7 @@ object MainMenu {
   case class MenuItem(idx: Int, label: (Props) => VdomNode, icon: Icon, location: Loc)
 
   val staticMenuItems = List(
-    MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(3))
+    MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
   )
 
   def menuItems(airportConfig: AirportConfig): List[MenuItem] = {
