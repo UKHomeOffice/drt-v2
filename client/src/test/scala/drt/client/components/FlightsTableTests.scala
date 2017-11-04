@@ -80,7 +80,9 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act Chox"),
                 <.th("Est PCP"),
                 <.th("Pax Nos"),
-                <.th("Splits")
+                <.th("e-Gates"),
+                <.th("EEA"),
+                <.th("Non-EEA")
               )),
               <.tbody(
                 <.tr(
@@ -94,10 +96,12 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                   <.td(testFlight.ActPax),
-                  <.td()))))
+                  <.td(0),
+                  <.td(0),
+                  <.td(0)))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack)),
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
@@ -117,7 +121,9 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act Chox"),
                 <.th("Est PCP"),
                 <.th("Pax Nos"),
-                <.th("Splits")
+                <.th("e-Gates"),
+                <.th("EEA"),
+                <.th("Non-EEA")
               )),
               <.tbody(
                 <.tr(
@@ -132,7 +138,9 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.ActChoxDT),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                   <.td(testFlight.ActPax),
-                  <.td()))))
+                  <.td(0),
+                  <.td(0),
+                  <.td(0)))))
 
           //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
@@ -163,7 +171,9 @@ object FlightsTableTests extends TestSuite {
                   <.th("Act Chox"),
                   <.th("Est PCP"),
                   <.th("Pax Nos"),
-                  <.th("Splits")
+                  <.th("e-Gates"),
+                  <.th("EEA"),
+                  <.th("Non-EEA")
                 )),
                 <.tbody(
                   <.tr(
@@ -177,7 +187,9 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.ActChoxDT),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                     <.td(testFlight.ActPax),
-                    <.td()))))
+                    <.td(0),
+                    <.td(0),
+                    <.td(0)))))
 
 
             def originMapperComponent(portCode: String): VdomNode = <.span(^.title := "JFK, New York, USA", portCode)
@@ -232,7 +244,9 @@ object FlightsTableTests extends TestSuite {
                 <.th("Act Chox"),
                 <.th("Est PCP"),
                 <.th("Pax Nos"),
-                <.th("Splits")
+                <.th("e-Gates"),
+                <.th("EEA"),
+                <.th("Non-EEA")
               )),
               <.tbody(
                 <.tr(
@@ -247,7 +261,9 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.ActChoxDT),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))), //pcp
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
-                  <.td()
+                  <.td(0),
+                  <.td(0),
+                  <.td(0)
                 ))))
 
           def paxComponent(f: Arrival, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")

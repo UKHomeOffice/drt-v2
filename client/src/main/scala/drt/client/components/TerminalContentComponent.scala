@@ -88,7 +88,7 @@ object TerminalContentComponent {
 
   class Backend(t: BackendScope[Props, State]) {
     val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
-      timelineComp,
+      None,
       originMapper,
       splitsGraphComponentColoured)(paxComp(843))
 

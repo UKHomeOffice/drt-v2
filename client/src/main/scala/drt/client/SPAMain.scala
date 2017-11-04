@@ -46,7 +46,7 @@ object SPAMain extends js.JSApp {
     }
   }
 
-  case class TerminalsDashboardLoc(hours: Int) extends Loc
+  case class TerminalsDashboardLoc(startTime: Option[String]) extends Loc
 
   def requestInitialActions(): Unit = {
     val initActions = Seq(
@@ -64,10 +64,10 @@ object SPAMain extends js.JSApp {
     .buildConfig { dsl =>
       import dsl._
 
-      val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(3)) ~> renderR((_: RouterCtl[Loc]) => TerminalsDashboardPage(3))
-      val terminalsDashboard: dsl.Rule = dynamicRouteCT("#terminalsDashboard" / int.caseClass[TerminalsDashboardLoc]) ~>
-        dynRenderR((page: TerminalsDashboardLoc, ctl) => {
-          TerminalsDashboardPage(page.hours)
+      val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(None)) ~> renderR((router: RouterCtl[Loc]) => TerminalsDashboardPage(None, router))
+      val terminalsDashboard: dsl.Rule = dynamicRouteCT(("#terminalsDashboard" / string(".+").option).caseClass[TerminalsDashboardLoc]) ~>
+        dynRenderR((page: TerminalsDashboardLoc, router) => {
+          TerminalsDashboardPage(None, router, page)
         })
       val terminal: dsl.Rule = dynamicRouteCT(("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option).caseClass[TerminalPageTabLoc]) ~>
         dynRenderR((page: TerminalPageTabLoc, router) => {
@@ -76,7 +76,7 @@ object SPAMain extends js.JSApp {
         })
 
       val rule = home | terminal | terminalsDashboard
-      rule.notFound(redirectToPage(TerminalsDashboardLoc(3))(Redirect.Replace))
+      rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
     .renderWith(layout)
     .onPostRender((prev, current) => {
