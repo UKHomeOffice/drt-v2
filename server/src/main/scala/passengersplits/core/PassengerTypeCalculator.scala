@@ -173,7 +173,7 @@ object PassengerTypeCalculator {
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
     case PaxTypeInfo(_, _, country, Some(docType)) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
-    case PaxTypeInfo(_, _, country, _) if isEea(country) && isNonMachineReadable(country) => EeaNonMachineReadable
+    case PaxTypeInfo(_, _, country, _) if isEea(country) => EeaNonMachineReadable
     case PaxTypeInfo(_, _, country, _) if !isEea(country) && isVisaNational(country) => VisaNational
     case PaxTypeInfo(_, _, country, _) if !isEea(country) => NonVisaNational
   }

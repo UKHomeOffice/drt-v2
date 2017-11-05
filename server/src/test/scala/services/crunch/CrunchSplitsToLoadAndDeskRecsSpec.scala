@@ -165,7 +165,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
     "Split source precedence " >> {
       "Given a flight with both api & csv splits " +
         "When I crunch " +
-        "I should see pax loads calculated from the api splits, ie 1 pax in first minute not 10 " >> {
+        "I should see pax loads calculated from the api splits and applied to the arrival's pax " >> {
 
         val scheduled = "2017-01-01T00:00Z"
 
@@ -189,7 +189,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         )
 
         val voyageManifests = VoyageManifests(Set(
-          VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+          VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
             PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
           ))
         ))
@@ -203,7 +203,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val expected = Map("T1" -> Map(
           Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-          Queues.EGate -> Seq(1.0, 0.0, 0.0, 0.0, 0.0)
+          Queues.EGate -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)
         ))
 
         resultSummary === expected

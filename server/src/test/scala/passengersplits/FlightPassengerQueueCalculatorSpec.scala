@@ -148,21 +148,22 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
     val israel = "ISR"
     val haiti = "HTI"
     s2"""${
-      "NationalityCountryEEAFlag" | "DocumentIssuingCountryCode" | "PassengerType" |>
-        "EEA" ! Germany ! EeaMachineReadable |
-        "" ! "NZL" ! NonVisaNational |
-        "" ! "AUS" ! NonVisaNational |
-        "" ! lebanon ! VisaNational |
-        "" ! israel ! NonVisaNational |
-        "" ! haiti ! VisaNational |
-        EEA ! Greece ! EeaNonMachineReadable |
-        EEA ! Italy ! EeaNonMachineReadable |
-        EEA ! Portugal ! EeaNonMachineReadable |
-        EEA ! Latvia ! EeaMachineReadable |
-        EEA ! Latvia ! EeaMachineReadable |
-        EEA ! Slovakia ! EeaNonMachineReadable | {
-        (countryFlag, documentCountry, passengerType) =>
-          PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", documentCountry, None)) must_== passengerType
+      "DocumentType" | "DocumentIssuingCountryCode" | "PassengerType" |>
+        "P" ! Germany ! EeaMachineReadable |
+        "P" ! "NZL" ! NonVisaNational |
+        "P" ! "AUS" ! NonVisaNational |
+        "P" ! lebanon ! VisaNational |
+        "P" ! israel ! NonVisaNational |
+        "P" ! haiti ! VisaNational |
+        "I" ! Greece ! EeaNonMachineReadable |
+        "I" ! Italy ! EeaNonMachineReadable |
+        "I" ! Portugal ! EeaNonMachineReadable |
+        "P" ! Latvia ! EeaMachineReadable |
+        "P" ! Latvia ! EeaMachineReadable |
+        "I" ! Slovakia ! EeaNonMachineReadable | {
+        (docType, documentCountry, passengerType) =>
+          log.info(s"$documentCountry -> $passengerType, ")
+          PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", documentCountry, Option(docType))) must_== passengerType
       }
     }"""
   }

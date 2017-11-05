@@ -411,8 +411,9 @@ class CrunchGraphStage(name: String,
         val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
           case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
           case PaxNumbers => {
-            val totalSplitsPax = splitsToUse.splits.filter(_.queueType != Queues.Transfer).map(_.paxCount).sum
-            splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
+            val splitsWithoutTransit = splitsToUse.splits.filter(_.queueType != Queues.Transfer)
+            val totalSplitsPax = splitsWithoutTransit.toList.map(_.paxCount).sum
+            splitsWithoutTransit.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
           }
           case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
         }

@@ -31,7 +31,7 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
     - Given A Flight to LHR $createLHRFlight
      And the flight has passengers
      And a Passenger is from {DEU} {InTransit} disembarking {BCN} $addPassenger
-     And a Passenger is from {DEU} {NotInTransit} disembarking {LHR} $addPassenger
+     And a Passenger is from {DEU} {NotInTransit} disembarking {STN} $addPassenger
     When we calculate the splits $calcSplits
     Then we do NOT see them in the split counts
     SplitCounts are eeaDesk {1} transfers {1} $assertSplits
