@@ -133,7 +133,6 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
     }
     val paxInManifest = manifest.PassengerList
     val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.PassengerIdentifier)
-    log.info(s"${manifest.EventCode} Manifest for ${manifest.flightCode}: grouped by PassengerIdentifier ${byIdGrouped.size} Vs ${paxInManifest.length}")
     val uniquePax = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
       case head :: _ => head
     } else paxInManifest
@@ -166,9 +165,7 @@ object PassengerTypeCalculator {
 
   def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
     case PaxTypeInfo(_, "Y", _, _) => Transit
-    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode != portCode =>
-      log.info(s"Caught a transit - disembarking at $disembarkPortCode (not $portCode)")
-      Transit
+    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode != portCode => Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {

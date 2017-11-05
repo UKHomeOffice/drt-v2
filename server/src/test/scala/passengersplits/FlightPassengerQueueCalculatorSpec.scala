@@ -162,7 +162,6 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
         "P" ! Latvia ! EeaMachineReadable |
         "I" ! Slovakia ! EeaNonMachineReadable | {
         (docType, documentCountry, passengerType) =>
-          log.info(s"$documentCountry -> $passengerType, ")
           PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", documentCountry, Option(docType))) must_== passengerType
       }
     }"""

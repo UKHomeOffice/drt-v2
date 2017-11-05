@@ -403,7 +403,6 @@ class CrunchGraphStage(name: String,
       }
 
       splitsToUseOption.map(splitsToUse => {
-        log.info(s"splitsToUse: $splitsToUse")
         val totalPax = splitsToUse.splitStyle match {
           case UndefinedSplitStyle => 0
           case _ => ArrivalHelper.bestPax(flight)
@@ -417,7 +416,6 @@ class CrunchGraphStage(name: String,
           }
           case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
         }
-        log.info(s"totalPax: $totalPax, splitRatios: $splitRatios")
 
         minutesForHours(flight.PcpTime, 1)
           .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
