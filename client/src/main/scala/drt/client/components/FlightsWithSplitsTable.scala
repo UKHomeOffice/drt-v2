@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
+import drt.shared.FlightsApi.QueueName
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import japgolly.scalajs.react._
@@ -29,13 +30,14 @@ object FlightsWithSplitsTable {
                    )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
     .renderPS((_$, props, state) => {
 
-
       val flightsWithSplits = props.flightsWithSplits
       val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
+
+      val queueNames = DashboardComponent.queuesFromPaxTypeAndQueue(props.queueOrder)
       Try {
         if (sortedFlights.nonEmpty)
           <.div(
@@ -53,7 +55,9 @@ object FlightsWithSplitsTable {
                 <.th("Act Chox"),
                 <.th("Est PCP"),
                 <.th("Pax Nos"),
-                <.th("Splits")
+                queueNames.map(
+                  q => <.th(Queues.queueDisplayNames(q))
+                ).toTagMod
               )),
               <.tbody(
                 sortedFlights.zipWithIndex.map {
@@ -81,7 +85,6 @@ object FlightsWithSplitsTable {
     .build
 
 }
-
 
 object FlightTableRow {
 
@@ -132,42 +135,25 @@ object FlightTableRow {
             <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
             <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
-            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, tt)),
+            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, Option(tt))),
             sourceDisplay)
         }
 
-        val bestSplits = flightWithSplits.bestSplits.toSet
-        //todo - we need to lift this splitsComponent code out somewhere more useful
-        val splitsComponents = bestSplits.map {
-          flightSplits => {
-            val splitStyle = flightSplits.splitStyle
-            val source = flightSplits.source.toLowerCase
-            val sourceDisplay = sourceDisplayName(flightSplits)
-            val vdomElement: VdomElement = splitStyle match {
-              case PaxNumbers =>
-                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
-                val splitStyleUnitLabe = "pax"
-                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
-                  case s if splitStyle == PaxNumbers => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
-                }).toMap
-                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
-              case Percentage =>
-                val splitTotal = flightSplits.splits.map(_.paxCount.toInt).sum
-                val splitStyle = flightSplits.splitStyle
-                val splitStyleUnitLabe = "%"
-                val queuePax: Map[PaxTypeAndQueue, Int] = flightSplits.splits.map({
-                  case s if splitStyle == Percentage => PaxTypeAndQueue(s.passengerType, s.queueType) -> s.paxCount.toInt
-                }).toMap
-                GraphComponent(source, splitStyleUnitLabe, sourceDisplay, splitTotal, queuePax, PaxTypesAndQueues.inOrderSansFastTrack)
-              case UndefinedSplitStyle => <.div(s"$splitStyle")
-            }
-            vdomElement
-          }
-        }
+        val bestSplits: Set[ApiSplits] = flightWithSplits.bestSplits.toSet
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val apiSplits = flightWithSplits.bestSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
 
+        val queueNames = DashboardComponent.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
+        val queuePax: Map[QueueName, Int] = flightWithSplits.bestSplits.map(splits => {
+          val ratioSplits = ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, props.bestPax(flight))
+          DashboardComponent
+            .queueTotals(
+              ratioSplits.splits
+                .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
+                .toMap
+            )
+        }).getOrElse(Map())
         <.tr(^.key := flight.uniqueId.toString,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -182,17 +168,40 @@ object FlightTableRow {
           <.td(^.key := flight.uniqueId.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
           <.td(^.key := flight.uniqueId.toString + "-pcptimefrom", pcpTimeRange(flight, props.bestPax)),
           <.td(^.key := flight.uniqueId.toString + "-actpax", props.paxComponent(flight, apiSplits)),
-          <.td(^.key := flight.uniqueId.toString + "-splits", splitsComponents.toTagMod))
+          queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}")).toTagMod
+        )
       }.recover {
         case e => log.error(s"couldn't make flight row $e")
           <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace.mkString(",")}")
       }.get
-    }
-
-    )
+    })
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+}
+
+object ApiSplitsToSplitRatio {
+
+  def applyPaxSplitsToFlightPax(splits: ApiSplits, totalPax: Int): ApiSplits = {
+    val ratioSplits = splits.copy(
+      splitStyle = SplitStyle("Ratio"),
+      splits = splits.splits.map(s => s.copy(paxCount = applyRatio(s, totalPax, splitsPaxTotal(splits))))
+    )
+
+    fudgeRoundingError(ratioSplits, totalPax - splitsPaxTotal(ratioSplits))
+  }
+
+  def applyRatio(split: ApiPaxTypeAndQueueCount, totalPax: Int, splitsTotal: Double): Long =
+    Math.round(totalPax * (split.paxCount / splitsTotal))
+
+  def fudgeRoundingError(ratioSplits: ApiSplits, diff: Double) = {
+    val sortedList = ratioSplits.splits.toList.sortBy(_.paxCount)
+    val fudged = (sortedList.head.copy(paxCount = sortedList.head.paxCount + diff) :: sortedList.tail).toSet
+
+    ratioSplits.copy(splits = fudged)
+  }
+
+  def splitsPaxTotal(splits: ApiSplits): Double = splits.splits.toSeq.map(_.paxCount).sum
 }
 
 

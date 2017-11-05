@@ -41,6 +41,7 @@ object SplitStyle {
   def apply(splitStyle: String): SplitStyle = splitStyle match {
     case "PaxNumbers$" => PaxNumbers
     case "Percentage$" => Percentage
+    case "Ratio" => Ratio
     case _ => UndefinedSplitStyle
   }
 }
@@ -48,6 +49,8 @@ object SplitStyle {
 case object PaxNumbers extends SplitStyle
 
 case object Percentage extends SplitStyle
+
+case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
@@ -88,7 +91,6 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     }
   }
 }
-
 
 case class FlightsNotReady()
 
@@ -185,9 +187,13 @@ trait SDateLike {
 
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
+  def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
+
   def toHoursAndMinutes(): String = f"${getHours()}%02d:${getMinutes()}%02d"
 
   def prettyDateTime(): String = f"${getDate()}%02d-${getMonth()}%02d-${getFullYear()} ${getHours()}%02d:${getMinutes()}%02d"
+
+  def prettyTime(): String = f"${getHours()}%02d:${getMinutes()}%02d"
 
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 }

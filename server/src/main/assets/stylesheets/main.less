@@ -173,11 +173,11 @@ div.planning-week {
   margin-bottom: 20px;
 }
 
-table.forecast thead{
+table.forecast thead {
   display: block;
 }
 
-table.forecast tbody{
+table.forecast tbody {
   display: block;
   overflow: scroll;
   height: 500px;
@@ -189,12 +189,14 @@ table.headlines {
   width: 100%;
 }
 
-table.forecast td.red{
+table.forecast td.red {
   background-color: #d02d31;
 }
-table.forecast td.amber{
+
+table.forecast td.amber {
   background-color: #f47738;
 }
+
 table.forecast td, table.headlines td {
   padding: 0.5em 0 0.5em 0;
   border: 1px solid #fff;
@@ -204,19 +206,22 @@ table.forecast td, table.headlines td {
   font-weight: normal;
   text-align: center;
 }
-table.forecast td{
+
+table.forecast td {
   width: 5.5em;
 }
+
 table.headlines td {
   width: 11em;
 }
+
 table.headlines th.queue-heading {
   width: 6em;
   font-size: small;
   font-weight: bold;
 }
 
-table.forecast th.heading,table.headlines th, th.sub-heading{
+table.forecast th.heading, table.headlines th, th.sub-heading {
   text-align: center;
   border-left: 1px solid #fff !important;
   border-bottom: 1px solid #fff;
@@ -227,27 +232,28 @@ table.forecast th.heading,table.headlines th, th.sub-heading{
   font-size: 1.1em;
 }
 
-table.forecast th.heading, th.sub-heading{
+table.forecast th.heading, th.sub-heading {
   width: 5em;
   font-weight: bold;
 }
 
-table.headlines th{
+table.headlines th {
   width: 10em;
   font-weight: bold;
 }
 
-
-
 table.forecast tr:nth-child(even) {
   background-color: #96c6e2;
 }
+
 table.forecast tr:nth-child(odd) {
   background-color: #bedbec;
 }
+
 table.headlines tr:nth-child(even) {
   background-color: #96c6e2;
 }
+
 table.headlines tr:nth-child(odd) {
   background-color: #bedbec;
 }
@@ -289,11 +295,10 @@ table.headlines tr:nth-child(odd) {
   }
   left: -24em;
   top: 58%;
-
 }
 
 .date-selector {
-  width: 682px;
+  width: 715px;
   padding-top: 2%;
   margin-left: 1.5%;
 }
@@ -859,6 +864,11 @@ th h2 {
 
 }
 
+.summary-box-container td {
+  text-align: center;
+  font-size: 15px;
+}
+
 @pax-bar-height: 20px;
 
 @reliability-low: #ff9999;
@@ -905,23 +915,131 @@ th h2 {
   min-width: 200px;
 }
 
+.summary-box-container table {
+  width: 100%;
+}
+
+div.summary-box-container.rag-summary {
+
+  text-align: center;
+  padding: 18px;
+}
+
+div.summary-box-container.rag-summary table.rag-desks{
+  width: 100%;
+  margin-top: 10px;
+}
+
+.summary-box-container.rag-summary td, .summary-box-container.rag-summary th {
+  padding: 1%;
+  font-size: 16px;
+  text-align: right;
+}
+
+div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-container.rag-summary table.rag-desks th{
+  width: 60px;
+  text-align: center;
+}
+
+
+.summary-box-container.pcp-summary {
+  position: relative;
+}
+
+.summary-box-container .pcp-pressure {
+  text-align: center;
+  padding-top: 38px;
+
+}
+.summary-box-container .pcp-pressure .title{
+  font-weight: bold;
+  text-align: center;
+}
+
+.dashboard-summary .splits {
+  width: 100%;
+  position: relative;
+  height: 150px;
+  display: inline-block;
+  bottom: 24px;
+}
+
+.col-sm-1.pax-count.summary-box-container {
+  position: relative;
+  text-align: center;
+  padding: 0px;
+}
+
+.col-sm-1.pax-count.summary-box-container div {
+  position: absolute;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.dashboard-summary .splits .graph {
+  height: 150px;
+}
+
+.pax-summary table tr td.heading, .pax-summary table tr th.heading {
+  text-align: left;
+}
+
+.pax-summary table tr td, .pax-summary table tr th{
+  text-align: right;
+  padding: 3px;
+}
+
+.summary-box-container.pax-summary {
+  min-width: 490px;
+}
+
+.dashboard-summary .red {
+  background: #a81b1e;
+  color: #fff;
+}
+
+.dashboard-summary .red th {
+  background: #660000;
+}
+.dashboard-summary .red td {
+  background: #8f1719;
+}
+
+.dashboard-summary .amber {
+  background: #f47738;
+  color: #0b0c0c;
+}
+
+.dashboard-summary .amber th {
+  background: #ce492a;
+}
+.dashboard-summary .amber td {
+  background: #fc8c34;
+}
+
+.dashboard-summary .flights-total {
+  width: 100%;
+  font-size: 18pt;
+  text-align: center;
+}
+
 .summary-box-container {
   display: inline-block;
-  bet height: 80px;
+  height: 150px;
   background-color: #dddddd;
   padding: 5px 5px 5px 5px;
   margin: 5px 5px 5px 5px;
+  min-width: 145px;
 }
 
 .summary-box-count {
-  font-size: 40pt;
+  font-size: 20pt;
   font-weight: bold;
   display: inline-block;
-}
-
-.summary-box-container .split-graph-container .splits .graph {
-  height: 80px;
-  top: -5px;
 }
 
 .splitsource-terminalaverage {
@@ -985,8 +1103,18 @@ th h2 {
   width: 136px;
   height: 28px;
   position: absolute;
-  bottom: -5px;
+  bottom: 0px;
   left: 0;
+}
+
+.bars {
+  position: relative;
+  height: 150px;
+}
+
+.splits .graph .bars .bar.bar-max {
+  height: 150px;
+  width: 0px;
 }
 
 .splits .graph .bar {
