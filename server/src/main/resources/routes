@@ -22,5 +22,5 @@ POST        /api/*path                                    controllers.Applicatio
 POST        /logging                                      controllers.Application.logging
 
 
-POST        /data/staff                                   controllers.Data.saveStaff
+POST        /data/staff                                   controllers.Application.saveStaff
 

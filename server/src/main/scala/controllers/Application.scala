@@ -20,6 +20,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
+import drt.staff.ImportStaff
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
@@ -490,6 +491,17 @@ class Application @Inject()(implicit val config: Configuration,
         log.error(s"got the wrong thing: $unexpected")
         NotFound("")
     }
+  }
+
+  def saveStaff() = Action {
+    implicit request =>
+      request.body.asJson.flatMap(ImportStaff.staffJsonToShifts) match {
+        case Some(shiftsString) =>
+          shiftsActor ! shiftsString
+          Created
+        case _ =>
+          BadRequest("{\"error\": \"Unable to parse data\"}")
+      }
   }
 
   def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
