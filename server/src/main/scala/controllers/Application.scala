@@ -421,7 +421,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     val startDayMidnight = getLocalLastMidnight(SDate(startDay.toLong))
     val crunchStateFuture = forecastCrunchStateActor.ask(
-      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(7).millisSinceEpoch)
+      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(180).millisSinceEpoch)
     )(new Timeout(30 seconds))
 
     val fileName = s"$terminal-planning-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
@@ -444,7 +444,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     val startDayMidnight = getLocalLastMidnight(SDate(startDay.toLong))
     val crunchStateFuture = forecastCrunchStateActor.ask(
-      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(7).millisSinceEpoch)
+      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(180).millisSinceEpoch)
     )(new Timeout(30 seconds))
 
     val fileName = s"$terminal-headlines-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
