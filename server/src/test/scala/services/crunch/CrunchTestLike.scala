@@ -18,7 +18,7 @@ import passengersplits.AkkaPersistTestConfig
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch._
 import services.graphstages._
-import services.{ForecastBaseArrivalsActor, LiveArrivalsActor, SDate}
+import services.{ForecastBaseArrivalsActor, ForecastPortArrivalsActor, LiveArrivalsActor, SDate}
 
 import scala.collection.immutable.{List, Seq, Set}
 
@@ -44,6 +44,7 @@ class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], pr
 }
 
 case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Flights],
+                       forecastArrivalsInput: SourceQueueWithComplete[Flights],
                        liveArrivalsInput: SourceQueueWithComplete[Flights],
                        manifestsInput: SourceQueueWithComplete[VoyageManifests],
                        liveShiftsInput: SourceQueueWithComplete[String],
@@ -100,11 +101,14 @@ class CrunchTestLike
 
   def baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "forecast-base-arrivals-actor")
 
+  def forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-port-arrivals-actor")
+
   def liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
 
   def testProbe(name: String) = TestProbe(name = name)
 
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
+                     initialForecastArrivals: Set[Arrival] = Set(),
                      initialLiveArrivals: Set[Arrival] = Set(),
                      initialManifests: VoyageManifests = VoyageManifests(Set()),
                      initialFlightsWithSplits: Option[FlightsWithSplits] = None,
@@ -129,8 +133,10 @@ class CrunchTestLike
 
     val arrivalsStage: ArrivalsGraphStage = new ArrivalsGraphStage(
       initialBaseArrivals = initialBaseArrivals,
+      initialForecastArrivals = initialForecastArrivals,
       initialLiveArrivals = initialLiveArrivals,
       baseArrivalsActor = baseArrivalsActor,
+      forecastArrivalsActor = forecastArrivalsActor,
       liveArrivalsActor = liveArrivalsActor,
       pcpArrivalTime = pcpArrivalTime,
       validPortTerminals = validTerminals,
@@ -156,6 +162,7 @@ class CrunchTestLike
       now = now)
 
     val baseFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val forecastFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val liveFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val manifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.backpressure)
 
@@ -210,8 +217,9 @@ class CrunchTestLike
       simulationQueueSubscriber = liveCrunchInput
     ).run()(actorMaterializer)
 
-    val (baseArrivalsInput, liveArrivalsInput) = RunnableArrivalsGraph(
+    val (baseArrivalsInput, forecastArrivalsInput, liveArrivalsInput) = RunnableArrivalsGraph(
       baseFlightsSource,
+      forecastFlightsSource,
       liveFlightsSource,
       arrivalsStage,
       List(liveArrivalsCrunchInput, forecastArrivalsCrunchInput)
@@ -229,6 +237,7 @@ class CrunchTestLike
 
     CrunchGraph(
       baseArrivalsInput = baseArrivalsInput,
+      forecastArrivalsInput = forecastArrivalsInput,
       liveArrivalsInput = liveArrivalsInput,
       manifestsInput = manifestsInput,
       liveShiftsInput = liveShiftsInput,

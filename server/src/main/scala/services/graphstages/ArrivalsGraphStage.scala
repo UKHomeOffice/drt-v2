@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.actor.ActorRef
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
+import akka.stream._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
@@ -14,22 +14,26 @@ import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps
 
 class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
+                         initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
                          baseArrivalsActor: ActorRef,
+                         forecastArrivalsActor: ActorRef,
                          liveArrivalsActor: ActorRef,
                          pcpArrivalTime: (Arrival) => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape2[Flights, Flights, ArrivalsDiff]] {
+  extends GraphStage[FanInShape3[Flights, Flights, Flights, ArrivalsDiff]] {
 
   val inBaseArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsBase.in")
+  val inForecastArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsForecast.in")
   val inLiveArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("outArrivalsDiff.in")
-  override val shape = new FanInShape2(inBaseArrivals, inLiveArrivals, outArrivalsDiff)
+  override val shape = new FanInShape3(inBaseArrivals, inForecastArrivals, inLiveArrivals, outArrivalsDiff)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var baseArrivals: Set[Arrival] = Set()
+    var forecastArrivals: Set[Arrival] = Set()
     var liveArrivals: Set[Arrival] = Set()
     var merged: Map[Int, Arrival] = Map()
     var toPush: Option[ArrivalsDiff] = None
@@ -44,26 +48,39 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
     setHandler(inBaseArrivals, new InHandler {
       override def onPush(): Unit = {
-        log.info(s"inBase onPush() grabbing base flights")
+        log.info(s"inBaseArrivals onPush() grabbing base flights")
         baseArrivals = grabAndSetPcp(inBaseArrivals)
 
         baseArrivalsActor ! ArrivalsState(baseArrivals.map(a => (a.uniqueId, a)).toMap)
 
-        mergeAndPush(baseArrivals, liveArrivals)
+        mergeAndPush(baseArrivals, forecastArrivals, liveArrivals)
 
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
       }
     })
 
+    setHandler(inForecastArrivals, new InHandler {
+      override def onPush(): Unit = {
+        log.info(s"inForecastArrivals onPush() grabbing forecast flights")
+        forecastArrivals = grabAndSetPcp(inForecastArrivals)
+
+        forecastArrivalsActor ! ArrivalsState(forecastArrivals.map(a => (a.uniqueId, a)).toMap)
+
+        mergeAndPush(forecastArrivals, forecastArrivals, liveArrivals)
+
+        if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
+      }
+    })
+
     setHandler(inLiveArrivals, new InHandler {
       override def onPush(): Unit = {
-        log.info(s"inLive onPush() grabbing live flights")
+        log.info(s"inLiveArrivals onPush() grabbing live flights")
 
         liveArrivals = updateAndPurge(grabAndSetPcp(inLiveArrivals))
 
         liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
 
-        mergeAndPush(baseArrivals, liveArrivals)
+        mergeAndPush(baseArrivals, forecastArrivals, liveArrivals)
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
       }
@@ -85,10 +102,10 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
         .toSet
     }
 
-    def mergeAndPush(baseArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
+    def mergeAndPush(baseArrivals: Set[Arrival], forecastArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
 
-      val newMerged = mergeArrivals(baseArrivals, liveArrivals)
+      val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
         .filterNot { case (_, a) =>
           val shouldGo = expired(a)
           if (shouldGo)
@@ -141,10 +158,25 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       } else log.info(s"outMerged not available to push")
     }
 
-    def mergeArrivals(base: Set[Arrival], live: Set[Arrival]): Map[Int, Arrival] = {
+    def mergeArrivals(base: Set[Arrival], forecast: Set[Arrival], live: Set[Arrival]): Map[Int, Arrival] = {
       val baseById: Map[Int, Arrival] = base.map(a => (a.uniqueId, a)).toMap
 
-      live.foldLeft(baseById) {
+      val withForecast = forecast.foldLeft(baseById) {
+        case (mergedSoFar, forecastArrival) =>
+          baseById.get(forecastArrival.uniqueId) match {
+            case None =>
+              log.info(s"Forecast arrival ${forecastArrival.IATA} on ${SDate(forecastArrival.Scheduled).toLocalDateTimeString()} not found in base arrivals so ignoring")
+              mergedSoFar
+            case Some(baseArrival) =>
+              val mergedArrival = forecastArrival.copy(
+                rawIATA = baseArrival.rawIATA,
+                rawICAO = baseArrival.rawICAO,
+                ActPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax)
+              mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival)
+          }
+      }
+
+      live.foldLeft(withForecast) {
         case (mergedSoFar, liveArrival) =>
           val baseArrival = baseById.getOrElse(liveArrival.uniqueId, liveArrival)
           val mergedArrival = liveArrival.copy(
