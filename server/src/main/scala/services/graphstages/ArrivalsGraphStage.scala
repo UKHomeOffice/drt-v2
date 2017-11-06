@@ -171,7 +171,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
               mergedSoFar
             case Some(baseArrival) =>
               val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
-              val mergedArrival = baseArrival.copy(ActPax = actPax)
+              val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax)
               mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival)
           }
       }

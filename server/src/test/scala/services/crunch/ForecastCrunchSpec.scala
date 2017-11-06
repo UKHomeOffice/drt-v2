@@ -245,15 +245,15 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunchForecastArrivals === expectedForecastArrivals
   }
 
-  "Given a base arrival with 21 pax, and a matching forecast arrival with 50 pax and a different format flight code " +
+  "Given a base arrival with 21 pax, and a matching forecast arrival with 50 pax, 25 trans pax and a different format flight code " +
     "When I ask for arrivals " +
-    "Then I should see the base arrival as with the forecast arrival's pax nos overlayed" >> {
+    "Then I should see the base arrival as with the forecast arrival's pax & transpax nos overlaid" >> {
 
     val baseScheduled = "2017-01-01T00:00Z"
     val forecastScheduled = baseScheduled
 
     val baseArrival = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "BA0001", terminal = "T1", actPax = 21)
-    val forecastArrival = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BAW0001", terminal = "T1", actPax = 50)
+    val forecastArrival = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BAW0001", terminal = "T1", actPax = 50, tranPax = 25)
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
@@ -266,7 +266,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.baseArrivalsInput.offer(baseArrivals)
     val crunchForecastArrivals = crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = 50))
+    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = 50, TranPax = 25))
 
     crunchForecastArrivals === expectedForecastArrivals
   }
