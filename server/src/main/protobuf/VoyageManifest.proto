@@ -36,4 +36,5 @@ message PassengerInfoJsonMessage {
     optional string inTransitFlag = 6;
     optional string disembarkationPortCountryCode = 7;
     optional string nationalityCountryCode = 8;
+    optional string passengerIdentifier = 9;
 }

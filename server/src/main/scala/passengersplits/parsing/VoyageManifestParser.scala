@@ -8,8 +8,6 @@ import services.SDate.JodaSDate
 import scala.util.Try
 
 object VoyageManifestParser {
-
-
   def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
     import FlightPassengerInfoProtocol._
     import spray.json._
@@ -26,7 +24,8 @@ object VoyageManifestParser {
                                DisembarkationPortCode: Option[String],
                                InTransitFlag: String = "N",
                                DisembarkationPortCountryCode: Option[String] = None,
-                               NationalityCountryCode: Option[String] = None
+                               NationalityCountryCode: Option[String] = None,
+                               PassengerIdentifier: Option[String]
                               ) {
     def toPassengerInfo = PassengerInfo(DocumentType, DocumentIssuingCountryCode, Age match {
       case Some(age) => Try(age.toInt).toOption
@@ -68,7 +67,8 @@ object VoyageManifestParser {
       "DisembarkationPortCode",
       "InTransitFlag",
       "DisembarkationPortCountryCode",
-      "NationalityCountryCode"
+      "NationalityCountryCode",
+      "PassengerIdentifier"
     )
     implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)
   }

@@ -94,17 +94,17 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
     "Given some passenger info parsed from the AdvancePassengerInfo" in {
       "Given a German national " in {
         "When we calculate passenger types THEN they are assigned to the EEA desk" in {
-          val passengerInfos = PassengerInfoJson(Passport, "DEU", "EEA", None, None, "N", None, Some("DEU")) :: Nil
+          val passengerInfos = PassengerInfoJson(Passport, "DEU", "EEA", None, None, "N", None, Some("DEU"), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
-          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(voyageManifest) should beEqualTo(List(
+          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
             SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1)))
         }
       }
       "Given a GBR (UK) national" in {
         "When we calculate passenger types then they are assigned to the EeaDesk" in {
-          val passengerInfos = PassengerInfoJson(Passport, "GBR", "EEA", None, None, "N", None, Some("GBR")) :: Nil
+          val passengerInfos = PassengerInfoJson(Passport, "GBR", "EEA", None, None, "N", None, Some("GBR"), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
-          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(voyageManifest) should beEqualTo(List(
+          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
             SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1)))
         }
       }
@@ -123,9 +123,9 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
       "classifying visaCountries" in {
         val visaRequiredCountryCode = PassengerTypeCalculator.visaCountries.head.code3Letter
         "given a non eu passenger if their country is visa nat then they're a visa-national to the nonEeaDesk" in {
-          val passengerInfos = PassengerInfoJson(Passport, visaRequiredCountryCode, "EEA", None, None, "N", None, Some(visaRequiredCountryCode)) :: Nil
+          val passengerInfos = PassengerInfoJson(Passport, visaRequiredCountryCode, "EEA", None, None, "N", None, Some(visaRequiredCountryCode), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
-          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(voyageManifest) should beEqualTo(List(
+          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
             SplitsPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1)))
 
         }
@@ -148,21 +148,21 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
     val israel = "ISR"
     val haiti = "HTI"
     s2"""${
-      "NationalityCountryEEAFlag" | "DocumentIssuingCountryCode" | "PassengerType" |>
-        "EEA" ! Germany ! EeaMachineReadable |
-        "" ! "NZL" ! NonVisaNational |
-        "" ! "AUS" ! NonVisaNational |
-        "" ! lebanon ! VisaNational |
-        "" ! israel ! NonVisaNational |
-        "" ! haiti ! VisaNational |
-        EEA ! Greece ! EeaNonMachineReadable |
-        EEA ! Italy ! EeaNonMachineReadable |
-        EEA ! Portugal ! EeaNonMachineReadable |
-        EEA ! Latvia ! EeaMachineReadable |
-        EEA ! Latvia ! EeaMachineReadable |
-        EEA ! Slovakia ! EeaNonMachineReadable | {
-        (countryFlag, documentCountry, passengerType) =>
-          PassengerTypeCalculator.mostAirports(PaxTypeInfo("N", countryFlag, documentCountry)) must_== passengerType
+      "DocumentType" | "DocumentIssuingCountryCode" | "PassengerType" |>
+        "P" ! Germany ! EeaMachineReadable |
+        "P" ! "NZL" ! NonVisaNational |
+        "P" ! "AUS" ! NonVisaNational |
+        "P" ! lebanon ! VisaNational |
+        "P" ! israel ! NonVisaNational |
+        "P" ! haiti ! VisaNational |
+        "I" ! Greece ! EeaNonMachineReadable |
+        "I" ! Italy ! EeaNonMachineReadable |
+        "I" ! Portugal ! EeaNonMachineReadable |
+        "P" ! Latvia ! EeaMachineReadable |
+        "P" ! Latvia ! EeaMachineReadable |
+        "I" ! Slovakia ! EeaNonMachineReadable | {
+        (docType, documentCountry, passengerType) =>
+          PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", documentCountry, Option(docType))) must_== passengerType
       }
     }"""
   }

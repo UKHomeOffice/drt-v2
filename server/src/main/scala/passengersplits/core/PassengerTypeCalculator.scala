@@ -95,6 +95,7 @@ object PassengerTypeCalculatorValues {
     val Switzerland = "CHE"
     val UK = "GBR"
   }
+
   import CountryCodes._
 
   lazy val EUCountries = {
@@ -125,12 +126,17 @@ object PassengerTypeCalculatorValues {
 object PassengerQueueCalculator extends PassengerQueueCalculator {
   val log = LoggerFactory.getLogger(getClass)
 
-  def convertVoyageManifestIntoPaxTypeAndQueueCounts(flight: VoyageManifestParser.VoyageManifest): List[SplitsPaxTypeAndQueueCount] = {
-    val paxTypeFn = flight.ArrivalPortCode match {
-      case "LHR" => whenTransitMatters
+  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[SplitsPaxTypeAndQueueCount] = {
+    val paxTypeFn = manifest.ArrivalPortCode match {
+      case "LHR" => whenTransitMatters(portCode)
       case _ => mostAirports
     }
-    val paxTypes = flight.PassengerList.map(passengerInfoFields).map(paxTypeFn)
+    val paxInManifest = manifest.PassengerList
+    val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.PassengerIdentifier)
+    val uniquePax = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
+      case head :: _ => head
+    } else paxInManifest
+    val paxTypes: Seq[PaxType] = uniquePax.map(passengerInfoFields).map(paxTypeFn)
     distributeToQueues(paxTypes)
   }
 
@@ -146,24 +152,27 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
 
 object PassengerTypeCalculator {
   val log = LoggerFactory.getLogger(getClass)
+
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(inTransitFlag: String, eeaFlag: String, documentCountry: String)
+  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, documentCountry: String, documentType: Option[String])
 
   def isEea(country: String) = EEACountries contains country
+
   def isNonMachineReadable(country: String) = nonMachineReadableCountries contains country
 
-  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.InTransitFlag, pi.EEAFlag, pi.DocumentIssuingCountryCode)
+  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
 
-  val transitMatters: PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo("Y", _, _) => Transit
+  def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
+    case PaxTypeInfo(_, "Y", _, _) => Transit
+    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode != portCode => Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-      case PaxTypeInfo(_, _, country) if isEea(country) && isNonMachineReadable(country) => EeaNonMachineReadable
-      case PaxTypeInfo(_, _, country) if isEea(country) => EeaMachineReadable
-      case PaxTypeInfo(_, _, country) if !isEea(country) && isVisaNational(country) => VisaNational
-      case PaxTypeInfo(_, _, country) if !isEea(country) => NonVisaNational
+    case PaxTypeInfo(_, _, country, Some(docType)) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
+    case PaxTypeInfo(_, _, country, _) if isEea(country) => EeaNonMachineReadable
+    case PaxTypeInfo(_, _, country, _) if !isEea(country) && isVisaNational(country) => VisaNational
+    case PaxTypeInfo(_, _, country, _) if !isEea(country) => NonVisaNational
   }
 
   def isVisaNational(countryCode: String) = visaCountyCodes.contains(countryCode)
@@ -174,12 +183,12 @@ object PassengerTypeCalculator {
 
   val mostAirports = countryAndDocumentTypes orElse defaultToVisaNational
 
-  val whenTransitMatters = transitMatters orElse mostAirports
+  def whenTransitMatters(portCode: String) = transitMatters(portCode) orElse mostAirports
 
   case class Country(name: String, code3Letter: String, isVisaRequired: Boolean)
 
   lazy val loadedCountries = loadCountries()
-  lazy val countries = loadedCountries.collect{case Right(c) => c}
+  lazy val countries = loadedCountries.collect { case Right(c) => c }
   lazy val visaCountries = countries.filter(_.isVisaRequired)
   lazy val visaCountyCodes = visaCountries.map(_.code3Letter).toSet
 

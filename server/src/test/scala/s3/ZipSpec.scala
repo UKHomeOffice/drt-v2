@@ -52,7 +52,7 @@ class ZipSpec extends Specification with Matchers {
       results.toList match {
         case ("drt_160302_165000_SU2584_CI_0915.json",
         VoyageManifest(DqEventCodes.CheckIn, "LHR", departurePort,  "2584", "SU", "2016-03-02", "21:05:00",
-        PassengerInfoJson(Some("V"), "GTM", "", Some("67"),  Some(dp), "Y", Some("AUS"), Some("GTM")) :: passengerInfoTail)) :: Nil => true
+        PassengerInfoJson(Some("V"), "GTM", "", Some("67"),  Some(dp), "Y", Some("AUS"), Some("GTM"), None) :: passengerInfoTail)) :: Nil => true
         case default =>
           assert(false, "Didn't match expectation, got: " + default)
           false
