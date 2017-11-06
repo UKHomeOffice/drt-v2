@@ -14,10 +14,10 @@ import scala.collection.immutable.Seq
 
 object TerminalPlanningComponent {
 
-  def getNextMonday(start: SDateLike) = {
-    val monday = if (start.getDayOfWeek() == 1) start else start.addDays(8 - start.getDayOfWeek())
+  def getNextSunday(start: SDateLike) = {
+    val sunday = if (start.getDayOfWeek() == 7) start else start.addDays(7 - start.getDayOfWeek())
 
-    SDate(f"${monday.getFullYear()}-${monday.getMonth()}%02d-${monday.getDate()}%02dT00:00:00")
+    SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
   }
 
   case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) {
@@ -29,7 +29,7 @@ object TerminalPlanningComponent {
     }.hashCode
   }
 
-  val yearOfMondays: Seq[SDateLike] = (0 to 51).map(w => getNextMonday(SDate.now()).addDays(w * 7))
+  val yearOfMondays: Seq[SDateLike] = (0 to 51).map(w => getNextSunday(SDate.now()).addDays(w * 7))
 
   implicit val propsReuse = Reusability.by((_: Props).hash)
 
@@ -125,7 +125,7 @@ object TerminalPlanningComponent {
     .build
 
   def defaultStartDate(dateStringOption: Option[String]) = {
-    dateStringOption.map(SDate(_)).getOrElse(getNextMonday(SDate.now()))
+    dateStringOption.map(SDate(_)).getOrElse(getNextSunday(SDate.now()))
   }
 
   def apply(props: Props): VdomElement = component(props)
