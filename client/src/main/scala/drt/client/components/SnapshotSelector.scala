@@ -53,7 +53,7 @@ object SnapshotSelector {
     )
     .renderPS((scope, props, state) => {
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
-      val days = Seq.range(1, 31)
+      val days = Seq.range(1, 32)
       val years = Seq.range(2017, today.getFullYear() + 1)
       val hours = Seq.range(0, 24)
 
