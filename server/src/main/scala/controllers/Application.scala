@@ -497,7 +497,6 @@ class Application @Inject()(implicit val config: Configuration,
     implicit request =>
       request.body.asJson.flatMap(ImportStaff.staffJsonToShifts) match {
         case Some(shiftsString) =>
-//          log.info(s"saveStaff got: $shiftsString")
           shiftsActor ! shiftsString
           Created
         case _ =>
