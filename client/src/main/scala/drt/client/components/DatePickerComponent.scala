@@ -44,7 +44,7 @@ object DatePickerComponent {
     )
     .renderPS(r = (scope, props, state) => {
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
-      val days = Seq.range(1, 31)
+      val days = Seq.range(1, 32)
       val years = Seq.range(2017, today.getFullYear() + 1)
 
       def drawSelect(names: Seq[String], values: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
@@ -92,15 +92,13 @@ object DatePickerComponent {
             <.div(^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
             <.div(^.className := s"btn btn-primary $tomorrowActive", "Tomorrow", ^.onClick ==> selectTomorrow)),
-          <.div(
-            <.label(^.className := "col-sm-1 no-gutters text-center", "or"),
             List(
               <.div(^.className := "col-sm-1 no-gutters", drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt))),
               <.div(^.className := "col-sm-2 no-gutters", drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt))),
               <.div(^.className := "col-sm-1 no-gutters", drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt))),
               <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate),
               errorMessage
-            ).toTagMod))
+            ).toTagMod)
       )
     })
     .configure(Reusability.shouldComponentUpdate)
