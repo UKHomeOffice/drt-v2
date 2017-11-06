@@ -2,7 +2,7 @@ package drt.chroma
 
 import akka.stream.scaladsl.Source
 import akka.stream.testkit.scaladsl.TestSink
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
+import drt.chroma.chromafetcher.ChromaFetcherLive.ChromaSingleFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import spray.json._

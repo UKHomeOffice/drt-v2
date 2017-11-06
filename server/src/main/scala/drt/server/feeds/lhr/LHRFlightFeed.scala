@@ -137,8 +137,8 @@ object LHRFlightFeed {
   def csvContentsProviderProd(): String = {
     Seq(
       "/usr/local/bin/lhr-live-fetch-latest-feed.sh",
-      "-u", ConfigFactory.load.getString("lhr_live_username"),
-      "-p", ConfigFactory.load.getString("lhr_live_password")).!!
+      "-u", ConfigFactory.load.getString("lhr.live.username"),
+      "-p", ConfigFactory.load.getString("lhr.live.password")).!!
   }
 
   val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")

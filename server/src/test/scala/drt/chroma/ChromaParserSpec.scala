@@ -1,6 +1,6 @@
 package drt.chroma
 
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
+import drt.chroma.chromafetcher.ChromaFetcherLive.ChromaSingleFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol
 import org.specs2.mutable.SpecificationLike
 

@@ -3,10 +3,9 @@ package drt.server.feeds.chroma
 import akka.actor.{ActorSystem, Cancellable}
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
-import controllers.MockedChromaSendReceive
-import drt.chroma.chromafetcher.ChromaFetcher
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
-import drt.chroma.{DiffingStage, StreamingChromaFlow}
+import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
+import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaSingleFlight}
+import drt.chroma.{DiffingStage, FeedType, StreamingChromaFlow}
 import drt.http.ProdSendAndReceive
 import drt.shared.Arrival
 import services.SDate
@@ -18,26 +17,17 @@ import scala.language.postfixOps
 trait ChromaFetcherLike {
   def system: ActorSystem
 
-  def chromafetcher: ChromaFetcher
+  def chromafetcher: ChromaFetcherLive
 }
 
-case class MockChroma(system: ActorSystem) extends ChromaFetcherLike {
+case class ProdChroma(system: ActorSystem, feedType: FeedType) extends ChromaFetcherLike {
   self =>
-  system.log.info("Mock Chroma init")
-  override val chromafetcher = new ChromaFetcher with MockedChromaSendReceive {
+  override val chromafetcher = new ChromaFetcherLive(feedType) with ProdSendAndReceive {
     implicit val system: ActorSystem = self.system
   }
 }
 
-case class ProdChroma(system: ActorSystem) extends ChromaFetcherLike {
-  self =>
-  override val chromafetcher = new ChromaFetcher with ProdSendAndReceive {
-    implicit val system: ActorSystem = self.system
-  }
-}
-
-
-case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
+case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
   flightFeed =>
 
   object EdiChroma {
@@ -85,7 +75,7 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
   }
 
   def chromaEdiFlights(): Source[List[Arrival], Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 30 seconds)
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher.chromafetcher, 30 seconds)
 
     def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
       csfs.map(EdiChroma.ediBaggageTerminalHack(_)).map(csf => EdiChroma.ediMapTerminals.get(csf.Terminal) match {
@@ -98,8 +88,49 @@ case class ChromaFlightFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLik
     apiFlightCopy(ediMapping)
   }
 
-  def chromaVanillaFlights(): Source[List[Arrival], Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSource(log, chromaFetcher.chromafetcher, 30 seconds)
+  def chromaVanillaFlights(frequency: FiniteDuration): Source[List[Arrival], Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher.chromafetcher, frequency)
     apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
+  }
+}
+
+case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
+  flightFeed =>
+
+  def apiFlightCopy(ediMapping: Source[Seq[ChromaForecastFlight], Cancellable]): Source[List[Arrival], Cancellable] = {
+    ediMapping.map(flights =>
+      flights.map(flight => {
+        val walkTimeMinutes = 4
+        val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
+        Arrival(
+          Operator = "",
+          Status = "Forecast",
+          EstDT = "",
+          ActDT = "",
+          EstChoxDT = "",
+          ActChoxDT = "",
+          Gate = "",
+          Stand = "",
+          MaxPax = 0,
+          ActPax = flight.EstPax,
+          TranPax = flight.EstTranPax,
+          RunwayID = "",
+          BaggageReclaimId = "",
+          FlightID = flight.FlightID,
+          AirportID = flight.AirportID,
+          Terminal = flight.Terminal,
+          rawICAO = flight.ICAO,
+          rawIATA = flight.IATA,
+          Origin = flight.Origin,
+          SchDT = flight.SchDT,
+          PcpTime = pcpTime,
+          Scheduled = SDate(flight.SchDT).millisSinceEpoch
+        )
+      }).toList)
+  }
+
+  def chromaVanillaFlights(frequency: FiniteDuration): Source[List[Arrival], Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceForecast(log, chromaFetcher.chromafetcher, frequency)
+    apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaForecastFlight]()))
   }
 }

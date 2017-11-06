@@ -1,8 +1,8 @@
 package drt.chroma
 
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.chromafetcher.ChromaFetcher
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaSingleFlight, ChromaToken}
+import drt.chroma.chromafetcher.ChromaFetcherLive
+import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaSingleFlight, ChromaToken}
 import drt.http.WithSendAndReceive
 import spray.client.pipelining._
 import spray.http._
@@ -27,7 +27,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   import system.dispatcher
 
   "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
-    val sut = new ChromaFetcher with WithSendAndReceive {
+    val sut = new ChromaFetcherLive with WithSendAndReceive {
       override lazy val config: Config = mockConfig
       implicit val system = test.system
       private val pipeline = tokenPipeline
@@ -50,7 +50,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
     sut.await
   }
   "When we request current flights we parse them successfully" >> {
-    val sut = new ChromaFetcher with WithSendAndReceive {
+    val sut = new ChromaFetcherLive with WithSendAndReceive {
       implicit val system = test.system
       override lazy val config: Config = mockConfig
 

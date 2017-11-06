@@ -1,6 +1,6 @@
 package drt.chroma.chromafetcher
 
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaSingleFlight, ChromaToken}
+import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaSingleFlight, ChromaToken}
 import spray.httpx.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
 
