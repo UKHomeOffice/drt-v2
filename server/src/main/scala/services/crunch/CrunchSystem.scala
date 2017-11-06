@@ -38,12 +38,13 @@ case class LiveCrunchInputs(arrivals: SourceQueueWithComplete[ArrivalsDiff], man
 
 case class ForecastCrunchInputs(arrivals: SourceQueueWithComplete[ArrivalsDiff])
 
-case class ArrivalsInputs(base: SourceQueueWithComplete[Flights], live: SourceQueueWithComplete[Flights])
+case class ArrivalsInputs(base: SourceQueueWithComplete[Flights], forecast: SourceQueueWithComplete[Flights], live: SourceQueueWithComplete[Flights])
 
 case class CrunchSystem(shifts: List[SourceQueueWithComplete[String]],
                         fixedPoints: List[SourceQueueWithComplete[String]],
                         staffMovements: List[SourceQueueWithComplete[Seq[StaffMovement]]],
                         baseArrivals: SourceQueueWithComplete[Flights],
+                        forecastArrivals: SourceQueueWithComplete[Flights],
                         liveArrivals: SourceQueueWithComplete[Flights],
                         actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                         manifests: SourceQueueWithComplete[VoyageManifests]
@@ -119,13 +120,22 @@ object CrunchSystem {
       historicalSplitsProvider = props.historicalSplitsProvider,
       expireAfterMillis = props.expireAfterMillis)
 
-    val arrivalsInputs: ArrivalsInputs = startRunnableArrivals(system = props.system, crunchSubscribers = List(liveCrunchInputs.arrivals, forecastCrunchInputs.arrivals), baseArrivalsActor = baseArrivalsActor, forecastArrivalsActor = baseArrivalsActor, liveArrivalsActor = liveArrivalsActor, pcpArrival = props.pcpArrival, airportConfig = props.airportConfig, 2 * Crunch.oneDayMillis)
+    val arrivalsInputs: ArrivalsInputs = startRunnableArrivals(
+      system = props.system,
+      crunchSubscribers = List(liveCrunchInputs.arrivals, forecastCrunchInputs.arrivals),
+      baseArrivalsActor = baseArrivalsActor,
+      forecastArrivalsActor = forecastArrivalsActor,
+      liveArrivalsActor = liveArrivalsActor,
+      pcpArrival = props.pcpArrival,
+      airportConfig = props.airportConfig,
+      2 * Crunch.oneDayMillis)
 
     CrunchSystem(
       shifts = List(liveSimInputs.shifts, forecastSimInputs.shifts),
       fixedPoints = List(liveSimInputs.fixedPoints, forecastSimInputs.fixedPoints),
       staffMovements = List(liveSimInputs.staffMovements, forecastSimInputs.staffMovements),
       baseArrivals = arrivalsInputs.base,
+      forecastArrivals = arrivalsInputs.forecast,
       liveArrivals = arrivalsInputs.live,
       actualDeskStats = liveSimInputs.actualDeskStats,
       manifests = liveCrunchInputs.manifests
@@ -238,7 +248,7 @@ object CrunchSystem {
       crunchSubscribers
     ).run()(ActorMaterializer())
 
-    ArrivalsInputs(baseArrivalsInput, liveArrivalsInput)
+    ArrivalsInputs(baseArrivalsInput, forecastArrivalsInput, liveArrivalsInput)
   }
 
   def initialArrivals(arrivalsActor: AskableActorRef): Set[Arrival] = {

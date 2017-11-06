@@ -42,6 +42,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
     override def preStart(): Unit = {
       baseArrivals = initialBaseArrivals
+      forecastArrivals = initialForecastArrivals
       liveArrivals = initialLiveArrivals
       super.preStart()
     }
@@ -66,7 +67,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
         forecastArrivalsActor ! ArrivalsState(forecastArrivals.map(a => (a.uniqueId, a)).toMap)
 
-        mergeAndPush(forecastArrivals, forecastArrivals, liveArrivals)
+        mergeAndPush(baseArrivals, forecastArrivals, liveArrivals)
 
         if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
       }
@@ -122,6 +123,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
         pushIfAvailable(toPush, outArrivalsDiff)
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
+        if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
       }
     })
@@ -168,10 +170,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
               log.info(s"Forecast arrival ${forecastArrival.IATA} on ${SDate(forecastArrival.Scheduled).toLocalDateTimeString()} not found in base arrivals so ignoring")
               mergedSoFar
             case Some(baseArrival) =>
-              val mergedArrival = forecastArrival.copy(
-                rawIATA = baseArrival.rawIATA,
-                rawICAO = baseArrival.rawICAO,
-                ActPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax)
+              val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
+              val mergedArrival = baseArrival.copy(ActPax = actPax)
               mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival)
           }
       }

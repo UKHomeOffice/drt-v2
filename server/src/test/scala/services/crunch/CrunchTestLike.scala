@@ -218,11 +218,11 @@ class CrunchTestLike
     ).run()(actorMaterializer)
 
     val (baseArrivalsInput, forecastArrivalsInput, liveArrivalsInput) = RunnableArrivalsGraph(
-      baseFlightsSource,
-      forecastFlightsSource,
-      liveFlightsSource,
-      arrivalsStage,
-      List(liveArrivalsCrunchInput, forecastArrivalsCrunchInput)
+      baseArrivalsSource = baseFlightsSource,
+      forecastArrivalsSource = forecastFlightsSource,
+      liveArrivalsSource = liveFlightsSource,
+      arrivalsStage = arrivalsStage,
+      arrivalsDiffQueueSubscribers = List(liveArrivalsCrunchInput, forecastArrivalsCrunchInput)
     ).run()(actorMaterializer)
 
     val askableLiveCrunchStateActor: AskableActorRef = liveActorRef
