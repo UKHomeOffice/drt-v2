@@ -39,6 +39,7 @@ object TerminalStaffing {
                 val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
                 <.div(
                   <.div(^.className := "container",
+//                    <.div(^.className := "col-md-3", rawShifts),
                     <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, staffingMP, props.terminalName))),
                     <.div(^.className := "col-md-3", movementsEditor(todaysMovements(movements, DateRange.start, DateRange.end), staffingMP, props.terminalName))
                   ),

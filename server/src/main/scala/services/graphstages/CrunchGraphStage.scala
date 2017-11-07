@@ -188,9 +188,8 @@ class CrunchGraphStage(name: String,
       val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
         case None => newFlightWithSplits
         case Some(vm) =>
-          log.info(s"Found buffered manifest to apply to new flight")
           manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
-          log.info(s"Removed applied manifest from buffer")
+          log.info(s"Found buffered manifest to apply to new flight, and removed from buffer")
           removeManifestsOlderThan(twoDaysAgo)
           updateFlightWithManifests(vm, newFlightWithSplits)
       }
