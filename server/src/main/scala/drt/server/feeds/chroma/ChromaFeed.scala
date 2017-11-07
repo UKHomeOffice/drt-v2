@@ -3,8 +3,8 @@ package drt.server.feeds.chroma
 import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
+import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
+import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcher}
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.shared.Arrival
 import services.SDate
@@ -12,7 +12,7 @@ import services.SDate
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLive) {
+case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
   flightFeed =>
 
   object EdiChroma {

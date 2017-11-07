@@ -1,8 +1,8 @@
 package drt.chroma
 
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.chromafetcher.ChromaFetcherLive
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaLiveFlight, ChromaToken}
+import drt.chroma.chromafetcher.ChromaFetcher
+import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.http.WithSendAndReceive
 import spray.client.pipelining._
 import spray.http._
@@ -27,7 +27,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   import system.dispatcher
 
   "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
-    val sut = new ChromaFetcherLive(LiveFeed, test.system) with WithSendAndReceive {
+    val sut = new ChromaFetcher(ChromaLive, test.system) with WithSendAndReceive {
       override lazy val config: Config = mockConfig
       private val pipeline = tokenPipeline
 
@@ -49,7 +49,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
     sut.await
   }
   "When we request current flights we parse them successfully" >> {
-    val sut = new ChromaFetcherLive(LiveFeed, test.system) with WithSendAndReceive {
+    val sut = new ChromaFetcher(ChromaLive, test.system) with WithSendAndReceive {
       override lazy val config: Config = mockConfig
       override val tokenUrl: String = "https://edibf.edinburghairport.com/edi/chroma/token"
       override val url: String = "https://edibf.edinburghairport.com/edi/chroma/live/edi"

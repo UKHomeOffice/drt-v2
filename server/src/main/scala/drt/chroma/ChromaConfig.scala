@@ -3,19 +3,19 @@ package drt.chroma
 import com.typesafe.config.ConfigFactory
 import spray.http.FormData
 
-trait FeedType {
+trait ChromaFeedType {
   def toString: String
 }
-case object LiveFeed extends FeedType {
+case object ChromaLive extends ChromaFeedType {
   override def toString: String = "live"
 }
-case object ForecastFeed extends FeedType {
+case object ChromaForecast extends ChromaFeedType {
   override def toString: String = "forecast"
 }
 
 trait ChromaConfig {
   lazy val config = ConfigFactory.load()
-  def feedType: FeedType
+  def feedType: ChromaFeedType
 
   val chromaTokenRequestCredentials = FormData(Seq(
     "username" -> config.getString("chroma.username"),

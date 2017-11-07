@@ -1,8 +1,8 @@
 package drt.chroma.chromafetcher
 
 import akka.actor.ActorSystem
-import drt.chroma.{ChromaConfig, FeedType}
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight, ChromaToken}
+import drt.chroma.{ChromaConfig, ChromaFeedType}
+import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight, ChromaToken}
 import drt.http.WithSendAndReceive
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
@@ -13,7 +13,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, Future}
 
-object ChromaFetcherLive {
+object ChromaFetcher {
 
   case class ChromaToken(access_token: String, token_type: String, expires_in: Int)
 
@@ -51,12 +51,12 @@ object ChromaFetcherLive {
 
 }
 
-abstract case class ChromaFetcherLive(override val feedType: FeedType, implicit val system: ActorSystem) extends ChromaConfig with WithSendAndReceive {
+abstract case class ChromaFetcher(override val feedType: ChromaFeedType, implicit val system: ActorSystem) extends ChromaConfig with WithSendAndReceive {
 
   import ChromaParserProtocol._
   import system.dispatcher
 
-  def log = LoggerFactory.getLogger(classOf[ChromaFetcherLive])
+  def log = LoggerFactory.getLogger(classOf[ChromaFetcher])
 
   val logResponse: HttpResponse => HttpResponse = { resp =>
     log.info(s"Response Object: $resp")
@@ -110,12 +110,12 @@ abstract case class ChromaFetcherLive(override val feedType: FeedType, implicit 
   }
 }
 
-abstract case class ChromaFetcherForecast(override val feedType: FeedType, implicit val system: ActorSystem) extends ChromaConfig with WithSendAndReceive {
+abstract case class ChromaFetcherForecast(override val feedType: ChromaFeedType, implicit val system: ActorSystem) extends ChromaConfig with WithSendAndReceive {
 
   import ChromaParserProtocol._
   import system.dispatcher
 
-  def log = LoggerFactory.getLogger(classOf[ChromaFetcherLive])
+  def log = LoggerFactory.getLogger(classOf[ChromaFetcher])
 
   val logResponse: HttpResponse => HttpResponse = { resp =>
     log.info(s"Response Object: $resp")

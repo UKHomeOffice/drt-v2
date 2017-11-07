@@ -4,8 +4,8 @@ import akka.NotUsed
 import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
-import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight}
+import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcher}
+import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -14,7 +14,7 @@ import scala.language.postfixOps
 
 object StreamingChromaFlow {
 
-  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcherLive, pollFrequency: FiniteDuration): Source[Seq[ChromaLiveFlight], Cancellable] = {
+  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcher, pollFrequency: FiniteDuration): Source[Seq[ChromaLiveFlight], Cancellable] = {
     implicit val l = log
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[Try[Seq[ChromaLiveFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)

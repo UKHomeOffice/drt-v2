@@ -14,8 +14,8 @@ import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
-import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
-import drt.chroma.{FeedType, ForecastFeed, LiveFeed}
+import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcher}
+import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lhr.LHRFlightFeed
@@ -151,15 +151,15 @@ trait SystemActors {
   def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
       case "LHR" => LHRFlightFeed()
-      case "EDI" => createLiveChromaFlightFeed(LiveFeed).chromaEdiFlights()
-      case _ => createLiveChromaFlightFeed(LiveFeed).chromaVanillaFlights(30 seconds)
+      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed.map(Flights)
   }
 
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
-      case "STN" => createForecastChromaFlightFeed(ForecastFeed).chromaVanillaFlights(30 minutes)
+      case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case _ => Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     }
     feed.map(Flights)
@@ -171,11 +171,11 @@ trait SystemActors {
   def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
-  def createLiveChromaFlightFeed(feedType: FeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(system.log, new ChromaFetcherLive(feedType, system) with ProdSendAndReceive)
+  def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
+    ChromaLiveFeed(system.log, new ChromaFetcher(feedType, system) with ProdSendAndReceive)
   }
 
-  def createForecastChromaFlightFeed(feedType: FeedType): ChromaForecastFeed = {
+  def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
   }
 }

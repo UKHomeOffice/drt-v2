@@ -1,6 +1,6 @@
 package drt.chroma
 
-import drt.chroma.chromafetcher.ChromaFetcherLive.ChromaLiveFlight
+import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import spray.http.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 
 trait SampleData {
