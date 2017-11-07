@@ -106,13 +106,13 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
 
       val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
-        .filterNot { case (_, a) => expired(a) }
+      val newMergedFiltered = newMerged.filterNot { case (_, a) => expired(a) }
 
-      log.info(s"Purged ${liveArrivals.size - newMerged.size} expired arrivals during merge")
+      log.info(s"Purged ${newMerged.size - newMergedFiltered.size} expired arrivals during merge")
 
-      toPush = arrivalsDiff(merged, newMerged)
+      toPush = arrivalsDiff(merged, newMergedFiltered)
       pushIfAvailable(toPush, outArrivalsDiff)
-      merged = newMerged
+      merged = newMergedFiltered
     }
 
     setHandler(outArrivalsDiff, new OutHandler {
@@ -168,7 +168,6 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
               mergedSoFar
             case Some(baseArrival) =>
               val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
-              log.info(s"updating pax from ${baseArrival.ActPax} to ${forecastArrival.ActPax} - ${SDate(forecastArrival.Scheduled).toLocalDateTimeString()}")
               val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
               mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival)
           }
