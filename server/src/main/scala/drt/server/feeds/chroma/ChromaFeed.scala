@@ -1,31 +1,16 @@
 package drt.server.feeds.chroma
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
-import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
 import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.chroma.{DiffingStage, FeedType, StreamingChromaFlow}
-import drt.http.ProdSendAndReceive
+import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
+import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.shared.Arrival
 import services.SDate
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
-
-
-//trait ChromaFetcherLike {
-//  def system: ActorSystem
-//
-//  def chromafetcher: ChromaFetcherLive
-//}
-
-//case class ProdChroma(system: ActorSystem, feedType: FeedType) extends ChromaFetcherLike {
-//  self =>
-//  override val chromafetcher = new ChromaFetcherLive(feedType) with ProdSendAndReceive {
-//    implicit val system: ActorSystem = self.system
-//  }
-//}
 
 case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLive) {
   flightFeed =>
