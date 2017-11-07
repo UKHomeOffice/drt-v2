@@ -76,18 +76,23 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    apiSplitsDc match {
-      case s@Some(_) => s
-      case None => apiSplitsCi match {
-        case s@Some(_) => s
-        case None => historicalSplits match {
-          case s@Some(_) => s
-          case None => terminalSplits match {
-            case s@Some(_) => s
-            case None => None
-          }
-        }
-      }
+    List(apiSplitsDc, apiSplitsCi, historicalSplits, terminalSplits).find {
+      case Some(_) => true
+      case _ => false
+    }.getOrElse {
+      None
+    }
+  }
+
+  def apiSplits: Option[ApiSplits] = {
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
+
+    List(apiSplitsDc, apiSplitsCi).find {
+      case Some(_) => true
+      case _ => false
+    }.getOrElse {
+      None
     }
   }
 }
