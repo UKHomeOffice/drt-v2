@@ -4,7 +4,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaSingleFlight}
+import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.{DiffingStage, FeedType, StreamingChromaFlow}
 import drt.http.ProdSendAndReceive
 import drt.shared.Arrival
@@ -14,20 +14,20 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-trait ChromaFetcherLike {
-  def system: ActorSystem
+//trait ChromaFetcherLike {
+//  def system: ActorSystem
+//
+//  def chromafetcher: ChromaFetcherLive
+//}
 
-  def chromafetcher: ChromaFetcherLive
-}
+//case class ProdChroma(system: ActorSystem, feedType: FeedType) extends ChromaFetcherLike {
+//  self =>
+//  override val chromafetcher = new ChromaFetcherLive(feedType) with ProdSendAndReceive {
+//    implicit val system: ActorSystem = self.system
+//  }
+//}
 
-case class ProdChroma(system: ActorSystem, feedType: FeedType) extends ChromaFetcherLike {
-  self =>
-  override val chromafetcher = new ChromaFetcherLive(feedType) with ProdSendAndReceive {
-    implicit val system: ActorSystem = self.system
-  }
-}
-
-case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
+case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLive) {
   flightFeed =>
 
   object EdiChroma {
@@ -38,13 +38,13 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike)
       "T2" -> ArrivalsHall2
     )
 
-    def ediBaggageTerminalHack(csf: ChromaSingleFlight): ChromaSingleFlight = {
+    def ediBaggageTerminalHack(csf: ChromaLiveFlight): ChromaLiveFlight = {
       if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
     }
   }
 
 
-  def apiFlightCopy(ediMapping: Source[Seq[ChromaSingleFlight], Cancellable]): Source[List[Arrival], Cancellable] = {
+  def apiFlightCopy(ediMapping: Source[Seq[ChromaLiveFlight], Cancellable]): Source[List[Arrival], Cancellable] = {
     ediMapping.map(flights =>
       flights.map(flight => {
         val walkTimeMinutes = 4
@@ -75,9 +75,9 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike)
   }
 
   def chromaEdiFlights(): Source[List[Arrival], Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher.chromafetcher, 30 seconds)
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, 30 seconds)
 
-    def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()).map(csfs =>
+    def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaLiveFlight]()).map(csfs =>
       csfs.map(EdiChroma.ediBaggageTerminalHack(_)).map(csf => EdiChroma.ediMapTerminals.get(csf.Terminal) match {
         case Some(renamedTerminal) =>
           csf.copy(Terminal = renamedTerminal)
@@ -89,12 +89,12 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike)
   }
 
   def chromaVanillaFlights(frequency: FiniteDuration): Source[List[Arrival], Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher.chromafetcher, frequency)
-    apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaSingleFlight]()))
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, frequency)
+    apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaLiveFlight]()))
   }
 }
 
-case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherLike) {
+case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherForecast) {
   flightFeed =>
 
   def apiFlightCopy(ediMapping: Source[Seq[ChromaForecastFlight], Cancellable]): Source[List[Arrival], Cancellable] = {
@@ -104,7 +104,7 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherL
         val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
         Arrival(
           Operator = "",
-          Status = "Forecast",
+          Status = "Port Forecast",
           EstDT = "",
           ActDT = "",
           EstChoxDT = "",
@@ -130,7 +130,7 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherL
   }
 
   def chromaVanillaFlights(frequency: FiniteDuration): Source[List[Arrival], Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSourceForecast(log, chromaFetcher.chromafetcher, frequency)
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceForecast(log, chromaFetcher, frequency)
     apiFlightCopy(chromaFlow.via(DiffingStage.DiffLists[ChromaForecastFlight]()))
   }
 }

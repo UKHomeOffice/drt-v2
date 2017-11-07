@@ -5,7 +5,7 @@ import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcherLive}
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaSingleFlight}
+import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -14,14 +14,14 @@ import scala.language.postfixOps
 
 object StreamingChromaFlow {
 
-  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcherLive, pollFrequency: FiniteDuration): Source[Seq[ChromaSingleFlight], Cancellable] = {
+  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcherLive, pollFrequency: FiniteDuration): Source[Seq[ChromaLiveFlight], Cancellable] = {
     implicit val l = log
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[Try[Seq[ChromaSingleFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+    val tickingSource: Source[Try[Seq[ChromaLiveFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => Try(chromaFetcher.currentFlightsBlocking))
 
     log.info(s"setting up ticking chroma source")
-    val recoverableTicking: Source[Seq[ChromaSingleFlight], Cancellable] = tickingSource
+    val recoverableTicking: Source[Seq[ChromaLiveFlight], Cancellable] = tickingSource
       .map {
         case x@Failure(f) =>
           log.error(f, s"Something went wrong on the fetch, but we'll try again in $pollFrequency")
@@ -29,7 +29,7 @@ object StreamingChromaFlow {
         case s => s
       }
       .collect({
-        case Success(s: Seq[ChromaSingleFlight]) =>
+        case Success(s: Seq[ChromaLiveFlight]) =>
           log.info("Got success {} flights", s.length)
           s
       })
@@ -38,7 +38,7 @@ object StreamingChromaFlow {
 
   def chromaPollingSourceForecast(log: LoggingAdapter, chromaFetcher: ChromaFetcherForecast, pollFrequency: FiniteDuration): Source[Seq[ChromaForecastFlight], Cancellable] = {
     implicit val l = log
-    val initialDelayImmediately: FiniteDuration = 1 milliseconds
+    val initialDelayImmediately: FiniteDuration = 15 seconds
     val tickingSource: Source[Try[Seq[ChromaForecastFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => Try(chromaFetcher.currentFlightsBlocking))
 

@@ -263,6 +263,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
     crunch.forecastArrivalsInput.offer(forecastArrivals)
+    Thread.sleep(250L)
     crunch.baseArrivalsInput.offer(baseArrivals)
     val crunchForecastArrivals = crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
 

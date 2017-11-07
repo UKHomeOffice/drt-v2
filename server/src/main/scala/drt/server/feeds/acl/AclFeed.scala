@@ -132,7 +132,7 @@ object AclFeed {
     Try {
       Arrival(
         Operator = fields(13),
-        Status = "Forecast",
+        Status = "ACL Forecast",
         EstDT = "",
         ActDT = "",
         EstChoxDT = "",

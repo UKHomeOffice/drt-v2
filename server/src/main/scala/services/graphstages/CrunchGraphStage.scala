@@ -580,25 +580,18 @@ class CrunchGraphStage(name: String,
 
   def purgeExpiredManifests(manifests: Map[String, Set[VoyageManifest]]): Map[String, Set[VoyageManifest]] = {
     val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
-    manifests
-      .mapValues(_.filterNot(m => {
-        val shouldGo = expired(m)
-        if (shouldGo)
-          log.info(s"Purging expired manifest ${m.scheduleArrivalDateTime.getOrElse(SDate.now().toLocalDateTimeString())}")
-        shouldGo
-      }))
+    val updated = manifests
+      .mapValues(_.filterNot(expired))
       .filterNot { case (_, ms) => ms.isEmpty }
+    log.info(s"Purged ${manifests.size - updated.size} expired manifests")
+    updated
   }
 
   def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime)
-    arrivals
-      .filterNot { case (_, a) =>
-        val shouldGo = expired(a)
-        if (shouldGo)
-          log.info(s"Purging expired arrival ${a.apiFlight.IATA} with PCP ${SDate(a.apiFlight.PcpTime).toLocalDateTimeString()}")
-        shouldGo
-      }
+    val updated = arrivals.filterNot { case (_, a) => expired(a) }
+    log.info(s"Purged ${arrivals.size - updated.size} expired arrivals")
+    updated
   }
 
   def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = {

@@ -2,7 +2,7 @@ package drt.chroma.chromafetcher
 
 import akka.actor.ActorSystem
 import drt.chroma.{ChromaConfig, FeedType}
-import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaSingleFlight, ChromaToken}
+import drt.chroma.chromafetcher.ChromaFetcherLive.{ChromaForecastFlight, ChromaLiveFlight, ChromaToken}
 import drt.http.WithSendAndReceive
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
@@ -17,26 +17,26 @@ object ChromaFetcherLive {
 
   case class ChromaToken(access_token: String, token_type: String, expires_in: Int)
 
-  case class ChromaSingleFlight(Operator: String,
-                                Status: String,
-                                EstDT: String,
-                                ActDT: String,
-                                EstChoxDT: String,
-                                ActChoxDT: String,
-                                Gate: String,
-                                Stand: String,
-                                MaxPax: Int,
-                                ActPax: Int,
-                                TranPax: Int,
-                                RunwayID: String,
-                                BaggageReclaimId: String,
-                                FlightID: Int,
-                                AirportID: String,
-                                Terminal: String,
-                                ICAO: String,
-                                IATA: String,
-                                Origin: String,
-                                SchDT: String)
+  case class ChromaLiveFlight(Operator: String,
+                              Status: String,
+                              EstDT: String,
+                              ActDT: String,
+                              EstChoxDT: String,
+                              ActChoxDT: String,
+                              Gate: String,
+                              Stand: String,
+                              MaxPax: Int,
+                              ActPax: Int,
+                              TranPax: Int,
+                              RunwayID: String,
+                              BaggageReclaimId: String,
+                              FlightID: Int,
+                              AirportID: String,
+                              Terminal: String,
+                              ICAO: String,
+                              IATA: String,
+                              Origin: String,
+                              SchDT: String)
 
   case class ChromaForecastFlight(
                                 EstPax: Int,
@@ -51,8 +51,7 @@ object ChromaFetcherLive {
 
 }
 
-abstract case class ChromaFetcherLive(override val feedType: FeedType) extends ChromaConfig with WithSendAndReceive {
-  implicit val system: ActorSystem
+abstract case class ChromaFetcherLive(override val feedType: FeedType, implicit val system: ActorSystem) extends ChromaConfig with WithSendAndReceive {
 
   import ChromaParserProtocol._
   import system.dispatcher
@@ -79,7 +78,7 @@ abstract case class ChromaFetcherLive(override val feedType: FeedType) extends C
 
   case class livePipeline(token: String) {
 
-    val pipeline: (HttpRequest => Future[List[ChromaSingleFlight]]) = {
+    val pipeline: (HttpRequest => Future[List[ChromaLiveFlight]]) = {
       log.info(s"Sending request for $token")
       val logRequest: HttpRequest => HttpRequest = { r => log.debug(r.toString); r }
 
@@ -88,15 +87,15 @@ abstract case class ChromaFetcherLive(override val feedType: FeedType) extends C
           logRequest ~>
           sendAndReceive ~>
           logResponse
-        resp ~> unmarshal[List[ChromaSingleFlight]]
+        resp ~> unmarshal[List[ChromaLiveFlight]]
       }
     }
   }
 
-  def currentFlights: Future[Seq[ChromaSingleFlight]] = {
+  def currentFlights: Future[Seq[ChromaLiveFlight]] = {
     log.info(s"requesting token")
     val eventualToken: Future[ChromaToken] = tokenPipeline(Post(tokenUrl, chromaTokenRequestCredentials))
-    def eventualLiveFlights(accessToken: String): Future[List[ChromaSingleFlight]] = livePipeline(accessToken).pipeline(Get(url))
+    def eventualLiveFlights(accessToken: String): Future[List[ChromaLiveFlight]] = livePipeline(accessToken).pipeline(Get(url))
 
     for {
       t <- eventualToken
@@ -106,13 +105,12 @@ abstract case class ChromaFetcherLive(override val feedType: FeedType) extends C
     }
   }
 
-  def currentFlightsBlocking: Seq[ChromaSingleFlight] = {
+  def currentFlightsBlocking: Seq[ChromaLiveFlight] = {
     Await.result(currentFlights, Duration(60, SECONDS))
   }
 }
 
-abstract case class ChromaFetcherForecast(override val feedType: FeedType) extends ChromaConfig with WithSendAndReceive {
-  implicit val system: ActorSystem
+abstract case class ChromaFetcherForecast(override val feedType: FeedType, implicit val system: ActorSystem) extends ChromaConfig with WithSendAndReceive {
 
   import ChromaParserProtocol._
   import system.dispatcher

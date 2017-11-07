@@ -34,7 +34,7 @@ class AclFeedSpec extends CrunchTestLike {
       val
 
       arrivals = arrivalsFromCsvContent(csvContent)
-      val expected = List(Arrival("4U", "Forecast", "", "", "", "", "", "", 180, 149, 0, "", "", -904483842, "LHR", "T2", "4U0460", "4U0460", "CGN", "2017-10-13T07:10:00Z", 1507878600000L, 0, None))
+      val expected = List(Arrival("4U", "ACL Forecast", "", "", "", "", "", "", 180, 149, 0, "", "", -904483842, "LHR", "T2", "4U0460", "4U0460", "CGN", "2017-10-13T07:10:00Z", 1507878600000L, 0, None))
 
       arrivals === expected
     }

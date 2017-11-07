@@ -182,15 +182,8 @@ object Crunch {
 
   def purgeExpiredMinutes[M <: Minute](minutes: Map[Int, M], now: () => SDateLike, expireAfterMillis: MillisSinceEpoch): Map[Int, M] = {
     val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
-    minutes
-      .filterNot {
-        case (_, cm) =>
-          val shouldGo = expired(cm)
-          if (shouldGo) {
-            val cmDate = SDate(cm.minute).toLocalDateTimeString()
-            log.info(s"Purging expired CrunchMinute $cmDate")
-          }
-          shouldGo
-      }
+    val updated = minutes.filterNot { case (_, cm) => expired(cm)}
+    log.info(s"Purged ${minutes.size - updated.size} expired CrunchMinutes")
+    updated
   }
 }

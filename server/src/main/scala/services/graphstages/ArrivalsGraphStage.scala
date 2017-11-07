@@ -89,30 +89,27 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
     def updateAndPurge(updates: Set[Arrival]): Set[Arrival] = {
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
-      updates
+      val updated = updates
         .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
           case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
         }
         .values
-        .filterNot(a => {
-          val shouldGo = expired(a)
-          if (shouldGo)
-            log.info(s"Purging expired arrival ${a.IATA} with PCP ${SDate(a.PcpTime).toLocalDateTimeString()}")
-          shouldGo
-        })
+        .filterNot(expired)
         .toSet
+
+      log.info(s"Purged ${liveArrivals.size - updated.size} expired arrivals during update")
+
+      updated
     }
 
     def mergeAndPush(baseArrivals: Set[Arrival], forecastArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
 
       val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
-        .filterNot { case (_, a) =>
-          val shouldGo = expired(a)
-          if (shouldGo)
-            log.info(s"Purging expired arrival ${a.IATA} with PCP ${SDate(a.PcpTime).toLocalDateTimeString()}")
-          shouldGo
-        }
+        .filterNot { case (_, a) => expired(a) }
+
+      log.info(s"Purged ${liveArrivals.size - newMerged.size} expired arrivals during merge")
+
       toPush = arrivalsDiff(merged, newMerged)
       pushIfAvailable(toPush, outArrivalsDiff)
       merged = newMerged
@@ -171,7 +168,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
               mergedSoFar
             case Some(baseArrival) =>
               val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
-              val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax)
+              log.info(s"updating pax from ${baseArrival.ActPax} to ${forecastArrival.ActPax} - ${SDate(forecastArrival.Scheduled).toLocalDateTimeString()}")
+              val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
               mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival)
           }
       }

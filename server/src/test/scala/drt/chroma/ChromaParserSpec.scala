@@ -1,6 +1,6 @@
 package drt.chroma
 
-import drt.chroma.chromafetcher.ChromaFetcherLive.ChromaSingleFlight
+import drt.chroma.chromafetcher.ChromaFetcherLive.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol
 import org.specs2.mutable.SpecificationLike
 
@@ -38,8 +38,8 @@ class ChromaParserSpec extends SpecificationLike {
           	 |,"SchDT":"2016-06-02T09:55:00Z"}]
         """.stripMargin.parseJson
 
-      chromaFlightJson.convertTo[List[ChromaSingleFlight]] should beEqualTo(List(
-        ChromaSingleFlight("Flybe",
+      chromaFlightJson.convertTo[List[ChromaLiveFlight]] should beEqualTo(List(
+        ChromaLiveFlight("Flybe",
           "On Chocks",
           "2016-06-02T10:55:00Z",
           "2016-06-02T10:55:00Z",
