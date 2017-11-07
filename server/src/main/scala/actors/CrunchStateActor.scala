@@ -60,7 +60,6 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
     case cs: PortState =>
       log.info(s"Received PortState. storing")
       updateStateFromPortState(cs)
-      saveSnapshotAtInterval(cs)
 
     case GetState =>
       sender() ! state
@@ -188,19 +187,24 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
       staffMinutesToUpdate = diff.staffMinuteUpdates.map(staffMinuteToMessage).toList
     )
 
-    persist(diffToPersist) { (diff: CrunchDiffMessage) =>
-      log.info(s"Persisting ${diff.getClass}")
-      context.system.eventStream.publish(diff)
-    }
-
     val filteredStaffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
     val filteredCrunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis)
-    
+
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
       crunchMinutes = filteredCrunchMinutes,
       staffMinutes = filteredStaffMinutes
     )
+
+    persist(diffToPersist) { (diff: CrunchDiffMessage) =>
+      log.info(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
+      context.system.eventStream.publish(diff)
+      if (diff.crunchMinutesToUpdate.length > 20000 || (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0)) {
+        val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(updatedState)
+        log.info(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
+        saveSnapshot(snapshotMessage)
+      }
+    }
 
     state = Option(updatedState)
   }
@@ -215,14 +219,6 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
 
   def staffMinuteToMessage(cm: StaffMinute): StaffMinuteMessage = {
     StaffMinuteMessage(terminalName = Option(cm.terminalName), minute = Option(cm.minute), shifts = Option(cm.shifts), fixedPoints = Option(cm.fixedPoints), movements = Option(cm.movements))
-  }
-
-  def saveSnapshotAtInterval(cs: PortState): Unit = {
-    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-      val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(cs)
-      log.info("Saving PortState snapshot")
-      saveSnapshot(snapshotMessage)
-    }
   }
 
   def portStateToSnapshotMessage(portState: PortState) = CrunchStateSnapshotMessage(
