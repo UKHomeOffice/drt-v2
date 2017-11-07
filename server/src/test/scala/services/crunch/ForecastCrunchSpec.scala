@@ -247,7 +247,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
   "Given a base arrival with 21 pax, and a matching forecast arrival with 50 pax, 25 trans pax and a different format flight code " +
     "When I ask for arrivals " +
-    "Then I should see the base arrival as with the forecast arrival's pax & transpax nos overlaid" >> {
+    "Then I should see the base arrival with the forecast's pax & transpax nos overlaid, but retaining the base's flight code" >> {
 
     val baseScheduled = "2017-01-01T00:00Z"
     val forecastScheduled = baseScheduled
