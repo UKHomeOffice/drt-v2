@@ -14,10 +14,13 @@ import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
-import drt.server.feeds.chroma.{ChromaFlightFeed, MockChroma, ProdChroma}
+import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcher}
+import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive}
+import drt.http.ProdSendAndReceive
+import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
@@ -127,8 +130,10 @@ trait SystemActors {
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], crunchInputs.fixedPoints))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], crunchInputs.staffMovements))
 
-  flightsSource(mockProd, airportConfig.portCode)
+  liveArrivalsSource(airportConfig.portCode)
     .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
+  forecastArrivalsSource(airportConfig.portCode)
+    .runForeach(f => crunchInputs.forecastArrivals.offer(f))(actorMaterializer)
 
   system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
     crunchInputs.baseArrivals.offer(aclFeed.arrivals)
@@ -143,14 +148,19 @@ trait SystemActors {
 
   VoyageManifestsProvider(bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
 
-  def flightsSource(prodMock: String, portCode: String): Source[Flights, Cancellable] = {
+  def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
-      case "LHR" =>
-        LHRFlightFeed()
-      case "EDI" =>
-        createChromaFlightFeed(prodMock).chromaEdiFlights()
-      case _ =>
-        createChromaFlightFeed(prodMock).chromaVanillaFlights()
+      case "LHR" => LHRFlightFeed()
+      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+    }
+    feed.map(Flights)
+  }
+
+  def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
+    val feed = portCode match {
+      case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
+      case _ => Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     }
     feed.map(Flights)
   }
@@ -161,12 +171,12 @@ trait SystemActors {
   def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
-  def createChromaFlightFeed(prodMock: String): ChromaFlightFeed = {
-    val fetcher = prodMock match {
-      case "MOCK" => MockChroma(system)
-      case "PROD" => ProdChroma(system)
-    }
-    ChromaFlightFeed(system.log, fetcher)
+  def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
+    ChromaLiveFeed(system.log, new ChromaFetcher(feedType, system) with ProdSendAndReceive)
+  }
+
+  def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
+    ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
   }
 }
 

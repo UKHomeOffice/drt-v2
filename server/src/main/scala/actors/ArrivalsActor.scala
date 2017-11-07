@@ -15,6 +15,11 @@ class ForecastBaseArrivalsActor extends ArrivalsActor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 }
 
+class ForecastPortArrivalsActor extends ArrivalsActor {
+  override def persistenceId: String = s"${getClass.getName}-forecast-port"
+  val log: Logger = LoggerFactory.getLogger(getClass)
+}
+
 class LiveArrivalsActor extends ArrivalsActor {
   override def persistenceId: String = s"${getClass.getName}-live"
   val log: Logger = LoggerFactory.getLogger(getClass)

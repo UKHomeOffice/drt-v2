@@ -16,19 +16,21 @@ object RunnableArrivalsGraph {
 
   def apply[SA](
                  baseArrivalsSource: Source[Flights, SA],
+                 forecastArrivalsSource: Source[Flights, SA],
                  liveArrivalsSource: Source[Flights, SA],
                  arrivalsStage: ArrivalsGraphStage,
                  arrivalsDiffQueueSubscribers: List[SourceQueueWithComplete[ArrivalsDiff]]
-               ): RunnableGraph[(SA, SA)] = {
+               ): RunnableGraph[(SA, SA, SA)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    RunnableGraph.fromGraph(GraphDSL.create(baseArrivalsSource, liveArrivalsSource)((_, _)) { implicit builder =>
-      (baseArrivals, liveArrivals) =>
+    RunnableGraph.fromGraph(GraphDSL.create(baseArrivalsSource, forecastArrivalsSource, liveArrivalsSource)((_, _, _)) { implicit builder =>
+      (baseArrivals, forecastArrivals, liveArrivals) =>
         val arrivals = builder.add(arrivalsStage)
 
         baseArrivals ~> arrivals.in0
-        liveArrivals ~> arrivals.in1
+        forecastArrivals ~> arrivals.in1
+        liveArrivals ~> arrivals.in2
 
         arrivals.out ~> Sink.foreach[ArrivalsDiff](ad => arrivalsDiffQueueSubscribers.foreach(q => {
           log.info(s"Offering ArrivalsDiff")

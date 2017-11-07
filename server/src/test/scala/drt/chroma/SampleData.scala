@@ -1,23 +1,23 @@
 package drt.chroma
 
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
+import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import spray.http.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 
 trait SampleData {
 
-  val flight1: ChromaSingleFlight = ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+  val flight1: ChromaLiveFlight = ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
     "2016-08-04T04:40:00Z",
     "2016-08-04T04:37:00Z",
     "",
     "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
     1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
   )
-  val flight2 = ChromaSingleFlight("Star Air", "On Chocks", "", "2016-08-04T05:32:00Z", "",
+  val flight2 = ChromaLiveFlight("Star Air", "On Chocks", "", "2016-08-04T05:32:00Z", "",
     "2016-08-04T05:41:00Z", "", "212",
     0, 0, 0, "24", "", 1200986, "EDI",
     "FRT", "SRR6566", "S66566", "CGN",
     "2016-08-04T05:15:00Z")
-  val flightWithUnknownStatus: ChromaSingleFlight = ChromaSingleFlight("Tnt Airways Sa", "Non existent status",
+  val flightWithUnknownStatus: ChromaLiveFlight = ChromaLiveFlight("Tnt Airways Sa", "Non existent status",
     "2016-08-04T04:40:00Z",
     "2016-08-04T04:37:00Z",
     "",

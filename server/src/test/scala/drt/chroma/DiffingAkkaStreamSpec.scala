@@ -2,7 +2,7 @@ package drt.chroma
 
 import akka.stream.scaladsl.Source
 import akka.stream.testkit.scaladsl.TestSink
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaSingleFlight
+import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import spray.json._
@@ -15,11 +15,11 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
     val source = Source(Seq(response0))
 
     "we can parse it" in {
-      source.map(content => content.parseJson.convertTo[List[ChromaSingleFlight]])
-        .runWith(TestSink.probe[List[ChromaSingleFlight]])
+      source.map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
+        .runWith(TestSink.probe[List[ChromaLiveFlight]])
         .request(1)
         .expectNext(List(
-          ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
@@ -34,10 +34,10 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
     val source = Source(Seq(response0, response1))
 
     "we can parse it" in {
-      source.map(content => content.parseJson.convertTo[List[ChromaSingleFlight]])
-        .runWith(TestSink.probe[List[ChromaSingleFlight]])
+      source.map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
+        .runWith(TestSink.probe[List[ChromaLiveFlight]])
         .requestNext(List(
-          ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
@@ -45,7 +45,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
           )))
         .requestNext(List(
-          ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
@@ -61,11 +61,11 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
 
     "we really can diff it and parse it" in {
       source
-        .map(content => content.parseJson.convertTo[List[ChromaSingleFlight]])
-        .via(DiffingStage.DiffLists[ChromaSingleFlight]())
-        .runWith(TestSink.probe[Seq[ChromaSingleFlight]])
+        .map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
+        .via(DiffingStage.DiffLists[ChromaLiveFlight]())
+        .runWith(TestSink.probe[Seq[ChromaLiveFlight]])
         .requestNext(List(
-          ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
@@ -84,17 +84,17 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
 
     "we really can diff it and parse it" in {
       source
-        .via(DiffingStage.DiffLists[ChromaSingleFlight]())
-        .runWith(TestSink.probe[Seq[ChromaSingleFlight]])
+        .via(DiffingStage.DiffLists[ChromaLiveFlight]())
+        .runWith(TestSink.probe[Seq[ChromaLiveFlight]])
         .requestNext(List(
-          ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
             "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
           )))
-        .requestNext(List(ChromaSingleFlight("Tnt Airways Sa", "On Chocks",
+        .requestNext(List(ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
           "2016-08-04T04:40:00Z",
           "2016-08-04T09:11:00Z",
           "",
