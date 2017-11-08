@@ -222,13 +222,13 @@ class StaffingStage(name: String,
           case None =>
             log.info(s"No window set. Not running a simulation")
             crunchMinutesWithDeployments match {
-              case cm if cm.nonEmpty =>
+              case cms if cms.nonEmpty =>
                 val firstMinuteInState = crunchMinutesWithDeployments
                   .values
                   .toList
                   .minBy(_.minute)
                 val firstMinuteWithoutWarmUp = firstMinuteInState.minute + warmUpMinutes * Crunch.oneMinuteMillis
-                crunchMinutesWithDeployments.filter {
+                cms.filter {
                   case (_, cm) => firstMinuteWithoutWarmUp <= cm.minute
                 }
               case _ => Map()
@@ -277,7 +277,6 @@ class StaffingStage(name: String,
         val simWaits = TryRenjin
           .runSimulationOfWork(workLoads, deployedDesks, config)
           .drop(warmUpMinutes)
-        log.info(s"Finished running simulation.")
         cms
           .sortBy(_.minute)
           .drop(warmUpMinutes)

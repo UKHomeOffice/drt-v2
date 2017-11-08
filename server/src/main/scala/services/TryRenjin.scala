@@ -4,7 +4,7 @@ import java.io.InputStream
 import javax.script.{ScriptEngine, ScriptEngineManager}
 
 import org.renjin.sexp.{DoubleVector, IntVector}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.immutable.{IndexedSeq, Seq}
 import scala.util.Try
@@ -16,7 +16,7 @@ case class OptimizerCrunchResult(
                          waitTimes: Seq[Int])
 
 object TryRenjin {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
 
   def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
@@ -42,12 +42,9 @@ object TryRenjin {
         engine.put("weight_pax", 0.05)
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
-        val startTime = SDate.now().millisSinceEpoch
         engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
-        val durationMillis = SDate.now().millisSinceEpoch - startTime
-        log.info(f"crunched in R in ${durationMillis.toDouble / 1000}%.2f seconds")
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
-        val deskRecsScala = (0 until deskRecs.length()) map (deskRecs.getElementAsInt(_))
+        val deskRecsScala = (0 until deskRecs.length()) map deskRecs.getElementAsInt
         OptimizerCrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
       }
       tryCrunchRes
@@ -65,7 +62,7 @@ object TryRenjin {
       engine.eval("processed <- process.work(w, " + desks + ", sla=sla, 0)")
 
       val waitRV = engine.eval(s"processed$$wait").asInstanceOf[IntVector]
-      val waitTimes: IndexedSeq[Int] = (0 until waitRV.length()) map (waitRV.getElementAsInt(_))
+      val waitTimes: IndexedSeq[Int] = (0 until waitRV.length()) map waitRV.getElementAsInt
 
       waitTimes
     }
