@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services._
-import drt.shared.CrunchApi.CrunchState
+import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared.{AirportConfig, AirportInfo}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -12,6 +12,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 object TerminalDisplayModeComponent {
 
   case class Props(crunchStatePot: Pot[CrunchState],
+                   forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    airportInfoPot: Pot[AirportInfo],
@@ -73,12 +74,11 @@ object TerminalDisplayModeComponent {
           }),
           <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
             if (state.activeTab == "planning") {
-              val forecastRCP = SPACircuit.connect(_.forecastPeriodPot)
-              <.div(forecastRCP(forecastMP => {
-                <.div(forecastMP().renderReady(fp => {
+              <.div(
+                <.div(props.forecastPeriodPot.renderReady(fp => {
                   TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
                 }))
-              }))
+              )
             } else ""
           })))
     })
