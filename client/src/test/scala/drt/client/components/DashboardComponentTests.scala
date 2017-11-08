@@ -149,9 +149,9 @@ object DashboardComponentTests extends TestSuite {
 
         val result = hourSummary(flights, cms, startDate)
         val expected = List(
-          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20d)),
-          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
-          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
+          DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20d)),
+          DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
+          DashboardSummary(SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
         )
 
         assert(result == expected)
@@ -171,9 +171,9 @@ object DashboardComponentTests extends TestSuite {
 
         val result = hourSummary(flights, cms, startDate)
         val expected = List(
-          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 2, Map(Queues.EeaDesk -> 20)),
-          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
-          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
+          DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 2, Map(Queues.EeaDesk -> 20)),
+          DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
+          DashboardSummary(SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
         )
 
         assert(result == expected)
@@ -192,9 +192,9 @@ object DashboardComponentTests extends TestSuite {
 
         val result = hourSummary(flights, cms, startDate)
         val expected = List(
-          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20)),
-          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
-          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
+          DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20)),
+          DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
+          DashboardSummary(SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
         )
 
         assert(result == expected)
@@ -218,12 +218,28 @@ object DashboardComponentTests extends TestSuite {
 
         val result = hourSummary(flights, cms, startDate)
         val expected = List(
-          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20)),
-          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
-          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20))
+          DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20)),
+          DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
+          DashboardSummary(SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20))
         )
 
         assert(result == expected)
+      }
+
+      "When calculating the total per queue for 3 hours" - {
+        "Given non round queue totals then the total should be equal to the sum of the rounded values" - {
+          val hourSummaries = List(
+            DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 1.4)),
+            DashboardSummary(SDate("2017-10-30T00:00:00Z").addHours(1).millisSinceEpoch, 0, Map(Queues.EeaDesk -> 1.4)),
+            DashboardSummary(SDate("2017-10-30T00:00:00Z").addHours(2).millisSinceEpoch, 0, Map(Queues.EeaDesk -> 1.4))
+          )
+
+          val result = totalsByQueue(hourSummaries)
+
+          val expected = Map(Queues.EeaDesk -> 3)
+
+          assert(result == expected)
+        }
       }
     }
   }
