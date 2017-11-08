@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services._
-import drt.shared.CrunchApi.CrunchState
+import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.Reusability
@@ -16,6 +16,7 @@ object TerminalComponent {
 
   case class TerminalModel(
                             crunchStatePot: Pot[CrunchState],
+                            forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             viewMode: ViewMode,
@@ -25,6 +26,7 @@ object TerminalComponent {
   def render(props: Props): Unit = {
     val modelRCP = SPACircuit.connect(model => TerminalModel(
       model.crunchStatePot,
+      model.forecastPeriodPot,
       model.airportConfig,
       model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
       model.viewMode,
@@ -39,6 +41,7 @@ object TerminalComponent {
     .renderPS(($, props, state) => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.crunchStatePot,
+        model.forecastPeriodPot,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.viewMode,
@@ -50,6 +53,7 @@ object TerminalComponent {
           <.div(
             TerminalDisplayModeComponent(TerminalDisplayModeComponent.Props(
               model.crunchStatePot,
+              model.forecastPeriodPot,
               airportConfig,
               props.terminalPageTab,
               model.airportInfos,
