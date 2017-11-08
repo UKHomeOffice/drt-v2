@@ -113,7 +113,7 @@ object CSVData {
       "API Visa National to Desk, API Non-visa National to Desk,API Visa National to Fast-Track,API Non-visa National to Fast Track," +
       "Historic EEA Machine Readable to EGate,Historic EEA Machine Readable to Desk,Historic EEA Non Machine Readable to Desk," +
       "Historic Visa National to Desk, Historic Non-visa National to Desk,Historic Visa National to Fast-Track,Historic Non-visa National to Fast Track"
-    val csvData = flightsWithSplits.map(fws => {
+    val csvData = flightsWithSplits.sortBy(_.apiFlight.PcpTime).map(fws => {
 
       val flightCsvFields = List(
         fws.apiFlight.IATA,

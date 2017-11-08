@@ -505,8 +505,11 @@ class Application @Inject()(implicit val config: Configuration,
 
   def saveStaff() = Action {
     implicit request =>
-      request.body.asJson.flatMap(ImportStaff.staffJsonToShifts) match {
+      val maybeShifts: Option[String] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
+
+      maybeShifts match {
         case Some(shiftsString) =>
+          log.info(s"Received ${shiftsString.split("\n").length} shifts. Sending to actor")
           shiftsActor ! shiftsString
           Created
         case _ =>

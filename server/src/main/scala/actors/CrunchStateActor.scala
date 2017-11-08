@@ -62,6 +62,7 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
       updateStateFromPortState(cs)
 
     case GetState =>
+      log.info(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
       sender() ! state
 
     case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
