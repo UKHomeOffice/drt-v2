@@ -121,7 +121,7 @@ object DashboardComponent {
       val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
       val queueTotals = totalsByQueue(summary)
       val totalPaxAcrossQueues = queueTotals.map(_._2).sum
-      
+
       <.div(^.className := "dashboard-summary container-fluid",
         <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
           <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
@@ -153,13 +153,13 @@ object DashboardComponent {
                     <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
                     <.td(s"${numFlights}"),
                     <.td(s"${totalPax}"),
-                    queueNames.map(q => <.td(s"${Math.round(paxPerQueue(q))}")).toTagMod
+                    queueNames.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
                   )
               }.toTagMod,
               <.tr(
                 <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
                 <.th(p.flights.size),
-                <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals(q)}")).toTagMod
+                <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
               )
             )
           )
