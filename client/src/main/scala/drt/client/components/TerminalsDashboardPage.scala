@@ -33,10 +33,9 @@ object TerminalsDashboardPage {
 
       val displayPeriodEnd = displayPeriodStart.addHours(3)
 
-      def flightWithinPeriod(flight: ApiFlightWithSplits) = BigSummaryBoxes.flightPcpInPeriod(flight, displayPeriodStart, displayPeriodEnd)
+      def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardComponent.flightPcpInPeriod(flight, displayPeriodStart, displayPeriodEnd)
 
       def minuteWithinPeriod(cm: CrunchMinute) = cm.minute >= displayPeriodStart.millisSinceEpoch && cm.minute < displayPeriodEnd.millisSinceEpoch
-
 
       val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig.map(ac => (ac.portCode, ac.queueOrder, ac.terminalNames)))
       val flightsAndMinutes = SPACircuit.connect(_.crunchStatePot.map(crunchState =>
@@ -47,9 +46,7 @@ object TerminalsDashboardPage {
       val hours3to6 = if (displayPeriodStart.prettyTime() == in3hours.prettyTime()) "active" else ""
       val hours6to9 = if (displayPeriodStart.prettyTime() == in6hours.prettyTime()) "active" else ""
 
-      def switchDashboardPeriod(time: String) = {
-        p.router.set(p.dashboardPage.copy(startTime = Option(time)))
-      }
+      def switchDashboardPeriod(time: String) = p.router.set(p.dashboardPage.copy(startTime = Option(time)))
 
       def periodNext3 = (_: ReactEventFromInput) => switchDashboardPeriod(currentPeriodStart.prettyTime())
 
@@ -86,8 +83,7 @@ object TerminalsDashboardPage {
             }
           }))
       }
-    }
-    )
+    })
     .build
 
   def apply(

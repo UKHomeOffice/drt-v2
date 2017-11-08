@@ -1,13 +1,9 @@
 package drt.client.components
 
-import javax.swing.plaf.multi.MultiMenuItemUI
-
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 import utest._
-
 
 object DashboardComponentTests extends TestSuite {
 
@@ -102,7 +98,7 @@ object DashboardComponentTests extends TestSuite {
       val flights = List(flight1, flight2, flight3, flight4, flight5, flight6)
 
       val start = SDate("2017-11-01T09:45:00")
-      val result = DashboardComponent.groupByHour(flights, start)
+      val result = DashboardComponent.groupFlightsByHour(flights, start)
 
 
       val expected = List(
@@ -129,6 +125,7 @@ object DashboardComponentTests extends TestSuite {
 
       assert(result == lowestMinute)
     }
+
     "Given a list of CrunchMinutes when asking for the highest PCP pressure I should get the Minute with the most pax back" - {
       val startDate = SDate("2017-10-30T00:00:00Z")
       val highestMinute = CrunchMinute("T1", Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 30, 40, 10, 10, Option(10), None, None)
@@ -142,6 +139,92 @@ object DashboardComponentTests extends TestSuite {
       val result = DashboardComponent.pcpHighest(cms)
 
       assert(result == highestMinute)
+    }
+
+    "When I ask for a break down of flights and queues per hour" - {
+      "Given 1 flight and 1 Crunch Minute for the same period" - {
+        val startDate = SDate("2017-10-30T00:00:00Z")
+        val flights = List(ApiFlightWithSplits(ArrivalGenerator.apiFlight(flightId = 1, schDt = "2017-10-30T00:00:00Z", actPax = 15), Set()))
+        val cms = List(CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
+
+        val result = hourSummary(flights, cms, startDate)
+        val expected = List(
+          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20d)),
+          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
+          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
+        )
+
+        assert(result == expected)
+      }
+
+      "Given 2 flights and 1 Crunch Minute for the same period then we should get a summary with 2 flights in" - {
+        val startDate = SDate("2017-10-30T00:00:00Z")
+        val flights = List(
+          ApiFlightWithSplits(
+            ArrivalGenerator.apiFlight(flightId = 1, schDt = "2017-10-30T00:00:00Z", actPax = 15), Set()
+          ),
+          ApiFlightWithSplits(
+            ArrivalGenerator.apiFlight(flightId = 2, schDt = "2017-10-30T00:01:00Z", actPax = 15), Set()
+          )
+        )
+        val cms = List(CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
+
+        val result = hourSummary(flights, cms, startDate)
+        val expected = List(
+          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 2, Map(Queues.EeaDesk -> 20)),
+          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
+          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
+        )
+
+        assert(result == expected)
+      }
+      "Given 2 flights and 1 Crunch Minute for different hours then we should get two hour summaries back each with one flight" - {
+        val startDate = SDate("2017-10-30T00:00:00Z")
+        val flights = List(
+          ApiFlightWithSplits(
+            ArrivalGenerator.apiFlight(flightId = 1, schDt = "2017-10-30T00:00:00Z", actPax = 15), Set()
+          ),
+          ApiFlightWithSplits(
+            ArrivalGenerator.apiFlight(flightId = 2, schDt = "2017-10-30T01:00:00Z", actPax = 15), Set()
+          )
+        )
+        val cms = List(CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
+
+        val result = hourSummary(flights, cms, startDate)
+        val expected = List(
+          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20)),
+          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
+          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map())
+        )
+
+        assert(result == expected)
+      }
+      "Given 2 flights and 2 Crunch Minutes for different hours and queues then we should get two hour summaries back each with one flight" - {
+        val startDate = SDate("2017-10-30T00:00:00Z")
+        val flights = List(
+          ApiFlightWithSplits(
+            ArrivalGenerator.apiFlight(flightId = 1, schDt = "2017-10-30T00:00:00Z", actPax = 15), Set()
+          ),
+          ApiFlightWithSplits(
+            ArrivalGenerator.apiFlight(flightId = 2, schDt = "2017-10-30T01:00:00Z", actPax = 15), Set()
+          )
+        )
+        val cms = List(
+          CrunchMinute("T1", Queues.EeaDesk, startDate.addHours(2).millisSinceEpoch, 20, 0, 0, 0, None, None, None),
+          CrunchMinute("T1", Queues.NonEeaDesk, startDate.addHours(2).millisSinceEpoch, 20, 0, 0, 0, None, None, None),
+          CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None),
+          CrunchMinute("T1", Queues.NonEeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None)
+        )
+
+        val result = hourSummary(flights, cms, startDate)
+        val expected = List(
+          (SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20)),
+          (SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
+          (SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20))
+        )
+
+        assert(result == expected)
+      }
     }
   }
 }
