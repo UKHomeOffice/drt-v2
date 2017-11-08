@@ -273,7 +273,7 @@ class StaffingStage(name: String,
         }
         val deployedDesks = minWlSd.map { case (_, _, sd) => sd.getOrElse(0) }
         val config = OptimizerConfig(slaByQueue(qn))
-        log.info(s"Running simulation on ${workLoads.length} workloads, ${deployedDesks.length} desks - ${firstMinute.toLocalDateTimeString()} to ${lastMinute.toLocalDateTimeString()}")
+        log.info(s"Running $qn simulation on ${workLoads.length} workloads - ${firstMinute.toLocalDateTimeString()} to ${lastMinute.toLocalDateTimeString()}")
         val simWaits = TryRenjin
           .runSimulationOfWork(workLoads, deployedDesks, config)
           .drop(warmUpMinutes)

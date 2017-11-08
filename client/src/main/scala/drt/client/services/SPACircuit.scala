@@ -1,7 +1,6 @@
 package drt.client.services
 
 import autowire._
-import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
@@ -168,21 +167,31 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
   }
 
   def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
-    CrunchState(0L, 0, crunchUpdates.flights, crunchUpdates.minutes)
+    CrunchState(crunchUpdates.flights, crunchUpdates.minutes, crunchUpdates.staff)
   }
 
   def updateStateFromUpdates(crunchUpdates: CrunchUpdates, existingState: CrunchState): CrunchState = {
     val lastMidnightMillis = SDate.midnightThisMorning().millisSinceEpoch
     val flights = updateAndTrimFlights(crunchUpdates, existingState, lastMidnightMillis)
-    val minutes = updateAndTrimMinutes(crunchUpdates, existingState, lastMidnightMillis)
-    CrunchState(flights = flights, crunchMinutes = minutes, crunchFirstMinuteMillis = 0L, numberOfMinutes = 0)
+    val minutes = updateAndTrimCrunch(crunchUpdates, existingState, lastMidnightMillis)
+    val staff = updateAndTrimStaff(crunchUpdates, existingState, lastMidnightMillis)
+    CrunchState(flights = flights, crunchMinutes = minutes, staffMinutes = staff)
   }
 
-  def updateAndTrimMinutes(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.CrunchMinute] = {
+  def updateAndTrimCrunch(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.CrunchMinute] = {
     val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= keepFromMillis)
     val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
     val minutes = crunchUpdates.minutes.foldLeft(existingMinutesByTqm) {
       case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.queueName, newCm.minute), newCm)
+    }.values.toSet
+    minutes
+  }
+
+  def updateAndTrimStaff(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.StaffMinute] = {
+    val relevantMinutes = existingState.staffMinutes.filter(_.minute >= keepFromMillis)
+    val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.minute), cm)).toMap
+    val minutes = crunchUpdates.staff.foldLeft(existingMinutesByTqm) {
+      case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.minute), newCm)
     }.values.toSet
     minutes
   }

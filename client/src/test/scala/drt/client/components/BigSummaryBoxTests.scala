@@ -22,7 +22,7 @@ object BigSummaryBoxTests extends TestSuite {
     "Summary for the next 3 hours" - {
       "Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards" - {
         "Given 0 flights" - {
-          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, Set(), Set())))
+          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(Set(), Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate(2016, 5, 1, 12)
@@ -44,10 +44,10 @@ object BigSummaryBoxTests extends TestSuite {
           val apiFlight2 = apiFlight("2017-05-01T13:05Z", FlightID = 2, ActPax = 300)
           val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = 3, ActPax = 40)
 
-          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, Set(
-                      ApiFlightWithSplits(apiFlight1, Set()),
-                      ApiFlightWithSplits(apiFlight2, Set()),
-                      ApiFlightWithSplits(apiFlight3, Set())), Set())))
+          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(Set(
+                                ApiFlightWithSplits(apiFlight1, Set()),
+                                ApiFlightWithSplits(apiFlight2, Set()),
+                                ApiFlightWithSplits(apiFlight3, Set())), Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate.parse("2017-05-01T12:00Z")
@@ -76,12 +76,12 @@ object BigSummaryBoxTests extends TestSuite {
           val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = 4, ActPax = 40, PcpTime = mkMillis("2017-05-01T13:22Z"))
 
 
-          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, Set(
-                      ApiFlightWithSplits(apiFlightPcpBeforeNow, Set()),
-                      ApiFlightWithSplits(apiFlight0aPcpAfterNow, Set()),
-                      ApiFlightWithSplits(apiFlight1, Set()),
-                      ApiFlightWithSplits(apiFlight2, Set()),
-                      ApiFlightWithSplits(apiFlight3, Set())), Set())))
+          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(Set(
+                                ApiFlightWithSplits(apiFlightPcpBeforeNow, Set()),
+                                ApiFlightWithSplits(apiFlight0aPcpAfterNow, Set()),
+                                ApiFlightWithSplits(apiFlight1, Set()),
+                                ApiFlightWithSplits(apiFlight2, Set()),
+                                ApiFlightWithSplits(apiFlight3, Set())), Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate.parse("2017-05-01T12:00Z")
@@ -114,7 +114,7 @@ object BigSummaryBoxTests extends TestSuite {
               ApiFlightWithSplits(apiFlight1, Set()),
               ApiFlightWithSplits(apiFlight2, Set()),
               ApiFlightWithSplits(notOurTerminal, Set()))
-            val rootModel = RootModel(crunchStatePot = Ready(CrunchState(0, 0, flights, Set())))
+            val rootModel = RootModel(crunchStatePot = Ready(CrunchState(flights, Set())))
 
 
             "AND a current time of 2017-05-01T12:00" - {
