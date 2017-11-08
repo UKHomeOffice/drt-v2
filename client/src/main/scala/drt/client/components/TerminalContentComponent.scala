@@ -96,12 +96,12 @@ object TerminalContentComponent {
       val bestPax = ArrivalHelper.bestPax _
       val queueOrder = props.airportConfig.queueOrder
 
-      val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
+      val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
       val staffingActive = if (state.activeTab == "staffing") "active" else ""
 
-      val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
+      val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
 
       <.div(
@@ -109,17 +109,27 @@ object TerminalContentComponent {
         <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
         TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours())),
         <.ul(^.className := "nav nav-tabs",
-          <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab = "arrivals"))
-          }),
+
           <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
             props.router.set(props.terminalPageTab.copy(tab = "desksAndQueues"))
+          }),
+          <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
+            props.router.set(props.terminalPageTab.copy(tab = "arrivals"))
           }),
           <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
             props.router.set(props.terminalPageTab.copy(tab = "staffing"))
           })
         ),
         <.div(^.className := "tab-content",
+          <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive", ^.href := "#desksAndQueues",
+            if (state.activeTab == "desksAndQueues") {
+              log.info(s"Rendering desks and queue $state")
+              props.crunchStatePot.renderReady(crunchState => {
+                log.info(s"rendering ready d and q")
+                TerminalDesksAndQueues(TerminalDesksAndQueues.Props(crunchState, props.airportConfig, props.terminalPageTab.terminal))
+              })
+            } else ""
+          ),
           <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
             if (state.activeTab == "arrivals") {
               log.info(s"Rendering arrivals $state")
@@ -133,15 +143,6 @@ object TerminalContentComponent {
               }))
             } else ""
           }),
-          <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive", ^.href := "#desksAndQueues",
-            if (state.activeTab == "desksAndQueues") {
-              log.info(s"Rendering desks and queue $state")
-              props.crunchStatePot.renderReady(crunchState => {
-                log.info(s"rendering ready d and q")
-                TerminalDesksAndQueues(TerminalDesksAndQueues.Props(crunchState, props.airportConfig, props.terminalPageTab.terminal))
-              })
-            } else ""
-          ),
           <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive", ^.href := "#staffing",
 
             if (state.activeTab == "staffing") {

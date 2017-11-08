@@ -23,7 +23,7 @@ object SPAMain extends js.JSApp {
   case class TerminalPageTabLoc(
                                  terminal: String,
                                  mode: String = "current",
-                                 tab: String = "arrivals",
+                                 tab: String = "desksAndQueues",
                                  date: Option[String] = None
                                ) extends Loc {
     def viewMode: ViewMode = {
