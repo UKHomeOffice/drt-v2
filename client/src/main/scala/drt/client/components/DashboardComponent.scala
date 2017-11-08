@@ -10,6 +10,13 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import scala.collection.immutable.Seq
 
 object DashboardComponent {
+
+  case class DashboardSummary(
+                               startTime: MillisSinceEpoch,
+                               numFlights: Int,
+                               paxPerQueue: Map[QueueName, Double]
+                             )
+
   def pcpHighest(cms: Seq[CrunchMinute]) = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad > cm2.paxLoad) cm1 else cm2)
 
   def pcpLowest(cms: Seq[CrunchMinute]) = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad < cm2.paxLoad) cm1 else cm2)
@@ -17,12 +24,12 @@ object DashboardComponent {
   def hourRange(start: SDateLike, numHours: Int) = (0 until numHours).map(h => start.addHours(h))
 
 
-  def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike) = {
+  def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
     val groupedFlights = groupFlightsByHour(flights, start).toMap
     val groupedCrunchMinutes = groupCrunchMinutesByHour(cms, start).toMap
     val sum = groupedCrunchMinutes.mapValues(cms => cms.map(_.paxLoad).sum).values.sum
 
-    hourRange(start, 3).map(h => (
+    hourRange(start, 3).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
       groupedCrunchMinutes.getOrElse(h.millisSinceEpoch, List())
@@ -111,16 +118,10 @@ object DashboardComponent {
 
       val queueNames = queuesFromPaxTypeAndQueue(p.queues)
 
-      val summary = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
-      val queueTotals = summary
-        .map {
-          case (_, _, byQ) => byQ
-        }
-        .flatMap(h => h.toList)
-        .groupBy { case (queueName, _) => queueName }
-        .mapValues(_.map { case (_, queuePax) => queuePax }.sum)
-
-      val totalPaxAcrossQueues = paxInPeriod(crunchMinuteTimeSlots).toInt
+      val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
+      val queueTotals = totalsByQueue(summary)
+      val totalPaxAcrossQueues = queueTotals.map(_._2).sum
+      
       <.div(^.className := "dashboard-summary container-fluid",
         <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
           <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
@@ -145,7 +146,7 @@ object DashboardComponent {
               <.tr(<.th(^.colSpan := 2, ^.className := "heading", "Time Range"), <.th("Flights"), <.th("Total Pax"), queueNames.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod),
               summary.map {
 
-                case (start, numFlights, paxPerQueue) =>
+                case DashboardSummary(start, numFlights, paxPerQueue) =>
 
                   val totalPax = paxPerQueue.values.map(Math.round(_)).sum
                   <.tr(
@@ -158,7 +159,7 @@ object DashboardComponent {
               <.tr(
                 <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
                 <.th(p.flights.size),
-                <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${Math.round(queueTotals(q))}")).toTagMod
+                <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals(q)}")).toTagMod
               )
             )
           )
@@ -179,6 +180,16 @@ object DashboardComponent {
 
     )
     .build
+
+  def totalsByQueue(summary: Seq[DashboardSummary]) = {
+    summary
+      .map {
+        case DashboardSummary(_, _, byQ) => byQ
+      }
+      .flatMap(h => h.toList)
+      .groupBy { case (queueName, _) => queueName }
+      .mapValues(queuTotalsbyQ => queuTotalsbyQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
+  }
 
   def apply(props: Props) = component(props)
 }
