@@ -73,12 +73,20 @@ object CrunchSystem {
     val askableForecastCrunchStateActor: AskableActorRef = props.forecastCrunchStateActor
 
     val initialLiveCrunchState = Await.result(askableLiveCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case ps: PortState => Option(ps)
-      case _ => None
+      case Some(ps: PortState) =>
+        log.info(s"Got an initial live crunch state with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
+        Option(ps)
+      case _ =>
+        log.info(s"Got no initial live crunch state from actor")
+        None
     }, 5 minutes)
     val initialForecastCrunchState = Await.result(askableForecastCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case ps: PortState => Option(ps)
-      case _ => None
+      case Some(ps: PortState) =>
+        log.info(s"Got an initial forecast crunch state with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
+        Option(ps)
+      case _ =>
+        log.info(s"Got no initial forecast crunch state from actor")
+        None
     }, 5 minutes)
 
     def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike) = new StaffingStage(
