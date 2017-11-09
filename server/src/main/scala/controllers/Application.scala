@@ -437,6 +437,7 @@ class Application @Inject()(implicit val config: Configuration,
     val fileName = s"$terminal-planning-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
     crunchStateFuture.map {
       case Some(PortState(_, m, s)) =>
+        log.info(s"Forecast CSV export for $terminal on ${startDay} with: crunch minutes: ${m.size} staff minutes: ${s.size}")
         val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
@@ -445,7 +446,7 @@ class Application @Inject()(implicit val config: Configuration,
         )
 
       case None =>
-        log.error(s"Missing planning data for ${startDayMidnight.ddMMyyString} for Terminal $terminal")
+        log.error(s"Forecast CSV Export: Missing planning data for ${startDayMidnight.ddMMyyString} for Terminal $terminal")
         NotFound(s"Sorry, no planning summary available for week starting ${startDayMidnight.ddMMyyString}")
     }
   }

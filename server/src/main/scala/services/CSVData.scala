@@ -1,12 +1,16 @@
 package services
 
-import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, ForecastPeriod, ForecastTimeSlot}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.immutable.Seq
 
 object CSVData {
+
+  val log = LoggerFactory.getLogger(getClass)
+
   def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures) = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
       day => s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
@@ -43,8 +47,18 @@ object CSVData {
   }
 
   def forecastPeriodToCsv(forecastPeriod: ForecastPeriod) = {
-    val sortedDays = forecastPeriod.days.toList.sortBy(_._1)
-    val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.transpose(_._2.take(96))
+    val sortedDays: Seq[(MillisSinceEpoch, Seq[ForecastTimeSlot])] = forecastPeriod.days.toList.sortBy(_._1)
+    log.info(s"Forecast CSV Export: Days in period: ${sortedDays.length}")
+    val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.filter {
+      case (millis, forecastTimeSlots) if forecastTimeSlots.length == 96 =>
+        log.info(s"Forecast CSV Export: day ${SDate(MilliDate(millis)).toLocalDateTimeString()}" +
+          s" first:${SDate(MilliDate(forecastTimeSlots.head.startMillis)).toLocalDateTimeString()}" +
+          s" last:${SDate(MilliDate(forecastTimeSlots.last.startMillis)).toLocalDateTimeString()}")
+        true
+      case (millis, forecastTimeSlots) =>
+        log.error(s"Forecast CSV Export: error for ${SDate(MilliDate(millis)).toLocalDateTimeString()} got ${forecastTimeSlots.length} days")
+        false
+    }.transpose(_._2.take(96))
 
     val headings1 = "," + sortedDays.map {
       case (day, _) =>
@@ -57,16 +71,9 @@ object CSVData {
     val headings2 = "Start Time," + sortedDays.map(_ => "Avail,Rec").mkString(",")
 
     val data = byTimeSlot.map(row => {
-
-      s"${
-        SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()
-      }" + "," + row.map(
-        col => {
-          s"${
-            col.available
-          },${
-            col.required
-          }"
+      s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," +
+        row.map(col => {
+          s"${col.available},${col.required}"
         }).mkString(",")
     }).mkString("\n")
 

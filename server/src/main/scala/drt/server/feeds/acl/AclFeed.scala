@@ -20,6 +20,7 @@ import scala.util.{Success, Try}
 
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: String) {
   def sftp: SFTPClient = sftpClient(ftpServer, username, path)
+
   def arrivals: Flights = {
     Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode))))
   }
@@ -71,9 +72,10 @@ object AclFeed {
       .collect { case Success(a) => a }
       .toList
 
-    val latestArrival = arrivals.maxBy(_.Scheduled)
-    log.info(s"ACL: ${arrivals.length} arrivals. Latest arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.IATA}")
-
+    if (arrivals.nonEmpty) {
+      val latestArrival = arrivals.maxBy(_.Scheduled)
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.IATA}")
+    }
     arrivals
   }
 
