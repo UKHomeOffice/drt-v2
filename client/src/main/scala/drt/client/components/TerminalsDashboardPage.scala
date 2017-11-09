@@ -63,7 +63,7 @@ object TerminalsDashboardPage {
             flightsAndMinutes { flightsAndMinutesMP =>
               <.div(
                 <.div(^.className := "form-group row",
-                  <.div(^.className := "btn-group col-sm-4 no-gutters", VdomAttr("data-toggle") := "buttons",
+                  <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
                     <.div(^.className := s"btn btn-primary $next3hours", s"${currentPeriodStart.prettyTime()}-${in3hours.prettyTime()}", ^.onClick ==> periodNext3),
                     <.div(^.className := s"btn btn-primary $hours3to6", s"${in3hours.prettyTime()}-${in6hours.prettyTime()}", ^.onClick ==> period3to6),
                     <.div(^.className := s"btn btn-primary $hours6to9", s"${in6hours.prettyTime()}-${in9hours.prettyTime()}", ^.onClick ==> period6to9))),
