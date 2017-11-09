@@ -94,6 +94,7 @@ trait SystemActors {
 
   val config: Configuration
 
+  val warmUpMinutes: Int = 240
   val maxDaysToCrunch: Int = ConfigFactory.load.getString("crunch.forecast.max_days").toInt
   val aclPollMinutes: Int = ConfigFactory.load.getString("crunch.forecast.poll_minutes").toInt
   val expireAfterMillis: Long = 2 * oneDayMillis
@@ -124,7 +125,8 @@ trait SystemActors {
     liveCrunchStateActor = liveCrunchStateActor,
     forecastCrunchStateActor = forecastCrunchStateActor,
     maxDaysToCrunch = maxDaysToCrunch,
-    expireAfterMillis = expireAfterMillis))
+    expireAfterMillis = expireAfterMillis,
+    warmUpMinutes = warmUpMinutes))
 
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], crunchInputs.shifts))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], crunchInputs.fixedPoints))

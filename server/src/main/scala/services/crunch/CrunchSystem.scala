@@ -59,7 +59,8 @@ object CrunchSystem {
                          liveCrunchStateActor: ActorRef,
                          forecastCrunchStateActor: ActorRef,
                          maxDaysToCrunch: Int,
-                         expireAfterMillis: Long)
+                         expireAfterMillis: Long,
+                         warmUpMinutes: Int)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -89,12 +90,12 @@ object CrunchSystem {
         None
     }, 5 minutes)
 
-    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike) = new StaffingStage(
+    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike, warmUpMinutes: Int) = new StaffingStage(
       name = name,
       initialOptionalPortState = initialPortState,
       minMaxDesks = props.airportConfig.minMaxDesksByTerminalQueue,
       slaByQueue = props.airportConfig.slaByQueue,
-      warmUpMinutes = 120,
+      warmUpMinutes = warmUpMinutes,
       now = () => SDate.now(),
       expireAfterMillis = props.expireAfterMillis,
       crunchEnd = crunchEnd
@@ -105,7 +106,7 @@ object CrunchSystem {
     val liveSimInputs: LiveSimulationInputs = startRunnableLiveSimulation(
       system = props.system,
       crunchStateActor = props.liveCrunchStateActor,
-      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute)),
+      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes),
       actualDesksStage = actualDesksAndQueuesStage)
 
     val liveCrunchInputs: LiveCrunchInputs = startRunnableLiveCrunch(
@@ -118,7 +119,7 @@ object CrunchSystem {
     val forecastSimInputs: ForecastSimulationInputs = startRunnableForecastSimulation(
       system = props.system,
       crunchStateActor = props.forecastCrunchStateActor,
-      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute)))
+      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes))
 
     val forecastCrunchInputs: ForecastCrunchInputs = startRunnableForecastCrunch(
       system = props.system,
