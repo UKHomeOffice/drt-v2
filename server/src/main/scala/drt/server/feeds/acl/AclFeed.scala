@@ -10,6 +10,7 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
+import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import services.SDate
 
@@ -25,6 +26,8 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
 }
 
 object AclFeed {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def sftpClient(ftpServer: String, username: String, path: String): SFTPClient = {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
@@ -63,10 +66,15 @@ object AclFeed {
       .filter(_.length == 30)
       .filter(_ (3) == "A")
 
-    arrivalEntries
+    val arrivals = arrivalEntries
       .map(aclFieldsToArrival)
       .collect { case Success(a) => a }
       .toList
+
+    val latestArrival = arrivals.maxBy(_.Scheduled)
+    log.info(s"ACL: ${arrivals.length} arrivals. Latest arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.IATA}")
+
+    arrivals
   }
 
   def contentFromFileName(sftp: SFTPClient, latestFileName: String): String = {

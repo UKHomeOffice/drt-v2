@@ -3,12 +3,13 @@ package drt.client.components
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services._
-import drt.shared.CrunchApi.CrunchState
+import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
+import scala.collection.immutable
 
 object TerminalComponent {
 
@@ -16,6 +17,10 @@ object TerminalComponent {
 
   case class TerminalModel(
                             crunchStatePot: Pot[CrunchState],
+                            forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+                            potShifts: Pot[String],
+                            potFixedPoints: Pot[String],
+                            potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             viewMode: ViewMode,
@@ -25,6 +30,10 @@ object TerminalComponent {
   def render(props: Props): Unit = {
     val modelRCP = SPACircuit.connect(model => TerminalModel(
       model.crunchStatePot,
+      model.forecastPeriodPot,
+      model.shiftsRaw,
+      model.fixedPointsRaw,
+      model.staffMovements,
       model.airportConfig,
       model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
       model.viewMode,
@@ -39,6 +48,10 @@ object TerminalComponent {
     .renderPS(($, props, state) => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.crunchStatePot,
+        model.forecastPeriodPot,
+        model.shiftsRaw,
+        model.fixedPointsRaw,
+        model.staffMovements,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.viewMode,
@@ -50,6 +63,10 @@ object TerminalComponent {
           <.div(
             TerminalDisplayModeComponent(TerminalDisplayModeComponent.Props(
               model.crunchStatePot,
+              model.forecastPeriodPot,
+              model.potShifts,
+              model.potFixedPoints,
+              model.potStaffMovements,
               airportConfig,
               props.terminalPageTab,
               model.airportInfos,

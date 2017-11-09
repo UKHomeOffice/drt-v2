@@ -110,11 +110,10 @@ object TerminalPlanningComponent {
             byTimeSlot.map(row => {
               <.tr(
                 <.td(^.colSpan := 2, SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()),
-                row.flatMap(
-                  col => {
-                    val ragClass = TerminalDesksAndQueuesRow.ragStatus(col.required, col.available)
-                    List(<.td(^.className := ragClass, col.available), <.td(col.required))
-                  }).toTagMod
+                row.flatMap(col => {
+                  val ragClass = TerminalDesksAndQueuesRow.ragStatus(col.required, col.available)
+                  List(<.td(^.className := ragClass, col.available), <.td(col.required))
+                }).toTagMod
               )
             }).toTagMod
           )
