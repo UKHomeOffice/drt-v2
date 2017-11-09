@@ -550,6 +550,7 @@ class Application @Inject()(implicit val config: Configuration,
 object Forecast {
   def headLineFigures(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName) = {
     val headlines = forecastMinutes
+      .toList
       .filter(_.terminalName == terminalName)
       .groupBy(
         cm => getLocalLastMidnight(SDate(cm.minute)).millisSinceEpoch

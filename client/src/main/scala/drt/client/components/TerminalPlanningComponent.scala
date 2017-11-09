@@ -14,8 +14,8 @@ import scala.collection.immutable.Seq
 
 object TerminalPlanningComponent {
 
-  def getNextSunday(start: SDateLike) = {
-    val sunday = if (start.getDayOfWeek() == 7) start else start.addDays(7 - start.getDayOfWeek())
+  def getLastSunday(start: SDateLike) = {
+    val sunday = if (start.getDayOfWeek() == 7) start else start.addDays(-1 * start.getDayOfWeek())
 
     SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
   }
@@ -29,7 +29,7 @@ object TerminalPlanningComponent {
     }.hashCode
   }
 
-  val yearOfMondays: Seq[SDateLike] = (0 to 51).map(w => getNextSunday(SDate.now()).addDays(w * 7))
+  val forecastWeeks: Seq[SDateLike] = (0 to 18).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
   implicit val propsReuse = Reusability.by((_: Props).hash)
 
@@ -53,8 +53,8 @@ object TerminalPlanningComponent {
           <.div(^.className := "col-sm-3 no-gutters", <.label(^.className := "col-form-label", "Select week start day")),
           <.div(^.className := "col-sm-2 no-gutters",
             drawSelect(
-              yearOfMondays.map(_.ddMMyyString),
-              yearOfMondays.map(_.toISOString()).toList,
+              forecastWeeks.map(_.ddMMyyString),
+              forecastWeeks.map(_.toISOString()).toList,
               defaultStartDate(props.page.date).toISOString())
           )
         ),
@@ -124,7 +124,7 @@ object TerminalPlanningComponent {
     .build
 
   def defaultStartDate(dateStringOption: Option[String]) = {
-    dateStringOption.map(SDate(_)).getOrElse(getNextSunday(SDate.now()))
+    dateStringOption.map(SDate(_)).getOrElse(getLastSunday(SDate.now()))
   }
 
   def apply(props: Props): VdomElement = component(props)
