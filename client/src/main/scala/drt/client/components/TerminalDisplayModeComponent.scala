@@ -4,15 +4,19 @@ import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
-import drt.shared.{AirportConfig, AirportInfo}
+import drt.shared.{AirportConfig, AirportInfo, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import scala.collection.immutable
 
 object TerminalDisplayModeComponent {
 
   case class Props(crunchStatePot: Pot[CrunchState],
                    forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+                   potShifts: Pot[String],
+                   potFixedPoints: Pot[String],
+                   potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    airportInfoPot: Pot[AirportInfo],
@@ -28,6 +32,9 @@ object TerminalDisplayModeComponent {
 
       val terminalContentProps = TerminalContentComponent.Props(
         props.crunchStatePot,
+        props.potShifts,
+        props.potFixedPoints,
+        props.potStaffMovements,
         props.airportConfig,
         props.terminalPageTab,
         props.airportInfoPot,
