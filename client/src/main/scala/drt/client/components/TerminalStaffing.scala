@@ -32,10 +32,13 @@ object TerminalStaffing {
                     airportConfig: AirportConfig
                   )
 
+  def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate) = {
+    movements.filter(m => m.time > start && m.time < end)
+  }
+
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(props: Props) = {
-
 
       <.div(
         props.potShifts.renderReady((rawShifts: String) => {
@@ -55,11 +58,6 @@ object TerminalStaffing {
           })
         })
       )
-    }
-
-
-    def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate) = {
-      movements.filter(m => m.time > start && m.time < end)
     }
 
     def filterByTerminal(fixedPoints: String, terminalName: String) = {
