@@ -52,7 +52,9 @@ object TerminalDesksAndQueuesRow {
             queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
           } else queueCells
       }
-      val fixedPoints = crunchMinutesByQueue.map(_.).sum
+      val fixedPoints = props.staffMinutes.map(_.fixedPoints).max
+      val movements = props.staffMinutes.map(_.movements).max
+      val available = props.staffMinutes.map(_.available).max
       val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
       val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
       val ragClass = ragStatus(totalRequired, totalDeployed)
@@ -61,10 +63,11 @@ object TerminalDesksAndQueuesRow {
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
       val pcpTds = List(
-        <.td(^.className := s"total-deployed $ragClass", "fp"),
+        <.td(^.className := s"non-pcp $ragClass", fixedPoints),
+        <.td(^.className := s"non-pcp $ragClass", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed $ragClass", totalDeployed),
-        <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", "avail"), upMovementPopup)))
+        <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
@@ -106,6 +109,7 @@ object TerminalDesksAndQueues {
     .initialState[State](State(false, ViewDeps))
     .renderPS((scope, props, state) => {
       def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
+
       def groupStaffMinutesBy15 = CrunchApi.groupStaffMinutesByX(15) _
 
       val queueNames = props.airportConfig.queues(props.terminalName).collect {
@@ -144,7 +148,8 @@ object TerminalDesksAndQueues {
         val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)).toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "total-deployed", "Misc", ^.title := "Miscellaneous staff"),
+          <.th(^.className := "non-pcp", "Misc", ^.title := "Miscellaneous staff"),
+          <.th(^.className := "non-pcp", "Moves", ^.title := "Staff movements"),
           <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks"),
           <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered"),
           <.th(^.className := "total-deployed", "Avail", ^.title := "Total staff available based on staff entered"))
@@ -161,7 +166,10 @@ object TerminalDesksAndQueues {
           qth(queueName, queueDisplayName(queueName), ^.colSpan := colsToSpan, ^.className := "top-heading")
       }.toList
 
-      val headings: List[TagMod] = queueHeadings :+ <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
+      val headings: List[TagMod] = queueHeadings ++ List(
+        <.th(^.className := "non-pcp", ^.colSpan := 2, ""),
+        <.th(^.className := "total-deployed", ^.colSpan := 3, "PCP")
+      )
 
       val terminalCrunchMinutes = groupCrunchMinutesBy15(
         CrunchApi.terminalMinutesByMinute(props.crunchState.crunchMinutes, props.terminalName),
@@ -182,17 +190,34 @@ object TerminalDesksAndQueues {
         scope.modState(_.copy(viewType = newViewType))
       }
 
-      <.div(
-        if (props.airportConfig.hasActualDeskStats) {
-          <.div(
-            <.input.checkbox(^.checked := state.showActuals, ^.onChange ==> toggleShowActuals, ^.id := "show-actuals"),
-            <.label(^.`for` := "show-actuals", "Show BlackJack Data"),
-            <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
-            <.label(^.`for` := "show-deps", "Available staff deployments"),
+      def viewTypeControls(viewDepsClass: String, viewRecsClass: String): TagMod = {
+        List(
+          <.div(^.className := s"selector-control view-type-control ${viewRecsClass}",
             <.input.radio(^.checked := state.viewType == ViewRecs, ^.onChange ==> toggleViewType(ViewRecs), ^.id := "show-recs"),
             <.label(^.`for` := "show-recs", "Recommendations")
-          )
-        } else "",
+          ),
+          <.div(^.className := s"selector-control view-type-control ${viewDepsClass}",
+            <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
+            <.label(^.`for` := "show-deps", "Available staff deployments")
+          )).toTagMod
+      }
+
+      def showActualsClass = if (state.showActuals) "active-control" else ""
+
+      def viewRecsClass = if (state.viewType == ViewRecs) "active-control" else ""
+
+      def viewDepsClass = if (state.viewType == ViewDeps) "active-control" else ""
+
+      <.div(
+        <.div(
+          if (props.airportConfig.hasActualDeskStats) {
+            <.div(^.className := s"selector-control deskstats-control $showActualsClass",
+              <.input.checkbox(^.checked := state.showActuals, ^.onChange ==> toggleShowActuals, ^.id := "show-actuals"),
+              <.label(^.`for` := "show-actuals", "Show BlackJack Data")
+            )
+          } else "",
+          viewTypeControls(viewDepsClass, viewRecsClass)
+        ),
         <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
           <.thead(
             ^.display := "block",

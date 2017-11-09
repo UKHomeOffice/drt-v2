@@ -1,6 +1,7 @@
 package drt.client.services
 
 import autowire._
+import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
