@@ -347,7 +347,7 @@ class Application @Inject()(implicit val config: Configuration,
     val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
-      case Some(PortState(f, m, _)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
+      case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
       case _ => None
     } recover {
       case t =>
@@ -385,7 +385,7 @@ class Application @Inject()(implicit val config: Configuration,
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
-      case Some(PortState(f, m, _)) => Option(CrunchState(0L, 0, f.values.toSet, m.values.toSet))
+      case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
       case _ => None
     }.recover {
       case t =>
@@ -414,7 +414,7 @@ class Application @Inject()(implicit val config: Configuration,
     val fileName = s"$terminalName-desks-and-queues-${pitMilliDate.getFullYear()}-${pitMilliDate.getMonth()}-${pitMilliDate.getDate()}T${pitMilliDate.getHours()}-${pitMilliDate.getMinutes()}"
 
     crunchStateFuture.map {
-      case Some(CrunchState(_, _, _, cm)) =>
+      case Some(CrunchState(_, cm, _)) =>
         val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
         val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
         Result(
@@ -492,7 +492,7 @@ class Application @Inject()(implicit val config: Configuration,
     val fileName = s"$terminalName-arrivals-${potMilliDate.getFullYear()}-${potMilliDate.getMonth()}-${potMilliDate.getDate()}T${potMilliDate.getHours()}-${potMilliDate.getMinutes()}"
 
     crunchStateFuture.map {
-      case Some(CrunchState(_, _, fs, _)) =>
+      case Some(CrunchState(fs, _, _)) =>
         val csvData = CSVData.flightsWithSplitsToCSV(fs.toList.filter(_.apiFlight.Terminal == terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
@@ -572,7 +572,7 @@ object Forecast {
 
   def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
     val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes)
-    groupByX(15)(terminalCrunchMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
+    groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
         case (millis, cms) =>
           cms.foldLeft(

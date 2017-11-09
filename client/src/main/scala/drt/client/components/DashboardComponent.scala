@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, groupByX, terminalCrunchMinutesByMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, groupCrunchMinutesByX}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
@@ -108,7 +108,7 @@ object DashboardComponent {
   val component = ScalaComponent.builder[Props]("SummaryBox")
     .render_P((p) => {
 
-      val crunchMinuteTimeSlots = groupByX(15)(terminalCrunchMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
+      val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
 
       val pressurePoint = worstTimeslot(crunchMinuteTimeSlots)
       val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))

@@ -74,15 +74,18 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
           val updatedFlights = cs.flights.filter {
             case (_, f) => f.lastUpdated.getOrElse(1L) > millis && start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
           }.values.toSet
-          val updatedMinutes = cs.crunchMinutes.filter {
+          val updatedCrunch = cs.crunchMinutes.filter {
             case (_, cm) => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end
           }.values.toSet
-          if (updatedFlights.nonEmpty || updatedMinutes.nonEmpty) {
+          val updatedStaff = cs.staffMinutes.filter {
+            case (_, cm) => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end
+          }.values.toSet
+          if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty) {
             val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
-            val minutesLatest = if (updatedMinutes.nonEmpty) updatedMinutes.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val minutesLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
             val latestUpdate = Math.max(flightsLatest, minutesLatest)
             log.info(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
-            Option(CrunchUpdates(latestUpdate, updatedFlights, updatedMinutes))
+            Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
           } else None
         case None => None
       }

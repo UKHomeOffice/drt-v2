@@ -329,6 +329,10 @@ table.headlines tr:nth-child(odd) {
   padding: 7px;
 }
 
+.date-selector select.form-control, .snapshot-selector select.form-control {
+  padding: 4px;
+}
+
 .date-time-picker-container .container {
   display: block;
   font-size: medium;
@@ -623,16 +627,52 @@ rect.bordered {
 @eGateUserDeskColor: #f7f0e2;
 @fastTrackUserDeskColor: #e7cee6;
 @transferUserDeskColor: #705975;
-@totalDeployedColor: #eeeff0;
+@nonPcpStaff: #eeeff0;
+@pcpStaff: #FFDF94;
 @amberColor: #FFEEBB;
 @redColor: #FFCCCC;
 
+
+.view-type-control {
+  float: right;
+  margin-left: 10px;
+}
+
+.deskstats-control {
+  float: left;
+  margin-right: 10px;
+}
+
+.selector-control {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 10px 5px 5px 10px;
+  background-color: #eee;
+  width: 230px;
+}
+
+.active-control {
+  background-color: #ccc;
+}
+
+.selector-control label {
+  margin-left: 10px;
+}
+
 th.total-deployed {
-  background-color: @totalDeployedColor;
+  background-color: @pcpStaff;
 }
 
 .total-deployed {
-  background-color: @totalDeployedColor;
+  background-color: @pcpStaff;
+}
+
+th.non-pcp {
+  background-color: @nonPcpStaff;
+}
+
+.non-pcp {
+  background-color: @nonPcpStaff;
 }
 
 .amber {
@@ -652,7 +692,7 @@ tr:nth-child(odd) > td.total-deployed.red {
 }
 
 tr:nth-child(odd) > td.total-deployed {
-  background-color: darken(@totalDeployedColor, 8%);
+  background-color: darken(@pcpStaff, 8%);
 }
 
 td.total-deployed span.deployed {
@@ -824,7 +864,7 @@ p {
 
 .terminal-desk-recs-container {
   height: 800px;
-  width: 1155px;
+  width: 1224px;
 }
 
 .user-desk-recs-container {

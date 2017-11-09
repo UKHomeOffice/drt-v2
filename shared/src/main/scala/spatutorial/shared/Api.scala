@@ -258,10 +258,9 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 object CrunchApi {
   type MillisSinceEpoch = Long
 
-  case class CrunchState(crunchFirstMinuteMillis: MillisSinceEpoch,
-                         numberOfMinutes: Int,
-                         flights: Set[ApiFlightWithSplits],
-                         crunchMinutes: Set[CrunchMinute])
+  case class CrunchState(flights: Set[ApiFlightWithSplits],
+                         crunchMinutes: Set[CrunchMinute],
+                         staffMinutes: Set[StaffMinute])
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[Int, CrunchMinute],
@@ -270,6 +269,7 @@ object CrunchApi {
   sealed trait Minute {
     val minute: MillisSinceEpoch
     val lastUpdated: Option[MillisSinceEpoch]
+    val terminalName: TerminalName
   }
 
   case class StaffMinute(terminalName: TerminalName,
@@ -305,7 +305,7 @@ object CrunchApi {
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
 
-  case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute])
+  case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
@@ -323,7 +323,7 @@ object CrunchApi {
     }).toMap
   }
 
-  def groupByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+  def groupCrunchMinutesByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
       val startMinute = group.map(_._1).min
@@ -348,12 +348,28 @@ object CrunchApi {
     })
   }
 
-  def terminalCrunchMinutesByMinute(minutes: Set[CrunchMinute], terminalName: TerminalName): Seq[(MillisSinceEpoch, Set[CrunchMinute])] = minutes
+  def groupStaffMinutesByX(groupSize: Int)(staffMinutes: Seq[(MillisSinceEpoch, Set[StaffMinute])], terminalName: TerminalName): Seq[(MillisSinceEpoch, Seq[StaffMinute])] = {
+    staffMinutes.grouped(groupSize).toList.map(group => {
+      val startMinute = group.map(_._1).min
+      val groupedStaffMinutes = group.map {
+        case (_, minutes) =>
+          StaffMinute(
+            terminalName,
+            startMinute,
+            minutes.map(_.shifts).max,
+            minutes.map(_.fixedPoints).max,
+            minutes.map(_.movements).max
+          )
+      }
+      (startMinute, groupedStaffMinutes)
+    })
+  }
+
+  def terminalMinutesByMinute[T <: Minute](minutes: Set[T], terminalName: TerminalName): Seq[(MillisSinceEpoch, Set[T])] = minutes
     .filter(_.terminalName == terminalName)
     .groupBy(_.minute)
     .toList
     .sortBy(_._1)
-
 }
 
 trait Api {
