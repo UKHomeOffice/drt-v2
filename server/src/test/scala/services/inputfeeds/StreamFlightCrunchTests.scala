@@ -43,7 +43,7 @@ object TestCrunchConfig {
       terminalNames = Seq("A1", "A2"),
       timeToChoxMillis = 0L,
       firstPaxOffMillis = 0L,
-      defaultWalkTimeMillis = 0L,
+      defaultWalkTimeMillis = Map("A1" -> 0L, "A2" -> 0L),
       defaultPaxSplits = SplitRatios(
         AirportConfigOrigin,
         SplitRatio(eeaMachineReadableToDesk, 0.4875),
