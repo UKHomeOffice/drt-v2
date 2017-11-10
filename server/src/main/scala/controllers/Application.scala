@@ -467,7 +467,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getForecastWeekHeadlinesToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
-    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
     val endOfForecast = startOfWeekMidnight.addDays(180)
     val now = SDate.now()
 
