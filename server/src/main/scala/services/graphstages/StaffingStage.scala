@@ -556,6 +556,11 @@ object StaffMovements {
     val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTimeMillis)
 
     val movementAdjustments = adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTimeMillis)
-    baseStaff - fixedPointStaff + movementAdjustments
+    val staffAvailable = baseStaff - fixedPointStaff + movementAdjustments match {
+      case sa if sa >= 0 => sa
+      case _ => 0
+    }
+
+    staffAvailable
   }
 }
