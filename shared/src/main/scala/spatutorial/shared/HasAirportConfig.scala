@@ -70,9 +70,9 @@ case class AirportConfig(
                           queues: Map[TerminalName, Seq[QueueName]],
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
-                          timeToChoxMillis: Long = 120000L,
-                          firstPaxOffMillis: Long = 120000L,
-                          defaultWalkTimeMillis: Long = 300000L,
+                          timeToChoxMillis: Long = 300000L,
+                          firstPaxOffMillis: Long = 180000L,
+                          defaultWalkTimeMillis: Map[TerminalName, Long],
                           defaultPaxSplits: SplitRatios,
                           defaultProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
                           minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
@@ -171,6 +171,7 @@ object AirportConfigs {
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("A1", "A2"),
+    defaultWalkTimeMillis = Map("A1" -> 180000L, "A2" -> 120000L),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map(
       "A1" -> Map(
@@ -214,6 +215,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
     terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.7425),
@@ -256,6 +258,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 10, NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2", "T3"),
+    defaultWalkTimeMillis = Map("T1" -> 180000L, "T2" -> 180000L, "T3" -> 60000L),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
     minMaxDesksByTerminalQueue = Map(
@@ -303,6 +306,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     terminalNames = Seq("T2", "T3", "T4", "T5"),
+    defaultWalkTimeMillis = Map("T2" -> 900000L, "T3" -> 660000L, "T4" -> 900000L, "T5" -> 660000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.57),
@@ -363,6 +367,7 @@ object AirportConfigs {
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 300000L),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
     minMaxDesksByTerminalQueue = Map(
@@ -380,6 +385,7 @@ object AirportConfigs {
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 780000L),
     defaultPaxSplits = defaultPaxSplits,
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
     minMaxDesksByTerminalQueue = Map(
@@ -394,24 +400,3 @@ object AirportConfigs {
   val allPorts = ema :: edi :: stn :: man :: ltn :: lhr :: Nil
   val confByPort = allPorts.map(c => (c.portCode, c)).toMap
 }
-
-/**
-  * LGW shift examples
-  */
-/*
-"A (P/T), {date}, 00:01, 07:25, 0",
-"A, {date}, 00:01, 08:25, 0",
-"S (P/T), {date}, 06:00, 13:24, 0",
-"S, {date}, 06:00, 14:24, 0",
-"E non team (P/T), {date}, 07:00, 14:24, 0",
-"E non team, {date}, 07:00, 15:24, 0",
-"E team, {date}, 07:00, 17:30, 0",
-"L non team, {date}, 11:36, 20:00, 0",
-"L non team (P/T), {date}, 12:36, 20:00, 0",
-"L team, {date}, 13:00, 23:30, 0",
-"LN non team, {date}, 15:36, 00:00, 0",
-"LN Non team (P/T), {date}, 16:36, 00:00, 0",
-"Night team, {date}, 21:00, 07:30, 0",
-"Night non team (P/T), {date}, 23:00, 06:24, 0",
-"Night non team, {date}, 23:00, 07:24, 0"
-*/

@@ -598,7 +598,9 @@ class CrunchGraphStage(name: String,
   }
 
   def isFlightInTimeWindow(f: ApiFlightWithSplits, crunchStart: SDateLike, crunchEnd: SDateLike): Boolean = {
-    crunchStart.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < crunchEnd.millisSinceEpoch
+    val startPcpTime = f.apiFlight.PcpTime
+    val endPcpTime = f.apiFlight.PcpTime + (ArrivalHelper.bestPax(f.apiFlight) / 20) * oneMinuteMillis
+    crunchStart.millisSinceEpoch <= endPcpTime && startPcpTime < crunchEnd.millisSinceEpoch
   }
 
   def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest): Boolean = {
