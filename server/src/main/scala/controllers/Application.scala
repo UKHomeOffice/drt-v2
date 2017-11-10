@@ -295,21 +295,26 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
+        val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+        val endOfForecast = startOfWeekMidnight.addDays(7).millisSinceEpoch
+        val now = SDate.now()
 
-        val midnight = getLocalLastMidnight(SDate(startDay))
+        val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
+          log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
+          getLocalNextMidnight(now)
+        } else startOfWeekMidnight
+
         val crunchStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
+          GetPortState(startOfForecast.millisSinceEpoch, endOfForecast)
         )(new Timeout(30 seconds))
 
         crunchStateFuture.map {
           case Some(PortState(_, m, s)) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            Option(
-              ForecastPeriodWithHeadlines(
-                ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)),
-                Forecast.headLineFigures(m.values.toSet, terminal)
-              )
-            )
+            val timeSlotsByDay = Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)
+            val period = ForecastPeriod(timeSlotsByDay)
+            val headlineFigures = Forecast.headLineFigures(m.values.toSet, terminal)
+            Option(ForecastPeriodWithHeadlines(period, headlineFigures))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
@@ -431,13 +436,20 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
+    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+    val endOfForecast = startOfWeekMidnight.addDays(180)
+    val now = SDate.now()
 
-    val startDayMidnight = getLocalLastMidnight(SDate(startDay.toLong))
+    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
+      log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
+      getLocalNextMidnight(now)
+    } else startOfWeekMidnight
+
     val crunchStateFuture = forecastCrunchStateActor.ask(
-      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(180).millisSinceEpoch)
+      GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
-    val fileName = s"$terminal-planning-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
+    val fileName = s"$terminal-planning-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}-${startOfForecast.getDate()}"
     crunchStateFuture.map {
       case Some(PortState(_, m, s)) =>
         log.info(s"Forecast CSV export for $terminal on ${startDay} with: crunch minutes: ${m.size} staff minutes: ${s.size}")
@@ -449,19 +461,26 @@ class Application @Inject()(implicit val config: Configuration,
         )
 
       case None =>
-        log.error(s"Forecast CSV Export: Missing planning data for ${startDayMidnight.ddMMyyString} for Terminal $terminal")
-        NotFound(s"Sorry, no planning summary available for week starting ${startDayMidnight.ddMMyyString}")
+        log.error(s"Forecast CSV Export: Missing planning data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
+        NotFound(s"Sorry, no planning summary available for week starting ${startOfWeekMidnight.ddMMyyString}")
     }
   }
 
   def getForecastWeekHeadlinesToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
+    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+    val endOfForecast = startOfWeekMidnight.addDays(180)
+    val now = SDate.now()
 
-    val startDayMidnight = getLocalLastMidnight(SDate(startDay.toLong))
+    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
+      log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
+      getLocalNextMidnight(now)
+    } else startOfWeekMidnight
+
     val crunchStateFuture = forecastCrunchStateActor.ask(
-      GetPortState(startDayMidnight.millisSinceEpoch, startDayMidnight.addDays(180).millisSinceEpoch)
+      GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.addDays(180).millisSinceEpoch)
     )(new Timeout(30 seconds))
 
-    val fileName = s"$terminal-headlines-${startDayMidnight.getFullYear()}-${startDayMidnight.getMonth()}-${startDayMidnight.getDate()}"
+    val fileName = s"$terminal-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}-${startOfForecast.getDate()}"
     crunchStateFuture.map {
       case Some(PortState(_, m, _)) =>
         val csvData = CSVData.forecastHeadlineToCSV(Forecast.headLineFigures(m.values.toSet, terminal))
@@ -472,8 +491,8 @@ class Application @Inject()(implicit val config: Configuration,
         )
 
       case None =>
-        log.error(s"Missing headline data for ${startDayMidnight.ddMMyyString} for Terminal $terminal")
-        NotFound(s"Sorry, no headlines available for week starting ${startDayMidnight.ddMMyyString}")
+        log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
+        NotFound(s"Sorry, no headlines available for week starting ${startOfWeekMidnight.ddMMyyString}")
     }
   }
 
@@ -580,7 +599,7 @@ object Forecast {
       .map {
         case (millis, cms) =>
           cms.foldLeft(
-            ForecastTimeSlot(millis,actualStaffByMinute.getOrElse(millis, 0), 0))(
+            ForecastTimeSlot(millis, actualStaffByMinute.getOrElse(millis, 0), 0))(
             (fts, cm) => fts
               .copy(required = fts.required + cm.deskRec)
           )
