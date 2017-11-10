@@ -77,9 +77,6 @@ object TerminalsDashboardPage {
                       val minutesInTerminal =
                         crunchState.crunchMinutes.toList.filter(minuteWithinPeriod).filter(_.terminalName == terminalName)
 
-                      println(s"Flights In Terminal: ${flightsInTerminal.length}")
-                      println(s"Minutes In Terminal: ${minutesInTerminal.length}")
-
                       DashboardComponent(DashboardComponent.Props(flightsInTerminal, minutesInTerminal, terminalName, queueOrder, displayPeriodStart, displayPeriodEnd))
                     })
                   )
