@@ -297,19 +297,25 @@ class Application @Inject()(implicit val config: Configuration,
       def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
 
         val midnight = getLocalLastMidnight(SDate(startDay))
+        val endMillis = midnight.addDays(7).millisSinceEpoch
+        val now = SDate.now()
+
+        val startMillis = if (midnight.millisSinceEpoch < now.millisSinceEpoch) {
+          log.info(s"${midnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
+          getLocalNextMidnight(now)
+        } else midnight
+
         val crunchStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
+          GetPortState(startMillis.millisSinceEpoch, endMillis)
         )(new Timeout(30 seconds))
 
         crunchStateFuture.map {
           case Some(PortState(_, m, s)) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            Option(
-              ForecastPeriodWithHeadlines(
-                ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)),
-                Forecast.headLineFigures(m.values.toSet, terminal)
-              )
-            )
+            val timeSlotsByDay = Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)
+            val period = ForecastPeriod(timeSlotsByDay)
+            val headlineFigures = Forecast.headLineFigures(m.values.toSet, terminal)
+            Option(ForecastPeriodWithHeadlines(period, headlineFigures))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
@@ -579,7 +585,7 @@ object Forecast {
       .map {
         case (millis, cms) =>
           cms.foldLeft(
-            ForecastTimeSlot(millis,actualStaffByMinute.getOrElse(millis, 0), 0))(
+            ForecastTimeSlot(millis, actualStaffByMinute.getOrElse(millis, 0), 0))(
             (fts, cm) => fts
               .copy(required = fts.required + cm.deskRec)
           )
