@@ -1,19 +1,17 @@
 package services.crunch
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
+import scala.concurrent.duration._
+import scala.languageFeature.postfixOps
 
 
 class CrunchEgateBanksSpec extends CrunchTestLike {
@@ -56,7 +54,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = deskRecsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(
