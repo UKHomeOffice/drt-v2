@@ -59,20 +59,21 @@ object CSVData {
         false
     }.transpose(_._2.take(96))
 
-    val headings1 = "," + sortedDays.map {
+    val headings = "," + sortedDays.map {
       case (day, _) =>
-        s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
-    }.mkString(",,")
-    val headings2 = "Start Time," + sortedDays.map(_ => "Avail,Rec").mkString(",")
+        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - available," +
+        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - required," +
+        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - difference"
+    }.mkString(",")
 
     val data = byTimeSlot.map(row => {
       s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," +
         row.map(col => {
-          s"${col.available},${col.required}"
+          s"${col.available},${col.required},${col.available - col.required}"
         }).mkString(",")
     }).mkString("\n")
 
-    List(headings1, headings2, data).mkString("\n")
+    List(headings, data).mkString("\n")
   }
 
 

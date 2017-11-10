@@ -424,7 +424,7 @@ class Application @Inject()(implicit val config: Configuration,
       case Some(CrunchState(_, cm, sm)) =>
         val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
         val smForDay = sm.filter(sm => MilliDate(sm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
-        val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay,smForDay, terminalName, airportConfig.queues(terminalName))
+        val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
@@ -436,7 +436,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
-    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
     val endOfForecast = startOfWeekMidnight.addDays(180)
     val now = SDate.now()
 
