@@ -120,7 +120,7 @@ object DashboardComponent {
 
       val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
       val queueTotals = totalsByQueue(summary)
-      val totalPaxAcrossQueues = queueTotals.map(_._2).sum
+      val totalPaxAcrossQueues = queueTotals.values.sum
 
       <.div(^.className := "dashboard-summary container-fluid",
         <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
@@ -138,7 +138,7 @@ object DashboardComponent {
               )
             )
           )),
-        <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"${totalPaxAcrossQueues} Pax")),
+        <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
         <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, p.queues)),
         <.div(^.className := "summary-box-container col-sm-4 pax-summary",
           <.table(
@@ -148,7 +148,7 @@ object DashboardComponent {
 
                 case DashboardSummary(start, numFlights, paxPerQueue) =>
 
-                  val totalPax = paxPerQueue.values.map(Math.round(_)).sum
+                  val totalPax = paxPerQueue.values.map(Math.round).sum
                   <.tr(
                     <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
                     <.td(s"${numFlights}"),
@@ -176,10 +176,7 @@ object DashboardComponent {
           )
         )
       )
-    }
-
-    )
-    .build
+    }).build
 
   def totalsByQueue(summary: Seq[DashboardSummary]) = {
     summary
