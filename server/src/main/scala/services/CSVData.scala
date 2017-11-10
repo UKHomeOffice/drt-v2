@@ -62,46 +62,59 @@ object CSVData {
 
     val headings1 = "," + sortedDays.map {
       case (day, _) =>
-        s"${
-          SDate(MilliDate(day)).getDate()
-        }/${
-          SDate(MilliDate(day)).getMonth()
-        }"
+        s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
     }.mkString(",,")
     val headings2 = "Start Time," + sortedDays.map(_ => "Avail,Rec").mkString(",")
 
     val data = byTimeSlot.map(row => {
       s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," +
-        row.map(col => {
-          s"${col.available},${col.required}"
-        }).mkString(",")
+        row.map(col => { s"${col.available},${col.required}"}).mkString(",")
     }).mkString("\n")
 
     List(headings1, headings2, data).mkString("\n")
   }
 
 
-  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], terminalName: TerminalName, queues: Seq[QueueName]) = {
-    val colHeadings = List("Pax", "Wait", "Desks req")
-    val headingsLine1 = "," + queues.flatMap(qn => List.fill(colHeadings.length)(qn)).mkString(",")
-    val headingsLine2 = "Start," + queues.flatMap(_ => colHeadings).mkString(",")
+  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]) = {
+    val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
+    val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
+    val headingsLine1 = "," + queues
+      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",") +
+      ",Misc,PCP Staff,PCP Staff"
+    val headingsLine2 = "Start," + queues.flatMap(q => {
+      if (q == Queues.EGate) eGatesHeadings else colHeadings
+    }).mkString(",") +
+      ",Staff req,Avail,Req"
+
 
     val lineEnding = "\n"
 
     val terminalMinutes = CrunchApi.terminalMinutesByMinute(cms, terminalName)
     val crunchMinutes = CrunchApi.groupCrunchMinutesByX(15)(terminalMinutes, terminalName, queues.toList)
       .collect {
-      case (min, cm) =>
-        val queueMinutes = cm.groupBy(_.queueName)
-        val terminalData = queues.flatMap(qn => {
-          queueMinutes.getOrElse(qn, Nil).toList.flatMap(cm => {
-            List(Math.round(cm.paxLoad), Math.round(cm.waitTime), cm.deskRec)
+        case (min, cm) =>
+          val queueMinutes = cm.groupBy(_.queueName)
+          val terminalData = queues.flatMap(qn => {
+            queueMinutes.getOrElse(qn, Nil).toList.flatMap(cm => {
+              List(
+                Math.round(cm.paxLoad).toString,
+                Math.round(cm.waitTime).toString,
+                cm.deskRec.toString,
+                cm.actWait.getOrElse(""),
+                cm.actDesks.getOrElse("")
+              )
+            })
           })
-        })
-        (min, terminalData)
-    }.toList.sortBy(m => m._1).map {
-      case (minute, data) =>
-        SDate(minute).toHoursAndMinutes() + "," + data.mkString(",")
+
+          (min, terminalData)
+      }.toList.sortBy(m => m._1).map {
+      case (minute, queueData) =>
+        val staffData = staffMinutes.find(_.minute == minute).map(sm => List(sm.fixedPoints.toString, sm.available.toString)).getOrElse(List("", ""))
+        val reqForMinute = terminalMinutes.toList.find(_._1 == minute).map {
+          case (_, cms) => cms.toList.map(_.deskRec).sum
+        }.getOrElse(0)
+
+        SDate(minute).toHoursAndMinutes() + "," + queueData.mkString(",") + "," + staffData.mkString(",") + "," + reqForMinute
     }
     headingsLine1 + lineEnding + headingsLine2 + lineEnding +
       crunchMinutes.mkString(lineEnding)

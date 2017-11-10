@@ -25,6 +25,13 @@ object Queues {
     FastTrack -> "Fast Track",
     Transfer -> "Tx"
   )
+
+  val exportQueueOrder = List(EeaDesk, NonEeaDesk, EGate)
+  val exportQueueDisplayNames: Map[QueueName, String] = Map(
+    EeaDesk -> "EEA",
+    NonEeaDesk -> "NON-EEA",
+    EGate -> "E-GATES"
+  )
 }
 
 sealed trait PaxType {
