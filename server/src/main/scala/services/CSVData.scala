@@ -87,24 +87,24 @@ object CSVData {
     val headingsLine2 = "Start," + queues.flatMap(_ => colHeadings).mkString(",")
 
     val lineEnding = "\n"
+
+    val terminalMinutes = CrunchApi.terminalMinutesByMinute(cms, terminalName)
+    val crunchMinutes = CrunchApi.groupCrunchMinutesByX(15)(terminalMinutes, terminalName, queues.toList)
+      .collect {
+      case (min, cm) =>
+        val queueMinutes = cm.groupBy(_.queueName)
+        val terminalData = queues.flatMap(qn => {
+          queueMinutes.getOrElse(qn, Nil).toList.flatMap(cm => {
+            List(Math.round(cm.paxLoad), Math.round(cm.waitTime), cm.deskRec)
+          })
+        })
+        (min, terminalData)
+    }.toList.sortBy(m => m._1).map {
+      case (minute, data) =>
+        SDate(minute).toHoursAndMinutes() + "," + data.mkString(",")
+    }
     headingsLine1 + lineEnding + headingsLine2 + lineEnding +
-      cms
-        .filter(_.terminalName == terminalName)
-        .filter(cm => SDate(cm.minute).getMinutes() % 15 == 0)
-        .groupBy(_.minute)
-        .collect {
-          case (min, cm) =>
-            val queueMinutes = cm.groupBy(_.queueName)
-            val terminalData = queues.flatMap(qn => {
-              queueMinutes.getOrElse(qn, Nil).toList.flatMap(cm => {
-                List(Math.round(cm.paxLoad), Math.round(cm.waitTime), cm.deskRec)
-              })
-            })
-            (min, terminalData)
-        }.toList.sortBy(m => m._1).map {
-        case (minute, data) =>
-          SDate(minute).toHoursAndMinutes() + "," + data.mkString(",")
-      }.mkString(lineEnding)
+      crunchMinutes.mkString(lineEnding)
   }
 
   def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]) = {

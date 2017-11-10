@@ -2,20 +2,17 @@ package services.crunch
 
 import drt.shared.CrunchApi.CrunchMinute
 import org.specs2.mutable.Specification
-import services.CSVData
+import services.{CSVData, SDate}
 
 class CrunchMinutesToCSVDataTest extends Specification{
 
   "Given a set of crunch minutes for a terminal, we should receive a CSV for that terminals data" >> {
-    val t15mins = 60000 * 15
+    val startDateTime = SDate("2017-11-10T00:00:00Z")
     val cms = Set(
-      CrunchMinute("T1", "Q1", 0, 1.1, 1, 1, 1),
-      CrunchMinute("T1", "Q1", t15mins, 2.1, 1, 1, 1),
-      CrunchMinute("T1", "Q3", 0, 1.3, 1, 1, 1),
-      CrunchMinute("T1", "Q2", t15mins, 2.2, 1, 1, 1),
-      CrunchMinute("T2", "Q1", 0, 1.0, 1, 1, 1),
-      CrunchMinute("T1", "Q2", 0, 1.2, 1, 1, 1),
-      CrunchMinute("T1", "Q3", t15mins, 2.3, 1, 1, 1)
+      CrunchMinute("T1", "Q1", startDateTime.millisSinceEpoch, 1.1, 1, 1, 1),
+      CrunchMinute("T1", "Q3", startDateTime.millisSinceEpoch, 1.3, 1, 1, 1),
+      CrunchMinute("T2", "Q1", startDateTime.millisSinceEpoch, 1.0, 1, 1, 1),
+      CrunchMinute("T1", "Q2", startDateTime.millisSinceEpoch, 1.2, 1, 1, 1)
     )
 
     val result = CSVData.terminalCrunchMinutesToCsvData(cms, "T1", List("Q1", "Q2", "Q3"))
@@ -23,40 +20,34 @@ class CrunchMinutesToCSVDataTest extends Specification{
     val expected =
       """ |,Q1,Q1,Q1,Q2,Q2,Q2,Q3,Q3,Q3
         |Start,Pax,Wait,Desks req,Pax,Wait,Desks req,Pax,Wait,Desks req
-        |00:00,1,1,1,1,1,1,1,1,1
-        |00:15,2,1,1,2,1,1,2,1,1""".stripMargin
+        |00:00,1,1,1,1,1,1,1,1,1""".stripMargin
 
     result === expected
   }
 
   "Given a set of crunch minutes for a terminal, we should get the result back in 15 minute increments" >> {
-    val t15mins = 60000 * 15
-    val t14mins = 60000 * 14
-    val t13mins = 60000 * 13
-    val cms = Set(
-      CrunchMinute("T1", "Q1", 0, 1.1, 1, 1, 1),
-      CrunchMinute("T1", "Q1", t15mins, 2.1, 1, 1, 1),
-      CrunchMinute("T1", "Q3", 0, 1.3, 1, 1, 1),
-      CrunchMinute("T1", "Q2", t15mins, 2.2, 1, 1, 1),
-      CrunchMinute("T2", "Q1", 0, 1.0, 1, 1, 1),
-      CrunchMinute("T1", "Q2", 0, 1.2, 1, 1, 1),
-      CrunchMinute("T1", "Q3", t15mins, 2.3, 1, 1, 1),
-      CrunchMinute("T1", "Q1", t14mins, 1.1, 1, 1, 1),
-      CrunchMinute("T1", "Q1", t13mins, 2.1, 1, 1, 1),
-      CrunchMinute("T1", "Q3", t14mins, 1.3, 1, 1, 1),
-      CrunchMinute("T1", "Q2", t13mins, 2.2, 1, 1, 1),
-      CrunchMinute("T2", "Q1", t14mins, 1.0, 1, 1, 1),
-      CrunchMinute("T1", "Q2", t14mins, 1.2, 1, 1, 1),
-      CrunchMinute("T1", "Q3", t13mins, 2.3, 1, 1, 1)
-    )
+    val startDateTime = SDate("2017-11-10T00:00:00Z")
+
+    val t15mins = startDateTime.addMinutes(15).millisSinceEpoch
+    val t14mins = startDateTime.addMinutes(14).millisSinceEpoch
+    val t13mins = startDateTime.addMinutes(13).millisSinceEpoch
+
+    val cms = (0 until 16).toSet.flatMap((min: Int) => {
+      Set(
+        CrunchMinute("T1", "Q1", startDateTime.addMinutes(min).millisSinceEpoch, 1.0, 1, 1, 1),
+        CrunchMinute("T1", "Q2", startDateTime.addMinutes(min).millisSinceEpoch, 1.0, 1, 1, 1),
+        CrunchMinute("T1", "Q3", startDateTime.addMinutes(min).millisSinceEpoch, 1.0, 1, 1, 1)
+      )
+    })
+
 
     val result = CSVData.terminalCrunchMinutesToCsvData(cms, "T1", List("Q1", "Q2", "Q3"))
 
     val expected =
       """ |,Q1,Q1,Q1,Q2,Q2,Q2,Q3,Q3,Q3
         |Start,Pax,Wait,Desks req,Pax,Wait,Desks req,Pax,Wait,Desks req
-        |00:00,1,1,1,1,1,1,1,1,1
-        |00:15,2,1,1,2,1,1,2,1,1""".stripMargin
+        |00:00,15,1,1,15,1,1,15,1,1
+        |00:15,1,1,1,1,1,1,1,1,1""".stripMargin
 
     result === expected
   }
