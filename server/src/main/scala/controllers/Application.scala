@@ -422,9 +422,10 @@ class Application @Inject()(implicit val config: Configuration,
     val fileName = s"$terminalName-desks-and-queues-${pitMilliDate.getFullYear()}-${pitMilliDate.getMonth()}-${pitMilliDate.getDate()}T${pitMilliDate.getHours()}-${pitMilliDate.getMinutes()}"
 
     crunchStateFuture.map {
-      case Some(CrunchState(_, cm, _)) =>
+      case Some(CrunchState(_, cm, sm)) =>
         val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
-        val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, terminalName, airportConfig.queues(terminalName))
+        val smForDay = sm.filter(sm => MilliDate(sm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
+        val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay,smForDay, terminalName, airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
