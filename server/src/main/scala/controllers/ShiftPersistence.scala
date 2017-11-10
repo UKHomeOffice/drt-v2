@@ -37,7 +37,7 @@ trait ShiftPersistence {
     val shiftsCollected = shiftsFuture.collect {
       case shifts: String =>
         log.info(s"Retrieved shifts from actor")
-        shifts
+        shifts.split("\n").take(30 * 96).mkString("\n")
     }
     shiftsCollected
   }
