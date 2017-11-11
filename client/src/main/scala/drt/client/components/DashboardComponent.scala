@@ -23,6 +23,27 @@ object DashboardComponent {
 
   def hourRange(start: SDateLike, numHours: Int) = (0 until numHours).map(h => start.addHours(h))
 
+  def aggregateAcrossQueues(startMinutes: List[CrunchMinute]) = startMinutes
+    .groupBy(_.minute)
+    .map {
+      case (minute, cms) =>
+        cms.reduceLeft((cm1, cm2) => CrunchMinute(
+          cm1.terminalName,
+          "All",
+          minute,
+          cm1.paxLoad + cm2.paxLoad,
+          cm1.workLoad + cm2.workLoad,
+          cm1.deskRec + cm2.deskRec,
+          cm1.waitTime + cm2.waitTime,
+          Option(cm1.deployedDesks.getOrElse(0) + cm2.deployedDesks.getOrElse(0)),
+          Option(cm1.deployedWait.getOrElse(0) + cm2.deployedWait.getOrElse(0)),
+          Option(cm1.deployedWait.getOrElse(0) + cm2.deployedWait.getOrElse(0)),
+          Option(cm1.actDesks.getOrElse(0) + cm2.actDesks.getOrElse(0)),
+          None
+        )
+        )
+    }.toList
+
 
   def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
     val groupedFlights = groupFlightsByHour(flights, start).toMap
@@ -110,7 +131,7 @@ object DashboardComponent {
 
       val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
 
-      val pressurePoint = worstTimeslot(crunchMinuteTimeSlots)
+      val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList))
       val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
       val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
@@ -122,6 +143,8 @@ object DashboardComponent {
       val queueTotals = totalsByQueue(summary)
       val totalPaxAcrossQueues = queueTotals.values.sum
 
+      val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList)).minute
+      val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList)).minute
       <.div(^.className := "dashboard-summary container-fluid",
         <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
           <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
@@ -168,10 +191,10 @@ object DashboardComponent {
           <.div(^.className := "pcp-pressure",
             <.div(^.className := "title", "PCP Pressure"),
             <.div(^.className := "highest",
-              Icon.chevronUp, s"${SDate(MilliDate(pcpHighest(crunchMinuteTimeSlots).minute)).prettyTime()}-${SDate(MilliDate(pcpHighest(crunchMinuteTimeSlots).minute)).addMinutes(15).prettyTime()}"
+              Icon.chevronUp, s"${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
             ),
             <.div(^.className := "lowest",
-              Icon.chevronDown, s"${SDate(MilliDate(pcpLowest(crunchMinuteTimeSlots).minute)).prettyTime()}-${SDate(MilliDate(pcpLowest(crunchMinuteTimeSlots).minute)).addMinutes(15).prettyTime()}"
+              Icon.chevronDown, s"${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
             )
           )
         )
