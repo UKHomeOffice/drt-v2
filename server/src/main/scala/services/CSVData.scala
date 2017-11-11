@@ -13,10 +13,9 @@ object CSVData {
 
   def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures) = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
-      day => s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
+      day => f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d"
     ).mkString(",")
-
-    val queues: String = Queues.queueOrder.flatMap(
+    val queues: String = Queues.exportQueueOrder.flatMap(
       q => {
         headlines.queueDayHeadlines.groupBy(_.queue).get(q).map(
           qhls => (s"${Queues.queueDisplayNames.getOrElse(q, q)}" ::
@@ -43,7 +42,7 @@ object CSVData {
       .map(hl => hl._2.toList.map(_.workload).sum)
       .mkString(",")
 
-    List(headings, queues, totalPax, totalWL).mkString("\n")
+    List(headings, totalPax, queues, totalWL).mkString("\n")
   }
 
   def forecastPeriodToCsv(forecastPeriod: ForecastPeriod) = {
@@ -60,18 +59,21 @@ object CSVData {
         false
     }.transpose(_._2.take(96))
 
-    val headings1 = "," + sortedDays.map {
+    val headings = "," + sortedDays.map {
       case (day, _) =>
-        s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}"
-    }.mkString(",,")
-    val headings2 = "Start Time," + sortedDays.map(_ => "Avail,Rec").mkString(",")
+        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - available," +
+        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - required," +
+        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - difference"
+    }.mkString(",")
 
     val data = byTimeSlot.map(row => {
       s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," +
-        row.map(col => { s"${col.available},${col.required}"}).mkString(",")
+        row.map(col => {
+          s"${col.available},${col.required},${col.available - col.required}"
+        }).mkString(",")
     }).mkString("\n")
 
-    List(headings1, headings2, data).mkString("\n")
+    List(headings, data).mkString("\n")
   }
 
 

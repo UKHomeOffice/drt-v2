@@ -121,10 +121,10 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val result = CSVData.forecastHeadlineToCSV(headlines)
 
       val expected =
-        s"""|,${day1StartMinute.getDate()}/${day1StartMinute.getMonth()},${day2StartMinute.getDate()}/${day2StartMinute.getMonth()},${day3StartMinute.getDate()}/${day3StartMinute.getMonth()}
+        f"""|,${day1StartMinute.getDate()}%02d/${day1StartMinute.getMonth()}%02d,${day2StartMinute.getDate()}%02d/${day2StartMinute.getMonth()}%02d,${day3StartMinute.getDate()}%02d/${day3StartMinute.getMonth()}%02d
+            |Total Pax,2,2,2
             |EEA,1,1,1
             |e-Gates,1,1,1
-            |Total Pax,2,2,2
             |Total Workload,4,4,4""".stripMargin
 
       result === expected
