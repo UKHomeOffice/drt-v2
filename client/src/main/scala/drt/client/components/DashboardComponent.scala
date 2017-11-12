@@ -138,6 +138,10 @@ object DashboardComponent {
 
       val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
 
+      if (crunchMinuteTimeSlots.isEmpty) {
+        <.div(^.className := "dashboard-summary container-fluid", "No data available to display")
+      } else {
+
       val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal))
       val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
@@ -206,6 +210,7 @@ object DashboardComponent {
           )
         )
       )
+      }
     }).build
 
   def totalsByQueue(summary: Seq[DashboardSummary]): Map[QueueName, MillisSinceEpoch] = {
