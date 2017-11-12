@@ -73,7 +73,7 @@ object FlightsWithSplitsTable {
                     ))
                 }.toTagMod)))
         else
-          <.div("No flights in this time period")
+          <.div("Loading flights...")
       } match {
         case Success(s) => s
         case Failure(f) =>
