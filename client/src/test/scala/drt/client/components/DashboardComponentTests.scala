@@ -10,7 +10,6 @@ object DashboardComponentTests extends TestSuite {
   import DashboardComponent._
 
 
-
   def tests = TestSuite {
 
     "DashboardComponentTests" - {
@@ -32,7 +31,7 @@ object DashboardComponentTests extends TestSuite {
           assert(result == expected)
         }
 
-        "Given two CrunchMinutes for different Queues in two minutes, I should get the same list back" - {
+        "Given two CrunchMinutes for different Queues in two minutes, I should get the same values back" - {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
@@ -41,10 +40,12 @@ object DashboardComponentTests extends TestSuite {
           )
 
           val result = aggregateAcrossQueues(startMinutes, "T1")
-          val expected = List(
-            CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
-            CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
-          )
+          val expected =
+            List(
+              CrunchMinute("T1", "All", startDate.millisSinceEpoch, 20, 40, 10, 10, Some(5), Some(0), Some(0), Some(0), None),
+              CrunchMinute("T1", "All", startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Some(5), Some(0), Some(0), Some(0), None)
+            )
+
 
           assert(result.toSet == expected.toSet)
         }
