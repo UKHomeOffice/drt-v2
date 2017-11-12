@@ -5,8 +5,10 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, groupCrunchMinutesB
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 
+import scala.collection.immutable
 import scala.collection.immutable.Seq
 
 object DashboardComponent {
@@ -17,32 +19,37 @@ object DashboardComponent {
                                paxPerQueue: Map[QueueName, Double]
                              )
 
-  def pcpHighest(cms: Seq[CrunchMinute]) = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad > cm2.paxLoad) cm1 else cm2)
+  def pcpHighest(cms: Seq[CrunchMinute]): CrunchMinute = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad > cm2.paxLoad) cm1 else cm2)
 
-  def pcpLowest(cms: Seq[CrunchMinute]) = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad < cm2.paxLoad) cm1 else cm2)
+  def pcpLowest(cms: Seq[CrunchMinute]): CrunchMinute = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad < cm2.paxLoad) cm1 else cm2)
 
-  def hourRange(start: SDateLike, numHours: Int) = (0 until numHours).map(h => start.addHours(h))
+  def hourRange(start: SDateLike, numHours: Int): immutable.IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
 
-  def aggregateAcrossQueues(startMinutes: List[CrunchMinute]) = startMinutes
-    .groupBy(_.minute)
-    .map {
-      case (minute, cms) =>
-        cms.reduceLeft((cm1, cm2) => CrunchMinute(
-          cm1.terminalName,
-          "All",
-          minute,
-          cm1.paxLoad + cm2.paxLoad,
-          cm1.workLoad + cm2.workLoad,
-          cm1.deskRec + cm2.deskRec,
-          cm1.waitTime + cm2.waitTime,
-          Option(cm1.deployedDesks.getOrElse(0) + cm2.deployedDesks.getOrElse(0)),
-          Option(cm1.deployedWait.getOrElse(0) + cm2.deployedWait.getOrElse(0)),
-          Option(cm1.deployedWait.getOrElse(0) + cm2.deployedWait.getOrElse(0)),
-          Option(cm1.actDesks.getOrElse(0) + cm2.actDesks.getOrElse(0)),
-          None
-        )
-        )
-    }.toList
+  def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminalName: TerminalName): List[CrunchMinute] = {
+    val emptyMinute = CrunchMinute(terminalName, "", 0L, 0, 0, 0, 0, None, None, None, None, None)
+
+    startMinutes
+      .groupBy(_.minute)
+      .map {
+        case (minute, cms) =>
+          cms.foldLeft(emptyMinute) {
+            case (minuteSoFar, cm) => CrunchMinute(
+              minuteSoFar.terminalName,
+              "All",
+              minute,
+              minuteSoFar.paxLoad + cm.paxLoad,
+              minuteSoFar.workLoad + cm.workLoad,
+              minuteSoFar.deskRec + cm.deskRec,
+              minuteSoFar.waitTime + cm.waitTime,
+              Option(minuteSoFar.deployedDesks.getOrElse(0) + cm.deployedDesks.getOrElse(0)),
+              Option(minuteSoFar.deployedWait.getOrElse(0) + cm.deployedWait.getOrElse(0)),
+              Option(minuteSoFar.deployedWait.getOrElse(0) + cm.deployedWait.getOrElse(0)),
+              Option(minuteSoFar.actDesks.getOrElse(0) + cm.actDesks.getOrElse(0)),
+              None
+            )
+          }
+      }.toList
+  }
 
 
   def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
@@ -75,7 +82,7 @@ object DashboardComponent {
     }).toList.sortBy(_._1)
   }
 
-  def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike) =
+  def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
     start.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= end.millisSinceEpoch
 
   def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = {
@@ -97,10 +104,10 @@ object DashboardComponent {
 
     val minutes = (time.getMinutes() / 15) * 15
 
-    SDate(f"${time.getFullYear()}-${time.getMonth()}%02d-${time.getDate()}%02d ${time.getHours()}%02d:${minutes}%02d")
+    SDate(f"${time.getFullYear()}-${time.getMonth()}%02d-${time.getDate()}%02d ${time.getHours()}%02d:$minutes%02d")
   }
 
-  def worstTimeslot(crunchMinutes: Seq[CrunchMinute]) = crunchMinutes.reduceLeft(
+  def worstTimeslot(crunchMinutes: Seq[CrunchMinute]): CrunchMinute = crunchMinutes.reduceLeft(
     (cm1, cm2) => if (deployedRatio(cm1) > deployedRatio(cm2)) cm1 else cm2
   )
 
@@ -113,9 +120,9 @@ object DashboardComponent {
     }
   }
 
-  val aggSplits = BigSummaryBoxes.aggregateSplits(ArrivalHelper.bestPax) _
+  val aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(ArrivalHelper.bestPax)
 
-  def paxInPeriod(cms: Seq[CrunchMinute]) = cms.map(_.paxLoad).sum
+  def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
   case class Props(
                     flights: List[ApiFlightWithSplits],
@@ -131,7 +138,7 @@ object DashboardComponent {
 
       val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
 
-      val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList))
+      val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal))
       val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
       val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
@@ -143,8 +150,8 @@ object DashboardComponent {
       val queueTotals = totalsByQueue(summary)
       val totalPaxAcrossQueues = queueTotals.values.sum
 
-      val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList)).minute
-      val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList)).minute
+      val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
+      val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
       <.div(^.className := "dashboard-summary container-fluid",
         <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
           <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
@@ -174,8 +181,8 @@ object DashboardComponent {
                   val totalPax = paxPerQueue.values.map(Math.round).sum
                   <.tr(
                     <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
-                    <.td(s"${numFlights}"),
-                    <.td(s"${totalPax}"),
+                    <.td(s"$numFlights"),
+                    <.td(s"$totalPax"),
                     queueNames.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
                   )
               }.toTagMod,
@@ -201,7 +208,7 @@ object DashboardComponent {
       )
     }).build
 
-  def totalsByQueue(summary: Seq[DashboardSummary]) = {
+  def totalsByQueue(summary: Seq[DashboardSummary]): Map[QueueName, MillisSinceEpoch] = {
     summary
       .map {
         case DashboardSummary(_, _, byQ) => byQ
@@ -211,5 +218,5 @@ object DashboardComponent {
       .mapValues(queuTotalsbyQ => queuTotalsbyQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
   }
 
-  def apply(props: Props) = component(props)
+  def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)
 }
