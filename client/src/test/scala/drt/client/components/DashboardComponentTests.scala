@@ -24,7 +24,7 @@ object DashboardComponentTests extends TestSuite {
             CrunchMinute("T1", Queues.EGate, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
           )
 
-          val result = aggregateAcrossQueues(startMinutes)
+          val result = aggregateAcrossQueues(startMinutes, "T1")
           val expected = List(
             CrunchMinute("T1", "All", startDate.millisSinceEpoch, 40, 80, 20, 20, Option(10), Some(0), Some(0), Some(0))
           )
@@ -40,7 +40,7 @@ object DashboardComponentTests extends TestSuite {
             CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
           )
 
-          val result = aggregateAcrossQueues(startMinutes)
+          val result = aggregateAcrossQueues(startMinutes, "T1")
           val expected = List(
             CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
             CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
@@ -58,7 +58,7 @@ object DashboardComponentTests extends TestSuite {
             CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
           )
 
-          val result = aggregateAcrossQueues(startMinutes)
+          val result = aggregateAcrossQueues(startMinutes, "T1")
           val expected = List(
             CrunchMinute("T1", "All", startDate.millisSinceEpoch, 40, 80, 20, 20, Option(10), Some(0), Some(0), Some(0)),
             CrunchMinute("T1", "All", startDate.addMinutes(15).millisSinceEpoch, 40, 80, 20, 20, Option(10), Some(0), Some(0), Some(0))
