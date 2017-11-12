@@ -9,9 +9,64 @@ object DashboardComponentTests extends TestSuite {
 
   import DashboardComponent._
 
+
+
   def tests = TestSuite {
 
     "DashboardComponentTests" - {
+
+      "When calculating the combined load accross all queues" - {
+        "Given two CrunchMinutes for different Queues in the same minute, I should get one combined CrunchMinute back" - {
+          val startDate = SDate("2017-10-30T00:00:00Z")
+
+          val startMinutes = List(
+            CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
+            CrunchMinute("T1", Queues.EGate, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
+          )
+
+          val result = aggregateAcrossQueues(startMinutes)
+          val expected = List(
+            CrunchMinute("T1", "All", startDate.millisSinceEpoch, 40, 80, 20, 20, Option(10), Some(0), Some(0), Some(0))
+          )
+
+          assert(result == expected)
+        }
+
+        "Given two CrunchMinutes for different Queues in two minutes, I should get the same list back" - {
+          val startDate = SDate("2017-10-30T00:00:00Z")
+
+          val startMinutes = List(
+            CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
+            CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
+          )
+
+          val result = aggregateAcrossQueues(startMinutes)
+          val expected = List(
+            CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
+            CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
+          )
+
+          assert(result.toSet == expected.toSet)
+        }
+        "Given four CrunchMinutes for different Queues in two minutes, I should get aggregate for each minute back" - {
+          val startDate = SDate("2017-10-30T00:00:00Z")
+
+          val startMinutes = List(
+            CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
+            CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
+            CrunchMinute("T1", Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None),
+            CrunchMinute("T1", Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, 40, 10, 10, Option(5), None, None)
+          )
+
+          val result = aggregateAcrossQueues(startMinutes)
+          val expected = List(
+            CrunchMinute("T1", "All", startDate.millisSinceEpoch, 40, 80, 20, 20, Option(10), Some(0), Some(0), Some(0)),
+            CrunchMinute("T1", "All", startDate.addMinutes(15).millisSinceEpoch, 40, 80, 20, 20, Option(10), Some(0), Some(0), Some(0))
+          )
+
+          assert(result.toSet == expected.toSet)
+        }
+      }
 
       "Given a list of Crunch Minutes I should find the timeslot with the highest RAG rating in the list" - {
         val startDate = SDate("2017-10-30T00:00:00Z")
@@ -218,9 +273,9 @@ object DashboardComponentTests extends TestSuite {
 
         val result = hourSummary(flights, cms, startDate)
         val expected = List(
-          DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20)),
+          DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20, Queues.NonEeaDesk -> 20)),
           DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
-          DashboardSummary(SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 20,Queues.NonEeaDesk -> 20))
+          DashboardSummary(SDate("2017-10-30T02:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 20, Queues.NonEeaDesk -> 20))
         )
 
         assert(result == expected)
