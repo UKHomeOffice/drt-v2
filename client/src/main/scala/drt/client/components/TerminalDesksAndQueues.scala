@@ -52,9 +52,9 @@ object TerminalDesksAndQueuesRow {
             queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
           } else queueCells
       }
-      val fixedPoints = props.staffMinutes.map(_.fixedPoints).max
-      val movements = props.staffMinutes.map(_.movements).max
-      val available = props.staffMinutes.map(_.available).max
+      val fixedPoints = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.fixedPoints).max else 0
+      val movements = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.movements).max else 0
+      val available = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.available).max else 0
       val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
       val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
       val ragClass = ragStatus(totalRequired, totalDeployed)
@@ -229,7 +229,7 @@ object TerminalDesksAndQueues {
             ^.height := "500px",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
-                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes(millis), props.airportConfig, props.terminalName, state.showActuals, state.viewType)
+                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, List()), props.airportConfig, props.terminalName, state.showActuals, state.viewType)
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
       )
