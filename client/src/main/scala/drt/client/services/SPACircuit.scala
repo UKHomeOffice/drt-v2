@@ -108,7 +108,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
             .recoverWith {
               case f =>
                 log.error(s"Update request failed: $f")
-                Future(GetCrunchUpdatesAfter(crunchUpdatesRequestFrequency))
+                Future(GetCrunchUpdatesAfter(PollDelay.recoveryDelay))
             }
 
         case vm =>
@@ -129,7 +129,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
           }.recoverWith {
             case f =>
               log.error(s"CrunchState request failed: $f")
-              Future(GetCrunchStateAfter(crunchUpdatesRequestFrequency))
+              Future(GetCrunchStateAfter(PollDelay.recoveryDelay))
           }
       }
       effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
