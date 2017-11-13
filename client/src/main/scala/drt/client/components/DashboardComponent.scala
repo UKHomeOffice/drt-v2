@@ -51,7 +51,6 @@ object DashboardComponent {
       }.toList
   }
 
-
   def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
     val groupedFlights = groupFlightsByHour(flights, start).toMap
     val groupedCrunchMinutes = groupCrunchMinutesByHour(cms, start).toMap
@@ -85,20 +84,17 @@ object DashboardComponent {
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
     start.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= end.millisSinceEpoch
 
-  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = {
-    splits.foldLeft(Map[QueueName, Int]())((map, ptqc) => {
+  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = splits
+    .foldLeft(Map[QueueName, Int]())((map, ptqc) => {
       ptqc match {
         case (PaxTypeAndQueue(_, q), pax) =>
           map + (q -> (map.getOrElse(q, 0) + pax))
       }
     })
-  }
 
-  def queuesFromPaxTypeAndQueue(ptq: List[PaxTypeAndQueue]): Seq[String] = {
-    ptq.map {
-      case PaxTypeAndQueue(_, q) => q
-    }.distinct
-  }
+  def queuesFromPaxTypeAndQueue(ptq: List[PaxTypeAndQueue]): Seq[String] = ptq.map {
+    case PaxTypeAndQueue(_, q) => q
+  }.distinct
 
   def windowStart(time: SDateLike): SDateLike = {
 
@@ -111,10 +107,10 @@ object DashboardComponent {
     (cm1, cm2) => if (deployedRatio(cm1) > deployedRatio(cm2)) cm1 else cm2
   )
 
-  def deployedRatio(cm1: CrunchMinute): Int = {
+  def deployedRatio(cm1: CrunchMinute): Double = {
     cm1.deployedDesks match {
       case Some(deployed) =>
-        cm1.deskRec / deployed
+        cm1.deskRec.toDouble / deployed
       case None =>
         cm1.deskRec
     }
@@ -142,74 +138,74 @@ object DashboardComponent {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")
       } else {
 
-      val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal))
-      val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
+        val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal))
+        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
-      val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
 
 
-      val queueNames = queuesFromPaxTypeAndQueue(p.queues)
+        val queueNames = queuesFromPaxTypeAndQueue(p.queues)
 
-      val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
-      val queueTotals = totalsByQueue(summary)
-      val totalPaxAcrossQueues = queueTotals.values.sum
+        val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
+        val queueTotals = totalsByQueue(summary)
+        val totalPaxAcrossQueues = queueTotals.values.sum
 
-      val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
-      val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
-      <.div(^.className := "dashboard-summary container-fluid",
-        <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
-          <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
-          <.table(^.className := s"summary-box-count rag-desks",
-            <.tbody(
-              <.tr(
-                <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime()}")
-              ),
-              <.tr(
-                <.td("Staff"), <.td("Desks")
-              ),
-              <.tr(
-                <.td(s"${pressurePoint.deployedDesks.getOrElse(0)}"), <.td(s"${pressurePoint.deskRec}")
+        val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
+        val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
+        <.div(^.className := "dashboard-summary container-fluid",
+          <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
+            <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
+            <.table(^.className := s"summary-box-count rag-desks",
+              <.tbody(
+                <.tr(
+                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime()}")
+                ),
+                <.tr(
+                  <.td("Staff"), <.td("Desks")
+                ),
+                <.tr(
+                  <.td(s"${pressurePoint.deployedDesks.getOrElse(0)}"), <.td(s"${pressurePoint.deskRec}")
+                )
+              )
+            )),
+          <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
+          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, p.queues)),
+          <.div(^.className := "summary-box-container col-sm-4 pax-summary",
+            <.table(
+              <.tbody(
+                <.tr(<.th(^.colSpan := 2, ^.className := "heading", "Time Range"), <.th("Flights"), <.th("Total Pax"), queueNames.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod),
+                summary.map {
+
+                  case DashboardSummary(start, numFlights, paxPerQueue) =>
+
+                    val totalPax = paxPerQueue.values.map(Math.round).sum
+                    <.tr(
+                      <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
+                      <.td(s"$numFlights"),
+                      <.td(s"$totalPax"),
+                      queueNames.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
+                    )
+                }.toTagMod,
+                <.tr(
+                  <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
+                  <.th(p.flights.size),
+                  <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
+                )
               )
             )
-          )),
-        <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
-        <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, p.queues)),
-        <.div(^.className := "summary-box-container col-sm-4 pax-summary",
-          <.table(
-            <.tbody(
-              <.tr(<.th(^.colSpan := 2, ^.className := "heading", "Time Range"), <.th("Flights"), <.th("Total Pax"), queueNames.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod),
-              summary.map {
-
-                case DashboardSummary(start, numFlights, paxPerQueue) =>
-
-                  val totalPax = paxPerQueue.values.map(Math.round).sum
-                  <.tr(
-                    <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
-                    <.td(s"$numFlights"),
-                    <.td(s"$totalPax"),
-                    queueNames.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
-                  )
-              }.toTagMod,
-              <.tr(
-                <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
-                <.th(p.flights.size),
-                <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
+          ),
+          <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
+            <.div(^.className := "pcp-pressure",
+              <.div(^.className := "title", "PCP Pressure"),
+              <.div(^.className := "highest",
+                Icon.chevronUp, s"${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
+              ),
+              <.div(^.className := "lowest",
+                Icon.chevronDown, s"${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
               )
-            )
-          )
-        ),
-        <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
-          <.div(^.className := "pcp-pressure",
-            <.div(^.className := "title", "PCP Pressure"),
-            <.div(^.className := "highest",
-              Icon.chevronUp, s"${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
-            ),
-            <.div(^.className := "lowest",
-              Icon.chevronDown, s"${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
             )
           )
         )
-      )
       }
     }).build
 
