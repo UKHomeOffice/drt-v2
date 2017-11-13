@@ -55,6 +55,12 @@ class StaffingStage(name: String,
           case Some(initialPortState: PortState) =>
             log.info(s"Received initial portState")
             portStateOption = Option(removeExpiredMinutes(initialPortState))
+
+            portStateOption.foreach(portState => {
+              val nbPortForecast2 = portState.flights.count(_._2.apiFlight.Status == "Port Forecast")
+              val nbBaseForecast2 = portState.flights.count(_._2.apiFlight.Status == "ACL Forecast")
+              log.info(s"On receiving initial flights: $nbPortForecast2 port forecast, $nbBaseForecast2 ACL forecast")
+            })
           case _ => log.info(s"Didn't receive any initial PortState")
         }
 
@@ -137,6 +143,12 @@ class StaffingStage(name: String,
           val incomingPortState = grab(inCrunch)
           simulationWindow = windowFromStateUpdate(portStateOption, incomingPortState)
           portStateOption = Option(mergePortState(portStateOption, incomingPortState))
+
+          portStateOption.foreach(portState => {
+            val nbPortForecast2 = portState.flights.count(_._2.apiFlight.Status == "Port Forecast")
+            val nbBaseForecast2 = portState.flights.count(_._2.apiFlight.Status == "ACL Forecast")
+            log.info(s"On receiving PortState: $nbPortForecast2 port forecast, $nbBaseForecast2 ACL forecast")
+          })
         }
         portStateOption = portStateOption.map(removeExpiredMinutes)
       }
