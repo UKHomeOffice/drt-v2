@@ -160,6 +160,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     def mergeArrivals(base: Set[Arrival], forecast: Set[Arrival], live: Set[Arrival]): Map[Int, Arrival] = {
       val baseById: Map[Int, Arrival] = base.map(a => (a.uniqueId, a)).toMap
 
+      log.info(s"Merging arrival sources: ${base.size} base arrivals, ${forecast.size} forecast arrivals, ${live.size} live arrivals")
+
       val withForecast = forecast.foldLeft(baseById) {
         case (mergedSoFar, forecastArrival) =>
           baseById.get(forecastArrival.uniqueId) match {
