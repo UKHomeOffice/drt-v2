@@ -188,8 +188,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
           mergedSoFar.updated(liveArrival.uniqueId, mergedArrival)
       }
 
-      val nbPortForecast2 = withForecast.count(_._2.Status == "Port Forecast")
-      val nbBaseForecast2 = withForecast.count(_._2.Status == "ACL Forecast")
+      val nbPortForecast2 = withLive.count(_._2.Status == "Port Forecast")
+      val nbBaseForecast2 = withLive.count(_._2.Status == "ACL Forecast")
       log.info(s"After merging live with forecast: $nbPortForecast2 port forecast, $nbBaseForecast2 ACL forecast")
 
       withLive
