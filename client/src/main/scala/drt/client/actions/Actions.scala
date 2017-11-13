@@ -30,9 +30,13 @@ object Actions {
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
+  case class GetForecastWeekAfter(startDay: SDateLike, terminalName: TerminalName, delay: FiniteDuration) extends Action
+
   case class SetForecastPeriod(forecastPeriodOption: Option[ForecastPeriodWithHeadlines]) extends Action
 
   case class GetAirportConfig() extends Action
+
+  case class GetAirportConfigAfter(delay: FiniteDuration) extends Action
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
@@ -40,11 +44,15 @@ object Actions {
 
   case class SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) extends Action
 
+  case class SaveFixedPointsAfter(fixedPoints: String, terminalName: TerminalName, delay: FiniteDuration) extends Action
+
   case class GetFixedPoints() extends Action
 
   case class SetShifts(shifts: String) extends Action
 
   case class GetShifts() extends Action
+
+  case class GetShiftsAfter(delay: FiniteDuration) extends Action
 
   case class AddShift(shift: StaffAssignment) extends Action
 
@@ -54,9 +62,13 @@ object Actions {
 
   case class SaveStaffMovements(terminalName: TerminalName) extends Action
 
+  case class SaveStaffMovementsAfter(terminalName: TerminalName, delay: FiniteDuration) extends Action
+
   case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
   case class GetStaffMovements() extends Action
+
+  case class GetStaffMovementsAfter(delay: FiniteDuration) extends Action
 
   case class SetViewMode(mode: ViewMode) extends Action
 
@@ -68,10 +80,12 @@ object Actions {
 
   case class GetAirportInfos(code: Set[String]) extends Action
 
-  case class GetAirportInfo(code: String) extends Action
+  case class GetAirportInfosAfter(code: Set[String], delay: FiniteDuration) extends Action
 
   case class UpdateAirportInfo(code: String, info: Option[AirportInfo]) extends Action
 
   case class UpdateAirportInfos(infos: Map[String, AirportInfo]) extends Action
+
+  case class DoNothing() extends Action
 
 }
