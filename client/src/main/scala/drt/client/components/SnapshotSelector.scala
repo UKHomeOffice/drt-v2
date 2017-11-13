@@ -15,7 +15,7 @@ import scala.scalajs.js.Date
 
 object SnapshotSelector {
 
-  val earliestAvailable = SDate(2017, 10, 6)
+  val earliestAvailable = SDate(2017, 11, 2)
 
   val log = LoggerFactory.getLogger("SnapshotSelector")
 
