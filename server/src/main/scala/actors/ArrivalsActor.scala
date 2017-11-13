@@ -12,11 +12,13 @@ case class ArrivalsState(arrivals: Map[Int, Arrival])
 
 class ForecastBaseArrivalsActor extends ArrivalsActor {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
+  override val snapshotInterval = 10
   val log: Logger = LoggerFactory.getLogger(getClass)
 }
 
 class ForecastPortArrivalsActor extends ArrivalsActor {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
+  override val snapshotInterval = 10
   val log: Logger = LoggerFactory.getLogger(getClass)
 }
 
