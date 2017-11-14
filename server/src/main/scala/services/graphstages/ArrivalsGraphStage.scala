@@ -42,7 +42,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
     override def preStart(): Unit = {
       baseArrivals = initialBaseArrivals
-      forecastArrivalsById = initialForecastArrivals.map(a => (a.uniqueId, a)).toMap
+      forecastArrivalsById = initialForecastArrivals.map(a => (a.uniqueId-> a)).toMap
       liveArrivals = initialLiveArrivals.map(a => (a.uniqueId, a)).toMap
       super.preStart()
     }
@@ -63,9 +63,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inForecastArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inForecastArrivals onPush() grabbing forecast flights")
-        forecastArrivalsById = grabAndSetPcp(inForecastArrivals).foldLeft(forecastArrivalsById) {
-          case (soFar, updatedArrival) => soFar.updated(updatedArrival.uniqueId, updatedArrival)
-        }
+        forecastArrivalsById = updateAndPurge(grabAndSetPcp(inForecastArrivals), forecastArrivalsById)
 
         forecastArrivalsActor ! ArrivalsState(forecastArrivalsById)
 
