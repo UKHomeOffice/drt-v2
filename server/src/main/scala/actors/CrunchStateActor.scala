@@ -147,12 +147,12 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
         ))
       case Some(ps) =>
         log.info(s"Applying CrunchDiff to PortState")
-        val stateWithDiffsApplied = Option(PortState(
+        val newPortState = PortState(
           flights = applyFlightsWithSplitsDiff(diff, ps.flights),
           crunchMinutes = applyCrunchDiff(diff, ps.crunchMinutes),
-          staffMinutes = applyStaffDiff(diff, ps.staffMinutes)))
-        log.info(s"Finished applying CrunchDiff to PortState")
-        stateWithDiffsApplied
+          staffMinutes = applyStaffDiff(diff, ps.staffMinutes))
+        log.info(s"Finished applying CrunchDiff to PortState: ${newPortState.flights.size} flights, ${newPortState.staffMinutes.size} staff minutes, ${newPortState.crunchMinutes.size} crunch minutes")
+        Option(newPortState)
     }
     newState
   }
@@ -218,11 +218,23 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
   }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = {
-    CrunchMinuteMessage(Option(cm.terminalName), Option(cm.queueName), Option(cm.minute), Option(cm.paxLoad), Option(cm.workLoad), Option(cm.deskRec), Option(cm.waitTime))
+    CrunchMinuteMessage(
+      terminalName = Option(cm.terminalName),
+      queueName = Option(cm.queueName),
+      minute = Option(cm.minute),
+      paxLoad = Option(cm.paxLoad),
+      workLoad = Option(cm.workLoad),
+      deskRec = Option(cm.deskRec),
+      waitTime = Option(cm.waitTime))
   }
 
-  def staffMinuteToMessage(cm: StaffMinute): StaffMinuteMessage = {
-    StaffMinuteMessage(terminalName = Option(cm.terminalName), minute = Option(cm.minute), shifts = Option(cm.shifts), fixedPoints = Option(cm.fixedPoints), movements = Option(cm.movements))
+  def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = {
+    StaffMinuteMessage(
+      terminalName = Option(sm.terminalName),
+      minute = Option(sm.minute),
+      shifts = Option(sm.shifts),
+      fixedPoints = Option(sm.fixedPoints),
+      movements = Option(sm.movements))
   }
 
   def portStateToSnapshotMessage(portState: PortState) = CrunchStateSnapshotMessage(
