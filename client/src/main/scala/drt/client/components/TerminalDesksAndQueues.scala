@@ -11,7 +11,7 @@ import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
 object TerminalDesksAndQueuesRow {
 
-  def ragStatus(totalRequired: Int, totalDeployed: Int) = {
+  def ragStatus(totalRequired: Int, totalDeployed: Int): QueueName = {
     totalRequired.toDouble / totalDeployed match {
       case diff if diff >= 1 => "red"
       case diff if diff >= 0.75 => "amber"
@@ -63,8 +63,8 @@ object TerminalDesksAndQueuesRow {
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
       val pcpTds = List(
-        <.td(^.className := s"non-pcp $ragClass", fixedPoints),
-        <.td(^.className := s"non-pcp $ragClass", movements),
+        <.td(^.className := s"non-pcp", fixedPoints),
+        <.td(^.className := s"non-pcp", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed $ragClass", totalDeployed),
         <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
@@ -106,7 +106,7 @@ object TerminalDesksAndQueues {
   })
 
   val component = ScalaComponent.builder[Props]("Loader")
-    .initialState[State](State(false, ViewDeps))
+    .initialState[State](State(showActuals = false, ViewDeps))
     .renderPS((scope, props, state) => {
       def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
 
@@ -192,11 +192,11 @@ object TerminalDesksAndQueues {
 
       def viewTypeControls(viewDepsClass: String, viewRecsClass: String): TagMod = {
         List(
-          <.div(^.className := s"selector-control view-type-control ${viewRecsClass}",
+          <.div(^.className := s"selector-control view-type-control $viewRecsClass",
             <.input.radio(^.checked := state.viewType == ViewRecs, ^.onChange ==> toggleViewType(ViewRecs), ^.id := "show-recs"),
             <.label(^.`for` := "show-recs", "Recommendations")
           ),
-          <.div(^.className := s"selector-control view-type-control ${viewDepsClass}",
+          <.div(^.className := s"selector-control view-type-control $viewDepsClass",
             <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
             <.label(^.`for` := "show-deps", "Available staff deployments")
           )).toTagMod
