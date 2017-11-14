@@ -152,29 +152,25 @@ class CrunchGraphStage(name: String,
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
       val latestCrunchMinute = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
-      val updatedFlights = arrivalsDiff.toUpdate.foldLeft[Map[Int, ApiFlightWithSplits]](afterRemovals) {
-        case (flightsSoFar, updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
+      val (updatesCount, additionsCount, updatedFlights) = arrivalsDiff.toUpdate.foldLeft((0, 0, afterRemovals)) {
+        case ((updates, additions, flightsSoFar), updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
           val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
           log.debug(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
-          flightsSoFar
-        case (flightsSoFar, updatedFlight) =>
+          (updates, additions, flightsSoFar)
+        case ((updates, additions, flightsSoFar), updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
             case None =>
-              log.debug(s"Adding new flight ${updatedFlight.IATA} / ${updatedFlight.SchDT} with key ${updatedFlight.uniqueId}")
               val ths = terminalAndHistoricSplits(updatedFlight)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
-              flightsSoFar.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits)
+              (updates, additions + 1, flightsSoFar.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits))
 
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-              log.info(s"Updating flight ${updatedFlight.IATA}. PcpTime ${updatedFlight.PcpTime} -> ${updatedFlight.PcpTime}")
-              flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight))
-
-            case _ => flightsSoFar
+              (updates + 1, additions, flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight)))
           }
       }
 
-      log.info(s"${updatedFlights.size} flights after updates")
+      log.info(s"${updatedFlights.size} flights after updates. $updatesCount updates & $additionsCount additions")
 
       val minusExpired = purgeExpiredArrivals(updatedFlights)
       log.info(s"${minusExpired.size} flights after removing expired")
