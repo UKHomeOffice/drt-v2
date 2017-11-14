@@ -8,7 +8,7 @@ import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, TimeRangeHours}
-import drt.shared.CrunchApi.CrunchState
+import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -17,8 +17,8 @@ import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomEle
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
-import scala.collection.immutable
 
+import scala.collection.immutable
 import scala.util.Try
 
 object TerminalContentComponent {
@@ -68,6 +68,18 @@ object TerminalContentComponent {
 
     withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString())
   })
+
+  def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState): CrunchState = {
+    CrunchState(
+      filterFlightsByRange(day, range, state.flights.toList).toSet,
+      state.crunchMinutes.filter(cm => timeFallsBetweenHours(range, cm.minute)),
+      state.staffMinutes.filter(sm => timeFallsBetweenHours(range, sm.minute))
+    )
+  }
+
+  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch) = {
+    SDate(MilliDate(minute)).getHours() >= range.start && SDate(MilliDate(minute)).getHours() < range.end
+  }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
@@ -130,7 +142,13 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.renderReady(crunchState => {
                 log.info(s"rendering ready d and q")
-                TerminalDesksAndQueues(TerminalDesksAndQueues.Props(crunchState, props.airportConfig, props.terminalPageTab.terminal))
+                TerminalDesksAndQueues(
+                  TerminalDesksAndQueues.Props(
+                    filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState),
+                    props.airportConfig,
+                    props.terminalPageTab.terminal
+                  )
+                )
               })
             } else ""
           ),
@@ -151,7 +169,7 @@ object TerminalContentComponent {
 
             if (state.activeTab == "staffing") {
               log.info(s"Rendering staffing $state")
-              TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal,props.potShifts, props.potFixedPoints, props.potStaffMovements, props.airportConfig))
+              TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal, props.potShifts, props.potFixedPoints, props.potStaffMovements, props.airportConfig))
             } else ""
           )))
     }
