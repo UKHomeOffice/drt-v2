@@ -123,7 +123,7 @@ object TerminalContentComponent {
       <.div(
         <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
         <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-        TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours())),
+        TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours(props.timeRangeHours.start, props.timeRangeHours.end))),
         <.ul(^.className := "nav nav-tabs",
 
           <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
