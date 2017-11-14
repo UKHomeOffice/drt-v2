@@ -162,18 +162,18 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
       log.info(s"Merging arrival sources: ${base.size} base arrivals, ${forecast.size} forecast arrivals, ${live.size} live arrivals")
 
-      val withForecast = forecast.foldLeft(baseById) {
-        case (mergedSoFar, forecastArrival) =>
+      val (notFoundCount, withForecast) = forecast.foldLeft((0, baseById)) {
+        case ((notFoundSoFar, mergedSoFar), forecastArrival) =>
           baseById.get(forecastArrival.uniqueId) match {
             case None =>
-              log.info(s"Forecast arrival ${forecastArrival.IATA} on ${SDate(forecastArrival.Scheduled).toLocalDateTimeString()} not found in base arrivals so ignoring")
-              mergedSoFar
+              (notFoundSoFar + 1, mergedSoFar)
             case Some(baseArrival) =>
               val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
               val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
-              mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival)
+              (notFoundSoFar, mergedSoFar.updated(forecastArrival.uniqueId, mergedArrival))
           }
       }
+      log.info(s"Ignoring $notFoundCount forecast arrivals not found in base arrivals")
 
       val withLive = live.foldLeft(withForecast) {
         case (mergedSoFar, liveArrival) =>
