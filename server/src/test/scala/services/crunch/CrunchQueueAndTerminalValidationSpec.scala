@@ -6,11 +6,11 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.List
+import scala.concurrent.duration._
 
 class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
   "Queue validation " >> {
@@ -40,7 +40,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 1).flatMap(_._2.keys)
 
       val expected = Set(Queues.EeaDesk)
