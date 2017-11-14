@@ -33,8 +33,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var baseArrivals: Set[Arrival] = Set()
-    var forecastArrivals: Set[Arrival] = Set()
-    var liveArrivals: Set[Arrival] = Set()
+    var forecastArrivalsById: Map[Int, Arrival] = Map()
+    var liveArrivals: Map[Int, Arrival] = Map()
     var merged: Map[Int, Arrival] = Map()
     var toPush: Option[ArrivalsDiff] = None
 
@@ -42,8 +42,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
     override def preStart(): Unit = {
       baseArrivals = initialBaseArrivals
-      forecastArrivals = initialForecastArrivals
-      liveArrivals = initialLiveArrivals
+      forecastArrivalsById = initialForecastArrivals.map(a => (a.uniqueId, a)).toMap
+      liveArrivals = initialLiveArrivals.map(a => (a.uniqueId, a)).toMap
       super.preStart()
     }
 
@@ -54,7 +54,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
         baseArrivalsActor ! ArrivalsState(baseArrivals.map(a => (a.uniqueId, a)).toMap)
 
-        mergeAndPush(baseArrivals, forecastArrivals, liveArrivals)
+        mergeAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
       }
@@ -63,11 +63,13 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inForecastArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inForecastArrivals onPush() grabbing forecast flights")
-        forecastArrivals = grabAndSetPcp(inForecastArrivals)
+        forecastArrivalsById = grabAndSetPcp(inForecastArrivals).foldLeft(forecastArrivalsById) {
+          case (soFar, updatedArrival) => soFar.updated(updatedArrival.uniqueId, updatedArrival)
+        }
 
-        forecastArrivalsActor ! ArrivalsState(forecastArrivals.map(a => (a.uniqueId, a)).toMap)
+        forecastArrivalsActor ! ArrivalsState(forecastArrivalsById)
 
-        mergeAndPush(baseArrivals, forecastArrivals, liveArrivals)
+        mergeAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
       }
@@ -77,27 +79,27 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       override def onPush(): Unit = {
         log.info(s"inLiveArrivals onPush() grabbing live flights")
 
-        liveArrivals = updateAndPurge(grabAndSetPcp(inLiveArrivals))
+        liveArrivals = updateAndPurge(grabAndSetPcp(inLiveArrivals), liveArrivals)
 
-        liveArrivalsActor ! ArrivalsState(liveArrivals.map(a => (a.uniqueId, a)).toMap)
+        liveArrivalsActor ! ArrivalsState(liveArrivals)
 
-        mergeAndPush(baseArrivals, forecastArrivals, liveArrivals)
+        mergeAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
       }
     })
 
-    def updateAndPurge(updates: Set[Arrival]): Set[Arrival] = {
+    def updateAndPurge(updates: Set[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
       val updated = updates
-        .foldLeft(liveArrivals.map(a => (a.uniqueId, a)).toMap) {
+        .foldLeft(existingArrivals) {
           case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
         }
-        .values
-        .filterNot(expired)
-        .toSet
+        .filterNot {
+          case (_, arrival) => expired(arrival)
+        }
 
-      log.info(s"Purged ${liveArrivals.size - updated.size} expired arrivals during update")
+      log.info(s"Purged ${existingArrivals.size - updated.size} expired arrivals during update")
 
       updated
     }
