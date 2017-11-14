@@ -40,7 +40,7 @@ object TimeRangeFilter {
         <.div(^.className := "date-view-picker-container",
           "From: ",
           <.select(
-            ^.defaultValue := state.startTime,
+            ^.value := state.startTime,
             ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setStart(e.target.value))),
             (0 to 24).map(h => {
               <.option(^.value := s"$h", f"$h%02d")
@@ -49,7 +49,7 @@ object TimeRangeFilter {
 
           " To: ",
           <.select(
-            ^.defaultValue := state.endTime,
+            ^.value := state.endTime,
             ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setEnd(e.target.value))),
             (0 to 24).map(h => {
               <.option(^.value := s"$h", f"$h%02d")
