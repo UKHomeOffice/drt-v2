@@ -70,10 +70,6 @@ class CrunchGraphStage(name: String,
           log.warn(s"Did not receive any flights to initialise with")
       }
 
-      val nbPortForecast2 = flightsByFlightId.values.count(_.apiFlight.Status == "Port Forecast")
-      val nbBaseForecast2 = flightsByFlightId.values.count(_.apiFlight.Status == "ACL Forecast")
-      log.info(s"On receiving initial flights: $nbPortForecast2 port forecast, $nbBaseForecast2 ACL forecast")
-
       super.preStart()
     }
 
@@ -111,10 +107,6 @@ class CrunchGraphStage(name: String,
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-
-          val nbPortForecast2 = flightsByFlightId.values.count(_.apiFlight.Status == "Port Forecast")
-          val nbBaseForecast2 = flightsByFlightId.values.count(_.apiFlight.Status == "ACL Forecast")
-          log.info(s"After updating from ArrivalsDiff: $nbPortForecast2 port forecast, $nbBaseForecast2 ACL forecast")
         } else log.info(s"No flight updates")
 
         if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)

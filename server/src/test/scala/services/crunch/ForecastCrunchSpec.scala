@@ -271,4 +271,38 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     crunchForecastArrivals === expectedForecastArrivals
   }
+
+  "Given 2 base arrivals followed by 1 matching forecast arrival, and then the other matching forecast arrival " +
+    "When I ask for arrivals " +
+    "Then I should see the forecast pax & status details for both arrivals" >> {
+
+    val baseScheduled = "2017-01-01T00:00Z"
+    val forecastScheduled = baseScheduled
+
+    val baseArrival1 = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "BA0001", terminal = "T1", actPax = 21, status = "ACL Forecast")
+    val baseArrival2 = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "AA1110", terminal = "T1", actPax = 22, status = "ACL Forecast")
+    val forecastArrival1 = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BAW0001", terminal = "T1", actPax = 51, status = "Port Forecast")
+    val forecastArrival2 = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "AAW1110", terminal = "T1", actPax = 52, status = "Port Forecast")
+    val baseArrivals = Flights(List(baseArrival1, baseArrival2))
+    val forecastArrivals1st = Flights(List(forecastArrival1))
+    val forecastArrivals2nd = Flights(List(forecastArrival2))
+
+    val crunch = runCrunchGraph(
+      now = () => SDate(baseScheduled),
+      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
+      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+
+    crunch.baseArrivalsInput.offer(baseArrivals)
+    crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+
+    crunch.forecastArrivalsInput.offer(forecastArrivals1st)
+    crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+
+    crunch.forecastArrivalsInput.offer(forecastArrivals2nd)
+    val crunchForecastArrivals = crunch.forecastTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+
+    val expectedForecastArrivals = Set(baseArrival1.copy(ActPax = 51, Status = "Port Forecast"), baseArrival2.copy(ActPax = 52, Status = "Port Forecast"))
+
+    crunchForecastArrivals === expectedForecastArrivals
+  }
 }
