@@ -22,7 +22,8 @@ class StaffingStage(name: String,
                     crunchStart: (SDateLike) => SDateLike = getLocalLastMidnight,
                     crunchEnd: (SDateLike) => SDateLike,
                     now: () => SDateLike,
-                    expireAfterMillis: Long)
+                    expireAfterMillis: Long,
+                    eGateBankSize: Int)
   extends GraphStage[FanInShape4[PortState, String, String, Seq[StaffMovement], PortState]] {
   val inCrunch: Inlet[PortState] = Inlet[PortState]("PortStateWithoutSimulations.in")
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
@@ -64,28 +65,28 @@ class StaffingStage(name: String,
       setHandler(inCrunch, new InHandler {
         override def onPush(): Unit = {
           grabAllAvailable()
-          runSimulationAndPush(5)
+          runSimulationAndPush(eGateBankSize)
         }
       })
 
       setHandler(inShifts, new InHandler {
         override def onPush(): Unit = {
           grabAllAvailable()
-          runSimulationAndPush(5)
+          runSimulationAndPush(eGateBankSize)
         }
       })
 
       setHandler(inFixedPoints, new InHandler {
         override def onPush(): Unit = {
           grabAllAvailable()
-          runSimulationAndPush(5)
+          runSimulationAndPush(eGateBankSize)
         }
       })
 
       setHandler(inMovements, new InHandler {
         override def onPush(): Unit = {
           grabAllAvailable()
-          runSimulationAndPush(5)
+          runSimulationAndPush(eGateBankSize)
         }
       })
 

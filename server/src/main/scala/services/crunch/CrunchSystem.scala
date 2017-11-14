@@ -90,23 +90,23 @@ object CrunchSystem {
         None
     }, 5 minutes)
 
-    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike, warmUpMinutes: Int) = new StaffingStage(
+    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike, warmUpMinutes: Int, eGateBankSize: Int) = new StaffingStage(
       name = name,
       initialOptionalPortState = initialPortState,
       minMaxDesks = props.airportConfig.minMaxDesksByTerminalQueue,
       slaByQueue = props.airportConfig.slaByQueue,
       warmUpMinutes = warmUpMinutes,
+      crunchEnd = crunchEnd,
       now = () => SDate.now(),
       expireAfterMillis = props.expireAfterMillis,
-      crunchEnd = crunchEnd
-    )
+      eGateBankSize = eGateBankSize)
 
     val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
 
     val liveSimInputs: LiveSimulationInputs = startRunnableLiveSimulation(
       system = props.system,
       crunchStateActor = props.liveCrunchStateActor,
-      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes),
+      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes, props.airportConfig.eGateBankSize),
       actualDesksStage = actualDesksAndQueuesStage)
 
     val liveCrunchInputs: LiveCrunchInputs = startRunnableLiveCrunch(
@@ -119,7 +119,7 @@ object CrunchSystem {
     val forecastSimInputs: ForecastSimulationInputs = startRunnableForecastSimulation(
       system = props.system,
       crunchStateActor = props.forecastCrunchStateActor,
-      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes))
+      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes, props.airportConfig.eGateBankSize))
 
     val forecastCrunchInputs: ForecastCrunchInputs = startRunnableForecastCrunch(
       system = props.system,
