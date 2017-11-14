@@ -1,9 +1,8 @@
 package drt.shared
 
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.PaxTypes._
-import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 
 import scala.collection.immutable.Seq
@@ -35,11 +34,11 @@ object Queues {
 }
 
 sealed trait PaxType {
-  def name = getClass.getSimpleName
+  def name: String = getClass.getSimpleName
 }
 
 object PaxType {
-  def apply(paxTypeString: String) = paxTypeString match {
+  def apply(paxTypeString: String): PaxType = paxTypeString match {
     case "EeaNonMachineReadable$" => EeaNonMachineReadable
     case "Transit$" => Transit
     case "VisaNational$" => VisaNational
@@ -87,7 +86,8 @@ case class AirportConfig(
                           queueOrder: List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrderSansFastTrack,
                           fixedPointExamples: Seq[String] = Seq(),
                           hasActualDeskStats: Boolean = false,
-                          portStateSnapshotInterval: Int = 1000
+                          portStateSnapshotInterval: Int = 1000,
+                          eGateBankSize: Int = 5
                         ) extends AirportConfigLike {
 
 }
@@ -240,7 +240,7 @@ object AirportConfigs {
     )),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
-        "eGate" -> (List(2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 1, 1, 1, 1, 1, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+        "eGate" -> (List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
         "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
         "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
@@ -254,7 +254,8 @@ object AirportConfigs {
     ),
     fixedPointExamples = Seq("Roving Officer,00:00,23:59,1",
       "Referral Officer,00:00,23:59,1",
-      "Forgery Officer,00:00,23:59,1")
+      "Forgery Officer,00:00,23:59,1"),
+    eGateBankSize = 10
   )
   val man = AirportConfig(
     portCode = "MAN",
@@ -404,6 +405,6 @@ object AirportConfigs {
     )
   )
 
-  val allPorts = ema :: edi :: stn :: man :: ltn :: lhr :: Nil
-  val confByPort = allPorts.map(c => (c.portCode, c)).toMap
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: Nil
+  val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
