@@ -11,7 +11,7 @@ import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
 object TerminalDesksAndQueuesRow {
 
-  def ragStatus(totalRequired: Int, totalDeployed: Int): QueueName = {
+  def ragStatus(totalRequired: Int, totalDeployed: Int): String = {
     totalRequired.toDouble / totalDeployed match {
       case diff if diff >= 1 => "red"
       case diff if diff >= 0.75 => "amber"
