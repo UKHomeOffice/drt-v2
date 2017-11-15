@@ -1,16 +1,12 @@
 package controllers
 
-import java.util.UUID
-
-import actors.pointInTime.StaffMovementsReadActor
 import actors.{GetState, StaffMovements}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.StaffMovement
 import org.slf4j.LoggerFactory
-import services.SDate
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global

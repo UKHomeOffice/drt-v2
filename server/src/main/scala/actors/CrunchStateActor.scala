@@ -36,6 +36,7 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
 
     case RecoveryCompleted =>
       log.info("Recovery: Finished restoring crunch state")
+      log.info(s"midnight: ${state.map(ps => ps.crunchMinutes.values.find(_.minute == 1510704000000L))}")
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")
@@ -52,7 +53,8 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
       }
       log.info(s"Recovery: state contains ${s.flights.size} flights " +
         s"with $apiCount Api splits " +
-        s"and ${s.crunchMinutes.size} crunch minutes")
+        s", ${s.crunchMinutes.size} crunch minutes " +
+        s", ${s.staffMinutes.size} staff minutes ")
   }
 
 
@@ -78,12 +80,13 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
             case (_, cm) => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end
           }.values.toSet
           val updatedStaff = cs.staffMinutes.filter {
-            case (_, cm) => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end
+            case (_, sm) => sm.lastUpdated.getOrElse(1L) > millis && start <= sm.minute && sm.minute < end
           }.values.toSet
           if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty) {
             val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
-            val minutesLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
-            val latestUpdate = Math.max(flightsLatest, minutesLatest)
+            val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(1L)).max else 0L
+            val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
             log.info(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
             Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
           } else None
@@ -225,7 +228,12 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
       paxLoad = Option(cm.paxLoad),
       workLoad = Option(cm.workLoad),
       deskRec = Option(cm.deskRec),
-      waitTime = Option(cm.waitTime))
+      waitTime = Option(cm.waitTime),
+      simDesks = cm.deployedDesks,
+      simWait = cm.deployedWait,
+      actDesks = cm.actDesks,
+      actWait = cm.actWait
+    )
   }
 
   def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = {

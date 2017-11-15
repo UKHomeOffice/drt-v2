@@ -36,7 +36,7 @@ object TerminalDesksAndQueuesRow {
       val crunchMinutesByQueue = props.queueMinutes.map(qm => Tuple2(qm.queueName, qm)).toMap
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
-          val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
+          val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}", ^.title := s"CrunchMinute: $cm")
           val queueCells = props.viewType match {
             case ViewDeps => List(paxLoadTd,
               <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),

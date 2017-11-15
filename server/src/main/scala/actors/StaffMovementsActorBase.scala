@@ -2,7 +2,7 @@ package actors
 
 import java.util.UUID
 
-import akka.actor.{ActorRef, DiagnosticActorLogging}
+import akka.actor.DiagnosticActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{MilliDate, StaffMovement}
@@ -17,11 +17,27 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
   def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
 }
 
+case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
-class StaffMovementsActor(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]]) extends StaffMovementsActorBase {
-  override def onUpdateState(data: StaffMovements) = {
+class StaffMovementsActor extends StaffMovementsActorBase {
+  var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
+
+  override def onUpdateState(data: StaffMovements): Unit = {
     log.info(s"Telling subscribers about updated staff movements")
     subscribers.map(_.offer(data.staffMovements))
+  }
+
+  val subsReceive: Receive = {
+    case AddStaffMovementsSubscribers(newSubscribers) =>
+      subscribers = newSubscribers.foldLeft(subscribers) {
+        case (soFar, newSub: SourceQueueWithComplete[Seq[StaffMovement]]) =>
+          log.info(s"Adding staff movements subscriber $newSub")
+          newSub :: soFar
+      }
+  }
+
+  override def receiveCommand: Receive = {
+    subsReceive orElse super.receiveCommand
   }
 }
 
@@ -50,10 +66,10 @@ class StaffMovementsActorBase extends PersistentActor
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
-      onUpdateState(state.staffMovements)
+    //      onUpdateState(state.staffMovements)
   }
 
-  val receiveCommand: Receive = {
+  def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
       sender() ! state.staffMovements

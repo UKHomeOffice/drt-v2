@@ -40,7 +40,7 @@ class CrunchGraphStage(name: String,
                        now: () => SDateLike,
                        maxDaysToCrunch: Int,
                        manifestsUsed: Boolean = true,
-                       warmUpMinutes: Int = 120)
+                       warmUpMinutes: Int)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
@@ -236,11 +236,14 @@ class CrunchGraphStage(name: String,
     }
 
     def crunch(flights: Map[Int, ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Option[PortState] = {
-      val flightsInCrunchWindow = flights.values.toList.filter(f => isFlightInTimeWindow(f, crunchStart, crunchEnd))
+      val start = crunchStart.addMinutes(-1 * warmUpMinutes)
+      val flightsInCrunchWindow = flights.values.toList.filter(f => isFlightInTimeWindow(f, start, crunchEnd))
       log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
       val uniqueFlights = groupFlightsByCodeShares(flightsInCrunchWindow).map(_._1)
       log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(procTimes)(uniqueFlights)
+      val earliestMinute: FlightSplitMinute = newFlightSplitMinutesByFlight.values.flatMap(_.map(identity)).toList.minBy(_.minute)
+      log.info(s"Earliest flight split minute: ${SDate(earliestMinute.minute).toLocalDateTimeString()}")
       val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
       log.info(s"Crunching $numberOfMinutes minutes")
       val crunchMinutes = crunchFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightSplitMinutesByFlight)
@@ -294,20 +297,20 @@ class CrunchGraphStage(name: String,
       val minutesInACrunch = 1440
       val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
 
-      val queueWorkloadsByCrunchPeriod: Iterator[List[(MillisSinceEpoch, (Load, Load))]] = queueWorkloads
+      val queueWorkloadsByCrunchPeriod: Seq[List[(MillisSinceEpoch, (Load, Load))]] = queueWorkloads
         .sortBy(_._1)
         .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+        .toList
+        .filter(_.length == minutesInACrunchWithWarmUp)
 
       val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
         .flatMap(wl => {
           crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
             .toList
             .sortBy(_._2.minute)
-            .drop(warmUpMinutes)
         })
         .toMap
-      val firstWarmUpMinutes = crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, queueWorkloads.sortBy(_._1).take(warmUpMinutes))
-      firstWarmUpMinutes ++ queueCrunchMinutes
+      queueCrunchMinutes
     }
 
     def crunchMinutes(slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
@@ -337,7 +340,7 @@ class CrunchGraphStage(name: String,
       val crunchEnd = queueWorkloads.map(_._1).max
       val crunchMinutes = crunchStartMillis to crunchEnd by oneMinuteMillis
 
-      log.info(s"Crunching $tn/$qn ${crunchMinutes.length} minutes: ${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEnd).toISOString()}")
+      log.info(s"Crunching $tn/$qn ${crunchMinutes.length} minutes: ${SDate(crunchStartMillis).toLocalDateTimeString()} to ${SDate(crunchEnd).toLocalDateTimeString()}")
 
       val workloadMinutes = qn match {
         case Queues.EGate => queueWorkloads.map(_._2._2 / eGateBankSize)
