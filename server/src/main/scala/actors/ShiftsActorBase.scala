@@ -78,7 +78,6 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
-    //      onUpdateState(state.shifts)
   }
 
   def receiveCommand: Receive = {

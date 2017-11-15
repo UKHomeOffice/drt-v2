@@ -66,7 +66,6 @@ class StaffMovementsActorBase extends PersistentActor
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
-    //      onUpdateState(state.staffMovements)
   }
 
   def receiveCommand: Receive = {

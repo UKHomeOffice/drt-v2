@@ -36,7 +36,6 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
 
     case RecoveryCompleted =>
       log.info("Recovery: Finished restoring crunch state")
-      log.info(s"midnight: ${state.map(ps => ps.crunchMinutes.values.find(_.minute == 1510704000000L))}")
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")

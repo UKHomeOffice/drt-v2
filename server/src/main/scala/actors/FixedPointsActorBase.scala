@@ -58,7 +58,6 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
-//      onUpdateState(state.fixedPoints)
   }
 
   def receiveCommand: Receive = {
