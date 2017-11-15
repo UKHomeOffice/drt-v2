@@ -52,7 +52,8 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
       val shifts = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
       updateState(shifts)
 
-    case SnapshotOffer(_, snapshot: ShiftStateSnapshotMessage) =>
+    case SnapshotOffer(md, snapshot: ShiftStateSnapshotMessage) =>
+      log.info(s"Recover: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.shifts.length} shifts")
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
 
     case RecoveryCompleted =>
