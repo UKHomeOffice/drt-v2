@@ -291,7 +291,6 @@ class CrunchGraphStage(name: String,
 
     def crunchQueueWorkloads(warmUpMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
       val minutesToCrunchWithWarmUp = minutesToCrunch + warmUpMinutes
-      log.info(s"minutesToCrunchWithWarmUp: $minutesToCrunchWithWarmUp")
 
       val queueWorkloadsByCrunchPeriod: Seq[List[(MillisSinceEpoch, (Load, Load))]] = queueWorkloads
         .sortBy(_._1)
