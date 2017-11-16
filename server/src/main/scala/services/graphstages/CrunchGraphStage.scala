@@ -297,7 +297,6 @@ class CrunchGraphStage(name: String,
         .sortBy(_._1)
         .sliding(minutesToCrunchWithWarmUp, minutesToCrunch)
         .toList
-//        .filter(_.length == minutesToCrunchWithWarmUp)
 
       val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
         .flatMap(wl => {
