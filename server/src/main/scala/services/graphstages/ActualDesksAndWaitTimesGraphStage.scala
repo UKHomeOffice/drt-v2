@@ -76,8 +76,6 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
     def addActualsIfAvailable() = (actualDesksOption, portStateOption) match {
       case (Some(ad), Some(cs)) =>
         log.info("Got actuals, adding to PortState")
-        log.info(s"ad: $ad")
-        log.info(s"cs: $cs")
         Option(addActualsToCrunchMinutes(ad, cs))
       case _ =>
         portStateOption
