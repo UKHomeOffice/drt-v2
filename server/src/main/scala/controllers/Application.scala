@@ -14,7 +14,7 @@ import boopickle.Default._
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
-import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcher}
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -94,6 +94,7 @@ trait SystemActors {
 
   val config: Configuration
 
+  val minutesToCrunch: Int = 1440
   val warmUpMinutes: Int = 240
   val maxDaysToCrunch: Int = ConfigFactory.load.getString("crunch.forecast.max_days").toInt
   val aclPollMinutes: Int = ConfigFactory.load.getString("crunch.forecast.poll_minutes").toInt
@@ -116,6 +117,9 @@ trait SystemActors {
   val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-live-state-actor")
   val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-forecast-state-actor")
   val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
+  val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
+  val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
+  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
     system = system,
@@ -126,11 +130,15 @@ trait SystemActors {
     forecastCrunchStateActor = forecastCrunchStateActor,
     maxDaysToCrunch = maxDaysToCrunch,
     expireAfterMillis = expireAfterMillis,
-    warmUpMinutes = warmUpMinutes))
-
-  val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], crunchInputs.shifts))
-  val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], crunchInputs.fixedPoints))
-  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], crunchInputs.staffMovements))
+    minutesToCrunch = minutesToCrunch,
+    warmUpMinutes = warmUpMinutes,
+    actors = Map(
+      "shifts" -> shiftsActor,
+      "fixed-points" -> fixedPointsActor,
+      "staff-movements" -> staffMovementsActor)))
+  shiftsActor ! AddShiftLikeSubscribers(crunchInputs.shifts)
+  fixedPointsActor ! AddShiftLikeSubscribers(crunchInputs.fixedPoints)
+  staffMovementsActor ! AddStaffMovementsSubscribers(crunchInputs.staffMovements)
 
   liveArrivalsSource(airportConfig.portCode)
     .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)

@@ -1,13 +1,13 @@
 package actors
 
-import akka.actor.{ActorLogging, ActorRef}
+import akka.actor.ActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
-import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import org.slf4j.LoggerFactory
+import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import services.SDate
 
 import scala.util.Try
@@ -24,11 +24,30 @@ case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to:
 
 case object GetShifts
 
-class ShiftsActor(subscribers: List[SourceQueueWithComplete[String]]) extends ShiftsActorBase {
-  override def onUpdateState(data: String) = {
+case class AddShiftLikeSubscribers(subscribers: List[SourceQueueWithComplete[String]])
+
+class ShiftsActor extends ShiftsActorBase {
+  var subscribers: List[SourceQueueWithComplete[String]] = List()
+
+  override def onUpdateState(data: String): Unit = {
     log.info(s"Telling subscribers about updated shifts")
     subscribers.map(_.offer(data))
   }
+
+  val subsReceive: Receive = {
+    case AddShiftLikeSubscribers(newSubscribers) =>
+      log.info(s"AddShiftLikeSubscribers matched")
+      subscribers = newSubscribers.foldLeft(subscribers) {
+        case (soFar, newSub: SourceQueueWithComplete[String]) =>
+          log.info(s"Adding shifts subscriber $newSub")
+          newSub :: soFar
+      }
+  }
+
+  override def receiveCommand: Receive = {
+    subsReceive orElse super.receiveCommand
+  }
+
 }
 
 class ShiftsActorBase extends PersistentActor with ActorLogging {
@@ -49,24 +68,22 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
 
   val receiveRecover: Receive = {
     case shiftsMessage: ShiftsMessage =>
+      log.info(s"Recovery: ShiftsMessage received with ${shiftsMessage.shifts.length} shifts")
       val shifts = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
       updateState(shifts)
 
     case SnapshotOffer(md, snapshot: ShiftStateSnapshotMessage) =>
-      log.info(s"Recover: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.shifts.length} shifts")
+      log.info(s"Recovery: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.shifts.length} shifts")
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
-      onUpdateState(state.shifts)
   }
 
-  val receiveCommand: Receive = {
+  def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
       sender() ! state.shifts
-
-    case GetShifts =>
 
     case data: String =>
       if (data != state.shifts) {

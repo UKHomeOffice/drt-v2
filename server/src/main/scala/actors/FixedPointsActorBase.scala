@@ -1,8 +1,8 @@
 package actors
 
-import akka.actor.{ActorLogging, ActorRef}
+import akka.actor.ActorLogging
 import akka.persistence._
-import akka.stream.scaladsl.{SourceQueue, SourceQueueWithComplete}
+import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.{Logger, LoggerFactory}
@@ -16,10 +16,25 @@ case class FixedPointsState(fixedPoints: String) {
   def updated(data: String): FixedPointsState = copy(fixedPoints = data)
 }
 
-class FixedPointsActor(subscribers: List[SourceQueueWithComplete[String]]) extends FixedPointsActorBase {
+class FixedPointsActor extends FixedPointsActorBase {
+  var subscribers: List[SourceQueueWithComplete[String]] = List()
+
   override def onUpdateState(data: String): Unit = {
     log.info(s"Telling subscribers about updated fixed points: $data")
     subscribers.map(_.offer(data))
+  }
+
+  val subsReceive: Receive = {
+    case AddShiftLikeSubscribers(newSubscribers) =>
+      subscribers = newSubscribers.foldLeft(subscribers) {
+        case (soFar, newSub: SourceQueueWithComplete[String]) =>
+          log.info(s"Adding fixed points subscriber $newSub")
+          newSub :: soFar
+      }
+  }
+
+  override def receiveCommand: Receive = {
+    subsReceive orElse super.receiveCommand
   }
 }
 
@@ -43,10 +58,9 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
-      onUpdateState(state.fixedPoints)
   }
 
-  val receiveCommand: Receive = {
+  def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
       sender() ! state.fixedPoints

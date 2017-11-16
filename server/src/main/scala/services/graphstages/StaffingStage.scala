@@ -11,13 +11,18 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, getLocalLastMidnight}
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
+
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class StaffingStage(name: String,
                     initialOptionalPortState: Option[PortState],
+                    initialShifts: String,
+                    initialFixedPoints: String,
+                    initialMovements: Seq[StaffMovement],
                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                     slaByQueue: Map[QueueName, Int],
+                    minutesToCrunch: Int,
                     warmUpMinutes: Int,
                     crunchStart: (SDateLike) => SDateLike = getLocalLastMidnight,
                     crunchEnd: (SDateLike) => SDateLike,
@@ -58,6 +63,9 @@ class StaffingStage(name: String,
             portStateOption = Option(removeExpiredMinutes(initialPortState))
           case _ => log.info(s"Didn't receive any initial PortState")
         }
+        shiftsOption = Option(initialShifts)
+        fixedPointsOption = Option(initialFixedPoints)
+        movementsOption = Option(initialMovements)
 
         super.preStart()
       }
@@ -108,7 +116,9 @@ class StaffingStage(name: String,
             PortState(
               flights = newState.flights,
               crunchMinutes = newState.crunchMinutes.foldLeft(existingState.crunchMinutes) {
-                case (soFar, (idx, cm)) => soFar.updated(idx, cm)
+                case (soFar, (idx, cm)) =>
+                  val existingCrunchMinute = soFar.getOrElse(idx, cm)
+                  soFar.updated(idx, cm.copy(deployedDesks = existingCrunchMinute.deployedDesks, deployedWait = existingCrunchMinute.deployedWait))
               },
               staffMinutes = newState.staffMinutes.foldLeft(existingState.staffMinutes) {
                 case (soFar, (idx, sm)) => soFar.updated(idx, sm)
@@ -160,8 +170,9 @@ class StaffingStage(name: String,
               log.info(s"window from state: None - no minutes (${ps.crunchMinutes.size})")
               None
             } else {
-              val window = Option((crunchStart(SDate(minutesInOrder.min)), crunchEnd(SDate(minutesInOrder.max))))
-              log.info(s"window from state: $window (${SDate(minutesInOrder.min).toLocalDateTimeString()} - ${SDate(minutesInOrder.max).toLocalDateTimeString()})")
+              val windowStart = safeWindowStart(minutesInOrder)
+              val window = Option((crunchStart(windowStart), crunchEnd(SDate(minutesInOrder.max))))
+              log.info(s"window from state: $window (${windowStart.toLocalDateTimeString()} - ${SDate(minutesInOrder.max).toLocalDateTimeString()})")
               window
             }
         }
@@ -193,7 +204,8 @@ class StaffingStage(name: String,
           log.info(s"window from update: None - no minutes")
           None
         } else {
-          val window = Option((crunchStart(SDate(minutesInOrder.min)), crunchEnd(SDate(minutesInOrder.max))))
+          val windowStart = safeWindowStart(minutesInOrder)
+          val window: Option[(SDateLike, SDateLike)] = Option((crunchStart(windowStart), crunchEnd(SDate(minutesInOrder.max))))
           log.info(s"window from update: $window")
           window
         }
@@ -236,8 +248,7 @@ class StaffingStage(name: String,
             }
           case Some((start, end)) =>
             log.info(s"Simulation window: ${start.toLocalDateTimeString()} -> ${end.toLocalDateTimeString()}")
-            val minutesInACrunch = 1440
-            val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
+            val minutesInACrunchWithWarmUp = minutesToCrunch + warmUpMinutes
 
             val crunchMinutesInWindow = crunchMinutesWithDeployments
               .values
@@ -253,7 +264,7 @@ class StaffingStage(name: String,
                     qCrunchMinutes
                       .toList
                       .sortBy(_.minute)
-                      .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+                      .sliding(minutesInACrunchWithWarmUp, minutesToCrunch)
                       .flatMap(cms => {
                         simulate(qn, cms, eGateBankSize)
                       })
@@ -278,6 +289,7 @@ class StaffingStage(name: String,
         val simWaits = TryRenjin
           .runSimulationOfWork(workLoads, deployedDesks, config)
           .drop(warmUpMinutes)
+
         cms
           .sortBy(_.minute)
           .drop(warmUpMinutes)
@@ -323,7 +335,7 @@ class StaffingStage(name: String,
             case (Some(_), false) =>
               log.info(s"No updates to push")
             case (Some(ps), true) =>
-              log.info(s"Pushing PortStateWithSimulation")
+              log.info(s"Pushing PortStateWithSimulation: ${ps.crunchMinutes.size} cms, ${ps.staffMinutes.size} sms, ${ps.flights.size} fts")
               push(outCrunch, ps)
               stateAwaitingPush = false
           }
@@ -354,6 +366,15 @@ class StaffingStage(name: String,
         }
       }
     }
+  }
+
+  def safeWindowStart(minutesInOrder: List[MillisSinceEpoch]): SDateLike = {
+    val lastMidnight = getLocalLastMidnight(now()).millisSinceEpoch
+    val startMillis = minutesInOrder.min match {
+      case millis if millis < lastMidnight => lastMidnight
+      case millis => millis
+    }
+    SDate(startMillis)
   }
 
   def adjustEgateWorkload(eGateBankSize: Int, wl: Double): Double = {

@@ -49,9 +49,9 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
     def pushAndPull() = {
       if (isAvailable(outCrunch)) {
         portStateWithActualDeskStats match {
-          case Some(cs) =>
-            log.info(s"Pushing out crunch")
-            push(outCrunch, cs)
+          case Some(ps) =>
+            log.info(s"Pushing portStateWithActualDeskStats: ${ps.crunchMinutes.size} cms, ${ps.staffMinutes.size} sms, ${ps.flights.size} fts")
+            push(outCrunch, ps)
             portStateWithActualDeskStats = None
           case None =>
             log.info(s"Nothing to push")
