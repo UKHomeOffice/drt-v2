@@ -1,6 +1,8 @@
 package controllers
 
+import java.io.File
 import java.nio.ByteBuffer
+import java.nio.file.Paths
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -18,13 +20,14 @@ import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lhr.LHRFlightFeed
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import org.joda.time.chrono.ISOChronology
+import org.reactivestreams.{Publisher, Subscriber}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
 import play.api.mvc._
@@ -167,9 +170,24 @@ trait SystemActors {
     feed.map(Flights)
   }
 
+  object LHRPublisher extends Publisher[List[Flights]] {
+    override def subscribe(s: Subscriber[_ >: List[Flights]]): Unit = {
+      system.scheduler.schedule(3 seconds, 5 seconds) {
+
+        val as = List(Arrival(
+          "", "Port Forecast", "", "", "", "", "", "", 0, 23, 6, "", "", 0, "LHR", "T2", "LH0914", "LH0914", "FRA",
+          SDate("2017-10-31T16:45").toISOString(), SDate("2017-10-31T16:45").millisSinceEpoch, 0, None
+        ))
+
+        s.onComplete()
+      }
+    }
+  }
+
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
+      case "LHR" => createForecastLHRFeed()
       case _ => Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     }
     feed.map(Flights)
@@ -187,6 +205,14 @@ trait SystemActors {
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
+  }
+
+  def createForecastLHRFeed(): Source[List[Arrival], Cancellable] = {
+    val lhrForecastFeed = LHRForecastFeed(config.getString("lhr.forecast_path").getOrElse(throw new Exception("Missing LHR Forecast Zip Path")))
+
+    Source.tick(0 seconds, 1 hour, {
+      lhrForecastFeed.arrivals
+    })
   }
 }
 

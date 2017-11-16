@@ -1,67 +1,15 @@
 package feeds
 
+import drt.server.feeds.lhr.LHRForecastFeed
 import drt.shared.Arrival
-import drt.shared.FlightsApi.TerminalName
-import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.specs2.mutable.Specification
 import services.SDate
 
-import scala.util.{Success, Try}
+import scala.collection.immutable.Seq
 
 class LHRForecastCSVFeedsSpec extends Specification {
-  
-  def parseCSV(csvContent: String, terminalName: TerminalName) = {
-    val flightEntries = csvContent
-      .split("\n")
-      .drop(3)
 
-    val arrivalEntries = flightEntries
-      .map(_.split(",").toList)
-      .filter(_.length == 8)
-      .filter(_ (4) == "INTERNATIONAL")
-
-    def lhrFieldsToArrivalForTerminal: (List[String]) => Try[Arrival] = lhrFieldsToArrival(terminalName)
-    val arrivals = arrivalEntries
-      .map(lhrFieldsToArrivalForTerminal)
-      .collect { case Success(a) => a }
-      .toList
-
-    arrivals
-  }
-  val pattern: DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/YYYY HH:mm")
-
-  def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
-
-  def lhrFieldsToArrival(terminalName: TerminalName)(fields: List[String]): Try[Arrival] = {
-    Try {
-      Arrival(
-        Operator = "",
-        Status = "Port Forecast",
-        EstDT = "",
-        ActDT = "",
-        EstChoxDT = "",
-        ActChoxDT = "",
-        Gate = "",
-        Stand = "",
-        MaxPax = 0,
-        ActPax = fields(5).toInt,
-        TranPax = fields(7).toInt,
-        RunwayID = "",
-        BaggageReclaimId = "",
-        FlightID = 0,
-        AirportID = "LHR",
-        Terminal = terminalName,
-        rawICAO = fields(2).replace(" ", ""),
-        rawIATA = fields(2).replace(" ", ""),
-        Origin = fields(3),
-        SchDT = SDate(parseDateTime(fields(1))).toISOString(),
-        Scheduled = SDate(parseDateTime(fields(1))).millisSinceEpoch,
-        PcpTime = 0,
-        None
-      )
-    }
-  }
+  import drt.server.feeds.lhr.LHRForecastFeed._
 
   "When parsing a CSV file for LHR Forecast" >> {
 
@@ -111,4 +59,35 @@ class LHRForecastCSVFeedsSpec extends Specification {
       result === expected
     }
   }
+
+
+  "When polling for new forecast files" >> {
+    "Given a path to a zip file then I should be able to extract each terminal CSV" >> {
+      val path = getClass.getClassLoader.getResource("lhr-forecast-fixture.zip").getPath
+
+      val result: List[Seq[Arrival]] = LHRForecastFeed.contentFromFileName(path).toList
+
+      val expected = List(
+        List(),
+        List(Arrival(
+          "","Port Forecast","","","","","","",0,30,4,"","",0,"LHR","T2","SA321","SA321","CPT",
+          SDate("2017-10-31T16:45:00Z").toISOString(),SDate("2017-10-31T16:45:00Z").millisSinceEpoch,0,None
+        )),
+        List(Arrival(
+          "","Port Forecast","","","","","","",0,260,19,"","",0,"LHR","T3","SA123","SA123","JHB",
+          SDate("2017-10-31T16:55:00Z").toISOString(),SDate("2017-10-31T16:55:00Z").millisSinceEpoch,0,None
+        )),
+        List(Arrival("","Port Forecast","","","","","","",0,300,40,"","",0,"LHR","T4","SA124","SA124","BUQ",
+          SDate("2017-10-31T16:35:00Z").toISOString(),SDate("2017-10-31T16:35:00Z").millisSinceEpoch,0,None
+        )),
+        List(Arrival("","Port Forecast","","","","","","",0,200,30,"","",0,"LHR","T5","SA1235","SA1235","HRE",
+          SDate("2017-10-31T16:40:00Z").toISOString(),SDate("2017-10-31T16:40:00Z").millisSinceEpoch,0,None
+        ))
+      )
+
+      result === expected
+    }
+  }
 }
+
+
