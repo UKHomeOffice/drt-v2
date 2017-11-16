@@ -302,6 +302,7 @@ class CrunchGraphStage(name: String,
           crunchMinutes(slas, minMaxDesks, eGateBankSize, tn, qn, wl)
             .toList
             .sortBy(_._2.minute)
+            .drop(warmUpMinutes)
         })
         .toMap
       queueCrunchMinutes
