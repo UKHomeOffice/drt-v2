@@ -1,8 +1,6 @@
 package controllers
 
-import java.io.File
 import java.nio.ByteBuffer
-import java.nio.file.Paths
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -27,7 +25,6 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import org.joda.time.chrono.ISOChronology
-import org.reactivestreams.{Publisher, Subscriber}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
 import play.api.mvc._
@@ -168,20 +165,6 @@ trait SystemActors {
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed.map(Flights)
-  }
-
-  object LHRPublisher extends Publisher[List[Flights]] {
-    override def subscribe(s: Subscriber[_ >: List[Flights]]): Unit = {
-      system.scheduler.schedule(3 seconds, 5 seconds) {
-
-        val as = List(Arrival(
-          "", "Port Forecast", "", "", "", "", "", "", 0, 23, 6, "", "", 0, "LHR", "T2", "LH0914", "LH0914", "FRA",
-          SDate("2017-10-31T16:45").toISOString(), SDate("2017-10-31T16:45").millisSinceEpoch, 0, None
-        ))
-
-        s.onComplete()
-      }
-    }
   }
 
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
