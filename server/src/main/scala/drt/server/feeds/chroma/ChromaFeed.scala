@@ -28,7 +28,6 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
     }
   }
 
-
   def apiFlightCopy(ediMapping: Source[Seq[ChromaLiveFlight], Cancellable]): Source[List[Arrival], Cancellable] = {
     ediMapping.map(flights =>
       flights.map(flight => {

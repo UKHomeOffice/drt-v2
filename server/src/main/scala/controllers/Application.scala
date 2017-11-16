@@ -15,10 +15,10 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
-import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive}
+import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lhr.LHRFlightFeed
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
@@ -170,6 +170,7 @@ trait SystemActors {
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
+      case "LHR" => createForecastLHRFeed(config.getString("lhr.forecast_path").getOrElse(throw new Exception("Missing LHR Forecast Zip Path")))
       case _ => Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     }
     feed.map(Flights)
@@ -187,6 +188,15 @@ trait SystemActors {
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
+  }
+
+  def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
+    val lhrForecastFeed = LHRForecastFeed(lhrForecastPath)
+    system.log.info(s"LHR Forecast: about to start ticking")
+    Source.tick(10 seconds, 1 hour, {
+      system.log.info(s"LHR Forecast: ticking")
+      lhrForecastFeed.arrivals
+    }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
   }
 }
 

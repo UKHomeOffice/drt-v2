@@ -382,7 +382,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
         .recoverWith {
           case f =>
             log.error(s"Failed to get Staff Movements: $f")
-            Future(GetStaffMovementsAfter(PollDelay.recoveryDelay))
+            Future(DoNothing())
         }
       )
       effectOnly(apiCallEffect + movementsEffect)
