@@ -3,18 +3,17 @@ package drt.server.feeds.lhr
 import java.io.FileInputStream
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
+
 import org.slf4j.LoggerFactory
 import drt.shared.Arrival
 import drt.shared.FlightsApi.{Flights, TerminalName}
-
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-
 import services.SDate
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 case class LHRForecastFeed(path: String) {
 
@@ -53,9 +52,9 @@ object LHRForecastFeed {
   def logErrors(parsedArrivals: Array[Try[Arrival]]) =
     parsedArrivals
       .foreach {
-        case Success(s) =>
-        case failure =>
-          log.error(s"LHR Forecast: Failed to parse CSV Row: $failure")
+        case Failure(f) =>
+          log.error(s"LHR Forecast: Failed to parse CSV Row: $f")
+        case _ =>
       }
 
   def contentFromFileName(path: String): Seq[Seq[Arrival]] = unzipStream(
@@ -71,7 +70,6 @@ object LHRForecastFeed {
     } match {
       case Success(s) =>
         log.info(s"LHR Forecast: got ${s.size} terminals")
-
         s
       case f =>
         log.error(s"Failed to unzip file: $f")

@@ -170,7 +170,7 @@ trait SystemActors {
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
-      case "LHR" => createForecastLHRFeed()
+      case "LHR" => createForecastLHRFeed(config.getString("lhr.forecast_path").getOrElse(throw new Exception("Missing LHR Forecast Zip Path")))
       case _ => Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     }
     feed.map(Flights)
@@ -190,8 +190,8 @@ trait SystemActors {
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
   }
 
-  def createForecastLHRFeed(): Source[List[Arrival], Cancellable] = {
-    val lhrForecastFeed = LHRForecastFeed(config.getString("lhr.forecast_path").getOrElse(throw new Exception("Missing LHR Forecast Zip Path")))
+  def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
+    val lhrForecastFeed = LHRForecastFeed(lhrForecastPath)
     system.log.info(s"LHR Forecast: about to start ticking")
     Source.tick(10 seconds, 1 hour, {
       system.log.info(s"LHR Forecast: ticking")
