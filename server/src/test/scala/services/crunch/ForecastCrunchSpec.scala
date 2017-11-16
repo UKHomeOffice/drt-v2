@@ -27,6 +27,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
+      minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30))
 
@@ -60,6 +61,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
+      minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30),
       shifts =
@@ -99,6 +101,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
+      minutesToCrunch = 1440,
+      warmUpMinutes = 120,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => SDate("2017-01-04T00:30Z"),
       shifts =
@@ -142,6 +146,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
+      minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
       earliestAndLatestAffectedPcpTime = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),

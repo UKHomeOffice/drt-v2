@@ -10,13 +10,12 @@ import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerQueueCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import services._
 import services.graphstages.Crunch.{log, _}
 import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
-import services._
 
 import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps
@@ -40,6 +39,7 @@ class CrunchGraphStage(name: String,
                        now: () => SDateLike,
                        maxDaysToCrunch: Int,
                        manifestsUsed: Boolean = true,
+                       minutesToCrunch: Int,
                        warmUpMinutes: Int)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
@@ -79,7 +79,7 @@ class CrunchGraphStage(name: String,
         if (!waitingForManifests && !waitingForArrivals) {
           portStateOption match {
             case Some(portState) =>
-              log.info(s"Pushing PortState (outCrunch)")
+              log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
               push(outCrunch, portState)
               portStateOption = None
             case None =>
@@ -257,7 +257,7 @@ class CrunchGraphStage(name: String,
           case None => log.info(s"We have no PortState yet. Nothing to push")
           case Some(portState) =>
             if (isAvailable(outCrunch)) {
-              log.info(s"Pushing PortState (pushStateIfReady)")
+              log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
               push(outCrunch, portState)
               portStateOption = None
             }
@@ -278,11 +278,7 @@ class CrunchGraphStage(name: String,
       workloadsToCrunchMinutes(warmUpMinutes, fullWlByTerminalAndQueue, slas, minMaxDesks, eGateBankSize)
     }
 
-    def workloadsToCrunchMinutes(warmUpMinutes: Int,
-                                 portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]],
-                                 slas: Map[QueueName, Int],
-                                 minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-                                 eGateBankSize: Int): Map[Int, CrunchMinute] = {
+    def workloadsToCrunchMinutes(warmUpMinutes: Int, portWorkloads: Map[TerminalName, Map[QueueName, List[(MillisSinceEpoch, (Load, Load))]]], slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int): Map[Int, CrunchMinute] = {
       portWorkloads.flatMap {
         case (tn, terminalWorkloads) =>
           val terminalCrunchMinutes = terminalWorkloads.flatMap {
@@ -294,14 +290,14 @@ class CrunchGraphStage(name: String,
     }
 
     def crunchQueueWorkloads(warmUpMinutes: Int, slas: Map[QueueName, Int], minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]], eGateBankSize: Int, tn: TerminalName, qn: QueueName, queueWorkloads: List[(MillisSinceEpoch, (Load, Load))]): Map[Int, CrunchMinute] = {
-      val minutesInACrunch = 1440
-      val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
+      val minutesToCrunchWithWarmUp = minutesToCrunch + warmUpMinutes
+      log.info(s"minutesToCrunchWithWarmUp: $minutesToCrunchWithWarmUp")
 
       val queueWorkloadsByCrunchPeriod: Seq[List[(MillisSinceEpoch, (Load, Load))]] = queueWorkloads
         .sortBy(_._1)
-        .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+        .sliding(minutesToCrunchWithWarmUp, minutesToCrunch)
         .toList
-        .filter(_.length == minutesInACrunchWithWarmUp)
+//        .filter(_.length == minutesToCrunchWithWarmUp)
 
       val queueCrunchMinutes: Map[Int, CrunchMinute] = queueWorkloadsByCrunchPeriod
         .flatMap(wl => {

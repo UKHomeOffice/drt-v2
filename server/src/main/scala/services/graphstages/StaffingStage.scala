@@ -11,6 +11,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, getLocalLastMidnight}
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
+
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -21,6 +22,7 @@ class StaffingStage(name: String,
                     initialMovements: Seq[StaffMovement],
                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
                     slaByQueue: Map[QueueName, Int],
+                    minutesToCrunch: Int,
                     warmUpMinutes: Int,
                     crunchStart: (SDateLike) => SDateLike = getLocalLastMidnight,
                     crunchEnd: (SDateLike) => SDateLike,
@@ -246,7 +248,7 @@ class StaffingStage(name: String,
             }
           case Some((start, end)) =>
             log.info(s"Simulation window: ${start.toLocalDateTimeString()} -> ${end.toLocalDateTimeString()}")
-            val minutesInACrunch = 1440
+            val minutesInACrunch = minutesToCrunch
             val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
 
             val crunchMinutesInWindow = crunchMinutesWithDeployments
@@ -288,6 +290,7 @@ class StaffingStage(name: String,
         val simWaits = TryRenjin
           .runSimulationOfWork(workLoads, deployedDesks, config)
           .drop(warmUpMinutes)
+
         cms
           .sortBy(_.minute)
           .drop(warmUpMinutes)
@@ -333,7 +336,7 @@ class StaffingStage(name: String,
             case (Some(_), false) =>
               log.info(s"No updates to push")
             case (Some(ps), true) =>
-              log.info(s"Pushing PortStateWithSimulation")
+              log.info(s"Pushing PortStateWithSimulation: ${ps.crunchMinutes.size} cms, ${ps.staffMinutes.size} sms, ${ps.flights.size} fts")
               push(outCrunch, ps)
               stateAwaitingPush = false
           }

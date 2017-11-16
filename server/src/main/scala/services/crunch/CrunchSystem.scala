@@ -12,16 +12,16 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import services._
 import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
 import services.graphstages._
-import services._
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
-import scala.collection.immutable.Seq
 
 
 case class LiveSimulationInputs(crunch: SourceQueueWithComplete[PortState],
@@ -61,6 +61,7 @@ object CrunchSystem {
                          forecastCrunchStateActor: ActorRef,
                          maxDaysToCrunch: Int,
                          expireAfterMillis: Long,
+                         minutesToCrunch: Int,
                          warmUpMinutes: Int,
                          actors: Map[String, AskableActorRef])
 
@@ -81,7 +82,7 @@ object CrunchSystem {
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
 
-    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike, warmUpMinutes: Int, eGateBankSize: Int) = new StaffingStage(
+    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike, minutesToCrunch: Int, warmUpMinutes: Int, eGateBankSize: Int) = new StaffingStage(
       name = name,
       initialOptionalPortState = initialPortState,
       initialShifts = initialShifts,
@@ -89,6 +90,7 @@ object CrunchSystem {
       initialMovements = initialStaffMovements,
       minMaxDesks = props.airportConfig.minMaxDesksByTerminalQueue,
       slaByQueue = props.airportConfig.slaByQueue,
+      minutesToCrunch = minutesToCrunch,
       warmUpMinutes = warmUpMinutes,
       crunchEnd = crunchEnd,
       now = () => SDate.now(),
@@ -100,7 +102,7 @@ object CrunchSystem {
     val liveSimInputs: LiveSimulationInputs = startRunnableLiveSimulation(
       system = props.system,
       crunchStateActor = props.liveCrunchStateActor,
-      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes, props.airportConfig.eGateBankSize),
+      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize),
       actualDesksStage = actualDesksAndQueuesStage)
 
     val liveCrunchInputs: LiveCrunchInputs = startRunnableLiveCrunch(
@@ -109,12 +111,13 @@ object CrunchSystem {
       airportConfig = props.airportConfig,
       historicalSplitsProvider = props.historicalSplitsProvider,
       expireAfterMillis = props.expireAfterMillis,
+      minutesToCrunch = props.minutesToCrunch,
       warmUpMinutes = props.warmUpMinutes)
 
     val forecastSimInputs: ForecastSimulationInputs = startRunnableForecastSimulation(
       system = props.system,
       crunchStateActor = props.forecastCrunchStateActor,
-      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.warmUpMinutes, props.airportConfig.eGateBankSize))
+      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize))
 
     val forecastCrunchInputs: ForecastCrunchInputs = startRunnableForecastCrunch(
       system = props.system,
@@ -123,6 +126,7 @@ object CrunchSystem {
       airportConfig = props.airportConfig,
       historicalSplitsProvider = props.historicalSplitsProvider,
       expireAfterMillis = props.expireAfterMillis,
+      minutesToCrunch = props.minutesToCrunch,
       warmUpMinutes = props.warmUpMinutes)
 
     val arrivalsInputs: ArrivalsInputs = startRunnableArrivals(
@@ -199,6 +203,7 @@ object CrunchSystem {
                   airportConfig: AirportConfig,
                   historicalSplitsProvider: SplitsProvider,
                   expireAfterMillis: Long,
+                  minutesToCrunch: Int,
                   warmUpMinutes: Int): CrunchGraphStage = new CrunchGraphStage(
     name = name,
     optionalInitialFlights = None,
@@ -216,6 +221,7 @@ object CrunchSystem {
     maxDaysToCrunch = maxDays,
     earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
     manifestsUsed = manifestsUsed,
+    minutesToCrunch = minutesToCrunch,
     warmUpMinutes = warmUpMinutes)
 
   def startRunnableLiveSimulation(implicit system: ActorSystem, crunchStateActor: ActorRef, staffingStage: StaffingStage, actualDesksStage: ActualDesksAndWaitTimesGraphStage): LiveSimulationInputs = {
@@ -259,14 +265,15 @@ object CrunchSystem {
 
   def startRunnableLiveCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
                               airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
-                              expireAfterMillis: Long, warmUpMinutes: Int): LiveCrunchInputs = {
+                              expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int): LiveCrunchInputs = {
     val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
     val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
     val (liveArrivalsCrunchInput, manifestsInput) = RunnableLiveCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
       arrivalsSource = liveArrivalsDiffQueueSource,
       voyageManifestsSource = manifestsSource,
       cruncher = crunchStage(name = "live", portCode = airportConfig.portCode, maxDays = 2, airportConfig = airportConfig,
-        historicalSplitsProvider = historicalSplitsProvider, expireAfterMillis = expireAfterMillis, warmUpMinutes = warmUpMinutes),
+        historicalSplitsProvider = historicalSplitsProvider, expireAfterMillis = expireAfterMillis,
+        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes),
       simulationQueueSubscriber = simulationSubscriber
     ).run()(ActorMaterializer())
 
@@ -275,12 +282,13 @@ object CrunchSystem {
 
   def startRunnableForecastCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
                                   maxDaysToCrunch: Int, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
-                                  expireAfterMillis: Long, warmUpMinutes: Int): ForecastCrunchInputs = {
+                                  expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int): ForecastCrunchInputs = {
     val forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
     val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
       arrivalsSource = forecastArrivalsDiffQueueSource,
       cruncher = crunchStage(name = "forecast", portCode = airportConfig.portCode, maxDays = maxDaysToCrunch, manifestsUsed = false,
-        airportConfig = airportConfig, historicalSplitsProvider, expireAfterMillis = expireAfterMillis, warmUpMinutes = warmUpMinutes),
+        airportConfig = airportConfig, historicalSplitsProvider, expireAfterMillis = expireAfterMillis,
+        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes),
       simulationQueueSubscriber = simulationSubscriber
     ).run()(ActorMaterializer())
 

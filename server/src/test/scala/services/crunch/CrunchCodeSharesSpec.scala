@@ -102,6 +102,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         procTimes = procTimes,
+        minutesToCrunch = 120,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
       )

@@ -120,6 +120,8 @@ class CrunchTestLike
                      portSplits: SplitRatios = defaultPaxSplits,
                      csvSplitsProvider: SplitsProvider = (_) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
+                     minutesToCrunch: Int = 30,
+                     warmUpMinutes: Int = 0,
                      crunchStartDateProvider: (SDateLike) => SDateLike,
                      crunchEndDateProvider: (SDateLike) => SDateLike,
                      earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
@@ -160,7 +162,8 @@ class CrunchTestLike
       maxDaysToCrunch = 100,
       manifestsUsed = manifestsUsed,
       now = now,
-      warmUpMinutes = 0)
+      minutesToCrunch = minutesToCrunch,
+      warmUpMinutes = warmUpMinutes)
 
     val baseFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val forecastFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
@@ -179,7 +182,7 @@ class CrunchTestLike
 
     val forecastProbe = testProbe("forecast")
     val forecastStaffingGraphStage = new StaffingStage(name = "forecast", initialOptionalPortState = None,
-      minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120,
+      minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes,
       crunchEnd = (_) => getLocalNextMidnight(SDate.now()), now = now,
       expireAfterMillis = 2 * oneDayMillis, eGateBankSize = 5, initialShifts = "", initialFixedPoints = "", initialMovements = Seq())
     val forecastActorRef = forecastCrunchStateActor(forecastProbe, now)
@@ -199,7 +202,7 @@ class CrunchTestLike
       simulationQueueSubscriber = forecastCrunchInput
     ).run()(actorMaterializer)
     val liveStaffingGraphStage = new StaffingStage(name = "live", initialOptionalPortState = None,
-      minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, warmUpMinutes = 120,
+      minMaxDesks = minMaxDesks, slaByQueue = slaByQueue, minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes,
       crunchEnd = (_) => getLocalNextMidnight(SDate.now()), now = now,
       expireAfterMillis = 2 * oneDayMillis, eGateBankSize = 5, initialShifts = "", initialFixedPoints = "", initialMovements = Seq())
     val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
