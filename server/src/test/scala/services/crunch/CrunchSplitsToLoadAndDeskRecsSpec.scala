@@ -48,7 +48,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 2)
 
       val expected = Map("T1" -> Map(
