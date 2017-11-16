@@ -51,7 +51,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     }
     val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
       (cm.actDesks, cm.actWait)
-    }).take(30)
+    })//.take(30)
 
 
     val expected = List.fill(15)((Option(1), Option(5))) ++ List.fill(15)((Option(2), Option(10)))
