@@ -248,8 +248,7 @@ class StaffingStage(name: String,
             }
           case Some((start, end)) =>
             log.info(s"Simulation window: ${start.toLocalDateTimeString()} -> ${end.toLocalDateTimeString()}")
-            val minutesInACrunch = minutesToCrunch
-            val minutesInACrunchWithWarmUp = minutesInACrunch + warmUpMinutes
+            val minutesInACrunchWithWarmUp = minutesToCrunch + warmUpMinutes
 
             val crunchMinutesInWindow = crunchMinutesWithDeployments
               .values
@@ -265,7 +264,7 @@ class StaffingStage(name: String,
                     qCrunchMinutes
                       .toList
                       .sortBy(_.minute)
-                      .sliding(minutesInACrunchWithWarmUp, minutesInACrunch)
+                      .sliding(minutesInACrunchWithWarmUp, minutesToCrunch)
                       .flatMap(cms => {
                         simulate(qn, cms, eGateBankSize)
                       })
