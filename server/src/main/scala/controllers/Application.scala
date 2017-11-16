@@ -17,7 +17,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
-import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive}
+import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
@@ -209,10 +209,11 @@ trait SystemActors {
 
   def createForecastLHRFeed(): Source[List[Arrival], Cancellable] = {
     val lhrForecastFeed = LHRForecastFeed(config.getString("lhr.forecast_path").getOrElse(throw new Exception("Missing LHR Forecast Zip Path")))
-
-    Source.tick(0 seconds, 1 hour, {
+    system.log.info(s"LHR Forecast: about to start ticking")
+    Source.tick(10 seconds, 1 hour, {
+      system.log.info(s"LHR Forecast: ticking")
       lhrForecastFeed.arrivals
-    })
+    }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
   }
 }
 

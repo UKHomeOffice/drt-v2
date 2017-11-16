@@ -65,11 +65,20 @@ object LHRForecastFeed {
   )
 
   def unzipStream(zipInputStream: ZipInputStream): Seq[Seq[Arrival]] = {
-    try {
+    val arrivals = Try{
+      log.info(s"LHR Forecast: About to unzip.")
       unzipAllFilesInStream(zipInputStream).toList
-    } finally {
-      zipInputStream.close()
+    } match {
+      case Success(s) =>
+        log.info(s"LHR Forecast: got ${s.size} terminals")
+
+        s
+      case f =>
+        log.error(s"Failed to unzip file: $f")
+        Seq()
     }
+    zipInputStream.close()
+    arrivals
   }
 
   def unzipAllFilesInStream(unzippedStream: ZipInputStream): Seq[Seq[Arrival]] = unzipAllFilesInStream(
@@ -77,22 +86,28 @@ object LHRForecastFeed {
     Option(unzippedStream.getNextEntry)
   )
 
-  val terminalCSVFile = "[^/]+/(T.).csv".r
+  val terminalCSVFile = "([^/]+/)?(T.).csv".r
 
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[Seq[Arrival]] =
+  def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[Seq[Arrival]] = {
+    log.info(s"LHR Forecast: Recursively unzipping files")
+
     zipEntryOption match {
       case None => Stream.empty
       case Some(zipEntry) =>
         zipEntry.getName match {
-          case terminalCSVFile(terminal) =>
+          case terminalCSVFile(_, terminal) =>
+            log.info(s"LHR Forecast: Processing terminal $terminal")
             val csv: String = getZipEntry(unzippedStream)
             val terminalArrivals = parseCSV(csv, terminal)
             val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
             terminalArrivals #:: unzipAllFilesInStream(unzippedStream, maybeEntry1)
           case nonCSVFile =>
+            log.info(s"LHR Forecast: Skipping $nonCSVFile found in Zip (doesn't match terminal regex)")
+
             unzipAllFilesInStream(unzippedStream, Option(unzippedStream.getNextEntry))
         }
     }
+  }
 
   def getZipEntry(zis: ZipInputStream): String = {
     val buffer = new Array[Byte](4096)
