@@ -37,7 +37,7 @@ object SPAMain extends js.JSApp {
       }
     }
 
-    def updateRequired(p: TerminalPageTabLoc) = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
+    def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
     def loadAction: Action = mode match {
       case "planning" =>
@@ -79,13 +79,15 @@ object SPAMain extends js.JSApp {
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
     .renderWith(layout)
-    .onPostRender((prev, current) => {
+    .onPostRender((maybePrevLoc, currentLoc) => {
       Callback(
-        (prev, current) match {
+        (maybePrevLoc, currentLoc) match {
           case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
             if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
           case (_, c: TerminalPageTabLoc) =>
             SPACircuit.dispatch(c.loadAction)
+          case (_, _: TerminalsDashboardLoc) =>
+            SPACircuit.dispatch(SetViewMode(ViewLive()))
           case _ =>
         }
       )
