@@ -26,10 +26,15 @@ object MainMenu {
     MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
   )
 
-  def menuItems(airportConfig: AirportConfig): List[MenuItem] = {
+  def menuItems(airportConfig: AirportConfig, currentLoc: Loc): List[MenuItem] = {
     val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
-        MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, TerminalPageTabLoc(tn))
+        val targetLoc = currentLoc match {
+          case tptl: TerminalPageTabLoc =>
+            TerminalPageTabLoc(tn, tptl.mode, tptl.tab, tptl.date)
+          case _ => TerminalPageTabLoc(tn)
+        }
+        MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, targetLoc)
     }.toList
 
     staticMenuItems ::: terminalDepsMenuItems
@@ -43,7 +48,7 @@ object MainMenu {
         <.div(
           airportConfigPotMP().renderReady(airportConfig => {
 
-            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig)) yield {
+            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig, props.currentLoc)) yield {
               val active = (props.currentLoc, item.location) match {
                 case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
                 case (current, itemLoc) => current == itemLoc
