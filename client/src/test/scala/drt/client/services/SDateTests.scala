@@ -9,7 +9,7 @@ import scala.scalajs.js.Date
 
 
 object SDateTests extends TestSuite {
-  def tests = TestSuite {
+  override def tests = TestSuite {
     'SDate - {
       "You can add days to an SDate" - {
         import drt.client.services.JSDateConversions._
@@ -75,6 +75,31 @@ object SDateTests extends TestSuite {
         }
       }
 
+      "When parsing a string to an option of an SDate" - {
+        "Given a valid date string then you should get back an option of an SDate of that Date" - {
+          val dateString = "2017-11-17T13:00"
+
+          val result = SDate.stringToSDateLikeOption(dateString)
+
+          val expected = SDate(dateString)
+
+          result match {
+            case Some(sd) =>
+              assert(sd.millisSinceEpoch == expected.millisSinceEpoch)
+            case other =>
+              println(s"expected $expected but got $other" )
+              assert(false)
+          }
+        }
+        "Given an invalid date string then you should get back None" - {
+          val result = SDate.stringToSDateLikeOption("sdf")
+
+          val expected = None
+
+          assert(result == expected)
+        }
+      }
+
       "During BST" - {
         "should take dates as UTC and return millis since epoch as UTC" - {
           val d = SDate(2017, 3, 28, 14, 44)
@@ -82,14 +107,15 @@ object SDateTests extends TestSuite {
           assert(actual == 1490708640000L)
         }
         "should take dates as UTC but return as local time with millisecond constructor" - {
-          val d = SDate(MilliDate(1490708453000L)) //2017-03-28 13:40 GMT
+          val d = SDate(MilliDate(1490708453000L))
+          //2017-03-28 13:40 GMT
           val actual = d.toString
           assert(actual == "2017-03-28T1440")
         }
-//        "should take dates as UTC but return as local time when parsing a string" - {
-//          val actual = SDate.parse("2017-03-28T13:40").toString
-//          assert(actual == "2017-03-28T1440")
-//        }
+        //        "should take dates as UTC but return as local time when parsing a string" - {
+        //          val actual = SDate.parse("2017-03-28T13:40").toString
+        //          assert(actual == "2017-03-28T1440")
+        //        }
       }
       "Outside of BST" - {
         "should take dates as UTC but return as local time with day, month, date, time constructor" - {
@@ -98,7 +124,8 @@ object SDateTests extends TestSuite {
           assert(actual == "2017-03-01T1444")
         }
         "should take dates as UTC but return as local time with millisecond constructor" - {
-          val d = SDate(MilliDate(1481364000000L)) //2016-12-10T10:00:00
+          val d = SDate(MilliDate(1481364000000L))
+          //2016-12-10T10:00:00
           val actual = d.toString
           assert(actual == "2016-12-10T1000")
         }
