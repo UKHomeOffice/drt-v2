@@ -81,6 +81,7 @@ object JSDateConversions {
       */
     def apply(dateString: String): SDateLike = new Date(dateString)
     def parse(dateString: String): SDateLike = new Date(dateString)
+    def stringToSDateLikeOption(dateString: String): Option[SDateLike] = Try(SDate(dateString)).toOption
 
     def midnightThisMorning(): SDateLike = {
       val d = new Date()

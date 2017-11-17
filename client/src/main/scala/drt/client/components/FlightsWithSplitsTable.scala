@@ -146,11 +146,17 @@ object FlightTableRow {
         val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
 
         def bestTime(f: ApiFlightWithSplits) = {
-          val flightDt = SDate.parse(f.apiFlight.SchDT)
-
-          if (f.apiFlight.PcpTime != 0) f.apiFlight.PcpTime else {
-            flightDt.millisSinceEpoch
+          val best = (
+            SDate.stringToSDateLikeOption(f.apiFlight.SchDT),
+            SDate.stringToSDateLikeOption(f.apiFlight.EstDT),
+            SDate.stringToSDateLikeOption(f.apiFlight.ActDT)
+          ) match {
+            case (Some(sd), None, None) => sd
+            case (_, Some(est), None) => est
+            case (_, _, Some(act)) => act
           }
+
+          best.millisSinceEpoch
         }
 
         val eta = bestTime(props.flightWithSplits)

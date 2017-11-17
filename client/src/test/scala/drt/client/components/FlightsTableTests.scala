@@ -85,7 +85,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Non-EEA")
               )),
               <.tbody(
-                <.tr(
+                <.tr(^.className := "",
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                   <.td(testFlight.Status),
@@ -126,7 +126,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Non-EEA")
               )),
               <.tbody(
-                <.tr(
+                <.tr(^.className := "",
                   <.td(<.span("herebecallback")),
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
@@ -176,7 +176,7 @@ object FlightsTableTests extends TestSuite {
                   <.th("Non-EEA")
                 )),
                 <.tbody(
-                  <.tr(
+                  <.tr(^.className := "",
                     <.td(testFlight.ICAO), <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
                     <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                     <.td(testFlight.Status),
@@ -249,7 +249,7 @@ object FlightsTableTests extends TestSuite {
                 <.th("Non-EEA")
               )),
               <.tbody(
-                <.tr(
+                <.tr(^.className := "",
                   <.td(testFlightT.ICAO),
                   <.td(testFlightT.Origin),
                   <.td(s"${testFlightT.Gate}/${testFlightT.Stand}"),
