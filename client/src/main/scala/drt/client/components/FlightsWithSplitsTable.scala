@@ -112,6 +112,20 @@ object FlightTableRow {
 
   case class RowState(hasChanged: Boolean)
 
+  def bestArrivalTime(f: Arrival) = {
+    val best = (
+      SDate.stringToSDateLikeOption(f.SchDT),
+      SDate.stringToSDateLikeOption(f.EstDT),
+      SDate.stringToSDateLikeOption(f.ActDT)
+    ) match {
+      case (Some(sd), None, None) => sd
+      case (_, Some(est), None) => est
+      case (_, _, Some(act)) => act
+    }
+
+    best.millisSinceEpoch
+  }
+
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .renderPS(($, props, state) => {
@@ -145,21 +159,8 @@ object FlightTableRow {
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
 
-        def bestTime(f: ApiFlightWithSplits) = {
-          val best = (
-            SDate.stringToSDateLikeOption(f.apiFlight.SchDT),
-            SDate.stringToSDateLikeOption(f.apiFlight.EstDT),
-            SDate.stringToSDateLikeOption(f.apiFlight.ActDT)
-          ) match {
-            case (Some(sd), None, None) => sd
-            case (_, Some(est), None) => est
-            case (_, _, Some(act)) => act
-          }
 
-          best.millisSinceEpoch
-        }
-
-        val eta = bestTime(props.flightWithSplits)
+        val eta = bestArrivalTime(props.flightWithSplits.apiFlight)
         val differenceFromScheduled = eta - SDate(props.flightWithSplits.apiFlight.SchDT).millisSinceEpoch
         val hourInMillis = 3600000
         val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
@@ -225,8 +226,3 @@ object ApiSplitsToSplitRatio {
 
   def splitsPaxTotal(splits: ApiSplits): Double = splits.splits.toSeq.map(_.paxCount).sum
 }
-
-
-
-
-
