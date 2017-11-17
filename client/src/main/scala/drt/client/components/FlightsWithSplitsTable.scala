@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.QueueName
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -144,6 +145,21 @@ object FlightTableRow {
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
 
+        def bestTime(f: ApiFlightWithSplits) = {
+          val flightDt = SDate.parse(f.apiFlight.SchDT)
+
+          if (f.apiFlight.PcpTime != 0) f.apiFlight.PcpTime else {
+            flightDt.millisSinceEpoch
+          }
+        }
+
+        val eta = bestTime(props.flightWithSplits)
+        val differenceFromScheduled = eta - SDate(props.flightWithSplits.apiFlight.SchDT).millisSinceEpoch
+        val hourInMillis = 3600000
+        val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
+          "danger"
+        else ""
+
         val queueNames = DashboardComponent.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = flightWithSplits.bestSplits.map(splits => {
           val ratioSplits = ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, props.bestPax(flight))
@@ -154,7 +170,7 @@ object FlightTableRow {
                 .toMap
             )
         }).getOrElse(Map())
-        <.tr(^.key := flight.uniqueId.toString,
+        <.tr(^.key := flight.uniqueId.toString, ^.className := offScheduleClass,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
           <.td(^.key := flight.uniqueId.toString + "-flightNo", allCodes.mkString(" - ")),
