@@ -11,7 +11,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import scala.collection.immutable
 import scala.collection.immutable.Seq
 
-object DashboardComponent {
+object DashboardTerminalSummary {
 
   case class DashboardSummary(
                                startTime: MillisSinceEpoch,
