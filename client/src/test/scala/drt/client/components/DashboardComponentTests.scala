@@ -7,7 +7,7 @@ import utest._
 
 object DashboardComponentTests extends TestSuite {
 
-  import DashboardComponent._
+  import DashboardTerminalSummary._
 
 
   def tests = TestSuite {
@@ -88,28 +88,28 @@ object DashboardComponentTests extends TestSuite {
 
       "given 13:45 I should get back 13:45" - {
         val time = SDate("2017-11-31T13:45")
-        val result = DashboardComponent.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time)
         val expected = SDate("2017-11-31T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:46 I should get back 13:45" - {
         val time = SDate("2017-11-31T13:46")
-        val result = DashboardComponent.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time)
         val expected = SDate("2017-11-31T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:52 I should get back 13:45" - {
         val time = SDate("2017-11-31T13:52")
-        val result = DashboardComponent.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time)
         val expected = SDate("2017-11-31T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:02 I should get back 13:00" - {
         val time = SDate("2017-11-31T13:02")
-        val result = DashboardComponent.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time)
         val expected = SDate("2017-11-31T13:00")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
@@ -124,7 +124,7 @@ object DashboardComponentTests extends TestSuite {
         )
 
         val expected = Map(Queues.EeaDesk -> 200)
-        val result = DashboardComponent.queueTotals(aggSplits)
+        val result = DashboardTerminalSummary.queueTotals(aggSplits)
 
         assert(result == expected)
       }
@@ -136,7 +136,7 @@ object DashboardComponentTests extends TestSuite {
         )
 
         val expected = Map(Queues.EeaDesk -> 200, Queues.EGate -> 100)
-        val result = DashboardComponent.queueTotals(aggSplits)
+        val result = DashboardTerminalSummary.queueTotals(aggSplits)
 
         assert(result == expected)
       }
@@ -154,7 +154,7 @@ object DashboardComponentTests extends TestSuite {
       val flights = List(flight1, flight2, flight3, flight4, flight5, flight6)
 
       val start = SDate("2017-11-01T09:45:00")
-      val result = DashboardComponent.groupFlightsByHour(flights, start)
+      val result = DashboardTerminalSummary.groupFlightsByHour(flights, start)
 
 
       val expected = List(
@@ -177,7 +177,7 @@ object DashboardComponentTests extends TestSuite {
         CrunchMinute("T1", Queues.EeaDesk, startDate.addMinutes(45).millisSinceEpoch, 20, 40, 10, 10, Option(10), None, None)
       )
 
-      val result = DashboardComponent.pcpLowest(cms)
+      val result = DashboardTerminalSummary.pcpLowest(cms)
 
       assert(result == lowestMinute)
     }
@@ -192,7 +192,7 @@ object DashboardComponentTests extends TestSuite {
         CrunchMinute("T1", Queues.EeaDesk, startDate.addMinutes(45).millisSinceEpoch, 20, 40, 10, 10, Option(10), None, None)
       )
 
-      val result = DashboardComponent.pcpHighest(cms)
+      val result = DashboardTerminalSummary.pcpHighest(cms)
 
       assert(result == highestMinute)
     }

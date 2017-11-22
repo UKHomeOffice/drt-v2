@@ -19,46 +19,47 @@ object TerminalsDashboardPage {
 
   val component = ScalaComponent.builder[Props]("TerminalsDashboard")
     .render_P(p => {
-      val currentPeriodStart = DashboardComponent.windowStart(SDate.now())
-      val in3hours = currentPeriodStart.addHours(3)
-      val in6hours = currentPeriodStart.addHours(6)
-      val in9hours = currentPeriodStart.addHours(9)
-
-      def displayPeriodStart = p.dashboardPage.startTime
-        .map(time => {
-          val today = currentPeriodStart.toISODateOnly
-          DashboardComponent.windowStart(SDate(s"$today $time"))
-        })
-        .getOrElse(currentPeriodStart)
-
-      val displayPeriodEnd = displayPeriodStart.addHours(3)
-
-      def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardComponent.flightPcpInPeriod(flight, displayPeriodStart, displayPeriodEnd)
-
-      def minuteWithinPeriod(cm: CrunchMinute) = cm.minute >= displayPeriodStart.millisSinceEpoch && cm.minute < displayPeriodEnd.millisSinceEpoch
 
       val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig.map(ac => (ac.queueOrder, ac.terminalNames)))
       val flightsAndMinutes = SPACircuit.connect(_.crunchStatePot)
-
-      val next3hours = if (displayPeriodStart.prettyTime() == currentPeriodStart.prettyTime()) "active" else ""
-      val hours3to6 = if (displayPeriodStart.prettyTime() == in3hours.prettyTime()) "active" else ""
-      val hours6to9 = if (displayPeriodStart.prettyTime() == in6hours.prettyTime()) "active" else ""
-
-      def switchDashboardPeriod(time: String) = p.router.set(p.dashboardPage.copy(startTime = Option(time)))
-
-      def periodNext3 = (_: ReactEventFromInput) => switchDashboardPeriod(currentPeriodStart.prettyTime())
-
-      def period3to6 = (_: ReactEventFromInput) => switchDashboardPeriod(in3hours.prettyTime())
-
-      def period6to9 = (_: ReactEventFromInput) => switchDashboardPeriod(in6hours.prettyTime())
-
 
       portCodeQueueOrderTerminals { portMP =>
         <.div(
           portMP().renderReady(portConfig => {
             val (queueOrder, terminals) = portConfig
             val bestPaxFN = ArrivalHelper.bestPax _
-            flightsAndMinutes(flightsAndMinutesMP =>
+            flightsAndMinutes(flightsAndMinutesMP => {
+              val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
+              val in3hours = currentPeriodStart.addHours(3)
+              val in6hours = currentPeriodStart.addHours(6)
+              val in9hours = currentPeriodStart.addHours(9)
+
+              def displayPeriodStart = p.dashboardPage.startTime
+                .map(time => {
+                  val today = currentPeriodStart.toISODateOnly
+                  DashboardTerminalSummary.windowStart(SDate(s"$today $time"))
+                })
+                .getOrElse(currentPeriodStart)
+
+              val displayPeriodEnd = displayPeriodStart.addHours(3)
+
+              def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardTerminalSummary.flightPcpInPeriod(flight, displayPeriodStart, displayPeriodEnd)
+
+              def minuteWithinPeriod(cm: CrunchMinute) = cm.minute >= displayPeriodStart.millisSinceEpoch && cm.minute < displayPeriodEnd.millisSinceEpoch
+
+
+              val next3hours = if (displayPeriodStart.prettyTime() == currentPeriodStart.prettyTime()) "active" else ""
+              val hours3to6 = if (displayPeriodStart.prettyTime() == in3hours.prettyTime()) "active" else ""
+              val hours6to9 = if (displayPeriodStart.prettyTime() == in6hours.prettyTime()) "active" else ""
+
+              def switchDashboardPeriod(time: String) = p.router.set(p.dashboardPage.copy(startTime = Option(time)))
+
+              def periodNext3 = (_: ReactEventFromInput) => switchDashboardPeriod(currentPeriodStart.prettyTime())
+
+              def period3to6 = (_: ReactEventFromInput) => switchDashboardPeriod(in3hours.prettyTime())
+
+              def period6to9 = (_: ReactEventFromInput) => switchDashboardPeriod(in6hours.prettyTime())
+
               <.div(
                 <.div(^.className := "form-group row",
                   <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
@@ -72,17 +73,17 @@ object TerminalsDashboardPage {
                       val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
                         .flights
                         .toList
-                          .filter(_.apiFlight.Terminal == terminalName)
+                        .filter(_.apiFlight.Terminal == terminalName)
                         .filter(flightWithinPeriod)
                       val minutesInTerminal =
                         crunchState.crunchMinutes.toList.filter(minuteWithinPeriod).filter(_.terminalName == terminalName)
 
-                      DashboardComponent(DashboardComponent.Props(flightsInTerminal, minutesInTerminal, terminalName, queueOrder, displayPeriodStart, displayPeriodEnd))
+                      DashboardTerminalSummary(DashboardTerminalSummary.Props(flightsInTerminal, minutesInTerminal, terminalName, queueOrder, displayPeriodStart, displayPeriodEnd))
                     })
                   )
                 }.toTagMod
               )
-            )
+            })
           }))
       }
     })

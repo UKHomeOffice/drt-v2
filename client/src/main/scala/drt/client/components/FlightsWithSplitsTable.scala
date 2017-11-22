@@ -37,7 +37,7 @@ object FlightsWithSplitsTable {
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
 
-      val queueNames = DashboardComponent.queuesFromPaxTypeAndQueue(props.queueOrder)
+      val queueNames = DashboardTerminalSummary.queuesFromPaxTypeAndQueue(props.queueOrder)
       Try {
         if (sortedFlights.nonEmpty)
           <.div(
@@ -118,6 +118,7 @@ object FlightTableRow {
       case (Some(sd), None, None) => sd
       case (_, Some(est), None) => est
       case (_, _, Some(act)) => act
+      case _ => throw new Exception(s"Flight has no scheduled date: $f")
     }
 
     best.millisSinceEpoch
@@ -134,8 +135,7 @@ object FlightTableRow {
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
       Try {
-        def sourceDisplayName(splits: ApiSplits) =
-          splits match {
+        def sourceDisplayName(splits: ApiSplits) = splits match {
             case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
             case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
             case _ => "Port Average"
@@ -164,7 +164,7 @@ object FlightTableRow {
           "danger"
         else ""
 
-        val queueNames = DashboardComponent.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
+        val queueNames = DashboardTerminalSummary.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = paxPerQueueUsingSplitRatio(flightWithSplits).getOrElse(Map())
         <.tr(^.key := flight.uniqueId.toString, ^.className := offScheduleClass,
           hasChangedStyle,
@@ -194,7 +194,7 @@ object FlightTableRow {
   def paxPerQueueUsingSplitRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
     flightWithSplits.bestSplits.map(splits => {
       val ratioSplits = ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flightWithSplits.apiFlight))
-      val pax = DashboardComponent
+      val pax = DashboardTerminalSummary
         .queueTotals(
           ratioSplits.splits
             .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
