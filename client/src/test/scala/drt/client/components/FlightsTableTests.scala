@@ -101,7 +101,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(0)))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack)),
+            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack)),
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
@@ -146,7 +146,7 @@ object FlightsTableTests extends TestSuite {
           //            .renderStatic(<.span("herebecallback")).build
           val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack.toList)),
             staticComponent(expected)())
         }
 
@@ -196,7 +196,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = (port) => originMapperComponent(port)
-            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack))
+            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -270,7 +270,7 @@ object FlightsTableTests extends TestSuite {
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = (s) => s)(paxComponent)(
-              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), ArrivalHelper.bestPax, PaxTypesAndQueues.inOrderSansFastTrack)),
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), PaxTypesAndQueues.inOrderSansFastTrack)),
             staticComponent(expected)())
 
         }

@@ -62,7 +62,7 @@ object FlightsTable {
         props.flightsWithSplitsPot.renderPending((t) => ViewTools.spinner),
         props.flightsWithSplitsPot.renderEmpty(ViewTools.spinner),
         props.flightsWithSplitsPot.renderReady(flights => {
-            FlightsWithSplitsTable.ArrivalsTable()()(FlightsWithSplitsTable.Props(flights, props.bestPax, PaxTypesAndQueues.inOrderSansFastTrack))
+            FlightsWithSplitsTable.ArrivalsTable()()(FlightsWithSplitsTable.Props(flights, PaxTypesAndQueues.inOrderSansFastTrack))
         })
       )
     }).build

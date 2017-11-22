@@ -19,7 +19,7 @@ object FlightComponents {
     airportConfigRCP(acPot => {
       <.div(
         acPot().renderReady(ac => {
-          val paxToDisplay: Int = bestPaxToDisplay(flight, apiExTransPax, ac.portCode)
+          val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
           val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
           val paxClass = paxDisplayClass(flight, apiPax, paxToDisplay)
           val maxCapLine = maxCapacityLine(maxFlightPax, flight)
