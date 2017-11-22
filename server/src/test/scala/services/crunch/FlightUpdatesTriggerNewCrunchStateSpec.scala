@@ -13,6 +13,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 
 class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
@@ -41,10 +42,10 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     )
 
     crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
     crunch.liveArrivalsInput.offer(inputFlightsAfter)
-    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
       case PortState(flights, _, _) => flights.values.map(_.copy(lastUpdated = None))
     }
 
@@ -77,12 +78,12 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     )
 
     crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
 
     crunch.liveArrivalsInput.offer(inputFlightsBefore)
     crunch.liveArrivalsInput.offer(inputFlightsAfter)
 
-    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
       case PortState(flights, _, _) => flights.values.map(_.copy(lastUpdated = None))
     }
 
