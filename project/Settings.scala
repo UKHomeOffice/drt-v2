@@ -36,8 +36,7 @@ object Settings {
     val akkaVersion = "2.4.16"
 
     val specs2Version = "3.7"
-    val react = "15.1.0"
-    val reactVersion = "15.5.4"
+    val react = "15.5.1"
 
     val jQuery = "1.11.1"
     val bootstrap = "3.3.6"
@@ -60,11 +59,10 @@ object Settings {
   ))
 
   val clientNpmDependences = Seq(
-    "react" -> "15.5.1",
-    "react-dom" -> "15.5.1",
-    "react-addons-test-utils" -> "15.5.1",
+    "react" -> versions.react,
+    "react-dom" -> versions.react,
+    "react-addons-test-utils" -> versions.react,
     "log4javascript" -> "1.4.15",
-    "jquery" -> jQuery,
     "bootstrap" -> bootstrap
   )
 
