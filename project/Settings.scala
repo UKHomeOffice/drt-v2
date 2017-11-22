@@ -63,7 +63,6 @@ object Settings {
     "react" -> "15.5.1",
     "react-dom" -> "15.5.1",
     "react-addons-test-utils" -> "15.5.1",
-    "@terebentina/react-popover" -> "github:terebentina/react-popover",
     "log4javascript" -> "1.4.15",
     "jquery" -> jQuery,
     "bootstrap" -> bootstrap
