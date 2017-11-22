@@ -109,7 +109,6 @@ object TerminalContentComponent {
       splitsGraphComponentColoured)(paxComp(843))
 
     def render(props: Props, state: State): TagOf[Div] = {
-      val bestPax = ArrivalHelper.bestPax _
       val queueOrder = props.airportConfig.queueOrder
 
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
@@ -161,7 +160,7 @@ object TerminalContentComponent {
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
                 val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, props.timeRangeHours, terminalFlights.toList)
 
-                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, bestPax, queueOrder))
+                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder))
               }))
             } else ""
           }),

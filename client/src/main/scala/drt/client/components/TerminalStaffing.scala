@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.data.Pot
-import diode.react.ModelProxy
 import drt.client.actions.Actions._
 import drt.client.services.FixedPoints._
 import drt.client.services.JSDateConversions._

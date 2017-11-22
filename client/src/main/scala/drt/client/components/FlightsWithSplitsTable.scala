@@ -19,7 +19,7 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = (Arrival) => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], bestPax: (Arrival) => Int, queueOrder: List[PaxTypeAndQueue])
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: List[PaxTypeAndQueue])
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.map(_.lastUpdated)
@@ -32,7 +32,6 @@ object FlightsWithSplitsTable {
     .renderPS((_$, props, state) => {
 
       val flightsWithSplits = props.flightsWithSplits
-      val bestPax = props.bestPax
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
@@ -69,7 +68,6 @@ object FlightsWithSplitsTable {
                       originMapper = originMapper,
                       paxComponent = paxComponent,
                       splitsGraphComponent = splitsGraphComponent,
-                      bestPax = bestPax,
                       splitsQueueOrder = props.queueOrder
                     ))
                 }.toTagMod)))
@@ -103,8 +101,7 @@ object FlightTableRow {
                    originMapper: OriginMapperF = (portCode) => portCode,
                    paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
-                   splitsQueueOrder: List[PaxTypeAndQueue],
-                   bestPax: (Arrival) => Int
+                   splitsQueueOrder: List[PaxTypeAndQueue]
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => props.flightWithSplits.lastUpdated)
@@ -168,15 +165,7 @@ object FlightTableRow {
         else ""
 
         val queueNames = DashboardComponent.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
-        val queuePax: Map[QueueName, Int] = flightWithSplits.bestSplits.map(splits => {
-          val ratioSplits = ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, props.bestPax(flight))
-          DashboardComponent
-            .queueTotals(
-              ratioSplits.splits
-                .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
-                .toMap
-            )
-        }).getOrElse(Map())
+        val queuePax: Map[QueueName, Int] = paxPerQueueUsingSplitRatio(flightWithSplits).getOrElse(Map())
         <.tr(^.key := flight.uniqueId.toString, ^.className := offScheduleClass,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -189,7 +178,7 @@ object FlightTableRow {
           <.td(^.key := flight.uniqueId.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
           <.td(^.key := flight.uniqueId.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.uniqueId.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.uniqueId.toString + "-pcptimefrom", pcpTimeRange(flight, props.bestPax)),
+          <.td(^.key := flight.uniqueId.toString + "-pcptimefrom", pcpTimeRange(flight, ArrivalHelper.bestPax)),
           <.td(^.key := flight.uniqueId.toString + "-actpax", props.paxComponent(flight, apiSplits)),
           queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}")).toTagMod
         )
@@ -201,28 +190,49 @@ object FlightTableRow {
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  def paxPerQueueUsingSplitRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
+    flightWithSplits.bestSplits.map(splits => {
+      val ratioSplits = ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flightWithSplits.apiFlight))
+      val pax = DashboardComponent
+        .queueTotals(
+          ratioSplits.splits
+            .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
+            .toMap
+        )
+      pax
+    })
+  }
 }
 
 object ApiSplitsToSplitRatio {
 
-  def applyPaxSplitsToFlightPax(splits: ApiSplits, totalPax: Int): ApiSplits = {
-    val ratioSplits = splits.copy(
+  def applyPaxSplitsToFlightPax(apiSplits: ApiSplits, totalPax: Int): ApiSplits = {
+    val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)
+    val splitsAppliedAsRatio = splitsSansTransfer.map(s => {
+      val total = splitsPaxTotal(splitsSansTransfer)
+      val paxCountRatio = applyRatio(s, totalPax, total)
+      s.copy(paxCount = paxCountRatio)
+    })
+    apiSplits.copy(
       splitStyle = SplitStyle("Ratio"),
-      splits = splits.splits.map(s => s.copy(paxCount = applyRatio(s, totalPax, splitsPaxTotal(splits))))
+      splits = fudgeRoundingError(splitsAppliedAsRatio, totalPax - splitsPaxTotal(splitsAppliedAsRatio))
     )
-
-    fudgeRoundingError(ratioSplits, totalPax - splitsPaxTotal(ratioSplits))
   }
 
   def applyRatio(split: ApiPaxTypeAndQueueCount, totalPax: Int, splitsTotal: Double): Long =
     Math.round(totalPax * (split.paxCount / splitsTotal))
 
-  def fudgeRoundingError(ratioSplits: ApiSplits, diff: Double) = {
-    val sortedList = ratioSplits.splits.toList.sortBy(_.paxCount)
-    val fudged = (sortedList.head.copy(paxCount = sortedList.head.paxCount + diff) :: sortedList.tail).toSet
-
-    ratioSplits.copy(splits = fudged)
+  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double) =
+    splits
+    .toList
+    .sortBy(_.paxCount)
+    .reverse match {
+    case head :: tail =>
+      (head.copy(paxCount = head.paxCount + diff) :: tail).toSet
+    case _ =>
+      splits
   }
 
-  def splitsPaxTotal(splits: ApiSplits): Double = splits.splits.toSeq.map(_.paxCount).sum
+  def splitsPaxTotal(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toSeq.map(_.paxCount).sum
 }
