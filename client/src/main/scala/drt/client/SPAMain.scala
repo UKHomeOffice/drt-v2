@@ -6,13 +6,13 @@ import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalP
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import japgolly.scalajs.react.{Callback, WebpackRequire}
+import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel, JSImport}
+import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scalacss.ProdDefaults._
 
 @JSExportTopLevel("SPAMain")
@@ -97,15 +97,8 @@ object SPAMain extends js.JSApp {
 
   def pathToThisApp: String = dom.document.location.pathname
 
-  def require(): Unit = {
-    WebpackRequire.React
-    WebpackRequire.ReactDOM
-    ()
-  }
-
   @JSExport
   def main(): Unit = {
-    require()
     log.warn("Application starting")
 
     import scalacss.ScalaCssReact._
@@ -117,16 +110,4 @@ object SPAMain extends js.JSApp {
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     router().renderIntoDOM(dom.document.getElementById("root"))
   }
-}
-
-object WebpackBootstrapRequire {
-
-  @JSImport("expose-loader?jQuery!jquery", JSImport.Namespace)
-  @js.native
-  object jQuery extends js.Any
-
-  @JSImport("expose-loader?Bootstrap!bootstrap", JSImport.Namespace)
-  @js.native
-  object Bootstrap extends js.Any
-
 }

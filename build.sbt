@@ -40,12 +40,12 @@ lazy val client: Project = (project in file("client"))
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
     requiresDOM := true,
-    enableReloadWorkflow := true,
-      scalaJSStage in Test := FastOptStage,
+//    enableReloadWorkflow := true,
+    scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
-    enableReloadWorkflow := true,
+//    enableReloadWorkflow := true,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
     useYarn := true,
@@ -60,9 +60,12 @@ lazy val client: Project = (project in file("client"))
     resolvers += Resolver.defaultLocal,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
-    testFrameworks += new TestFramework("utest.runner.Framework")
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    scalaJSUseMainModuleInitializer := true
   )
-  .enablePlugins(ScalaJSBundlerPlugin, ScalaJSWeb)
+  .enablePlugins(ScalaJSPlugin)
+  .enablePlugins(ScalaJSBundlerPlugin)
+  .enablePlugins(ScalaJSWeb)
   .dependsOn(sharedJS)
 
 // Client projects (just one in this case)
@@ -70,7 +73,8 @@ lazy val clients = Seq(client)
 
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
-  .enablePlugins(PlayScala, WebScalaJSBundlerPlugin)
+  .enablePlugins(PlayScala)
+  .enablePlugins(WebScalaJSBundlerPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
   name := "drt",
@@ -121,10 +125,10 @@ lazy val server = (project in file("server"))
 lazy val ReleaseCmd = Command.command("release") {
   state =>
     "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
-//      "client/clean" ::
-//      "server/clean" ::
-//      "client/test" ::
-//      "server/test" ::
+      //      "client/clean" ::
+      //      "server/clean" ::
+      //      "client/test" ::
+      //      "server/test" ::
       "server/dist" ::
       "set elideOptions in client := Seq()" ::
       state
