@@ -25,7 +25,7 @@ object Settings {
     val scala = "2.11.8"
     val scalaDom = "0.9.2"
     val scalajsReact = "1.1.1"
-    val scalajsReactComponents = "0.5.0"
+    val scalajsReactComponents = "0.8.0"
     val scalaCSS = "0.5.3"
     val log4js = "1.4.10"
     val autowire = "0.2.6"
@@ -113,7 +113,7 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "test" % versions.scalajsReact % Test,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    //    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
+    "com.olvind" %%% "scalajs-react-components" % versions.scalajsReactComponents,
     "io.suzaku" %%% "diode" % versions.diode,
     //    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
     "io.suzaku" %%% "diode-react" % versions.diode,
