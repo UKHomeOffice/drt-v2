@@ -84,18 +84,6 @@ object DashboardTerminalSummary {
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
     start.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= end.millisSinceEpoch
 
-  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = splits
-    .foldLeft(Map[QueueName, Int]())((map, ptqc) => {
-      ptqc match {
-        case (PaxTypeAndQueue(_, q), pax) =>
-          map + (q -> (map.getOrElse(q, 0) + pax))
-      }
-    })
-
-  def queuesFromPaxTypeAndQueue(ptq: List[PaxTypeAndQueue]): Seq[String] = ptq.map {
-    case PaxTypeAndQueue(_, q) => q
-  }.distinct
-
   def windowStart(time: SDateLike): SDateLike = {
 
     val minutes = (time.getMinutes() / 15) * 15
@@ -143,8 +131,7 @@ object DashboardTerminalSummary {
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
 
-
-        val queueNames = queuesFromPaxTypeAndQueue(p.queues)
+        val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(p.queues)
 
         val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
         val queueTotals = totalsByQueue(summary)

@@ -37,7 +37,7 @@ object FlightsWithSplitsTable {
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
 
-      val queueNames = DashboardTerminalSummary.queuesFromPaxTypeAndQueue(props.queueOrder)
+      val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.queueOrder)
       Try {
         if (sortedFlights.nonEmpty)
           <.div(
@@ -164,8 +164,8 @@ object FlightTableRow {
           "danger"
         else ""
 
-        val queueNames = DashboardTerminalSummary.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
-        val queuePax: Map[QueueName, Int] = paxPerQueueUsingSplitRatio(flightWithSplits).getOrElse(Map())
+        val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
+        val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingSplitRatio(flightWithSplits).getOrElse(Map())
         <.tr(^.key := flight.uniqueId.toString, ^.className := offScheduleClass,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
@@ -190,49 +190,5 @@ object FlightTableRow {
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
-
-  def paxPerQueueUsingSplitRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
-    flightWithSplits.bestSplits.map(splits => {
-      val ratioSplits = ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flightWithSplits.apiFlight))
-      val pax = DashboardTerminalSummary
-        .queueTotals(
-          ratioSplits.splits
-            .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
-            .toMap
-        )
-      pax
-    })
-  }
 }
 
-object ApiSplitsToSplitRatio {
-
-  def applyPaxSplitsToFlightPax(apiSplits: ApiSplits, totalPax: Int): ApiSplits = {
-    val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)
-    val splitsAppliedAsRatio = splitsSansTransfer.map(s => {
-      val total = splitsPaxTotal(splitsSansTransfer)
-      val paxCountRatio = applyRatio(s, totalPax, total)
-      s.copy(paxCount = paxCountRatio)
-    })
-    apiSplits.copy(
-      splitStyle = SplitStyle("Ratio"),
-      splits = fudgeRoundingError(splitsAppliedAsRatio, totalPax - splitsPaxTotal(splitsAppliedAsRatio))
-    )
-  }
-
-  def applyRatio(split: ApiPaxTypeAndQueueCount, totalPax: Int, splitsTotal: Double): Long =
-    Math.round(totalPax * (split.paxCount / splitsTotal))
-
-  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double) =
-    splits
-    .toList
-    .sortBy(_.paxCount)
-    .reverse match {
-    case head :: tail =>
-      (head.copy(paxCount = head.paxCount + diff) :: tail).toSet
-    case _ =>
-      splits
-  }
-
-  def splitsPaxTotal(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toSeq.map(_.paxCount).sum
-}
