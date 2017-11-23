@@ -165,7 +165,7 @@ object FlightTableRow {
         else ""
 
         val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
-        val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingSplitRatio(flightWithSplits).getOrElse(Map())
+        val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
         <.tr(^.key := flight.uniqueId.toString, ^.className := offScheduleClass,
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,

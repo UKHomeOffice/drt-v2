@@ -418,16 +418,17 @@ object ApiSplitsToSplitRatio {
       }
     })
 
-  def paxPerQueueUsingSplitRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
-    flightWithSplits.bestSplits.map(splits => {
-      queueTotals(
-        ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flightWithSplits.apiFlight))
-          .splits
-          .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
-          .toMap
-      )
-    })
+  def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
+    flightWithSplits.bestSplits.map(s => flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits.apiFlight))
   }
+
+  def flightPaxPerQueueUsingSplitsAsRatio(splits: ApiSplits, flight: Arrival): Map[QueueName, Int] = queueTotals(
+    ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flight))
+      .splits
+      .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
+      .toMap
+  )
+
 
   def applyPaxSplitsToFlightPax(apiSplits: ApiSplits, totalPax: Int): ApiSplits = {
     val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)
