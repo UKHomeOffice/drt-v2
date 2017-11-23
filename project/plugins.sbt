@@ -11,10 +11,6 @@ libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.19")
 
-//bundles npm packages - should ultimately replace the /bundle(s)/ dirs and the
-// jsDependencies from webjars
-//addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.6.0")
-
 addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.9.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.2.2")
