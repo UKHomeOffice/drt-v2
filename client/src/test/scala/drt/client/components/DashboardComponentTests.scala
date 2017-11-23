@@ -124,7 +124,7 @@ object DashboardComponentTests extends TestSuite {
         )
 
         val expected = Map(Queues.EeaDesk -> 200)
-        val result = DashboardTerminalSummary.queueTotals(aggSplits)
+        val result = ApiSplitsToSplitRatio.queueTotals(aggSplits)
 
         assert(result == expected)
       }
@@ -136,7 +136,7 @@ object DashboardComponentTests extends TestSuite {
         )
 
         val expected = Map(Queues.EeaDesk -> 200, Queues.EGate -> 100)
-        val result = DashboardTerminalSummary.queueTotals(aggSplits)
+        val result = ApiSplitsToSplitRatio.queueTotals(aggSplits)
 
         assert(result == expected)
       }

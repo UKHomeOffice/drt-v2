@@ -62,8 +62,8 @@ object CSVData {
     val headings = "," + sortedDays.map {
       case (day, _) =>
         f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - available," +
-        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - required," +
-        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - difference"
+          f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - required," +
+          f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - difference"
     }.mkString(",")
 
     val data = byTimeSlot.map(row => {
@@ -130,11 +130,12 @@ object CSVData {
         s.queueType == paxTypeAndQueue.queueType && s.passengerType == paxTypeAndQueue.passengerType
       )).map(ptqc => Math.round(ptqc.paxCount).toString).getOrElse("")
 
-    val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
-      "API EEA Machine Readable to EGate,API EEA Machine Readable to Desk,API EEA Non Machine Readable to Desk," +
-      "API Visa National to Desk, API Non-visa National to Desk,API Visa National to Fast-Track,API Non-visa National to Fast Track," +
-      "Historic EEA Machine Readable to EGate,Historic EEA Machine Readable to Desk,Historic EEA Non Machine Readable to Desk," +
-      "Historic Visa National to Desk, Historic Non-visa National to Desk,Historic Visa National to Fast-Track,Historic Non-visa National to Fast Track"
+    val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
+    val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
+      headingsForSplitSource(queueNames, "API") + "," +
+      headingsForSplitSource(queueNames, "Historical") + "," +
+      headingsForSplitSource(queueNames, "Terminal Average")
+
     val csvData = flightsWithSplits.sortBy(_.apiFlight.PcpTime).map(fws => {
 
       val flightCsvFields = List(
@@ -149,25 +150,29 @@ object CSVData {
         fws.apiFlight.EstChoxDT,
         fws.apiFlight.ActChoxDT,
         SDate(fws.apiFlight.PcpTime).toISOString(),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)),
-        splitFromFlightWithSplits(fws, SplitRatiosNs.SplitSources.Historical, PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack))
-      )
+        fws.apiFlight.ActPax,
+        ArrivalHelper.bestPax(fws.apiFlight)
+      ) ++
+        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage).getOrElse(q, 0)}") ++
+        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, 0)}") ++
+        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, 0)}")
 
       flightCsvFields
     }).map(_.mkString(",")).mkString("\n")
 
     headings + "\n" + csvData
+  }
+
+  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[QueueName, Int] =
+    fws
+      .splits
+      .find(_.source == splitSource)
+      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
+      .getOrElse(Map())
+
+  def headingsForSplitSource(queueNames: Seq[String], source: String) = {
+    queueNames.map(
+      q => s"$source ${Queues.queueDisplayNames(q)}"
+    ).mkString(",")
   }
 }
