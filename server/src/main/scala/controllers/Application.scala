@@ -282,16 +282,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def actorSystem: ActorSystem = system
 
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
-        if (isHistoricDate(day)) {
-          crunchStateForEndOfDay(day)
-        } else if (day < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
-          log.error(s"Trying to load live CrunchState from Forecast Actor.")
-          Future(None)
-        } else {
-          crunchStateForDayInForecast(day)
-        }
-      }
+      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateForDayInPastOrFuture(day)
 
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
         crunchStateAtPointInTime(pointInTime)
@@ -365,6 +356,16 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
+  def crunchStateForDayInPastOrFuture(day: MillisSinceEpoch): Future[Option[CrunchState]] =
+    if (isHistoricDate(day)) {
+      crunchStateForEndOfDay(day)
+    } else if (day < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
+      log.error(s"Trying to load live CrunchState from Forecast Actor.")
+      Future(None)
+    } else {
+      crunchStateForDayInForecast(day)
+    }
+
   def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = getLocalNextMidnight(SDate(day)).millisSinceEpoch
@@ -428,7 +429,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def getDesksAndQueuesForDayCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
 
-    val crunchStateFuture: Future[Option[CrunchState]] = crunchStateForEndOfDay(pointInTime.toLong)
+    val crunchStateFuture: Future[Option[CrunchState]] = crunchStateForDayInPastOrFuture(pointInTime.toLong)
 
     desksToCSV(pointInTime, terminalName, crunchStateFuture)
   }
@@ -523,7 +524,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def getFlightsWithSplitsForDayCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     val potMilliDate = MilliDate(pointInTime.toLong)
-    val crunchStateFuture = crunchStateForEndOfDay(pointInTime.toLong)
+    val crunchStateFuture = crunchStateForDayInPastOrFuture(pointInTime.toLong)
 
     flightsCSVFromCrunchState(terminalName, potMilliDate, crunchStateFuture)
   }
