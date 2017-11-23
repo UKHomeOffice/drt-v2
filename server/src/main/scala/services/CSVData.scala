@@ -153,9 +153,9 @@ object CSVData {
         fws.apiFlight.ActPax,
         ArrivalHelper.bestPax(fws.apiFlight)
       ) ++
-        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage).getOrElse(q, 0)}") ++
-        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, 0)}") ++
-        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, 0)}")
+        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage).getOrElse(q, "")}") ++
+        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, "")}") ++
+        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
 
       flightCsvFields
     }).map(_.mkString(",")).mkString("\n")
