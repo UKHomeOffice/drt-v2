@@ -1,6 +1,7 @@
 package drt.client.components
 
 import drt.client.services.SPACircuit
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
@@ -9,19 +10,20 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(maxFlightPax: Int = 853)(flight: Arrival, apiSplits: ApiSplits): TagMod = {
+  def paxComp(maxFlightPax: Int = 853)(flightWithSplits: ApiFlightWithSplits): TagMod = {
 
-    val airportConfigRCP = SPACircuit.connect(_.airportConfig)
-
+    val flight = flightWithSplits.apiFlight
+    val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
     val apiPax: Int = ApiSplits.totalPax(apiSplits.splits).toInt
     val apiExTransPax: Int = ApiSplits.totalExcludingTransferPax(apiSplits.splits).toInt
 
+    val airportConfigRCP = SPACircuit.connect(_.airportConfig)
     airportConfigRCP(acPot => {
       <.div(
         acPot().renderReady(ac => {
           val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
           val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
-          val paxClass = paxDisplayClass(flight, apiPax, paxToDisplay)
+          val paxClass = paxClassFromSplits(flightWithSplits)
           val maxCapLine = maxCapacityLine(maxFlightPax, flight)
 
           <.div(
@@ -35,6 +37,14 @@ object FlightComponents {
     })
   }
 
+  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
+    flightWithSplits.bestSplits match {
+      case Some(ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _)) => "pax-api"
+      case Some(ApiSplits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
+      case _ => "pax-unknown"
+    }
+  }
+
   def bestPaxToDisplay(flight: Arrival, apiExTransPax: Int, portCode: String) = {
     val bestNonApiPax = ArrivalHelper.bestPax(flight)
     val apiDiffTrustThreshold = 0.2
@@ -42,16 +52,6 @@ object FlightComponents {
     val trustApi = absPercentageDifference <= apiDiffTrustThreshold
     val paxToDisplay = if (apiExTransPax > 0 && trustApi) apiExTransPax else bestNonApiPax
     paxToDisplay
-  }
-
-  def paxDisplayClass(flight: Arrival, apiPax: Int, paxToDisplay: Int) = {
-    if (apiPax > 0) {
-      "pax-api"
-    } else if (paxToDisplay == flight.ActPax) {
-      "pax-portfeed"
-    } else {
-      "pax-unknown"
-    }
   }
 
   def paxComponentTitle(flight: Arrival, apiPax: Int, apiIncTrans: Int): String = {
