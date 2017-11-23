@@ -28,7 +28,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   )(paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
+                   )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
     .renderPS((_$, props, state) => {
 
       val flightsWithSplits = props.flightsWithSplits
@@ -99,7 +99,7 @@ object FlightTableRow {
                    idx: Int,
                    timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
-                   paxComponent: (Arrival, ApiSplits) => TagMod = (f, _) => f.ActPax,
+                   paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: List[PaxTypeAndQueue]
                   )
@@ -154,8 +154,6 @@ object FlightTableRow {
         val bestSplits: Set[ApiSplits] = flightWithSplits.bestSplits.toSet
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
-
 
         val eta = bestArrivalTime(props.flightWithSplits.apiFlight)
         val differenceFromScheduled = eta - SDate(props.flightWithSplits.apiFlight.SchDT).millisSinceEpoch
@@ -179,7 +177,7 @@ object FlightTableRow {
           <.td(^.key := flight.uniqueId.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
           <.td(^.key := flight.uniqueId.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
           <.td(^.key := flight.uniqueId.toString + "-pcptimefrom", pcpTimeRange(flight, ArrivalHelper.bestPax)),
-          <.td(^.key := flight.uniqueId.toString + "-actpax", props.paxComponent(flight, apiSplits)),
+          <.td(^.key := flight.uniqueId.toString + "-actpax", props.paxComponent(flightWithSplits)),
           queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}")).toTagMod
         )
       }.recover {

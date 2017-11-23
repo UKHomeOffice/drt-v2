@@ -266,7 +266,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(0)
                 ))))
 
-          def paxComponent(f: Arrival, s: ApiSplits): VdomNode = <.div(f.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
+          def paxComponent(f: ApiFlightWithSplits): VdomNode = <.div(f.apiFlight.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = (s) => s)(paxComponent)(
