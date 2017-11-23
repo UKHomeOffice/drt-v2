@@ -40,29 +40,24 @@ lazy val client: Project = (project in file("client"))
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
     requiresDOM := true,
-    enableReloadWorkflow := true,
-      scalaJSStage in Test := FastOptStage,
+    scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
-    enableReloadWorkflow := true,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",
     useYarn := true,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
-    // use Scala.js provided launcher code to start the client app
-    //    scalaJSUseMainModuleInitializer := true,
-    //    persistLaunch/ser := true,
-    //    scalaJSUseMsainModuleInitializer in Test := false,
-    //    webpackConfigFile := Some(baseDirectory.value / "custom.webpack.config.js"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
-    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
-    testFrameworks += new TestFramework("utest.runner.Framework")
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    scalaJSUseMainModuleInitializer := true
   )
-  .enablePlugins(ScalaJSBundlerPlugin, ScalaJSWeb)
+  .enablePlugins(ScalaJSPlugin)
+  .enablePlugins(ScalaJSBundlerPlugin)
+  .enablePlugins(ScalaJSWeb)
   .dependsOn(sharedJS)
 
 // Client projects (just one in this case)
@@ -70,7 +65,8 @@ lazy val clients = Seq(client)
 
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
-  .enablePlugins(PlayScala, WebScalaJSBundlerPlugin)
+  .enablePlugins(PlayScala)
+  .enablePlugins(WebScalaJSBundlerPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
   name := "drt",
@@ -109,22 +105,10 @@ lazy val server = (project in file("server"))
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 
-
-
-//server.resolvers  ++= Seq(
-//  Resolver.bintrayRepo("mfglabs", "maven"),
-//  Resolver.bintrayRepo("dwhjames", "maven"),
-//  Resolver.sonatypeRepo("snapshots")
-//)
-
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
   state =>
     "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
-//      "client/clean" ::
-//      "server/clean" ::
-//      "client/test" ::
-//      "server/test" ::
       "server/dist" ::
       "set elideOptions in client := Seq()" ::
       state

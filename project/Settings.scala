@@ -23,28 +23,27 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
     val scala = "2.11.8"
-    val scalaDom = "0.9.1"
-    val scalajsReact = "1.0.0"
-    val scalajsReactComponents = "0.5.0"
+    val scalaDom = "0.9.2"
+    val scalajsReact = "1.1.1"
+    val scalajsReactComponents = "0.8.0"
     val scalaCSS = "0.5.3"
     val log4js = "1.4.10"
     val autowire = "0.2.6"
-    val booPickle = "1.2.4"
+    val booPickle = "1.2.6"
     val diode = "1.1.2"
-    val uTest = "0.4.3"
+    val uTest = "0.4.7"
 
     val akkaVersion = "2.4.16"
 
     val specs2Version = "3.7"
-    val react = "15.1.0"
-    val reactVersion = "15.5.4"
+    val react = "15.5.4"
+    val reactTestUtils = "15.4.1"
 
-    val jQuery = "1.11.1"
     val bootstrap = "3.3.6"
     val chartjs = "2.1.3"
 
     val playScripts = "0.5.0"
-    val sprayVersion: String = "1.3.3"
+    val sprayVersion = "1.2.6"
     val json4sVersion = "3.4.0"
   }
 
@@ -56,16 +55,14 @@ object Settings {
     */
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % versions.autowire,
-    "me.chrons" %%% "boopickle" % versions.booPickle
+    "io.suzaku" %%% "boopickle" % versions.booPickle
   ))
 
   val clientNpmDependences = Seq(
-    "react" -> "15.5.1",
-    "react-dom" -> "15.5.1",
-    "react-addons-test-utils" -> "15.5.1",
-    "@terebentina/react-popover" -> "github:terebentina/react-popover",
+    "react" -> versions.react,
+    "react-dom" -> versions.react,
+    "react-addons-test-utils" -> versions.reactTestUtils,
     "log4javascript" -> "1.4.15",
-    "jquery" -> jQuery,
     "bootstrap" -> bootstrap
   )
 
@@ -74,7 +71,6 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
-    "io.spray" % "spray-caching_2.11" % "1.3.4",
     "org.specs2" %% "specs2-core" % specs2Version % Test,
     "org.specs2" %% "specs2-junit" % specs2Version % Test,
     "org.specs2" %% "specs2-mock" % specs2Version % Test,
@@ -101,12 +97,15 @@ object Settings {
 
     "com.hierynomus" % "sshj" % "0.19.1",
 
-    "joda-time" % "joda-time" % "2.9.4") :::
-    List("io.spray" %% "spray-client" % versions.sprayVersion,
-      "io.spray" %% "spray-routing" % versions.sprayVersion,
-      "io.spray" %% "spray-json" % "1.3.2",
-      "com.typesafe" % "config" % "1.3.0"
-    ))
+    "joda-time" % "joda-time" % "2.9.4",
+
+    "io.spray" %% "spray-caching" % "1.3.4", //versions.sprayVersion,
+    "io.spray" %% "spray-client" % "1.3.4", //versions.sprayVersion,
+    "io.spray" %% "spray-routing" % "1.3.4", //versions.sprayVersion,
+    "io.spray" %% "spray-json" % "1.3.4", //versions.sprayVersion,
+
+    "com.typesafe" % "config" % "1.3.0"
+  ))
 
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -115,7 +114,7 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "test" % versions.scalajsReact % Test,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    //    "com.github.chandu0101.scalajs-react-components" %%% "core" % versions.scalajsReactComponents,
+    "com.olvind" %%% "scalajs-react-components" % versions.scalajsReactComponents,
     "io.suzaku" %%% "diode" % versions.diode,
     //    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
     "io.suzaku" %%% "diode-react" % versions.diode,
