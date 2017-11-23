@@ -37,6 +37,7 @@ object Settings {
 
     val specs2Version = "3.7"
     val react = "15.5.4"
+    val reactTestUtils = "15.4.1"
 
     val bootstrap = "3.3.6"
     val chartjs = "2.1.3"
@@ -60,7 +61,7 @@ object Settings {
   val clientNpmDependences = Seq(
     "react" -> versions.react,
     "react-dom" -> versions.react,
-    //    "react-addons-test-utils" -> versions.react,
+    "react-addons-test-utils" -> versions.reactTestUtils,
     "log4javascript" -> "1.4.15",
     "bootstrap" -> bootstrap
   )
