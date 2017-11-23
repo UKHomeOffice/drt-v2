@@ -51,7 +51,6 @@ lazy val client: Project = (project in file("client"))
     skip in packageJSDependencies := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
-    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true
