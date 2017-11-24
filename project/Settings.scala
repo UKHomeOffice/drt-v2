@@ -26,25 +26,38 @@ object Settings {
     val scalaDom = "0.9.2"
     val scalajsReact = "1.1.1"
     val scalajsReactComponents = "0.8.0"
+    val scalaJsScripts = "1.0.0"
     val scalaCSS = "0.5.3"
-    val log4js = "1.4.10"
     val autowire = "0.2.6"
     val booPickle = "1.2.6"
     val diode = "1.1.2"
     val uTest = "0.4.7"
 
-    val akkaVersion = "2.4.16"
+    val akka = "2.4.16"
+    val akkaStreamContrib = "0.2"
 
-    val specs2Version = "3.7"
+    val specs2 = "3.7"
     val react = "15.5.4"
     val reactTestUtils = "15.4.1"
 
     val bootstrap = "3.3.6"
-    val chartjs = "2.1.3"
 
     val playScripts = "0.5.0"
-    val sprayVersion = "1.2.6"
-    val json4sVersion = "3.4.0"
+    val sprayVersion = "1.3.4"
+    val levelDb = "0.7"
+    val levelDbJni = "1.8"
+    val renjin = "0.8.2195"
+    val awsSdk = "1.11.89"
+    val awsCommons = "0.10.0"
+    val csvCommons = "1.4"
+    val pprint = "0.4.3"
+    val scalaCheck = "1.13.4"
+    val akkaPersistenceInmemory = "2.4.18.1"
+    val sshJ = "0.19.1"
+    val jodaTime = "2.9.4"
+    val exposeLoader = "0.7.1"
+    val log4Javascript = "1.4.15"
+    val typesafeConfig = "1.3.0"
   }
 
   import versions._
@@ -54,73 +67,75 @@ object Settings {
     * the special %%% function selects the correct version for each project
     */
   val sharedDependencies = Def.setting(Seq(
-    "com.lihaoyi" %%% "autowire" % versions.autowire,
-    "io.suzaku" %%% "boopickle" % versions.booPickle
+    "com.lihaoyi" %%% "autowire" % autowire,
+    "io.suzaku" %%% "boopickle" % booPickle
   ))
 
   val clientNpmDependences = Seq(
-    "react" -> versions.react,
-    "react-dom" -> versions.react,
-    "react-addons-test-utils" -> versions.reactTestUtils,
-    "log4javascript" -> "1.4.15",
+    "react" -> react,
+    "react-dom" -> react,
+    "react-addons-test-utils" -> reactTestUtils,
+    "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap
   )
 
-  val clientNpmDevDependencies = "expose-loader" -> "0.7.1"
-
+  val clientNpmDevDependencies = "expose-loader" -> exposeLoader
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
-    "org.specs2" %% "specs2-core" % specs2Version % Test,
-    "org.specs2" %% "specs2-junit" % specs2Version % Test,
-    "org.specs2" %% "specs2-mock" % specs2Version % Test,
+    "com.amazonaws" % "aws-java-sdk" % awsSdk,
+    "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInmemory % "test",
+    "com.hierynomus" % "sshj" % sshJ,
+    "com.lihaoyi" %% "pprint" % pprint,
+    "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.mfglabs" %% "commons-aws" % awsCommons,
+
+    "com.typesafe" % "config" % typesafeConfig,
+    "com.typesafe.akka" %% "akka-testkit" % akka % "test",
+    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
+    "com.typesafe.akka" %% "akka-persistence" % akka,
+    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
+    "com.typesafe.akka" %% "akka-slf4j" % akka,
+
+    "com.vmunier" %% "play-scalajs-scripts" % playScripts,
+    "com.vmunier" %% "scalajs-scripts" % scalaJsScripts,
+
+    "io.spray" %% "spray-caching" % sprayVersion,
+    "io.spray" %% "spray-client" % sprayVersion,
+    "io.spray" %% "spray-routing" % sprayVersion,
+    "io.spray" %% "spray-json" % sprayVersion,
+
+    "joda-time" % "joda-time" % jodaTime,
+
+    "org.apache.commons" % "commons-csv" % csvCommons,
+    "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
+    "org.iq80.leveldb" % "leveldb" % levelDb,
+    "org.renjin" % "renjin-script-engine" % renjin,
+    "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
+
+    "org.specs2" %% "specs2-core" % specs2 % Test,
+    "org.specs2" %% "specs2-junit" % specs2 % Test,
+    "org.specs2" %% "specs2-mock" % specs2 % Test,
     "org.specs2" %% "specs2-scalacheck" % "3.8.4" % Test,
-    "com.vmunier" %% "play-scalajs-scripts" % versions.playScripts,
+
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
-    "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
-    "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
-    "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test",
-    "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
-    "com.typesafe.akka" %% "akka-stream-contrib" % "0.2",
-    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-    "org.iq80.leveldb" % "leveldb" % "0.7",
-    "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
-    "com.lihaoyi" %%% "utest" % versions.uTest % Test,
-    "org.renjin" % "renjin-script-engine" % "0.8.2195",
-    "com.amazonaws" % "aws-java-sdk" % "1.11.89",
-    "com.mfglabs" %% "commons-aws" % "0.10.0",
-    "org.apache.commons" % "commons-csv" % "1.4",
-    "com.vmunier" %% "scalajs-scripts" % "1.0.0",
-    "com.lihaoyi" %% "pprint" % "0.4.3",
-    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
-    "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.4.18.1" % "test",
-
-    "com.hierynomus" % "sshj" % "0.19.1",
-
-    "joda-time" % "joda-time" % "2.9.4",
-
-    "io.spray" %% "spray-caching" % "1.3.4", //versions.sprayVersion,
-    "io.spray" %% "spray-client" % "1.3.4", //versions.sprayVersion,
-    "io.spray" %% "spray-routing" % "1.3.4", //versions.sprayVersion,
-    "io.spray" %% "spray-json" % "1.3.4", //versions.sprayVersion,
-
-    "com.typesafe" % "config" % "1.3.0"
+    "org.webjars" % "bootstrap" % bootstrap % Provided
   ))
 
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(
-    "com.github.japgolly.scalajs-react" %%% "core" % versions.scalajsReact,
-    "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
-    "com.github.japgolly.scalajs-react" %%% "test" % versions.scalajsReact % Test,
-    "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    "com.olvind" %%% "scalajs-react-components" % versions.scalajsReactComponents,
-    "io.suzaku" %%% "diode" % versions.diode,
-    //    "com.payalabs" %%% "scalajs-react-bridge" % "0.2.0-SNAPSHOT",
-    "io.suzaku" %%% "diode-react" % versions.diode,
-    "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
-    "com.lihaoyi" %%% "pprint" % "0.4.3",
-    "com.lihaoyi" %%% "utest" % versions.uTest % Test
+    "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
+    "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
+    "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
+    "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
+    "com.olvind" %%% "scalajs-react-components" % scalajsReactComponents,
+    "io.suzaku" %%% "diode" % diode,
+    //    "com.payalabs" % "scalajs-react-bridge_sjs0.6_2.12" % "0.4.0-SNAPSHOT",
+    "io.suzaku" %%% "diode-react" % diode,
+    "org.scala-js" %%% "scalajs-dom" % scalaDom,
+    "com.lihaoyi" %%% "pprint" % pprint,
+    "com.lihaoyi" %%% "utest" % uTest % Test
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

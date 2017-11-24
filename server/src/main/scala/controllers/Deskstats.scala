@@ -101,7 +101,9 @@ object Deskstats {
         columnData(deskIndex).toInt
       } match {
         case Success(d) => Option(d)
-        case Failure(_) => None
+        case Failure(_) =>
+          log.info(s"couldn't parse desks at index $deskIndex from '$columnData'")
+          None
       }
       val waitTimeOption = Try {
         log.debug(s"deskStats waitTime: ${columnData(waitTimeIndex)}, from columnData: $columnData")
@@ -109,7 +111,9 @@ object Deskstats {
         (hours * 60) + minutes
       } match {
         case Success(d) => Option(d)
-        case Failure(_) => None
+        case Failure(_) =>
+          log.info(s"couldn't parse wait time at index $waitTimeIndex from '$columnData'")
+          None
       }
       parseSDate(columnData).millisSinceEpoch -> DeskStat(desksOption, waitTimeOption)
     }.toMap
@@ -127,7 +131,7 @@ object Deskstats {
 
     val rows = deskstatsContent.split("\n").drop(1).toList
     log.debug(s"DeskStats: Got ${rows.length} relevant rows")
-    val parsedRows = rows.map(parseCsvLine).filter(_.length == 11)
+    val parsedRows = rows.map(parseCsvLine).filter(_.length == 12)
     val dataByTerminal = parsedRows.groupBy(_ (columnIndices("terminal")))
     val dataByTerminalAndQueue =
       dataByTerminal.map {
@@ -159,6 +163,13 @@ object Deskstats {
   }
 
   def parseCsvLine(line: String): Seq[String] = {
-    line.drop(1).dropRight(1).split("\",\"").toList
+    line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)").toList.map(stripQuotes)
+  }
+
+  def stripQuotes(cell: String) = {
+    val length = cell.length
+    if (length > 0 && cell(0) == '"' && cell(cell.length - 1) == '"') {
+      cell.drop(1).dropRight(1)
+    } else cell
   }
 }

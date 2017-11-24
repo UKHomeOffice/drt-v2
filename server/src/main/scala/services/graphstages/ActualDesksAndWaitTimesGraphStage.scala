@@ -90,7 +90,7 @@ object ActualDesksAndWaitTimesGraphStage {
     val crunchMinutesWithActuals = ps.crunchMinutes.values.map((cm: CrunchMinute) => {
       val deskStat: Option[DeskStat] = act.desks
         .get(cm.terminalName)
-        .flatMap(_.get(cm.queueName)).flatMap(qds => {
+        .flatMap(_.get(cm.queueName)).flatMap((qds: Map[Long, DeskStat]) => {
         qds.find(ds => ds._1 <= cm.minute && ds._1 + fifteenMins > cm.minute).map {
           case (time, ds: DeskStat) => ds
         }
