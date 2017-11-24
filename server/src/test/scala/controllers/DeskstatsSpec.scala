@@ -78,15 +78,15 @@ class DeskstatsSpec extends Specification {
         "Then we should see None " >> {
         val deskstatsContent =
           """"device","Date","Time","EEA desks open","Queue time EEA","Non EEA desks open","Queue time Non EEA","Fast Track desks open","Queue time Fast Track","Int/Dom desks open","Queue time Int/Dom","Comments"
-            |"T2","01/01/2017","21:30 - 21:45","1","00:04","1","","2","00:00","","",""""".stripMargin
+            |"T2","01/01/2017","21:30 - 21:45","1","","","","","","","",""""".stripMargin
 
         val data = csvData(deskstatsContent)
 
         val expected = Map(
           "T2" -> Map(
-            Queues.EeaDesk -> Map(1483306200000L -> DeskStat(Some(1), Some(4))),
-            Queues.NonEeaDesk -> Map(1483306200000L -> DeskStat(Some(1), None)),
-            Queues.FastTrack -> Map(1483306200000L -> DeskStat(Some(2), Some(0)))))
+            Queues.EeaDesk -> Map(1483306200000L -> DeskStat(Some(1), None)),
+            Queues.NonEeaDesk -> Map(1483306200000L -> DeskStat(None, None)),
+            Queues.FastTrack -> Map(1483306200000L -> DeskStat(None, None))))
 
         data === expected
       }
