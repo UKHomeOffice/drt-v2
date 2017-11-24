@@ -332,7 +332,11 @@ object CrunchApi {
       val startMinute = group.map(_._1).min
       val queueCrunchMinutes = queueOrder.collect {
         case qn if byQueueName.contains(qn) =>
-          val queueMinutes = byQueueName(qn)
+          val queueMinutes: Seq[CrunchMinute] = byQueueName(qn)
+          val allActDesks = queueMinutes.collect { case (CrunchMinute(_, _, _, _, _, _, _, _, _, Some(ad), _, _)) => ad }
+          val actDesks = if (allActDesks.isEmpty) None else Option(allActDesks.max)
+          val allActWaits = queueMinutes.collect { case (CrunchMinute(_, _, _, _, _, _, _, _, _, _, Some(aw), _)) => aw }
+          val actWaits = if (allActWaits.isEmpty) None else Option(allActWaits.max)
           CrunchMinute(
             terminalName = terminalName,
             queueName = qn,
@@ -343,8 +347,8 @@ object CrunchApi {
             waitTime = queueMinutes.map(_.waitTime).max,
             deployedDesks = Option(queueMinutes.map(_.deployedDesks.getOrElse(0)).max),
             deployedWait = Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
-            actDesks = Option(queueMinutes.map(_.actDesks.getOrElse(0)).max),
-            actWait = Option(queueMinutes.map(_.actWait.getOrElse(0)).max)
+            actDesks = actDesks,
+            actWait = actWaits
           )
       }
       (startMinute, queueCrunchMinutes)
