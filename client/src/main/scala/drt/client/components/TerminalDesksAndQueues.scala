@@ -1,13 +1,21 @@
 package drt.client.components
 
+//import com.sun.net.httpserver.Authenticator.Success
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
+import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import org.scalajs.dom.raw.Node
+import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
+
+import scala.util.{Success, Try}
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.html_<^.{<, VdomElement, _}
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom
+
 
 object TerminalDesksAndQueuesRow {
 
@@ -38,12 +46,23 @@ object TerminalDesksAndQueuesRow {
         case (qn, cm) =>
           val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
           val queueCells = props.viewType match {
-            case ViewDeps => List(paxLoadTd,
-              <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),
-              <.td(^.className := queueColour(qn), ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
-            case ViewRecs => List(paxLoadTd,
+            case ViewDeps =>
+              val ragClass = cm.deployedWait.getOrElse(0).toDouble / props.airportConfig.slaByQueue(qn) match {
+                case pc if pc >= 1 => "red"
+                case pc if pc >= 0.7 => "amber"
+                case _ => ""
+              }
+              List(paxLoadTd,
+                <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),
+                <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
+            case ViewRecs =>
+              val ragClass = cm.waitTime.toDouble / props.airportConfig.slaByQueue(qn) match {
+                case pc if pc >= 1 => "red"
+                case pc if pc >= 0.7 => "amber"
+              }
+              List(paxLoadTd,
               <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deskRec}", s"${cm.deskRec}"),
-              <.td(^.className := queueColour(qn), ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
+              <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
           }
 
           if (props.showActuals) {
@@ -67,7 +86,7 @@ object TerminalDesksAndQueuesRow {
         <.td(^.className := s"non-pcp", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed $ragClass", totalDeployed),
-        <.td(^.className := s"total-deployed $ragClass staff-adjustments", <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
+        <.td(^.className := s"total-deployed $ragClass staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
@@ -78,6 +97,8 @@ object TerminalDesksAndQueuesRow {
 }
 
 object TerminalDesksAndQueues {
+
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   def queueDisplayName(name: String): QueueName = Queues.queueDisplayNames.getOrElse(name, name)
 
@@ -152,7 +173,7 @@ object TerminalDesksAndQueues {
           <.th(^.className := "non-pcp", "Moves", ^.title := "Staff movements"),
           <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks"),
           <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered"),
-          <.th(^.className := "total-deployed", "Avail", ^.title := "Total staff available based on staff entered"))
+          <.th(^.className := "total-deployed", "Avail", ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
       }
 
       val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
@@ -168,7 +189,7 @@ object TerminalDesksAndQueues {
 
       val headings: List[TagMod] = queueHeadings ++ List(
         <.th(^.className := "non-pcp", ^.colSpan := 2, ""),
-        <.th(^.className := "total-deployed", ^.colSpan := 3, "PCP")
+        <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
       )
 
       val terminalCrunchMinutes = groupCrunchMinutesBy15(
@@ -208,7 +229,22 @@ object TerminalDesksAndQueues {
 
       def viewDepsClass = if (state.viewType == ViewDeps) "active-control" else ""
 
+      def thing = VdomAttr("data-sticky")
+
+      def floatingHeader = {
+        <.div(
+          ^.id := "toStick",
+          ^.className := "container sticky",
+          <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs",
+            <.thead(
+              <.tr(<.th("") :: headings: _*),
+              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames): _*)),
+            <.tbody()
+          ))
+      }
+
       <.div(
+        floatingHeader,
         <.div(
           if (props.airportConfig.hasActualDeskStats) {
             <.div(^.className := s"selector-control deskstats-control $showActualsClass",
@@ -218,15 +254,13 @@ object TerminalDesksAndQueues {
           } else "",
           viewTypeControls(viewDepsClass, viewRecsClass)
         ),
-        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs $colsClass",
+        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs",
           <.thead(
-            ^.display := "block",
+            thing := "data-sticky",
             <.tr(<.th("") :: headings: _*),
             <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames): _*)),
           <.tbody(
-            ^.display := "block",
-            ^.overflow := "scroll",
-            ^.height := "500px",
+            ^.id := "sticky-body",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
                 val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, List()), props.airportConfig, props.terminalName, state.showActuals, state.viewType)
@@ -234,8 +268,66 @@ object TerminalDesksAndQueues {
             }.toTagMod))
       )
     })
-    .componentDidMount((p) => Callback.log("TerminalDesksAndQueues did mount"))
+    .componentDidMount((_) => {
+      Callback.log("TerminalDesksAndQueues did mount")
+
+      def toIntOrElse(intString: String, stickyInitial: Int): Int = {
+        Try {
+          intString.toDouble.round.toInt
+        } match {
+          case Success(x) => x
+          case _ => stickyInitial
+        }
+      }
+
+      def handleStickyClass(top: Double, bottom: Double, mainWidth: Double, elements: NodeListSeq[Element], toStick: Element): Unit = {
+        elements.foreach(sticky => {
+          val stickyEnter = toIntOrElse(sticky.getAttribute("data-sticky-initial"), 0)
+          val stickyExit = bottom.round.toInt
+
+          if (top >= stickyEnter && top <= stickyExit)
+            toStick.classList.add("sticky-show")
+          else toStick.classList.remove("sticky-show")
+        })
+      }
+
+      def setInitialHeights(elements: NodeListSeq[Element]): Unit = {
+        elements.foreach(element => {
+          val scrollTop = dom.document.documentElement.scrollTop
+          val relativeTop = element.getBoundingClientRect().top
+          val actualTop = relativeTop + scrollTop
+          log.info(s"initial top: $relativeTop, scrollTop: $scrollTop")
+          element.setAttribute("data-sticky-initial", actualTop.toString)
+        })
+      }
+
+      val stickies: NodeListSeq[Element] = dom.document.querySelectorAll("[data-sticky]").asInstanceOf[NodeListOf[Element]]
+
+      dom.document.addEventListener("scroll", (e: Event) => {
+        val top = dom.document.documentElement.scrollTop // || dom.document.body.scrollTop
+        val bottom = dom.document.documentElement.scrollHeight // || dom.document.body.scrollHeight
+        val mainWidth = dom.document.querySelector("#sticky-body").getBoundingClientRect().width
+
+        handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
+      })
+
+      Callback(setInitialHeights(stickies))
+
+    })
     .build
 
   def apply(props: Props): VdomElement = component(props)
+
+  implicit class NodeListSeq[T <: Node](nodes: DOMList[T]) extends IndexedSeq[T] {
+    override def foreach[U](f: T => U): Unit = {
+      for (i <- 0 until nodes.length) {
+        f(nodes(i))
+      }
+    }
+
+    override def length: Int = nodes.length
+
+    override def apply(idx: Int): T = nodes(idx)
+  }
+
 }

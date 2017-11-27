@@ -9,6 +9,7 @@
 
 @bgDefault: #f8f8f8;
 @bgHighlight: #dddddd;
+
 @colDefault: #333333;
 @colHighlight: #666666;
 @dropDown: false;
@@ -446,20 +447,6 @@ div.scrollable-table-body {
   overflow: scroll;
 }
 
-div.user-desk-recs-container table.table > tbody > tr > td,
-div.user-desk-recs-container table.table > tbody > tr > th,
-table.table.user-desk-recs > tbody > tr > td,
-table.table.user-desk-recs > tbody > tr > th {
-  padding-right: 0.25em;
-  padding: 0.25em;
-}
-
-div.user-desk-recs-container table.table > tbody > tr > td,
-table.user-desk-recs > tbody > tr > td,
-table.user-desk-recs > tbody > tr > td > input {
-  text-align: right;
-}
-
 table.user-desk-recs thead tr:nth-child(1) th {
   font-size: 24px;
   padding-top: 15px;
@@ -481,11 +468,6 @@ table.user-desk-recs thead tr th {
 
 table.user-desk-recs thead tr {
   border-bottom: #000;
-}
-
-div.user-desk-recs-container table.table > tbody > tr > td.date-field,
-table.user-desk-recs > tbody > tr > td.date-field {
-  text-align: left;
 }
 
 table.user-desk-recs.cols-2 {
@@ -554,6 +536,10 @@ table.user-desk-recs.cols-4 {
   }
 }
 
+table.user-desk-recs {
+  table-layout: fixed;
+}
+
 table.user-desk-recs.cols-5 tbody td, table.user-desk-recs.cols-5 thead th {
   width: 71px;
 }
@@ -563,7 +549,7 @@ table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
 }
 
 table.user-desk-recs.cols-3 tbody td, table.user-desk-recs.cols-3 thead th {
-  width: 95px;
+  /*width: 84px;*/
 }
 
 table.user-desk-recs.cols-2 tbody td, table.user-desk-recs.cols-2 thead th {
@@ -574,22 +560,28 @@ table.user-desk-recs > tbody > tr > td > input:focus {
   text-align: left;
 }
 
-div.user-desk-recs-container {
-  width: 40%;
-  margin-right: 2em;
-  float: left;
+table.user-desk-recs > tbody > tr > td {
+  padding: 7px 10px 4px 12px;
+  text-align: right;
+  border: 0;
+}
+
+table.user-desk-recs > thead > tr > th {
+  border: 0;
+}
+
+table.user-desk-recs > tbody > tr > td:nth-last-child(1) {
+  padding: 5px 3px;
+  text-align: center;
+}
+
+table.user-desk-recs > tbody > tr > td:nth-child(1) {
+  padding-left: 4px;
+  text-align: center;
 }
 
 div.user-desk-recs-chart {
   margin-top: 2em;
-}
-
-div.user-desk-recs-container table.table > tbody > tr > th, table.user-desk-recs > tbody > tr > th {
-  text-align: center;
-}
-
-div.panel-body > div.user-desk-recs-container > div > table > tbody > tr > td.date-field > div > div > div > div {
-  width: 300%;
 }
 
 rect.bordered {
@@ -597,7 +589,7 @@ rect.bordered {
   stroke-width: 2px;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 120px) {
   .container {
     width: 96%;
   }
@@ -628,7 +620,7 @@ rect.bordered {
 @fastTrackUserDeskColor: #e7cee6;
 @transferUserDeskColor: #705975;
 @nonPcpStaff: #eeeff0;
-@pcpStaff: #FFDF94;
+@pcpStaff: #FFEBBD; //#FFDF94;
 @amberColor: #FFEEBB;
 @redColor: #FFCCCC;
 
@@ -675,28 +667,27 @@ th.non-pcp {
   background-color: @nonPcpStaff;
 }
 
-.amber {
-  background-color: @alert-warning-bg;
-}
-
-tr:nth-child(odd) > td.total-deployed.amber {
-  background-color: darken(@alert-warning-bg, 8%);
-}
-
-.red {
-  background-color: @alert-danger-bg;
-}
-
-tr:nth-child(odd) > td.total-deployed.red {
-  background-color: darken(@alert-danger-bg, 8%);
-}
-
 tr:nth-child(odd) > td.total-deployed {
-  background-color: darken(@pcpStaff, 8%);
+  background-color: darken(@pcpStaff, 5%);
+}
+
+tr:nth-child(odd) > td.non-pcp {
+  background-color: darken(@nonPcpStaff, 5%);
+}
+
+#desksAndQueues tr > td.amber {
+  background-color: #F47738;
+  color: #fff;
+}
+
+#desksAndQueues tr > td.red {
+  background-color: #A81B1E;
+  color: #fff;
 }
 
 td.total-deployed span.deployed {
-  width: 25px;
+  width: 40px;
+  padding: 0px 2px;
   display: inline-block;
   text-align: center;
 }
@@ -864,12 +855,7 @@ p {
 
 .terminal-desk-recs-container {
   height: 800px;
-  width: 1224px;
-}
-
-.user-desk-recs-container {
-  height: 400px;
-  overflow: scroll;
+  /*max-width: 1224px;*/
 }
 
 table.user-desk-recs tbody tr td.table-danger {
@@ -1222,4 +1208,23 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
     padding-right: 0;
     padding-left: 0;
   }
+}
+
+.sticky {
+  display: none;
+  z-index: 1;
+  background-color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+}
+
+.sticky-show {
+  display: block;
+}
+
+.sticky table {
+  margin: 0px
 }

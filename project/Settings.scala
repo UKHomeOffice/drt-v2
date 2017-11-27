@@ -131,7 +131,6 @@ object Settings {
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
     "com.olvind" %%% "scalajs-react-components" % scalajsReactComponents,
     "io.suzaku" %%% "diode" % diode,
-    //    "com.payalabs" % "scalajs-react-bridge_sjs0.6_2.12" % "0.4.0-SNAPSHOT",
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.lihaoyi" %%% "pprint" % pprint,
