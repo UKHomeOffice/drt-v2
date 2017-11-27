@@ -1,20 +1,19 @@
 package drt.client.components
 
-//import com.sun.net.httpserver.Authenticator.Success
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import org.scalajs.dom.raw.Node
-import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
-
-import scala.util.{Success, Try}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
+import org.scalajs.dom.raw.Node
+import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
+
+import scala.util.{Success, Try}
 
 
 object TerminalDesksAndQueuesRow {
