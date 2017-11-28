@@ -292,10 +292,9 @@ object TerminalDesksAndQueues {
 
       def setInitialHeights(elements: NodeListSeq[Element]): Unit = {
         elements.foreach(element => {
-          val scrollTop = dom.document.documentElement.scrollTop
+          val scrollTop = documentScrollTop
           val relativeTop = element.getBoundingClientRect().top
           val actualTop = relativeTop + scrollTop
-          log.info(s"initial top: $relativeTop, scrollTop: $scrollTop")
           element.setAttribute("data-sticky-initial", actualTop.toString)
         })
       }
@@ -303,8 +302,8 @@ object TerminalDesksAndQueues {
       val stickies: NodeListSeq[Element] = dom.document.querySelectorAll("[data-sticky]").asInstanceOf[NodeListOf[Element]]
 
       dom.document.addEventListener("scroll", (e: Event) => {
-        val top = dom.document.documentElement.scrollTop // || dom.document.body.scrollTop
-        val bottom = dom.document.documentElement.scrollHeight // || dom.document.body.scrollHeight
+        val top = documentScrollTop
+        val bottom = documentScrollHeight
         val mainWidth = dom.document.querySelector("#sticky-body").getBoundingClientRect().width
 
         handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
@@ -314,6 +313,9 @@ object TerminalDesksAndQueues {
 
     })
     .build
+
+  def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)
+  def documentScrollHeight: Double = Math.max(dom.document.documentElement.scrollHeight, dom.document.body.scrollHeight)
 
   def apply(props: Props): VdomElement = component(props)
 
