@@ -11,8 +11,9 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Div, TableSection}
 
+import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
 
 object FlightsWithSplitsTable {
@@ -36,30 +37,23 @@ object FlightsWithSplitsTable {
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
-
       val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.queueOrder)
+
       Try {
-        if (sortedFlights.nonEmpty)
+        if (sortedFlights.nonEmpty) {
+          val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
+          val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
           <.div(
+            <.div(^.id := "toStick", ^.className := "container sticky",
+              <.table(
+                ^.id := "sticky",
+                classesAttr,
+                tableHead(props, timelineTh, queueNames))),
             <.table(
-              ^.className := "table table-responsive table-striped table-hover table-sm",
-              <.thead(<.tr(
-                timelineTh,
-                <.th("Flight"),
-                <.th("Origin"),
-                <.th("Gate/Stand"),
-                <.th("Status"),
-                <.th("Sch"),
-                <.th("Est"),
-                <.th("Act"),
-                if (props.hasEstChox) <.th("Est Chox") else "",
-                <.th("Act Chox"),
-                <.th("Est PCP"),
-                <.th("Pax Nos"),
-                queueNames.map(
-                  q => <.th(Queues.queueDisplayNames(q))
-                ).toTagMod
-              )),
+              ^.id := "sticky-body",
+              dataStickyAttr,
+              classesAttr,
+              tableHead(props, timelineTh, queueNames),
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case ((flightWithSplits, codeShares), idx) =>
@@ -73,6 +67,7 @@ object FlightsWithSplitsTable {
                       hasEstChox = props.hasEstChox
                     ))
                 }.toTagMod)))
+        }
         else
           <.div("Loading flights...")
       } match {
@@ -83,8 +78,28 @@ object FlightsWithSplitsTable {
       }
     })
     .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
     .build
 
+  def tableHead(props: Props, timelineTh: TagMod, queueNames: immutable.Seq[String]): TagOf[TableSection] = {
+    <.thead(<.tr(
+      timelineTh,
+      <.th("Flight"),
+      <.th("Origin"),
+      <.th("Gate/Stand", ^.width := "10%"),
+      <.th("Status", ^.width := "10%"),
+      <.th("Sch"),
+      <.th("Est"),
+      <.th("Act"),
+      if (props.hasEstChox) <.th("Est Chox") else TagMod(""),
+      <.th("Act Chox"),
+      <.th("Est PCP", ^.width := "14%"),
+      <.th("Pax Nos"),
+      queueNames.map(
+        q => <.th(Queues.queueDisplayNames(q))
+      ).toTagMod
+    ))
+  }
 }
 
 object FlightTableRow {
@@ -155,6 +170,7 @@ object FlightTableRow {
         val bestSplits: Set[ApiSplits] = flightWithSplits.bestSplits.toSet
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+        val timeIndicatorClass = if (flight.PcpTime < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
         val eta = bestArrivalTime(props.flightWithSplits.apiFlight)
         val differenceFromScheduled = eta - SDate(props.flightWithSplits.apiFlight.SchDT).millisSinceEpoch
@@ -165,7 +181,9 @@ object FlightTableRow {
 
         val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
-        <.tr(^.key := flight.uniqueId.toString, ^.className := offScheduleClass,
+        <.tr(
+          ^.key := flight.uniqueId.toString,
+          ^.className := s"$offScheduleClass $timeIndicatorClass",
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
           <.td(^.key := flight.uniqueId.toString + "-flightNo", allCodes.mkString(" - ")),

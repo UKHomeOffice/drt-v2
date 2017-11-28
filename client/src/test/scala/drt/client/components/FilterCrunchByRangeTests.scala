@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.TimeRangeHours
+import drt.client.services.{CustomWindow, TimeRangeHours}
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, StaffMinute}
 import drt.shared.{ApiFlightWithSplits, Queues}
 import utest.{TestSuite, _}
@@ -13,7 +13,7 @@ object FilterCrunchByRangeTests extends TestSuite {
 
   def tests = TestSuite {
     "Given an hour range of 10 to 14" - {
-      val range = TimeRangeHours(10, 14)
+      val range = CustomWindow(10, 14)
       val dateWithinRange = SDate.parse("2017-01-01T11:00:00Z")
       val dateOutsideRange = SDate.parse("2017-01-01T09:00:00Z")
 

@@ -22,7 +22,22 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 
-case class TimeRangeHours(start: Int = 0, end: Int = 24)
+sealed trait TimeRangeHours {
+  def start: Int
+  def end: Int
+}
+
+case class CustomWindow(start: Int, end: Int) extends TimeRangeHours
+
+case class WholeDayWindow() extends TimeRangeHours {
+  override def start: Int = 0
+  override def end: Int = 24
+}
+
+case class CurrentWindow() extends TimeRangeHours {
+  override def start: Int = SDate.now().getHours() - 1
+  override def end: Int = SDate.now().getHours() + 3
+}
 
 sealed trait ViewMode {
   def millis: MillisSinceEpoch = time.millisSinceEpoch
@@ -47,7 +62,7 @@ case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      fixedPointsRaw: Pot[String] = Empty,
                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
                      viewMode: ViewMode = ViewLive(),
-                     timeRangeFilter: TimeRangeHours = TimeRangeHours(),
+                     timeRangeFilter: TimeRangeHours = CurrentWindow(),
                      loadingState: LoadingState = LoadingState())
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {

@@ -28,12 +28,9 @@ object SPAMain extends js.JSApp {
                                ) extends Loc {
     def viewMode: ViewMode = {
       (mode, date) match {
-        case ("current", Some(dateString)) =>
-          ViewDay(SDate(dateString))
-        case ("snapshot", dateStringOption) =>
-          ViewPointInTime(dateStringOption.map(SDate(_)).getOrElse(SDate.now()))
-        case _ =>
-          ViewLive()
+        case ("current", Some(dateString)) => ViewDay(SDate(dateString))
+        case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(SDate(_)).getOrElse(SDate.now()))
+        case _ => ViewLive()
       }
     }
 

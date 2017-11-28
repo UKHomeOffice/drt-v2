@@ -7,7 +7,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, TimeRangeHours}
+import drt.client.services.{CurrentWindow, SPACircuit, TimeRangeHours}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -77,7 +77,7 @@ object TerminalContentComponent {
     )
   }
 
-  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch) = {
+  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch): Boolean = {
     SDate(MilliDate(minute)).getHours() >= range.start && SDate(MilliDate(minute)).getHours() < range.end
   }
 
@@ -122,7 +122,7 @@ object TerminalContentComponent {
       <.div(
         <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
         <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-        TimeRangeFilter(TimeRangeFilter.Props(TimeRangeHours(props.timeRangeHours.start, props.timeRangeHours.end))),
+        TimeRangeFilter(TimeRangeFilter.Props(CurrentWindow())),
         <.ul(^.className := "nav nav-tabs",
 
           <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
