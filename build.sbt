@@ -1,3 +1,4 @@
+import org.scalajs.core.tools.linker.ModuleInitializer
 import sbt.Keys._
 import sbt.Project.projectToRef
 

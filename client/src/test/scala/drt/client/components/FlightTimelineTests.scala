@@ -20,8 +20,6 @@ object ExampleReactScalaJsTest extends TestSuite {
   import japgolly.scalajs.react._
   import japgolly.scalajs.react.vdom.html_<^._
 
-  test.WebpackRequire.ReactTestUtils
-
   class CP {
     var prev = "none"
 

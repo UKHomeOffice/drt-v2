@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
+import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
@@ -60,8 +60,8 @@ object TerminalDesksAndQueuesRow {
                 case pc if pc >= 0.7 => "amber"
               }
               List(paxLoadTd,
-              <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deskRec}", s"${cm.deskRec}"),
-              <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
+                <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deskRec}", s"${cm.deskRec}"),
+                <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
           }
 
           if (props.showActuals) {
@@ -85,7 +85,7 @@ object TerminalDesksAndQueuesRow {
         <.td(^.className := s"non-pcp", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed $ragClass", totalDeployed),
-        <.td(^.className := s"total-deployed $ragClass staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
+        <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
@@ -228,20 +228,19 @@ object TerminalDesksAndQueues {
 
       def viewDepsClass = if (state.viewType == ViewDeps) "active-control" else ""
 
-      def thing = VdomAttr("data-sticky")
+      val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
+
+      val classesAttr = ^.cls := s"table table-striped table-hover table-sm user-desk-recs"
 
       def floatingHeader = {
-        <.div(
-          ^.id := "toStick",
-          ^.className := "container sticky",
-          <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs",
+        <.div(^.id := "toStick", ^.className := "container sticky",
+          <.table(classesAttr,
             <.thead(
               <.tr(<.th("") :: headings: _*),
               <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames): _*)),
             <.tbody()
           ))
       }
-
       <.div(
         floatingHeader,
         <.div(
@@ -253,9 +252,11 @@ object TerminalDesksAndQueues {
           } else "",
           viewTypeControls(viewDepsClass, viewRecsClass)
         ),
-        <.table(^.cls := s"table table-striped table-hover table-sm user-desk-recs",
+        <.table(
+          ^.id := "sticky",
+          classesAttr,
           <.thead(
-            thing := "data-sticky",
+            dataStickyAttr,
             <.tr(<.th("") :: headings: _*),
             <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames): _*)),
           <.tbody(
@@ -267,54 +268,11 @@ object TerminalDesksAndQueues {
             }.toTagMod))
       )
     })
-    .componentDidMount((_) => {
-      Callback.log("TerminalDesksAndQueues did mount")
-
-      def toIntOrElse(intString: String, stickyInitial: Int): Int = {
-        Try {
-          intString.toDouble.round.toInt
-        } match {
-          case Success(x) => x
-          case _ => stickyInitial
-        }
-      }
-
-      def handleStickyClass(top: Double, bottom: Double, mainWidth: Double, elements: NodeListSeq[Element], toStick: Element): Unit = {
-        elements.foreach(sticky => {
-          val stickyEnter = toIntOrElse(sticky.getAttribute("data-sticky-initial"), 0)
-          val stickyExit = bottom.round.toInt
-
-          if (top >= stickyEnter && top <= stickyExit)
-            toStick.classList.add("sticky-show")
-          else toStick.classList.remove("sticky-show")
-        })
-      }
-
-      def setInitialHeights(elements: NodeListSeq[Element]): Unit = {
-        elements.foreach(element => {
-          val scrollTop = documentScrollTop
-          val relativeTop = element.getBoundingClientRect().top
-          val actualTop = relativeTop + scrollTop
-          element.setAttribute("data-sticky-initial", actualTop.toString)
-        })
-      }
-
-      val stickies: NodeListSeq[Element] = dom.document.querySelectorAll("[data-sticky]").asInstanceOf[NodeListOf[Element]]
-
-      dom.document.addEventListener("scroll", (e: Event) => {
-        val top = documentScrollTop
-        val bottom = documentScrollHeight
-        val mainWidth = dom.document.querySelector("#sticky-body").getBoundingClientRect().width
-
-        handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
-      })
-
-      Callback(setInitialHeights(stickies))
-
-    })
+    .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
     .build
 
   def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)
+
   def documentScrollHeight: Double = Math.max(dom.document.documentElement.scrollHeight, dom.document.body.scrollHeight)
 
   def apply(props: Props): VdomElement = component(props)
@@ -331,4 +289,50 @@ object TerminalDesksAndQueues {
     override def apply(idx: Int): T = nodes(idx)
   }
 
+}
+
+object StickyTableHeader {
+  def toIntOrElse(intString: String, stickyInitial: Int): Int = {
+    Try {
+      intString.toDouble.round.toInt
+    } match {
+      case Success(x) => x
+      case _ => stickyInitial
+    }
+  }
+
+  def handleStickyClass(top: Double, bottom: Double, mainWidth: Double, elements: NodeListSeq[Element], toStick: Element): Unit = {
+    elements.foreach(sticky => {
+      val stickyEnter = toIntOrElse(sticky.getAttribute("data-sticky-initial"), 0)
+      val stickyExit = bottom.round.toInt
+
+      if (top >= stickyEnter && top <= stickyExit)
+        toStick.classList.add("sticky-show")
+      else toStick.classList.remove("sticky-show")
+    })
+  }
+
+  def setInitialHeights(elements: NodeListSeq[Element]): Unit = {
+    elements.foreach(element => {
+      val scrollTop = documentScrollTop
+      val relativeTop = element.getBoundingClientRect().top
+      val actualTop = relativeTop + scrollTop
+      element.setAttribute("data-sticky-initial", actualTop.toString)
+    })
+  }
+
+  def apply(selector: String): Callback = {
+
+    val stickies: NodeListSeq[Element] = dom.document.querySelectorAll(selector).asInstanceOf[NodeListOf[Element]]
+
+    dom.document.addEventListener("scroll", (e: Event) => {
+      val top = documentScrollTop
+      val bottom = documentScrollHeight
+      val mainWidth = dom.document.querySelector("#sticky-body").getBoundingClientRect().width
+
+      handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
+    })
+
+    Callback(setInitialHeights(stickies))
+  }
 }
