@@ -48,7 +48,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 2)
 
       val expected = Map("T1" -> Map(
@@ -115,7 +115,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val resultSummary = workLoadsFromPortState(result, 5)
 
 
@@ -153,7 +153,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         crunch.liveArrivalsInput.offer(flights)
 
-        val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+        val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
         val resultSummary = paxLoadsFromPortState(result, 5)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
@@ -195,10 +195,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ))
 
         crunch.baseArrivalsInput.offer(flights)
-        crunch.liveTestProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
+        crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
         crunch.manifestsInput.offer(voyageManifests)
-        val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+        val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
         val resultSummary = paxLoadsFromPortState(result, 5)
 
         val expected = Map("T1" -> Map(
