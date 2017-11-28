@@ -141,7 +141,6 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.renderReady(crunchState => {
                 log.info(s"rendering ready d and q")
-                DesksAndQueues.Table()
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
                     filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState),
