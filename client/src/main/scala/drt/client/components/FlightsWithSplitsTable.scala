@@ -82,18 +82,19 @@ object FlightsWithSplitsTable {
     .build
 
   def tableHead(props: Props, timelineTh: TagMod, queueNames: immutable.Seq[String]): TagOf[TableSection] = {
-    <.thead(<.tr(
+    <.thead(
+      <.tr(
       timelineTh,
       <.th("Flight"),
       <.th("Origin"),
-      <.th("Gate/Stand", ^.width := "10%"),
-      <.th("Status", ^.width := "10%"),
+      <.th("Gate/Stand", ^.className := "gate-stand"),
+      <.th("Status", ^.className := "status"),
       <.th("Sch"),
       <.th("Est"),
       <.th("Act"),
       if (props.hasEstChox) <.th("Est Chox") else TagMod(""),
       <.th("Act Chox"),
-      <.th("Est PCP", ^.width := "14%"),
+      <.th("Est PCP", ^.className := "pcp"),
       <.th("Pax Nos"),
       queueNames.map(
         q => <.th(Queues.queueDisplayNames(q))
@@ -159,7 +160,7 @@ object FlightTableRow {
 
         def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
           val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-          val tt = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+          val tt = <.table(^.className := "table table-responsive table-hover table-sm ",
             <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
             <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
           <.div(^.className := "splitsource-" + source,
@@ -172,18 +173,11 @@ object FlightTableRow {
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val timeIndicatorClass = if (flight.PcpTime < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
-        val eta = bestArrivalTime(props.flightWithSplits.apiFlight)
-        val differenceFromScheduled = eta - SDate(props.flightWithSplits.apiFlight.SchDT).millisSinceEpoch
-        val hourInMillis = 3600000
-        val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
-          "danger"
-        else ""
-
         val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
         <.tr(
           ^.key := flight.uniqueId.toString,
-          ^.className := s"$offScheduleClass $timeIndicatorClass",
+          ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
           <.td(^.key := flight.uniqueId.toString + "-flightNo", allCodes.mkString(" - ")),
@@ -209,5 +203,15 @@ object FlightTableRow {
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  def offScheduleClass(arrival: Arrival): String = {
+    val eta = bestArrivalTime(arrival)
+    val differenceFromScheduled = eta - SDate(arrival.SchDT).millisSinceEpoch
+    val hourInMillis = 3600000
+    val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
+      "danger"
+    else ""
+    offScheduleClass
+  }
 }
 

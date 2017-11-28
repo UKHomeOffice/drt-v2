@@ -16,8 +16,6 @@ object BigSummaryBoxTests extends TestSuite {
   import ApiFlightGenerator._
   import BigSummaryBoxes._
 
-  test.WebpackRequire.ReactTestUtils
-
   def tests = TestSuite {
     "Summary for the next 3 hours" - {
       "Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards" - {

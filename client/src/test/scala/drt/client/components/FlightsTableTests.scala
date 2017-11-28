@@ -1,10 +1,12 @@
 package drt.client.components
 
 import diode.data.{Pot, Ready}
+import drt.client.components.FlightsWithSplitsTable.tableHead
 import drt.client.services.JSDateConversions.SDate
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Unmounted
-import japgolly.scalajs.react.vdom.html_<^
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import org.scalajs.dom.html.TableSection
 import utest._
 
 import scala.collection.immutable.{Map, Seq}
@@ -61,28 +63,43 @@ object FlightsTableTests extends TestSuite {
       }
 
       "FlightsTables" - {
+        def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
+          <.tr(
+            if (timeline) <.th("Timeline") else TagMod(""),
+            <.th("Flight"),
+            <.th("Origin"),
+            <.th("Gate/Stand", ^.className := "gate-stand"),
+            <.th("Status", ^.className := "status"),
+            <.th("Sch"),
+            <.th("Est"),
+            <.th("Act"),
+            <.th("Est Chox"),
+            <.th("Act Chox"),
+            <.th("Est PCP", ^.className := "pcp"),
+            <.th("Pax Nos"),
+            <.th("e-Gates"),
+            <.th("EEA"),
+            <.th("Non-EEA")
+          ))
+        val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
+        val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
+
         "Given a single flight then we see the FlightCode(ICAO???) " +
           "Origin, Gate/Stand, Status, Sch and other dates, and something nifty for pax" - {
 
           val expected = <.div(
+            <.div(^.id := "toStick", ^.className := "container sticky",
+              <.table(
+                ^.id := "sticky",
+                classesAttr,
+                thead())),
             <.table(
-              ^.className := "table table-responsive table-striped table-hover table-sm",
-              <.thead(<.tr(<.th("Flight"), <.th("Origin"),
-                <.th("Gate/Stand"),
-                <.th("Status"),
-                <.th("Sch"),
-                <.th("Est"),
-                <.th("Act"),
-                <.th("Est Chox"),
-                <.th("Act Chox"),
-                <.th("Est PCP"),
-                <.th("Pax Nos"),
-                <.th("e-Gates"),
-                <.th("EEA"),
-                <.th("Non-EEA")
-              )),
+              ^.id := "sticky-body",
+              dataStickyAttr,
+              classesAttr,
+              thead(),
               <.tbody(
-                <.tr(^.className := "",
+                <.tr(^.className := " before-now",
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                   <.td(testFlight.Status),
@@ -102,28 +119,20 @@ object FlightsTableTests extends TestSuite {
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
+          val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           val expected = <.div(
+            <.div(^.id := "toStick", ^.className := "container sticky",
+              <.table(
+                ^.id := "sticky",
+                classesAttr,
+                thead(timeline = true))),
             <.table(
-              ^.className := "table table-responsive table-striped table-hover table-sm",
-              <.thead(<.tr(
-                <.th("Timeline"),
-                <.th("Flight"),
-                <.th("Origin"),
-                <.th("Gate/Stand"),
-                <.th("Status"),
-                <.th("Sch"),
-                <.th("Est"),
-                <.th("Act"),
-                <.th("Est Chox"),
-                <.th("Act Chox"),
-                <.th("Est PCP"),
-                <.th("Pax Nos"),
-                <.th("e-Gates"),
-                <.th("EEA"),
-                <.th("Non-EEA")
-              )),
+              ^.id := "sticky-body",
+              dataStickyAttr,
+              classesAttr,
+              thead(timeline = true),
               <.tbody(
-                <.tr(^.className := "",
+                <.tr(^.className := " before-now",
                   <.td(<.span("herebecallback")),
                   <.td(testFlight.ICAO), <.td(testFlight.Origin),
                   <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
@@ -141,7 +150,6 @@ object FlightsTableTests extends TestSuite {
 
           //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
-          val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
             ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
@@ -154,27 +162,20 @@ object FlightsTableTests extends TestSuite {
         "ArrivalsTableComponent has a hook for an origin portCode mapper" - {
           "Simple hook " - {
             val expected = <.div(
+              <.div(^.id := "toStick", ^.className := "container sticky",
+                <.table(
+                  ^.id := "sticky",
+                  classesAttr,
+                  thead())),
               <.table(
-                ^.className := "table table-responsive table-striped table-hover table-sm",
-                <.thead(<.tr(
-                  <.th("Flight"),
-                  <.th("Origin"),
-                  <.th("Gate/Stand"),
-                  <.th("Status"),
-                  <.th("Sch"),
-                  <.th("Est"),
-                  <.th("Act"),
-                  <.th("Est Chox"),
-                  <.th("Act Chox"),
-                  <.th("Est PCP"),
-                  <.th("Pax Nos"),
-                  <.th("e-Gates"),
-                  <.th("EEA"),
-                  <.th("Non-EEA")
-                )),
+                ^.id := "sticky-body",
+                dataStickyAttr,
+                classesAttr,
+                thead(),
                 <.tbody(
-                  <.tr(^.className := "",
-                    <.td(testFlight.ICAO), <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
+                  <.tr(^.className := " before-now",
+                    <.td(testFlight.ICAO),
+                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
                     <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                     <.td(testFlight.Status),
                     date(testFlight.SchDT),
@@ -227,26 +228,18 @@ object FlightsTableTests extends TestSuite {
           val width = ((120.toDouble / biggestCapacityFlightInTheWorldRightNow) * 100).round
           val testFlightT = testFlight.copy(ActPax = paxToDisplay)
           val expected = <.div(
+            <.div(^.id := "toStick", ^.className := "container sticky",
+              <.table(
+                ^.id := "sticky",
+                classesAttr,
+                thead())),
             <.table(
-              ^.className := "table table-responsive table-striped table-hover table-sm",
-              <.thead(<.tr(
-                <.th("Flight"),
-                <.th("Origin"),
-                <.th("Gate/Stand"),
-                <.th("Status"),
-                <.th("Sch"),
-                <.th("Est"),
-                <.th("Act"),
-                <.th("Est Chox"),
-                <.th("Act Chox"),
-                <.th("Est PCP"),
-                <.th("Pax Nos"),
-                <.th("e-Gates"),
-                <.th("EEA"),
-                <.th("Non-EEA")
-              )),
+              ^.id := "sticky-body",
+              dataStickyAttr,
+              classesAttr,
+              thead(),
               <.tbody(
-                <.tr(^.className := "",
+                <.tr(^.className := " before-now",
                   <.td(testFlightT.ICAO),
                   <.td(testFlightT.Origin),
                   <.td(s"${testFlightT.Gate}/${testFlightT.Stand}"),

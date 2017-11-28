@@ -12,8 +12,6 @@ object FilterFlightsByRangeTests extends TestSuite {
 
   import ApiFlightGenerator._
 
-  test.WebpackRequire.ReactTestUtils
-
   def tests = TestSuite {
     "Given an hour range of 10 to 14" - {
       val range = CustomWindow(10, 14)
