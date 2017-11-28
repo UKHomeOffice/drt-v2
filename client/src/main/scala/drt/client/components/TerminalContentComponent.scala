@@ -160,7 +160,7 @@ object TerminalContentComponent {
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
                 val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, props.timeRangeHours, terminalFlights.toList)
 
-                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder))
+                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder, props.airportConfig.hasEstChox))
               }))
             } else ""
           }),
@@ -186,7 +186,5 @@ object TerminalContentComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(props: Props): VdomElement = {
-    component(props)
-  }
+  def apply(props: Props): VdomElement = component(props)
 }
