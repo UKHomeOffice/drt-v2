@@ -20,7 +20,7 @@ object FlightComponents {
     val airportConfigRCP = SPACircuit.connect(_.airportConfig)
     airportConfigRCP(acPot => {
       <.div(
-        acPot().renderReady(ac => {
+        acPot().renderReady(_ => {
           val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
           val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
           val paxClass = paxClassFromSplits(flightWithSplits)
@@ -45,7 +45,7 @@ object FlightComponents {
     }
   }
 
-  def bestPaxToDisplay(flight: Arrival, apiExTransPax: Int, portCode: String) = {
+  def bestPaxToDisplay(flight: Arrival, apiExTransPax: Int, portCode: String): Int = {
     val bestNonApiPax = ArrivalHelper.bestPax(flight)
     val apiDiffTrustThreshold = 0.2
     val absPercentageDifference = Math.abs(apiExTransPax - bestNonApiPax).toDouble / bestNonApiPax
@@ -93,7 +93,7 @@ object FlightComponents {
                 val label = paxTypeAndQueueString(paxTypeAndQueue)
                 <.div(
                   ^.className := "bar " + paxTypeAndQueue.queueType,
-                  ^.height := s"${percentage}%",
+                  ^.height := s"$percentage%",
                   ^.title := s"$paxCount $label")
             }.toTagMod,
             <.div(^.className := "bar-max bar")
