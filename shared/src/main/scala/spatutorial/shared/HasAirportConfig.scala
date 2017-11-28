@@ -87,7 +87,8 @@ case class AirportConfig(
                           fixedPointExamples: Seq[String] = Seq(),
                           hasActualDeskStats: Boolean = false,
                           portStateSnapshotInterval: Int = 1000,
-                          eGateBankSize: Int = 5
+                          eGateBankSize: Int = 5,
+                          hasEstChox: Boolean = false
                         ) extends AirportConfigLike {
 
 }
@@ -366,7 +367,8 @@ object AirportConfigs {
     ),
     queueOrder = PaxTypesAndQueues.inOrderWithFastTrack,
     hasActualDeskStats = true,
-    portStateSnapshotInterval = 250
+    portStateSnapshotInterval = 250,
+    hasEstChox = true
   )
   val ltn = AirportConfig(
     portCode = "LTN",

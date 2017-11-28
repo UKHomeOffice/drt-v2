@@ -12,13 +12,10 @@ import scala.collection.immutable.{Map, Seq}
 
 object FlightsTableTests extends TestSuite {
 
+  import FlightsWithSplitsTable.ArrivalsTable
+  import japgolly.scalajs.react._
   import japgolly.scalajs.react.test._
   import japgolly.scalajs.react.vdom.html_<^._
-  import japgolly.scalajs.react.{test, _}
-
-  test.WebpackRequire.ReactTestUtils
-
-  import FlightsWithSplitsTable.ArrivalsTable
 
   def tests = TestSuite {
 
@@ -101,7 +98,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(0)))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack)),
+            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
         "ArrivalsTableComponent has a hook for a timeline column" - {
@@ -146,7 +143,7 @@ object FlightsTableTests extends TestSuite {
           //            .renderStatic(<.span("herebecallback")).build
           val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack.toList)),
+            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
 
@@ -196,7 +193,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = (port) => originMapperComponent(port)
-            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack))
+            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -270,7 +267,7 @@ object FlightsTableTests extends TestSuite {
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = (s) => s)(paxComponent)(
-              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), PaxTypesAndQueues.inOrderSansFastTrack)),
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
 
         }
@@ -278,7 +275,7 @@ object FlightsTableTests extends TestSuite {
     }
   }
 
-  def assertRenderedComponentsAreEqual[P](rc: Unmounted[P, Unit, Unit], expected: Unmounted[Unit, Unit, Unit]) = {
+  def assertRenderedComponentsAreEqual[P](rc: Unmounted[P, Unit, Unit], expected: Unmounted[Unit, Unit, Unit]): Unit = {
     ReactTestUtils.withRenderedIntoDocument(rc) {
       real =>
         ReactTestUtils.withRenderedIntoDocument(expected) {

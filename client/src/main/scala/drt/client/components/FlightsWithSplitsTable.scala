@@ -19,7 +19,7 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = (Arrival) => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: List[PaxTypeAndQueue])
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: List[PaxTypeAndQueue], hasEstChox: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.map(_.lastUpdated)
@@ -29,7 +29,7 @@ object FlightsWithSplitsTable {
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
-    .renderPS((_$, props, state) => {
+    .render_P((props) => {
 
       val flightsWithSplits = props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
@@ -45,13 +45,14 @@ object FlightsWithSplitsTable {
               ^.className := "table table-responsive table-striped table-hover table-sm",
               <.thead(<.tr(
                 timelineTh,
-                <.th("Flight"), <.th("Origin"),
+                <.th("Flight"),
+                <.th("Origin"),
                 <.th("Gate/Stand"),
                 <.th("Status"),
                 <.th("Sch"),
                 <.th("Est"),
                 <.th("Act"),
-                <.th("Est Chox"),
+                if (props.hasEstChox) <.th("Est Chox") else "",
                 <.th("Act Chox"),
                 <.th("Est PCP"),
                 <.th("Pax Nos"),
@@ -68,7 +69,8 @@ object FlightsWithSplitsTable {
                       originMapper = originMapper,
                       paxComponent = paxComponent,
                       splitsGraphComponent = splitsGraphComponent,
-                      splitsQueueOrder = props.queueOrder
+                      splitsQueueOrder = props.queueOrder,
+                      hasEstChox = props.hasEstChox
                     ))
                 }.toTagMod)))
         else
@@ -101,7 +103,8 @@ object FlightTableRow {
                    originMapper: OriginMapperF = (portCode) => portCode,
                    paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
-                   splitsQueueOrder: List[PaxTypeAndQueue]
+                   splitsQueueOrder: List[PaxTypeAndQueue],
+                   hasEstChox: Boolean
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => props.flightWithSplits.lastUpdated)
@@ -126,9 +129,7 @@ object FlightTableRow {
 
   val tableRow = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
-    .renderPS(($, props, state) => {
-
-      val idx = props.idx
+    .render_PS((props, state) => {
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -136,10 +137,10 @@ object FlightTableRow {
 
       Try {
         def sourceDisplayName(splits: ApiSplits) = splits match {
-            case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
-            case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
-            case _ => "Port Average"
-          }
+          case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
+          case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
+          case _ => "Port Average"
+        }
 
         def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
           val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
@@ -174,7 +175,9 @@ object FlightTableRow {
           <.td(^.key := flight.uniqueId.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
           <.td(^.key := flight.uniqueId.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
           <.td(^.key := flight.uniqueId.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-          <.td(^.key := flight.uniqueId.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT)),
+          if (props.hasEstChox)
+            <.td(^.key := flight.uniqueId.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT))
+          else "",
           <.td(^.key := flight.uniqueId.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
           <.td(^.key := flight.uniqueId.toString + "-pcptimefrom", pcpTimeRange(flight, ArrivalHelper.bestPax)),
           <.td(^.key := flight.uniqueId.toString + "-actpax", props.paxComponent(flightWithSplits)),
