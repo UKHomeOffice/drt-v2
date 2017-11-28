@@ -60,9 +60,9 @@ case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, event
 }
 
 object ApiSplits {
-  def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).map(_.paxCount).sum
+  def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
 
-  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.map(_.paxCount).sum
+  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(_.paxCount).sum
 }
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastUpdated: Option[MillisSinceEpoch] = None) {
