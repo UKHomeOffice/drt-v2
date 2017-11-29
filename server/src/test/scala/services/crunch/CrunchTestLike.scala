@@ -24,7 +24,7 @@ import scala.collection.immutable.{List, Seq, Set}
 
 
 class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, "live-test", queues, now, expireAfterMillis) {
+  extends CrunchStateActor(1, "live-test", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -34,7 +34,7 @@ class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe:
 }
 
 class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, "forecast-test", queues, now, expireAfterMillis) {
+  extends CrunchStateActor(1, "forecast-test", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
