@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.TimeRangeHours
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -16,7 +17,7 @@ import scala.scalajs.js.Date
 object DatePickerComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc)
+  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
@@ -87,7 +88,7 @@ object DatePickerComponent {
       def isDataAvailableForDate = SnapshotSelector.isLaterThanEarliest(state.selectedDateTime)
 
       <.div(^.className := "date-selector",
-        <.div(^.className := "form-group row",
+        <.div(^.className := "row",
           <.div(^.className := "btn-group col-sm-4 no-gutters", VdomAttr("data-toggle") := "buttons",
             <.div(^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
@@ -98,7 +99,9 @@ object DatePickerComponent {
               <.div(^.className := "col-sm-1 no-gutters", drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt))),
               <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate),
               errorMessage
-            ).toTagMod)
+            ).toTagMod,
+          TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours))
+        )
       )
     })
     .configure(Reusability.shouldComponentUpdate)

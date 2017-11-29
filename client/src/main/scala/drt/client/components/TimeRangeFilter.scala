@@ -42,6 +42,7 @@ object TimeRangeFilter {
         case CurrentWindow() => "active"
         case _ => ""
       }
+
       def dayActive = state.window match {
         case WholeDayWindow() => "active"
         case _ => ""
@@ -50,34 +51,37 @@ object TimeRangeFilter {
       <.div(
         <.div(^.className := "date-view-picker-container",
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
-          <.div(^.className := s"btn btn-primary $nowActive", "Current", ^.onClick ==> ((e: ReactEventFromInput) => {
-            val newState = State(CurrentWindow())
-            val state = scope.modState(_ => newState)
-            SPACircuit.dispatch(SetTimeRangeFilter(newState.window))
-            state
-          })),
-          <.div(^.className := s"btn btn-primary $dayActive", "Whole Day", ^.onClick ==> ((e: ReactEventFromInput) => {
-            val newState = State(WholeDayWindow())
-            val state = scope.modState(_ => newState)
-            SPACircuit.dispatch(SetTimeRangeFilter(newState.window))
-            state
-          }))),
-          "From: ",
-          <.select(
-            ^.value := state.window.start,
-            ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setStart(e.target.value))),
-            (0 to 24).map(h => {
-              <.option(^.value := s"$h", f"$h%02d")
-            }
-            ).toTagMod),
-          " To: ",
-          <.select(
-            ^.value := state.window.end,
-            ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setEnd(e.target.value))),
-            (0 to 24).map(h => {
-              <.option(^.value := s"$h", f"$h%02d")
-            }
-            ).toTagMod)
+            <.div(^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
+              val newState = State(CurrentWindow())
+              val state = scope.modState(_ => newState)
+              SPACircuit.dispatch(SetTimeRangeFilter(newState.window))
+              state
+            })),
+            <.div(^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
+              val newState = State(WholeDayWindow())
+              val state = scope.modState(_ => newState)
+              SPACircuit.dispatch(SetTimeRangeFilter(newState.window))
+              state
+            }))
+          ),
+          <.div(^.className := "time-range",
+            "From: ",
+            <.select(
+              ^.value := state.window.start,
+              ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setStart(e.target.value))),
+              (0 to 24).map(h => {
+                <.option(^.value := s"$h", f"$h%02d")
+              }
+              ).toTagMod),
+            " To: ",
+            <.select(
+              ^.value := state.window.end,
+              ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setEnd(e.target.value))),
+              (0 to 24).map(h => {
+                <.option(^.value := s"$h", f"$h%02d")
+              }
+              ).toTagMod)
+          )
         ))
     })
   }).build

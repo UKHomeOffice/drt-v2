@@ -120,19 +120,22 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
 
       <.div(
-        <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-        <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours)),
-        <.ul(^.className := "nav nav-tabs",
-          <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab = "desksAndQueues"))
-          }),
-          <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab = "arrivals"))
-          }),
-          <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(tab = "staffing"))
-          })
+        <.div(^.className := "tabs-with-export",
+          <.ul(^.className := "nav nav-tabs",
+            <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(tab = "desksAndQueues"))
+            }),
+            <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(tab = "arrivals"))
+            }),
+            <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(tab = "staffing"))
+            })
+          ),
+          <.div(^.className := "exports",
+            <.a("Export Arrivals", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
+            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank")
+          )
         ),
         <.div(^.className := "tab-content",
           <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive", ^.href := "#desksAndQueues",
