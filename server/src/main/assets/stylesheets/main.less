@@ -126,10 +126,15 @@
 }
 
 .date-view-picker-container {
-  padding: 17px;
+  display: flex;
+  padding: 10px 17px 0 0;
   color: #333;
   font-size: 16px;
   margin-bottom: 15px;
+}
+
+.date-view-picker-container .time-range {
+  padding-top: 16px;
 }
 
 .date-view-picker-container select {
@@ -360,6 +365,27 @@ table.headlines tr:nth-child(odd) {
   left: -19em;
   top: 93%;
 
+}
+
+.tabs-with-export {
+  display: flex;
+}
+
+.nav-tabs {
+  width: 100%;
+}
+
+.exports {
+  display: flex;
+  text-align: right;
+  padding-top: 11px;
+  border-bottom: 1px solid #ddd;
+}
+
+.exports a {
+  margin: 0 10px 4px 0;
+  padding: 2px 10px;
+  width: 143px;
 }
 
 .table-xcondensed {

@@ -69,7 +69,7 @@ object TerminalDisplayModeComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
-              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab)),
+              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours)),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
