@@ -122,9 +122,8 @@ object TerminalContentComponent {
       <.div(
         <.a("Export Arrivals", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
         <.a("Export Desks", ^.className := "btn btn-link", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-        TimeRangeFilter(TimeRangeFilter.Props(CurrentWindow())),
+        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours)),
         <.ul(^.className := "nav nav-tabs",
-
           <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
             props.router.set(props.terminalPageTab.copy(tab = "desksAndQueues"))
           }),
