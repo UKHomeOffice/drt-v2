@@ -113,9 +113,14 @@ trait SystemActors {
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
   val actorMaterializer = ActorMaterializer()
 
+  val purgeOldLiveSnapshots = false
+  val purgeOldForecastSnapshots = true
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+
+  val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis), name = "voyage-manifests-actor")
-  val liveCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-live-state-actor")
-  val forecastCrunchStateActor: ActorRef = system.actorOf(Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis), name = "crunch-forecast-state-actor")
+  val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
   val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))

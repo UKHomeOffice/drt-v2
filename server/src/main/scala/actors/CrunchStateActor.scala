@@ -16,7 +16,12 @@ import services.graphstages.Crunch._
 import scala.collection.immutable._
 import scala.language.postfixOps
 
-class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[TerminalName, Seq[QueueName]], now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor {
+class CrunchStateActor(val snapshotInterval: Int,
+                       name: String,
+                       portQueues: Map[TerminalName, Seq[QueueName]],
+                       now: () => SDateLike,
+                       expireAfterMillis: Long,
+                       purgePreviousSnapshots: Boolean) extends PersistentActor {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
@@ -98,6 +103,9 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Snapshot failed $md\n$cause")
+
+    case DeleteSnapshotsSuccess(_) =>
+      log.info(s"Purged snapshots")
 
     case u =>
       log.warn(s"Received unexpected message $u")
@@ -209,6 +217,11 @@ class CrunchStateActor(val snapshotInterval: Int, name: String, portQueues: Map[
         val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(updatedState)
         log.info(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
         saveSnapshot(snapshotMessage)
+        if (purgePreviousSnapshots) {
+          val maxSequenceNr = lastSequenceNr
+          log.info(s"Purging snapshots with sequence number < $maxSequenceNr")
+          deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
+        }
       }
     }
 
