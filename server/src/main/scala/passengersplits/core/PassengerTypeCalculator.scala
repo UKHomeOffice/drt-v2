@@ -165,7 +165,7 @@ object PassengerTypeCalculator {
 
   def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
     case PaxTypeInfo(_, "Y", _, _) => Transit
-    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode != portCode => Transit
+    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode.nonEmpty && disembarkPortCode != portCode => Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
