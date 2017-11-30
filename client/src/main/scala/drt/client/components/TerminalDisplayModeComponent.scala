@@ -75,7 +75,7 @@ object TerminalDisplayModeComponent {
           }),
           <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
             if (state.activeTab == "snapshot") <.div(
-              SnapshotSelector(props.router, props.terminalPageTab),
+              SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),

@@ -130,7 +130,7 @@
   padding: 10px 17px 0 0;
   color: #333;
   font-size: 16px;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .date-view-picker-container .time-range {
@@ -309,27 +309,35 @@ table.headlines tr:nth-child(odd) {
   margin-left: 1.5%;
 }
 
+.date-selector label.text {
+  margin-top: 7px;
+}
+
+.date-selector label.text.center {
+  text-align: center;
+  width: 100%;
+}
+
+.date-selector .narrower {
+  width: auto;
+}
+
+.date-selector .spacer {
+  width: 15px;
+}
+
 .snapshot-selector {
   width: 750px;
   padding-top: 2%;
   margin-left: 0.5%;
 }
 
-.snapshot-selector .error-message {
-  position: relative;
+.snapshot-selector .error-message, .date-selector .error-message  {
+  /*position: relative;
   float: left;
   left: 55em;
-  top: -2.5em;
-  border: 1px solid red;
-  border-radius: 3px;
-  padding: 7px;
-}
-
-.date-selector .error-message {
-  position: relative;
-  float: left;
-  left: 50em;
-  top: -2.5em;
+  top: -2.5em;*/
+  width: 240px;
   border: 1px solid red;
   border-radius: 3px;
   padding: 7px;

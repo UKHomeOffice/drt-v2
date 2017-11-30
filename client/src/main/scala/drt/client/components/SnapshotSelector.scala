@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.TimeRangeHours
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -19,7 +20,7 @@ object SnapshotSelector {
 
   val log: Logger = LoggerFactory.getLogger("SnapshotSelector")
 
-  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc)
+  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def snapshotDateTime = SDate(year, month, day, hours, minutes)
@@ -81,39 +82,35 @@ object SnapshotSelector {
         }
       }
 
+      def errorMessage = if (!isInPast)
+        <.div(^.className := "error-message", "Please select a date in the past")
+      else if (!isLaterThanEarliest(state.snapshotDateTime))
+        <.div(^.className := "error-message", s"Earliest available is ${SnapshotSelector.earliestAvailable.ddMMyyString}")
+      else <.div()
+
       def isInPast = {
         state.snapshotDateTime.millisSinceEpoch < SDate.now().millisSinceEpoch
       }
 
-      <.div(
-        <.div(
-          if (state.showDatePicker) {
-            val errorMessage = if (!isInPast) <.div(^.className := "error-message", "Please select a date in the past") else if
-            (!isLaterThanEarliest(state.snapshotDateTime)) <.div(^.className := "error-message", s"Earliest available is ${earliestAvailable.prettyDateTime()}") else <.div()
-
-            <.div(
-              <.div(
-                <.div(^.className := "form-group row snapshot-selector",
-                  List(
-                    <.div(^.className := "col-sm-3 no-gutters", <.label("Choose Snapshot", ^.className := "col-form-label")),
-                    <.div(^.className := "col-sm-2 no-gutters", drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt))),
-                    <.div(^.className := "col-sm-1 no-gutters", drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt))),
-                    <.div(^.className := "col-sm-1 no-gutters", drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt))),
-                    <.div(^.className := "col-sm-1 no-gutters", drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt))),
-                    <.div(^.className := "col-sm-1 no-gutters", drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt))),
-                    <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime)),
-                    errorMessage
-                  ).toTagMod
-                )))
-          } else {
-            <.div(^.className := "form-group row",
-              <.div(s"Showing Snapshot at: ${state.snapshotDateTime.prettyDateTime()}", ^.className := "popover-trigger",
-                ^.onClick ==> ((_: ReactEventFromInput) => scope.modState(_.copy(showDatePicker = true))))
-            )
-          }))
+      <.div(^.className := "date-selector",
+        <.div(^.className := "row",
+          List(
+            <.div(^.className := "col-sm-2 no-gutters", <.label("Snapshot as of", ^.className := "text")),
+            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt))),
+            <.div(^.className := "col-sm-2 no-gutters narrower", drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt))),
+            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt))),
+            <.div(^.className := "col-sm-1 no-gutters", <.label("at", ^.className := "text center")),
+            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt))),
+            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt))),
+            <.div(^.className := "col-sm-1 no-gutters spacer", <.label(" ", ^.className := "text center")),
+            <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime)),
+            errorMessage
+          ).toTagMod),
+        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours))
+      )
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc): VdomElement = component(Props(router, page))
+  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, timeRangeHours: TimeRangeHours): VdomElement = component(Props(router, page, timeRangeHours))
 }
