@@ -126,7 +126,7 @@ object TerminalDesksAndQueues {
   })
 
   val component = ScalaComponent.builder[Props]("Loader")
-    .initialState[State](State(showActuals = false, ViewDeps))
+    .initialState[State](State(showActuals = true, ViewDeps))
     .renderPS((scope, props, state) => {
       def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
 
