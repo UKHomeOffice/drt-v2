@@ -58,6 +58,7 @@ object TerminalDesksAndQueuesRow {
               val ragClass = cm.waitTime.toDouble / props.airportConfig.slaByQueue(qn) match {
                 case pc if pc >= 1 => "red"
                 case pc if pc >= 0.7 => "amber"
+                case _ => ""
               }
               List(paxLoadTd,
                 <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deskRec}", s"${cm.deskRec}"),
