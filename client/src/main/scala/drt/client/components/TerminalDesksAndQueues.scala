@@ -32,7 +32,8 @@ object TerminalDesksAndQueuesRow {
                    airportConfig: AirportConfig,
                    terminalName: TerminalName,
                    showActuals: Boolean,
-                   viewType: ViewType)
+                   viewType: ViewType,
+                   hasActualDeskStats: Boolean)
 
   implicit val rowPropsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     (props.queueMinutes.hashCode, props.showActuals, props.viewType.hashCode)
@@ -126,7 +127,9 @@ object TerminalDesksAndQueues {
   })
 
   val component = ScalaComponent.builder[Props]("Loader")
-    .initialState[State](State(showActuals = true, ViewDeps))
+    .initialStateFromProps(p => {
+      State(showActuals = p.airportConfig.hasActualDeskStats, ViewDeps)
+    })
     .renderPS((scope, props, state) => {
       def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
 
@@ -157,7 +160,7 @@ object TerminalDesksAndQueues {
               <.th(^.title := "Wait times with recommendations", "Est wait", ^.className := queueColumnClass))
         }
 
-        if (state.showActuals)
+        if (props.airportConfig.hasActualDeskStats && state.showActuals)
           headings ++ List(
             <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
             <.th(^.title := "Actual wait times", "Act wait", ^.className := queueColumnActualsClass))
@@ -264,7 +267,7 @@ object TerminalDesksAndQueues {
             ^.id := "sticky-body",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
-                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, List()), props.airportConfig, props.terminalName, state.showActuals, state.viewType)
+                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, List()), props.airportConfig, props.terminalName, state.showActuals, state.viewType, props.airportConfig.hasActualDeskStats)
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
       )
