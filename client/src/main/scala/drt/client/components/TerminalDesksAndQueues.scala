@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.JSDateConversions
+import drt.client.services.JSDateConversions._
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -73,11 +73,10 @@ object TerminalDesksAndQueuesRow {
       }
       val fixedPoints = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.fixedPoints).max else 0
       val movements = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.movements).max else 0
-      val available = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.available).max else 0
+      val available = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(sm => sm.shifts - sm.movements).max else 0
       val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
       val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
       val ragClass = ragStatus(totalRequired, totalDeployed)
-      import JSDateConversions._
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
@@ -242,6 +241,7 @@ object TerminalDesksAndQueues {
             <.tbody()
           ))
       }
+
       <.div(
         floatingHeader,
         <.div(

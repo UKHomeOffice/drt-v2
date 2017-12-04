@@ -91,9 +91,7 @@ object TerminalDisplayModeComponent {
     })
     .build
 
-  def apply(props: Props): VdomElement = {
-    component(props)
-  }
+  def apply(props: Props): VdomElement = component(props)
 }
 
 
