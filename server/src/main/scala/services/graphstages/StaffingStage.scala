@@ -428,10 +428,12 @@ object StaffDeploymentCalculator {
 
   def queueRecsToDeployments(round: Double => Int)
                             (queueRecs: Seq[(String, Int)], staffAvailable: Int, minMaxDesks: Map[String, (Int, Int)]): Seq[(String, Int)] = {
-    val totalStaffRec = queueRecs.map(_._2).sum
+    val queueRecsCorrected = if (queueRecs.map(_._2).sum == 0) queueRecs.map(qr => (qr._1, 1)) else queueRecs
 
-    queueRecs.foldLeft(List[(String, Int)]()) {
-      case (agg, (queue, deskRec)) if agg.length < queueRecs.length - 1 =>
+    val totalStaffRec = queueRecsCorrected.map(_._2).sum
+
+    queueRecsCorrected.foldLeft(List[(String, Int)]()) {
+      case (agg, (queue, deskRec)) if agg.length < queueRecsCorrected.length - 1 =>
         val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
         val totalRecommended = agg.map(_._2).sum
         val dr = deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - totalRecommended)
