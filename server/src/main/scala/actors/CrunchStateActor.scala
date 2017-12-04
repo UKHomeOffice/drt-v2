@@ -261,7 +261,8 @@ class CrunchStateActor(val snapshotInterval: Int,
     Option(0L),
     Option(0),
     portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-    portState.crunchMinutes.values.toList.map(crunchMinuteToMessage)
+    portState.crunchMinutes.values.toList.map(crunchMinuteToMessage),
+    portState.staffMinutes.values.toList.map(staffMinuteToMessage)
   )
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortState = {
