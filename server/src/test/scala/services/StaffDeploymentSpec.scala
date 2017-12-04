@@ -25,6 +25,7 @@ class StaffDeploymentSpec extends Specification {
       Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(10))),
       Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(10)))))
 
+  private val staffAvailable = 25
   "Given a set of CrunchMinutes representing a single terminal with 3 queues at one minute " +
   "When I ask to add deployments to them " +
   "Then I see the staff available distributed to the appropriate queues" >> {
@@ -34,13 +35,34 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.EGate, 0, 12)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => 25)
+    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
       crunchMinute("T1", Queues.EeaDesk, 0, 5, Some(4)),
       crunchMinute("T1", Queues.NonEeaDesk, 0, 10, Some(10)),
       crunchMinute("T1", Queues.EGate, 0, 12, Some(10))
+    )
+
+    result === expected
+  }
+
+  "Given a set of CrunchMinutes with recs all zero " +
+  "When I ask to add deployments to them " +
+  "Then I see the staff available distributed evenly across the queues" >> {
+    val crunchMinutes = Set(
+      crunchMinute("T1", Queues.EeaDesk, 0, 0),
+      crunchMinute("T1", Queues.NonEeaDesk, 0, 0),
+      crunchMinute("T1", Queues.EGate, 0, 0)
+    ).map(cm => (cm.key, cm)).toMap
+    val deployer: Deployer = queueRecsToDeployments(_.toInt)
+    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
+    val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
+
+    val expected = Set(
+      crunchMinute("T1", Queues.EeaDesk, 0, 0, Some(8)),
+      crunchMinute("T1", Queues.NonEeaDesk, 0, 0, Some(9)),
+      crunchMinute("T1", Queues.EGate, 0, 0, Some(8))
     )
 
     result === expected
@@ -56,7 +78,7 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.NonEeaDesk, 60000, 15)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => 25)
+    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
 
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
@@ -85,7 +107,7 @@ class StaffDeploymentSpec extends Specification {
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
 
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => 25)
+    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
