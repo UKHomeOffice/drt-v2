@@ -1,7 +1,7 @@
 package services
 
 import com.typesafe.config.ConfigFactory
-import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import org.joda.time.DateTime
@@ -56,9 +56,9 @@ object CSVPassengerSplitsProvider {
       }.getOrElse(defaultPct)
   }
 
-  def applyEgatesSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], egatePct: Double): List[SplitsPaxTypeAndQueueCount] = {
+  def applyEgatesSplits(ptaqc: List[ApiPaxTypeAndQueueCount], egatePct: Double): List[ApiPaxTypeAndQueueCount] = {
     ptaqc.flatMap {
-      case s@SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count) =>
+      case s@ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count) =>
         val eeaDeskPax = Math.round(count * (1 - egatePct)).toInt
         s.copy(queueType = EGate, paxCount = count - eeaDeskPax) ::
           s.copy(queueType = EeaDesk, paxCount = eeaDeskPax) :: Nil
@@ -68,13 +68,13 @@ object CSVPassengerSplitsProvider {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  def applyFastTrackSplits(ptaqc: List[SplitsPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[SplitsPaxTypeAndQueueCount] = {
+  def applyFastTrackSplits(ptaqc: List[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): List[ApiPaxTypeAndQueueCount] = {
     val results = ptaqc.flatMap {
-      case s@SplitsPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
+      case s@ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
         val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
         s.copy(queueType = Queues.FastTrack, paxCount = count - nonVisaNationalNonEeaDesk) ::
           s.copy(paxCount = nonVisaNationalNonEeaDesk) :: Nil
-      case s@SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.visaNational != 0 =>
+      case s@ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.visaNational != 0 =>
         val visaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.visaNational)).toInt
         s.copy(queueType = Queues.FastTrack, paxCount = count - visaNationalNonEeaDesk) ::
           s.copy(paxCount = visaNationalNonEeaDesk) :: Nil

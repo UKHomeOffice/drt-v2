@@ -1,18 +1,16 @@
 package passengersplits
 
-import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
 import drt.shared.PaxTypes._
-import drt.shared.{PaxType, Queues}
-import passengersplits.core.PassengerTypeCalculator.{Country, PaxTypeInfo}
-import passengersplits.core.{PassengerQueueCalculator, PassengerTypeCalculator, PassengerTypeCalculatorValues}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import drt.shared.{ApiPaxTypeAndQueueCount, PaxType, Queues}
 import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
 import org.specs2.specification.Tables
+import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
 import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
+import passengersplits.core.{PassengerQueueCalculator, PassengerTypeCalculator}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 
 import scala.collection.immutable
-import scala.reflect.io.File
 
 
 class FlightPassengerQueueCalculatorSpec extends Specification with Matchers with Tables {
@@ -53,10 +51,10 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
       )
       val calculatedDeskCounts = calculateQueuePaxCounts(passengerTypeCounts, 0)
       calculatedDeskCounts.toSet should beEqualTo(List(
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 20),
-        SplitsPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 10),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 10),
-        SplitsPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 5)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 20),
+        ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 10),
+        ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 10),
+        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 5)
       ).toSet)
     }
     "Given different counts of passenger types, " +
@@ -69,10 +67,10 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
         VisaNational -> 10
       )
       val expectedDeskPaxCounts = Set(
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100),
-        SplitsPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 15),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 50),
-        SplitsPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 10)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100),
+        ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 15),
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 50),
+        ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 10)
       )
       val calculatedDeskCounts = calculateQueuePaxCounts(passengerTypeCounts, 0d)
       calculatedDeskCounts.toSet should beEqualTo(expectedDeskPaxCounts)
@@ -84,8 +82,8 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
         VisaNational -> 10
       )
       val expectedDeskPaxCounts = Set(
-        SplitsPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 10),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 50)
+        ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 10),
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 50)
       )
       val calculatedDeskCounts = calculateQueuePaxCounts(passengerTypeCounts, 0d)
       calculatedDeskCounts.toSet === expectedDeskPaxCounts
@@ -97,7 +95,7 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
           val passengerInfos = PassengerInfoJson(Passport, "DEU", "EEA", None, None, "N", None, Some("DEU"), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
           PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
-            SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1)))
+            ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1)))
         }
       }
       "Given a GBR (UK) national" in {
@@ -105,7 +103,7 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
           val passengerInfos = PassengerInfoJson(Passport, "GBR", "EEA", None, None, "N", None, Some("GBR"), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
           PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
-            SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1)))
+            ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1)))
         }
       }
     }
@@ -126,7 +124,7 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
           val passengerInfos = PassengerInfoJson(Passport, visaRequiredCountryCode, "EEA", None, None, "N", None, Some(visaRequiredCountryCode), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
           PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
-            SplitsPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1)))
+            ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1)))
 
         }
         "Number of visaCountries is 112" in {
@@ -143,7 +141,6 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
 
   def passengerType = {
     import CountryCodes._
-    import PassengerTypeCalculatorValues.EEA
     val lebanon = "LBN"
     val israel = "ISR"
     val haiti = "HTI"

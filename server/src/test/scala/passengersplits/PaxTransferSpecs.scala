@@ -1,7 +1,6 @@
 package passengersplits
 
-import drt.shared.PassengerSplits.SplitsPaxTypeAndQueueCount
-import drt.shared.{DqEventCodes, Queues}
+import drt.shared.{ApiPaxTypeAndQueueCount, DqEventCodes, Queues}
 import org.specs2._
 import org.specs2.specification.script.StandardDelimitedStepParsers
 import passengersplits.core.PassengerQueueCalculator
@@ -50,7 +49,7 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
     """
 
   var currentFlight: Option[VoyageManifest] = None
-  var calculatedSplits: List[SplitsPaxTypeAndQueueCount] = Nil
+  var calculatedSplits: List[ApiPaxTypeAndQueueCount] = Nil
 
   def splitsByQueue = calculatedSplits.groupBy(_.queueType).mapValues(v => v.map(_.paxCount).sum)
 

@@ -5,7 +5,7 @@ import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
 import controllers.SystemActors.SplitsProvider
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
-import drt.shared.PassengerSplits.{PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
+import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -554,7 +554,7 @@ class CrunchGraphStage(name: String,
 
     def paxTypeAndQueueCounts(manifest: VoyageManifest, f: ApiFlightWithSplits): ApiSplits = {
       val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest)
-      val sptqc: Set[SplitsPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
+      val sptqc: Set[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
       val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = sptqc.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
       val withEgateAndFastTrack = addEgatesAndFastTrack(f, apiPaxTypeAndQueueCounts)
       val splitsFromManifest = ApiSplits(withEgateAndFastTrack, SplitSources.ApiSplitsWithCsvPercentage, Some(manifest.EventCode), PaxNumbers)

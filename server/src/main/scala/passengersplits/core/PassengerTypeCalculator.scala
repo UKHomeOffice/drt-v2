@@ -1,9 +1,9 @@
 package passengersplits.core
 
-import drt.shared.PassengerSplits.{ PaxTypeAndQueueCounts, SplitsPaxTypeAndQueueCount}
-import drt.shared.PaxType
+import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
+import drt.shared.{ApiPaxTypeAndQueueCount, PaxType}
 import drt.shared.PaxTypes._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
@@ -16,7 +16,7 @@ trait PassengerQueueCalculator {
   import drt.shared.Queues._
 
   def calculateQueuePaxCounts(paxTypeCounts: Map[PaxType, Int], egatePercentage: Double): PaxTypeAndQueueCounts = {
-    val queues: Iterable[SplitsPaxTypeAndQueueCount] = paxTypeCounts flatMap (ptaq =>
+    val queues: Iterable[ApiPaxTypeAndQueueCount] = paxTypeCounts flatMap (ptaq =>
       if (egatePercentage == 0)
         calculateQueuesFromPaxTypesWithoutEgates(ptaq, egatePercentage)
       else
@@ -26,28 +26,28 @@ trait PassengerQueueCalculator {
     sortedQueues
   }
 
-  def calculateQueuesFromPaxTypesWithoutEgates(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[SplitsPaxTypeAndQueueCount] = {
+  def calculateQueuesFromPaxTypesWithoutEgates(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[ApiPaxTypeAndQueueCount] = {
     paxTypeAndCount match {
       case (EeaNonMachineReadable, paxCount) =>
-        Seq(SplitsPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
+        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
       case (EeaMachineReadable, paxCount) =>
-        Seq(SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount))
-      case (Transit, c) => Seq(SplitsPaxTypeAndQueueCount(Transit, Transfer, c))
-      case (otherPaxType, c) => Seq(SplitsPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
+        Seq(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount))
+      case (Transit, c) => Seq(ApiPaxTypeAndQueueCount(Transit, Transfer, c))
+      case (otherPaxType, c) => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
     }
   }
 
-  def calculateQueuesFromPaxTypes(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[SplitsPaxTypeAndQueueCount] = {
+  def calculateQueuesFromPaxTypes(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[ApiPaxTypeAndQueueCount] = {
     paxTypeAndCount match {
       case (EeaNonMachineReadable, paxCount) =>
-        Seq(SplitsPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
+        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
       case (EeaMachineReadable, paxCount) =>
         val egatePaxCount = (egatePercentag * paxCount).toInt
         Seq(
-          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, (paxCount - egatePaxCount)),
-          SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, egatePaxCount)
+          ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, (paxCount - egatePaxCount)),
+          ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, egatePaxCount)
         )
-      case (otherPaxType, c) => Seq(SplitsPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
+      case (otherPaxType, c) => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
     }
   }
 
@@ -124,19 +124,20 @@ object PassengerTypeCalculatorValues {
 }
 
 object PassengerQueueCalculator extends PassengerQueueCalculator {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[SplitsPaxTypeAndQueueCount] = {
+  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[ApiPaxTypeAndQueueCount] = {
     val paxTypeFn = manifest.ArrivalPortCode match {
       case "LHR" => whenTransitMatters(portCode)
       case _ => mostAirports
     }
     val paxInManifest = manifest.PassengerList
     val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.PassengerIdentifier)
-    val uniquePax = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
+    val uniquePax: Seq[PassengerInfoJson] = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
       case head :: _ => head
     } else paxInManifest
-    val paxTypes: Seq[PaxType] = uniquePax.map(passengerInfoFields).map(paxTypeFn)
+    val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
+    val paxTypes: Seq[PaxType] = paxTypeInfos.map(paxTypeFn)
     distributeToQueues(paxTypes)
   }
 

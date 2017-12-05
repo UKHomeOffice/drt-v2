@@ -54,6 +54,8 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double)
+
 case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = ApiSplits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = ApiSplits.totalPax(splits)
@@ -228,16 +230,11 @@ object FlightsApi {
   type QueueName = String
 }
 
-sealed trait SplitCounts
-
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double) extends SplitCounts
-
 object PassengerSplits {
   type QueueType = String
 
-  type PaxTypeAndQueueCounts = List[SplitsPaxTypeAndQueueCount]
+  type PaxTypeAndQueueCounts = List[ApiPaxTypeAndQueueCount]
 
-  case class SplitsPaxTypeAndQueueCount(passengerType: PaxType, queueType: QueueType, paxCount: Int)
 
   case object FlightsNotFound
 
@@ -247,7 +244,7 @@ object PassengerSplits {
                              voyageNumber: String,
                              totalPaxCount: Int,
                              scheduledArrivalDateTime: MilliDate,
-                             paxSplits: List[SplitsPaxTypeAndQueueCount])
+                             paxSplits: List[ApiPaxTypeAndQueueCount])
 
 }
 
