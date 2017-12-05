@@ -6,7 +6,6 @@ import drt.shared.{CrunchApi, Queues}
 import services.SDate
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
 
 class PlanningActualStaffSpec() extends CrunchTestLike {

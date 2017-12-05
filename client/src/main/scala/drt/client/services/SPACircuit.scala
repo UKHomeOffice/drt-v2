@@ -112,6 +112,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       val eventualAction = viewMode() match {
         case ViewLive() =>
           log.info(s"Requesting CrunchUpdates")
+          implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
           AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call()
             .map {
               case Some(cu) =>
@@ -128,6 +129,8 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
 
         case vm =>
           log.info(s"Requesting crunchState for point in time ${vm.time.prettyDateTime()}")
+
+          implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
 
           val call = vm match {
             case ViewPointInTime(time) => AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()

@@ -336,7 +336,8 @@ object SplitsConversion {
       sm.paxTypeAndQueueCount.map(ptqcm => ApiPaxTypeAndQueueCount(
         PaxType(ptqcm.paxType.getOrElse("")),
         ptqcm.queueType.getOrElse(""),
-        ptqcm.paxValue.getOrElse(0d)
+        ptqcm.paxValue.getOrElse(0d),
+        None
       )).toSet,
       sm.source.getOrElse(""),
       sm.eventType,

@@ -13,7 +13,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import org.scalajs.dom.html.{Div, TableSection}
 
-import scala.collection.immutable
+//import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
 
 object FlightsWithSplitsTable {
@@ -81,7 +81,7 @@ object FlightsWithSplitsTable {
     .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
     .build
 
-  def tableHead(props: Props, timelineTh: TagMod, queueNames: immutable.Seq[String]): TagOf[TableSection] = {
+  def tableHead(props: Props, timelineTh: TagMod, queueNames: Seq[String]): TagOf[TableSection] = {
     <.thead(
       <.tr(
       timelineTh,

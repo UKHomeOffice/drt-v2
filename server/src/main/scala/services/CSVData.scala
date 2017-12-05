@@ -5,8 +5,6 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
-
 object CSVData {
 
   val log = LoggerFactory.getLogger(getClass)

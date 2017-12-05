@@ -4,7 +4,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
 
-import scala.collection.immutable.{Map, _}
+//import scala.collection.immutable.{Map, _}
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
@@ -54,7 +54,7 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double)
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double, nationalities: Option[Map[String, Double]])
 
 case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = ApiSplits.totalExcludingTransferPax(splits)

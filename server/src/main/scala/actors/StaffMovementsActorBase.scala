@@ -9,8 +9,6 @@ import drt.shared.{MilliDate, StaffMovement}
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.SDate
 
-import scala.collection.immutable.Seq
-
 case class StaffMovements(staffMovements: Seq[StaffMovement])
 
 case class StaffMovementsState(staffMovements: StaffMovements) {

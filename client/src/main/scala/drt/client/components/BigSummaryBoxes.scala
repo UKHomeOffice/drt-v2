@@ -123,7 +123,7 @@ object BigSummaryBoxes {
   def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = ApiSplits(
     aggSplits.map {
       case (k, v) => {
-        ApiPaxTypeAndQueueCount(k.passengerType, k.queueType, v)
+        ApiPaxTypeAndQueueCount(k.passengerType, k.queueType, v, None)
       }
     }.toSet,
     "Aggregated", None, PaxNumbers

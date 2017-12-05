@@ -3,11 +3,11 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, TimeRangeHours, ViewMode}
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriod, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines}
 import drt.shared.FlightsApi._
 import drt.shared._
 
-import scala.collection.immutable.{Map, Seq}
+//import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.duration.FiniteDuration
 
 object Actions {

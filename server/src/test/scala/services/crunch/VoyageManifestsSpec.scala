@@ -57,10 +57,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expectedSplits = Set(
       ApiSplits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0)), TerminalAverage, None, Percentage),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage),
       ApiSplits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 1.0)))), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers)
     )
     val splitsSet = flights.head match {
       case (_, ApiFlightWithSplits(_, s, _)) => s
@@ -109,12 +109,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expectedSplits = Set(
       ApiSplits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0)), TerminalAverage, None, Percentage),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage),
       ApiSplits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 1.0)))), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers),
       ApiSplits(Set(
-        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0)), ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0, Option(Map("USA" -> 1.0)))), ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
     val splitsSet = portState.flights.head match {
       case (_, ApiFlightWithSplits(_, s, _)) => s

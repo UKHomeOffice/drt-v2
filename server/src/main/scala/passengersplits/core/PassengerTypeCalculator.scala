@@ -1,58 +1,78 @@
 package passengersplits.core
 
 import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
-import drt.shared.{ApiPaxTypeAndQueueCount, PaxType}
 import drt.shared.PaxTypes._
+import drt.shared.{ApiPaxTypeAndQueueCount, PaxType}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
-
-import scala.collection.immutable.{Iterable, Seq}
 
 trait PassengerQueueCalculator {
 
   import drt.shared.PaxType
   import drt.shared.Queues._
 
-  def calculateQueuePaxCounts(paxTypeCounts: Map[PaxType, Int], egatePercentage: Double): PaxTypeAndQueueCounts = {
-    val queues: Iterable[ApiPaxTypeAndQueueCount] = paxTypeCounts flatMap (ptaq =>
-      if (egatePercentage == 0)
-        calculateQueuesFromPaxTypesWithoutEgates(ptaq, egatePercentage)
-      else
-        calculateQueuesFromPaxTypes(ptaq, egatePercentag = egatePercentage))
+  def calculateQueuePaxCounts(paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])], egatePercentage: Double): PaxTypeAndQueueCounts = {
+    val queues: Iterable[ApiPaxTypeAndQueueCount] = paxTypeCountAndNats flatMap {
+      case (pType, (pCount, pNats)) =>
+        if (egatePercentage == 0)
+          calculateQueuesFromPaxTypesWithoutEgates(pType, pCount, pNats, egatePercentage)
+        else
+          calculateQueuesFromPaxTypes(pType, pCount, pNats, egatePercentage)
+    }
 
     val sortedQueues = queues.toList.sortBy(_.passengerType.toString)
     sortedQueues
   }
 
-  def calculateQueuesFromPaxTypesWithoutEgates(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[ApiPaxTypeAndQueueCount] = {
-    paxTypeAndCount match {
-      case (EeaNonMachineReadable, paxCount) =>
-        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
-      case (EeaMachineReadable, paxCount) =>
-        Seq(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount))
-      case (Transit, c) => Seq(ApiPaxTypeAndQueueCount(Transit, Transfer, c))
-      case (otherPaxType, c) => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
+  def calculateQueuesFromPaxTypesWithoutEgates(paxType: PaxType, paxCount: Int, paxNats: Option[Map[String, Double]], egatePercentage: Double): Seq[ApiPaxTypeAndQueueCount] = {
+    paxType match {
+      case EeaNonMachineReadable =>
+        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount, paxNats))
+      case EeaMachineReadable =>
+        Seq(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount, paxNats))
+      case Transit => Seq(ApiPaxTypeAndQueueCount(Transit, Transfer, paxCount, paxNats))
+      case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
     }
   }
 
-  def calculateQueuesFromPaxTypes(paxTypeAndCount: (PaxType, Int), egatePercentag: Double): Seq[ApiPaxTypeAndQueueCount] = {
-    paxTypeAndCount match {
-      case (EeaNonMachineReadable, paxCount) =>
-        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount))
-      case (EeaMachineReadable, paxCount) =>
-        val egatePaxCount = (egatePercentag * paxCount).toInt
+  def calculateQueuesFromPaxTypes(paxType: PaxType, paxCount: Int, paxNats: Option[Map[String, Double]], egatePercentage: Double): Seq[ApiPaxTypeAndQueueCount] = {
+    paxType match {
+      case EeaNonMachineReadable =>
+        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount, paxNats))
+      case EeaMachineReadable =>
+        val egatePaxCount = (egatePercentage * paxCount).toInt
         Seq(
-          ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, (paxCount - egatePaxCount)),
-          ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, egatePaxCount)
+          ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount - egatePaxCount, paxNats),
+          ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, egatePaxCount, paxNats)
         )
-      case (otherPaxType, c) => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, c))
+      case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
     }
   }
 
-  def countPassengerTypes(passengerTypes: Seq[PaxType]): Map[PaxType, Int] = {
-    passengerTypes.groupBy((x) => x).mapValues(_.length)
+  def countPassengerTypes(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Map[PaxType, (Int, Option[Map[String, Double]])] = {
+    val typeToTuples: Map[PaxType, Seq[(PaxType, Option[String])]] = paxTypeAndNationalities
+      .groupBy {
+        case (pt, _) => pt
+      }
+
+    val paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])] = typeToTuples
+      .mapValues {
+        case ptNats =>
+          val natCounts: Map[String, Double] = ptNats
+            .groupBy {
+              case (_, maybeNat) => maybeNat
+            }
+            .collect {
+              case (Some(nat), pax) => (nat, pax.length.toDouble)
+            }
+          if (natCounts.values.sum == ptNats.length)
+            Tuple2(ptNats.length, Some(natCounts))
+          else
+            Tuple2(ptNats.length, None)
+      }
+    paxTypeCountAndNats
   }
 
 }
@@ -98,7 +118,7 @@ object PassengerTypeCalculatorValues {
 
   import CountryCodes._
 
-  lazy val EUCountries = {
+  lazy val EUCountries: Set[String] = {
     Set(
       Austria, Belgium, Bulgaria, Croatia, Cyprus, Czech,
       Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland,
@@ -108,7 +128,7 @@ object PassengerTypeCalculatorValues {
     )
   }
 
-  lazy val EEACountries = {
+  lazy val EEACountries: Set[String] = {
     val extras = Set(Iceland, Norway, Liechtenstein, Switzerland)
     EUCountries ++ extras
   }
@@ -137,61 +157,60 @@ object PassengerQueueCalculator extends PassengerQueueCalculator {
       case head :: _ => head
     } else paxInManifest
     val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
-    val paxTypes: Seq[PaxType] = paxTypeInfos.map(paxTypeFn)
+    val paxTypes: Seq[(PaxType, Option[String])] = paxTypeInfos.map(pti => Tuple2(paxTypeFn(pti), pti.nationalityCode))
     distributeToQueues(paxTypes)
   }
 
-  private def distributeToQueues(paxTypes: Seq[PaxType]) = {
-    val paxTypeCounts = countPassengerTypes(paxTypes)
+  private def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): List[ApiPaxTypeAndQueueCount] = {
+    val paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])] = countPassengerTypes(paxTypeAndNationalities)
     val disabledEgatePercentage = 0d
 
-    calculateQueuePaxCounts(paxTypeCounts, disabledEgatePercentage)
+    calculateQueuePaxCounts(paxTypeCountAndNats, disabledEgatePercentage)
   }
-
 }
 
 
 object PassengerTypeCalculator {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, documentCountry: String, documentType: Option[String])
+  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, documentCountry: String, documentType: Option[String], nationalityCode: Option[String])
 
-  def isEea(country: String) = EEACountries contains country
+  def isEea(country: String): Boolean = EEACountries contains country
 
-  def isNonMachineReadable(country: String) = nonMachineReadableCountries contains country
+  def isNonMachineReadable(country: String): Boolean = nonMachineReadableCountries contains country
 
-  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.DocumentIssuingCountryCode, pi.DocumentType)
+  def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.DocumentIssuingCountryCode, pi.DocumentType, pi.NationalityCountryCode)
 
   def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo(_, "Y", _, _) => Transit
-    case PaxTypeInfo(Some(disembarkPortCode), _, _, _) if disembarkPortCode.nonEmpty && disembarkPortCode != portCode => Transit
+    case PaxTypeInfo(_, "Y", _, _, _) => Transit
+    case PaxTypeInfo(Some(disembarkPortCode), _, _, _, _) if disembarkPortCode.nonEmpty && disembarkPortCode != portCode => Transit
   }
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo(_, _, country, Some(docType)) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
-    case PaxTypeInfo(_, _, country, _) if isEea(country) => EeaNonMachineReadable
-    case PaxTypeInfo(_, _, country, _) if !isEea(country) && isVisaNational(country) => VisaNational
-    case PaxTypeInfo(_, _, country, _) if !isEea(country) => NonVisaNational
+    case PaxTypeInfo(_, _, country, Some(docType), _) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
+    case PaxTypeInfo(_, _, country, _, _) if isEea(country) => EeaNonMachineReadable
+    case PaxTypeInfo(_, _, country, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
+    case PaxTypeInfo(_, _, country, _, _) if !isEea(country) => NonVisaNational
   }
 
-  def isVisaNational(countryCode: String) = visaCountyCodes.contains(countryCode)
+  def isVisaNational(countryCode: String): Boolean = visaCountyCodes.contains(countryCode)
 
   val defaultToVisaNational: PartialFunction[PaxTypeInfo, PaxType] = {
     case _ => VisaNational
   }
 
-  val mostAirports = countryAndDocumentTypes orElse defaultToVisaNational
+  val mostAirports: PartialFunction[PaxTypeInfo, PaxType] = countryAndDocumentTypes orElse defaultToVisaNational
 
-  def whenTransitMatters(portCode: String) = transitMatters(portCode) orElse mostAirports
+  def whenTransitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = transitMatters(portCode) orElse mostAirports
 
   case class Country(name: String, code3Letter: String, isVisaRequired: Boolean)
 
-  lazy val loadedCountries = loadCountries()
-  lazy val countries = loadedCountries.collect { case Right(c) => c }
-  lazy val visaCountries = countries.filter(_.isVisaRequired)
-  lazy val visaCountyCodes = visaCountries.map(_.code3Letter).toSet
+  lazy val loadedCountries: Seq[Either[String, Country]] = loadCountries()
+  lazy val countries: Seq[Country] = loadedCountries.collect { case Right(c) => c }
+  lazy val visaCountries: Seq[Country] = countries.filter(_.isVisaRequired)
+  lazy val visaCountyCodes: Set[String] = visaCountries.map(_.code3Letter).toSet
 
   def loadCountries(): Seq[Either[String, Country]] = {
     log.info(s"Loading countries for passengerTypeCalculator")
@@ -202,9 +221,9 @@ object PassengerTypeCalculator {
     } yield {
       l.split(",", -1) match {
         case Array(name, threeLetterCode, "visa") =>
-          Right(Country(name, threeLetterCode, true))
+          Right(Country(name, threeLetterCode, isVisaRequired = true))
         case Array(name, threeLetterCode, _) =>
-          Right(Country(name, threeLetterCode, false))
+          Right(Country(name, threeLetterCode, isVisaRequired = false))
         case e =>
           Left(s"error in $idx ${e.toList}")
       }

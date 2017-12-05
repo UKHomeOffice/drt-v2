@@ -449,7 +449,7 @@ class CrunchGraphStage(name: String,
       val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
       val splitRatios: Set[SplitRatio] = portSplits.splits.toSet
       val portDefault: Set[ApiPaxTypeAndQueueCount] = splitRatios.map {
-        case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio)
+        case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio, None)
       }
 
       val defaultSplits = Set(ApiSplits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
@@ -464,7 +464,7 @@ class CrunchGraphStage(name: String,
       csvSplitsProvider(fs).map(ratios => {
         val splitRatios: Set[SplitRatio] = ratios.splits.toSet
         splitRatios.map {
-          case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100)
+          case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100, None)
         }
       })
     }
@@ -511,7 +511,7 @@ class CrunchGraphStage(name: String,
 
     def applyEgatesSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], egatePct: Double): Set[ApiPaxTypeAndQueueCount] = {
       ptaqc.flatMap {
-        case s@ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count) =>
+        case s@ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count, _) =>
           val eeaDeskPax = Math.round(count * (1 - egatePct)).toInt
           s.copy(queueType = EGate, paxCount = count - eeaDeskPax) ::
             s.copy(queueType = EeaDesk, paxCount = eeaDeskPax) :: Nil
@@ -521,11 +521,11 @@ class CrunchGraphStage(name: String,
 
     def applyFastTrackSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): Set[ApiPaxTypeAndQueueCount] = {
       val results = ptaqc.flatMap {
-        case s@ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.nonVisaNational != 0 =>
+        case s@ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count, _) if fastTrackPercentages.nonVisaNational != 0 =>
           val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
           s.copy(queueType = Queues.FastTrack, paxCount = count - nonVisaNationalNonEeaDesk) ::
             s.copy(paxCount = nonVisaNationalNonEeaDesk) :: Nil
-        case s@ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count) if fastTrackPercentages.visaNational != 0 =>
+        case s@ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count, _) if fastTrackPercentages.visaNational != 0 =>
           val visaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.visaNational)).toInt
           s.copy(queueType = Queues.FastTrack, paxCount = count - visaNationalNonEeaDesk) ::
             s.copy(paxCount = visaNationalNonEeaDesk) :: Nil
@@ -554,8 +554,7 @@ class CrunchGraphStage(name: String,
 
     def paxTypeAndQueueCounts(manifest: VoyageManifest, f: ApiFlightWithSplits): ApiSplits = {
       val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest)
-      val sptqc: Set[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
-      val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = sptqc.map(ptqc => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ptqc.paxCount))
+      val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
       val withEgateAndFastTrack = addEgatesAndFastTrack(f, apiPaxTypeAndQueueCounts)
       val splitsFromManifest = ApiSplits(withEgateAndFastTrack, SplitSources.ApiSplitsWithCsvPercentage, Some(manifest.EventCode), PaxNumbers)
 
