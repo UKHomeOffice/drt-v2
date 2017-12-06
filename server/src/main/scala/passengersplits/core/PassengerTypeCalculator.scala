@@ -79,7 +79,6 @@ trait PassengerQueueCalculator {
 
 object PassengerTypeCalculatorValues {
 
-
   object CountryCodes {
     val Austria = "AUT"
     val Australia = "AUS"
@@ -120,10 +119,33 @@ object PassengerTypeCalculatorValues {
 
   lazy val EUCountries: Set[String] = {
     Set(
-      Austria, Belgium, Bulgaria, Croatia, Cyprus, Czech,
-      Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland,
-      Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland,
-      Portugal, Romania, Slovakia, Slovenia, Spain, Sweden,
+      Austria,
+      Belgium,
+      Bulgaria,
+      Croatia,
+      Cyprus,
+      Czech,
+      Denmark,
+      Estonia,
+      Finland,
+      France,
+      Germany,
+      Greece,
+      Hungary,
+      Ireland,
+      Italy,
+      Latvia,
+      Lithuania,
+      Luxembourg,
+      Malta,
+      Netherlands,
+      Poland,
+      Portugal,
+      Romania,
+      Slovakia,
+      Slovenia,
+      Spain,
+      Sweden,
       UK
     )
   }
