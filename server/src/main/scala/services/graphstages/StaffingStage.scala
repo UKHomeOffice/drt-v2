@@ -2,16 +2,23 @@ package services.graphstages
 
 import java.util.UUID
 
+import actors.{GetState, StaffMovements}
+import actors.pointInTime.{FixedPointsReadActor, ShiftsReadActor, StaffMovementsReadActor}
+import akka.actor.{ActorContext, ActorRef, PoisonPill, Props}
+import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{MilliDate, Queues, SDateLike, StaffMovement}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, getLocalLastMidnight}
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -211,7 +218,7 @@ class StaffingStage(name: String,
         }
       }
 
-      def maybeSources: Option[StaffSources] = staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
+      def maybeSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
 
       def runSimulationAndPush(eGateBankSize: Int): Unit = {
         portStateWithSimulation = portStateOption match {
@@ -220,7 +227,7 @@ class StaffingStage(name: String,
             None
           case Some(ps@PortState(_, crunchMinutes, _)) =>
             log.info(s"Running simulations")
-            val staffMinutes: Map[Int, StaffMinute] = staffMinutesForCrunchMinutes(crunchMinutes)
+            val staffMinutes: Map[Int, StaffMinute] = Staffing.staffMinutesForCrunchMinutes(crunchMinutes, maybeSources, warmUpMinutes)
             val crunchMinutesWithDeployments = addDeployments(crunchMinutes, queueRecsToDeployments(_.toInt), maybeSources, minMaxDesks)
             val crunchMinutesWithSimulation = addSimulationNumbers(crunchMinutesWithDeployments, eGateBankSize)
             Option(ps.copy(crunchMinutes = crunchMinutesWithSimulation, staffMinutes = staffMinutes))
@@ -299,34 +306,6 @@ class StaffingStage(name: String,
           }
       }
 
-      def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute]): Map[Int, StaffMinute] = {
-        val staff = maybeSources
-        crunchMinutes
-          .values
-          .groupBy(_.terminalName)
-          .flatMap {
-            case (tn, tcms) =>
-              val minutes = tcms.map(_.minute)
-              val startMinuteMillis = minutes.min + (warmUpMinutes * Crunch.oneMinuteMillis)
-              val endMinuteMillis = minutes.max
-              val minuteMillis = startMinuteMillis to endMinuteMillis by Crunch.oneMinuteMillis
-              log.info(s"Getting ${minuteMillis.size} staff minutes")
-              minuteMillis
-                .map(m => {
-                  val staffMinute = staff match {
-                    case None => StaffMinute(tn, m, 0, 0, 0)
-                    case Some(staffSources) =>
-                      val shifts = staffSources.shifts.terminalStaffAt(tn, m)
-                      val fixedPoints = staffSources.fixedPoints.terminalStaffAt(tn, m)
-                      val movements = staffSources.movements.terminalStaffAt(tn, m)
-                      StaffMinute(tn, m, shifts, fixedPoints, movements)
-                  }
-                  (staffMinute.key, staffMinute)
-                })
-                .toMap
-          }
-      }
-
       def pushAndPull(): Unit = {
         if (isAvailable(outCrunch))
           (portStateWithSimulation, stateAwaitingPush) match {
@@ -343,28 +322,6 @@ class StaffingStage(name: String,
 
         allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
       }
-
-      def staffAvailableByTerminalAndQueue(optionalShifts: Option[String], optionalFixedPoints: Option[String], optionalMovements: Option[Seq[StaffMovement]]): Option[StaffSources] = {
-        val rawShiftsString = optionalShifts.getOrElse("")
-        val rawFixedPointsString = optionalFixedPoints.getOrElse("")
-        val myMovements = optionalMovements.getOrElse(Seq())
-
-        val myShifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
-        val myFixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
-
-        if (myShifts.exists(s => s.isFailure) || myFixedPoints.exists(s => s.isFailure)) {
-          None
-        } else {
-          val successfulShifts = myShifts.collect { case Success(s) => s }
-          val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(successfulShifts)
-
-          val successfulFixedPoints = myFixedPoints.collect { case Success(s) => s }
-          val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
-          val mm = StaffMovementsService(myMovements)
-          val available = StaffMovements.terminalStaffAt(ss, fps)(myMovements) _
-          Option(StaffSources(ss, fps, mm, available))
-        }
-      }
     }
   }
 
@@ -380,6 +337,91 @@ class StaffingStage(name: String,
   def adjustEgateWorkload(eGateBankSize: Int, wl: Double): Double = {
     wl / eGateBankSize
   }
+}
+
+object Staffing {
+  val log = LoggerFactory.getLogger(getClass)
+
+  def staffAvailableByTerminalAndQueue(optionalShifts: Option[String], optionalFixedPoints: Option[String], optionalMovements: Option[Seq[StaffMovement]]): Option[StaffSources] = {
+    val rawShiftsString = optionalShifts.getOrElse("")
+    val rawFixedPointsString = optionalFixedPoints.getOrElse("")
+    val myMovements = optionalMovements.getOrElse(Seq())
+
+    val myShifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
+    val myFixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
+
+    if (myShifts.exists(s => s.isFailure) || myFixedPoints.exists(s => s.isFailure)) {
+      None
+    } else {
+      val successfulShifts = myShifts.collect { case Success(s) => s }
+      val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(successfulShifts)
+
+      val successfulFixedPoints = myFixedPoints.collect { case Success(s) => s }
+      val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
+      val mm = StaffMovementsService(myMovements)
+      val available = StaffMovementsHelper.terminalStaffAt(ss, fps)(myMovements) _
+      Option(StaffSources(ss, fps, mm, available))
+    }
+  }
+
+  def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute], maybeSources: Option[StaffSources], warmUpMinutes: Int): Map[Int, StaffMinute] = {
+    val staff = maybeSources
+    crunchMinutes
+      .values
+      .groupBy(_.terminalName)
+      .flatMap {
+        case (tn, tcms) =>
+          val minutes = tcms.map(_.minute)
+          val startMinuteMillis = minutes.min + (warmUpMinutes * Crunch.oneMinuteMillis)
+          val endMinuteMillis = minutes.max
+          val minuteMillis = startMinuteMillis to endMinuteMillis by Crunch.oneMinuteMillis
+          log.info(s"Getting ${minuteMillis.size} staff minutes")
+          minuteMillis
+            .map(m => {
+              val staffMinute = staff match {
+                case None => StaffMinute(tn, m, 0, 0, 0)
+                case Some(staffSources) =>
+                  val shifts = staffSources.shifts.terminalStaffAt(tn, m)
+                  val fixedPoints = staffSources.fixedPoints.terminalStaffAt(tn, m)
+                  val movements = staffSources.movements.terminalStaffAt(tn, m)
+                  StaffMinute(tn, m, shifts, fixedPoints, movements)
+              }
+              (staffMinute.key, staffMinute)
+            })
+            .toMap
+      }
+  }
+
+  def reconstructStaffMinutes(pointInTime: SDateLike, context: ActorContext, fl: Map[Int, ApiFlightWithSplits], cm: Map[Int, CrunchApi.CrunchMinute]): PortState = {
+    val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
+    val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime), name = s"ShiftsReadActor-$uniqueSuffix")
+    val askableShiftsActor: AskableActorRef = shiftsActor
+    val fixedPointsActor: ActorRef = context.actorOf(Props(classOf[FixedPointsReadActor], pointInTime), name = s"FixedPointsReadActor-$uniqueSuffix")
+    val askableFixedPointsActor: AskableActorRef = fixedPointsActor
+    val staffMovementsActor: ActorRef = context.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime), name = s"StaffMovementsReadActor-$uniqueSuffix")
+    val askableStaffMovementsActor: AskableActorRef = staffMovementsActor
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val timeout: Timeout = new Timeout(30 seconds)
+
+    val shiftsFuture: Future[String] = askableShiftsActor.ask(GetState).map { case fp: String => fp }.recoverWith { case _ => Future("") }
+    val fixedPointsFuture: Future[String] = askableFixedPointsActor.ask(GetState).map { case fp: String => fp }.recoverWith { case _ => Future("") }
+    val movementsFuture: Future[Seq[StaffMovement]] = askableStaffMovementsActor.ask(GetState).map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
+
+    val shifts = Await.result(shiftsFuture, 1 minute)
+    val fixedPoints = Await.result(fixedPointsFuture, 1 minute)
+    val movements = Await.result(movementsFuture, 1 minute)
+
+    shiftsActor ! PoisonPill
+    fixedPointsActor ! PoisonPill
+    staffMovementsActor ! PoisonPill
+
+    val staffSources = Staffing.staffAvailableByTerminalAndQueue(Option(shifts), Option(fixedPoints), Option(movements))
+    val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources, 0)
+
+    PortState(fl, cm, staffMinutes)
+  }
+
 }
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
@@ -538,7 +580,7 @@ case class StaffAssignmentServiceWithDates(assignments: Seq[StaffAssignment])
 case class StaffMovementsService(movements: Seq[StaffMovement])
   extends StaffAssignmentService {
   def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int = {
-    StaffMovements.adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateMillis)
+    StaffMovementsHelper.adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateMillis)
   }
 }
 
@@ -562,7 +604,7 @@ object StaffAssignmentServiceWithDates {
   }
 }
 
-object StaffMovements {
+object StaffMovementsHelper {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
       val uuid: UUID = UUID.randomUUID()
