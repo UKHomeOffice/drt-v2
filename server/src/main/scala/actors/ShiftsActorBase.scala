@@ -78,6 +78,9 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
 
     case RecoveryCompleted =>
       log.info("RecoveryCompleted")
+
+    case u =>
+      log.info(s"Recovery: received unexpected ${u.getClass}")
   }
 
   def receiveCommand: Receive = {
