@@ -10,7 +10,7 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(maxFlightPax: Int = 853)(flightWithSplits: ApiFlightWithSplits): TagMod = {
+  def paxComp(maxFlightPax: Int = 100)(flightWithSplits: ApiFlightWithSplits): TagMod = {
 
     val flight = flightWithSplits.apiFlight
     val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
@@ -22,17 +22,14 @@ object FlightComponents {
       <.div(
         acPot().renderReady(_ => {
           val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
-          val paxWidth = paxBarWidth(maxFlightPax, paxToDisplay)
+          val paxWidth = paxBarWidth(0, paxToDisplay)
           val paxClass = paxClassFromSplits(flightWithSplits)
-          val maxCapLine = maxCapacityLine(maxFlightPax, flight)
 
           <.div(
             ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
             ^.className := "pax-cell",
-            maxCapLine,
-            <.div(^.className := paxClass, ^.width := paxWidth),
-            <.div(^.className := "pax", paxToDisplay),
-            maxCapLine)
+            <.div(^.className := paxClass),
+            <.div(^.className := "pax", paxToDisplay))
         }))
     })
   }
@@ -57,8 +54,7 @@ object FlightComponents {
   def paxComponentTitle(flight: Arrival, apiPax: Int, apiIncTrans: Int): String = {
     val max: String = if (flight.MaxPax > 0) flight.MaxPax.toString else "n/a"
     val portDirectPax: Int = flight.ActPax - flight.TranPax
-    s"""
-       |Port: $portDirectPax (${flight.ActPax} - ${flight.TranPax} transfer)
+    s"""|Pax: $portDirectPax (${flight.ActPax} - ${flight.TranPax} transfer)
        |Max: $max""".stripMargin
   }
 
