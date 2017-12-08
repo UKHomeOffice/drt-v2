@@ -24,7 +24,6 @@ object FlightComponents {
           val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
           val paxWidth = paxBarWidth(0, paxToDisplay)
           val paxClass = paxClassFromSplits(flightWithSplits)
-          val maxCapLine = maxCapacityLine(maxFlightPax, flight)
 
           <.div(
             ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
