@@ -80,10 +80,13 @@ object CSVData {
   def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]) = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
-    val headingsLine1 = "," + queues
-      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",") +
+    val relevantQueues = queues
+      .filterNot(_ == Queues.Transfer)
+    val queueHeadings = relevantQueues
+      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",")
+    val headingsLine1 = "," + queueHeadings +
       ",Misc,PCP Staff,PCP Staff"
-    val headingsLine2 = "Start," + queues.flatMap(q => {
+    val headingsLine2 = "Start," + relevantQueues.flatMap(q => {
       if (q == Queues.EGate) eGatesHeadings else colHeadings
     }).mkString(",") +
       ",Staff req,Avail,Req"
@@ -119,8 +122,11 @@ object CSVData {
       .map {
         case (minute, queueData) =>
           val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
+          log.info(s"staffby15Minutes: ${staffBy15Minutes.size}")
           val staffMinute = staffBy15Minutes.getOrElse(minute, StaffMinute.empty)
+          log.info(s"staffMinute for ${SDate(minute).toLocalDateTimeString()}: $staffMinute")
           val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, (staffMinute.shifts - staffMinute.movements).toString)
+          log.info(s"staffData: $staffData")
           val reqForMinute = crunchMilliMinutes.toList.find(_._1 == minute).map {
             case (_, queueCrunchMinutes) => queueCrunchMinutes.toList.map(_.deskRec).sum
           }.getOrElse(0)

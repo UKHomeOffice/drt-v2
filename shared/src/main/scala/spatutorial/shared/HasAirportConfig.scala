@@ -29,7 +29,8 @@ object Queues {
   val exportQueueDisplayNames: Map[QueueName, String] = Map(
     EeaDesk -> "EEA",
     NonEeaDesk -> "NON-EEA",
-    EGate -> "E-GATES"
+    EGate -> "E-GATES",
+    FastTrack -> "FAST TRACK"
   )
 }
 

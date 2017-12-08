@@ -439,8 +439,8 @@ class Application @Inject()(implicit val config: Configuration,
 
     crunchStateFuture.map {
       case Some(CrunchState(_, cm, sm)) =>
-        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pit.ddMMyyString)
-        val smForDay = sm.filter(sm => MilliDate(sm.minute).ddMMyyString == pit.ddMMyyString)
+        val cmForDay: Set[CrunchMinute] = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pit.ddMMyyString)
+        val smForDay: Set[StaffMinute] = sm.filter(sm => MilliDate(sm.minute).ddMMyyString == pit.ddMMyyString)
         val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
