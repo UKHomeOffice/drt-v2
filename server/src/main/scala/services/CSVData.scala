@@ -89,8 +89,12 @@ object CSVData {
 
     val lineEnding = "\n"
 
-    val terminalMinutes = CrunchApi.terminalMinutesByMinute(cms, terminalName)
-    val crunchMinutes = CrunchApi.groupCrunchMinutesByX(15)(terminalMinutes, terminalName, queues.toList)
+    val crunchMilliMinutes = CrunchApi.terminalMinutesByMinute(cms, terminalName)
+    val staffMilliMinutes = CrunchApi
+      .terminalMinutesByMinute(staffMinutes, terminalName)
+      .map { case (minute, sms) => (minute, sms.head) }
+
+    val crunchMinutes = CrunchApi.groupCrunchMinutesByX(15)(crunchMilliMinutes, terminalName, queues.toList)
       .collect {
         case (min, cm) =>
           val queueMinutes = cm.groupBy(_.queueName)
@@ -107,15 +111,24 @@ object CSVData {
           })
 
           (min, terminalData)
-      }.toList.sortBy(m => m._1).map {
-      case (minute, queueData) =>
-        val staffData = staffMinutes.find(_.minute == minute).map(sm => List(sm.fixedPoints.toString, sm.available.toString)).getOrElse(List("", ""))
-        val reqForMinute = terminalMinutes.toList.find(_._1 == minute).map {
-          case (_, cms) => cms.toList.map(_.deskRec).sum
-        }.getOrElse(0)
+      }
+      .toList
+      .sortBy(m => m._1)
+      .map {
+        case (minute, queueData) =>
+          val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
+          val staffMinute = staffBy15Minutes.getOrElse(minute, StaffMinute.empty)
+          val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, (staffMinute.shifts - staffMinute.movements).toString)
+          val reqForMinute = crunchMilliMinutes.toList.find(_._1 == minute).map {
+            case (_, queueCrunchMinutes) => queueCrunchMinutes.toList.map(_.deskRec).sum
+          }.getOrElse(0)
 
-        SDate(minute).toHoursAndMinutes() + "," + queueData.mkString(",") + "," + staffData.mkString(",") + "," + reqForMinute
-    }
+          val hoursAndMinutes = SDate(minute).toHoursAndMinutes()
+          val queueFields = queueData.mkString(",")
+          val pcpFields = staffData.mkString(",")
+
+          hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
+      }
     headingsLine1 + lineEnding + headingsLine2 + lineEnding +
       crunchMinutes.mkString(lineEnding)
   }

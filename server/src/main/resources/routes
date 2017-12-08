@@ -5,10 +5,10 @@
 # Home page
 GET         /                                             controllers.Application.index
 
-GET         /export/desks/:pointInTime/:terminalName      controllers.Application.getDesksAndQueuesCSVAtPointInTime(pointInTime, terminalName)
-GET         /export/arrivals/:pointInTime/:terminalName   controllers.Application.getFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName)
-GET         /export/planning/:weekStarting/:terminalName  controllers.Application.getForecastWeekToCSV(weekStarting, terminalName)
-GET         /export/headlines/:weekStarting/:terminalName  controllers.Application.getForecastWeekHeadlinesToCSV(weekStarting, terminalName)
+GET         /export/desks/:pointInTime/:terminalName      controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
+GET         /export/arrivals/:pointInTime/:terminalName   controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName)
+GET         /export/planning/:weekStarting/:terminalName  controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
+GET         /export/headlines/:weekStarting/:terminalName  controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/fonts/*file                           controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)

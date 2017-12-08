@@ -25,7 +25,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
     val expected =
       """|,Q1,Q1,Q1,Q1,Q1,Q2,Q2,Q2,Q2,Q2,Q3,Q3,Q3,Q3,Q3,Misc,PCP Staff,PCP Staff
          |Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Staff req,Avail,Req
-         |00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,5,3""".stripMargin
+         |00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,4,3""".stripMargin
 
     result === expected
   }
@@ -54,8 +54,8 @@ class CrunchMinutesToCSVDataTest extends Specification {
     val expected =
       """|,Q1,Q1,Q1,Q1,Q1,Q2,Q2,Q2,Q2,Q2,Q3,Q3,Q3,Q3,Q3,Misc,PCP Staff,PCP Staff
          |Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Staff req,Avail,Req
-         |00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,5,3
-         |00:15,1,1,1,,,1,1,1,,,1,1,1,,,,,3""".stripMargin
+         |00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,4,3
+         |00:15,1,1,1,,,1,1,1,,,1,1,1,,,0,0,3""".stripMargin
 
     result === expected
   }
@@ -74,7 +74,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     val expected = """|,EEA,EEA,EEA,EEA,EEA,NON-EEA,NON-EEA,NON-EEA,NON-EEA,NON-EEA,E-GATES,E-GATES,E-GATES,E-GATES,E-GATES,Misc,PCP Staff,PCP Staff
                       |Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Avail,Req
-                      |00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,5,3""".stripMargin
+                      |00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,3""".stripMargin
 
     val result = CSVData.terminalCrunchMinutesToCsvData(cms, staffMins, "T1", Queues.exportQueueOrder)
 
