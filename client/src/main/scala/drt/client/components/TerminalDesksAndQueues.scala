@@ -28,7 +28,7 @@ object TerminalDesksAndQueuesRow {
 
   case class Props(minuteMillis: MillisSinceEpoch,
                    queueMinutes: Seq[CrunchMinute],
-                   staffMinutes: Seq[StaffMinute],
+                   staffMinute: StaffMinute,
                    airportConfig: AirportConfig,
                    terminalName: TerminalName,
                    showActuals: Boolean,
@@ -72,9 +72,9 @@ object TerminalDesksAndQueuesRow {
             queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
           } else queueCells
       }
-      val fixedPoints = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.fixedPoints).max else 0
-      val movements = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(_.movements).max else 0
-      val available = if (props.staffMinutes.nonEmpty) props.staffMinutes.map(sm => sm.shifts - sm.movements).max else 0
+      val fixedPoints = props.staffMinute.fixedPoints
+      val movements = props.staffMinute.movements
+      val available = props.staffMinute.shifts - props.staffMinute.movements
       val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
       val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
       val ragClass = ragStatus(totalRequired, totalDeployed)
@@ -199,10 +199,12 @@ object TerminalDesksAndQueues {
         props.terminalName,
         Queues.queueOrder
       )
-      val terminalStaffMinutes = groupStaffMinutesBy15(
-        CrunchApi.terminalMinutesByMinute(props.crunchState.staffMinutes, props.terminalName),
-        props.terminalName
-      ).toMap
+      val staffMinutesByMillis = CrunchApi
+        .terminalMinutesByMinute(props.crunchState.staffMinutes, props.terminalName)
+        .map {
+          case (millis, minutes) => (millis, minutes.head)
+        }
+      val terminalStaffMinutes = groupStaffMinutesBy15(staffMinutesByMillis, props.terminalName).toMap
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
@@ -267,7 +269,7 @@ object TerminalDesksAndQueues {
             ^.id := "sticky-body",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
-                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, List()), props.airportConfig, props.terminalName, state.showActuals, state.viewType, props.airportConfig.hasActualDeskStats)
+                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, StaffMinute.empty), props.airportConfig, props.terminalName, state.showActuals, state.viewType, props.airportConfig.hasActualDeskStats)
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
       )

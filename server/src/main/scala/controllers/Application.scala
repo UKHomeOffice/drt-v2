@@ -425,29 +425,22 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getDesksAndQueuesCSVAtPointInTime(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
 
     val crunchStateFuture: Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime.toLong)
 
-    desksToCSV(pointInTime, terminalName, crunchStateFuture)
+    exportDesksToCSV(pointInTime, terminalName, crunchStateFuture)
   }
 
-  def getDesksAndQueuesForDayCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportDesksToCSV(pointInTime: String, terminalName: TerminalName, crunchStateFuture: Future[Option[CrunchState]]): Future[Result] = {
+    val pit = MilliDate(pointInTime.toLong)
 
-    val crunchStateFuture: Future[Option[CrunchState]] = crunchStateForDayInPastOrFuture(pointInTime.toLong)
-
-    desksToCSV(pointInTime, terminalName, crunchStateFuture)
-  }
-
-  def desksToCSV(pointInTime: String, terminalName: TerminalName, crunchStateFuture: Future[Option[CrunchState]]): Future[Result] = {
-    val pitMilliDate = MilliDate(pointInTime.toLong)
-
-    val fileName = s"$terminalName-desks-and-queues-${pitMilliDate.getFullYear()}-${pitMilliDate.getMonth()}-${pitMilliDate.getDate()}T${pitMilliDate.getHours()}-${pitMilliDate.getMinutes()}"
+    val fileName = s"$terminalName-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}-${pit.getDate()}T${pit.getHours()}-${pit.getMinutes()}"
 
     crunchStateFuture.map {
       case Some(CrunchState(_, cm, sm)) =>
-        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
-        val smForDay = sm.filter(sm => MilliDate(sm.minute).ddMMyyString == pitMilliDate.ddMMyyString)
+        val cmForDay = cm.filter(cm => MilliDate(cm.minute).ddMMyyString == pit.ddMMyyString)
+        val smForDay = sm.filter(sm => MilliDate(sm.minute).ddMMyyString == pit.ddMMyyString)
         val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
@@ -459,7 +452,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
+  def exportForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
     val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
     val endOfForecast = startOfWeekMidnight.addDays(180)
     val now = SDate.now()
@@ -490,7 +483,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getForecastWeekHeadlinesToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
+  def exportForecastWeekHeadlinesToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = Action.async {
     val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
     val endOfForecast = startOfWeekMidnight.addDays(180)
     val now = SDate.now()
@@ -520,14 +513,14 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getFlightsWithSplitsAtPointInTimeCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     val potMilliDate = MilliDate(pointInTime.toLong)
     val crunchStateFuture = crunchStateAtPointInTime(pointInTime.toLong)
 
     flightsCSVFromCrunchState(terminalName, potMilliDate, crunchStateFuture)
   }
 
-  def getFlightsWithSplitsForDayCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportFlightsWithSplitsForDayCSV(pointInTime: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     val potMilliDate = MilliDate(pointInTime.toLong)
     val crunchStateFuture = crunchStateForDayInPastOrFuture(pointInTime.toLong)
 

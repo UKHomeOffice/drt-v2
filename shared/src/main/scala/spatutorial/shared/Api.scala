@@ -288,6 +288,10 @@ object CrunchApi {
     }
   }
 
+  object StaffMinute {
+    def empty = StaffMinute("", 0L, 0, 0, 0, None)
+  }
+
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
                           minute: MillisSinceEpoch,
@@ -355,21 +359,24 @@ object CrunchApi {
     })
   }
 
-  def groupStaffMinutesByX(groupSize: Int)(staffMinutes: Seq[(MillisSinceEpoch, Set[StaffMinute])], terminalName: TerminalName): Seq[(MillisSinceEpoch, Seq[StaffMinute])] = {
-    staffMinutes.grouped(groupSize).toList.map(group => {
-      val startMinute = group.map(_._1).min
-      val groupedStaffMinutes = group.map {
-        case (_, minutes) =>
-          StaffMinute(
-            terminalName,
-            startMinute,
-            minutes.map(_.shifts).max,
-            minutes.map(_.fixedPoints).max,
-            minutes.map(_.movements).max
-          )
-      }
-      (startMinute, groupedStaffMinutes)
-    })
+  def groupStaffMinutesByX(groupSize: Int)(staffMinutes: Seq[(MillisSinceEpoch, StaffMinute)], terminalName: TerminalName): Seq[(MillisSinceEpoch, StaffMinute)] = {
+    staffMinutes
+      .grouped(groupSize)
+      .toList
+      .map((milliStaffMinutes: Seq[(MillisSinceEpoch, StaffMinute)]) => {
+        val startMinute = milliStaffMinutes.map(_._1).min
+        val minutes = milliStaffMinutes.map(_._2)
+
+        val groupedStaffMinute = StaffMinute(
+          terminalName,
+          startMinute,
+          minutes.map(_.shifts).max,
+          minutes.map(_.fixedPoints).max,
+          minutes.map(_.movements).max
+        )
+
+        (startMinute, groupedStaffMinute)
+      })
   }
 
   def terminalMinutesByMinute[T <: Minute](minutes: Set[T], terminalName: TerminalName): Seq[(MillisSinceEpoch, Set[T])] = minutes
