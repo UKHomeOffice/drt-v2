@@ -29,10 +29,8 @@ object FlightComponents {
           <.div(
             ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
             ^.className := "pax-cell",
-            //maxCapLine,
-            <.div(^.className := paxClass),// ^.width := paxWidth),
+            <.div(^.className := paxClass),
             <.div(^.className := "pax", paxToDisplay))
-            //maxCapLine)
         }))
     })
   }
