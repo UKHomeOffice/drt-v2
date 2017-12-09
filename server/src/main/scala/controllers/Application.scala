@@ -559,7 +559,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
     implicit request =>
-      log.debug(s"Request path: $path")
+      log.info(s"Request path: $path")
 
       // get the request body as ByteString
       val b = request.body.asBytes(parse.UNLIMITED).get

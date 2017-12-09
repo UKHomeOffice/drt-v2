@@ -415,9 +415,15 @@ class CrunchGraphStage(name: String,
           .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
           .flatMap {
             case (minuteMillis, flightPaxInMinute) =>
-              splitRatios
-                .filterNot(_.queueType == Queues.Transfer)
-                .map(apiSplit => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplit, Percentage))
+              val splitsWithoutTransit = splitRatios.filterNot(_.queueType == Queues.Transfer)
+              splitsWithoutTransit
+                .map(apiSplit => {
+                  val nationalitiesPax = splitsWithoutTransit.toList.map(_.nationalities.map(_.values).getOrElse(List()).sum).sum
+                  val paxCorrectionFactor = flightPaxInMinute / nationalitiesPax
+                  log.info(s"paxCorrectionFactor: $paxCorrectionFactor")
+                  val splitWithCorrectionFactor = apiSplit.copy(nationalities = apiSplit.nationalities.map(_.mapValues(_ * paxCorrectionFactor)))
+                  flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, splitWithCorrectionFactor, Percentage)
+                })
           }.toSet
       }).getOrElse(Set())
     }
@@ -429,7 +435,30 @@ class CrunchGraphStage(name: String,
                           apiSplitRatio: ApiPaxTypeAndQueueCount,
                           splitStyle: SplitStyle): FlightSplitMinute = {
       val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
-      val splitWorkLoadInMinute = splitPaxInMinute * procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
+      val paxTypeQueueProcTime = procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
+      val defaultWorkload = splitPaxInMinute * paxTypeQueueProcTime
+      val splitWorkLoadInMinute = apiSplitRatio.nationalities match {
+        case Some(nats) =>
+          log.info(s"Split nationality available. Looking up processing time")
+          val natBasedWorkload = nats
+            .map {
+              case (nat, pax) => AirportConfigs.nationalityProcessingTimes.get(nat) match {
+                case Some(procTime) =>
+                  val procTimeInMinutes = procTime / 60
+                  log.info(s"Using processing time for $nat: $procTimeInMinutes (rather than $paxTypeQueueProcTime)")
+                  pax * procTimeInMinutes
+                case None =>
+                  log.info(s"Processing time for $nat not found. Using ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}: $paxTypeQueueProcTime")
+                  pax * paxTypeQueueProcTime
+              }
+            }
+            .sum
+          log.info(s"Nationality based workload: $natBasedWorkload vs $defaultWorkload default workload")
+          natBasedWorkload
+        case _ =>
+          log.info(s"No split nationalities available. Using general processing times")
+          defaultWorkload
+      }
       FlightSplitMinute(flight.uniqueId, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
     }
 
