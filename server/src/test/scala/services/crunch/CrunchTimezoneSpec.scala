@@ -57,11 +57,10 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          procTimes = procTimes,
+          airportConfig = airportConfig,
           minutesToCrunch = 120,
           crunchStartDateProvider = (_) => SDate("2017-05-31T23:00Z"),
-          crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120),
-          minMaxDesks = minMaxDesks
+          crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120)
         )
 
         crunch.liveArrivalsInput.offer(flights)

@@ -64,11 +64,10 @@ class AclFeedSpec extends CrunchTestLike {
       ))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
@@ -93,11 +92,10 @@ class AclFeedSpec extends CrunchTestLike {
       val liveFlights = Flights(List(liveFlight))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )

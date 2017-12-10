@@ -33,11 +33,12 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
-      ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))),
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
@@ -75,11 +76,12 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
-      ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))),
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )

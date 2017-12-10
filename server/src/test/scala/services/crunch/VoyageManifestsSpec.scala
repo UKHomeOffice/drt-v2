@@ -39,11 +39,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))
       ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate)),
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30))
 
@@ -89,12 +91,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
     val crunchGraphs: CrunchGraph = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        nonVisaNationalToDesk -> 25d / 60
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          nonVisaNationalToDesk -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
@@ -140,14 +144,15 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))
       ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate)),
       crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
-      portCode = portCode
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
     crunchGraphs.manifestsInput.offer(inputManifests)
@@ -187,14 +192,15 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
       crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
-      portCode = portCode
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
     crunchGraphs.manifestsInput.offer(inputManifests)
@@ -237,16 +243,17 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaNonMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60,
-        visaNationalToDesk -> 25d / 60
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          visaNationalToDesk -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk)),
       crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
-      portCode = portCode
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
     crunchGraphs.manifestsInput.offer(inputManifests)

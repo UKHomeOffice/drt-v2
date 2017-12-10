@@ -25,18 +25,20 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       ))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(
+          defaultPaxSplits = SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 1),
+            SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
+          ),
+          defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+        ),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-        portSplits = SplitRatios(
-          SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 1),
-          SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
-        ))
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
       crunch.liveArrivalsInput.offer(flights)
 
@@ -61,11 +63,12 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     ))
 
     val fiveMinutes = 600d / 60
-    val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = procTimes,
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+      ),
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
     )

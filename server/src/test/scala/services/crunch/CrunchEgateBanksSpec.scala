@@ -21,8 +21,6 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       "Then I should see lower egates recs by a factor of 5 (rounded up)" >> {
 
       val scheduled00 = "2017-01-01T00:00Z"
-      val scheduled15 = "2017-01-01T00:15Z"
-
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
@@ -30,27 +28,27 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       ))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(
-        eeaMachineReadableToDesk -> fiveMinutes,
-        eeaMachineReadableToEGate -> fiveMinutes
-      )
-      val minMaxDesks = Map("T1" -> Map(
-        Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20)))))
-      val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
-        slaByQueue = slaByQueue,
-        minMaxDesks = minMaxDesks,
+        airportConfig = airportConfig.copy(
+          defaultPaxSplits = SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 0.5),
+            SplitRatio(eeaMachineReadableToEGate, 0.5)
+          ),
+          defaultProcessingTimes = Map("T1" -> Map(
+            eeaMachineReadableToDesk -> fiveMinutes,
+            eeaMachineReadableToEGate -> fiveMinutes
+          )),
+          minMaxDesksByTerminalQueue = Map("T1" -> Map(
+            Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))),
+            Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
+          slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
+        ),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-        portSplits = SplitRatios(
-          SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.5),
-          SplitRatio(eeaMachineReadableToEGate, 0.5)
-        ))
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
       crunch.liveArrivalsInput.offer(flights)
 

@@ -25,11 +25,10 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       ))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
@@ -58,11 +57,10 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       ))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
@@ -87,7 +85,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "I should only see crunch results for the flight with a valid terminal" >> {
       val scheduled00 = "2017-01-01T00:00Z"
-      val scheduled15 = "2017-01-01T00:15Z"
 
       val scheduled = "2017-01-01T00:00Z"
 
@@ -97,11 +94,10 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       ))
 
       val fiveMinutes = 600d / 60
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
         minutesToCrunch = 120,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
