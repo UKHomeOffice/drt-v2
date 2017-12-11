@@ -173,10 +173,14 @@ trait SystemActors {
   }
 
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
+    val forecastNoOp = Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
-      case "LHR" => createForecastLHRFeed(config.getString("lhr.forecast_path").getOrElse(throw new Exception("Missing LHR Forecast Zip Path")))
-      case _ => Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
+      case "LHR" => config.getString("lhr.forecast_path")
+        .map(path => createForecastLHRFeed(path))
+        .getOrElse(forecastNoOp)
+      case _ =>
+        forecastNoOp
     }
     feed.map(Flights)
   }
