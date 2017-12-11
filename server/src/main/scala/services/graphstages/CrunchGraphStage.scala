@@ -11,7 +11,7 @@ import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.PassengerQueueCalculator
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services._
 import services.graphstages.Crunch.{log, _}
@@ -26,14 +26,9 @@ case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 class CrunchGraphStage(name: String,
                        optionalInitialFlights: Option[FlightsWithSplits],
                        airportConfig: AirportConfig,
-//                       portCode: String,
-//                       slas: Map[QueueName, Int],
-//                       minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
-//                       procTimes: Map[PaxTypeAndQueue, Double],
                        natProcTimes: Map[String, Double],
                        groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-//                       portSplits: SplitRatios,
-                       csvSplitsProvider: SplitsProvider,
+                       splitsCalculator: SplitsCalculator,
                        crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                        crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                        earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
@@ -162,7 +157,7 @@ class CrunchGraphStage(name: String,
         case ((updates, additions, flightsSoFar), updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
             case None =>
-              val ths = terminalAndHistoricSplits(updatedFlight)
+              val ths = splitsCalculator.terminalAndHistoricSplits(updatedFlight)
               val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
               val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
               (updates, additions + 1, flightsSoFar.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits))
@@ -397,129 +392,21 @@ class CrunchGraphStage(name: String,
       }.toSet
     }
 
-    def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {
-      val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
-      val splitRatios: Set[SplitRatio] = airportConfig.defaultPaxSplits.splits.toSet
-      val portDefault: Set[ApiPaxTypeAndQueueCount] = splitRatios.map {
-        case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio, None)
-      }
-
-      val defaultSplits = Set(ApiSplits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
-
-      historical match {
-        case None => defaultSplits
-        case Some(h) => Set(ApiSplits(h, SplitSources.Historical, None, Percentage)) ++ defaultSplits
-      }
-    }
-
-    def historicalSplits(fs: Arrival): Option[Set[ApiPaxTypeAndQueueCount]] = {
-      csvSplitsProvider(fs).map(ratios => {
-        val splitRatios: Set[SplitRatio] = ratios.splits.toSet
-        splitRatios.map {
-          case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100, None)
-        }
-      })
-    }
-
-    def fastTrackPercentagesFromSplit(splitOpt: Option[SplitRatios], defaultVisaPct: Double, defaultNonVisaPct: Double): FastTrackPercentages = {
-      val visaNational = splitOpt
-        .map {
-          ratios =>
-
-            val splits = ratios.splits
-            val visaNationalSplits = splits.filter(s => s.paxType.passengerType == PaxTypes.VisaNational)
-
-            val totalVisaNationalSplit = visaNationalSplits.map(_.ratio).sum
-
-            splits
-              .find(p => p.paxType.passengerType == PaxTypes.VisaNational && p.paxType.queueType == Queues.FastTrack)
-              .map(_.ratio / totalVisaNationalSplit).getOrElse(defaultVisaPct)
-        }.getOrElse(defaultVisaPct)
-
-      val nonVisaNational = splitOpt
-        .map {
-          ratios =>
-            val splits = ratios.splits
-            val totalNonVisaNationalSplit = splits.filter(s => s.paxType.passengerType == PaxTypes.NonVisaNational).map(_.ratio).sum
-
-            splits
-              .find(p => p.paxType.passengerType == PaxTypes.NonVisaNational && p.paxType.queueType == Queues.FastTrack)
-              .map(_.ratio / totalNonVisaNationalSplit).getOrElse(defaultNonVisaPct)
-        }.getOrElse(defaultNonVisaPct)
-      FastTrackPercentages(visaNational, nonVisaNational)
-    }
-
-    def egatePercentageFromSplit(splitOpt: Option[SplitRatios], defaultPct: Double): Double = {
-      splitOpt
-        .map { x =>
-          val splits = x.splits
-          val interestingSplits = splits.filter(s => s.paxType.passengerType == PaxTypes.EeaMachineReadable)
-          val interestingSplitsTotal = interestingSplits.map(_.ratio).sum
-          splits
-            .find(p => p.paxType.queueType == Queues.EGate)
-            .map(_.ratio / interestingSplitsTotal).getOrElse(defaultPct)
-        }.getOrElse(defaultPct)
-    }
-
-    def applyEgatesSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], egatePct: Double): Set[ApiPaxTypeAndQueueCount] = {
-      ptaqc.flatMap {
-        case s@ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, count, _) =>
-          val eeaDeskPax = Math.round(count * (1 - egatePct)).toInt
-          s.copy(queueType = EGate, paxCount = count - eeaDeskPax) ::
-            s.copy(queueType = EeaDesk, paxCount = eeaDeskPax) :: Nil
-        case s => s :: Nil
-      }
-    }
-
-    def applyFastTrackSplits(ptaqc: Set[ApiPaxTypeAndQueueCount], fastTrackPercentages: FastTrackPercentages): Set[ApiPaxTypeAndQueueCount] = {
-      val results = ptaqc.flatMap {
-        case s@ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, count, _) if fastTrackPercentages.nonVisaNational != 0 =>
-          val nonVisaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.nonVisaNational)).toInt
-          s.copy(queueType = Queues.FastTrack, paxCount = count - nonVisaNationalNonEeaDesk) ::
-            s.copy(paxCount = nonVisaNationalNonEeaDesk) :: Nil
-        case s@ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, count, _) if fastTrackPercentages.visaNational != 0 =>
-          val visaNationalNonEeaDesk = Math.round(count * (1 - fastTrackPercentages.visaNational)).toInt
-          s.copy(queueType = Queues.FastTrack, paxCount = count - visaNationalNonEeaDesk) ::
-            s.copy(paxCount = visaNationalNonEeaDesk) :: Nil
-        case s => s :: Nil
-      }
-      log.debug(s"applied fastTrack $fastTrackPercentages got $ptaqc")
-      results
-    }
-
     def updateFlightWithManifests(manifests: Set[VoyageManifest], f: ApiFlightWithSplits): ApiFlightWithSplits = {
       manifests.foldLeft(f) {
         case (flightSoFar, manifest) => updateFlightWithManifest(flightSoFar, manifest)
       }
     }
 
-    def updateFlightWithManifest(flightSoFar: ApiFlightWithSplits, manifest: VoyageManifest): ApiFlightWithSplits = {
-      val splitsFromManifest = paxTypeAndQueueCounts(manifest, flightSoFar)
+    def updateFlightWithManifest(arrival: ApiFlightWithSplits, manifest: VoyageManifest): ApiFlightWithSplits = {
+      val splitsFromManifest =  splitsCalculator.splitsForArrival(manifest, arrival)
 
-      val updatedSplitsSet = flightSoFar.splits.filterNot {
+      val updatedSplitsSet = arrival.splits.filterNot {
         case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, Some(manifest.EventCode), _) => true
         case _ => false
       } + splitsFromManifest
 
-      flightSoFar.copy(splits = updatedSplitsSet)
-    }
-
-    def paxTypeAndQueueCounts(manifest: VoyageManifest, f: ApiFlightWithSplits): ApiSplits = {
-      val paxTypeAndQueueCounts: PaxTypeAndQueueCounts = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(airportConfig.portCode, manifest)
-      val apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount] = paxTypeAndQueueCounts.toSet
-      val withEgateAndFastTrack = addEgatesAndFastTrack(f, apiPaxTypeAndQueueCounts)
-      val splitsFromManifest = ApiSplits(withEgateAndFastTrack, SplitSources.ApiSplitsWithCsvPercentage, Some(manifest.EventCode), PaxNumbers)
-
-      splitsFromManifest
-    }
-
-    def addEgatesAndFastTrack(f: ApiFlightWithSplits, apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
-      val csvSplits = csvSplitsProvider(f.apiFlight)
-      val egatePercentage: Load = egatePercentageFromSplit(csvSplits, 0.6)
-      val fastTrackPercentages: FastTrackPercentages = fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
-      val ptqcWithCsvEgates = applyEgatesSplits(apiPaxTypeAndQueueCounts, egatePercentage)
-      val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
-      ptqcwithCsvEgatesFastTrack
+      arrival.copy(splits = updatedSplitsSet)
     }
   }
 
@@ -595,8 +482,11 @@ object WorkloadCalculator {
       }
 
       val splitsWithoutTransit = splitRatios.filterNot(_.queueType == Queues.Transfer)
-      val nationalitiesPax = splitsWithoutTransit.toList.map(_.nationalities.map(_.values).getOrElse(List()).sum).sum
-      val paxCorrectionFactor = ArrivalHelper.bestPax(flight) / nationalitiesPax
+      val paxCorrectionFactor = splitsWithoutTransit.toList.map(_.nationalities.map(_.values).getOrElse(List()).sum).sum match {
+        case nonZeroNatPax if nonZeroNatPax != 0 => ArrivalHelper.bestPax(flight) / nonZeroNatPax
+        case _ => 1
+      }
+
       log.info(s"paxCorrectionFactor: $paxCorrectionFactor")
 
       minutesForHours(flight.PcpTime, 1)
@@ -630,7 +520,7 @@ object WorkloadCalculator {
             case (nat, pax) => nationalityProcessingTimes.get(nat) match {
               case Some(procTime) =>
                 val procTimeInMinutes = procTime / 60
-                log.info(s"Using processing time for $nat: $procTimeInMinutes (rather than $paxTypeQueueProcTime)")
+                log.info(s"Using processing time for $pax $nat: $procTimeInMinutes (rather than $paxTypeQueueProcTime)")
                 pax * procTimeInMinutes
               case None =>
                 log.info(s"Processing time for $nat not found. Using ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}: $paxTypeQueueProcTime")

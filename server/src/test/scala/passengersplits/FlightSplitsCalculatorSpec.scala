@@ -8,16 +8,16 @@ import org.specs2.specification.Tables
 import org.specs2.specification.core.Fragments
 import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
 import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
-import passengersplits.core.{PassengerQueueCalculator, PassengerTypeCalculator}
+import passengersplits.core.{SplitsCalculator, PassengerTypeCalculator}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 
 
-class FlightPassengerQueueCalculatorSpec extends Specification with Matchers with Tables {
+class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables {
   "Information about a passenger and their document type tells us what passenger type they are" >> {
     s2"""$passengerType"""
   }
 
-  import PassengerQueueCalculator._
+  import SplitsCalculator._
   import Queues._
 
   val UK = "UK"
@@ -95,7 +95,7 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
         "When we calculate passenger types THEN they are assigned to the EEA desk" in {
           val passengerInfos = PassengerInfoJson(Passport, "DEU", "EEA", None, None, "N", None, Some("DEU"), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
-          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
+          SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
             ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, Option(Map("DEU" -> 1.0)))))
         }
       }
@@ -103,7 +103,7 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
         "When we calculate passenger types then they are assigned to the EeaDesk" in {
           val passengerInfos = PassengerInfoJson(Passport, "GBR", "EEA", None, None, "N", None, Some("GBR"), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
-          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
+          SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
             ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, Option(Map("GBR" -> 1.0)))))
         }
       }
@@ -124,7 +124,7 @@ class FlightPassengerQueueCalculatorSpec extends Specification with Matchers wit
         "given a non eu passenger if their country is visa nat then they're a visa-national to the nonEeaDesk" in {
           val passengerInfos = PassengerInfoJson(Passport, visaRequiredCountryCode, "EEA", None, None, "N", None, Some(visaRequiredCountryCode), None) :: Nil
           val voyageManifest = VoyageManifest("DC", "LGW", "BCN", "2643", "FR", "", "", passengerInfos)
-          PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
+          SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", voyageManifest) should beEqualTo(List(
             ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1, Option(Map(visaRequiredCountryCode -> 1.0)))))
 
         }

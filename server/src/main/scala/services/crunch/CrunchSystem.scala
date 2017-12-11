@@ -11,6 +11,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
 import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
@@ -207,14 +208,9 @@ object CrunchSystem {
     name = name,
     optionalInitialFlights = None,
     airportConfig = airportConfig,
-//    portCode = portCode,
-//    slas = airportConfig.slaByQueue,
-//    minMaxDesks = airportConfig.minMaxDesksByTerminalQueue,
-//    procTimes = airportConfig.defaultProcessingTimes.head._2,
     natProcTimes = AirportConfigs.nationalityProcessingTimes,
     groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-//    portSplits = airportConfig.defaultPaxSplits,
-    csvSplitsProvider = historicalSplitsProvider,
+    splitsCalculator = SplitsCalculator(airportConfig.portCode, historicalSplitsProvider, airportConfig.defaultPaxSplits.splits.toSet),
     crunchStartFromFirstPcp = getLocalLastMidnight,
     crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
     expireAfterMillis = expireAfterMillis,

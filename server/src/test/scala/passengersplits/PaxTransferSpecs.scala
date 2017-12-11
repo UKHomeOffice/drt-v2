@@ -3,7 +3,7 @@ package passengersplits
 import drt.shared.{ApiPaxTypeAndQueueCount, DqEventCodes, Queues}
 import org.specs2._
 import org.specs2.specification.script.StandardDelimitedStepParsers
-import passengersplits.core.PassengerQueueCalculator
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 
 class PaxTransferSpecs extends Specification with specification.dsl.GWT with StandardDelimitedStepParsers {
@@ -76,7 +76,7 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
 
   def calcSplits = step {
     for (flight <- currentFlight) {
-      calculatedSplits = PassengerQueueCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", flight)
+      calculatedSplits = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", flight)
     }
   }
 

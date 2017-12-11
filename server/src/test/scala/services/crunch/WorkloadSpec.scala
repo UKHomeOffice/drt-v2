@@ -14,7 +14,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.apiFlight(actPax = 1)
     val splits = Set(
       ApiSplits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
         SplitSources.ApiSplitsWithCsvPercentage,
         Option(DqEventCodes.DepartureConfirmed),
         PaxNumbers))

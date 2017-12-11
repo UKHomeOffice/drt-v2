@@ -15,6 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch._
 import services.graphstages._
@@ -169,14 +170,9 @@ class CrunchTestLike
       name,
       optionalInitialFlights = initialFlightsWithSplits,
       airportConfig = airportConfig,
-//      portCode = portCode,
-//      slas = slaByQueue,
-//      minMaxDesks = minMaxDesks,
-//      procTimes = procTimes,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-//      portSplits = portSplits,
-      csvSplitsProvider = csvSplitsProvider,
+      splitsCalculator = SplitsCalculator(airportConfig.portCode, csvSplitsProvider, airportConfig.defaultPaxSplits.splits.toSet),
       crunchStartFromFirstPcp = crunchStartDateProvider,
       crunchEndFromLastPcp = crunchEndDateProvider,
       earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTime,
