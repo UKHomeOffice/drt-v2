@@ -44,7 +44,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     )
 
     crunch.baseArrivalsInput.offer(flights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
@@ -87,7 +87,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     )
 
     crunch.baseArrivalsInput.offer(flights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {

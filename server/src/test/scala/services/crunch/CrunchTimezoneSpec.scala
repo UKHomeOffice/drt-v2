@@ -1,15 +1,11 @@
 package services.crunch
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -53,11 +49,14 @@ class CrunchTimezoneSpec extends CrunchTestLike {
         ))
 
         val fiveMinutes = 600d / 60
-        val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> fiveMinutes)
+        val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          airportConfig = airportConfig,
+          airportConfig = airportConfig.copy(
+            minMaxDesksByTerminalQueue = minMaxDesks,
+            defaultProcessingTimes = procTimes
+          ),
           minutesToCrunch = 120,
           crunchStartDateProvider = (_) => SDate("2017-05-31T23:00Z"),
           crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120)

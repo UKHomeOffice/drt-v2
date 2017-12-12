@@ -153,7 +153,7 @@ object FlightTableRow {
 
       Try {
         def sourceDisplayName(splits: ApiSplits) = splits match {
-          case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
+          case ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _) => s"Live ${splits.eventType.getOrElse("")}"
           case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
           case _ => "Port Average"
         }

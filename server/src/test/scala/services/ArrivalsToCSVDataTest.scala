@@ -23,7 +23,7 @@ class ArrivalsToCSVDataTest extends Specification {
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 5, None),
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 6, None),
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 7, None)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)),
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)),
           ApiSplits(
             Set(
               ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8, None),
@@ -43,7 +43,7 @@ class ArrivalsToCSVDataTest extends Specification {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30, None),
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10, None)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)))
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)))
       ),
       ApiFlightWithSplits(
         apiFlight(3, "SA326", "SA0326", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
@@ -53,7 +53,7 @@ class ArrivalsToCSVDataTest extends Specification {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30, None),
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10, None)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)))
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)))
       )
     )
 

@@ -1,4 +1,4 @@
-package services.crunch
+package services.crunch.workload
 
 import controllers.ArrivalGenerator
 import drt.shared.SplitRatiosNs.SplitSources
@@ -15,7 +15,7 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
-        SplitSources.ApiSplitsWithCsvPercentage,
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
@@ -35,7 +35,7 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
-        SplitSources.ApiSplitsWithCsvPercentage,
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
@@ -56,7 +56,7 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
-        SplitSources.ApiSplitsWithCsvPercentage,
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
@@ -71,13 +71,13 @@ class WorkloadSpec extends Specification {
 
   "Given an arrival with 100 pax and 1 split containing 1 pax with 1 nationality " +
     "When I ask for the workload for this arrival " +
-    "Then I see the 10x the proc time for the given nationality" >> {
+    "Then I see the 100x the proc time for the given nationality" >> {
 
     val arrival = ArrivalGenerator.apiFlight(actPax = 100)
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
-        SplitSources.ApiSplitsWithCsvPercentage,
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
@@ -85,9 +85,10 @@ class WorkloadSpec extends Specification {
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
     val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes)
+      .toList
       .map(_.workLoad)
 
-    workloads === Set(gbrSeconds / 60 * 100)
+    workloads === List.fill(5)(gbrSeconds / 60 * 20)
   }
 
   "Given an arrival with 10 pax and 1 split containing 3 pax with 2 nationalities " +
@@ -98,7 +99,7 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map("GBR" -> 1, "FRA" -> 2)))),
-        SplitSources.ApiSplitsWithCsvPercentage,
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)

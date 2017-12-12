@@ -10,6 +10,7 @@ import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import services.SDate
+import services.crunch.VoyageManifestGenerator._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -18,13 +19,6 @@ import scala.concurrent.duration._
 class VoyageManifestsSpec extends CrunchTestLike {
   isolated
   sequential
-
-  val lhrEuPassport = PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
-  val lhrEuIdCard = PassengerInfoJson(Some("I"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
-  val lhrVisa = PassengerInfoJson(Some("P"), "EGY", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
-  val lhrNonVisa = PassengerInfoJson(Some("P"), "SLV", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
-  val lhrInTransitFlag = PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "Y", Some("GBR"), Option("GBR"), None)
-  val lhrInTransitCountry = PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("JFK"), "N", Some("GBR"), Option("GBR"), None)
 
   "Given a VoyageManifest arriving before its corresponding flight " +
     "When I crunch the flight " +
@@ -35,7 +29,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val inputFlights = Flights(List(flight))
     val inputManifests = VoyageManifests(Set(
-      VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(lhrEuPassport))
+      VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
@@ -62,7 +56,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage),
       ApiSplits(Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 1.0)))), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.CheckIn), PaxNumbers)
     )
     val splitsSet = flights.head match {
       case (_, ApiFlightWithSplits(_, s, _)) => s
@@ -116,9 +110,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage),
       ApiSplits(Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 1.0)))), ApiSplitsWithCsvPercentage, Option(DqEventCodes.CheckIn), PaxNumbers),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.CheckIn), PaxNumbers),
       ApiSplits(Set(
-        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0, Option(Map("USA" -> 1.0)))), ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0, Option(Map("USA" -> 1.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
     val splitsSet = portState.flights.head match {
       case (_, ApiFlightWithSplits(_, s, _)) => s
@@ -140,11 +134,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10)
     val inputFlights = Flights(List(flight))
     val inputManifests = VoyageManifests(Set(
-      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(lhrEuPassport))
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
+        portCode = portCode,
         defaultProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
@@ -185,14 +180,15 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val inputFlights = Flights(List(flight))
     val inputManifests = VoyageManifests(Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-        lhrEuPassport,
-        lhrInTransitFlag,
-        lhrInTransitCountry
+        euPassport,
+        inTransitFlag,
+        inTransitCountry
       ))
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
+        portCode = portCode,
         defaultProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
@@ -233,17 +229,18 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val inputFlights = Flights(List(flight))
     val inputManifests = VoyageManifests(Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-        lhrInTransitFlag,
-        lhrInTransitCountry,
-        lhrEuPassport,
-        lhrEuIdCard,
-        lhrVisa,
-        lhrVisa
+        inTransitFlag,
+        inTransitCountry,
+        euPassport,
+        euIdCard,
+        visa,
+        visa
       ))
     ))
     val crunchGraphs = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
+        portCode = portCode,
         defaultProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaNonMachineReadableToDesk -> 25d / 60,

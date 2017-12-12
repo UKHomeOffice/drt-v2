@@ -73,8 +73,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
   }
 
   def bestSplits: Option[ApiSplits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.CheckIn))
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
@@ -87,8 +87,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
   }
 
   def apiSplits: Option[ApiSplits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithCsvPercentage && s.eventType.contains(DqEventCodes.CheckIn))
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.DepartureConfirmed))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.CheckIn))
 
     List(apiSplitsDc, apiSplitsCi).find {
       case Some(_) => true

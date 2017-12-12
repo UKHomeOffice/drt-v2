@@ -32,13 +32,13 @@ class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables
         Tuple2(EeaNonMachineReadable, None))
 
       val passengerTypeCounts = countPassengerTypes(passengerTypes)
-      val expectedpassengerTypeCounts = Map(
+      val expectedPassengerTypeCounts = Map(
         EeaMachineReadable -> Tuple2(1, None),
         EeaNonMachineReadable -> Tuple2(1, None),
         NonVisaNational -> Tuple2(2, None),
         VisaNational -> Tuple2(1, None)
       )
-      passengerTypeCounts should beEqualTo(expectedpassengerTypeCounts)
+      passengerTypeCounts should beEqualTo(expectedPassengerTypeCounts)
     }
 
     "Given counts of passenger types, " +

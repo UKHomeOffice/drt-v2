@@ -74,7 +74,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlight)
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val flightsResult = result.flights.values.map(_.apiFlight)
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"))
@@ -102,9 +102,9 @@ class AclFeedSpec extends CrunchTestLike {
 
       crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlights)
-      crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       crunch.liveArrivalsInput.offer(liveFlights)
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val flightsResult = result.flights.values.map(_.apiFlight)
 
       val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
@@ -138,7 +138,7 @@ class AclFeedSpec extends CrunchTestLike {
       crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = initialLive ++ newAcl
@@ -170,7 +170,7 @@ class AclFeedSpec extends CrunchTestLike {
       crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.liveArrivalsInput.offer(Flights(newLive.toList))
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newLive.map(_.copy(rawIATA = "BA0001")) + initialAcl2
@@ -203,10 +203,10 @@ class AclFeedSpec extends CrunchTestLike {
 
       crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
-      crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
       crunch.liveArrivalsInput.offer(Flights(newLive.toList))
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newAcl ++ newLive ++ initialLive

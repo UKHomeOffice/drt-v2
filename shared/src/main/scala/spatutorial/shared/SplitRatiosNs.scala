@@ -1,12 +1,11 @@
 package drt.shared
 
 object SplitRatiosNs {
-//  type SplitRatios = List[SplitRatio]
   case class SplitRatios(splits: List[SplitRatio]=Nil, origin: String)
 
   object SplitSources {
     val AdvPaxInfo = "advPaxInfo"
-    val ApiSplitsWithCsvPercentage = "ApiSplitsWithHistoricalEGatePercentage"
+    val ApiSplitsWithHistoricalEGateAndFTPercentages = "ApiSplitsWithHistoricalEGateAndFTPercentages"
     val Historical = "Historical"
     val TerminalAverage = "TerminalAverage"
   }

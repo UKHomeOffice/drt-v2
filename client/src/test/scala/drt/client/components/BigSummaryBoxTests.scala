@@ -149,12 +149,12 @@ object BigSummaryBoxTests extends TestSuite {
 
               val splits1 = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None),
                 ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 23, None)),
-                SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
+                SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
 
               val splits2 = ApiSplits(Set(
                 ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11, None),
                 ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 17, None))
-                , SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
+                , SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
 
               val flights = FlightsWithSplits(
                 List(ApiFlightWithSplits(apiFlight1, Set(splits1)),
@@ -239,7 +239,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                 val splits1 = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None),
                   ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 23, None)),
-                  SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
+                  SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
 
                 val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Set(splits1))
 
@@ -258,7 +258,7 @@ object BigSummaryBoxTests extends TestSuite {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = 2, ActPax = 100, PcpTime = mkMillis("2017-05-01T12:05Z"))
                   val splits1 = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 0.2, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 0.7, None)),
-                    SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed), Percentage)
+                    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), Percentage)
 
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Set(splits1))
 
