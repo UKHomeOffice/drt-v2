@@ -133,8 +133,8 @@ object TerminalContentComponent {
             })
           ),
           <.div(^.className := "exports",
-            <.a("Export Arrivals", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank"),
-            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}", ^.target := "_blank")
+            <.a("Export Arrivals", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank"),
+            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank")
           )
         ),
         <.div(^.className := "tab-content",

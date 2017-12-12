@@ -74,7 +74,7 @@ object TerminalDesksAndQueuesRow {
       }
       val fixedPoints = props.staffMinute.fixedPoints
       val movements = props.staffMinute.movements
-      val available = props.staffMinute.shifts - props.staffMinute.movements
+      val available = props.staffMinute.shifts + props.staffMinute.movements
       val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
       val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
       val ragClass = ragStatus(totalRequired, totalDeployed)

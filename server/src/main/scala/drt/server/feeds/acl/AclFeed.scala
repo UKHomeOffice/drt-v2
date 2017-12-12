@@ -65,7 +65,11 @@ object AclFeed {
     val arrivalEntries = flightEntries
       .map(_.split(",").toList)
       .filter(_.length == 30)
-      .filter(_ (3) == "A")
+      .filter(_ (AclColIndex.ArrDep) == "A")
+      .filter(f => f(AclColIndex.FlightNumber) match {
+        case Arrival.flightCodeRegex(_, _, suffix) => !(suffix == "P" || suffix == "F")
+        case _ => true
+      })
 
     val arrivals = arrivalEntries
       .map(aclFieldsToArrival)
@@ -130,9 +134,7 @@ object AclFeed {
     new String(stringBuffer.toArray, UTF_8)
   }
 
-  def dateAndTimeToDateTimeIso(date: String, time: String): String = {
-    s"${date}T${formatTimeToIso(time)}"
-  }
+  def dateAndTimeToDateTimeIso(date: String, time: String): String = s"${date}T${formatTimeToIso(time)}"
 
   def formatTimeToIso(time: String): String = f"${time.toInt}%04d".splitAt(2) match {
     case (hour, minute) => s"$hour:$minute:00Z"
@@ -141,7 +143,7 @@ object AclFeed {
   def aclFieldsToArrival(fields: List[String]): Try[Arrival] = {
     Try {
       Arrival(
-        Operator = fields(13),
+        Operator = fields(AclColIndex.Operator),
         Status = "ACL Forecast",
         EstDT = "",
         ActDT = "",
@@ -149,24 +151,48 @@ object AclFeed {
         ActChoxDT = "",
         Gate = "",
         Stand = "",
-        MaxPax = fields(20).toInt,
-        ActPax = (fields(20).toInt * fields(29).toDouble).round.toInt,
+        MaxPax = fields(AclColIndex.MaxPax).toInt,
+        ActPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt,
         TranPax = 0,
         RunwayID = "",
         BaggageReclaimId = "",
-        FlightID = (fields(28) + fields(5) + fields(25) + fields(16)).hashCode,
-        AirportID = fields(2),
+        FlightID = (fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode,
+        AirportID = fields(AclColIndex.Airport),
         Terminal = s"T${
-          fields(24).take(1)
+          fields(AclColIndex.Terminal).take(1)
         }",
-        rawICAO = fields(28),
-        rawIATA = fields(28),
-        Origin = fields(16),
-        SchDT = dateAndTimeToDateTimeIso(fields(5), fields(25)),
-        Scheduled = SDate(dateAndTimeToDateTimeIso(fields(5), fields(25))).millisSinceEpoch,
+        rawICAO = fields(AclColIndex.FlightNumber),
+        rawIATA = fields(AclColIndex.FlightNumber),
+        Origin = fields(AclColIndex.Origin),
+        SchDT = dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time)),
+        Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = 0,
         None
       )
     }
+  }
+
+  object AclColIndex {
+
+    val allFields: Map[String, Int] = List(
+      "A/C", "ACReg", "Airport", "ArrDep", "CreDate",
+      "Date", "DOOP", "EditDate", "Icao Aircraft Type", "Icao Last/Next Station",
+      "Icao Orig/Dest Station", "LastNext", "LastNextCountry", "Ope", "OpeGroup",
+      "OpeName", "OrigDest", "OrigDestCountry", "Res", "Season",
+      "Seats", "ServNo", "ST", "ove.ind", "Term",
+      "Time", "TurnOpe", "TurnServNo", "OpeFlightNo", "LoadFactor"
+    ).zipWithIndex.toMap
+
+    val MaxPax: Int = allFields("Seats")
+    val LoadFactor: Int = allFields("LoadFactor")
+    val FlightNumber: Int = allFields("OpeFlightNo")
+    val Date: Int = allFields("Date")
+    val Time: Int = allFields("Time")
+    val Operator: Int = allFields("Ope")
+    val Origin: Int = allFields("OrigDest")
+    val Airport: Int = allFields("Airport")
+    val Terminal: Int = allFields("Term")
+    val ArrDep: Int = allFields("ArrDep")
+    val FlightType: Int = allFields("ST")
   }
 }
