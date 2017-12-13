@@ -102,24 +102,7 @@ class CrunchTestLike
     timeToChoxMillis = 120000L,
     firstPaxOffMillis = 180000L
   )
-//  val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> 25d / 60)
-//  val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45)
-//  val defaultPaxSplits = SplitRatios(
-//    SplitSources.TerminalAverage,
-//    SplitRatio(eeaMachineReadableToDesk, 1)
-//  )
-//  val minMaxDesks = Map(
-//    "T1" -> Map(
-//      Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-//      Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-//      Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
-//    "T2" -> Map(
-//      Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-//      Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-//      Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
-//  val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
-//  val timeToChoxMillis = 120000L
-//  val firstPaxOffMillis = 180000L
+
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
   def liveCrunchStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor")
@@ -181,7 +164,9 @@ class CrunchTestLike
       manifestsUsed = manifestsUsed,
       now = now,
       minutesToCrunch = minutesToCrunch,
-      warmUpMinutes = warmUpMinutes)
+      warmUpMinutes = warmUpMinutes,
+      useNationalityBasedProcessingTimes = false
+    )
 
     val baseFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val forecastFlightsSource = Source.queue[Flights](0, OverflowStrategy.backpressure)

@@ -125,6 +125,8 @@ trait SystemActors {
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+  val useNationalityBasedProcessingTimes = config.getString("nationality-based-processing-times").isDefined
+  system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
     system = system,
@@ -140,7 +142,8 @@ trait SystemActors {
     actors = Map(
       "shifts" -> shiftsActor,
       "fixed-points" -> fixedPointsActor,
-      "staff-movements" -> staffMovementsActor)))
+      "staff-movements" -> staffMovementsActor),
+    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes))
   shiftsActor ! AddShiftLikeSubscribers(crunchInputs.shifts)
   fixedPointsActor ! AddShiftLikeSubscribers(crunchInputs.fixedPoints)
   staffMovementsActor ! AddStaffMovementsSubscribers(crunchInputs.staffMovements)

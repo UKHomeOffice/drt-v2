@@ -37,7 +37,8 @@ class CrunchGraphStage(name: String,
                        maxDaysToCrunch: Int,
                        manifestsUsed: Boolean = true,
                        minutesToCrunch: Int,
-                       warmUpMinutes: Int)
+                       warmUpMinutes: Int,
+                       useNationalityBasedProcessingTimes: Boolean)
   extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
@@ -238,7 +239,7 @@ class CrunchGraphStage(name: String,
       log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
       val uniqueFlights = groupFlightsByCodeShares(flightsInCrunchWindow).map(_._1)
       log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
-      val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(airportConfig.defaultProcessingTimes.head._2)(uniqueFlights)
+      val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(airportConfig.defaultProcessingTimes.head._2, useNationalityBasedProcessingTimes)(uniqueFlights)
       val earliestMinute: MillisSinceEpoch = newFlightSplitMinutesByFlight.values.flatMap(_.map(identity)).toList match {
         case fsm if fsm.nonEmpty => fsm.map(_.minute).min
         case _ => 0L
@@ -374,10 +375,10 @@ class CrunchGraphStage(name: String,
       })
     }
 
-    def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double])(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
+    def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double], useNationalityBasedProcessingTimes: Boolean)(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
       flightsWithSplits.map {
         case ApiFlightWithSplits(flight, splits, _) =>
-          (flight.uniqueId, WorkloadCalculator.flightToFlightSplitMinutes(flight, splits, portProcTimes, natProcTimes))
+          (flight.uniqueId, WorkloadCalculator.flightToFlightSplitMinutes(flight, splits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes))
       }.toMap
     }
 

@@ -12,7 +12,9 @@ object WorkloadCalculator {
   def flightToFlightSplitMinutes(flight: Arrival,
                                  splits: Set[ApiSplits],
                                  procTimes: Map[PaxTypeAndQueue, Double],
-                                 nationalityProcessingTimes: Map[String, Double]): Set[FlightSplitMinute] = {
+                                 nationalityProcessingTimes: Map[String, Double],
+                                 useNationalityBasedProctimes: Boolean
+                                ): Set[FlightSplitMinute] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.CheckIn))
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
@@ -43,13 +45,25 @@ object WorkloadCalculator {
 
       val splitsWithoutTransit = splitRatios.filterNot(_.queueType == Queues.Transfer)
 
+      val totalPaxWithNationality = splitsWithoutTransit.toList.flatMap(_.nationalities.map(_.values.sum)).sum
+
       minutesForHours(flight.PcpTime, 1)
         .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
         .flatMap {
           case (minuteMillis, flightPaxInMinute) =>
             splitsWithoutTransit
               .map(apiSplit => {
-                flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, apiSplit, Percentage, nationalityProcessingTimes)
+                flightSplitMinute(
+                  flight,
+                  procTimes,
+                  minuteMillis,
+                  flightPaxInMinute,
+                  apiSplit,
+                  Percentage,
+                  nationalityProcessingTimes,
+                  totalPaxWithNationality,
+                  useNationalityBasedProctimes
+                )
               })
         }.toSet
     }).getOrElse(Set())
@@ -61,36 +75,36 @@ object WorkloadCalculator {
                         flightPaxInMinute: Int,
                         apiSplitRatio: ApiPaxTypeAndQueueCount,
                         splitStyle: SplitStyle,
-                        nationalityProcessingTimes: Map[String, Double]): FlightSplitMinute = {
+                        nationalityProcessingTimes: Map[String, Double],
+                        totalPaxWithNationality: Double,
+                        useNationalityBasedProctimes: Boolean
+                       ): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
     val paxTypeQueueProcTime = procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
     val defaultWorkload = splitPaxInMinute * paxTypeQueueProcTime
-    log.info(s"Looking at $apiSplitRatio")
-    val splitWorkLoadInMinute = apiSplitRatio.nationalities match {
-      case Some(nats) if nats.values.sum > 0 =>
-        val totalNats = nats.values.sum
+
+    val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProctimes) match {
+      case (Some(nats), true) if nats.values.sum > 0 =>
         val bestPax = ArrivalHelper.bestPax(flight)
-        val natsToPaxRatio = totalNats.toDouble / bestPax
+        val natsToPaxRatio = totalPaxWithNationality / bestPax
         val natFactor = (flightPaxInMinute.toDouble / bestPax) / natsToPaxRatio
-        log.info(s"totalNats: $totalNats / bestPax: $bestPax, natFactor: $natFactor - ($flightPaxInMinute / $bestPax) / $natsToPaxRatio")
-        log.info(s"Split nationality available. Looking up processing time")
+        log.debug(s"totalNats: $totalPaxWithNationality / bestPax: $bestPax, natFactor: $natFactor - ($flightPaxInMinute / $bestPax) / $natsToPaxRatio")
         val natBasedWorkload = nats
           .map {
             case (nat, pax) => nationalityProcessingTimes.get(nat) match {
               case Some(procTime) =>
                 val procTimeInMinutes = procTime / 60
-                log.info(s"Using processing time for $pax $nat: $procTimeInMinutes (rather than $paxTypeQueueProcTime)")
+                log.debug(s"Using processing time for $pax $nat: $procTimeInMinutes (rather than $paxTypeQueueProcTime)")
                 pax * procTimeInMinutes * natFactor
               case None =>
-                log.info(s"Processing time for $nat not found. Using ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}: $paxTypeQueueProcTime")
+                log.debug(s"Processing time for $nat not found. Using ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}: $paxTypeQueueProcTime")
                 pax * paxTypeQueueProcTime
             }
           }
           .sum
-        log.info(s"Nationality based workload: $natBasedWorkload vs $defaultWorkload default workload")
+        log.debug(s"Nationality based workload: $natBasedWorkload vs $defaultWorkload default workload")
         natBasedWorkload
       case _ =>
-        log.info(s"No nats available. Using general processing times")
         defaultWorkload
     }
     FlightSplitMinute(flight.uniqueId, apiSplitRatio.passengerType, flight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
