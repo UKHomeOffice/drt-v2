@@ -28,7 +28,6 @@ class SplitsSpec extends Specification {
       euIdCard, euIdCard,
       euPassport, euPassport)
     val manifest = voyageManifest(paxInfos = paxInfos)
-//    val manifestPaxCount = manifest.PassengerList.length
 
     val splitsCalc = SplitsCalculator("LHR", eeaMrSplitsProvider, Set())
 
