@@ -127,68 +127,57 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider,
 
 object SplitsCalculator {
 
-  def countPassengerTypes(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Map[PaxType, (Int, Option[Map[String, Double]])] = {
-    val typeToTuples: Map[PaxType, Seq[(PaxType, Option[String])]] = paxTypeAndNationalities
-      .groupBy {
-        case (pt, _) => pt
-      }
-
-    val paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])] = typeToTuples
-      .mapValues(ptNats => {
-        val natCounts: Map[String, Double] = ptNats
-          .groupBy {
-            case (_, maybeNat) => maybeNat
-          }
-          .collect {
-            case (Some(nat), pax) => (nat, pax.length.toDouble)
-          }
-        if (natCounts.values.sum == ptNats.length)
-          Tuple2(ptNats.length, Some(natCounts))
-        else
-          Tuple2(ptNats.length, None)
-      })
-    paxTypeCountAndNats
-  }
+  def countPassengerTypes(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Map[PaxType, (Int, Option[Map[String, Double]])] = paxTypeAndNationalities
+    .groupBy {
+      case (pt, _) => pt
+    }
+    .mapValues(ptNats => {
+      val natCounts: Map[String, Double] = ptNats
+        .groupBy {
+          case (_, maybeNat) => maybeNat
+        }
+        .collect {
+          case (Some(nat), pax) => (nat, pax.length.toDouble)
+        }
+      if (natCounts.values.sum == ptNats.length)
+        Tuple2(ptNats.length, Some(natCounts))
+      else
+        Tuple2(ptNats.length, None)
+    })
 
   import drt.shared.PaxType
   import drt.shared.Queues._
 
-  def calculateQueuePaxCounts(paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])], egatePercentage: Double): PaxTypeAndQueueCounts = {
-    val queues: Iterable[ApiPaxTypeAndQueueCount] = paxTypeCountAndNats flatMap {
+  def calculateQueuePaxCounts(paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])], egatePercentage: Double): PaxTypeAndQueueCounts = paxTypeCountAndNats
+    .flatMap {
       case (pType, (pCount, pNats)) =>
         if (egatePercentage == 0)
           calculateQueuesFromPaxTypesWithoutEgates(pType, pCount, pNats, egatePercentage)
         else
           calculateQueuesFromPaxTypes(pType, pCount, pNats, egatePercentage)
     }
+    .toList
+    .sortBy(_.passengerType.toString)
 
-    val sortedQueues = queues.toList.sortBy(_.passengerType.toString)
-    sortedQueues
+  def calculateQueuesFromPaxTypesWithoutEgates(paxType: PaxType, paxCount: Int, paxNats: Option[Map[String, Double]], egatePercentage: Double): Seq[ApiPaxTypeAndQueueCount] = paxType match {
+    case EeaNonMachineReadable =>
+      Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount, paxNats))
+    case EeaMachineReadable =>
+      Seq(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount, paxNats))
+    case Transit => Seq(ApiPaxTypeAndQueueCount(Transit, Transfer, paxCount, paxNats))
+    case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
   }
 
-  def calculateQueuesFromPaxTypesWithoutEgates(paxType: PaxType, paxCount: Int, paxNats: Option[Map[String, Double]], egatePercentage: Double): Seq[ApiPaxTypeAndQueueCount] = {
-    paxType match {
-      case EeaNonMachineReadable =>
-        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount, paxNats))
-      case EeaMachineReadable =>
-        Seq(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount, paxNats))
-      case Transit => Seq(ApiPaxTypeAndQueueCount(Transit, Transfer, paxCount, paxNats))
-      case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
-    }
-  }
-
-  def calculateQueuesFromPaxTypes(paxType: PaxType, paxCount: Int, paxNats: Option[Map[String, Double]], egatePercentage: Double): Seq[ApiPaxTypeAndQueueCount] = {
-    paxType match {
-      case EeaNonMachineReadable =>
-        Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount, paxNats))
-      case EeaMachineReadable =>
-        val egatePaxCount = (egatePercentage * paxCount).toInt
-        Seq(
-          ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount - egatePaxCount, paxNats),
-          ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, egatePaxCount, paxNats)
-        )
-      case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
-    }
+  def calculateQueuesFromPaxTypes(paxType: PaxType, paxCount: Int, paxNats: Option[Map[String, Double]], egatePercentage: Double): Seq[ApiPaxTypeAndQueueCount] = paxType match {
+    case EeaNonMachineReadable =>
+      Seq(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, paxCount, paxNats))
+    case EeaMachineReadable =>
+      val egatePaxCount = (egatePercentage * paxCount).toInt
+      Seq(
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, paxCount - egatePaxCount, paxNats),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, egatePaxCount, paxNats)
+      )
+    case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
   }
 
   def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[ApiPaxTypeAndQueueCount] = {
@@ -226,9 +215,9 @@ object SplitsCalculator {
       s.copy(paxCount = remainingPax, nationalities = remainingNationalities))
   }
 
-  def reduceNationalities(split: ApiPaxTypeAndQueueCount, reductionFactor: Load): Option[Map[String, Load]] = {
-    split.nationalities.map(_.map {
+  def reduceNationalities(split: ApiPaxTypeAndQueueCount, reductionFactor: Load): Option[Map[String, Load]] = split
+    .nationalities
+    .map(_.map {
       case (nat, natCount) => (nat, natCount * (1 - reductionFactor))
     })
-  }
 }
