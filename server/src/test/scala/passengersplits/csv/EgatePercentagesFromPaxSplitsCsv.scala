@@ -1,18 +1,18 @@
 package passengersplits.csv
 
-import drt.shared.Arrival
-import drt.shared.PassengerSplits.{SplitsPaxTypeAndQueueCount, VoyagePaxSplits}
+import drt.shared.ApiPaxTypeAndQueueCount
+import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational}
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.SplitRatios
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.specs2.mutable.Specification
-import services.{CSVPassengerSplitsProvider, SDate}
 import services.SDate.implicits._
+import services.{CSVPassengerSplitsProvider, SDate}
 
 class EgatePercentagesFromPaxSplitsCsv extends Specification {
 
-  val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+  val formatter: DateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
   "DRT-4568 Given a Flight Passenger Split" >> {
     "When we ask for the egate percentage, we get a multiplier" >> {
@@ -50,13 +50,13 @@ class EgatePercentagesFromPaxSplitsCsv extends Specification {
     "We can convert a VoyagePassengerInfo (split from DQ API) into an ApiSplit where we apply a percentage calculation to the" +
       "eeaDesk, diverting that percentage to eGate" >> {
       val vps = VoyagePaxSplits("STN", "BA", "978", 100, SDate(2017, 10, 1, 10, 30), List(
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100, None),
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20, None)
       ))
       val converted = vps.copy(paxSplits = List(
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 30),
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 70),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 30, None),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 70, None),
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20, None)
       ))
 
       converted.paxSplits.toSet === CSVPassengerSplitsProvider.applyEgates(vps, 0.7).paxSplits.toSet
@@ -65,13 +65,13 @@ class EgatePercentagesFromPaxSplitsCsv extends Specification {
     "Given an initial paxCount where the percentage would not be a round number, we put any remainder in the eeaDesk" +
       "so a 70% split on 99 people sends 30 to eeaDesk and 69 to eGates" >> {
       val vps = VoyagePaxSplits("STN", "BA", "978", 100, SDate(2017, 10, 1, 10, 30), List(
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 99),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 99, None),
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20, None)
       ))
       val converted = vps.copy(paxSplits = List(
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 30),
-        SplitsPaxTypeAndQueueCount(EeaMachineReadable, EGate, 69),
-        SplitsPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20)
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 30, None),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 69, None),
+        ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 20, None)
       ))
 
       converted.paxSplits.toSet === CSVPassengerSplitsProvider.applyEgates(vps, 0.7).paxSplits.toSet

@@ -13,7 +13,6 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import org.scalajs.dom.html.{Div, TableSection}
 
-import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
 
 object FlightsWithSplitsTable {
@@ -81,7 +80,7 @@ object FlightsWithSplitsTable {
     .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
     .build
 
-  def tableHead(props: Props, timelineTh: TagMod, queueNames: immutable.Seq[String]): TagOf[TableSection] = {
+  def tableHead(props: Props, timelineTh: TagMod, queueNames: Seq[String]): TagOf[TableSection] = {
     <.thead(
       <.tr(
       timelineTh,
@@ -153,7 +152,7 @@ object FlightTableRow {
 
       Try {
         def sourceDisplayName(splits: ApiSplits) = splits match {
-          case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => s"Live ${splits.eventType.getOrElse("")}"
+          case ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _) => s"Live ${splits.eventType.getOrElse("")}"
           case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
           case _ => "Port Average"
         }

@@ -51,7 +51,7 @@ class CrunchStateActor(val snapshotInterval: Int,
     case Some(s) =>
       val apiCount = s.flights.count {
         case (_, f) => f.splits.exists {
-          case ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _) => true
+          case ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
           case _ => false
         }
       }
@@ -336,7 +336,8 @@ object SplitsConversion {
       sm.paxTypeAndQueueCount.map(ptqcm => ApiPaxTypeAndQueueCount(
         PaxType(ptqcm.paxType.getOrElse("")),
         ptqcm.queueType.getOrElse(""),
-        ptqcm.paxValue.getOrElse(0d)
+        ptqcm.paxValue.getOrElse(0d),
+        None
       )).toSet,
       sm.source.getOrElse(""),
       sm.eventType,

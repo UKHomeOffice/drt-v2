@@ -125,6 +125,8 @@ trait SystemActors {
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+  val useNationalityBasedProcessingTimes = config.getString("nationality-based-processing-times").isDefined
+  system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
     system = system,
@@ -140,7 +142,8 @@ trait SystemActors {
     actors = Map(
       "shifts" -> shiftsActor,
       "fixed-points" -> fixedPointsActor,
-      "staff-movements" -> staffMovementsActor)))
+      "staff-movements" -> staffMovementsActor),
+    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes))
   shiftsActor ! AddShiftLikeSubscribers(crunchInputs.shifts)
   fixedPointsActor ! AddShiftLikeSubscribers(crunchInputs.fixedPoints)
   staffMovementsActor ! AddStaffMovementsSubscribers(crunchInputs.staffMovements)
@@ -584,12 +587,14 @@ class Application @Inject()(implicit val config: Configuration,
 
   def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
     implicit request =>
-      log.debug(s"Request path: $path")
+      log.info(s"Request path: $path")
 
       // get the request body as ByteString
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
+
+      implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
       val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor))
 
       router(
@@ -635,7 +640,7 @@ object Forecast {
     ForecastHeadlineFigures(headlines)
   }
 
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, immutable.Seq[ForecastTimeSlot]] = {
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
     val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes)
     groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {

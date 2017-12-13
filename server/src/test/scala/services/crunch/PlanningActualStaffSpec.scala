@@ -6,7 +6,6 @@ import drt.shared.{CrunchApi, Queues}
 import services.SDate
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
@@ -24,8 +23,10 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(weekbeginning),
+        airportConfig = airportConfig.copy(
+          minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
+        ),
         minutesToCrunch = 1440,
-        minMaxDesks = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1))))),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addDays(3),
         shifts =

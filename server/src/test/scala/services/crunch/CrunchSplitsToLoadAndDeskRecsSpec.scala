@@ -31,20 +31,22 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
       ))
 
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(
-        eeaMachineReadableToDesk -> 20d / 60,
-        eeaMachineReadableToEGate -> 35d / 60)
-
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
+        airportConfig = airportConfig.copy(
+          defaultPaxSplits = SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, edSplit),
+            SplitRatio(eeaMachineReadableToEGate, egSplit)
+          ),
+          defaultProcessingTimes = Map("T1" -> Map(
+            eeaMachineReadableToDesk -> 20d / 60,
+            eeaMachineReadableToEGate -> 35d / 60))
+        ),
+
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-        portSplits = SplitRatios(
-          SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, edSplit),
-          SplitRatio(eeaMachineReadableToEGate, egSplit)
-        ))
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
       crunch.liveArrivalsInput.offer(flights)
 
@@ -72,6 +74,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
+        airportConfig = airportConfig,
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
@@ -94,24 +97,26 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 100)
       ))
-      val procTimes: Map[PaxTypeAndQueue, Double] = Map(
-        eeaMachineReadableToDesk -> 0.25,
-        eeaMachineReadableToEGate -> 0.3,
-        eeaNonMachineReadableToDesk -> 0.4
-      )
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        procTimes = procTimes,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-        portSplits = SplitRatios(
-          SplitSources.TerminalAverage,
-          List(SplitRatio(eeaMachineReadableToDesk, 0.25),
-            SplitRatio(eeaMachineReadableToEGate, 0.25),
-            SplitRatio(eeaNonMachineReadableToDesk, 0.5)
+        airportConfig = airportConfig.copy(
+          defaultProcessingTimes = Map("T1" -> Map(
+            eeaMachineReadableToDesk -> 0.25,
+            eeaMachineReadableToEGate -> 0.3,
+            eeaNonMachineReadableToDesk -> 0.4
+          )),
+          defaultPaxSplits = SplitRatios(
+            SplitSources.TerminalAverage,
+            List(SplitRatio(eeaMachineReadableToDesk, 0.25),
+              SplitRatio(eeaMachineReadableToEGate, 0.25),
+              SplitRatio(eeaNonMachineReadableToDesk, 0.5)
+            )
           )
-        ))
+        ),
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      )
 
       crunch.liveArrivalsInput.offer(flights)
 
@@ -137,13 +142,13 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
         ))
 
-        val procTimes: Map[PaxTypeAndQueue, Double] = Map(
-          eeaMachineReadableToDesk -> 20d / 60,
-          eeaMachineReadableToEGate -> 35d / 60)
-
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          procTimes = procTimes,
+          airportConfig = airportConfig.copy(
+            defaultProcessingTimes = Map("T1" -> Map(
+              eeaMachineReadableToDesk -> 20d / 60,
+              eeaMachineReadableToEGate -> 35d / 60))
+          ),
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           csvSplitsProvider = _ => Option(SplitRatios(
@@ -173,13 +178,13 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10, airportId = "LHR")
         ))
 
-        val procTimes: Map[PaxTypeAndQueue, Double] = Map(
-          eeaMachineReadableToDesk -> 20d / 60,
-          eeaMachineReadableToEGate -> 35d / 60)
-
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          procTimes = procTimes,
+          airportConfig = airportConfig.copy(
+            defaultProcessingTimes = Map("T1" -> Map(
+              eeaMachineReadableToDesk -> 20d / 60,
+              eeaMachineReadableToEGate -> 35d / 60))
+          ),
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           csvSplitsProvider = _ => Option(SplitRatios(

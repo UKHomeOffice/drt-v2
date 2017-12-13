@@ -88,6 +88,7 @@ object PollDelay {
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case _: GetAirportConfig =>
+      log.info(s"Calling airportConfiguration")
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig).recoverWith {
         case f =>
           log.error(s"CrunchState request failed: $f")
@@ -111,7 +112,8 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
     case GetCrunchState() =>
       val eventualAction = viewMode() match {
         case ViewLive() =>
-          log.info(s"Requesting CrunchUpdates")
+          log.info(s"Calling getCrunchUpdates")
+          implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
           AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call()
             .map {
               case Some(cu) =>
@@ -129,9 +131,15 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
         case vm =>
           log.info(s"Requesting crunchState for point in time ${vm.time.prettyDateTime()}")
 
+          implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
+
           val call = vm match {
-            case ViewPointInTime(time) => AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
-            case ViewDay(time) => AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
+            case ViewPointInTime(time) =>
+              log.info(s"Calling getCrunchStateForPointInTime ${time.prettyDateTime()}")
+              AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
+            case ViewDay(time) =>
+              log.info(s"Calling getCrunchStateForDay ${time.prettyDateTime()}")
+              AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
             case _ => Future(None)
           }
           call.map {
@@ -249,6 +257,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportInfos(codes) =>
+      log.info(s"Calling airportInfosByAirportCodes")
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos)
         .recoverWith {
@@ -282,6 +291,7 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]
     case GetShifts() =>
       val shiftsEffect = Effect(Future(GetShifts())).after(300 seconds)
 
+      log.info(s"Calling getShifts")
 
       val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call().map(res => SetShifts(res)).recoverWith {
         case f =>
@@ -349,6 +359,8 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
       else
         updated(Ready(fixedPoints))
     case SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) =>
+      log.info(s"Calling saveFixedPoints")
+
       val otherTerminalFixedPoints = FixedPoints.filterOtherTerminals(terminalName, value.getOrElse(""))
       val newRawFixedPoints = otherTerminalFixedPoints + "\n" + fixedPoints
       val futureResponse = AjaxClient[Api].saveFixedPoints(newRawFixedPoints).call().map(_ => SetFixedPoints(newRawFixedPoints, Option(terminalName)))
@@ -366,6 +378,7 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
     case GetFixedPoints() =>
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
+      log.info(s"Calling getFixedPoints")
 
       val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(viewMode().millis).call().map(res => SetFixedPoints(res, None)))
       effectOnly(apiCallEffect + fixedPointsEffect)
@@ -392,6 +405,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
       updated(Ready(staffMovements))
     case GetStaffMovements() =>
       val movementsEffect = Effect(Future(GetStaffMovements())).after(60 seconds)
+      log.info(s"Calling getStaffMovements")
 
       val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call().map(res => SetStaffMovements(res))
         .recoverWith {
@@ -410,6 +424,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
 
     case SaveStaffMovements(t) =>
       if (value.isReady) {
+        log.info(s"Calling saveStaffMovements")
         val responseFuture = AjaxClient[Api].saveStaffMovements(value.get).call().map(_ => DoNothing())
           .recoverWith {
             case f =>
@@ -463,7 +478,7 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
 class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetForecastWeek(startDay, terminalName) =>
-      log.info(s"Requesting forecast week starting at ${startDay.toLocalDateTimeString()}")
+      log.info(s"Calling forecastWeekSummary starting at ${startDay.toLocalDateTimeString()}")
       val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call().map(res => SetForecastPeriod(res))
         .recoverWith {
           case f =>

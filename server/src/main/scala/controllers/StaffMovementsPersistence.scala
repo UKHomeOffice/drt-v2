@@ -8,7 +8,6 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.StaffMovement
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._

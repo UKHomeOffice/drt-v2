@@ -33,17 +33,18 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
-      ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))),
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
     crunch.baseArrivalsInput.offer(flights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
@@ -75,17 +76,18 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      procTimes = Map(
-        eeaMachineReadableToDesk -> 25d / 60,
-        eeaMachineReadableToEGate -> 25d / 60
-      ),
-      queues = Map("T1" -> Seq(EeaDesk, EGate)),
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))),
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
     crunch.baseArrivalsInput.offer(flights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {

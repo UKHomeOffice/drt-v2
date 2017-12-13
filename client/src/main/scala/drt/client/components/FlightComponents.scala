@@ -36,7 +36,7 @@ object FlightComponents {
 
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
     flightWithSplits.bestSplits match {
-      case Some(ApiSplits(_, SplitSources.ApiSplitsWithCsvPercentage, _, _)) => "pax-api"
+      case Some(ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
       case Some(ApiSplits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"
     }

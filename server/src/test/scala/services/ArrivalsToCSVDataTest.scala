@@ -1,14 +1,13 @@
 package services
 
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.specs2.mutable.Specification
 
 
 class ArrivalsToCSVDataTest extends Specification {
 
-  import controllers.ArrivalGenerator.apiFlight
   import CSVData._
+  import controllers.ArrivalGenerator.apiFlight
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data" >> {
 
@@ -17,44 +16,44 @@ class ArrivalsToCSVDataTest extends Specification {
         apiFlight(1, "SA324", "SA0324", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
         Set(ApiSplits(
           Set(
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 3),
-            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 4),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 5),
-            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 6),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 7)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 3, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 4, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 5, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 6, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 7, None)
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)),
           ApiSplits(
             Set(
-              ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8),
-              ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 9),
-              ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 10),
-              ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11),
-              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12),
-              ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13),
-              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 14)
+              ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 9, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 10, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 14, None)
             ), SplitRatiosNs.SplitSources.Historical, None))
       ),
       ApiFlightWithSplits(
         apiFlight(2, "SA325", "SA0325", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
         Set(ApiSplits(
           Set(
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30),
-            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)))
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10, None)
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)))
       ),
       ApiFlightWithSplits(
         apiFlight(3, "SA326", "SA0326", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
         Set(ApiSplits(
           Set(
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30),
-            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithCsvPercentage, Option(DqEventCodes.DepartureConfirmed)))
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10, None)
+          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)))
       )
     )
 

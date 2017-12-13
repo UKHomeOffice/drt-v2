@@ -11,12 +11,12 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
 import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
 import services.graphstages._
 
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -63,7 +63,9 @@ object CrunchSystem {
                          expireAfterMillis: Long,
                          minutesToCrunch: Int,
                          warmUpMinutes: Int,
-                         actors: Map[String, AskableActorRef])
+                         actors: Map[String, AskableActorRef],
+                         useNationalityBasedProcessingTimes: Boolean
+                        )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -112,7 +114,8 @@ object CrunchSystem {
       historicalSplitsProvider = props.historicalSplitsProvider,
       expireAfterMillis = props.expireAfterMillis,
       minutesToCrunch = props.minutesToCrunch,
-      warmUpMinutes = props.warmUpMinutes)
+      warmUpMinutes = props.warmUpMinutes,
+      useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
     val forecastSimInputs: ForecastSimulationInputs = startRunnableForecastSimulation(
       system = props.system,
@@ -127,7 +130,8 @@ object CrunchSystem {
       historicalSplitsProvider = props.historicalSplitsProvider,
       expireAfterMillis = props.expireAfterMillis,
       minutesToCrunch = props.minutesToCrunch,
-      warmUpMinutes = props.warmUpMinutes)
+      warmUpMinutes = props.warmUpMinutes
+    )
 
     val arrivalsInputs: ArrivalsInputs = startRunnableArrivals(
       system = props.system,
@@ -204,16 +208,13 @@ object CrunchSystem {
                   historicalSplitsProvider: SplitsProvider,
                   expireAfterMillis: Long,
                   minutesToCrunch: Int,
-                  warmUpMinutes: Int): CrunchGraphStage = new CrunchGraphStage(
+                  warmUpMinutes: Int, useNationalityBasedProcessingTimes: Boolean): CrunchGraphStage = new CrunchGraphStage(
     name = name,
     optionalInitialFlights = None,
-    portCode = portCode,
-    slas = airportConfig.slaByQueue,
-    minMaxDesks = airportConfig.minMaxDesksByTerminalQueue,
-    procTimes = airportConfig.defaultProcessingTimes.head._2,
+    airportConfig = airportConfig,
+    natProcTimes = AirportConfigs.nationalityProcessingTimes,
     groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-    portSplits = airportConfig.defaultPaxSplits,
-    csvSplitsProvider = historicalSplitsProvider,
+    splitsCalculator = SplitsCalculator(airportConfig.portCode, historicalSplitsProvider, airportConfig.defaultPaxSplits.splits.toSet),
     crunchStartFromFirstPcp = getLocalLastMidnight,
     crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
     expireAfterMillis = expireAfterMillis,
@@ -222,7 +223,8 @@ object CrunchSystem {
     earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
     manifestsUsed = manifestsUsed,
     minutesToCrunch = minutesToCrunch,
-    warmUpMinutes = warmUpMinutes)
+    warmUpMinutes = warmUpMinutes,
+    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes)
 
   def startRunnableLiveSimulation(implicit system: ActorSystem, crunchStateActor: ActorRef, staffingStage: StaffingStage, actualDesksStage: ActualDesksAndWaitTimesGraphStage): LiveSimulationInputs = {
     val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](10, OverflowStrategy.backpressure)
@@ -265,7 +267,7 @@ object CrunchSystem {
 
   def startRunnableLiveCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
                               airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
-                              expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int): LiveCrunchInputs = {
+                              expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int, useNationalityBasedProcessingTimes: Boolean): LiveCrunchInputs = {
     val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
     val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
     val (liveArrivalsCrunchInput, manifestsInput) = RunnableLiveCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
@@ -273,7 +275,7 @@ object CrunchSystem {
       voyageManifestsSource = manifestsSource,
       cruncher = crunchStage(name = "live", portCode = airportConfig.portCode, maxDays = 2, airportConfig = airportConfig,
         historicalSplitsProvider = historicalSplitsProvider, expireAfterMillis = expireAfterMillis,
-        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes),
+        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes, useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes),
       simulationQueueSubscriber = simulationSubscriber
     ).run()(ActorMaterializer())
 
@@ -288,7 +290,7 @@ object CrunchSystem {
       arrivalsSource = forecastArrivalsDiffQueueSource,
       cruncher = crunchStage(name = "forecast", portCode = airportConfig.portCode, maxDays = maxDaysToCrunch, manifestsUsed = false,
         airportConfig = airportConfig, historicalSplitsProvider, expireAfterMillis = expireAfterMillis,
-        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes),
+        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes, useNationalityBasedProcessingTimes = false),
       simulationQueueSubscriber = simulationSubscriber
     ).run()(ActorMaterializer())
 
