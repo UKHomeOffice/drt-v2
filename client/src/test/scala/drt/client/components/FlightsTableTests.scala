@@ -106,13 +106,13 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
                   <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")),
-                  <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
+                  <.td(<.span(^.title := "2016-01-01 13:15", "13:15"), ^.className := "est-chox"),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
-                  <.td(testFlight.ActPax),
-                  <.td(0),
-                  <.td(0),
-                  <.td(0)))))
+                  <.td(testFlight.ActPax, ^.className := "right"),
+                  <.td(0, ^.className := "right"),
+                  <.td(0, ^.className := "right"),
+                  <.td(0, ^.className := "right")))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
@@ -140,13 +140,13 @@ object FlightsTableTests extends TestSuite {
                   date(testFlight.SchDT),
                   date(testFlight.EstDT),
                   date(testFlight.ActDT),
-                  date(testFlight.EstChoxDT),
+                  date(testFlight.EstChoxDT, Option("est-chox")),
                   date(testFlight.ActChoxDT),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
-                  <.td(testFlight.ActPax),
-                  <.td(0),
-                  <.td(0),
-                  <.td(0)))))
+                  <.td(testFlight.ActPax, ^.className := "right"),
+                  <.td(0, ^.className := "right"),
+                  <.td(0, ^.className := "right"),
+                  <.td(0, ^.className := "right")))))
 
           //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
@@ -155,7 +155,10 @@ object FlightsTableTests extends TestSuite {
             staticComponent(expected)())
         }
 
-        def date(dt: String) = <.td(flightDate(dt))
+        def date(dt: String, className: Option[String] = None) = className match {
+          case Some(cn) => <.td(flightDate(dt), ^.className := cn)
+          case _ => <.td(flightDate(dt))
+        }
 
         def flightDate(dt: String) = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
 
@@ -181,13 +184,13 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.SchDT),
                     date(testFlight.EstDT),
                     date(testFlight.ActDT),
-                    date(testFlight.EstChoxDT),
+                    date(testFlight.EstChoxDT, Option("est-chox")),
                     date(testFlight.ActChoxDT),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
-                    <.td(testFlight.ActPax),
-                    <.td(0),
-                    <.td(0),
-                    <.td(0)))))
+                    <.td(testFlight.ActPax, ^.className := "right"),
+                    <.td(0, ^.className := "right"),
+                    <.td(0, ^.className := "right"),
+                    <.td(0, ^.className := "right")))))
 
 
             def originMapperComponent(portCode: String): VdomNode = <.span(^.title := "JFK, New York, USA", portCode)
@@ -247,13 +250,13 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.SchDT),
                   date(testFlightT.EstDT),
                   date(testFlightT.ActDT),
-                  date(testFlightT.EstChoxDT),
+                  date(testFlightT.EstChoxDT, Option("est-chox")),
                   date(testFlightT.ActChoxDT),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))), //pcp
-                  <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
-                  <.td(0),
-                  <.td(0),
-                  <.td(0)
+                  <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%"), ^.className := "right"),
+                  <.td(0, ^.className := "right"),
+                  <.td(0, ^.className := "right"),
+                  <.td(0, ^.className := "right")
                 ))))
 
           def paxComponent(f: ApiFlightWithSplits): VdomNode = <.div(f.apiFlight.ActPax, ^.className := "pax-portfeed", ^.width := s"$width%")
