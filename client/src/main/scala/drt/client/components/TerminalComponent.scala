@@ -23,29 +23,14 @@ object TerminalComponent {
                             potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
-                            viewMode: ViewMode,
                             timeRangeHours: TimeRangeHours
                           )
-
-  def render(props: Props): Unit = {
-    val modelRCP = SPACircuit.connect(model => TerminalModel(
-      model.crunchStatePot,
-      model.forecastPeriodPot,
-      model.shiftsRaw,
-      model.fixedPointsRaw,
-      model.staffMovements,
-      model.airportConfig,
-      model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
-      model.viewMode,
-      model.timeRangeFilter
-    ))
-  }
 
   implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.caseClass[TerminalPageTabLoc]
   implicit val propsReuse: Reusability[Props] = Reusability.caseClass[Props]
 
   val component = ScalaComponent.builder[Props]("Terminal")
-    .renderPS(($, props, state) => {
+    .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.crunchStatePot,
         model.forecastPeriodPot,
@@ -54,7 +39,6 @@ object TerminalComponent {
         model.staffMovements,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
-        model.viewMode,
         model.timeRangeFilter
       ))
       modelRCP(modelMP => {

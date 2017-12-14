@@ -24,6 +24,7 @@ import scala.util.{Failure, Success, Try}
 
 sealed trait TimeRangeHours {
   def start: Int
+
   def end: Int
 }
 
@@ -31,11 +32,13 @@ case class CustomWindow(start: Int, end: Int) extends TimeRangeHours
 
 case class WholeDayWindow() extends TimeRangeHours {
   override def start: Int = 0
+
   override def end: Int = 24
 }
 
 case class CurrentWindow() extends TimeRangeHours {
   override def start: Int = SDate.now().getHours() - 1
+
   override def end: Int = SDate.now().getHours() + 3
 }
 
@@ -436,26 +439,13 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
   }
 }
 
-class ViewModeHandler[M](viewModeMP: ModelRW[M, ViewMode], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeMP) {
+class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[CrunchState])], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetViewMode(newMode) =>
-      log.info(s"VM: Set client newMode from $value to $newMode")
-      val currentMode = value
+    case SetViewMode(newViewMode) =>
+      val (currentViewMode, _) = value
 
-      val actionResult: ActionResult[M] = currentMode match {
-        case ViewLive() =>
-          updated(newMode)
-        case _ =>
-          crunchStateMP.value match {
-            case Pending(_) =>
-              log.info(s"CrunchState Pending. No need to request")
-              updated(newMode)
-            case _ =>
-              log.info(s"CrunchState not Pending. Requesting CrunchState")
-              updated(newMode, Effect(Future(GetCrunchState())))
-          }
-      }
-      actionResult
+      log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode")
+      updated((newViewMode, Pending()), Effect(Future(GetCrunchState())))
   }
 }
 
@@ -523,7 +513,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(_.viewMode)((m, v) => m.copy(viewMode = v)), zoom(_.crunchStatePot)),
+      new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2)), zoom(_.crunchStatePot)),
       new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new NoopHandler(zoomRW(identity)((m, v) => m))
