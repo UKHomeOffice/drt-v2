@@ -235,9 +235,15 @@ class CrunchGraphStage(name: String,
 
     def crunch(flights: Map[Int, ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Option[PortState] = {
       val start = crunchStart.addMinutes(-1 * warmUpMinutes)
-      val flightsInCrunchWindow = flights.values.toList.filter(f => isFlightInTimeWindow(f, start, crunchEnd))
-      log.info(s"Requesting crunch for ${flightsInCrunchWindow.length} flights after flights update")
-      val uniqueFlights = groupFlightsByCodeShares(flightsInCrunchWindow).map(_._1)
+
+      val scheduledFlightsInCrunchWindow = flights
+        .values
+        .toList
+        .filter(_.apiFlight.Status != "Cancelled")
+        .filter(f => isFlightInTimeWindow(f, start, crunchEnd))
+
+      log.info(s"Requesting crunch for ${scheduledFlightsInCrunchWindow.length} flights after flights update")
+      val uniqueFlights = groupFlightsByCodeShares(scheduledFlightsInCrunchWindow).map(_._1)
       log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(airportConfig.defaultProcessingTimes.head._2, useNationalityBasedProcessingTimes)(uniqueFlights)
       val earliestMinute: MillisSinceEpoch = newFlightSplitMinutesByFlight.values.flatMap(_.map(identity)).toList match {
