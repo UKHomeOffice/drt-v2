@@ -271,7 +271,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
       val stringToObject: Map[String, Pot[AirportInfo]] = value ++ Map("BHX" -> mkPending, "EDI" -> mkPending)
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos)
         .recoverWith {
-          case f =>
+          case _ =>
             log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(GetAirportInfosAfter(codes, PollDelay.recoveryDelay))
         }

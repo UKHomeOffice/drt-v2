@@ -181,38 +181,48 @@ object FlightTableRow {
             sourceDisplay)
         }
 
-        val bestSplits: Set[ApiSplits] = flightWithSplits.bestSplits.toSet
-
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val timeIndicatorClass = if (flight.PcpTime < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
         val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
+        val flightFields = List[(Option[String], TagMod)](
+          (None, allCodes.mkString(" - ")),
+          (None, props.originMapper(flight.Origin)),
+          (None, s"${flight.Gate}/${flight.Stand}"),
+          (None, flight.Status),
+          (None, localDateTimeWithPopup(flight.SchDT)),
+          (None, localDateTimeWithPopup(flight.EstDT)),
+          (None, localDateTimeWithPopup(flight.ActDT)),
+          (Option("est-chox"), localDateTimeWithPopup(flight.EstChoxDT)),
+          (None, localDateTimeWithPopup(flight.ActChoxDT)),
+          (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
+          (Option("right"), props.paxComponent(flightWithSplits)))
+          .filterNot {
+            case (Some("est-chox"), _) if !props.hasEstChox => true
+            case _ => false
+          }
+          .map {
+            case (Some(className), tm) => <.td(tm, ^.className := className)
+            case (_, tm) => <.td(tm)
+          }
+          .toTagMod
+
         <.tr(
           ^.key := flight.uniqueId.toString,
           ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-          List[TagMod](
-            allCodes.mkString(" - "),
-            props.originMapper(flight.Origin),
-            s"${flight.Gate}/${flight.Stand}",
-            flight.Status,
-            localDateTimeWithPopup(flight.SchDT),
-            localDateTimeWithPopup(flight.EstDT),
-            localDateTimeWithPopup(flight.ActDT),
-            localDateTimeWithPopup(flight.EstChoxDT),
-            localDateTimeWithPopup(flight.ActChoxDT),
-            pcpTimeRange(flight, ArrivalHelper.bestPax),
-            props.paxComponent(flightWithSplits)
-          ).map(c => <.td(c)).toTagMod,
-          queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}")).toTagMod
+          flightFields,
+          queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}", ^.className := "right")).toTagMod
         )
       }.recover {
         case e => log.error(s"couldn't make flight row $e")
           <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace.mkString(",")}")
       }.get
-    })
+    }
+
+    )
     .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
