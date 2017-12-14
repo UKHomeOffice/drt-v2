@@ -94,7 +94,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
       log.info(s"Calling airportConfiguration")
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig).recoverWith {
         case f =>
-          log.error(s"CrunchState request failed: $f")
+          log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(GetAirportConfigAfter(PollDelay.recoveryDelay))
       }))
     case UpdateAirportConfig(configHolder) =>
@@ -127,7 +127,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
             }
             .recoverWith {
               case f =>
-                log.error(s"Update request failed: $f")
+                log.error(s"Update request failed. Re-requesting after ${PollDelay.recoveryDelay}")
                 Future(GetCrunchUpdatesAfter(PollDelay.recoveryDelay))
             }
 
@@ -154,7 +154,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
               GetCrunchStateAfter(crunchUpdatesRequestFrequency)
           }.recoverWith {
             case f =>
-              log.error(s"CrunchState request failed: $f")
+              log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
               Future(GetCrunchStateAfter(PollDelay.recoveryDelay))
           }
       }
@@ -272,7 +272,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
       updated(stringToObject, Effect(AjaxClient[Api].airportInfosByAirportCodes(codes).call().map(UpdateAirportInfos)
         .recoverWith {
           case f =>
-            log.error(s"CrunchState request failed: $f")
+            log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(GetAirportInfosAfter(codes, PollDelay.recoveryDelay))
         }
       ))
@@ -290,7 +290,9 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetShifts(shifts: String) =>
-      updated(Ready(shifts))
+      val scheduledRequest = Effect(Future(GetShifts())).after(15 seconds)
+
+      updated(Ready(shifts), scheduledRequest)
 
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
@@ -299,16 +301,16 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]
       effectOnly(Effect(Future(GetShifts())).after(delay))
 
     case GetShifts() =>
-      val shiftsEffect = Effect(Future(GetShifts())).after(300 seconds)
-
       log.info(s"Calling getShifts")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call().map(res => SetShifts(res)).recoverWith {
-        case f =>
-          log.error(s"Failed to get shifts: $f")
-          Future(GetShiftsAfter(PollDelay.recoveryDelay))
-      })
-      effectOnly(apiCallEffect + shiftsEffect)
+      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call()
+        .map(SetShifts)
+        .recoverWith {
+          case _ =>
+            log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(GetShiftsAfter(PollDelay.recoveryDelay))
+        })
+      effectOnly(apiCallEffect)
   }
 }
 
@@ -368,15 +370,17 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
         updated(Ready(fixedPoints))
       else
         updated(Ready(fixedPoints))
+
     case SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) =>
       log.info(s"Calling saveFixedPoints")
 
       val otherTerminalFixedPoints = FixedPoints.filterOtherTerminals(terminalName, value.getOrElse(""))
       val newRawFixedPoints = otherTerminalFixedPoints + "\n" + fixedPoints
-      val futureResponse = AjaxClient[Api].saveFixedPoints(newRawFixedPoints).call().map(_ => SetFixedPoints(newRawFixedPoints, Option(terminalName)))
+      val futureResponse = AjaxClient[Api].saveFixedPoints(newRawFixedPoints).call()
+        .map(_ => SetFixedPoints(newRawFixedPoints, Option(terminalName)))
         .recoverWith {
-          case f =>
-            log.error(s"Failed to save FixedPoints: $f")
+          case _ =>
+            log.error(s"Failed to save FixedPoints. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(SaveFixedPointsAfter(fixedPoints, terminalName, PollDelay.recoveryDelay))
         }
       effectOnly(Effect(futureResponse))
@@ -386,6 +390,7 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
 
     case AddShift(fixedPoints) =>
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
+
     case GetFixedPoints() =>
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
       log.info(s"Calling getFixedPoints")
@@ -403,6 +408,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
         val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
         updated(Ready(updatedValue))
       } else noChange
+
     case RemoveStaffMovement(_, uUID) =>
       if (value.isReady) {
         val terminalAffectedOption = value.get.find(_.uUID == uUID).map(_.terminalName)
@@ -411,20 +417,23 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
           updated(Ready(updatedValue), Effect(Future(SaveStaffMovements(terminalAffectedOption.get))))
         } else noChange
       } else noChange
+
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      updated(Ready(staffMovements))
+      val scheduledRequest = Effect(Future(GetStaffMovements())).after(60 seconds)
+      updated(Ready(staffMovements), scheduledRequest)
+
     case GetStaffMovements() =>
-      val movementsEffect = Effect(Future(GetStaffMovements())).after(60 seconds)
       log.info(s"Calling getStaffMovements")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call().map(res => SetStaffMovements(res))
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call()
+        .map(res => SetStaffMovements(res))
         .recoverWith {
-          case f =>
-            log.error(s"Failed to get Staff Movements: $f")
-            Future(DoNothing())
+          case _ =>
+            log.error(s"Failed to get Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(GetStaffMovementsAfter(PollDelay.recoveryDelay))
         }
       )
-      effectOnly(apiCallEffect + movementsEffect)
+      effectOnly(apiCallEffect)
 
     case GetStaffMovementsAfter(delay) =>
       effectOnly(Effect(Future(GetStaffMovements())).after(delay))
@@ -435,10 +444,11 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
     case SaveStaffMovements(t) =>
       if (value.isReady) {
         log.info(s"Calling saveStaffMovements")
-        val responseFuture = AjaxClient[Api].saveStaffMovements(value.get).call().map(_ => DoNothing())
+        val responseFuture = AjaxClient[Api].saveStaffMovements(value.get).call()
+          .map(_ => DoNothing())
           .recoverWith {
-            case f =>
-              log.error(s"Failed to save Staff Movements: $f")
+            case _ =>
+              log.error(s"Failed to save Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
               Future(SaveStaffMovementsAfter(t, PollDelay.recoveryDelay))
           }
         effectOnly(Effect(responseFuture))
@@ -487,19 +497,23 @@ class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetForecastWeek(startDay, terminalName) =>
       log.info(s"Calling forecastWeekSummary starting at ${startDay.toLocalDateTimeString()}")
-      val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call().map(res => SetForecastPeriod(res))
+      val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call()
+        .map(res => SetForecastPeriod(res))
         .recoverWith {
-          case f =>
-            log.error(s"Failed to get Forecast Period: $f")
+          case _ =>
+            log.error(s"Failed to get Forecast Period. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(GetForecastWeekAfter(startDay, terminalName, PollDelay.recoveryDelay))
         })
 
       effectOnly(apiCallEffect)
+
     case GetForecastWeekAfter(startDay, terminalName, delay) =>
       effectOnly(Effect(Future(GetForecastWeek(startDay, terminalName))).after(delay))
+
     case SetForecastPeriod(Some(forecastPeriod)) =>
       log.info(s"Received forecast period.")
       updated(Ready(forecastPeriod))
+
     case SetForecastPeriod(None) =>
       log.info(s"No forecast available for requested dates")
       updated(Unavailable)
