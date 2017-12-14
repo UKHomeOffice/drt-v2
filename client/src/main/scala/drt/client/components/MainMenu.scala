@@ -46,7 +46,7 @@ object MainMenu {
 
       airportConfigPotRCP(airportConfigPotMP => {
         <.div(
-          airportConfigPotMP().renderReady(airportConfig => {
+          airportConfigPotMP().render(airportConfig => {
 
             val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig, props.currentLoc)) yield {
               val active = (props.currentLoc, item.location) match {

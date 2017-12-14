@@ -81,24 +81,38 @@ object FlightsWithSplitsTable {
     .build
 
   def tableHead(props: Props, timelineTh: TagMod, queueNames: Seq[String]): TagOf[TableSection] = {
+    val columns = List(
+      ("Flight", None),
+      ("Origin", None),
+      ("Gate/Stand", Option("gate-stand")),
+      ("Status", Option("status")),
+      ("Sch", None),
+      ("Est", None),
+      ("Act", None),
+      ("Est Chox", None),
+      ("Act Chox", None),
+      ("Est PCP", Option("pcp")),
+      ("Pax", None))
+
+    val portColumnThs = columns
+      .filter {
+        case (label, _) => label != "Est Chox" || props.hasEstChox
+      }
+      .map {
+        case (label, None) => <.th(label)
+        case (label, Some(className)) => <.th(label, ^.className := className)
+      }
+      .toTagMod
+
     <.thead(
       <.tr(
-      timelineTh,
-      <.th("Flight"),
-      <.th("Origin"),
-      <.th("Gate/Stand", ^.className := "gate-stand"),
-      <.th("Status", ^.className := "status"),
-      <.th("Sch"),
-      <.th("Est"),
-      <.th("Act"),
-      if (props.hasEstChox) <.th("Est Chox") else TagMod(""),
-      <.th("Act Chox"),
-      <.th("Est PCP", ^.className := "pcp"),
-      <.th("Pax Nos"),
-      queueNames.map(
-        q => <.th(Queues.queueDisplayNames(q))
-      ).toTagMod
-    ))
+        timelineTh,
+        portColumnThs,
+        queueNames.map(
+          q => <.th(Queues.queueDisplayNames(q))
+        ).toTagMod
+      )
+    )
   }
 }
 
@@ -179,19 +193,19 @@ object FlightTableRow {
           ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-          <.td(^.key := flight.uniqueId.toString + "-flightNo", allCodes.mkString(" - ")),
-          <.td(^.key := flight.uniqueId.toString + "-origin", props.originMapper(flight.Origin)),
-          <.td(^.key := flight.uniqueId.toString + "-gatestand", s"${flight.Gate}/${flight.Stand}"),
-          <.td(^.key := flight.uniqueId.toString + "-status", flight.Status),
-          <.td(^.key := flight.uniqueId.toString + "-schdt", localDateTimeWithPopup(flight.SchDT)),
-          <.td(^.key := flight.uniqueId.toString + "-estdt", localDateTimeWithPopup(flight.EstDT)),
-          <.td(^.key := flight.uniqueId.toString + "-actdt", localDateTimeWithPopup(flight.ActDT)),
-          if (props.hasEstChox)
-            <.td(^.key := flight.uniqueId.toString + "-estchoxdt", localDateTimeWithPopup(flight.EstChoxDT))
-          else "",
-          <.td(^.key := flight.uniqueId.toString + "-actchoxdt", localDateTimeWithPopup(flight.ActChoxDT)),
-          <.td(^.key := flight.uniqueId.toString + "-pcptimefrom", pcpTimeRange(flight, ArrivalHelper.bestPax)),
-          <.td(^.key := flight.uniqueId.toString + "-actpax", props.paxComponent(flightWithSplits)),
+          List[TagMod](
+            allCodes.mkString(" - "),
+            props.originMapper(flight.Origin),
+            s"${flight.Gate}/${flight.Stand}",
+            flight.Status,
+            localDateTimeWithPopup(flight.SchDT),
+            localDateTimeWithPopup(flight.EstDT),
+            localDateTimeWithPopup(flight.ActDT),
+            localDateTimeWithPopup(flight.EstChoxDT),
+            localDateTimeWithPopup(flight.ActChoxDT),
+            pcpTimeRange(flight, ArrivalHelper.bestPax),
+            props.paxComponent(flightWithSplits)
+          ).map(c => <.td(c)).toTagMod,
           queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}")).toTagMod
         )
       }.recover {

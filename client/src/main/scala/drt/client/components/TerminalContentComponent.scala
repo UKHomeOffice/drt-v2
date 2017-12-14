@@ -141,7 +141,7 @@ object TerminalContentComponent {
           <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive", ^.href := "#desksAndQueues",
             if (state.activeTab == "desksAndQueues") {
               log.info(s"Rendering desks and queue $state")
-              props.crunchStatePot.renderReady(crunchState => {
+              props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
@@ -157,7 +157,7 @@ object TerminalContentComponent {
             if (state.activeTab == "arrivals") {
               log.info(s"Rendering arrivals $state")
 
-              <.div(props.crunchStatePot.renderReady((crunchState: CrunchState) => {
+              <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
                 val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, props.timeRangeHours, terminalFlights.toList)

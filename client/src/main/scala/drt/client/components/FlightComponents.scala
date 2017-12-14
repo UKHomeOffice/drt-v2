@@ -20,7 +20,7 @@ object FlightComponents {
     val airportConfigRCP = SPACircuit.connect(_.airportConfig)
     airportConfigRCP(acPot => {
       <.div(
-        acPot().renderReady(_ => {
+        acPot().render(_ => {
           val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
           val paxWidth = paxBarWidth(0, paxToDisplay)
           val paxClass = paxClassFromSplits(flightWithSplits)

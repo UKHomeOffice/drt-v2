@@ -82,7 +82,7 @@ object TerminalDisplayModeComponent {
           <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
             if (state.activeTab == "planning") {
               <.div(
-                <.div(props.forecastPeriodPot.renderReady(fp => {
+                <.div(props.forecastPeriodPot.render(fp => {
                   TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
                 }))
               )

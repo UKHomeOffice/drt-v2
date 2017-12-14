@@ -40,9 +40,9 @@ object TerminalStaffing {
     def render(props: Props) = {
 
       <.div(
-        props.potShifts.renderReady((rawShifts: String) => {
-          props.potFixedPoints.renderReady((rawFixedPoints: String) => {
-            props.potStaffMovements.renderReady((movements: Seq[StaffMovement]) => {
+        props.potShifts.render((rawShifts: String) => {
+          props.potFixedPoints.render((rawFixedPoints: String) => {
+            props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
               val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
               val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
               <.div(
