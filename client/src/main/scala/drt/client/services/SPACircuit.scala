@@ -158,7 +158,14 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
               Future(GetCrunchStateAfter(PollDelay.recoveryDelay))
           }
       }
-      effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+      val crunchState = modelRW.value._1
+
+      crunchState match {
+        case Ready(thing) =>
+          updated((PendingStale(thing), latestUpdateMillis), Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+        case _ =>
+          effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+      }
 
     case GetCrunchStateAfter(delay) =>
       log.info(s"Re-requesting CrunchState for ${viewMode().time.prettyDateTime()}")
@@ -203,14 +210,14 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
     case UpdateCrunchStateFromUpdates(crunchUpdates) =>
       log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
 
-      val someStateExists = value._1.isReady
+      val someStateExists = !value._1.isEmpty
 
       val newState = if (someStateExists) {
         val existingState = value._1.get
         updateStateFromUpdates(crunchUpdates, existingState)
       } else newStateFromUpdates(crunchUpdates)
 
-      updated((Ready(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+      updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
   }
 
   def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
@@ -439,13 +446,24 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
   }
 }
 
-class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[CrunchState])], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
+class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[CrunchState], MillisSinceEpoch)], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetViewMode(newViewMode) =>
-      val (currentViewMode, _) = value
+      val (currentViewMode, _, currentLatestUpdateMillis) = value
 
-      log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode")
-      updated((newViewMode, Pending()), Effect(Future(GetCrunchState())))
+      val latestUpdateMillis = if (currentViewMode != ViewLive() && newViewMode == ViewLive()) 0L else currentLatestUpdateMillis
+
+      log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis")
+      (currentViewMode, newViewMode, crunchStateMP.value) match {
+        case (_, _, cs@Pending(_)) =>
+          updated((newViewMode, cs, latestUpdateMillis))
+        case (ViewLive(), nvm, PendingStale(_, _)) if nvm != ViewLive() =>
+          updated((newViewMode, Pending(), latestUpdateMillis))
+        case (_, _, cs@PendingStale(_, _)) =>
+          updated((newViewMode, cs, latestUpdateMillis))
+        case _ =>
+          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())))
+      }
   }
 }
 
@@ -513,7 +531,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2)), zoom(_.crunchStatePot)),
+      new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
       new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new NoopHandler(zoomRW(identity)((m, v) => m))

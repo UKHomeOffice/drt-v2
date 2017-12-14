@@ -31,7 +31,7 @@ object TerminalsDashboardPage {
 
       portCodeQueueOrderTerminals { portMP =>
         <.div(
-          portMP().renderReady(portConfig => {
+          portMP().render(portConfig => {
             val (queueOrder, terminals) = portConfig
             flightsAndMinutes(flightsAndMinutesMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
@@ -61,7 +61,7 @@ object TerminalsDashboardPage {
                   terminals.map { terminalName =>
                     <.div(
                       <.h3(s"Terminal $terminalName"),
-                      flightsAndMinutesMP().renderReady(crunchState => {
+                      flightsAndMinutesMP().render(crunchState => {
                         val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
                           .flights
                           .toList

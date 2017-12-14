@@ -43,7 +43,7 @@ object TerminalComponent {
       ))
       modelRCP(modelMP => {
         val model = modelMP.value
-        <.div(model.airportConfig.renderReady(airportConfig => {
+        <.div(model.airportConfig.render(airportConfig => {
           <.div(
             TerminalDisplayModeComponent(TerminalDisplayModeComponent.Props(
               model.crunchStatePot,

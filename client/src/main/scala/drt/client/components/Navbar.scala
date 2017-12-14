@@ -20,7 +20,7 @@ object Navbar {
     <.nav(^.className := "navbar navbar-default",
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
-          airportConfigPotMP().renderReady(airportConfig => {
+          airportConfigPotMP().render(airportConfig => {
             <.div(^.className := "navbar-drt",
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),

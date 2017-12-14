@@ -76,7 +76,7 @@ object FlightsTableTests extends TestSuite {
             <.th("Est Chox"),
             <.th("Act Chox"),
             <.th("Est PCP", ^.className := "pcp"),
-            <.th("Pax Nos"),
+            <.th("Pax"),
             <.th("e-Gates"),
             <.th("EEA"),
             <.th("Non-EEA")

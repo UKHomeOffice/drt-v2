@@ -20,9 +20,7 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider,
 
   def splitsForArrival(manifest: VoyageManifestParser.VoyageManifest, arrival: Arrival): ApiSplits = {
     val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
-    log.info(s"splits from $portCode manifest: $paxTypeAndQueueCounts")
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
-    log.info(s"splits after applying egates & ft: $withEgateAndFastTrack")
 
     ApiSplits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
   }
@@ -53,10 +51,8 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider,
   def addEgatesAndFastTrack(arrival: Arrival, apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
     val csvSplits = csvSplitsProvider(arrival)
     val egatePercentage = egatePercentageFromSplit(csvSplits, 0.6)
-    log.info(s"egatePercentage: $egatePercentage")
     val fastTrackPercentages: FastTrackPercentages = fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
     val ptqcWithCsvEgates = applyEgatesSplits(apiPaxTypeAndQueueCounts, egatePercentage)
-    log.info(s"ptqcWithCsvEgates: $ptqcWithCsvEgates")
     val ptqcwithCsvEgatesFastTrack = applyFastTrackSplits(ptqcWithCsvEgates, fastTrackPercentages)
     ptqcwithCsvEgatesFastTrack
   }
