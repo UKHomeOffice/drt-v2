@@ -2,12 +2,14 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared.{AirportConfig, AirportInfo, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+
 import scala.collection.immutable
 
 object TerminalDisplayModeComponent {
@@ -70,13 +72,19 @@ object TerminalDisplayModeComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
+              <.h2(props.terminalPageTab.date match {
+                case Some(ds) if(SDate(ds).ddMMyyString == SDate.now().ddMMyyString) => "Live View"
+                case Some(ds) if(SDate(ds).millisSinceEpoch < SDate.now().millisSinceEpoch) => "Historic View"
+                case Some(ds) if(SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch) => "Forecast View"
+                case _ => "Live View"
+              }),
               DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState)),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
           <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
             if (state.activeTab == "snapshot") <.div(
-
+              <.h2("Snapshot View"),
               SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState),
               TerminalContentComponent(terminalContentProps)
             ) else ""
