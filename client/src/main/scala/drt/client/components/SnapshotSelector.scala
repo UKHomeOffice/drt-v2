@@ -104,10 +104,6 @@ object SnapshotSelector {
         state.snapshotDateTime.millisSinceEpoch < SDate.now().millisSinceEpoch
       }
 
-      println(s"Loading state is : ${props.loadingState.isLoading}")
-
-
-
       <.div(^.className := "date-selector",
         <.div(^.className := "row",
           List(
