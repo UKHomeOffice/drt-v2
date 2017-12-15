@@ -21,7 +21,8 @@ object TerminalDisplayModeComponent {
                    terminalPageTab: TerminalPageTabLoc,
                    airportInfoPot: Pot[AirportInfo],
                    timeRangeHours: TimeRangeHours,
-                   router: RouterCtl[Loc]
+                   router: RouterCtl[Loc],
+                   loadingState: LoadingState
                   )
 
   case class State(activeTab: String)
@@ -69,13 +70,14 @@ object TerminalDisplayModeComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
-              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours)),
+              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState)),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
           <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
             if (state.activeTab == "snapshot") <.div(
-              SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours),
+
+              SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),

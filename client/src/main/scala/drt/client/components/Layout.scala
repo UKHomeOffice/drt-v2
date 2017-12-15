@@ -1,10 +1,9 @@
 package drt.client.components
 
+import drt.client.SPAMain._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
-import drt.client.SPAMain._
-
 
 object Layout {
 
@@ -19,11 +18,8 @@ object Layout {
         <.div(
           // here we use plain Bootstrap class names as these are specific to the top level layout defined here
           Navbar(props.ctl, props.currentLoc.page),
-          <.div(^.className := "container", props.currentLoc.render()),
-          Loader()
+          <.div(^.className := "container", props.currentLoc.render())
         )
-
-
       )
     })
     .build
