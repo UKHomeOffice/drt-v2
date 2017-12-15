@@ -23,11 +23,7 @@ object TerminalComponent {
                             potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
-                            timeRangeHours: TimeRangeHours
-                          )
-
-  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.caseClass[TerminalPageTabLoc]
-  implicit val propsReuse: Reusability[Props] = Reusability.caseClass[Props]
+                            timeRangeHours: TimeRangeHours)
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {

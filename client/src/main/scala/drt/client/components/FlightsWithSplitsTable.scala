@@ -4,6 +4,7 @@ import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.QueueName
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -22,7 +23,7 @@ object FlightsWithSplitsTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: List[PaxTypeAndQueue], hasEstChox: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    props.flightsWithSplits.map(_.lastUpdated)
+    props.flightsWithSplits.hashCode()
   })
 
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
@@ -136,12 +137,12 @@ object FlightTableRow {
                    hasEstChox: Boolean
                   )
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => props.flightWithSplits.lastUpdated)
-  implicit val stateReuse: Reusability[RowState] = Reusability.caseClass[RowState]
-
   case class RowState(hasChanged: Boolean)
 
-  def bestArrivalTime(f: Arrival) = {
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx))
+  implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
+
+  def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
     val best = (
       SDate.stringToSDateLikeOption(f.SchDT),
       SDate.stringToSDateLikeOption(f.EstDT),

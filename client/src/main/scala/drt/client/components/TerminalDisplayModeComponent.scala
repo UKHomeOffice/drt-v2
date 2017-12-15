@@ -28,18 +28,18 @@ object TerminalDisplayModeComponent {
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .initialStateFromProps(p => State(p.terminalPageTab.mode))
-    .renderPS((scope, props, state) => {
+    .render_PS((props, state) => {
 
       val terminalContentProps = TerminalContentComponent.Props(
-        props.crunchStatePot,
-        props.potShifts,
-        props.potFixedPoints,
-        props.potStaffMovements,
-        props.airportConfig,
-        props.terminalPageTab,
-        props.airportInfoPot,
-        props.timeRangeHours,
-        props.router
+        crunchStatePot = props.crunchStatePot,
+        potShifts = props.potShifts,
+        potFixedPoints = props.potFixedPoints,
+        potStaffMovements = props.potStaffMovements,
+        airportConfig = props.airportConfig,
+        terminalPageTab = props.terminalPageTab,
+        airportInfoPot = props.airportInfoPot,
+        timeRangeHours = props.timeRangeHours,
+        router = props.router
       )
 
       val currentClass = if (state.activeTab == "current") "active" else ""
