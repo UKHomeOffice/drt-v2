@@ -58,6 +58,7 @@ object Settings {
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
+    val reactHandsontable = "0.3.1"
   }
 
   import versions._
@@ -76,7 +77,8 @@ object Settings {
     "react-dom" -> react,
     "react-addons-test-utils" -> reactTestUtils,
     "log4javascript" -> log4Javascript,
-    "bootstrap" -> bootstrap
+    "bootstrap" -> bootstrap,
+    "react-handsontable" -> reactHandsontable
   )
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader

@@ -119,10 +119,12 @@ object TerminalContentComponent {
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
       val staffingActive = if (state.activeTab == "staffing") "active" else ""
+      val staffingV2Active = if (state.activeTab == "staffingv2") "active" else ""
 
       val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
       val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
+      val staffingPanelV2Active = if (state.activeTab == "staffingv2") "active" else "fade"
 
       <.div(
         <.div(^.className := "tabs-with-export",
@@ -135,6 +137,9 @@ object TerminalContentComponent {
             }),
             <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(tab = "staffing"))
+            }),
+            <.li(^.className := staffingV2Active, <.a(VdomAttr("data-toggle") := "tab", "Staffing v2"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(tab = "staffingv2"))
             })
           ),
           <.div(^.className := "exports",
@@ -173,10 +178,15 @@ object TerminalContentComponent {
             } else ""
           }),
           <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive", ^.href := "#staffing",
-
             if (state.activeTab == "staffing") {
               log.info(s"Rendering staffing $state")
               TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal, props.potShifts, props.potFixedPoints, props.potStaffMovements, props.airportConfig))
+            } else ""
+          ),
+          <.div(^.id := "staffingv2", ^.className := s"tab-pane terminal-staffing-container $staffingPanelV2Active", ^.href := "#staffingv2",
+            if (state.activeTab == "staffingv2") {
+              log.info(s"Rendering staffingv2 $state")
+              HotTable.component(HotTable.props(Seq(Seq("yeah"))))()
             } else ""
           )))
     }

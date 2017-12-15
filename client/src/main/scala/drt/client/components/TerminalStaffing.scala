@@ -175,8 +175,7 @@ object TerminalStaffing {
     }
   }
 
-  def apply(props: Props): VdomElement =
-    component(props)
+  def   apply(props: Props): VdomElement = component(props)
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
