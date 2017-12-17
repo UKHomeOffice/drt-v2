@@ -24,7 +24,8 @@ object TerminalDisplayModeComponent {
                    airportInfoPot: Pot[AirportInfo],
                    timeRangeHours: TimeRangeHours,
                    router: RouterCtl[Loc],
-                   loadingState: LoadingState
+                   loadingState: LoadingState,
+                   showActuals: Boolean
                   )
 
   case class State(activeTab: String)
@@ -42,7 +43,8 @@ object TerminalDisplayModeComponent {
         props.terminalPageTab,
         props.airportInfoPot,
         props.timeRangeHours,
-        props.router
+        props.router,
+        props.showActuals
       )
 
       val currentClass = if (state.activeTab == "current") "active" else ""

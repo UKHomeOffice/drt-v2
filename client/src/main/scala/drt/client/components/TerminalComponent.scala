@@ -24,7 +24,8 @@ object TerminalComponent {
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             timeRangeHours: TimeRangeHours,
-                            loadingState: LoadingState
+                            loadingState: LoadingState,
+                            showActuals: Boolean
                           )
 
   implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.caseClass[TerminalPageTabLoc]
@@ -41,7 +42,8 @@ object TerminalComponent {
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.timeRangeFilter,
-        model.loadingState
+        model.loadingState,
+        model.showActualIfAvailable
       ))
       modelRCP(modelMP => {
         val model = modelMP.value
@@ -58,7 +60,9 @@ object TerminalComponent {
               model.airportInfos,
               model.timeRangeHours,
               props.router,
-              model.loadingState)
+              model.loadingState,
+              model.showActuals
+            )
             ))
         }))
       })
