@@ -59,6 +59,12 @@ object TerminalContentComponent {
     }
   }
 
+  case class State(activeTab: String)
+
+  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
+  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
+
+
   def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]): List[ApiFlightWithSplits] = arrivals.filter(a => {
 
     def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
@@ -100,8 +106,6 @@ object TerminalContentComponent {
         vdomElementFromTag(<.div(portCode))
     }.get
   }
-
-  case class State(activeTab: String)
 
   class Backend(t: BackendScope[Props, State]) {
     val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
@@ -177,9 +181,6 @@ object TerminalContentComponent {
           )))
     }
   }
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
-  implicit val stateReuse: Reusability[State] = Reusability.caseClass[State]
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.tab))

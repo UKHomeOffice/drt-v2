@@ -12,6 +12,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 
 import scala.collection.immutable
 
+
 object TerminalDisplayModeComponent {
 
   case class Props(crunchStatePot: Pot[CrunchState],
@@ -32,7 +33,7 @@ object TerminalDisplayModeComponent {
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .initialStateFromProps(p => State(p.terminalPageTab.mode))
-    .renderPS((scope, props, state) => {
+    .render_PS((props, state) => {
 
       val terminalContentProps = TerminalContentComponent.Props(
         props.crunchStatePot,
@@ -75,9 +76,9 @@ object TerminalDisplayModeComponent {
           <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
               <.h2(props.terminalPageTab.date match {
-                case Some(ds) if(SDate(ds).ddMMyyString == SDate.now().ddMMyyString) => "Live View"
-                case Some(ds) if(SDate(ds).millisSinceEpoch < SDate.now().millisSinceEpoch) => "Historic View"
-                case Some(ds) if(SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch) => "Forecast View"
+                case Some(ds) if SDate(ds).ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                case Some(ds) if SDate(ds).millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                case Some(ds) if SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
                 case _ => "Live View"
               }),
               DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState)),
