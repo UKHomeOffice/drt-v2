@@ -1010,7 +1010,6 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
   text-align: center;
 }
 
-
 .summary-box-container.pcp-summary {
   position: relative;
 }
@@ -1062,8 +1061,26 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
   padding: 3px;
 }
 
+
+.pax-summary table {
+  height: 100%;
+}
+.pax-summary table tr:nth-child(odd) {
+  background-color: darken(#ddd, 10%);
+}
+.pax-summary table tr:first-child {
+  border: none;
+}
+.pax-summary table tr td{
+  padding: 2px;
+}
+.pax-summary table tr {
+  border-top: black 1px solid;
+}
+
 .summary-box-container.pax-summary {
   min-width: 490px;
+  padding:0;
 }
 
 .summary-box-container.rag-summary.red {
