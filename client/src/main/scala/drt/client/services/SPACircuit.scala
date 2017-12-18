@@ -7,7 +7,6 @@ import diode._
 import diode.data._
 import diode.react.ReactConnector
 import drt.client.actions.Actions._
-import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
@@ -55,6 +54,8 @@ case class ViewLive() extends ViewMode {
 case class ViewPointInTime(time: SDateLike) extends ViewMode
 
 case class ViewDay(time: SDateLike) extends ViewMode
+
+case class LoadingState(isLoading: Boolean = false)
 
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
@@ -164,9 +165,9 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
 
       crunchState match {
         case Ready(thing) =>
-          updated((PendingStale(thing), latestUpdateMillis), Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+          updated((PendingStale(thing), latestUpdateMillis), Effect(Future(ShowLoader())) + Effect(eventualAction))
         case _ =>
-          effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+          effectOnly(Effect(Future(ShowLoader())) + Effect(eventualAction))
       }
 
     case GetCrunchStateAfter(delay) =>
@@ -488,12 +489,13 @@ class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends Log
 
 class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case ShowLoader(message) =>
-      updated(LoadingState(isLoading = true, message))
+    case ShowLoader() =>
+      updated(LoadingState(isLoading = true))
     case HideLoader() =>
-      updated(LoadingState(isLoading = false, ""))
+      updated(LoadingState(isLoading = false))
   }
 }
+
 class ShowActualDesksAndQueuesHandler[M](modelRW: ModelRW[M, Boolean]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case UpdateShowActualDesksAndQueues(state) =>

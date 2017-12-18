@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.TimeRangeHours
+import drt.client.services.{LoadingState, TimeRangeHours}
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
