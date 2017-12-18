@@ -7,7 +7,6 @@ import diode._
 import diode.data._
 import diode.react.ReactConnector
 import drt.client.actions.Actions._
-import drt.client.components.LoadingState
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
@@ -55,6 +54,8 @@ case class ViewLive() extends ViewMode {
 case class ViewPointInTime(time: SDateLike) extends ViewMode
 
 case class ViewDay(time: SDateLike) extends ViewMode
+
+case class LoadingState(isLoading: Boolean = false)
 
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
@@ -162,11 +163,15 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       }
       val crunchState = modelRW.value._1
 
+      val effects = if (isPollingForUpdates)
+        Effect(eventualAction)
+      else
+        Effect(Future(ShowLoader())) + Effect(eventualAction)
       crunchState match {
         case Ready(thing) =>
-          updated((PendingStale(thing), latestUpdateMillis), Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+          updated((PendingStale(thing), latestUpdateMillis), effects)
         case _ =>
-          effectOnly(Effect(Future(ShowLoader("Updating..."))) + Effect(eventualAction))
+          effectOnly(effects)
       }
 
     case GetCrunchStateAfter(delay) =>
@@ -220,6 +225,10 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       } else newStateFromUpdates(crunchUpdates)
 
       updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+  }
+
+  def isPollingForUpdates = {
+    viewMode() == ViewLive() && latestUpdateMillis != 0L
   }
 
   def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
@@ -488,12 +497,13 @@ class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends Log
 
 class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case ShowLoader(message) =>
-      updated(LoadingState(isLoading = true, message))
+    case ShowLoader() =>
+      updated(LoadingState(isLoading = true))
     case HideLoader() =>
-      updated(LoadingState(isLoading = false, ""))
+      updated(LoadingState(isLoading = false))
   }
 }
+
 class ShowActualDesksAndQueuesHandler[M](modelRW: ModelRW[M, Boolean]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case UpdateShowActualDesksAndQueues(state) =>

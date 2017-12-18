@@ -1,4 +1,5 @@
 package drt.client.actions
+
 import java.util.UUID
 
 import diode.Action
@@ -12,6 +13,8 @@ import scala.concurrent.duration.FiniteDuration
 object Actions {
 
   case class GetCrunchState() extends Action
+
+  case class GetCrunchUpdates() extends Action
 
   case class SetCrunchPending() extends Action
 
@@ -73,7 +76,7 @@ object Actions {
 
   case class SetTimeRangeFilter(timeRangeHours: TimeRangeHours) extends Action
 
-  case class ShowLoader(message: String) extends Action
+  case class ShowLoader() extends Action
 
   case class HideLoader() extends Action
 
