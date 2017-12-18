@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.actions.Actions.ToggleShowActual
+import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
@@ -212,7 +212,7 @@ object TerminalDesksAndQueues {
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
 
-        SPACircuit.dispatch(ToggleShowActual(newValue))
+        SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
 
         scope.modState(_.copy(showActuals = newValue))
       }

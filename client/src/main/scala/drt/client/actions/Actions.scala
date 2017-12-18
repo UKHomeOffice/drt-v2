@@ -85,7 +85,7 @@ object Actions {
 
   case class UpdateAirportInfos(infos: Map[String, AirportInfo]) extends Action
 
-  case class ToggleShowActual(state: Boolean) extends Action
+  case class UpdateShowActualDesksAndQueues(state: Boolean) extends Action
 
   case class DoNothing() extends Action
 

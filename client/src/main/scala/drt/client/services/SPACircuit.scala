@@ -494,9 +494,9 @@ class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionH
       updated(LoadingState(isLoading = false, ""))
   }
 }
-class ShowActualHandler[M](modelRW: ModelRW[M, Boolean]) extends LoggingActionHandler(modelRW) {
+class ShowActualDesksAndQueuesHandler[M](modelRW: ModelRW[M, Boolean]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case ToggleShowActual(state) =>
+    case UpdateShowActualDesksAndQueues(state) =>
       updated(state)
   }
 }
@@ -556,7 +556,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
       new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
-      new ShowActualHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
+      new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new NoopHandler(zoomRW(identity)((m, v) => m))
     )
 
