@@ -17,7 +17,7 @@ import scala.scalajs.js.Date
 object DatePickerComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours)
+  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
@@ -31,8 +31,10 @@ object DatePickerComponent {
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.terminalPageTab.viewMode.hashCode())
-  implicit val stateReuse: Reusability[State] = Reusability.caseClass[State]
+  implicit val propsReuse: Reusability[Props] = Reusability.by(
+    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading)
+  )
+  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
   val component = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps(
@@ -56,6 +58,8 @@ object DatePickerComponent {
           }.toTagMod)
       }
 
+      def isCurrentSelection = state.selectedDateTime.ddMMyyString == props.terminalPageTab.date.map(SDate(_)).getOrElse(SDate.now()).ddMMyyString
+
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def updateUrlWithDateCallback(date: Option[SDateLike]): Callback = {
@@ -78,16 +82,25 @@ object DatePickerComponent {
 
       def selectToday = (_: ReactEventFromInput) => updateUrlWithDateCallback(None)
 
+      def isDataAvailableForDate = SnapshotSelector.isLaterThanEarliest(state.selectedDateTime)
+
+      def goButton(loading: Boolean, isCurrentSelection: Boolean) = (loading, isCurrentSelection) match {
+        case (true, true) =>
+          <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.spinner)
+        case (false, true) =>
+          <.div (^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
+        case _ =>
+          <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate))
+      }
 
       val yesterdayActive = if (state.selectedDateTime.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
       val todayActive = if (state.selectedDateTime.ddMMyyString == SDate.now().ddMMyyString) "active" else ""
+
       val tomorrowActive = if (state.selectedDateTime.ddMMyyString == SDate.now().addDays(1).ddMMyyString) "active" else ""
 
       val errorMessage = if (!SnapshotSelector.isLaterThanEarliest(state.selectedDateTime))
         <.div(^.className := "error-message", s"Earliest available is ${SnapshotSelector.earliestAvailable.ddMMyyString}")
       else <.div()
-
-      def isDataAvailableForDate = SnapshotSelector.isLaterThanEarliest(state.selectedDateTime)
 
       <.div(^.className := "date-selector",
         <.div(^.className := "row",
@@ -100,7 +113,7 @@ object DatePickerComponent {
             <.div(^.className := "col-sm-2 no-gutters narrower", drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt))),
             <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt))),
             <.div(^.className := "col-sm-1 no-gutters spacer", <.label(" ", ^.className := "text center")),
-            <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate)),
+            goButton(props.loadingState.isLoading, isCurrentSelection),
             errorMessage
           ).toTagMod),
         TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours))

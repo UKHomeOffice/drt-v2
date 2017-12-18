@@ -23,7 +23,13 @@ object TerminalComponent {
                             potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
-                            timeRangeHours: TimeRangeHours)
+                            timeRangeHours: TimeRangeHours,
+                            loadingState: LoadingState,
+                            showActuals: Boolean
+                          )
+
+  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.caseClass[TerminalPageTabLoc]
+  implicit val propsReuse: Reusability[Props] = Reusability.caseClass[Props]
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
@@ -35,7 +41,9 @@ object TerminalComponent {
         model.staffMovements,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
-        model.timeRangeFilter
+        model.timeRangeFilter,
+        model.loadingState,
+        model.showActualIfAvailable
       ))
       modelRCP(modelMP => {
         val model = modelMP.value
@@ -51,7 +59,10 @@ object TerminalComponent {
               props.terminalPageTab,
               model.airportInfos,
               model.timeRangeHours,
-              props.router)
+              props.router,
+              model.loadingState,
+              model.showActuals
+            )
             ))
         }))
       })

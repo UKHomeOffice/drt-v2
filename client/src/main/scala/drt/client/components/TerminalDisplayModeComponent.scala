@@ -2,13 +2,16 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared.{AirportConfig, AirportInfo, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+
 import scala.collection.immutable
+
 
 object TerminalDisplayModeComponent {
 
@@ -21,7 +24,9 @@ object TerminalDisplayModeComponent {
                    terminalPageTab: TerminalPageTabLoc,
                    airportInfoPot: Pot[AirportInfo],
                    timeRangeHours: TimeRangeHours,
-                   router: RouterCtl[Loc]
+                   router: RouterCtl[Loc],
+                   loadingState: LoadingState,
+                   showActuals: Boolean
                   )
 
   case class State(activeTab: String)
@@ -31,15 +36,16 @@ object TerminalDisplayModeComponent {
     .render_PS((props, state) => {
 
       val terminalContentProps = TerminalContentComponent.Props(
-        crunchStatePot = props.crunchStatePot,
-        potShifts = props.potShifts,
-        potFixedPoints = props.potFixedPoints,
-        potStaffMovements = props.potStaffMovements,
-        airportConfig = props.airportConfig,
-        terminalPageTab = props.terminalPageTab,
-        airportInfoPot = props.airportInfoPot,
-        timeRangeHours = props.timeRangeHours,
-        router = props.router
+        props.crunchStatePot,
+        props.potShifts,
+        props.potFixedPoints,
+        props.potStaffMovements,
+        props.airportConfig,
+        props.terminalPageTab,
+        props.airportInfoPot,
+        props.timeRangeHours,
+        props.router,
+        props.showActuals
       )
 
       val currentClass = if (state.activeTab == "current") "active" else ""
@@ -69,13 +75,20 @@ object TerminalDisplayModeComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
-              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours)),
+              <.h2(props.terminalPageTab.date match {
+                case Some(ds) if SDate(ds).ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                case Some(ds) if SDate(ds).millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                case Some(ds) if SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
+                case _ => "Live View"
+              }),
+              DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState)),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
           <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
             if (state.activeTab == "snapshot") <.div(
-              SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours),
+              <.h2("Snapshot View"),
+              SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),

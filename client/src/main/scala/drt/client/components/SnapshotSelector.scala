@@ -20,7 +20,7 @@ object SnapshotSelector {
 
   val log: Logger = LoggerFactory.getLogger("SnapshotSelector")
 
-  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours)
+  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def snapshotDateTime = SDate(year, month, day, hours, minutes)
@@ -39,7 +39,7 @@ object SnapshotSelector {
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-  implicit val propsReuse: Reusability[Props] = Reusability.always
+  implicit val propsReuse: Reusability[Props] = Reusability.by(_.loadingState.isLoading)
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
@@ -53,6 +53,7 @@ object SnapshotSelector {
         }
     )
     .renderPS((scope, props, state) => {
+      val selectedDate: SDateLike = props.terminalPageTab.date.map(SDate(_)).getOrElse(today)
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
       val days = Seq.range(1, 32)
       val years = Seq.range(2017, today.getFullYear() + 1)
@@ -72,6 +73,17 @@ object SnapshotSelector {
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def isValidSnapshotDate = isLaterThanEarliest(state.snapshotDateTime) && isInPast
+
+      def isCurrentSelection = selectedDate.toISOString() == state.snapshotDateTime.toISOString()
+
+      def goButton(loading: Boolean, isCurrentSelection: Boolean) = (loading, isCurrentSelection) match {
+        case (true, true) =>
+          <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.spinner)
+        case (false, true) =>
+          <.div (^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
+        case _ =>
+          <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime))
+      }
 
       def selectPointInTime = (_: ReactEventFromInput) => {
         if (isValidSnapshotDate) {
@@ -103,7 +115,7 @@ object SnapshotSelector {
             <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt))),
             <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt))),
             <.div(^.className := "col-sm-1 no-gutters spacer", <.label(" ", ^.className := "text center")),
-            <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime)),
+            goButton(props.loadingState.isLoading, isCurrentSelection),
             errorMessage
           ).toTagMod),
         TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours))
@@ -112,5 +124,5 @@ object SnapshotSelector {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, timeRangeHours: TimeRangeHours): VdomElement = component(Props(router, page, timeRangeHours))
+  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState): VdomElement = component(Props(router, page, timeRangeHours, loadingState))
 }
