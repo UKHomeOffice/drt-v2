@@ -163,11 +163,15 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       }
       val crunchState = modelRW.value._1
 
+      val effects = if (isPollingForUpdates)
+        Effect(eventualAction)
+      else
+        Effect(Future(ShowLoader())) + Effect(eventualAction)
       crunchState match {
         case Ready(thing) =>
-          updated((PendingStale(thing), latestUpdateMillis), Effect(Future(ShowLoader())) + Effect(eventualAction))
+          updated((PendingStale(thing), latestUpdateMillis), effects)
         case _ =>
-          effectOnly(Effect(Future(ShowLoader())) + Effect(eventualAction))
+          effectOnly(effects)
       }
 
     case GetCrunchStateAfter(delay) =>
@@ -221,6 +225,10 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       } else newStateFromUpdates(crunchUpdates)
 
       updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+  }
+
+  def isPollingForUpdates = {
+    viewMode() == ViewLive() && latestUpdateMillis != 0L
   }
 
   def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
