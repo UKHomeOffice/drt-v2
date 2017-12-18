@@ -32,7 +32,8 @@ object TerminalContentComponent {
                     terminalPageTab: TerminalPageTabLoc,
                     airportInfoPot: Pot[AirportInfo],
                     timeRangeHours: TimeRangeHours,
-                    router: RouterCtl[Loc]
+                    router: RouterCtl[Loc],
+                    showActuals: Boolean
                   ) {
     lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]], Int, Int) = {
       val depsHash = crunchStatePot.map(
@@ -147,7 +148,8 @@ object TerminalContentComponent {
                   TerminalDesksAndQueues.Props(
                     filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState),
                     props.airportConfig,
-                    props.terminalPageTab.terminal
+                    props.terminalPageTab.terminal,
+                    props.showActuals
                   )
                 )
               })

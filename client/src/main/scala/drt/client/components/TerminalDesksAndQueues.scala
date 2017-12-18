@@ -1,8 +1,10 @@
 package drt.client.components
 
+import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
+import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -106,7 +108,7 @@ object TerminalDesksAndQueues {
 
   def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
-  case class Props(crunchState: CrunchState, airportConfig: AirportConfig, terminalName: TerminalName)
+  case class Props(crunchState: CrunchState, airportConfig: AirportConfig, terminalName: TerminalName, showActuals: Boolean)
 
   sealed trait ViewType
 
@@ -119,16 +121,17 @@ object TerminalDesksAndQueues {
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     val lastUpdatedCm = props.crunchState.crunchMinutes.map(_.lastUpdated)
     val lastUpdatedFs = props.crunchState.flights.map(_.lastUpdated)
-    (lastUpdatedCm, lastUpdatedFs)
+
+    (lastUpdatedCm, lastUpdatedFs, props.showActuals)
   })
 
   implicit val stateReuse: Reusability[State] = Reusability.by((state: State) => {
-    state.showActuals
+    state.viewType == ViewDeps
   })
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {
-      State(showActuals = p.airportConfig.hasActualDeskStats, ViewDeps)
+      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, ViewDeps)
     })
     .renderPS((scope, props, state) => {
       def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
@@ -208,6 +211,9 @@ object TerminalDesksAndQueues {
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
+
+        SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
+
         scope.modState(_.copy(showActuals = newValue))
       }
 
