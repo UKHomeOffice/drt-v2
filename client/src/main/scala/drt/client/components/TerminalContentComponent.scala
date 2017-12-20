@@ -182,12 +182,6 @@ object TerminalContentComponent {
               log.info(s"Rendering staffing $state")
               TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal, props.potShifts, props.potFixedPoints, props.potStaffMovements, props.airportConfig))
             } else ""
-          ),
-          <.div(^.id := "staffingv2", ^.className := s"tab-pane terminal-staffing-container $staffingPanelV2Active", ^.href := "#staffingv2",
-            if (state.activeTab == "staffingv2") {
-              log.info(s"Rendering staffingv2 $state")
-              HotTable.component(HotTable.props(Seq(Seq("yeah"))))()
-            } else ""
           )))
     }
   }

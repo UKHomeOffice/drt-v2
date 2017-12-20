@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
@@ -55,6 +56,7 @@ object TerminalDisplayModeComponent {
       val currentContentClass = if (state.activeTab == "current") "fade in active" else "fade out"
       val snapshotContentClass = if (state.activeTab == "snapshot") "fade in active" else "fade out"
       val planningContentClass = if (state.activeTab == "planning") "fade in active" else "fade out"
+      val staffingContentClass = if (state.activeTab == "staffing") "fade in active" else "fade out"
 
       <.div(
         <.ul(^.className := "nav nav-tabs",
@@ -69,6 +71,11 @@ object TerminalDisplayModeComponent {
           <.li(^.className := planningClass,
             <.a(VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(mode = "planning", date = None))
+            }
+          ),
+          <.li(^.className := planningClass,
+            <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(mode = "staffing", date = None))
             }
           )
         ),
@@ -100,7 +107,13 @@ object TerminalDisplayModeComponent {
                 }))
               )
             } else ""
-          })))
+          }),
+          <.div(^.id := "staffingv2", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+          if (state.activeTab == "staffingv2") {
+            log.info(s"Rendering staffingv2 $state")
+            props.potShifts.render(s => TerminalStaffingV2(s))
+          } else ""
+        )))
     })
     .build
 

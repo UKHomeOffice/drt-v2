@@ -187,6 +187,8 @@ trait SDateLike {
 
   def addDays(daysToAdd: Int): SDateLike
 
+  def addMonths(monthsToAdd: Int): SDateLike
+
   def addHours(hoursToAdd: Int): SDateLike
 
   def addMinutes(minutesToAdd: Int): SDateLike
