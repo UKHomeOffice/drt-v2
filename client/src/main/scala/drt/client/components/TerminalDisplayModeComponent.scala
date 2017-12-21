@@ -52,6 +52,7 @@ object TerminalDisplayModeComponent {
       val currentClass = if (state.activeTab == "current") "active" else ""
       val snapshotDataClass = if (state.activeTab == "snapshot") "active" else ""
       val planningClass = if (state.activeTab == "planning") "active" else ""
+      val staffingClass = if (state.activeTab == "staffing") "active" else ""
 
       val currentContentClass = if (state.activeTab == "current") "fade in active" else "fade out"
       val snapshotContentClass = if (state.activeTab == "snapshot") "fade in active" else "fade out"
@@ -73,7 +74,7 @@ object TerminalDisplayModeComponent {
               props.router.set(props.terminalPageTab.copy(mode = "planning", date = None))
             }
           ),
-          <.li(^.className := planningClass,
+          <.li(^.className := staffingClass,
             <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(mode = "staffing", date = None))
             }
@@ -108,12 +109,14 @@ object TerminalDisplayModeComponent {
               )
             } else ""
           }),
-          <.div(^.id := "staffingv2", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
-          if (state.activeTab == "staffingv2") {
-            log.info(s"Rendering staffingv2 $state")
-            props.potShifts.render(s => TerminalStaffingV2(s))
-          } else ""
-        )))
+          <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+            if (state.activeTab == "staffing") {
+              log.info(s"Rendering staffing $state")
+              props.potShifts.render(s => TerminalStaffingV2(s))
+            } else ""
+          )
+        )
+      )
     })
     .build
 

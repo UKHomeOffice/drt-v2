@@ -6,14 +6,9 @@ import utest._
 
 object StaffingComponentTests extends TestSuite {
 
-  def lastDayOfMonth(today: SDateLike) = {
-    val firstOfMonth: SDateLike = firstDayOfMonth(today)
+  import drt.client.components.TerminalStaffingV2._
 
-    val lastDayOfMonth = firstOfMonth.addMonths(1).addDays(-1)
-    lastDayOfMonth
-  }
 
-  def firstDayOfMonth(today: SDateLike) = SDate(today.getFullYear(), today.getMonth(), 1, 0, 0)
 
   def tests = TestSuite {
     'StaffingService - {
@@ -83,6 +78,45 @@ object StaffingComponentTests extends TestSuite {
 
           val expected = SDate(2018, 6, 1)
           assert(result.toISOString() == expected.toISOString())
+        }
+      }
+      "When asking for a list of time slots" - {
+        "Given a start time of 2017-12-21T00:00 and an end time of 2017-12-21T01:00 " +
+          "Then I should get back 15 minute slots" - {
+
+          val startTime = SDate("2017-12-21T00:00")
+          val endTime = SDate("2017-12-21T01:00")
+
+          val result = toTimeSlots(startTime, endTime).map(_.millisSinceEpoch)
+
+          val expected = List(
+            SDate("2017-12-21T00:00"),
+            SDate("2017-12-21T00:15"),
+            SDate("2017-12-21T00:30"),
+            SDate("2017-12-21T00:45")
+          ).map(_.millisSinceEpoch)
+
+          assert(result == expected)
+        }
+      }
+      "When asking for a list of days" - {
+        "Given a start day of 2017-12-21 and an end day of 2017-12-25 " +
+          "Then I should get back a list of days in between" - {
+
+          val startDay = SDate("2017-12-21")
+          val endDay = SDate("2017-12-25")
+
+          val result = consecutiveDaysInMonth(startDay, endDay).map(_.millisSinceEpoch)
+
+          val expected = List(
+            SDate("2017-12-21"),
+            SDate("2017-12-22"),
+            SDate("2017-12-23"),
+            SDate("2017-12-24"),
+            SDate("2017-12-25")
+          ).map(_.millisSinceEpoch)
+
+          assert(result == expected)
         }
       }
     }

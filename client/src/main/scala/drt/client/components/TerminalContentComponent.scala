@@ -137,9 +137,6 @@ object TerminalContentComponent {
             }),
             <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(tab = "staffing"))
-            }),
-            <.li(^.className := staffingV2Active, <.a(VdomAttr("data-toggle") := "tab", "Staffing v2"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(tab = "staffingv2"))
             })
           ),
           <.div(^.className := "exports",
