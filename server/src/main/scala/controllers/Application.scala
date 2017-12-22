@@ -12,6 +12,7 @@ import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import com.google.inject.Inject
+import com.google.inject.Singleton
 import com.typesafe.config.ConfigFactory
 import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
@@ -26,7 +27,7 @@ import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.http.HttpEntity
+import play.api.http.{DefaultHttpFilters, HeaderNames, HttpEntity, HttpFilters}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
@@ -46,6 +47,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.matching.Regex
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
 
@@ -243,6 +245,25 @@ trait ProdPassengerSplitProviders {
 
 trait ImplicitTimeoutProvider {
   implicit val timeout: Timeout = Timeout(1 second)
+}
+
+@Singleton
+class NoCacheFilter @Inject()(
+                               implicit override val mat: Materializer,
+                             exec: ExecutionContext) extends Filter {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+  val rootRegex: Regex = "/v2/.{3}/live".r
+
+  override def apply(requestHeaderToFutureResult: (RequestHeader) => Future[Result])(rh: RequestHeader): Future[Result] = {
+    requestHeaderToFutureResult(rh).map { result =>
+      rh.uri match {
+        case rootRegex() =>
+          result.withHeaders(HeaderNames.CACHE_CONTROL -> "no-cache")
+        case _ =>
+          result
+      }
+    }
+  }
 }
 
 class Application @Inject()(implicit val config: Configuration,
