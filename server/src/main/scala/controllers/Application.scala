@@ -278,6 +278,8 @@ class Application @Inject()(implicit val config: Configuration,
   ctrl =>
   val log: LoggingAdapter = system.log
 
+  log.info(s"Starting DRTv2 build ${getClass.getPackage.getImplementationVersion}")
+
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
   private val systemTimeZone = System.getProperty("user.timezone")
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
