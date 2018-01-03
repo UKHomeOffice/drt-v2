@@ -332,6 +332,11 @@ class CrunchStateActor(val snapshotInterval: Int,
 
 object SplitsConversion {
   def splitMessageToApiSplits(sm: SplitMessage): ApiSplits = {
+    val splitSource = sm.source.getOrElse("") match {
+      case SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages_Old => SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+      case s => s
+    }
+
     ApiSplits(
       sm.paxTypeAndQueueCount.map(ptqcm => ApiPaxTypeAndQueueCount(
         PaxType(ptqcm.paxType.getOrElse("")),
@@ -339,7 +344,7 @@ object SplitsConversion {
         ptqcm.paxValue.getOrElse(0d),
         None
       )).toSet,
-      sm.source.getOrElse(""),
+      splitSource,
       sm.eventType,
       SplitStyle(sm.style.getOrElse(""))
     )
