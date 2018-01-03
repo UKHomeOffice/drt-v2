@@ -91,7 +91,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
 //      val result = CSVData.forecastPeriodToCsv(forecast)
 //
 //      val expected =
-//        s"""|,${day1Midnight.getDate()}/${day1Midnight.getMonth()},,${day2Midnight.getDate()}/${day2Midnight.getMonth()},,${day3Midnight.getDate()}/${day3Midnight.getMonth()}
+//        s"""|,${day1Midnight.getDate()}/${day1Midnight.getMonthMillis()},,${day2Midnight.getDate()}/${day2Midnight.getMonthMillis()},,${day3Midnight.getDate()}/${day3Midnight.getMonthMillis()}
 //            |Start Time,Avail,Rec,Avail,Rec,Avail,Rec
 //            |00:00,1,2,1,2,1,2
 //            |00:15,3,4,3,4,3,4

@@ -118,7 +118,7 @@ object SDateTests extends TestSuite {
         //        }
       }
       "Outside of BST" - {
-        "should take dates as UTC but return as local time with day, month, date, time constructor" - {
+        "should take dates as UTC but return as local time with day, monthMillis, date, time constructor" - {
           val d = SDate(2017, 3, 1, 14, 44)
           val actual = d.toString
           assert(actual == "2017-03-01T1444")

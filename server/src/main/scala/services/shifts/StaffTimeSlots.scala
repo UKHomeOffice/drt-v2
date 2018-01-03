@@ -8,10 +8,11 @@ import scala.util.{Success, Try}
 object StaffTimeSlots {
 
   def slotsToShifts(slots: StaffTimeSlotsForMonth) = {
+    val monthSDate = SDate(slots.monthMillis)
     slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
       case (slot, index) =>
         val dateTime = SDate(slot.start)
-        f"shift${slots.month.getMonth()}%02d${slots.month.getFullYear()}$index, ${slot.terminal}, ${dateTime.ddMMyyString}, ${dateTime.prettyTime}, ${dateTime.addMillis(slot.durationMillis - 1).prettyTime}, ${slot.staff}"
+        f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index, ${slot.terminal}, ${dateTime.ddMMyyString}, ${dateTime.prettyTime}, ${dateTime.addMillis(slot.durationMillis - 1).prettyTime}, ${slot.staff}"
     }.mkString("\n")
   }
 
@@ -43,7 +44,7 @@ object StaffTimeSlots {
         line.replaceAll("([^\\\\]),", "$1\",\"")
           .split("\",\"").toList.map(_.trim) match {
           case List(_, _, d, _, _, _) =>
-            !isDateInMonth(d, slots.month)
+            !isDateInMonth(d, SDate(slots.monthMillis))
           case _ => false
         }
       })

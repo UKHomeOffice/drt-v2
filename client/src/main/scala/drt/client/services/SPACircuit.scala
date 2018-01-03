@@ -57,12 +57,15 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class LoadingState(isLoading: Boolean = false)
 
+case class MonthOfRawShifts(month: SDateLike, shifts: String)
+
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                      airportConfig: Pot[AirportConfig] = Empty,
                      shiftsRaw: Pot[String] = Empty,
+                     monthShifts: Pot[MonthOfRawShifts] = Empty,
                      fixedPointsRaw: Pot[String] = Empty,
                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
                      viewMode: ViewMode = ViewLive(),
@@ -301,17 +304,14 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SaveMonthTimeSlotsToShifts(staffTimeSlots) =>
-      value match {
-        case Ready(shifts) =>
 
-      }
       log.info(s"Saving staff time slots as Shifts")
-//      AjaxClient[Api].saveStaffTimeSlots(staffTimeSlots).call()
-//        .recoverWith{
-//        case error =>
-//          log.error(s"Failed to save staff: $error")
-//          SPACircuit.dispatch()
-//      }
+      AjaxClient[Api].saveStaffTimeSlotsForMonth(staffTimeSlots).call()
+      //        .recoverWith{
+      //        case error =>
+      //          log.error(s"Failed to save staff: $error")
+      //          SPACircuit.dispatch()
+      //      }
       noChange
     case SetShifts(shifts: String) =>
       val scheduledRequest = Effect(Future(GetShifts())).after(15 seconds)

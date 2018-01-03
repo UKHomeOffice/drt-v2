@@ -89,16 +89,14 @@ object TerminalStaffingV2 {
                     router: RouterCtl[Loc]
                   )
 
-  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], start: SDateLike, terminal: String): StaffTimeSlotsForMonth = {
-
-    StaffTimeSlotsForMonth(month, staff.zipWithIndex.flatMap {
-      case (days, timeslotIndex) =>
-        days.zipWithIndex.map {
-          case (staff, dayIndex) =>
-            StaffTimeSlot(terminal, start.addDays(dayIndex).addMinutes(timeslotIndex * 15).millisSinceEpoch, staff)
-        }
-    }.sortBy(_.start))
-  }
+  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], start: SDateLike, terminal: String): StaffTimeSlotsForMonth =
+    StaffTimeSlotsForMonth(month.millisSinceEpoch, staff.zipWithIndex.flatMap {
+    case (days, timeslotIndex) =>
+      days.zipWithIndex.map {
+        case (staff, dayIndex) =>
+          StaffTimeSlot(terminal, start.addDays(dayIndex).addMinutes(timeslotIndex * 15).millisSinceEpoch, staff)
+      }
+  }.sortBy(_.start))
 
   def updateTimeSlot(timeSlots: Seq[Seq[Int]], slot: Int, day: Int, value: Int): Seq[Seq[Int]] = {
     timeSlots.updated(slot, timeSlots(day).updated(day, value))

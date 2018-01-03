@@ -68,7 +68,7 @@ case class StaffTimeSlot(
                         )
 
 case class StaffTimeSlotsForMonth(
-                                   month: SDateLike,
+                                   monthMillis: MillisSinceEpoch,
                                    timeSlots: Seq[StaffTimeSlot]
                                  )
 
@@ -423,7 +423,7 @@ trait Api {
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def saveShifts(shifts: String): Future[Unit]
+  def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForMonth): Future[Unit]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 

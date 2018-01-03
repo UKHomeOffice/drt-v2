@@ -37,6 +37,7 @@ import services.SplitsProvider.SplitProvider
 import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
+import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
@@ -379,8 +380,16 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
-      def saveShifts(rawShifts: String): Future[Unit] = {
-        Future(shiftsActor ! rawShifts)
+      def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForMonth): Future[Unit] = {
+        log.info(s"Saving ${timeSlotsForMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForMonth.monthMillis).ddMMyyString}")
+        val futureShifts = shiftsActor.ask(GetState)(new Timeout(30 seconds))
+        futureShifts.map {
+          case shifts: String =>
+            println(s"Existing Shifts: $shifts")
+            val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForMonth)
+            println(s"Existing Shifts: $updatedShifts")
+            shiftsActor ! updatedShifts
+        }
       }
 
       override def askableCacheActorRef: AskableActorRef = cacheActorRef

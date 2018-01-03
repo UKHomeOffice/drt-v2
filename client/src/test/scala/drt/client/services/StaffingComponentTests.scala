@@ -10,7 +10,7 @@ object StaffingComponentTests extends TestSuite {
 
   def tests = TestSuite {
     'StaffingService - {
-      "When asking for the end date of the month " - {
+      "When asking for the end date of the monthMillis " - {
         "Given 31-12-2017 then I should get 31-12-2017" - {
           val today = SDate(2017, 12, 31)
 
@@ -44,7 +44,7 @@ object StaffingComponentTests extends TestSuite {
           assert(result.toISOString() == expected.toISOString())
         }
       }
-      "When asking for the first date of the month " - {
+      "When asking for the first date of the monthMillis " - {
         "Given 31-12-2017 then I should get 01-12-2017" - {
           val today = SDate(2017, 12, 31)
 
@@ -118,7 +118,7 @@ object StaffingComponentTests extends TestSuite {
         }
       }
     }
-    "When asking for 6 months from first day of month provided" - {
+    "When asking for 6 months from first day of monthMillis provided" - {
       "Given 2017-06-22 then I should get back 2017-06-01, 2017-07-01, 2017-08-01, 2017-09-01," +
         " 2017-10-01, 2017-11-01," - {
         val startDate = SDate("2017-06-22")
@@ -170,7 +170,7 @@ object StaffingComponentTests extends TestSuite {
         val result = staffToStaffTimeSlotsForMonth(start, staff, start, terminal)
 
         val expected = StaffTimeSlotsForMonth(
-          start, List(
+          start.millisSinceEpoch, List(
           StaffTimeSlot("T1", start.millisSinceEpoch, 1),
           StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
           StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
@@ -194,7 +194,7 @@ object StaffingComponentTests extends TestSuite {
         val result = staffToStaffTimeSlotsForMonth(start, staff, start, terminal)
 
         val expected = StaffTimeSlotsForMonth(
-          start, List(
+          start.millisSinceEpoch, List(
           StaffTimeSlot("T1", start.millisSinceEpoch, 1),
           StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
           StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
