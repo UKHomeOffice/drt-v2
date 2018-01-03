@@ -58,6 +58,8 @@ object Actions {
 
   case class AddShift(shift: StaffAssignment) extends Action
 
+  case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForMonth) extends Action
+
   case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
   case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action

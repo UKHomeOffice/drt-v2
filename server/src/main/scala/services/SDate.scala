@@ -34,6 +34,8 @@ object SDate {
 
     def addMinutes(mins: Int): SDateLike = dateTime.plusMinutes(mins)
 
+    def addMillis(millisToAdd: Int): SDateLike = dateTime.plusMillis(millisToAdd)
+
     def millisSinceEpoch: Long = dateTime.getMillis
 
     override def toISOString(): String = jodaSDateToIsoString(dateTime)

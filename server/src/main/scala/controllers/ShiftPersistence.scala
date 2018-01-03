@@ -24,10 +24,6 @@ trait ShiftPersistence {
 
   def shiftsActor: ActorRef
 
-  def saveShifts(rawShifts: String) = {
-      shiftsActor ! rawShifts
-  }
-
   def getShifts(pointInTime: MillisSinceEpoch): Future[String] = {
     log.info(s"getShifts($pointInTime)")
 

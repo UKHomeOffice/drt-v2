@@ -1,14 +1,12 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.SDateLike
+import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForMonth}
 import utest._
 
 object StaffingComponentTests extends TestSuite {
 
   import drt.client.components.TerminalStaffingV2._
-
-
 
   def tests = TestSuite {
     'StaffingService - {
@@ -120,7 +118,95 @@ object StaffingComponentTests extends TestSuite {
         }
       }
     }
+    "When asking for 6 months from first day of month provided" - {
+      "Given 2017-06-22 then I should get back 2017-06-01, 2017-07-01, 2017-08-01, 2017-09-01," +
+        " 2017-10-01, 2017-11-01," - {
+        val startDate = SDate("2017-06-22")
+
+        val expected = List(
+          SDate("2017-06-01"),
+          SDate("2017-07-01"),
+          SDate("2017-08-01"),
+          SDate("2017-09-01"),
+          SDate("2017-10-01"),
+          SDate("2017-11-01")
+        )
+
+        val result = sixMonthsFromFirstOfMonth(startDate)
+
+        assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
+      }
+      "Given 2017-12-22 then I should get back 2017-12-01, 2018-01-01, 2018-02-01, 2018-03-01," +
+        " 2018-04-01, 2018-05-01" - {
+        val startDate = SDate("2017-12-22")
+
+        val expected = List(
+          SDate("2017-12-01"),
+          SDate("2018-01-01"),
+          SDate("2018-02-01"),
+          SDate("2018-03-01"),
+          SDate("2018-04-01"),
+          SDate("2018-05-01")
+        )
+
+        val result = sixMonthsFromFirstOfMonth(startDate)
+
+        assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
+      }
+    }
+    "When converting a table of staff per timeslot day to shifts" - {
+      "Given one day with 4 time slots then I should get back a list of sfaff timeslots" - {
+        val staff = List(
+          List(1),
+          List(1),
+          List(1),
+          List(1)
+        )
+
+        val start = SDate("2017-12-24")
+
+        val terminal = "T1"
+
+        val result = staffToStaffTimeSlotsForMonth(start, staff, start, terminal)
+
+        val expected = StaffTimeSlotsForMonth(
+          start, List(
+          StaffTimeSlot("T1", start.millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1)
+        ))
+
+        assert(result == expected)
+      }
+      "Given two days with 4 time slots then I should get back a list of sfaff timeslots" - {
+        val staff = List(
+          List(1,2),
+          List(1,2),
+          List(1,2),
+          List(1,2)
+        )
+
+        val start = SDate("2017-12-24")
+
+        val terminal = "T1"
+
+        val result = staffToStaffTimeSlotsForMonth(start, staff, start, terminal)
+
+        val expected = StaffTimeSlotsForMonth(
+          start, List(
+          StaffTimeSlot("T1", start.millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1),
+          StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2),
+          StaffTimeSlot("T1", start.addDays(1).addMinutes(15).millisSinceEpoch, 2),
+          StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2),
+          StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2)
+        ))
+
+        assert(result == expected)
+      }
+    }
   }
 }
-
-

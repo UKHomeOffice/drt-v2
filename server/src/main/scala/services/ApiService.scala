@@ -87,5 +87,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
+  def saveShifts(shifts: String): Future[Unit]
 }
 

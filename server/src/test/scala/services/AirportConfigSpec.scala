@@ -3,7 +3,7 @@ package services
 import org.specs2.mutable.Specification
 import drt.shared.{AirportConfigs}
 
-class AirportConfigSpec extends Specification{
+class AirportConfigSpec extends Specification {
   "Airport Config" >> {
     "LHR Airport Config" should {
 

@@ -41,7 +41,6 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
 
-import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -378,6 +377,10 @@ class Application @Inject()(implicit val config: Configuration,
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
         }
+      }
+
+      def saveShifts(rawShifts: String): Future[Unit] = {
+        Future(shiftsActor ! rawShifts)
       }
 
       override def askableCacheActorRef: AskableActorRef = cacheActorRef

@@ -300,6 +300,19 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case SaveMonthTimeSlotsToShifts(staffTimeSlots) =>
+      value match {
+        case Ready(shifts) =>
+
+      }
+      log.info(s"Saving staff time slots as Shifts")
+//      AjaxClient[Api].saveStaffTimeSlots(staffTimeSlots).call()
+//        .recoverWith{
+//        case error =>
+//          log.error(s"Failed to save staff: $error")
+//          SPACircuit.dispatch()
+//      }
+      noChange
     case SetShifts(shifts: String) =>
       val scheduledRequest = Effect(Future(GetShifts())).after(15 seconds)
 

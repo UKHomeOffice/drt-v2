@@ -1,11 +1,10 @@
 package drt.staff
 
+import drt.shared.StaffTimeSlotsForMonth
 import org.joda.time.{DateTime, DateTimeZone}
-import play.api.libs.json.{JsResult, JsValue, Json, Reads}
+import play.api.libs.json.{JsValue, Json}
 import services.SDate
 import services.SDate.implicits._
-
-import scala.util.parsing.json.JSON
 
 case class StaffShift(port_code: String, terminal: String, staff: String, shift_start: String)
 
@@ -28,4 +27,5 @@ object ImportStaff {
         }.mkString("\n")
     }
   }
+
 }

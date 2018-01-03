@@ -112,7 +112,7 @@ object TerminalDisplayModeComponent {
           <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
             if (state.activeTab == "staffing") {
               log.info(s"Rendering staffing $state")
-              props.potShifts.render(s => TerminalStaffingV2(s))
+              props.potShifts.render(s => TerminalStaffingV2(s, props.terminalPageTab, props.router))
             } else ""
           )
         )

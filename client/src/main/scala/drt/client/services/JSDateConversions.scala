@@ -59,6 +59,10 @@ object JSDateConversions {
         newDate
       }
 
+      def addMillis(millisToAdd: Int): SDateLike = {
+        new Date(millisSinceEpoch + millisToAdd)
+      }
+
       def millisSinceEpoch: Long = date.getTime().toLong
 
       override def toISOString(): String = date.toISOString()
@@ -67,6 +71,8 @@ object JSDateConversions {
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
+
+    def apply(millis: Long): SDateLike = new Date(millis)
 
     /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
@@ -102,4 +108,5 @@ object JSDateConversions {
       JSSDate(new Date())
     }
   }
+
 }

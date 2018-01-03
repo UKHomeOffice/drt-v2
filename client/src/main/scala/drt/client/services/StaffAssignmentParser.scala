@@ -13,7 +13,6 @@ import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 
 
-
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
   def toCsv: String = {
     val startDate: SDateLike = SDate(startDt)
