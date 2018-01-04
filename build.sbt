@@ -103,7 +103,7 @@ lazy val server = (project in file("server"))
   // compress CSS
   LessKeys.compress in Assets := true,
   PB.targets in Compile := Seq(
-    scalapb.gen() -> (sourceManaged in Compile).value
+    scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   )
 )
   .aggregate(clients.map(projectToRef): _*)

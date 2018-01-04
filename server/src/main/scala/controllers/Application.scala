@@ -11,6 +11,7 @@ import akka.stream._
 import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
+import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.typesafe.config.ConfigFactory
@@ -278,7 +279,7 @@ class Application @Inject()(implicit val config: Configuration,
   ctrl =>
   val log: LoggingAdapter = system.log
 
-  log.info(s"Starting DRTv2 build ${getClass.getPackage.getImplementationVersion}")
+  log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
   private val systemTimeZone = System.getProperty("user.timezone")
