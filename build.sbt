@@ -68,12 +68,15 @@ lazy val clients = Seq(client)
 lazy val server = (project in file("server"))
   .enablePlugins(PlayScala)
   .enablePlugins(WebScalaJSBundlerPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
   name := "drt",
   version := Settings.version,
   scalaVersion := Settings.versions.scala,
   scalacOptions ++= Settings.scalacOptions,
+  buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+  buildInfoPackage := "buildinfo",
   javaOptions in Test += "-Duser.timezone=UTC",
   javaOptions in Runtime += "-Duser.timezone=UTC",
   libraryDependencies ++= Settings.jvmDependencies.value,
