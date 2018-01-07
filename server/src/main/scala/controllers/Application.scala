@@ -320,6 +320,8 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateForDayInPastOrFuture(day)
 
+      def getApplicationVersion(): String = BuildInfo.version
+
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
         crunchStateAtPointInTime(pointInTime)
       }

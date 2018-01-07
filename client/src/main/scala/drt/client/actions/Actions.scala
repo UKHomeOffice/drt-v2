@@ -12,6 +12,8 @@ import scala.concurrent.duration.FiniteDuration
 
 object Actions {
 
+  case object GetApplicationVersion extends Action
+
   case class GetCrunchState() extends Action
 
   case class GetCrunchUpdates() extends Action
