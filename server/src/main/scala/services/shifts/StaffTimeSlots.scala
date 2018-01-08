@@ -20,7 +20,7 @@ object StaffTimeSlots {
     val twoDigitYear = date.getFullYear().toString.substring(2, 4)
     val filterDate2DigitYear = f"${date.getDate()}%02d/${date.getMonth()}%02d/$twoDigitYear"
     val filterDate4DigitYear = f"${date.getDate()}%02d/${date.getMonth()}%02d/${date.getFullYear()}"
-    val todaysShifts = shifts.split("\n").filter(l => {
+    val todaysShifts = shiftsToLines(shifts).filter(l => {
       l.contains(filterDate2DigitYear) || l.contains(filterDate4DigitYear)
     })
   }
@@ -39,10 +39,9 @@ object StaffTimeSlots {
   }
 
   def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForMonth) = {
-    val shiftsExcludingNewMonth = existingShifts.split("\n")
+    val shiftsExcludingNewMonth = shiftsToLines(existingShifts)
       .filter(line => {
-        line.replaceAll("([^\\\\]),", "$1\",\"")
-          .split("\",\"").toList.map(_.trim) match {
+        shiftLineToFieldList(line) match {
           case List(_, _, d, _, _, _) =>
             !isDateInMonth(d, SDate(slots.monthMillis))
           case _ => false
@@ -50,5 +49,24 @@ object StaffTimeSlots {
       })
 
     (shiftsExcludingNewMonth.mkString("\n") + "\n" + StaffTimeSlots.slotsToShifts(slots)).trim
+  }
+
+  private def shiftLineToFieldList(line: String) = {
+    line.replaceAll("([^\\\\]),", "$1\",\"")
+      .split("\",\"").toList.map(_.trim)
+  }
+
+  private def shiftsToLines(existingShifts: String) = {
+    existingShifts.split("\n")
+  }
+
+  def getShiftsForMonth(shifts: String, month: SDateLike) = {
+    shiftsToLines(shifts).filter(line => {
+      shiftLineToFieldList(line) match {
+        case List(_, _, d, _, _, _) =>
+          isDateInMonth(d, month)
+        case _ => false
+      }
+    }).mkString("\n")
   }
 }

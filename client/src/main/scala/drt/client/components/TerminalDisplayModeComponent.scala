@@ -2,23 +2,23 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
-import drt.shared.{AirportConfig, AirportInfo, StaffMovement}
+import drt.shared.{AirportConfig, AirportInfo, MonthOfRawShifts, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 
 import scala.collection.immutable
-
 
 object TerminalDisplayModeComponent {
 
   case class Props(crunchStatePot: Pot[CrunchState],
                    forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
                    potShifts: Pot[String],
+                   potMonthOfShifts: Pot[MonthOfRawShifts],
                    potFixedPoints: Pot[String],
                    potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                    airportConfig: AirportConfig,
@@ -111,8 +111,9 @@ object TerminalDisplayModeComponent {
           }),
           <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
             if (state.activeTab == "staffing") {
-              log.info(s"Rendering staffing $state")
-              props.potShifts.render(s => TerminalStaffingV2(s, props.terminalPageTab, props.router))
+              props.potMonthOfShifts.render(ms => {
+                TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
+              })
             } else ""
           )
         )

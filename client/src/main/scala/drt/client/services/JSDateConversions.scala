@@ -77,7 +77,7 @@ object JSDateConversions {
     /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
       */
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s:Int =0, ms: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm, s, ms)
 
     /** *
       * dateString is an ISO parseable datetime representation, with optional timezone

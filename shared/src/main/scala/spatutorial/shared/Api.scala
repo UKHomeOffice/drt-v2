@@ -72,6 +72,8 @@ case class StaffTimeSlotsForMonth(
                                    timeSlots: Seq[StaffTimeSlot]
                                  )
 
+case class MonthOfRawShifts(month: MillisSinceEpoch, shifts: String)
+
 object ApiSplits {
   def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
 
@@ -424,6 +426,8 @@ trait Api {
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
   def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForMonth): Future[Unit]
+
+  def getShiftsForMonth(month: MillisSinceEpoch): Future[String]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 

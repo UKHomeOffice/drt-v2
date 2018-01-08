@@ -54,7 +54,13 @@ object Actions {
 
   case class GetShifts() extends Action
 
+  case class SetShiftsForMonth(shiftsForMonth: MonthOfRawShifts) extends Action
+
   case class GetShiftsAfter(delay: FiniteDuration) extends Action
+
+  case class GetShiftsForMonth(month: SDateLike) extends Action
+
+  case class GetShiftsForMonthAfter(month: SDateLike, delay: FiniteDuration) extends Action
 
   case class AddShift(shift: StaffAssignment) extends Action
 

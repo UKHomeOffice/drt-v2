@@ -1,6 +1,6 @@
 package services.shifts
 
-import drt.shared.{StaffTimeSlot, StaffTimeSlotsForMonth}
+import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForMonth}
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -146,6 +146,56 @@ class StaffTimeSlotsSpec extends Specification {
         """.stripMargin.trim
 
       val result = replaceShiftMonthWithTimeSlotsForMonth(existingShifts, slots)
+
+      result === expected
+    }
+  }
+
+
+  "When getting all shifts for a specific month" >> {
+    "Given a month for which there is no shifts then the result should be empty" >> {
+      val shifts =
+        """
+          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+        """.stripMargin.trim
+      val month = SDate("2019-01-02T00:00")
+
+      val expected = ""
+
+      val result = getShiftsForMonth(shifts, month)
+
+      result === expected
+    }
+    "Given shifts for the month requested then those shifts should be returned" >> {
+      val shifts =
+        """
+          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+        """.stripMargin.trim
+      val month = SDate("2018-01-02T00:00")
+
+      val expected =
+        """
+          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+        """.stripMargin.trim
+
+      val result = getShiftsForMonth(shifts, month)
+
+      result === expected
+    }
+    "Given shifts for both the month requested and another month then only the requested month should be returned" >> {
+      val shifts =
+        """
+          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+          |shift0120180, T1, 05/02/18, 00:00, 00:14, 10
+        """.stripMargin.trim
+      val month = SDate("2018-01-02T00:00")
+
+      val expected =
+        """
+          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+        """.stripMargin.trim
+
+      val result = getShiftsForMonth(shifts, month)
 
       result === expected
     }

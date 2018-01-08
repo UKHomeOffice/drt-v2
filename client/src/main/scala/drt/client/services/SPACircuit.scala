@@ -57,15 +57,13 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class LoadingState(isLoading: Boolean = false)
 
-case class MonthOfRawShifts(month: SDateLike, shifts: String)
-
 case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                      airportConfig: Pot[AirportConfig] = Empty,
                      shiftsRaw: Pot[String] = Empty,
-                     monthShifts: Pot[MonthOfRawShifts] = Empty,
+                     monthOfShifts: Pot[MonthOfRawShifts] = Empty,
                      fixedPointsRaw: Pot[String] = Empty,
                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
                      viewMode: ViewMode = ViewLive(),
@@ -303,16 +301,6 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SaveMonthTimeSlotsToShifts(staffTimeSlots) =>
-
-      log.info(s"Saving staff time slots as Shifts")
-      AjaxClient[Api].saveStaffTimeSlotsForMonth(staffTimeSlots).call()
-      //        .recoverWith{
-      //        case error =>
-      //          log.error(s"Failed to save staff: $error")
-      //          SPACircuit.dispatch()
-      //      }
-      noChange
     case SetShifts(shifts: String) =>
       val scheduledRequest = Effect(Future(GetShifts())).after(15 seconds)
 
@@ -335,6 +323,36 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]
             Future(GetShiftsAfter(PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
+  }
+}
+
+class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfRawShifts]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case SaveMonthTimeSlotsToShifts(staffTimeSlots) =>
+
+      log.info(s"Saving staff time slots as Shifts $staffTimeSlots")
+      AjaxClient[Api].saveStaffTimeSlotsForMonth(staffTimeSlots).call()
+      //        .recoverWith{
+      //        case error =>
+      //          log.error(s"Failed to save staff: $error")
+      //          SPACircuit.dispatch()
+      //      }
+      noChange
+
+    case GetShiftsForMonth(month) =>
+      log.info(s"Calling getShifts for Month")
+
+      val apiCallEffect = Effect(AjaxClient[Api].getShiftsForMonth(month.millisSinceEpoch).call()
+        .map(s => SetShiftsForMonth(MonthOfRawShifts(month.millisSinceEpoch, s)))
+        .recoverWith {
+          case _ =>
+            log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(GetShiftsAfter(PollDelay.recoveryDelay))
+        })
+      effectOnly(apiCallEffect)
+    case SetShiftsForMonth(monthOfRawShifts) =>
+
+      updated(Ready(monthOfRawShifts))
   }
 }
 
@@ -574,6 +592,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
+      new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),

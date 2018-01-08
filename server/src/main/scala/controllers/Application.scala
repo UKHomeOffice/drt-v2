@@ -36,6 +36,7 @@ import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
@@ -381,14 +382,24 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForMonth): Future[Unit] = {
-        log.info(s"Saving ${timeSlotsForMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForMonth.monthMillis).ddMMyyString}")
+        log.info(s"Saving ${timeSlotsForMonth.timeSlots} timeslots for ${SDate(timeSlotsForMonth.monthMillis).ddMMyyString}")
         val futureShifts = shiftsActor.ask(GetState)(new Timeout(30 seconds))
         futureShifts.map {
           case shifts: String =>
             println(s"Existing Shifts: $shifts")
             val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForMonth)
-            println(s"Existing Shifts: $updatedShifts")
+            println(s"Updated Shifts: $updatedShifts")
             shiftsActor ! updatedShifts
+        }
+      }
+
+      def getShiftsForMonth(month: MillisSinceEpoch): Future[String] = {
+        val shiftsFuture = shiftsActor ? GetState
+
+        shiftsFuture.collect {
+          case shifts: String =>
+            log.info(s"Shifts: Retrieved shifts from actor")
+            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month))
         }
       }
 

@@ -7,6 +7,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, StaffAssignmentParser, StaffAssignmentServiceWithDates}
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForMonth}
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -44,6 +45,7 @@ object HotTable {
           c.toList.foreach(change =>
             (change(0), change(1), change(3)) match {
               case (row: Int, col: Int, value: String) =>
+                log.info(s"Changing a value to a parsed string")
                 val tryValue = Try(Integer.parseInt(value)) match {
                   case Success(v) =>
                     changeCallback(row, col, v)
@@ -52,12 +54,16 @@ object HotTable {
                 }
 
               case (row: Int, col: Int, value: Int) =>
+                log.info(s"Changing a value to an Int")
                 changeCallback(row, col, value)
               case other =>
                 log.error(s"couldn't match $other")
             }
           )
         })
+      if (maybeArray.isEmpty) {
+        log.info(s"Called change function with no values")
+      }
     }
 
     p.settings = js.Dictionary(
@@ -75,10 +81,16 @@ object HotTable {
 
 object TerminalStaffingV2 {
 
+  case class TimeSlotDay(timeSlot: Int, day: Int)
+  {
+    def key = s"$timeSlot-$day"
+  }
+
   case class State(
                     timeSlots: Seq[Seq[Int]],
                     colHeadings: Seq[String],
-                    rowHeadings: Seq[String]
+                    rowHeadings: Seq[String],
+                    changes: Map[String, Int]
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -91,15 +103,25 @@ object TerminalStaffingV2 {
 
   def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], start: SDateLike, terminal: String): StaffTimeSlotsForMonth =
     StaffTimeSlotsForMonth(month.millisSinceEpoch, staff.zipWithIndex.flatMap {
-    case (days, timeslotIndex) =>
-      days.zipWithIndex.map {
-        case (staff, dayIndex) =>
-          StaffTimeSlot(terminal, start.addDays(dayIndex).addMinutes(timeslotIndex * 15).millisSinceEpoch, staff)
-      }
-  }.sortBy(_.start))
+      case (days, timeslotIndex) =>
+        days.zipWithIndex.foreach {
+          case thing =>
+            log.info(s"staff timeslots for month: Got $thing")
+        }
+        days.zipWithIndex.collect {
+          case (staffInSlotForDay, dayIndex) if staffInSlotForDay != 0 =>
+            val slotStart = start.addDays(dayIndex).addMinutes(timeslotIndex * 15)
+            log.info(s"Creating time slot: ${slotStart.toISOString()} with $staffInSlotForDay staff")
+            StaffTimeSlot(terminal, slotStart.millisSinceEpoch, staffInSlotForDay)
+        }
+    }.sortBy(_.start))
 
   def updateTimeSlot(timeSlots: Seq[Seq[Int]], slot: Int, day: Int, value: Int): Seq[Seq[Int]] = {
-    timeSlots.updated(slot, timeSlots(day).updated(day, value))
+    log.info(s"Updating TimeSlot: Slot: $slot / Day: $day with value: $value")
+    log.info(s"Previous value = ${timeSlots(slot)(day)}")
+    val newTimeslots = timeSlots.updated(slot, timeSlots(day).updated(day, value))
+    log.info(s"New value = ${newTimeslots(slot)(day)}")
+    newTimeslots
   }
 
   def slotsInDay(date: SDateLike): Seq[SDateLike] = {
@@ -146,6 +168,9 @@ object TerminalStaffingV2 {
 
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
+  implicit val propsReuse = Reusability.by((_: Props).rawShiftString.hashCode)
+  implicit val stateReuse = Reusability.always[State]
+
   val component = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(props => {
       import drt.client.services.JSDateConversions._
@@ -165,11 +190,11 @@ object TerminalStaffingV2 {
           daysInMonth.map(day => ss.terminalStaffAt("T2", SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
         })
 
-      State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now()).map(_.prettyTime()))
+      State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now()).map(_.prettyTime()), Map())
     })
     .renderPS((scope, props, state) => {
 
-      val viewingDate = dateFromDateStringOption(props.terminalPageTab.date)
+      val viewingDate = firstDayOfMonth(dateFromDateStringOption(props.terminalPageTab.date))
       <.div(
         <.div(^.className := "date-picker",
           <.div(^.className := "row",
@@ -189,7 +214,7 @@ object TerminalStaffingV2 {
           colHeadings = state.colHeadings,
           rowHeadings = state.rowHeadings,
           (row, col, value) => {
-            scope.modState(state => state.copy(timeSlots = updateTimeSlot(state.timeSlots, row, col, value))).runNow()
+            scope.modState(state => state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))).runNow()
           }
         )),
         <.div(^.className := "row",
@@ -197,20 +222,38 @@ object TerminalStaffingV2 {
             <.input.button(^.value := "Save Changes",
               ^.className := "btn btn-primary",
               ^.onClick ==> ((e: ReactEventFromInput) =>
-                Callback(
+                Callback {
+                  log.info(s"Staffing changes: ${scope.state.changes}")
+
                   SPACircuit.dispatch(
                     SaveMonthTimeSlotsToShifts(
                       staffToStaffTimeSlotsForMonth(
                         viewingDate,
-                        state.timeSlots,
-                        dateFromDateStringOption(props.terminalPageTab.date),
+                        state.timeSlots.zipWithIndex.map {
+                          case (timeSlotDays, timeslot) =>
+                            //                            log.info(s"Time Slot: ${timeSlotDays}, Time Slot: ${timeslot}")
+                            timeSlotDays.zipWithIndex.map {
+                              case (staff, day) =>
+
+                                val staffAtSlot = state.changes.getOrElse(TimeSlotDay(timeslot, day).key, staff)
+                                if (staffAtSlot != 0)
+                                  log.info(s"changes:: Day $day, Timeslot $timeslot, Staff $staffAtSlot")
+                                else
+                                  log.info(s"changes:: Zero staff for $day/$timeslot")
+
+                                staffAtSlot
+                            }
+                        },
+                        firstDayOfMonth(dateFromDateStringOption(props.terminalPageTab.date)),
                         props.terminalPageTab.terminal
-                      ))))
-                ))
+                      )))
+                })
+            )
           )
-        )
-      )
+        ))
     })
+    .configure(Reusability.shouldComponentUpdate)
+    .componentDidUpdate(_ => Callback.log("Staff updated"))
     .componentDidMount(_ => Callback.log(s"Staff Mounted"))
     .build
 
