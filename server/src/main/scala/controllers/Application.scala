@@ -573,10 +573,10 @@ class Application @Inject()(implicit val config: Configuration,
     log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")
 
     val zipContent = AclFeed.contentFromFileName(aclFeed.sftp, fileName)
-    val zipFileName = fileName.replace(".zip", ".csv")
+    val csvFileName = fileName.replace(".zip", ".csv")
 
     val result = Result(
-      ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$zipFileName'")),
+      ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$csvFileName'")),
       HttpEntity.Strict(ByteString(zipContent), Option("application/csv"))
     )
 
