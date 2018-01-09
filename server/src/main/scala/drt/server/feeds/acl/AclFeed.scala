@@ -95,8 +95,14 @@ object AclFeed {
     val zis: ZipInputStream = new ZipInputStream(new ByteArrayInputStream(outputStream.toByteArray))
 
     val csvContent: String = unzipStream(zis).toList.head
-    csvContent
+
+    dropFileNameFromContent(csvContent)
   }
+
+  def dropFileNameFromContent(content: String) = content
+    .split("\n")
+    .drop(1)
+    .mkString("\n")
 
   def unzipStream(zipInputStream: ZipInputStream): Seq[String] = {
     try {
@@ -131,6 +137,7 @@ object AclFeed {
       stringBuffer ++= buffer.take(len)
       len = zis.read(buffer)
     }
+
     new String(stringBuffer.toArray, UTF_8)
   }
 
@@ -195,4 +202,5 @@ object AclFeed {
     val ArrDep: Int = allFields("ArrDep")
     val FlightType: Int = allFields("ST")
   }
+
 }
