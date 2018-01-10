@@ -330,14 +330,14 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfRawShifts]]) exten
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SaveMonthTimeSlotsToShifts(staffTimeSlots) =>
 
-      log.info(s"Saving staff time slots as Shifts $staffTimeSlots")
-      AjaxClient[Api].saveStaffTimeSlotsForMonth(staffTimeSlots).call()
-      //        .recoverWith{
-      //        case error =>
-      //          log.error(s"Failed to save staff: $error")
-      //          SPACircuit.dispatch()
-      //      }
-      noChange
+      log.info(s"Saving staff time slots as Shifts")
+      val action: Future[Action] = AjaxClient[Api].saveStaffTimeSlotsForMonth(staffTimeSlots).call().map(_ => NoAction)
+        .recoverWith {
+          case error =>
+            log.error(s"Failed to save staff month timeslots: $error, retrying after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(SaveMonthTimeSlotsToShifts(staffTimeSlots), PollDelay.recoveryDelay))
+        }
+      effectOnly(Effect(action))
 
     case GetShiftsForMonth(month) =>
       log.info(s"Calling getShifts for Month")
@@ -347,7 +347,7 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfRawShifts]]) exten
         .recoverWith {
           case _ =>
             log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(GetShiftsAfter(PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetShiftsForMonth(month), PollDelay.recoveryDelay))
         })
       updated(Pending(), apiCallEffect)
     case SetShiftsForMonth(monthOfRawShifts) =>
@@ -575,6 +575,13 @@ class NoopHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandle
   }
 }
 
+class RetryHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case RetryActionAfter(actionToRetry, delay) =>
+      effectOnly(Effect(Future(actionToRetry)).after(delay))
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -598,6 +605,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
+      new RetryHandler(zoomRW(identity)((m, v) => m)),
       new NoopHandler(zoomRW(identity)((m, v) => m))
     )
 
