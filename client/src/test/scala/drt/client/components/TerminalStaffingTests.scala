@@ -8,7 +8,7 @@ import utest.{TestSuite, _}
 import TerminalStaffing.todaysMovements
 import scala.collection.immutable._
 
-object nvm extends TestSuite {
+object TerminalStaffingTests extends TestSuite {
 
   def tests = TestSuite {
     "Staff Movements" - {

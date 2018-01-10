@@ -174,10 +174,10 @@ object StaffingComponentTests extends TestSuite {
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
-            StaffTimeSlot("T1", start.millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1)
+            StaffTimeSlot("T1", start.millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000)
           ))
 
         assert(result == expected)
@@ -198,14 +198,14 @@ object StaffingComponentTests extends TestSuite {
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
-            StaffTimeSlot("T1", start.millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1),
-            StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(15).millisSinceEpoch, 2),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2)
+            StaffTimeSlot("T1", start.millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2, 15 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(15).millisSinceEpoch, 2, 15 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2, 15 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2, 15 * 60000)
           ))
 
         assert(result == expected)

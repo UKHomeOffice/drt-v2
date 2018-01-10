@@ -382,7 +382,7 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
-        log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
+        log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
         val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
         futureShifts.map {
           case shifts: String =>

@@ -45,7 +45,6 @@ object HotTable {
           c.toList.foreach(change =>
             (change(0), change(1), change(3)) match {
               case (row: Int, col: Int, value: String) =>
-                log.info(s"Changing a value to a parsed string")
                 val tryValue = Try(Integer.parseInt(value)) match {
                   case Success(v) =>
                     changeCallback(row, col, v)
@@ -54,7 +53,6 @@ object HotTable {
                 }
 
               case (row: Int, col: Int, value: Int) =>
-                log.info(s"Changing a value to an Int")
                 changeCallback(row, col, value)
               case other =>
                 log.error(s"couldn't match $other")
@@ -108,7 +106,6 @@ object TerminalStaffingV2 {
         days.zipWithIndex.collect {
           case (staffInSlotForDay, dayIndex) if staffInSlotForDay != 0 =>
             val slotStart = month.addDays(dayIndex).addMinutes(timeSlotIndex * slotMinutes)
-            log.info(s"Creating time slot: ${slotStart.toISOString()} with $staffInSlotForDay staff")
             StaffTimeSlot(terminal, slotStart.millisSinceEpoch, staffInSlotForDay, slotMinutes * 60000)
         }
 
