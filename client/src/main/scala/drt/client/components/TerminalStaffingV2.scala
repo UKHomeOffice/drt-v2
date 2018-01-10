@@ -100,8 +100,12 @@ object TerminalStaffingV2 {
     def timeSlotMinutes = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
   }
 
-  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth = {
-    StaffTimeSlotsForTerminalMonth(month.millisSinceEpoch, terminal, staff.zipWithIndex.flatMap {
+  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth =
+    StaffTimeSlotsForTerminalMonth(month.millisSinceEpoch, terminal, staffTimeSlotSeqToStaffTimeSlots(month, staff, terminal, slotMinutes))
+
+
+  def staffTimeSlotSeqToStaffTimeSlots(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int) =
+    staff.zipWithIndex.flatMap {
       case (days, timeSlotIndex) =>
         days.zipWithIndex.collect {
           case (staffInSlotForDay, dayIndex) if staffInSlotForDay != 0 =>
@@ -109,13 +113,11 @@ object TerminalStaffingV2 {
             StaffTimeSlot(terminal, slotStart.millisSinceEpoch, staffInSlotForDay, slotMinutes * 60000)
         }
 
-    }.sortBy(_.start))
-  }
+    }.sortBy(_.start)
 
-  def updateTimeSlot(timeSlots: Seq[Seq[Int]], slot: Int, day: Int, value: Int): Seq[Seq[Int]] = {
 
+  def updateTimeSlot(timeSlots: Seq[Seq[Int]], slot: Int, day: Int, value: Int): Seq[Seq[Int]] =
     timeSlots.updated(slot, timeSlots(day).updated(day, value))
-  }
 
   def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
     val minutesInDay = 24 * 60
@@ -152,15 +154,12 @@ object TerminalStaffingV2 {
     List.tabulate(days)(i => startDay.addDays(i))
   }
 
-  def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = {
-    (0 to 5).map(i => firstDayOfMonth(date).addMonths(i))
-  }
+  def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5).map(i => firstDayOfMonth(date).addMonths(i))
 
-  def dateFromDateStringOption(dateStringOption: Option[String]) = {
+  def dateFromDateStringOption(dateStringOption: Option[String]) =
     dateStringOption.map(d => SDate(d)).getOrElse(SDate.now())
-  }
 
-  def applyChanges(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[String, Int]): Seq[Seq[Int]] = {
+  def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[String, Int]): Seq[Seq[Int]] =
     staffTimeSlotDays.zipWithIndex.map {
       case (days, timslotIndex) =>
         days.zipWithIndex.map {
@@ -171,7 +170,6 @@ object TerminalStaffingV2 {
             }
         }
     }
-  }
 
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
@@ -241,7 +239,7 @@ object TerminalStaffingV2 {
               ^.onClick ==> ((e: ReactEventFromInput) =>
                 Callback {
 
-                  val updatedTimeSlots = applyChanges(state.timeSlots, scope.state.changes)
+                  val updatedTimeSlots = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
 
                   SPACircuit.dispatch(
                     SaveMonthTimeSlotsToShifts(

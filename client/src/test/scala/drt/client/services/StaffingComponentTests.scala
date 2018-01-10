@@ -13,7 +13,7 @@ object StaffingComponentTests extends TestSuite {
 
   def tests = TestSuite {
     'StaffingService - {
-      "When asking for the end date of the monthMillis " - {
+      "When asking for the end date of the month " - {
         "Given 31-12-2017 then I should get 31-12-2017" - {
           val today = SDate(2017, 12, 31)
 
@@ -47,7 +47,7 @@ object StaffingComponentTests extends TestSuite {
           assert(result.toISOString() == expected.toISOString())
         }
       }
-      "When asking for the first date of the monthMillis " - {
+      "When asking for the first date of the month " - {
         "Given 31-12-2017 then I should get 01-12-2017" - {
           val today = SDate(2017, 12, 31)
 
@@ -121,7 +121,7 @@ object StaffingComponentTests extends TestSuite {
         }
       }
     }
-    "When asking for 6 months from first day of monthMillis provided" - {
+    "When asking for 6 months from first day of month provided" - {
       "Given 2017-06-22 then I should get back 2017-06-01, 2017-07-01, 2017-08-01, 2017-09-01," +
         " 2017-10-01, 2017-11-01," - {
         val startDate = SDate("2017-06-22")
@@ -247,7 +247,7 @@ object StaffingComponentTests extends TestSuite {
         val staffTimeSlotDays = Seq(Seq(1))
         val changes = Map[String, Int]()
 
-        val result = applyChanges(staffTimeSlotDays, changes)
+        val result = applyRecordedChangesToShiftState(staffTimeSlotDays, changes)
         val expected = Seq(Seq(1))
 
         assert(result == expected)
@@ -258,7 +258,7 @@ object StaffingComponentTests extends TestSuite {
         val staffTimeSlotDays = Seq(Seq(1))
         val changes = Map(TimeSlotDay(0, 0).key -> 2)
 
-        val result = applyChanges(staffTimeSlotDays, changes)
+        val result = applyRecordedChangesToShiftState(staffTimeSlotDays, changes)
         val expected = Seq(Seq(2))
 
         assert(result == expected)
@@ -271,7 +271,7 @@ object StaffingComponentTests extends TestSuite {
           TimeSlotDay(1, 0).key -> 2
         )
 
-        val result = applyChanges(staffTimeSlotDays, changes)
+        val result = applyRecordedChangesToShiftState(staffTimeSlotDays, changes)
         val expected = Seq(Seq(2), Seq(2), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1))
 
         assert(result == expected)
@@ -297,7 +297,7 @@ object StaffingComponentTests extends TestSuite {
           TimeSlotDay(1, 1).key -> 2
         )
 
-        val result = applyChanges(staffTimeSlotDays, changes)
+        val result = applyRecordedChangesToShiftState(staffTimeSlotDays, changes)
         val expected = Seq(
           Seq(2, 2),
           Seq(2, 2),

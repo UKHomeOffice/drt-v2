@@ -90,7 +90,7 @@ class StaffTimeSlotsSpec extends Specification {
     }
   }
 
-  "When replacing a monthMillis of shifts with new timeslots" >> {
+  "When replacing a month of shifts with new timeslots" >> {
     "Given no existing shifts then only the new timeslots should be present in the new shifts" >> {
       val existingShifts = ""
       val startTime = SDate("2018-01-02T00:00")
@@ -110,7 +110,7 @@ class StaffTimeSlotsSpec extends Specification {
       result === expected
     }
 
-    "Given a shift for a previous monthMillis the new timeslots should be present in the new shifts as well as the old" >> {
+    "Given a shift for a previous month the new timeslots should be present in the new shifts as well as the old" >> {
       val existingShifts =
         """
           |shift1220170, T1, 02/12/17, 00:00, 00:14, 1
@@ -133,7 +133,7 @@ class StaffTimeSlotsSpec extends Specification {
       result === expected
     }
 
-    "Given a shift for the same monthMillis as the new timeslots, it should be replaced by the new timeslots" >> {
+    "Given a shift for the same month as the new timeslots, it should be replaced by the new timeslots" >> {
       val existingShifts =
         """
           |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
@@ -156,7 +156,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       result === expected
     }
-    "Given a shift for the same monthMillis as the new timeslots but for a different terminal, it should not be replaced" >> {
+    "Given a shift for the same month as the new timeslots but for a different terminal, it should not be replaced" >> {
       val existingShifts =
         """
           |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
@@ -234,7 +234,7 @@ class StaffTimeSlotsSpec extends Specification {
     }
   }
 
-  "When checking if a shift string falls within a particular monthMillis" >> {
+  "When checking if a shift string falls within a particular month" >> {
     "Given 01/01/2018 and SDate(2018, 1, 1) then the result should be true" >> {
       val dateString = "01/01/2018"
       val month = SDate(2018, 1, 1, 0, 0)

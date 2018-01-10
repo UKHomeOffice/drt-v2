@@ -5,7 +5,7 @@ import utest.{TestSuite, _}
 object ServerShiftDateTests extends TestSuite {
   def tests = TestSuite {
     'DateStuff - {
-      "Day of monthMillis starts from 1" - {
+      "Day of month starts from 1" - {
         val baseDate = SDate(2016, 2, 1, 10, 23)
         assert(baseDate.getMonth() == 2)
       }
