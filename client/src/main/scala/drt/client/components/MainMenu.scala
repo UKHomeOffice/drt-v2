@@ -30,7 +30,7 @@ object MainMenu {
     val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
-          case tptl: TerminalPageTabLoc =>
+          case tptl: TerminalPageTabLoc if tptl.mode != "staffing" =>
             TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date)
           case _ => TerminalPageTabLoc(tn)
         }

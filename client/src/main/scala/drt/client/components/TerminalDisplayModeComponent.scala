@@ -58,19 +58,21 @@ object TerminalDisplayModeComponent {
       val planningContentClass = if (state.activeTab == "planning") "fade in active" else "fade out"
       val staffingContentClass = if (state.activeTab == "staffing") "fade in active" else "fade out"
 
+      val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
+
       <.div(
         <.ul(^.className := "nav nav-tabs",
           <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "subMode", "Current"), ^.onClick --> {
-            props.router.set(props.terminalPageTab.copy(mode = "current", date = None))
+            props.router.set(props.terminalPageTab.copy(mode = "current", subMode = subMode, date = None))
           }),
           <.li(^.className := snapshotDataClass,
             <.a(VdomAttr("data-toggle") := "subMode", "Snapshot"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(mode = "snapshot", date = None))
+              props.router.set(props.terminalPageTab.copy(mode = "snapshot", subMode = subMode, date = None))
             }
           ),
           <.li(^.className := planningClass,
             <.a(VdomAttr("data-toggle") := "subMode", "Planning"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(mode = "planning", date = None))
+              props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
             }
           ),
           <.li(^.className := staffingClass,
