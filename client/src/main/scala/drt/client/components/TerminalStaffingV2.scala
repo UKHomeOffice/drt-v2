@@ -85,7 +85,6 @@ object TerminalStaffingV2 {
     def key = s"$timeSlot-$day"
   }
 
-
   case class State(
                     timeSlots: Seq[Seq[Int]],
                     colHeadings: Seq[String],
@@ -99,16 +98,18 @@ object TerminalStaffingV2 {
                     rawShiftString: String,
                     terminalPageTab: TerminalPageTabLoc,
                     router: RouterCtl[Loc]
-                  )
+                  ) {
+    def timeSlotMinutes = Try(terminalPageTab.tab.toInt).toOption.getOrElse(60)
+  }
 
-  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String): StaffTimeSlotsForTerminalMonth = {
+  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth = {
     StaffTimeSlotsForTerminalMonth(month.millisSinceEpoch, terminal, staff.zipWithIndex.flatMap {
       case (days, timeSlotIndex) =>
         days.zipWithIndex.collect {
           case (staffInSlotForDay, dayIndex) if staffInSlotForDay != 0 =>
-            val slotStart = month.addDays(dayIndex).addMinutes(timeSlotIndex * 15)
+            val slotStart = month.addDays(dayIndex).addMinutes(timeSlotIndex * slotMinutes)
             log.info(s"Creating time slot: ${slotStart.toISOString()} with $staffInSlotForDay staff")
-            StaffTimeSlot(terminal, slotStart.millisSinceEpoch, staffInSlotForDay)
+            StaffTimeSlot(terminal, slotStart.millisSinceEpoch, staffInSlotForDay, slotMinutes * 60000)
         }
 
     }.sortBy(_.start))
@@ -119,10 +120,11 @@ object TerminalStaffingV2 {
     timeSlots.updated(slot, timeSlots(day).updated(day, value))
   }
 
-  def slotsInDay(date: SDateLike): Seq[SDateLike] = {
-    val startOfDay = SDate(date.getFullYear(), date.getMonth(), date.getDate())
-    val slots = 24 * 4
-    List.tabulate(slots)(i => startOfDay.addMinutes(i * 15))
+  def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
+    val minutesInDay = 24 * 60
+    val startOfDay = SDate(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0)
+    val slots = minutesInDay / slotDuration
+    List.tabulate(slots)(i => startOfDay.addMinutes(i * slotDuration))
   }
 
   def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ((ReactEventFromInput) => Callback)) = {
@@ -194,12 +196,12 @@ object TerminalStaffingV2 {
 
       def daysInMonth = consecutiveDaysInMonth(firstDay, lastDayOfMonth(firstDay))
 
-      val timeSlots = slotsInDay(viewingDate)
+      val timeSlots = slotsInDay(viewingDate, props.timeSlotMinutes)
         .map(slot => {
           daysInMonth.map(day => ss.terminalStaffAt(props.terminalPageTab.terminal, SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
         })
 
-      State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now()).map(_.prettyTime()), Map())
+      State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime()), Map())
     })
     .renderPS((scope, props, state) => {
 
@@ -215,7 +217,16 @@ object TerminalStaffingV2 {
                 defaultValue = viewingDate.toISOString,
                 callback = (e: ReactEventFromInput) =>
                   props.router.set(props.terminalPageTab.copy(date = Option(SDate(e.target.value).toISODateOnly)))
-              ))).toTagMod
+              )),
+              <.div(^.className := "col-sm-1 no-gutters spacer", <.label("Time Resolution", ^.className := "text center")),
+              <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(
+                values = Seq("15", "60"),
+                names = Seq("Quarter Hourly", "Hourly"),
+                defaultValue = s"${props.timeSlotMinutes}",
+                callback = (e: ReactEventFromInput) =>
+                  props.router.set(props.terminalPageTab.copy(tab = e.target.value))
+              ))
+            ).toTagMod
           )
         ),
         HotTable.component(HotTable.props(
@@ -240,7 +251,8 @@ object TerminalStaffingV2 {
                       staffToStaffTimeSlotsForMonth(
                         viewingDate,
                         updatedTimeSlots,
-                        props.terminalPageTab.terminal
+                        props.terminalPageTab.terminal,
+                        props.timeSlotMinutes
                       )))
                 })
             )

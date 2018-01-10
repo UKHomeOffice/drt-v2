@@ -2,7 +2,10 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
+
 import utest._
+
+import scala.collection.immutable.Seq
 
 object StaffingComponentTests extends TestSuite {
 
@@ -155,7 +158,7 @@ object StaffingComponentTests extends TestSuite {
       }
     }
     "When converting a table of staff per time slot day to shifts" - {
-      "Given one day with 4 time slots then I should get back a list of sfaff timeslots" - {
+      "Given one day with 4 time slots with 15 minute time slots then I should get back a list of sfaff timeslots" - {
         val staff = List(
           List(1),
           List(1),
@@ -167,7 +170,7 @@ object StaffingComponentTests extends TestSuite {
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal)
+        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
@@ -179,7 +182,7 @@ object StaffingComponentTests extends TestSuite {
 
         assert(result == expected)
       }
-      "Given two days with 4 time slots then I should get back a list of sfaff timeslots" - {
+      "Given two days with 4 time slots with 15 minute time slots then I should get back a list of sfaff timeslots" - {
         val staff = List(
           List(1, 2),
           List(1, 2),
@@ -191,7 +194,7 @@ object StaffingComponentTests extends TestSuite {
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal)
+        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
@@ -204,6 +207,35 @@ object StaffingComponentTests extends TestSuite {
             StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2),
             StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2)
           ))
+
+        assert(result == expected)
+      }
+      "Given two days with 4 time slots with 60 minute time slots then I should get back a list of sfaff timeslots" - {
+        val staff = List(
+          List(1, 2),
+          List(1, 2),
+          List(1, 2),
+          List(1, 2)
+        )
+
+        val start = SDate("2017-12-24")
+
+        val terminal = "T1"
+
+        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal, 60)
+
+        val expected = StaffTimeSlotsForTerminalMonth(
+          start.millisSinceEpoch, terminal, List(
+            StaffTimeSlot("T1", start.millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(60).millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(120).millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot("T1", start.addMinutes(180).millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2, 60 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(60).millisSinceEpoch, 2, 60 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(120).millisSinceEpoch, 2, 60 * 60000),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(180).millisSinceEpoch, 2, 60 * 60000)
+          )
+        )
 
         assert(result == expected)
       }
@@ -247,16 +279,16 @@ object StaffingComponentTests extends TestSuite {
 
       "Given 2 daya with 10 time slot with 1 staff member and 4 changes with 2 staff then changes should be reflected" - {
         val staffTimeSlotDays = Seq(
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1)
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1)
         )
         val changes = Map(
           TimeSlotDay(0, 0).key -> 2,
@@ -267,17 +299,42 @@ object StaffingComponentTests extends TestSuite {
 
         val result = applyChanges(staffTimeSlotDays, changes)
         val expected = Seq(
-          Seq(2,2),
-          Seq(2,2),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1),
-          Seq(1,1)
+          Seq(2, 2),
+          Seq(2, 2),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1),
+          Seq(1, 1)
         )
+
+        assert(result == expected)
+      }
+    }
+
+    "When producing staff timeslots for a day" - {
+      "Given 2018-01-10 and a time slot length of 15 minutes " +
+        "then I should get back 96 fifteen minute time slots starting at midnight" - {
+        val startDate = SDate("2018-01-10")
+        val slotDuration = 15
+
+        val result = slotsInDay(startDate, slotDuration)
+
+        val expected = List.tabulate(96)(i => startDate.addMinutes(i * 15))
+
+        assert(result == expected)
+      }
+      "Given 2018-01-10 and a time slot length of 60 minutes " +
+        "then I should get back 24 sixty minute time slots starting at midnight" - {
+        val startDate = SDate("2018-01-10")
+        val slotDuration = 60
+
+        val result = slotsInDay(startDate, slotDuration)
+
+        val expected = List.tabulate(24)(i => startDate.addMinutes(i * 60))
 
         assert(result == expected)
       }

@@ -7,7 +7,6 @@ import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared.{AirportConfig, AirportInfo, MonthOfRawShifts, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 
@@ -76,7 +75,7 @@ object TerminalDisplayModeComponent {
           ),
           <.li(^.className := staffingClass,
             <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(mode = "staffing", date = None))
+              props.router.set(props.terminalPageTab.copy(mode = "staffing", tab = "60", date = None))
             }
           )
         ),

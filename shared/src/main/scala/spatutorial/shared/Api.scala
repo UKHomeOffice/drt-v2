@@ -64,7 +64,7 @@ case class StaffTimeSlot(
                           terminal: String,
                           start: MillisSinceEpoch,
                           staff: Int,
-                          durationMillis: Int = 15 * 60000
+                          durationMillis: Int
                         )
 
 case class StaffTimeSlotsForTerminalMonth(

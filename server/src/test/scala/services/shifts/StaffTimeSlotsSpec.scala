@@ -14,7 +14,7 @@ class StaffTimeSlotsSpec extends Specification {
       val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
         "T1",
-        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
+        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
       val expected =
@@ -33,8 +33,8 @@ class StaffTimeSlotsSpec extends Specification {
         startTime.millisSinceEpoch,
         "T1",
         Seq(
-          StaffTimeSlot("T1", startTime.millisSinceEpoch, 1),
-          StaffTimeSlot("T1", startTime.addMinutes(15).millisSinceEpoch, 2)
+          StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 15 * 60000),
+          StaffTimeSlot("T1", startTime.addMinutes(15).millisSinceEpoch, 2, 15 * 60000)
         )
       )
 
@@ -97,7 +97,7 @@ class StaffTimeSlotsSpec extends Specification {
       val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
         "T1",
-        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
+        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
       val expected =
@@ -119,7 +119,7 @@ class StaffTimeSlotsSpec extends Specification {
       val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
         "T1",
-        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
+        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
       val expected =
@@ -144,7 +144,7 @@ class StaffTimeSlotsSpec extends Specification {
       val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
         "T1",
-        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
+        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
       val expected =
@@ -168,7 +168,7 @@ class StaffTimeSlotsSpec extends Specification {
       val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
         "T1",
-        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
+        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
       val expected =
