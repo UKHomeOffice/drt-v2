@@ -412,14 +412,39 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
   }
 }
 
-//class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[String]]) {
-//  protected def handle: PartialFunction[Any, ActionResult[M]] = {
-//    case GetApplicationVersion =>
-//      val apiCallEffect = Effect(AjaxClient[Api].getApplicationVersion().call().map(res => SetFixedPoints(res, None)))
-//
-//      updated(apiCallEffect)
-//  }
-//}
+class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetApplicationVersion =>
+      log.info(s"Calling getApplicationVersion")
+
+      val nextCallEffect = Effect(Future(GetApplicationVersion)).after(PollDelay.recoveryDelay)
+
+      val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersion => {
+        value match {
+          case Ready(clientVersion) if serverVersion != clientVersion=>
+            ShowVersionWarning(clientVersion, serverVersion)
+          case Ready(_) =>
+            log.info(s"server application version unchanged ($serverVersion")
+            NoAction
+          case Empty =>
+            SetApplicationVersion(serverVersion)
+          case u =>
+            log.info(s"Got a $u")
+            NoAction
+        }
+      }))
+
+      effectOnly(nextCallEffect + effect)
+
+    case SetApplicationVersion(newVersion) =>
+      log.info(s"Setting application version to $newVersion")
+      updated(Ready(newVersion))
+
+    case ShowVersionWarning(client, server) =>
+      log.info(s"version change! client: $client -> server: $server")
+      noChange
+  }
+}
 
 class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -570,7 +595,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
-//      new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v)))
+      new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
