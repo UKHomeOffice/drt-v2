@@ -340,9 +340,10 @@ object StickyTableHeader {
     dom.document.addEventListener("scroll", (e: Event) => {
       val top = documentScrollTop
       val bottom = documentScrollHeight
-      val mainWidth = dom.document.querySelector("#sticky-body").getBoundingClientRect().width
-
-      handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
+      Option(dom.document.querySelector("#sticky-body")).foreach(stickyBody => {
+        val mainWidth = stickyBody.getBoundingClientRect().width
+        handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
+      })
     })
 
     Callback(setInitialHeights(stickies))

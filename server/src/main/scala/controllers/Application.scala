@@ -572,6 +572,22 @@ class Application @Inject()(implicit val config: Configuration,
     flightsCSVFromCrunchState(terminalName, potMilliDate, crunchStateFuture, startHour, endHour)
   }
 
+  def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
+    val fileName = AclFeed.latestFileForPort(aclFeed.sftp, portCode.toUpperCase)
+
+    log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")
+
+    val zipContent = AclFeed.contentFromFileName(aclFeed.sftp, fileName)
+    val csvFileName = fileName.replace(".zip", ".csv")
+
+    val result = Result(
+      ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$csvFileName'")),
+      HttpEntity.Strict(ByteString(zipContent), Option("application/csv"))
+    )
+
+    Future(result)
+  }
+
   def flightsCSVFromCrunchState(terminalName: TerminalName, pit: MilliDate, crunchStateFuture: Future[Option[CrunchState]], startHour: Int, endHour: Int): Future[Result] = {
     val fileName = f"$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
       f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
