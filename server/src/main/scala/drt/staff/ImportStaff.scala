@@ -1,6 +1,6 @@
 package drt.staff
 
-import drt.shared.StaffTimeSlotsForMonth
+import drt.shared.StaffTimeSlotsForTerminalMonth
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.libs.json.{JsValue, Json}
 import services.SDate

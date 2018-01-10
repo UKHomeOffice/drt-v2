@@ -67,8 +67,9 @@ case class StaffTimeSlot(
                           durationMillis: Int = 15 * 60000
                         )
 
-case class StaffTimeSlotsForMonth(
+case class StaffTimeSlotsForTerminalMonth(
                                    monthMillis: MillisSinceEpoch,
+                                   terminal: TerminalName,
                                    timeSlots: Seq[StaffTimeSlot]
                                  )
 
@@ -425,7 +426,7 @@ trait Api {
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForMonth): Future[Unit]
+  def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
 
   def getShiftsForMonth(month: MillisSinceEpoch): Future[String]
 

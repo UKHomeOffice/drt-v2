@@ -1,7 +1,7 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForMonth}
+import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
 import utest._
 
 object StaffingComponentTests extends TestSuite {
@@ -154,7 +154,7 @@ object StaffingComponentTests extends TestSuite {
         assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
       }
     }
-    "When converting a table of staff per timeslot day to shifts" - {
+    "When converting a table of staff per time slot day to shifts" - {
       "Given one day with 4 time slots then I should get back a list of sfaff timeslots" - {
         val staff = List(
           List(1),
@@ -167,43 +167,117 @@ object StaffingComponentTests extends TestSuite {
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, start, terminal)
+        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal)
 
-        val expected = StaffTimeSlotsForMonth(
-          start.millisSinceEpoch, List(
-          StaffTimeSlot("T1", start.millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1)
-        ))
+        val expected = StaffTimeSlotsForTerminalMonth(
+          start.millisSinceEpoch, terminal, List(
+            StaffTimeSlot("T1", start.millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1)
+          ))
 
         assert(result == expected)
       }
       "Given two days with 4 time slots then I should get back a list of sfaff timeslots" - {
         val staff = List(
-          List(1,2),
-          List(1,2),
-          List(1,2),
-          List(1,2)
+          List(1, 2),
+          List(1, 2),
+          List(1, 2),
+          List(1, 2)
         )
 
         val start = SDate("2017-12-24")
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, start, terminal)
+        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal)
 
-        val expected = StaffTimeSlotsForMonth(
-          start.millisSinceEpoch, List(
-          StaffTimeSlot("T1", start.millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1),
-          StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2),
-          StaffTimeSlot("T1", start.addDays(1).addMinutes(15).millisSinceEpoch, 2),
-          StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2),
-          StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2)
-        ))
+        val expected = StaffTimeSlotsForTerminalMonth(
+          start.millisSinceEpoch, terminal, List(
+            StaffTimeSlot("T1", start.millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1),
+            StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(15).millisSinceEpoch, 2),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2),
+            StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2)
+          ))
+
+        assert(result == expected)
+      }
+    }
+
+    "When applying changes to a list of staff per timeslot" - {
+      import scala.collection.immutable.Seq
+      "Given 1 day with 1 time slot with 1 staff member and no changes then the time slot should be unchanged" - {
+        val staffTimeSlotDays = Seq(Seq(1))
+        val changes = Map[String, Int]()
+
+        val result = applyChanges(staffTimeSlotDays, changes)
+        val expected = Seq(Seq(1))
+
+        assert(result == expected)
+      }
+
+
+      "Given 1 day with 1 time slot with 1 staff member and 1 change with 2 staff then the timeslot should contain 2 staff" - {
+        val staffTimeSlotDays = Seq(Seq(1))
+        val changes = Map(TimeSlotDay(0, 0).key -> 2)
+
+        val result = applyChanges(staffTimeSlotDays, changes)
+        val expected = Seq(Seq(2))
+
+        assert(result == expected)
+      }
+
+      "Given 1 day with 10 time slot with 1 staff member and 2 changes with 2 staff then changes should be reflected" - {
+        val staffTimeSlotDays = Seq(Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1))
+        val changes = Map(
+          TimeSlotDay(0, 0).key -> 2,
+          TimeSlotDay(1, 0).key -> 2
+        )
+
+        val result = applyChanges(staffTimeSlotDays, changes)
+        val expected = Seq(Seq(2), Seq(2), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1), Seq(1))
+
+        assert(result == expected)
+      }
+
+      "Given 2 daya with 10 time slot with 1 staff member and 4 changes with 2 staff then changes should be reflected" - {
+        val staffTimeSlotDays = Seq(
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1)
+        )
+        val changes = Map(
+          TimeSlotDay(0, 0).key -> 2,
+          TimeSlotDay(1, 0).key -> 2,
+          TimeSlotDay(0, 1).key -> 2,
+          TimeSlotDay(1, 1).key -> 2
+        )
+
+        val result = applyChanges(staffTimeSlotDays, changes)
+        val expected = Seq(
+          Seq(2,2),
+          Seq(2,2),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1),
+          Seq(1,1)
+        )
 
         assert(result == expected)
       }

@@ -1,13 +1,13 @@
 package services.shifts
 
-import drt.shared.{SDateLike, StaffTimeSlotsForMonth}
+import drt.shared.{SDateLike, StaffTimeSlotsForTerminalMonth}
 import services.SDate
 
 import scala.util.{Success, Try}
 
 object StaffTimeSlots {
 
-  def slotsToShifts(slots: StaffTimeSlotsForMonth) = {
+  def slotsToShifts(slots: StaffTimeSlotsForTerminalMonth) = {
     val monthSDate = SDate(slots.monthMillis)
     slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
       case (slot, index) =>
@@ -38,12 +38,11 @@ object StaffTimeSlots {
     }
   }
 
-  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForMonth) = {
+  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForTerminalMonth) = {
     val shiftsExcludingNewMonth = shiftsToLines(existingShifts)
       .filter(line => {
         shiftLineToFieldList(line) match {
-          case List(_, _, d, _, _, _) =>
-            !isDateInMonth(d, SDate(slots.monthMillis))
+          case List(_, t, d, _, _, _) if !isDateInMonth(d, SDate(slots.monthMillis)) || t != slots.terminal => true
           case _ => false
         }
       })

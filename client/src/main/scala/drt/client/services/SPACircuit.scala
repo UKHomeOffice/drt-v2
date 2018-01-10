@@ -349,9 +349,8 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfRawShifts]]) exten
             log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(GetShiftsAfter(PollDelay.recoveryDelay))
         })
-      effectOnly(apiCallEffect)
+      updated(Pending(), apiCallEffect)
     case SetShiftsForMonth(monthOfRawShifts) =>
-
       updated(Ready(monthOfRawShifts))
   }
 }

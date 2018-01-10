@@ -1,6 +1,6 @@
 package services.shifts
 
-import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForMonth}
+import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -8,11 +8,12 @@ class StaffTimeSlotsSpec extends Specification {
 
   import StaffTimeSlots._
 
-  "When converting StaffTimeSlotsForMonth to shifts" >> {
-    "Given a StaffTimeSlotsForMonth with one 15 minute StaffTimeSlot then I should get one matching shift" >> {
+  "When converting StaffTimeSlotsForTerminalMonth to shifts" >> {
+    "Given a StaffTimeSlotsForTerminalMonth with one 15 minute StaffTimeSlot then I should get one matching shift" >> {
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
       )
 
@@ -26,10 +27,11 @@ class StaffTimeSlotsSpec extends Specification {
       result === expected
     }
 
-    "Given a StaffTimeSlotsForMonth with two 15 minute StaffTimeSlotsForMonth then I should get two matching shifts" >> {
+    "Given a StaffTimeSlotsForTerminalMonth with two 15 minute StaffTimeSlotsForTerminalMonth then I should get two matching shifts" >> {
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(
           StaffTimeSlot("T1", startTime.millisSinceEpoch, 1),
           StaffTimeSlot("T1", startTime.addMinutes(15).millisSinceEpoch, 2)
@@ -47,10 +49,11 @@ class StaffTimeSlotsSpec extends Specification {
       result === expected
     }
 
-    "Given a StaffTimeSlotsForMonth with two 1 hour StaffTimeSlotsForMonth then I should get two matching shifts" >> {
+    "Given a StaffTimeSlotsForTerminalMonth with two 1 hour StaffTimeSlotsForTerminalMonth then I should get two matching shifts" >> {
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(
           StaffTimeSlot("T1", startTime.millisSinceEpoch, 1, 60 * 60000),
           StaffTimeSlot("T1", startTime.addMinutes(60).millisSinceEpoch, 2, 60 * 60000)
@@ -68,10 +71,11 @@ class StaffTimeSlotsSpec extends Specification {
       result === expected
     }
 
-    "Given a StaffTimeSlotsForMonth containing entries with zero staff then those entries should be ignored" >> {
+    "Given a StaffTimeSlotsForTerminalMonth containing entries with zero staff then those entries should be ignored" >> {
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(
           StaffTimeSlot("T1", startTime.millisSinceEpoch, 0, 60 * 60000),
           StaffTimeSlot("T1", startTime.addMinutes(60).millisSinceEpoch, 0, 60 * 60000)
@@ -90,8 +94,9 @@ class StaffTimeSlotsSpec extends Specification {
     "Given no existing shifts then only the new timeslots should be present in the new shifts" >> {
       val existingShifts = ""
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
       )
 
@@ -111,8 +116,9 @@ class StaffTimeSlotsSpec extends Specification {
           |shift1220170, T1, 02/12/17, 00:00, 00:14, 1
         """.stripMargin.trim
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
       )
 
@@ -135,8 +141,9 @@ class StaffTimeSlotsSpec extends Specification {
           |shift0120180, T1, 07/01/18, 00:00, 00:14, 10
         """.stripMargin.trim
       val startTime = SDate("2018-01-02T00:00")
-      val slots = StaffTimeSlotsForMonth(
+      val slots = StaffTimeSlotsForTerminalMonth(
         startTime.millisSinceEpoch,
+        "T1",
         Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
       )
 
@@ -149,8 +156,32 @@ class StaffTimeSlotsSpec extends Specification {
 
       result === expected
     }
-  }
+    "Given a shift for the same monthMillis as the new timeslots but for a different terminal, it should not be replaced" >> {
+      val existingShifts =
+        """
+          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+          |shift0120180, T1, 06/01/18, 00:00, 00:14, 10
+          |shift0120180, T1, 07/01/18, 00:00, 00:14, 10
+          |shift0120180, T2, 07/01/18, 00:00, 00:14, 10
+        """.stripMargin.trim
+      val startTime = SDate("2018-01-02T00:00")
+      val slots = StaffTimeSlotsForTerminalMonth(
+        startTime.millisSinceEpoch,
+        "T1",
+        Seq(StaffTimeSlot("T1", startTime.millisSinceEpoch, 1))
+      )
 
+      val expected =
+        """
+          |shift0120180, T2, 07/01/18, 00:00, 00:14, 10
+          |shift0120180, T1, 02/01/18, 00:00, 00:14, 1
+        """.stripMargin.trim
+
+      val result = replaceShiftMonthWithTimeSlotsForMonth(existingShifts, slots)
+
+      result === expected
+    }
+  }
 
   "When getting all shifts for a specific month" >> {
     "Given a month for which there is no shifts then the result should be empty" >> {
@@ -166,6 +197,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       result === expected
     }
+    
     "Given shifts for the month requested then those shifts should be returned" >> {
       val shifts =
         """
@@ -182,6 +214,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       result === expected
     }
+
     "Given shifts for both the month requested and another month then only the requested month should be returned" >> {
       val shifts =
         """
