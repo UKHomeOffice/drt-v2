@@ -36,12 +36,13 @@ import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
+import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
 
-import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -250,7 +251,7 @@ trait ImplicitTimeoutProvider {
 @Singleton
 class NoCacheFilter @Inject()(
                                implicit override val mat: Materializer,
-                             exec: ExecutionContext) extends Filter {
+                               exec: ExecutionContext) extends Filter {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val rootRegex: Regex = "/v2/.{3}/live".r
 
@@ -377,6 +378,27 @@ class Application @Inject()(implicit val config: Configuration,
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
+        }
+      }
+
+      def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
+        log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
+        val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
+        futureShifts.map {
+          case shifts: String =>
+            val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
+
+            shiftsActor ! updatedShifts
+        }
+      }
+
+      def getShiftsForMonth(month: MillisSinceEpoch): Future[String] = {
+        val shiftsFuture = shiftsActor ? GetState
+
+        shiftsFuture.collect {
+          case shifts: String =>
+            log.info(s"Shifts: Retrieved shifts from actor")
+            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month))
         }
       }
 

@@ -19,7 +19,6 @@ object ShiftsServiceTests extends TestSuite {
         "I want to be able tell DRT about staff available by shift for a given period" +
         "So that I can easily get an initial state for the system" - {
 
-
         "Given a shift of 10 people, if we ask how many staff are available" - {
           val shifts = StaffAssignment("alpha", "T1", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10)
           val shiftService = StaffAssignmentServiceWithoutDates(shifts :: Nil)

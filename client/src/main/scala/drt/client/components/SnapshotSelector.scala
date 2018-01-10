@@ -20,6 +20,8 @@ object SnapshotSelector {
 
   val log: Logger = LoggerFactory.getLogger("SnapshotSelector")
 
+  val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
+
   case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState)
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
@@ -54,7 +56,7 @@ object SnapshotSelector {
     )
     .renderPS((scope, props, state) => {
       val selectedDate: SDateLike = props.terminalPageTab.date.map(SDate(_)).getOrElse(today)
-      val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
+
       val days = Seq.range(1, 32)
       val years = Seq.range(2017, today.getFullYear() + 1)
       val hours = Seq.range(0, 24)

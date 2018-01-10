@@ -15,13 +15,13 @@ object TerminalStaffingTests extends TestSuite {
       "should only display movements within the date range provided" - {
         val uid = UUID.randomUUID()
         val yesterday = StaffMovement("T1", "reason", SDate(2017, 7, 20, 12, 0), 1, uid, None)
-        val today =     StaffMovement("T1", "reason", SDate(2017, 7, 21, 12, 0), 1, uid, None)
+        val today = StaffMovement("T1", "reason", SDate(2017, 7, 21, 12, 0), 1, uid, None)
         val sm = Seq(
           yesterday,
           today
         )
 
-        val expected =  Seq(today)
+        val expected = Seq(today)
         val result = todaysMovements(sm, SDate(2017, 7, 21, 0, 0), SDate(2017, 7, 22, 0, 0))
 
         assert(expected == result)

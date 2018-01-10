@@ -54,9 +54,17 @@ object Actions {
 
   case class GetShifts() extends Action
 
+  case class SetShiftsForMonth(shiftsForMonth: MonthOfRawShifts) extends Action
+
   case class GetShiftsAfter(delay: FiniteDuration) extends Action
 
+  case class GetShiftsForMonth(month: SDateLike) extends Action
+
+  case class GetShiftsForMonthAfter(month: SDateLike, delay: FiniteDuration) extends Action
+
   case class AddShift(shift: StaffAssignment) extends Action
+
+  case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForTerminalMonth) extends Action
 
   case class AddStaffMovement(staffMovement: StaffMovement) extends Action
 
@@ -89,6 +97,8 @@ object Actions {
   case class UpdateAirportInfos(infos: Map[String, AirportInfo]) extends Action
 
   case class UpdateShowActualDesksAndQueues(state: Boolean) extends Action
+
+  case class RetryActionAfter(action: Action, delay: FiniteDuration) extends Action
 
   case class DoNothing() extends Action
 

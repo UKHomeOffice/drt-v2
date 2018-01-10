@@ -41,6 +41,12 @@ object JSDateConversions {
         newDate
       }
 
+      def addMonths(monthsToAdd: Int): SDateLike = {
+        val newDate = new Date(millisSinceEpoch)
+        newDate.setMonth(newDate.getMonth() + monthsToAdd)
+        newDate
+      }
+
       def addHours(hoursToAdd: Int): SDateLike = {
         val newDate = new Date(millisSinceEpoch)
         newDate.setHours(newDate.getHours() + hoursToAdd)
@@ -53,6 +59,10 @@ object JSDateConversions {
         newDate
       }
 
+      def addMillis(millisToAdd: Int): SDateLike = {
+        new Date(millisSinceEpoch + millisToAdd)
+      }
+
       def millisSinceEpoch: Long = date.getTime().toLong
 
       override def toISOString(): String = date.toISOString()
@@ -62,10 +72,12 @@ object JSDateConversions {
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
+    def apply(millis: Long): SDateLike = new Date(millis)
+
     /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
       */
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm)
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s:Int =0, ms: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm, s, ms)
 
     /** *
       * dateString is an ISO parseable datetime representation, with optional timezone
@@ -96,4 +108,5 @@ object JSDateConversions {
       JSSDate(new Date())
     }
   }
+
 }

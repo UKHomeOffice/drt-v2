@@ -31,7 +31,7 @@ object MainMenu {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
-            TerminalPageTabLoc(tn, tptl.mode, tptl.tab, tptl.date)
+            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date)
           case _ => TerminalPageTabLoc(tn)
         }
         MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, targetLoc)

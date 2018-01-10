@@ -2,7 +2,7 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPlanningComponent, TerminalStaffingV2, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -23,7 +23,7 @@ object SPAMain extends js.JSApp {
   case class TerminalPageTabLoc(
                                  terminal: String,
                                  mode: String = "current",
-                                 tab: String = "desksAndQueues",
+                                 subMode: String = "desksAndQueues",
                                  date: Option[String] = None
                                ) extends Loc {
     def viewMode: ViewMode = {
@@ -39,6 +39,9 @@ object SPAMain extends js.JSApp {
     def loadAction: Action = mode match {
       case "planning" =>
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(date), terminal)
+      case "staffing" =>
+        log.info(s"dispatching get shifts for month on staffing page")
+        GetShiftsForMonth(TerminalStaffingV2.dateFromDateStringOption(date))
       case _ => SetViewMode(viewMode)
     }
   }
@@ -81,6 +84,7 @@ object SPAMain extends js.JSApp {
           case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
             if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
           case (_, c: TerminalPageTabLoc) =>
+            log.info(s"Triggering post load action for $c")
             SPACircuit.dispatch(c.loadAction)
           case (_, _: TerminalsDashboardLoc) =>
             SPACircuit.dispatch(SetViewMode(ViewLive()))

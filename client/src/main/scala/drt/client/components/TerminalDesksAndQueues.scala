@@ -300,7 +300,6 @@ object TerminalDesksAndQueues {
 
     override def apply(idx: Int): T = nodes(idx)
   }
-
 }
 
 object StickyTableHeader {

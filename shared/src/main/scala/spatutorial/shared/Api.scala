@@ -60,6 +60,21 @@ case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, event
   lazy val totalPax: Double = ApiSplits.totalPax(splits)
 }
 
+case class StaffTimeSlot(
+                          terminal: String,
+                          start: MillisSinceEpoch,
+                          staff: Int,
+                          durationMillis: Int
+                        )
+
+case class StaffTimeSlotsForTerminalMonth(
+                                   monthMillis: MillisSinceEpoch,
+                                   terminal: TerminalName,
+                                   timeSlots: Seq[StaffTimeSlot]
+                                 )
+
+case class MonthOfRawShifts(month: MillisSinceEpoch, shifts: String)
+
 object ApiSplits {
   def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
 
@@ -187,9 +202,13 @@ trait SDateLike {
 
   def addDays(daysToAdd: Int): SDateLike
 
+  def addMonths(monthsToAdd: Int): SDateLike
+
   def addHours(hoursToAdd: Int): SDateLike
 
   def addMinutes(minutesToAdd: Int): SDateLike
+
+  def addMillis(millisToAdd: Int): SDateLike
 
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
@@ -202,6 +221,14 @@ trait SDateLike {
   def prettyTime(): String = f"${getHours()}%02d:${getMinutes()}%02d"
 
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
+
+  override def equals(obj: scala.Any): Boolean = {
+    obj match {
+      case d: SDateLike =>
+        d.millisSinceEpoch == millisSinceEpoch
+      case _ => false
+    }
+  }
 }
 
 
@@ -389,8 +416,6 @@ trait Api {
 
   def airportConfiguration(): AirportConfig
 
-  def saveShifts(rawShifts: String): Unit
-
   def getShifts(pointIntTime: MillisSinceEpoch): Future[String]
 
   def saveFixedPoints(rawFixedPoints: String): Unit
@@ -400,6 +425,10 @@ trait Api {
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
+
+  def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
+
+  def getShiftsForMonth(month: MillisSinceEpoch): Future[String]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 
@@ -435,7 +464,6 @@ object ApiSplitsToSplitRatio {
       .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
       .toMap
   )
-
 
   def applyPaxSplitsToFlightPax(apiSplits: ApiSplits, totalPax: Int): ApiSplits = {
     val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)
