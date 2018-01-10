@@ -19,6 +19,7 @@ object Layout {
           // here we use plain Bootstrap class names as these are specific to the top level layout defined here
           Navbar(props.ctl, props.currentLoc.page),
           <.div(^.className := "container", props.currentLoc.render())
+          VersionUpdateNotice()
         )
       )
     })

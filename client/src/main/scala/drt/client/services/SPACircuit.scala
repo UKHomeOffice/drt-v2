@@ -57,7 +57,9 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class LoadingState(isLoading: Boolean = false)
 
-case class RootModel(applicationVersion: Pot[String] = Empty,
+case class ClientServerVersions(client: String, server: String)
+
+case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
@@ -412,7 +414,7 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
   }
 }
 
-class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetApplicationVersion =>
       log.info(s"Calling getApplicationVersion")
@@ -421,7 +423,7 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[String]]) extends Log
 
       val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersion => {
         value match {
-          case Ready(clientVersion) if serverVersion != clientVersion=>
+          case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion=>
             ShowVersionWarning(clientVersion, serverVersion)
           case Ready(_) =>
             log.info(s"server application version unchanged ($serverVersion")
