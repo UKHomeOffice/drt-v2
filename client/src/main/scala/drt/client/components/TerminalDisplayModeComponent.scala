@@ -60,27 +60,27 @@ object TerminalDisplayModeComponent {
 
       <.div(
         <.ul(^.className := "nav nav-tabs",
-          <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
+          <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "subMode", "Current"), ^.onClick --> {
             props.router.set(props.terminalPageTab.copy(mode = "current", date = None))
           }),
           <.li(^.className := snapshotDataClass,
-            <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
+            <.a(VdomAttr("data-toggle") := "subMode", "Snapshot"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(mode = "snapshot", date = None))
             }
           ),
           <.li(^.className := planningClass,
-            <.a(VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+            <.a(VdomAttr("data-toggle") := "subMode", "Planning"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(mode = "planning", date = None))
             }
           ),
           <.li(^.className := staffingClass,
-            <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(mode = "staffing", tab = "60", date = None))
+            <.a(VdomAttr("data-toggle") := "subMode", "Staffing"), ^.onClick --> {
+              props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "60", date = None))
             }
           )
         ),
-        <.div(^.className := "tab-content",
-          <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
+        <.div(^.className := "subMode-content",
+          <.div(^.id := "current", ^.className := s"subMode-pane $currentContentClass", {
             if (state.activeTab == "current") <.div(
               <.h2(props.terminalPageTab.date match {
                 case Some(ds) if SDate(ds).ddMMyyString == SDate.now().ddMMyyString => "Live View"
@@ -92,14 +92,14 @@ object TerminalDisplayModeComponent {
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
-          <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
+          <.div(^.id := "snapshot", ^.className := s"subMode-pane $snapshotContentClass", {
             if (state.activeTab == "snapshot") <.div(
               <.h2("Snapshot View"),
               SnapshotSelector(props.router, props.terminalPageTab, props.timeRangeHours, props.loadingState),
               TerminalContentComponent(terminalContentProps)
             ) else ""
           }),
-          <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
+          <.div(^.id := "planning", ^.className := s"subMode-pane $planningContentClass", {
             if (state.activeTab == "planning") {
               <.div(
                 <.div(props.forecastPeriodPot.render(fp => {
@@ -108,7 +108,7 @@ object TerminalDisplayModeComponent {
               )
             } else ""
           }),
-          <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+          <.div(^.id := "staffing", ^.className := s"subMode-pane terminal-staffing-container $staffingContentClass",
             if (state.activeTab == "staffing") {
               props.potMonthOfShifts.render(ms => {
                 TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)

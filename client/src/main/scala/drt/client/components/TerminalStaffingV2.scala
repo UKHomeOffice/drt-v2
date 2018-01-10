@@ -97,7 +97,7 @@ object TerminalStaffingV2 {
                     terminalPageTab: TerminalPageTabLoc,
                     router: RouterCtl[Loc]
                   ) {
-    def timeSlotMinutes = Try(terminalPageTab.tab.toInt).toOption.getOrElse(60)
+    def timeSlotMinutes = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
   }
 
   def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth = {
@@ -221,7 +221,7 @@ object TerminalStaffingV2 {
                 names = Seq("Quarter Hourly", "Hourly"),
                 defaultValue = s"${props.timeSlotMinutes}",
                 callback = (e: ReactEventFromInput) =>
-                  props.router.set(props.terminalPageTab.copy(tab = e.target.value))
+                  props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
               ))
             ).toTagMod
           )
