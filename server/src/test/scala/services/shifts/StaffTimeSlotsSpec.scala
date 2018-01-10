@@ -197,7 +197,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       result === expected
     }
-    
+
     "Given shifts for the month requested then those shifts should be returned" >> {
       val shifts =
         """

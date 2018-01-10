@@ -196,7 +196,7 @@ object TerminalStaffingV2 {
 
       val timeSlots = slotsInDay(viewingDate)
         .map(slot => {
-          daysInMonth.map(day => ss.terminalStaffAt("T2", SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
+          daysInMonth.map(day => ss.terminalStaffAt(props.terminalPageTab.terminal, SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
         })
 
       State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now()).map(_.prettyTime()), Map())

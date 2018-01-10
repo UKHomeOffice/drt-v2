@@ -251,7 +251,7 @@ trait ImplicitTimeoutProvider {
 @Singleton
 class NoCacheFilter @Inject()(
                                implicit override val mat: Materializer,
-                             exec: ExecutionContext) extends Filter {
+                               exec: ExecutionContext) extends Filter {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val rootRegex: Regex = "/v2/.{3}/live".r
 
