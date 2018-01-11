@@ -102,9 +102,7 @@ object SnapshotSelector {
         <.div(^.className := "error-message", s"Earliest available is ${SnapshotSelector.earliestAvailable.ddMMyyString}")
       else <.div()
 
-      def isInPast = {
-        state.snapshotDateTime.millisSinceEpoch < SDate.now().millisSinceEpoch
-      }
+      def isInPast = state.snapshotDateTime.millisSinceEpoch < SDate.now().millisSinceEpoch
 
       <.div(^.className := "date-selector",
         <.div(^.className := "row",

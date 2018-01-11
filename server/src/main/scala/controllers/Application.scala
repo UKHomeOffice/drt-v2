@@ -128,7 +128,7 @@ trait SystemActors {
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
-  val useNationalityBasedProcessingTimes = config.getString("nationality-based-processing-times").isDefined
+  val useNationalityBasedProcessingTimes = config.getString("feature-flags.nationality-based-processing-times").isDefined
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
@@ -221,12 +221,15 @@ trait AirportConfiguration {
 
 trait AirportConfProvider extends AirportConfiguration {
   val portCode: String = ConfigFactory.load().getString("portcode").toUpperCase
+  val config: Configuration
 
   def mockProd: String = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
+  def useStaffingInput: Boolean = config.getString("feature-flags.use-v2-staff-input").isDefined
+
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = getPortConfFromEnvVar
+  def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(useStaffingInput = useStaffingInput)
 }
 
 trait ProdPassengerSplitProviders {

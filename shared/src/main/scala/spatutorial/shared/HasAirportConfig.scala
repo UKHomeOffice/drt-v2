@@ -88,7 +88,8 @@ case class AirportConfig(
                           hasActualDeskStats: Boolean = false,
                           portStateSnapshotInterval: Int = 1000,
                           eGateBankSize: Int = 5,
-                          hasEstChox: Boolean = false
+                          hasEstChox: Boolean = false,
+                          useStaffingInput: Boolean = false
                         ) extends AirportConfigLike {
 
 }
