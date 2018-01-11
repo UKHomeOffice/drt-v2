@@ -75,11 +75,13 @@ object TerminalDisplayModeComponent {
               props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
             }
           ),
+          if (props.airportConfig.useStaffingInput)
           <.li(^.className := staffingClass,
             <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "60", date = None))
             }
           )
+          else ""
         ),
         <.div(^.className := "tab-content",
           <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
