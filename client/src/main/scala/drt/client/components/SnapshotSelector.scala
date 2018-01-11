@@ -112,7 +112,7 @@ object SnapshotSelector {
             <.div(^.className := "col-sm-2 no-gutters", <.label("Snapshot as of", ^.className := "text")),
             <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), days.map(_.toString), state.day, (v: String) => (s: State) => s.copy(day = v.toInt))),
             <.div(^.className := "col-sm-2 no-gutters narrower", drawSelect(months.map(_._1.toString), months.map(_._2.toString), state.month, (v: String) => (s: State) => s.copy(month = v.toInt))),
-            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(years.map(_.toString), years.map(_.toString), state.day, (v: String) => (s: State) => s.copy(year = v.toInt))),
+            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(years.map(_.toString), years.map(_.toString), state.year, (v: String) => (s: State) => s.copy(year = v.toInt))),
             <.div(^.className := "col-sm-1 no-gutters", <.label("at", ^.className := "text center")),
             <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(hours.map(h => f"$h%02d"), hours.map(_.toString), state.hours, (v: String) => (s: State) => s.copy(hours = v.toInt))),
             <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(minutes.map(m => f"$m%02d"), minutes.map(_.toString), state.minutes, (v: String) => (s: State) => s.copy(minutes = v.toInt))),
