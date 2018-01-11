@@ -178,10 +178,11 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       val withLive = live.foldLeft(withForecast) {
         case (mergedSoFar, liveArrival) =>
           val baseArrival = baseById.getOrElse(liveArrival.uniqueId, liveArrival)
+          val mergedSoFarArrival = mergedSoFar.getOrElse(liveArrival.uniqueId, liveArrival)
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
-            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else baseArrival.ActPax)
+            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else mergedSoFarArrival.ActPax)
           mergedSoFar.updated(liveArrival.uniqueId, mergedArrival)
       }
 
