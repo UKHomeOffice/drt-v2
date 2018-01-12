@@ -57,7 +57,10 @@ case class ViewDay(time: SDateLike) extends ViewMode
 
 case class LoadingState(isLoading: Boolean = false)
 
-case class RootModel(latestUpdateMillis: MillisSinceEpoch = 0L,
+case class ClientServerVersions(client: String, server: String)
+
+case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
+                     latestUpdateMillis: MillisSinceEpoch = 0L,
                      crunchStatePot: Pot[CrunchState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
@@ -97,7 +100,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
     case _: GetAirportConfig =>
       log.info(s"Calling airportConfiguration")
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig).recoverWith {
-        case f =>
+        case _ =>
           log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(GetAirportConfigAfter(PollDelay.recoveryDelay))
       }))
@@ -441,6 +444,41 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
   }
 }
 
+class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetApplicationVersion =>
+      log.info(s"Calling getApplicationVersion")
+
+      val nextCallEffect = Effect(Future(GetApplicationVersion)).after(PollDelay.recoveryDelay)
+
+      val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersion => {
+        value match {
+          case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion =>
+            UpdateServerApplicationVersion(serverVersion)
+          case Ready(_) =>
+            log.info(s"server application version unchanged ($serverVersion)")
+            NoAction
+          case Empty =>
+            SetApplicationVersion(serverVersion)
+          case u =>
+            log.info(s"Got a $u")
+            NoAction
+        }
+      }))
+
+      effectOnly(nextCallEffect + effect)
+
+    case SetApplicationVersion(newVersion) =>
+      log.info(s"Setting application version to $newVersion")
+      updated(Ready(ClientServerVersions(newVersion, newVersion)))
+
+    case UpdateServerApplicationVersion(newServerVersion) =>
+      log.info(s"Updating server application version to $newServerVersion")
+      val newClientServerVersions = value.map(_.copy(server = newServerVersion))
+      updated(newClientServerVersions)
+  }
+}
+
 class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovement(staffMovement) =>
@@ -597,6 +635,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
+      new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),

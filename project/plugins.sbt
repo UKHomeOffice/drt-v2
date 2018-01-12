@@ -25,3 +25,4 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.0")
 
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
