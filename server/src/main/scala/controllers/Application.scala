@@ -501,7 +501,9 @@ class Application @Inject()(implicit val config: Configuration,
 
     log.info(s"Start hour: $startHour End hour: $endHour")
 
-    val fileName = f"$terminalName-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
+    val portCode = airportConfig.portCode
+
+    val fileName = f"$portCode-$terminalName-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
       f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
     def minutesOnDayWithinRange(minute: SDateLike) = {
@@ -539,7 +541,9 @@ class Application @Inject()(implicit val config: Configuration,
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
-    val fileName = f"$terminal-planning-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+    val portCode = airportConfig.portCode
+
+    val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
     crunchStateFuture.map {
       case Some(PortState(_, m, s)) =>
         log.info(s"Forecast CSV export for $terminal on ${startDay} with: crunch minutes: ${m.size} staff minutes: ${s.size}")
@@ -569,7 +573,9 @@ class Application @Inject()(implicit val config: Configuration,
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.addDays(180).millisSinceEpoch)
     )(new Timeout(30 seconds))
 
-    val fileName = f"$terminal-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+    val portCode = airportConfig.portCode
+
+    val fileName = f"$portCode-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
     crunchStateFuture.map {
       case Some(PortState(_, m, _)) =>
         val csvData = CSVData.forecastHeadlineToCSV(Forecast.headLineFigures(m.values.toSet, terminal))
@@ -609,7 +615,8 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def flightsCSVFromCrunchState(terminalName: TerminalName, pit: MilliDate, crunchStateFuture: Future[Option[CrunchState]], startHour: Int, endHour: Int): Future[Result] = {
-    val fileName = f"$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
+    val portCode = airportConfig.portCode
+    val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
       f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
     def minutesOnDayWithinRange(minute: SDateLike) = {
