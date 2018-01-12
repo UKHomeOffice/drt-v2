@@ -52,7 +52,7 @@ object DashboardTerminalSummary {
   }
 
   def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
-    val groupedFlights = groupFlightsByHour(flights, start).toMap
+    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByHour(flights, start).toMap
     val groupedCrunchMinutes = groupCrunchMinutesByHour(cms, start).toMap
     val sum = groupedCrunchMinutes.mapValues(cms => cms.map(_.paxLoad).sum).values.sum
 
