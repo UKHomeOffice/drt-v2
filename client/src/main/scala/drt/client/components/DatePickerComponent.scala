@@ -32,7 +32,7 @@ object DatePickerComponent {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(
-    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading)
+    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end)
   )
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
@@ -94,7 +94,10 @@ object DatePickerComponent {
       }
 
       val yesterdayActive = if (state.selectedDateTime.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
-      val todayActive = if (state.selectedDateTime.ddMMyyString == SDate.now().ddMMyyString) "active" else ""
+
+      def isTodayActive = state.selectedDateTime.ddMMyyString == SDate.now().ddMMyyString
+
+      val todayActive = if (isTodayActive) "active" else ""
 
       val tomorrowActive = if (state.selectedDateTime.ddMMyyString == SDate.now().addDays(1).ddMMyyString) "active" else ""
 
@@ -116,7 +119,7 @@ object DatePickerComponent {
             goButton(props.loadingState.isLoading, isCurrentSelection),
             errorMessage
           ).toTagMod),
-        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours))
+        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = isTodayActive ))
       )
     })
     .configure(Reusability.shouldComponentUpdate)
