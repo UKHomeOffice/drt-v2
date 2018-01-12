@@ -68,10 +68,10 @@ case class StaffTimeSlot(
                         )
 
 case class StaffTimeSlotsForTerminalMonth(
-                                   monthMillis: MillisSinceEpoch,
-                                   terminal: TerminalName,
-                                   timeSlots: Seq[StaffTimeSlot]
-                                 )
+                                           monthMillis: MillisSinceEpoch,
+                                           terminal: TerminalName,
+                                           timeSlots: Seq[StaffTimeSlot]
+                                         )
 
 case class MonthOfRawShifts(month: MillisSinceEpoch, shifts: String)
 
@@ -347,9 +347,9 @@ object CrunchApi {
 
   case class QueueHeadline(day: MillisSinceEpoch, queue: QueueName, paxNos: Int, workload: Int)
 
-  def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]) = {
+  def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]): Map[MillisSinceEpoch, Int] = {
     staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
-      slot.map(_.minute).min -> slot.map(_.available).min
+      slot.map(_.minute).min -> slot.map(_.shifts).min
     }).toMap
   }
 
