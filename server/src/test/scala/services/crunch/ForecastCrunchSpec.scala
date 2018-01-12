@@ -277,6 +277,41 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunchForecastArrivals === expectedForecastArrivals
   }
 
+  "Given a base arrival with 21 pax, followed by a matching forecast arrival with 50 pax, and finally a live flight with zero pax " +
+    "When I ask for arrivals " +
+    "Then I should see the base arrival details with the forecast pax" >> {
+
+    val baseScheduled = "2017-01-01T00:00Z"
+    val forecastScheduled = baseScheduled
+    val liveScheduled = baseScheduled
+
+    val baseArrival = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "BA0001", terminal = "T1", actPax = 21)
+    val forecastArrival = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BAW0001", terminal = "T1", actPax = 50, tranPax = 25)
+    val liveArrival = ArrivalGenerator.apiFlight(schDt = liveScheduled, iata = "BA0001", terminal = "T1", actPax = 0, tranPax = 0, estDt = liveScheduled)
+    val baseArrivals = Flights(List(baseArrival))
+    val forecastArrivals = Flights(List(forecastArrival))
+    val liveArrivals = Flights(List(liveArrival))
+
+    val crunch = runCrunchGraph(
+      now = () => SDate(baseScheduled),
+      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
+      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+
+    crunch.baseArrivalsInput.offer(baseArrivals)
+    Thread.sleep(250L)
+    crunch.forecastArrivalsInput.offer(forecastArrivals)
+    Thread.sleep(250L)
+    crunch.liveArrivalsInput.offer(liveArrivals)
+
+    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+    val crunchForecastArrivals = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+
+    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, EstDT = liveScheduled))
+
+    crunchForecastArrivals === expectedForecastArrivals
+  }
+
   "Given 2 base arrivals followed by 1 matching forecast arrival, and then the other matching forecast arrival " +
     "When I ask for arrivals " +
     "Then I should see the forecast pax & status details for both arrivals" >> {
