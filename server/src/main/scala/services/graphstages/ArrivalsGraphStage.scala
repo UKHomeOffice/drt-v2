@@ -182,7 +182,9 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
-            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else mergedSoFarArrival.ActPax)
+            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else mergedSoFarArrival.ActPax,
+            TranPax = if (liveArrival.ActPax > 0) liveArrival.TranPax else mergedSoFarArrival.TranPax)
+
           mergedSoFar.updated(liveArrival.uniqueId, mergedArrival)
       }
 
