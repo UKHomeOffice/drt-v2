@@ -74,8 +74,6 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
     val staffAvailable: Map[MillisSinceEpoch, Int] = staffByTimeSlot(15)(staffMinutes)
 
-
-
     val expected = Map(
       slot0To14 -> 20,
       slot15To29 -> 20,

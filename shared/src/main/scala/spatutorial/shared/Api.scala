@@ -68,10 +68,10 @@ case class StaffTimeSlot(
                         )
 
 case class StaffTimeSlotsForTerminalMonth(
-                                   monthMillis: MillisSinceEpoch,
-                                   terminal: TerminalName,
-                                   timeSlots: Seq[StaffTimeSlot]
-                                 )
+                                           monthMillis: MillisSinceEpoch,
+                                           terminal: TerminalName,
+                                           timeSlots: Seq[StaffTimeSlot]
+                                         )
 
 case class MonthOfRawShifts(month: MillisSinceEpoch, shifts: String)
 
