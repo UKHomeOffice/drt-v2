@@ -423,10 +423,10 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
 
       val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersion => {
         value match {
-          case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion=>
-            ShowVersionWarning(clientVersion, serverVersion)
+          case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion =>
+            UpdateServerApplicationVersion(serverVersion)
           case Ready(_) =>
-            log.info(s"server application version unchanged ($serverVersion")
+            log.info(s"server application version unchanged ($serverVersion)")
             NoAction
           case Empty =>
             SetApplicationVersion(serverVersion)
@@ -440,11 +440,12 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
 
     case SetApplicationVersion(newVersion) =>
       log.info(s"Setting application version to $newVersion")
-      updated(Ready(newVersion))
+      updated(Ready(ClientServerVersions(newVersion, newVersion)))
 
-    case ShowVersionWarning(client, server) =>
-      log.info(s"version change! client: $client -> server: $server")
-      noChange
+    case UpdateServerApplicationVersion(newServerVersion) =>
+      log.info(s"Updating server application version to $newServerVersion")
+      val newClientServerVersions = value.map(_.copy(server = newServerVersion))
+      updated(newClientServerVersions)
   }
 }
 

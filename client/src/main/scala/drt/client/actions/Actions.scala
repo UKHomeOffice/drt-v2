@@ -16,6 +16,8 @@ object Actions {
 
   case class SetApplicationVersion(version: String) extends Action
 
+  case class UpdateServerApplicationVersion(version: String) extends Action
+
   case class ShowVersionWarning(currentVersion: String, newVersion: String) extends Action
 
   case class GetCrunchState() extends Action
