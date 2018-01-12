@@ -41,7 +41,7 @@ object SnapshotSelector {
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.loadingState.isLoading)
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end))
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
@@ -118,7 +118,7 @@ object SnapshotSelector {
             goButton(props.loadingState.isLoading, isCurrentSelection),
             errorMessage
           ).toTagMod),
-        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours))
+        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = false))
       )
     })
     .configure(Reusability.shouldComponentUpdate)

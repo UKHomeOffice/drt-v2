@@ -48,7 +48,7 @@ object TerminalComponent {
         model.showActualIfAvailable
       ))
       modelRCP(modelMP => {
-        val model = modelMP.value
+        val model = modelMP()
         <.div(model.airportConfig.render(airportConfig => {
           <.div(
             TerminalDisplayModeComponent(TerminalDisplayModeComponent.Props(

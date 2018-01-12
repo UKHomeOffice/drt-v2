@@ -504,16 +504,18 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
       val latestUpdateMillis = if (currentViewMode != ViewLive() && newViewMode == ViewLive()) 0L else currentLatestUpdateMillis
 
+      val updateTimeFilterAction = if(newViewMode == ViewLive()) SetTimeRangeFilter(CurrentWindow()) else NoAction
+
       log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis")
       (currentViewMode, newViewMode, crunchStateMP.value) match {
         case (_, _, cs@Pending(_)) =>
-          updated((newViewMode, cs, latestUpdateMillis))
+          updated((newViewMode, cs, latestUpdateMillis), Effect(Future(updateTimeFilterAction)))
         case (ViewLive(), nvm, PendingStale(_, _)) if nvm != ViewLive() =>
-          updated((newViewMode, Pending(), latestUpdateMillis))
+          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(SetTimeRangeFilter(WholeDayWindow()))))
         case (_, _, cs@PendingStale(_, _)) =>
-          updated((newViewMode, cs, latestUpdateMillis))
+          updated((newViewMode, cs, latestUpdateMillis), Effect(Future(updateTimeFilterAction)))
         case _ =>
-          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())))
+          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())) + Effect(Future(updateTimeFilterAction)))
       }
   }
 }
@@ -521,6 +523,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetTimeRangeFilter(r) =>
+      log.info(s"Setting time range to $r")
       updated(r)
   }
 }

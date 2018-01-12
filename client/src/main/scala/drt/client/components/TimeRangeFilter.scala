@@ -1,90 +1,79 @@
 package drt.client.components
 
-import diode.react.ModelProxy
 import drt.client.actions.Actions.SetTimeRangeFilter
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
 object TimeRangeFilter {
 
   val log: Logger = LoggerFactory.getLogger("TimeRangeFilter")
 
-  case class Props(window: TimeRangeHours)
+  case class Props(window: TimeRangeHours, showNow: Boolean)
 
-  case class State(window: TimeRangeHours)
-
-  def now = CurrentWindow()
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.window.start, p.window.end))
 
   val component = ScalaComponent.builder[Props]("TimeRangeFilter")
-    .initialStateFromProps(p => State(p.window)).renderS((scope, state) => {
-    val timeRangeFilterRCP = SPACircuit.connect(
-      m => m.timeRangeFilter
-    )
-    timeRangeFilterRCP((timeRangeFilterMP: ModelProxy[TimeRangeHours]) => {
+    .render_P((props) => {
 
-      def setStart(v: String) = (s: State) => {
-        val newWindow = CustomWindow(start = v.toInt, end = s.window.end)
-        val state = State(newWindow)
-        SPACircuit.dispatch(SetTimeRangeFilter(newWindow))
-        state
+      def setStart(v: String) = {
+        val newWindow = CustomWindow(start = v.toInt, end = props.window.end)
+        Callback(SPACircuit.dispatch(SetTimeRangeFilter(newWindow)))
       }
 
-      def setEnd(v: String) = (s: State) => {
-        val newWindow = CustomWindow(start = s.window.start, end = v.toInt)
-        val state = State(newWindow)
-        SPACircuit.dispatch(SetTimeRangeFilter(newWindow))
-        state
+      def setEnd(v: String) = {
+        val newWindow = CustomWindow(start = props.window.start, end = v.toInt)
+        Callback(SPACircuit.dispatch(SetTimeRangeFilter(newWindow)))
       }
 
-      def nowActive = state.window match {
+      def nowActive = props.window match {
         case CurrentWindow() => "active"
         case _ => ""
       }
 
-      def dayActive = state.window match {
+      def dayActive = props.window match {
         case WholeDayWindow() => "active"
         case _ => ""
       }
 
+      log.info(s"Rendering filter with: ${props.window}")
+
       <.div(
         <.div(^.className := "date-view-picker-container",
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+            if (props.showNow)
             <.div(^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
-              val newState = State(CurrentWindow())
-              val state = scope.modState(_ => newState)
-              SPACircuit.dispatch(SetTimeRangeFilter(newState.window))
-              state
-            })),
+              Callback(SPACircuit.dispatch(SetTimeRangeFilter(CurrentWindow())))
+            })) else "",
             <.div(^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
-              val newState = State(WholeDayWindow())
-              val state = scope.modState(_ => newState)
-              SPACircuit.dispatch(SetTimeRangeFilter(newState.window))
-              state
+              Callback(SPACircuit.dispatch(SetTimeRangeFilter(WholeDayWindow())))
             }))
           ),
           <.div(^.className := "time-range",
             "From: ",
             <.select(
-              ^.value := state.window.start,
-              ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setStart(e.target.value))),
+              ^.defaultValue := s"${props.window.start}",
+              ^.onChange ==> ((e: ReactEventFromInput) => setStart(e.target.value)),
               (0 to 24).map(h => {
                 <.option(^.value := s"$h", f"$h%02d")
               }
               ).toTagMod),
             " To: ",
             <.select(
-              ^.value := state.window.end,
-              ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(setEnd(e.target.value))),
+              ^.defaultValue := s"${props.window.end}",
+              ^.onChange ==> ((e: ReactEventFromInput) => setEnd(e.target.value)),
               (0 to 24).map(h => {
                 <.option(^.value := s"$h", f"$h%02d")
               }
               ).toTagMod)
           )
         ))
-    })
-  }).build
+
+  })
+    .configure(Reusability.shouldComponentUpdate)
+    .build
 
   def apply(props: Props): VdomElement = component(props)
 }
