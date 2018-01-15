@@ -104,7 +104,8 @@ lazy val server = (project in file("server"))
   LessKeys.compress in Assets := true,
   PB.targets in Compile := Seq(
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
-  )
+  ),
+  TwirlKeys.templateImports += "buildinfo._"
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
