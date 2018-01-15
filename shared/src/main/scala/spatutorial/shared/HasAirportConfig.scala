@@ -24,7 +24,8 @@ object Queues {
     Transfer -> "Tx"
   )
 
-  val exportQueueOrder = List(EeaDesk, NonEeaDesk, EGate)
+  val exportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
+  val exportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
   val exportQueueDisplayNames: Map[QueueName, String] = Map(
     EeaDesk -> "EEA",
     NonEeaDesk -> "NON-EEA",
@@ -89,7 +90,8 @@ case class AirportConfig(
                           portStateSnapshotInterval: Int = 1000,
                           eGateBankSize: Int = 5,
                           hasEstChox: Boolean = false,
-                          useStaffingInput: Boolean = false
+                          useStaffingInput: Boolean = false,
+                          exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack
                         ) extends AirportConfigLike {
 
 }
@@ -380,7 +382,8 @@ object AirportConfigs {
     queueOrder = PaxTypesAndQueues.inOrderWithFastTrack,
     hasActualDeskStats = true,
     portStateSnapshotInterval = 250,
-    hasEstChox = true
+    hasEstChox = true,
+    exportQueueOrder = Queues.exportQueueOrderWithFastTrack
   )
   val ltn = AirportConfig(
     portCode = "LTN",

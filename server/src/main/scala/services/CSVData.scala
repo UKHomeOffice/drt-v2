@@ -9,11 +9,11 @@ object CSVData {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures) = {
+  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]) = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
       day => f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d"
     ).mkString(",")
-    val queues: String = Queues.exportQueueOrder.flatMap(
+    val queues: String = queueOrder.flatMap(
       q => {
         headlines.queueDayHeadlines.groupBy(_.queue).get(q).map(
           qhls => (s"${Queues.queueDisplayNames.getOrElse(q, q)}" ::

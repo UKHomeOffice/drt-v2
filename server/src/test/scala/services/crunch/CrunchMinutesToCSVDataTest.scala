@@ -76,7 +76,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
                       |Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Avail,Req
                       |00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,3""".stripMargin
 
-    val result = CSVData.terminalCrunchMinutesToCsvData(cms, staffMins, "T1", Queues.exportQueueOrder)
+    val result = CSVData.terminalCrunchMinutesToCsvData(cms, staffMins, "T1", Queues.exportQueueOrderSansFastTrack)
 
     result === expected
   }

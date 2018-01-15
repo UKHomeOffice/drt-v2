@@ -118,7 +118,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
         QueueHeadline(day3StartMinute.millisSinceEpoch, Queues.EGate, 1, 2)
       ))
 
-      val result = CSVData.forecastHeadlineToCSV(headlines)
+      val result = CSVData.forecastHeadlineToCSV(headlines, Queues.exportQueueOrderSansFastTrack)
 
       val expected =
         f"""|,${day1StartMinute.getDate()}%02d/${day1StartMinute.getMonth()}%02d,${day2StartMinute.getDate()}%02d/${day2StartMinute.getMonth()}%02d,${day3StartMinute.getDate()}%02d/${day3StartMinute.getMonth()}%02d
