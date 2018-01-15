@@ -131,6 +131,16 @@ object PaxTypesAndQueues {
   val transitToTransfer = PaxTypeAndQueue(PaxTypes.Transit, Queues.Transfer)
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
+  def displayName = Map(
+    eeaMachineReadableToEGate -> "eGates",
+    eeaMachineReadableToDesk -> "EEA (Machine Readable)",
+    eeaNonMachineReadableToDesk -> "EEA (Non Machine Readable)",
+    visaNationalToDesk -> "Non EEA (Visa)",
+    nonVisaNationalToDesk -> "Non EEA (Non Visa)",
+    visaNationalToFastTrack -> "Fast Track (Visa)",
+    nonVisaNationalToFastTrack -> "Fast Track (Non Visa)"
+  )
+
   /*todo - we should move the usages of this to airportConfig */
   val inOrderSansFastTrack = List(
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)

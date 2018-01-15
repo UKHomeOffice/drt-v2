@@ -69,7 +69,7 @@ object FlightComponents {
   }
 
 
-  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.passengerType} > ${ptqc.queueType}"
+  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${PaxTypesAndQueues.displayName(ptqc)}"
 
   object SplitsGraph {
 
@@ -89,7 +89,7 @@ object FlightComponents {
                 <.div(
                   ^.className := "bar " + paxTypeAndQueue.queueType,
                   ^.height := s"$percentage%",
-                  ^.title := s"$paxCount $label")
+                  ^.title := s"$label")
             }.toTagMod,
             <.div(^.className := "bar-max bar")
           )))
