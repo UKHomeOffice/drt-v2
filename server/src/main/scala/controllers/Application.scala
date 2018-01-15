@@ -575,15 +575,15 @@ class Application @Inject()(implicit val config: Configuration,
     } else startOfWeekMidnight
 
     val crunchStateFuture = forecastCrunchStateActor.ask(
-      GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.addDays(180).millisSinceEpoch)
+      GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
-    val portCode = airportConfig.portCode
 
-    val fileName = f"$portCode-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+
+    val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
     crunchStateFuture.map {
       case Some(PortState(_, m, _)) =>
-        val csvData = CSVData.forecastHeadlineToCSV(Forecast.headLineFigures(m.values.toSet, terminal))
+        val csvData = CSVData.forecastHeadlineToCSV(Forecast.headLineFigures(m.values.toSet, terminal), airportConfig.exportQueueOrder)
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv")
