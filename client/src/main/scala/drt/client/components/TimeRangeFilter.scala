@@ -54,7 +54,7 @@ object TimeRangeFilter {
           <.div(^.className := "time-range",
             "From: ",
             <.select(
-              ^.defaultValue := s"${props.window.start}",
+              ^.value := s"${props.window.start}",
               ^.onChange ==> ((e: ReactEventFromInput) => setStart(e.target.value)),
               (0 to 24).map(h => {
                 <.option(^.value := s"$h", f"$h%02d")
@@ -62,7 +62,7 @@ object TimeRangeFilter {
               ).toTagMod),
             " To: ",
             <.select(
-              ^.defaultValue := s"${props.window.end}",
+              ^.value := s"${props.window.end}",
               ^.onChange ==> ((e: ReactEventFromInput) => setEnd(e.target.value)),
               (0 to 24).map(h => {
                 <.option(^.value := s"$h", f"$h%02d")
