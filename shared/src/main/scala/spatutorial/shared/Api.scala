@@ -353,6 +353,12 @@ object CrunchApi {
     }).toMap
   }
 
+  def fixedPointsByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]): Map[MillisSinceEpoch, Int] = {
+    staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
+      slot.map(_.minute).min -> slot.map(_.fixedPoints).max
+    }).toMap
+  }
+
   def groupCrunchMinutesByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queueName)
