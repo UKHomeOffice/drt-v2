@@ -716,14 +716,16 @@ object Forecast {
 
   def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
     val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes)
+    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes)
     groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
       .map {
-        case (millis, cms) =>
-          cms.foldLeft(
-            ForecastTimeSlot(millis, actualStaffByMinute.getOrElse(millis, 0), 0))(
-            (fts, cm) => fts
-              .copy(required = fts.required + cm.deskRec)
-          )
+        case (startMillis, cms) =>
+          val available = actualStaffByMinute.getOrElse(startMillis, 0)
+          val fixedPoints = fixedPointsByMinute.getOrElse(startMillis, 0)
+          val forecastTimeSlot = ForecastTimeSlot(startMillis, available, required = fixedPoints)
+          cms.foldLeft(forecastTimeSlot) {
+            case (fts, cm) => fts.copy(required = fts.required + cm.deskRec)
+          }
       }
       .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
   }

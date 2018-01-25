@@ -77,8 +77,8 @@ object TerminalDesksAndQueuesRow {
       val fixedPoints = props.staffMinute.fixedPoints
       val movements = props.staffMinute.movements
       val available = props.staffMinute.shifts + props.staffMinute.movements
-      val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum
-      val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum
+      val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum + props.staffMinute.fixedPoints
+      val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum + props.staffMinute.fixedPoints
       val ragClass = ragStatus(totalRequired, totalDeployed)
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
