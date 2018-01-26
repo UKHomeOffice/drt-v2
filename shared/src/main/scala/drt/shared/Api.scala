@@ -305,7 +305,7 @@ object CrunchApi {
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: Int = s"$terminalName$minute".hashCode
-    lazy val available = shifts + movements - fixedPoints match {
+    lazy val available = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
     }
