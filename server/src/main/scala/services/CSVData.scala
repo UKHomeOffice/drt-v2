@@ -178,6 +178,11 @@ object CSVData {
       .getOrElse(Map())
 
   def headingsForSplitSource(queueNames: Seq[String], source: String): String = {
-    queueNames.map(q => s"$source ${Queues.queueDisplayNames(q)}").mkString(",")
+    queueNames
+      .map(q => {
+        val queueName = Queues.queueDisplayNames(q)
+        s"$source $queueName"
+      })
+      .mkString(",")
   }
 }

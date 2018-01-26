@@ -18,7 +18,6 @@ import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import scala.util.{Success, Try}
 
 
-
 object TerminalDesksAndQueuesRow {
 
   def ragStatus(totalRequired: Int, totalDeployed: Int): String = {
