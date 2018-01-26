@@ -18,6 +18,7 @@ import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import scala.util.{Success, Try}
 
 
+
 object TerminalDesksAndQueuesRow {
 
   def ragStatus(totalRequired: Int, totalDeployed: Int): String = {
@@ -64,7 +65,7 @@ object TerminalDesksAndQueuesRow {
                 case _ => ""
               }
               List(paxLoadTd,
-                <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deskRec}", s"${cm.deskRec}"),
+                <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}"),
                 <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
           }
 
@@ -76,18 +77,19 @@ object TerminalDesksAndQueuesRow {
       }
       val fixedPoints = props.staffMinute.fixedPoints
       val movements = props.staffMinute.movements
-      val available = props.staffMinute.shifts + props.staffMinute.movements
-      val totalRequired = crunchMinutesByQueue.map(_._2.deskRec).sum + props.staffMinute.fixedPoints
-      val totalDeployed = crunchMinutesByQueue.map(_._2.deployedDesks.getOrElse(0)).sum + props.staffMinute.fixedPoints
-      val ragClass = ragStatus(totalRequired, totalDeployed)
+      val available = props.staffMinute.available
+      val crunchMinutes = crunchMinutesByQueue.values.toSet
+      val totalReq = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
+      val totalDep = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
+      val ragClass = ragStatus(totalReq, totalDep)
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
         <.td(^.className := s"non-pcp", movements),
-        <.td(^.className := s"total-deployed $ragClass", totalRequired),
-        <.td(^.className := s"total-deployed $ragClass", totalDeployed),
+        <.td(^.className := s"total-deployed $ragClass", totalReq),
+        <.td(^.className := s"total-deployed $ragClass", totalDep),
         <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })

@@ -120,13 +120,10 @@ object CSVData {
       .map {
         case (minute, queueData) =>
           val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
-          log.info(s"staffby15Minutes: ${staffBy15Minutes.size}")
           val staffMinute = staffBy15Minutes.getOrElse(minute, StaffMinute.empty)
-          log.info(s"staffMinute for ${SDate(minute).toLocalDateTimeString()}: $staffMinute")
           val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, (staffMinute.shifts - staffMinute.movements).toString)
-          log.info(s"staffData: $staffData")
           val reqForMinute = crunchMilliMinutes.toList.find(_._1 == minute).map {
-            case (_, queueCrunchMinutes) => queueCrunchMinutes.toList.map(_.deskRec).sum
+            case (_, queueCrunchMinutes) => DesksAndQueues.totalRequired(staffMinute, queueCrunchMinutes)
           }.getOrElse(0)
 
           val hoursAndMinutes = SDate(minute).toHoursAndMinutes()
