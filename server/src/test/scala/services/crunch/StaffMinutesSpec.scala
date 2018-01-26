@@ -77,8 +77,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val staff = minutesInOrder.map(_.available)
     val staffMillis = minutesInOrder.map(_.minute)
 
-    val expectedStaff = List.fill(30)(0)
-    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29*Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
+    val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
+    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
     (staffMillis, staff) === Tuple2(expectedMillis, expectedStaff)
   }
