@@ -79,17 +79,17 @@ object TerminalDesksAndQueuesRow {
       val movements = props.staffMinute.movements
       val available = props.staffMinute.available
       val crunchMinutes = crunchMinutesByQueue.values.toSet
-      val totalReq = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
-      val totalDep = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
-      val ragClass = ragStatus(totalReq, totalDep)
+      val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
+      val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
+      val ragClass = ragStatus(totalRequired, totalDeployed)
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
         <.td(^.className := s"non-pcp", movements),
-        <.td(^.className := s"total-deployed $ragClass", totalReq),
-        <.td(^.className := s"total-deployed $ragClass", totalDep),
+        <.td(^.className := s"total-deployed $ragClass", totalRequired),
+        <.td(^.className := s"total-deployed $ragClass", totalDeployed),
         <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
