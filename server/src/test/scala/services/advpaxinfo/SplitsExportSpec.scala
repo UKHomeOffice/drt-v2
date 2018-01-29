@@ -7,6 +7,7 @@ import akka.stream.IOResult
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.Specification
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
 import services.Manifests
 
@@ -82,7 +83,8 @@ class SplitsExportSpec extends Specification {
 
       manifests
         .map(vm => {
-          println(s"vm: $vm")
+          val splitsFromManifest = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts("STN", vm)
+          println(s"splitsFromManifest: $splitsFromManifest")
         })
 
       1 === 1
