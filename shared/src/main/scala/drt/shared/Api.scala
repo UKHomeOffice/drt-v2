@@ -305,7 +305,7 @@ object CrunchApi {
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: Int = s"$terminalName$minute".hashCode
-    lazy val available = shifts + movements - fixedPoints match {
+    lazy val available = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
     }
@@ -350,6 +350,12 @@ object CrunchApi {
   def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]): Map[MillisSinceEpoch, Int] = {
     staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
       slot.map(_.minute).min -> slot.map(_.shifts).min
+    }).toMap
+  }
+
+  def fixedPointsByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute]): Map[MillisSinceEpoch, Int] = {
+    staffMinutes.toList.sortBy(_.minute).grouped(slotSize).toList.map(slot => {
+      slot.map(_.minute).min -> slot.map(_.fixedPoints).max
     }).toMap
   }
 

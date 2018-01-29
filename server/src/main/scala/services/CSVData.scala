@@ -9,7 +9,7 @@ object CSVData {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]) = {
+  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]): String = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
       day => f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d"
     ).mkString(",")
@@ -43,7 +43,7 @@ object CSVData {
     List(headings, totalPax, queues, totalWL).mkString("\n")
   }
 
-  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod) = {
+  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String = {
     val sortedDays: Seq[(MillisSinceEpoch, Seq[ForecastTimeSlot])] = forecastPeriod.days.toList.sortBy(_._1)
     log.info(s"Forecast CSV Export: Days in period: ${sortedDays.length}")
     val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.filter {
@@ -74,8 +74,7 @@ object CSVData {
     List(headings, data).mkString("\n")
   }
 
-
-  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]) = {
+  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): QueueName = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
@@ -88,7 +87,6 @@ object CSVData {
       if (q == Queues.EGate) eGatesHeadings else colHeadings
     }).mkString(",") +
       ",Staff req,Avail,Req"
-
 
     val lineEnding = "\n"
 
@@ -120,14 +118,13 @@ object CSVData {
       .map {
         case (minute, queueData) =>
           val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
-          log.info(s"staffby15Minutes: ${staffBy15Minutes.size}")
           val staffMinute = staffBy15Minutes.getOrElse(minute, StaffMinute.empty)
-          log.info(s"staffMinute for ${SDate(minute).toLocalDateTimeString()}: $staffMinute")
           val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, (staffMinute.shifts - staffMinute.movements).toString)
-          log.info(s"staffData: $staffData")
-          val reqForMinute = crunchMilliMinutes.toList.find(_._1 == minute).map {
-            case (_, queueCrunchMinutes) => queueCrunchMinutes.toList.map(_.deskRec).sum
-          }.getOrElse(0)
+          val reqForMinute = crunchMilliMinutes
+            .toList
+            .find { case (minuteMilli, _) => minuteMilli == minute }
+            .map { case (_, queueCrunchMinutes) => DesksAndQueues.totalRequired(staffMinute, queueCrunchMinutes) }
+            .getOrElse(0)
 
           val hoursAndMinutes = SDate(minute).toHoursAndMinutes()
           val queueFields = queueData.mkString(",")
@@ -139,14 +136,7 @@ object CSVData {
       crunchMinutes.mkString(lineEnding)
   }
 
-  def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]) = {
-
-    def splitFromFlightWithSplits(fws: ApiFlightWithSplits, source: String, paxTypeAndQueue: PaxTypeAndQueue): String = fws.splits
-      .find(s => s.source == source)
-      .flatMap(as => as.splits.find(s =>
-        s.queueType == paxTypeAndQueue.queueType && s.passengerType == paxTypeAndQueue.passengerType
-      )).map(ptqc => Math.round(ptqc.paxCount).toString).getOrElse("")
-
+  def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]): String = {
     val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
@@ -187,9 +177,12 @@ object CSVData {
       .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
-  def headingsForSplitSource(queueNames: Seq[String], source: String) = {
-    queueNames.map(
-      q => s"$source ${Queues.queueDisplayNames(q)}"
-    ).mkString(",")
+  def headingsForSplitSource(queueNames: Seq[String], source: String): String = {
+    queueNames
+      .map(q => {
+        val queueName = Queues.queueDisplayNames(q)
+        s"$source $queueName"
+      })
+      .mkString(",")
   }
 }
