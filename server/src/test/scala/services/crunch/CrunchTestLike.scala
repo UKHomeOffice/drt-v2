@@ -6,7 +6,6 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
-import controllers.SystemActors.SplitsProvider
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
@@ -19,7 +18,7 @@ import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch._
 import services.graphstages._
-import services.{ForecastBaseArrivalsActor, ForecastPortArrivalsActor, LiveArrivalsActor, SDate}
+import services._
 
 import scala.collection.immutable.{List, Seq, Set}
 
@@ -123,7 +122,7 @@ class CrunchTestLike
                      initialManifests: VoyageManifests = VoyageManifests(Set()),
                      initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                      airportConfig: AirportConfig = airportConfig,
-                     csvSplitsProvider: SplitsProvider = (_) => None,
+                     csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      minutesToCrunch: Int = 30,
                      warmUpMinutes: Int = 0,

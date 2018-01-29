@@ -5,7 +5,7 @@ import drt.shared.PassengerSplits.VoyagePaxSplits
 import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.Queues.{EGate, EeaDesk}
 import org.joda.time.DateTime
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 
@@ -94,7 +94,7 @@ object CSVPassengerSplitsProvider {
 }
 
 case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   log.info("Initialising CSV Splits")
   lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = {
@@ -103,11 +103,10 @@ case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) ex
     splitsLines
   }
 
-  def splitRatioProvider: (Arrival => Option[SplitRatios]) = flight => {
-    val flightDate = DateTime.parse(flight.SchDT)
+  def splitRatioProvider: SplitsProvider.SplitProvider = (iata, scheduled) => {
+    val flightDate = new DateTime(scheduled.millisSinceEpoch)
     //todo - we should profile this, but it's likely much more efficient to store in nested map IATA -> DayOfWeek -> MonthOfYear
     //todo OR IATA -> (DayOfWeek, MonthOfYear)
-    val iata = flight.IATA
     val dayOfWeek = flightDate.dayOfWeek.getAsText
     val month = flightDate.monthOfYear.getAsText
 

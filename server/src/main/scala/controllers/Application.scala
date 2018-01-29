@@ -15,7 +15,7 @@ import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.typesafe.config.ConfigFactory
-import controllers.SystemActors.SplitsProvider
+//import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
@@ -87,10 +87,6 @@ object PaxFlow {
                              (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
 }
 
-object SystemActors {
-  type SplitsProvider = (Arrival) => Option[SplitRatios]
-}
-
 trait SystemActors {
   self: AirportConfProvider =>
 
@@ -125,7 +121,7 @@ trait SystemActors {
   val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis), name = "voyage-manifests-actor")
   val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
+  val historicalSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
@@ -236,14 +232,14 @@ trait AirportConfProvider extends AirportConfiguration {
 trait ProdPassengerSplitProviders {
   self: AirportConfiguration with SystemActors =>
 
-  val csvSplitsProvider: (Arrival) => Option[SplitRatios] = SplitsProvider.csvProvider
+  val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: Arrival): Double = {
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
+    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0.6)
   }
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
-    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
+    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 
   private implicit val timeout: Timeout = Timeout(250 milliseconds)
 }

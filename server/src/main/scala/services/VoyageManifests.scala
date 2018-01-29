@@ -50,9 +50,9 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
       .mapAsync(64) { filename =>
         log.info(s"Fetching $filename as stream")
         val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
-        Future(fileNameAndContentFromZip(filename, zipByteStream))
+        Future(Manifests.fileNameAndContentFromZip(filename, zipByteStream, Option(portCode)))
       }
-      .mapConcat(jsons => jsons)
+      .mapConcat(identity)
       .runWith(Sink.seq[(String, VoyageManifest)])
   }
 
@@ -135,30 +135,6 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
     fetchAndPushManifests(startingFilename)
   }
 
-  def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed]): Seq[(String, VoyageManifest)] = {
-    val inputStream: InputStream = zippedFileByteStream.runWith(
-      StreamConverters.asInputStream()
-    )
-    val zipInputStream = new ZipInputStream(inputStream)
-    val vmStream = Stream.continually(zipInputStream.getNextEntry).takeWhile(_ != null).map { jsonFile =>
-      val buffer = new Array[Byte](4096)
-      val stringBuffer = new ArrayBuffer[Byte]()
-      var len: Int = zipInputStream.read(buffer)
-
-      while (len > 0) {
-        stringBuffer ++= buffer.take(len)
-        len = zipInputStream.read(buffer)
-      }
-      val content: String = new String(stringBuffer.toArray, UTF_8)
-      val manifest = VoyageManifestParser.parseVoyagePassengerInfo(content)
-      Tuple3(zipFileName, jsonFile.getName, manifest)
-    }.collect {
-      case (zipFilename, _, Success(vm)) if vm.ArrivalPortCode == portCode => (zipFilename, vm)
-    }
-    log.info(s"Finished processing $zipFileName")
-    vmStream
-  }
-
   def zipFiles(latestFile: String): Source[String, NotUsed] = {
     filterToFilesNewerThan(filesAsSource, latestFile)
   }
@@ -184,4 +160,35 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
   }
 
   def s3Client: AmazonS3AsyncClient = new AmazonS3AsyncClient(new ProfileCredentialsProvider("drt-prod-s3"))
+}
+
+object Manifests {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+
+  def fileNameAndContentFromZip[X](zipFileName: String, zippedFileByteStream: Source[ByteString, X], maybePort: Option[String]): Seq[(String, VoyageManifest)] = {
+    val inputStream: InputStream = zippedFileByteStream.runWith(
+      StreamConverters.asInputStream()
+    )
+    val zipInputStream = new ZipInputStream(inputStream)
+    val vmStream = Stream.continually(zipInputStream.getNextEntry).takeWhile(_ != null).map { jsonFile =>
+      val buffer = new Array[Byte](4096)
+      val stringBuffer = new ArrayBuffer[Byte]()
+      var len: Int = zipInputStream.read(buffer)
+
+      while (len > 0) {
+        stringBuffer ++= buffer.take(len)
+        len = zipInputStream.read(buffer)
+      }
+      val content: String = new String(stringBuffer.toArray, UTF_8)
+      val manifest = VoyageManifestParser.parseVoyagePassengerInfo(content)
+      Tuple3(zipFileName, jsonFile.getName, manifest)
+    }.collect {
+      case (zipFilename, _, Success(vm)) if maybePort.isEmpty || vm.ArrivalPortCode == maybePort.get => (zipFilename, vm)
+    }
+    log.info(s"Finished processing $zipFileName")
+    vmStream
+  }
 }

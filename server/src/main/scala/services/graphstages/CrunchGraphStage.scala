@@ -2,20 +2,16 @@ package services.graphstages
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
-import controllers.SystemActors.SplitsProvider
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
-import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
-import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
-import drt.shared.Queues.{EGate, EeaDesk}
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services._
 import services.graphstages.Crunch.{log, _}
-import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
+import services.workloadcalculator.PaxLoadCalculator.Load
 
 import scala.collection.immutable.{Map, Seq}
 import scala.language.postfixOps

@@ -1,15 +1,15 @@
 package services.crunch.workload
 
 import controllers.ArrivalGenerator
-import controllers.SystemActors.SplitsProvider
 import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable}
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import services.crunch.VoyageManifestGenerator._
 import org.specs2.mutable.Specification
 import passengersplits.core.SplitsCalculator
+import services.SplitsProvider
+import services.crunch.VoyageManifestGenerator._
 
 
 class SplitsSpec extends Specification {
@@ -17,7 +17,7 @@ class SplitsSpec extends Specification {
   val eeaMrToEgate = SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate), 0.5)
   val splitRatios = SplitRatios(splits = List(eeaMrToDesk, eeaMrToEgate), origin = Historical)
 
-  val eeaMrSplitsProvider: SplitsProvider = _ => Option(splitRatios)
+  val eeaMrSplitsProvider: SplitsProvider.SplitProvider = (_, _) => Option(splitRatios)
 
   "Given an arrival and its voyage manifest and historic splits for egates and fast track " +
     "When I ask for the arrival's splits " +

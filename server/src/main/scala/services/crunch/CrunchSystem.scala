@@ -6,7 +6,6 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.Timeout
-import controllers.SystemActors.SplitsProvider
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared._
@@ -56,7 +55,7 @@ object CrunchSystem {
   case class CrunchProps(system: ActorSystem,
                          airportConfig: AirportConfig,
                          pcpArrival: Arrival => MilliDate,
-                         historicalSplitsProvider: SplitsProvider,
+                         historicalSplitsProvider: SplitsProvider.SplitProvider,
                          liveCrunchStateActor: ActorRef,
                          forecastCrunchStateActor: ActorRef,
                          maxDaysToCrunch: Int,
@@ -205,7 +204,7 @@ object CrunchSystem {
                   maxDays: Int,
                   manifestsUsed: Boolean = true,
                   airportConfig: AirportConfig,
-                  historicalSplitsProvider: SplitsProvider,
+                  historicalSplitsProvider: SplitsProvider.SplitProvider,
                   expireAfterMillis: Long,
                   minutesToCrunch: Int,
                   warmUpMinutes: Int, useNationalityBasedProcessingTimes: Boolean): CrunchGraphStage = new CrunchGraphStage(
@@ -266,7 +265,7 @@ object CrunchSystem {
   }
 
   def startRunnableLiveCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
-                              airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
+                              airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider.SplitProvider,
                               expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int, useNationalityBasedProcessingTimes: Boolean): LiveCrunchInputs = {
     val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
     val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
@@ -283,7 +282,7 @@ object CrunchSystem {
   }
 
   def startRunnableForecastCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
-                                  maxDaysToCrunch: Int, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
+                                  maxDaysToCrunch: Int, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider.SplitProvider,
                                   expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int): ForecastCrunchInputs = {
     val forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
     val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](

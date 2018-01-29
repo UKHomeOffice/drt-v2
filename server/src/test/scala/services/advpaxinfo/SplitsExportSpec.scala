@@ -1,7 +1,18 @@
 package services.advpaxinfo
 
+import java.io.File
+import java.nio.file.{Path, Paths}
+
+import akka.stream.IOResult
+import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.Specification
+import passengersplits.parsing.VoyageManifestParser
+import services.Manifests
+
+import scala.collection.immutable
+import scala.concurrent.Future
+import scala.io.BufferedSource
 
 
 class SplitsExportSpec extends Specification {
@@ -53,6 +64,28 @@ class SplitsExportSpec extends Specification {
       val (_, result) = SplitsExport.expandToFullNationalities(summaries)
 
       result === expected
+    }
+
+    "I can get some archetypes from a zip" >> {
+      import akka.stream.scaladsl._
+
+      val files = SplitsExport.getListOfFiles(rawZipFilesPath)
+
+      val manifests = files.take(1).flatMap(file => {
+        val x = FileIO.fromPath(Paths.get(file.getAbsolutePath))
+        Manifests
+          .fileNameAndContentFromZip(file.getName, x, None)
+          .map {
+            case (_, vm) => vm
+          }
+      })
+
+      manifests
+        .map(vm => {
+          println(s"vm: $vm")
+        })
+
+      1 === 1
     }
   }
 }
