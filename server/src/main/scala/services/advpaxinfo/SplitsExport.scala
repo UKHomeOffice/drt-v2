@@ -4,10 +4,15 @@ import java.io.{BufferedWriter, File, FileInputStream, FileWriter}
 import java.util.zip.ZipInputStream
 
 import com.typesafe.config.ConfigFactory
-import passengersplits.core.ZipUtils
+import drt.shared.{ApiPaxTypeAndQueueCount, MilliDate, PaxType}
+import passengersplits.core.{SplitsCalculator, ZipUtils}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import services.SDate
 
 
 case class FlightSummary(flightCode: String, arrivalDate: String, arrivalTime: String, arrivalPort: String, isInteractive: Option[Boolean], nationalities: Map[String, Int])
+
+case class HistoricSplitsCollection(flightCode: String, scheduled: MilliDate, splits: List[ApiPaxTypeAndQueueCount])
 
 
 object SplitsExport {
@@ -17,7 +22,7 @@ object SplitsExport {
   def getListOfFiles(dir: String): List[File] = {
     val d = new File(dir)
     if (d.exists && d.isDirectory) {
-      d.listFiles.filter(_.isFile).toList
+      d.listFiles.filter(file => file.isFile && file.getName.takeRight(4) == ".zip").toList
     } else {
       List[File]()
     }
@@ -98,7 +103,7 @@ object SplitsExport {
 
       val pax = (json \ "PassengerList").get.asInstanceOf[JsArray].value
 
-      val interactiveFlagExists = pax.exists(p => (p \"PassengerIdentifier").asOpt[String].isDefined)
+      val interactiveFlagExists = pax.exists(p => (p \ "PassengerIdentifier").asOpt[String].isDefined)
 
       val isInteractive = if (interactiveFlagExists)
         Option(pax.exists(p => (p \ "PassengerIdentifier").as[String].nonEmpty))
@@ -150,4 +155,56 @@ object SplitsExport {
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(csvContent)
   }
+
+  def historicSplitsCollection(portCode: String, manifests: List[VoyageManifest]): List[HistoricSplitsCollection] = {
+    val historicSplits: List[HistoricSplitsCollection] = manifests
+      .map(vm => {
+        val splitsFromManifest = SplitsCalculator
+          .convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, vm)
+          .map(p => p.copy(nationalities = None))
+        val scheduled = MilliDate(SDate(s"${vm.ScheduledDateOfArrival}T${vm.ScheduledTimeOfArrival}").millisSinceEpoch)
+
+        HistoricSplitsCollection(vm.flightCode, scheduled, splitsFromManifest)
+      })
+    historicSplits
+  }
+
+  def averageFlightSplitsByMonthAndDay(historicSplits: List[HistoricSplitsCollection], archetypes: List[(PaxType, String)]): Map[(String, Int, Int), List[Double]] = {
+    val byFlight: Map[(String, Int, Int), List[Double]] = historicSplits
+      .groupBy(_.flightCode)
+      .flatMap {
+        case (flightCode, splitsCollections) =>
+          splitsCollections
+            .groupBy(splitsCollection => {
+              val scheduled = SDate(splitsCollection.scheduled)
+              val monthDay = Tuple2(scheduled.getMonth(), scheduled.getDayOfWeek())
+              monthDay
+            })
+            .map {
+              case ((month, day), splitsForMonthAndDay) =>
+                val paxCounts = splitsForMonthAndDay.length match {
+                  case 0 => List[Double]()
+                  case _ => archetypes
+                    .map {
+                      case (paxType, queueName) =>
+                        val monthDayArchetypeCounts: List[Double] = splitsForMonthAndDay
+                          .flatMap(splits =>
+                            splits.splits.filter(ptqc =>
+                              ptqc.passengerType == paxType && ptqc.queueType == queueName))
+                          .map(_.paxCount)
+
+                        val average = (monthDayArchetypeCounts.sum, monthDayArchetypeCounts.length) match {
+                          case (_, 0) => 0.0
+                          case (archetypeSum, numFlights) => archetypeSum / numFlights
+                        }
+                        average
+                    }
+                }
+                ((flightCode, month, day), paxCounts)
+            }
+            .toList
+      }
+    byFlight
+  }
+
 }
