@@ -24,7 +24,7 @@ object Navbar {
             <.div(^.className := "navbar-drt",
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
-                <.ul(^.className := "nav navbar-nav navbar-right", <.li(<.a( Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect_uri=" + BaseUrl.until_#.value)))
+                <.ul(^.className := "nav navbar-nav navbar-right", <.li(<.a( Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value)))
               ))
           }))
       })
