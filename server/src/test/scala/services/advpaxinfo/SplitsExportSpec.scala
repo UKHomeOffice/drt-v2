@@ -68,10 +68,11 @@ class SplitsExportSpec extends Specification {
 
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
-      val manifests = files.sortBy(_.getName).take(2500).flatMap(file => {
+      val manifests = files.sortBy(_.getName).flatMap(file => {
         val byteStringSource = FileIO.fromPath(Paths.get(file.getAbsolutePath))
+        val flightCodesToSelect = List("FR8543", "FR0713", "FR9015", "FR9276", "FR1319", "FR8183", "FR4195", "FR3015", "FR6542", "FR1789", "FR8267", "EW0358", "FR8289", "FR8167", "FR1708", "FR2282", "FR2469", "FR8446", "FR8777", "FR8364")
         Manifests
-          .fileNameAndContentFromZip(file.getName, byteStringSource, Option("STN"))
+          .fileNameAndContentFromZip(file.getName, byteStringSource, Option("STN"), Option(flightCodesToSelect))
           .map {
             case (_, vm) => vm
           }
@@ -84,32 +85,30 @@ class SplitsExportSpec extends Specification {
         Tuple2(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
       )
 
-
-      val historicSplits: List[HistoricSplitsCollection] = SplitsExport.historicSplitsCollection("STN", manifests)
-      val averageSplits: Map[(String, Int, Int), List[Double]] = SplitsExport.averageFlightSplitsByMonthAndDay(historicSplits, archetypes)
+      val historicSplits: List[HistoricSplitsCollection] = SplitsExport
+        .historicSplitsCollection("STN", manifests)
+        .sortBy(h => (h.flightCode, SDate(h.scheduled).getFullYear(), SDate(h.scheduled).getMonth(), SDate(h.scheduled).getDayOfWeek()))
+      val averageSplits = SplitsExport.averageFlightSplitsByMonthAndDay(historicSplits, archetypes)
 
       val filePath = "/tmp/historic-splits-from-api.csv"
       val file = new File(filePath)
       val bw = new BufferedWriter(new FileWriter(file))
 
       val paxTypes = archetypes.map(_._1.name.dropRight(1)).mkString(",")
-      bw.write(s"flight,month,day,$paxTypes,$paxTypes\n")
-
-      println(s"Writing ${averageSplits.size} flight's worth of splits")
+      val paxTypeAvgs = archetypes.map(a => s"${a._1.name.dropRight(1)} avg").mkString(",")
+      bw.write(s"flight,scheduled,origin,dest,year,month,day,$paxTypes,$paxTypeAvgs\n")
 
       historicSplits
         .foreach(s => {
+          val year = SDate(s.scheduled).getFullYear()
           val month = SDate(s.scheduled).getMonth()
           val dayOfWeek = SDate(s.scheduled).getDayOfWeek()
-          val average: List[Double] = averageSplits.getOrElse((s.flightCode, month, dayOfWeek), List.fill(archetypes.length)(0d))
-          val diffs: List[Double] = archetypes.zipWithIndex.map {
-            case ((paxType, queueName), index) =>
-              val actualValue: Double = s.splits.find {
-                case ApiPaxTypeAndQueueCount(pt, qn, _, _) => pt == paxType && qn == queueName
-              }.map(_.paxCount).getOrElse(0)
-              val histAvg: Double = average(index)
-              val diff = actualValue - histAvg
-              Math.abs(diff)
+          val key = (s.flightCode, year - 1, month, dayOfWeek)
+          val average = averageSplits.get(key) match {
+            case None => List.fill(archetypes.length)(0d)
+            case Some(avgs) =>
+              println(s"Found historic avgs for $key: $avgs")
+              avgs
           }
           val actuals = archetypes.map {
             case (paxType, queueName) =>
@@ -117,12 +116,11 @@ class SplitsExportSpec extends Specification {
                 case ApiPaxTypeAndQueueCount(pt, qn, _, _) => pt == paxType && qn == queueName
               }.map(_.paxCount).getOrElse(0)
           }
-          val row = s"${s.flightCode},$month,$dayOfWeek,${actuals.mkString(",")},${average.mkString(",")}\n"
+          val row = s"${s.flightCode},${SDate(s.scheduled).ddMMyyString},${s.originPort},${s.arrivalPort},$year,$month,$dayOfWeek,${actuals.mkString(",")},${average.mkString(",")}\n"
           bw.write(row)
         })
 
-
-      bw.close
+      bw.close()
 
       //      println(averageSplits)
 
