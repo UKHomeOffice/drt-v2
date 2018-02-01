@@ -28,18 +28,20 @@ class SplitsExportSpec extends Specification {
       skipped("These were used to help write the exporting code for real API files which are not normally accessible")
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
-      val content: List[String] = SplitsExport.extractFilesFromZips(files.take(1))
+      val content: List[String] = SplitsExport.extractFilesFromZips(files.take(1), List("FR"))
 
       content.head.length !== 0
     }
 
-    "I can parse fields from the json" >> {
-      skipped("These were used to help write the exporting code for real API files which are not normally accessible")
+    "I can produce an csv export of nationalities" >> {
+//      skipped("These were used to help write the exporting code for real API files which are not normally accessible")
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
       val carriers = List(
         "AB", "NY", "AP", "IZ", "5O", "AG", "5Y", "S4", "8H", "0B", "OK", "J7", "WK", "OF", "5F", "FH", "FH",
-        "4U", "5K", "6H", "B0", "VL", "IG", "NL", "SX", "RE", "ZT", "VG", "W6", "8Z")
+        "4U", "5K", "6H", "B0", "VL", "IG", "NL", "SX", "RE", "ZT", "VG", "W6", "8Z",
+        "JP", "AP", "IZ", "5O", "BM", "V3", "V4", "WX", "DE", "OU", "J7", "T3", "T4", "OF", "E9", "NY", "5F",
+        "ST", "IB", "I2", "6H", "LG", "IG", "YM", "HG", "SX", "EZ", "ZT", "HV", "OR", "WF", "WW")
 
       val filesToInclude = files.sortBy(_.getAbsolutePath)
       val (nations, summaries) = SplitsExport.extractSummariesFromZips(filesToInclude, carriers)
@@ -63,16 +65,17 @@ class SplitsExportSpec extends Specification {
       result === expected
     }
 
-    "I can get some archetypes from a zip" >> {
+    "I can get export splits from API to csv" >> {
+      skipped("not now..")
       import akka.stream.scaladsl._
 
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
       val manifests = files.sortBy(_.getName).flatMap(file => {
         val byteStringSource = FileIO.fromPath(Paths.get(file.getAbsolutePath))
-        val flightCodesToSelect = List("FR8543", "FR0713", "FR9015", "FR9276", "FR1319", "FR8183", "FR4195", "FR3015", "FR6542", "FR1789", "FR8267", "EW0358", "FR8289", "FR8167", "FR1708", "FR2282", "FR2469", "FR8446", "FR8777", "FR8364")
+        val flightCodesToSelect = Option(List("FR", "U2"))
         Manifests
-          .fileNameAndContentFromZip(file.getName, byteStringSource, Option("STN"), Option(flightCodesToSelect))
+          .fileNameAndContentFromZip(file.getName, byteStringSource, Option("STN"), flightCodesToSelect)
           .map {
             case (_, vm) => vm
           }
@@ -87,7 +90,7 @@ class SplitsExportSpec extends Specification {
 
       val historicSplits: List[HistoricSplitsCollection] = SplitsExport
         .historicSplitsCollection("STN", manifests)
-        .sortBy(h => (h.flightCode, SDate(h.scheduled).getFullYear(), SDate(h.scheduled).getMonth(), SDate(h.scheduled).getDayOfWeek()))
+        .sortBy(h => h.scheduled.millisSinceEpoch)
       val averageSplits = SplitsExport.averageFlightSplitsByMonthAndDay(historicSplits, archetypes)
 
       val filePath = "/tmp/historic-splits-from-api.csv"

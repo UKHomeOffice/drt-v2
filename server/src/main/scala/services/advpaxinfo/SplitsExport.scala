@@ -28,10 +28,22 @@ object SplitsExport {
     }
   }
 
-  def extractFilesFromZips(files: List[File]): List[String] = {
+  def fileNameFilter(carrierList: List[String]): String => Boolean = (fileName: String) => {
+    val fileNameParts = fileName.split("_")
+    val eventCode = fileNameParts(4)
+    val carrierCode = fileNameParts(3).take(2)
+    val isDc = eventCode == DqEventCodes.DepartureConfirmed
+    val isInterestingCarrier = carrierList.contains(carrierCode)
+
+//    println(s"$fileName - eventcode: $eventCode, carriercode: $carrierCode")
+
+    isDc && isInterestingCarrier
+  }
+
+  def extractFilesFromZips(files: List[File], carriers: List[String]): List[String] = {
     val content = files.map(file => {
       val zipStream = new ZipInputStream(new FileInputStream(file.getAbsolutePath))
-      val allUnzipped: Seq[ZipUtils.UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zipStream)
+      val allUnzipped: Seq[ZipUtils.UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zipStream, fileNameFilter(carriers))
 
       allUnzipped.map(unzippedFile => unzippedFile.content)
     })
@@ -44,20 +56,20 @@ object SplitsExport {
       .flatMap(file => {
         println(s"Processing $file")
         val zipStream = new ZipInputStream(new FileInputStream(file.getAbsolutePath))
-        val allUnzipped: Seq[ZipUtils.UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zipStream)
+        val allUnzipped: Seq[ZipUtils.UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zipStream, fileNameFilter(carriers))
 
-        allUnzipped.map(unzippedFile => summaryFromJson(unzippedFile.content, carriers))
+        allUnzipped.map(unzippedFile => summaryFromJson(unzippedFile.content))
       })
       .collect { case Some(fs) => fs }
 
     SplitsExport.expandToFullNationalities(relevantSummaries)
   }
 
-  def getFlightSummaries(jsons: List[String], carriersFilter: List[String]): List[FlightSummary] = jsons
-    .map(json => summaryFromJson(json, carriersFilter))
-    .collect {
-      case Some(summary) => summary
-    }
+//  def getFlightSummaries(jsons: List[String], carriersFilter: List[String]): List[FlightSummary] = jsons
+//    .map(json => summaryFromJson(json))
+//    .collect {
+//      case Some(summary) => summary
+//    }
 
   def expandToFullNationalities(summaries: List[FlightSummary]): (List[String], List[FlightSummary]) = {
     val allCountries = summaries
@@ -87,50 +99,46 @@ object SplitsExport {
     SplitsExport.extractSummariesFromZips(files, carriers)
   }
 
-  def summaryFromJson(jsonString: String, carriersFilter: List[String]): Option[FlightSummary] = {
+  def summaryFromJson(jsonString: String): Option[FlightSummary] = {
     val json = Json.parse(jsonString)
     val flightNumber = (json \ "VoyageNumber").as[String]
     val carrierCode = (json \ "CarrierCode").as[String]
-    val eventCode = (json \ "EventCode").as[String]
 
-    carriersFilter.find(validCarrier => {
-      validCarrier == carrierCode.toString && eventCode == "DC"
-    }).map(_ => {
-      val flightCode = s"$carrierCode$flightNumber"
-      val arrivalDate = (json \ "ScheduledDateOfArrival").as[String]
-      val arrivalTime = (json \ "ScheduledTimeOfArrival").as[String]
-      val portCode = (json \ "ArrivalPortCode").as[String]
+    val flightCode = s"$carrierCode$flightNumber"
+    val arrivalDate = (json \ "ScheduledDateOfArrival").as[String]
+    val arrivalTime = (json \ "ScheduledTimeOfArrival").as[String]
+    val portCode = (json \ "ArrivalPortCode").as[String]
 
-      val pax = (json \ "PassengerList").get.asInstanceOf[JsArray].value
+    val pax = (json \ "PassengerList").get.asInstanceOf[JsArray].value
 
-      val interactiveFlagExists = pax.exists(p => (p \ "PassengerIdentifier").asOpt[String].isDefined)
+    val interactiveFlagExists = pax.exists(p => (p \ "PassengerIdentifier").asOpt[String].isDefined)
 
-      val isInteractive = if (interactiveFlagExists)
-        Option(pax.exists(p => (p \ "PassengerIdentifier").as[String].nonEmpty))
-      else
-        None
+    val isInteractive = if (interactiveFlagExists)
+      Option(pax.exists(p => (p \ "PassengerIdentifier").as[String].nonEmpty))
+    else
+      None
 
-      val countryCounts: Map[String, Int] = pax
-        .map(p => {
-          val natCode = p \ "NationalityCountryCode"
-          val natCodeStr = natCode.as[String] match {
-            case "" => "n/a"
-            case cc => cc
-          }
-          val pid = if (interactiveFlagExists)
-            (p \ "PassengerIdentifier").as[String]
-          else ""
-          (natCodeStr, pid)
-        })
-        .collect {
-          case (natCode, pid) if isInteractive.isEmpty || !isInteractive.get || pid.isEmpty => natCode
+    val countryCounts: Map[String, Int] = pax
+      .map(p => {
+        val natCode = p \ "NationalityCountryCode"
+        val natCodeStr = natCode.as[String] match {
+          case "" => "n/a"
+          case cc => cc
         }
-        .foldLeft(Map[String, Int]()) {
-          case (soFar, country) => soFar.updated(country, soFar.getOrElse(country, 0) + 1)
-        }
+        val pid = if (interactiveFlagExists)
+          (p \ "PassengerIdentifier").as[String]
+        else ""
+        (natCodeStr, pid)
+      })
+      .collect {
+        case (natCode, pid) if isInteractive.isEmpty || !isInteractive.get || pid.isEmpty => natCode
+      }
+      .foldLeft(Map[String, Int]()) {
+        case (soFar, country) => soFar.updated(country, soFar.getOrElse(country, 0) + 1)
+      }
 
-      FlightSummary(flightCode, arrivalDate, arrivalTime, portCode, isInteractive, countryCounts)
-    })
+    Option(FlightSummary(flightCode, arrivalDate, arrivalTime, portCode, isInteractive, countryCounts))
+
   }
 
   def writeCsvReport(nations: List[String], summaries: List[FlightSummary], filePath: String): Unit = {
@@ -154,6 +162,8 @@ object SplitsExport {
     val file = new File(filePath)
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(csvContent)
+
+    bw.close()
   }
 
   def historicSplitsCollection(portCode: String, manifests: List[VoyageManifest]): List[HistoricSplitsCollection] = {

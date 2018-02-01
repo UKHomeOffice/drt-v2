@@ -183,7 +183,7 @@ object Manifests {
       .filter(jsonFile => jsonFile.getName.split("_")(4) == DqEventCodes.DepartureConfirmed)
       .filter {
         case _ if maybeAirlines.isEmpty => true
-        case jsonFile => maybeAirlines.get.contains(jsonFile.getName.split("_")(3).take(6))
+        case jsonFile => maybeAirlines.get.contains(jsonFile.getName.split("_")(3).take(2))
       }
       .map {
         case jsonFile =>
