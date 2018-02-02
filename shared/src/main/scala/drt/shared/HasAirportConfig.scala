@@ -36,6 +36,7 @@ object Queues {
 
 sealed trait PaxType {
   def name: String = getClass.getSimpleName
+  def cleanName: String = getClass.getSimpleName.dropRight(1)
 }
 
 object PaxType {

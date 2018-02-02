@@ -1,15 +1,27 @@
 package services.advpaxinfo
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter, InputStream}
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
+import java.util.zip.ZipInputStream
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Source, StreamConverters}
+import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import drt.shared._
 import org.specs2.mutable.Specification
 import passengersplits.core.SplitsCalculator
+import passengersplits.parsing.VoyageManifestParser
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import services.Manifests.log
 import services.{Manifests, SDate}
 
 import scala.collection.immutable
+import scala.collection.immutable.Seq
+import scala.collection.mutable.ArrayBuffer
+import scala.util.{Failure, Success, Try}
 
 
 class SplitsExportSpec extends Specification {
@@ -34,7 +46,7 @@ class SplitsExportSpec extends Specification {
     }
 
     "I can produce an csv export of nationalities" >> {
-//      skipped("These were used to help write the exporting code for real API files which are not normally accessible")
+      skipped("These were used to help write the exporting code for real API files which are not normally accessible")
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
       val carriers = List(
@@ -129,6 +141,124 @@ class SplitsExportSpec extends Specification {
 
       1 === 1
     }
+
+    val archetypes = List(
+      Tuple2(PaxTypes.EeaMachineReadable.cleanName, Queues.EeaDesk),
+      Tuple2(PaxTypes.EeaNonMachineReadable.cleanName, Queues.EeaDesk),
+      Tuple2(PaxTypes.VisaNational.cleanName, Queues.NonEeaDesk),
+      Tuple2(PaxTypes.NonVisaNational.cleanName, Queues.NonEeaDesk)
+    )
+
+    implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+
+    def writeSplitsFromZip[X](zipFileName: String,
+                              zippedFileByteStream: Source[ByteString, X],
+                              outputFile: BufferedWriter): Unit = {
+
+      val inputStream: InputStream = zippedFileByteStream.runWith(
+        StreamConverters.asInputStream()
+      )
+      val zipInputStream = new ZipInputStream(inputStream)
+
+      Stream
+        .continually(zipInputStream.getNextEntry)
+        .takeWhile(_ != null)
+        .foreach { _ =>
+          val buffer = new Array[Byte](4096)
+          val stringBuffer = new ArrayBuffer[Byte]()
+          var len: Int = zipInputStream.read(buffer)
+
+          while (len > 0) {
+            stringBuffer ++= buffer.take(len)
+            len = zipInputStream.read(buffer)
+          }
+          val jsonContent: String = new String(stringBuffer.toArray, UTF_8)
+          parseJsonAndWrite(archetypes, outputFile, jsonContent)
+        }
+
+      log.info(s"Finished processing $zipFileName")
+
+      //      outputFile.flush()
+    }
+
+    "I can get export splits from API directly to csv" >> {
+      skipped("no need to export the csv every time")
+      import akka.stream.scaladsl._
+
+      val files = SplitsExport.getListOfFiles(rawZipFilesPath)
+
+      val filePath = "/tmp/all-splits-from-api.csv"
+      val file = new File(filePath)
+      val bw = new BufferedWriter(new FileWriter(file))
+      val paxTypes = archetypes.map(_._1).mkString(",")
+      bw.write(s"flight,scheduled,origin,dest,year,month,day,$paxTypes\n")
+
+      files.sortBy(_.getName).foreach(file => {
+        val byteStringSource = FileIO.fromPath(Paths.get(file.getAbsolutePath))
+        writeSplitsFromZip(file.getName, byteStringSource, bw)
+      })
+
+      bw.close()
+
+      1 === 1
+    }
+
+    "I can read a splits csv into spark" >> {
+      import org.apache.spark.sql.SparkSession
+      import org.apache.spark.sql.SQLContext
+
+      val spark: SparkSession = SparkSession
+        .builder
+        .appName("Simple Application")
+        .config("spark.master", "local")
+        .getOrCreate()
+      //      val logData = spark.read.textFile(logFile).cache()
+      //      val sqlContext = new SQLContext(spark.sparkContext)
+
+      //      spark.read.format()
+
+      val stuff = spark.read.format("csv")
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .load("/tmp/all-splits-from-api.csv")
+
+      //      stuff.sqlContext.sql()
+      stuff.printSchema()
+
+      1 === 1
+    }
   }
 
+  def parseJsonAndWrite(archetypes: List[(String, String)], outputFile: BufferedWriter, content: String): Unit = {
+    VoyageManifestParser.parseVoyagePassengerInfo(content) match {
+      case Success(vm) =>
+        val splitsFromManifest = SplitsCalculator
+          .convertVoyageManifestIntoPaxTypeAndQueueCounts(vm.ArrivalPortCode, vm)
+          .map(p => p.copy(nationalities = None))
+
+        val scheduledDateString = s"${vm.ScheduledDateOfArrival}T${vm.ScheduledTimeOfArrival}"
+        Try {
+          MilliDate(SDate(scheduledDateString).millisSinceEpoch)
+        } match {
+          case Failure(_) => println(s"Couldn't parse scheduled date string: $scheduledDateString")
+          case Success(scheduled) =>
+            val year = SDate(scheduled).getFullYear()
+            val month = SDate(scheduled).getMonth()
+            val dayOfWeek = SDate(scheduled).getDayOfWeek()
+
+            val actuals = archetypes.map {
+              case (paxType, queueName) =>
+                splitsFromManifest.find {
+                  case ApiPaxTypeAndQueueCount(pt, qn, _, _) => pt.cleanName == paxType && qn == queueName
+                }.map(_.paxCount).getOrElse(0)
+            }
+
+            val row = s"${vm.flightCode},${SDate(scheduled).ddMMyyString},${vm.DeparturePortCode},${vm.ArrivalPortCode},$year,$month,$dayOfWeek,${actuals.mkString(",")}\n"
+            outputFile.write(row)
+        }
+
+      case _ =>
+    }
+  }
 }
