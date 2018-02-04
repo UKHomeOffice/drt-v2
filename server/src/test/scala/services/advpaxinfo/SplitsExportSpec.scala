@@ -250,15 +250,18 @@ class SplitsExportSpec extends Specification {
       val featuresWithFlights = flightsDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithMonths) {
         case (fts, flight) => fts :+ s"f$flight"
       }
-      val ufdmDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day,"-",month,"-",origin) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      //      val ufdmDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithUfdm = ufdmDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFlights) {
+      val fdmDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day,"-",month) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+      val featuresWithFdm = fdmDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFlights) {
         case (fts, flight) => fts :+ s"fdm$flight"
       }
+      val dmyDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(day,"-",month,"-",year) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+      val featuresWithDmy = dmyDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFdm) {
+        case (fts, flight) => fts :+ s"dmy$flight"
+      }
 
-      println(featuresWithUfdm)
+//      println(featuresWithDmy)
 
-      val features = featuresWithUfdm
+      val features = featuresWithDmy
 
       /*
       fdm
@@ -284,17 +287,24 @@ class SplitsExportSpec extends Specification {
       (EeaNonMachineReadable,4.691023823714822,0.6733516753500037)
       (VisaNational,6.510381027910867,0.8761626847123509)
       (NonVisaNational,8.007164577409212,0.8564613418412119)
+
+      fdm & dmy
+      (EeaMachineReadable,19.65314004718673,0.7860965137211503)
+      (EeaNonMachineReadable,4.675973943394951,0.6754442387306999)
+      (VisaNational,6.493675754509389,0.8767973886013103)
+      (NonVisaNational,7.940601672821772,0.8588378729216842)
       */
 
       val stats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
         val trainingSet = stuff
           //          .select(col(label), col("day"), col("month"), col("flight"), col("origin"))
-          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month"), col("origin")), col("day"), col("month"), col("flight"), col("origin"))
+          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")))
           .where(col("flight").like(s"$carrier%"))
           .where(col("dest") === portCode)
           .map(r => {
             val sparseFeatures = Seq(
-              (features.indexOf(s"fdm${r.getAs[String](1)}"), 1.0)
+              (features.indexOf(s"fdm${r.getAs[String](1)}"), 1.0),
+              (features.indexOf(s"dmy${r.getAs[String](2)}"), 1.0)
               //              (features.indexOf(s"d${r.getAs[Int](1)}"), 1.0),
               //              (features.indexOf(s"m${r.getAs[Int](2)}"), 1.0),
               //              (features.indexOf(s"f${r.getAs[String](3)}"), 1.0)
