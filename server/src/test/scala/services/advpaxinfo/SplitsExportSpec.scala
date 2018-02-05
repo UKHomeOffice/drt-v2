@@ -222,7 +222,7 @@ class SplitsExportSpec extends Specification {
         .read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv("/Users/beneppel/Git/drt/all-splits-from-api.csv")
+        .csv("/tmp/all-splits-from-api.csv")
       //        .csv("/home/rich/dev/all-splits-from-api.csv")
 
       stuff.createOrReplaceTempView("splits")
@@ -317,15 +317,15 @@ class SplitsExportSpec extends Specification {
         val lrModel = lr.fit(trainingSet)
 
         // Print the coefficients and intercept for linear regression
-        println(s"Coefficients: ${lrModel.coefficients} Intercept: ${lrModel.intercept}")
+//        println(s"Coefficients: ${lrModel.evaluate()coefficients} Intercept: ${lrModel.intercept}")
 
         // Summarize the model over the training set and print out some metrics
         val trainingSummary = lrModel.summary
         println(s"numIterations: ${trainingSummary.totalIterations}")
-        println(s"objectiveHistory: [${trainingSummary.objectiveHistory.mkString(",")}]")
-        trainingSummary.residuals.show()
-        println(s"RMSE: ${trainingSummary.rootMeanSquaredError}")
-        println(s"r2: ${trainingSummary.r2}")
+//        println(s"objectiveHistory: [${trainingSummary.objectiveHistory.mkString(",")}]")
+//        trainingSummary.residuals.show()
+//        println(s"RMSE: ${trainingSummary.rootMeanSquaredError}")
+//        println(s"r2: ${trainingSummary.r2}")
 
         val validationSet = stuff
           .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
@@ -346,13 +346,16 @@ class SplitsExportSpec extends Specification {
 
           }).cache()
 
-        val squaredDiff = lrModel.transform(validationSet).select(col("label"), col("prediction")).rdd.map(r => {
+        val summary = lrModel.evaluate(validationSet)
+//        println(s"RMSE: ${summary.rootMeanSquaredError}")
+//        println(s"r2: ${summary.r2}")
+        /*.select(col("label"), col("prediction")).rdd.map(r => {
           Math.pow(r.getAs[Double](0) - r.getAs[Double](1), 2)
-        }).collect()
-        println(s"Root mean squared: ${Math.sqrt(squaredDiff.sum / squaredDiff.length)}")
+        }).collect()*/
+//        println(s"Root mean squared: ${Math.sqrt(squaredDiff.sum / squaredDiff.length)}")
 
 
-        (label, trainingSummary.rootMeanSquaredError, trainingSummary.r2)
+        s"$label, ${trainingSummary.rootMeanSquaredError}, ${trainingSummary.r2} Vs validation: ${summary.rootMeanSquaredError}, ${summary.r2}"
       })
 
       stats.foreach(println)
