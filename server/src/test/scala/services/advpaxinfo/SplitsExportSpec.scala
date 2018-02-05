@@ -222,46 +222,35 @@ class SplitsExportSpec extends Specification {
         .read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv("/home/rich/dev/all-splits-from-api.csv")
+        .csv("/tmp/all-splits-from-api.csv")
+      //        .csv("/home/rich/dev/all-splits-from-api.csv")
 
       stuff.createOrReplaceTempView("splits")
+
+      stuff.printSchema()
 
       import org.apache.spark.sql.functions._
 
 
       val carrier = "FR"
       val carrierLike =s"""LIKE "$carrier%""""
-      //      val carriers = List("BA0855", "BA9131", "BA0865", "BA0361", "BA0501", "BA0566", "BA0553", "BA0088", "BA0296", "BA0423", "BA0721", "BA0074", "BA0719", "BA0345", "BA0903", "BA0315", "BA9126", "BA0645", "BA0847", "BA0429")
-      //      val carrierLike =s"""IN ("${carriers.mkString("\",\"")}")"""
       val portCode = "STN"
-      val originsDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT origin FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithOrigins = originsDf.rdd.map(_.getAs[String](0)).collect().foldLeft(IndexedSeq[String]()) {
-        case (fts, origin) => fts :+ s"o$origin"
-      }
-      val daysDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT day FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithDays = daysDf.rdd.map(_.getAs[Int](0)).collect().foldLeft(featuresWithOrigins) {
-        case (fts, day) => fts :+ s"d$day"
-      }
-      val monthsDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT month FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithMonths = monthsDf.rdd.map(_.getAs[Int](0)).collect().foldLeft(featuresWithDays) {
-        case (fts, month) => fts :+ s"m$month"
-      }
-      val flightsDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT flight FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithFlights = flightsDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithMonths) {
-        case (fts, flight) => fts :+ s"f$flight"
-      }
       val fdmDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day,"-",month) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithFdm = fdmDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFlights) {
-        case (fts, flight) => fts :+ s"fdm$flight"
+      val featuresWithFdm = fdmDf.rdd.map(_.getAs[String](0)).collect().foldLeft(IndexedSeq[String]()) {
+        case (fts, flightDayMonth) => fts :+ s"fdm$flightDayMonth"
       }
       val dmyDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(day,"-",month,"-",year) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
       val featuresWithDmy = dmyDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFdm) {
-        case (fts, flight) => fts :+ s"dmy$flight"
+        case (fts, dayMonthYear) => fts :+ s"dmy$dayMonthYear"
+      }
+      val recentDf = sparkSession.sqlContext.sql(s"""SELECT IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+      val featuresWithRecent = recentDf.rdd.map(_.getAs[Int](0)).collect().foldLeft(featuresWithDmy) {
+        case (fts, recent) => fts :+ s"recent$recent"
       }
 
-//      println(featuresWithDmy)
+      //      println(featuresWithDmy)
 
-      val features = featuresWithDmy
+      val features = featuresWithRecent
 
       /*
       fdm
@@ -295,20 +284,24 @@ class SplitsExportSpec extends Specification {
       (NonVisaNational,7.94,0.85)
       */
 
+            stuff
+              .select(col("scheduled"))
+              .where(col("scheduled") < "2018-01-05")
+              .orderBy(col("scheduled").desc)
+              .limit(5)
+              .show()
+
       val stats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
         val trainingSet = stuff
-          //          .select(col(label), col("day"), col("month"), col("flight"), col("origin"))
-          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")))
+          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
           .where(col("flight").like(s"$carrier%"))
           .where(col("dest") === portCode)
+          .where(col("scheduled") < "2018-01-05")
           .map(r => {
             val sparseFeatures = Seq(
               (features.indexOf(s"fdm${r.getAs[String](1)}"), 1.0),
-              (features.indexOf(s"dmy${r.getAs[String](2)}"), 1.0)
-              //              (features.indexOf(s"d${r.getAs[Int](1)}"), 1.0),
-              //              (features.indexOf(s"m${r.getAs[Int](2)}"), 1.0),
-              //              (features.indexOf(s"f${r.getAs[String](3)}"), 1.0)
-              //    (features.indexOf(s"o${r.getAs[String](5)}"), 1.0)
+              (features.indexOf(s"dmy${r.getAs[String](2)}"), 1.0),
+              (features.indexOf(s"recent${r.getAs[Int](3)}"), 1.0)
             )
 
             LabeledPoint(
@@ -317,10 +310,9 @@ class SplitsExportSpec extends Specification {
             )
           }).cache()
 
+
         val lr = new LinearRegression()
           .setMaxIter(100)
-        //        .setRegParam(1)
-        //        .setElasticNetParam(1)
 
         val lrModel = lr.fit(trainingSet)
 
@@ -334,6 +326,27 @@ class SplitsExportSpec extends Specification {
         trainingSummary.residuals.show()
         println(s"RMSE: ${trainingSummary.rootMeanSquaredError}")
         println(s"r2: ${trainingSummary.r2}")
+
+        val validationSet = stuff
+          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
+          .where(col("flight").like(s"$carrier%"))
+          .where(col("dest") === portCode)
+          .where(col("scheduled") >= "2018-01-05")
+          .map(r => {
+            val sparseFeatures = Seq(
+              (features.indexOf(s"fdm${r.getAs[String](1)}"), 1.0),
+              (features.indexOf(s"dmy${r.getAs[String](2)}"), 1.0),
+              (features.indexOf(s"recent${r.getAs[Int](3)}"), 1.0)
+            )
+
+            LabeledPoint(
+              r.getAs[Double](0),
+              Vectors.sparse(features.length, sparseFeatures)
+            )
+
+          }).cache()
+
+        lrModel.transform(validationSet).select(col("label"), col("prediction"))
 
         (label, trainingSummary.rootMeanSquaredError, trainingSummary.r2)
       })
@@ -369,7 +382,7 @@ class SplitsExportSpec extends Specification {
                 }.map(_.paxCount).getOrElse(0)
             }
 
-            val row = s"${vm.flightCode},${SDate(scheduled).ddMMyyString},${vm.DeparturePortCode},${vm.ArrivalPortCode},$year,$month,$dayOfWeek,${actuals.mkString(",")}\n"
+            val row = s"${vm.flightCode},${SDate(scheduled).toISOString()},${vm.DeparturePortCode},${vm.ArrivalPortCode},$year,$month,$dayOfWeek,${actuals.mkString(",")}\n"
             outputFile.write(row)
         }
 
