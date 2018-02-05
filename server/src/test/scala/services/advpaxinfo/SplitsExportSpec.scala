@@ -229,11 +229,11 @@ class SplitsExportSpec extends Specification {
       import org.apache.spark.sql.functions._
 
 
-      val carrier = "BA"
+      val carrier = "FR"
       val carrierLike =s"""LIKE "$carrier%""""
       //      val carriers = List("BA0855", "BA9131", "BA0865", "BA0361", "BA0501", "BA0566", "BA0553", "BA0088", "BA0296", "BA0423", "BA0721", "BA0074", "BA0719", "BA0345", "BA0903", "BA0315", "BA9126", "BA0645", "BA0847", "BA0429")
       //      val carrierLike =s"""IN ("${carriers.mkString("\",\"")}")"""
-      val portCode = "LHR"
+      val portCode = "STN"
       val originsDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT origin FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
       val featuresWithOrigins = originsDf.rdd.map(_.getAs[String](0)).collect().foldLeft(IndexedSeq[String]()) {
         case (fts, origin) => fts :+ s"o$origin"
@@ -265,34 +265,34 @@ class SplitsExportSpec extends Specification {
 
       /*
       fdm
-      (EeaMachineReadable,20.0497869553242,0.7773752270190677)
-      (EeaNonMachineReadable,4.691487703528661,0.6732870698132789)
-      (VisaNational,6.510755344204573,0.8761484441764252)
-      (NonVisaNational,8.00737588206807,0.8564537659291388)
+      (EeaMachineReadable, 20.04, 0.77)
+      (EeaNonMachineReadable, 4.69, 0.67)
+      (VisaNational, 6.51, 0.87)
+      (NonVisaNational, 8.00, 0.85)
 
       fdm & d & m
-      (EeaMachineReadable,20.04978695532413,0.7773752270190692)
-      (EeaNonMachineReadable,4.69148770352874,0.6732870698132679)
-      (VisaNational,6.510755344204834,0.8761484441764154)
-      (NonVisaNational,8.007375882068233,0.8564537659291329)
+      (EeaMachineReadable, 20.04, 0.77)
+      (EeaNonMachineReadable, 4.69, 0.67)
+      (VisaNational, 6.51, 0.87)
+      (NonVisaNational, 8.00, 0.85)
 
-      d, m, f
-      (EeaMachineReadable,26.909408532615686,0.5989834750196937)
-      (EeaNonMachineReadable,5.935354190698902,0.47707616332920155)
-      (VisaNational,8.863133605406642,0.770483820309338)
-      (NonVisaNational,10.7249698474388,0.7424844068022289)
+      d,  m,  f
+      (EeaMachineReadable, 26.90, 0.59)
+      (EeaNonMachineReadable, 5.93, 0.47)
+      (VisaNational, 8.86, 0.77)
+      (NonVisaNational, 10.72, 0.74)
 
       fdmo
-      (EeaMachineReadable,20.034898951145987,0.777705725092353)
-      (EeaNonMachineReadable,4.691023823714822,0.6733516753500037)
-      (VisaNational,6.510381027910867,0.8761626847123509)
-      (NonVisaNational,8.007164577409212,0.8564613418412119)
+      (EeaMachineReadable, 20.03, 0.77)
+      (EeaNonMachineReadable, 4.69, 0.67)
+      (VisaNational, 6.51, 0.87)
+      (NonVisaNational,8.00,0.85)
 
       fdm & dmy
-      (EeaMachineReadable,19.65314004718673,0.7860965137211503)
-      (EeaNonMachineReadable,4.675973943394951,0.6754442387306999)
-      (VisaNational,6.493675754509389,0.8767973886013103)
-      (NonVisaNational,7.940601672821772,0.8588378729216842)
+      (EeaMachineReadable,19.65,0.78)
+      (EeaNonMachineReadable,4.67,0.67)
+      (VisaNational,6.49,0.87)
+      (NonVisaNational,7.94,0.85)
       */
 
       val stats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
