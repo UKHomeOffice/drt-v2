@@ -222,7 +222,7 @@ class SplitsExportSpec extends Specification {
         .read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv("/tmp/all-splits-from-api.csv")
+        .csv("/Users/beneppel/Git/drt/all-splits-from-api.csv")
       //        .csv("/home/rich/dev/all-splits-from-api.csv")
 
       stuff.createOrReplaceTempView("splits")
@@ -346,7 +346,11 @@ class SplitsExportSpec extends Specification {
 
           }).cache()
 
-        lrModel.transform(validationSet).select(col("label"), col("prediction"))
+        val squaredDiff = lrModel.transform(validationSet).select(col("label"), col("prediction")).rdd.map(r => {
+          Math.pow(r.getAs[Double](0) - r.getAs[Double](1), 2)
+        }).collect()
+        println(s"Root mean squared: ${Math.sqrt(squaredDiff.sum / squaredDiff.length)}")
+
 
         (label, trainingSummary.rootMeanSquaredError, trainingSummary.r2)
       })
