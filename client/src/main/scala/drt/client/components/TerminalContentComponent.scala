@@ -133,7 +133,7 @@ object TerminalContentComponent {
             <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
             }),
-            <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staffing"), ^.onClick --> {
+            <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
             })
           ),

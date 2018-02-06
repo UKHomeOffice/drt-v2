@@ -90,7 +90,7 @@ case class AirportConfig(
                           portStateSnapshotInterval: Int = 1000,
                           eGateBankSize: Int = 5,
                           hasEstChox: Boolean = false,
-                          useStaffingInput: Boolean = false,
+                          useStaffingInput: Boolean = true,
                           exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack
                         ) extends AirportConfigLike {
 
