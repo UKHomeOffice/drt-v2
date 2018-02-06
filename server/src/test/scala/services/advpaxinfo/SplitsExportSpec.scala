@@ -10,11 +10,16 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
+import controllers.ArrivalGenerator
 import drt.shared._
+import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.regression.LinearRegression
+import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
 import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.sql.Row
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.{col, concat_ws, expr}
+import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.specs2.mutable.Specification
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
@@ -189,7 +194,7 @@ class SplitsExportSpec extends Specification {
 
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
-      val filePath = "/tmp/all-splits-from-api.csv"
+      val filePath = "/home/rich/dev/all-splits-from-api.csv"
       val file = new File(filePath)
       val bw = new BufferedWriter(new FileWriter(file))
       val paxTypes = archetypes.map(_._1).mkString(",")
@@ -205,9 +210,133 @@ class SplitsExportSpec extends Specification {
       1 === 1
     }
 
-    case class CsvSplit(flight: String, scheduled: String, origin: String, dest: String, year: Int, month: Int, day: Int, eeaMr: Double, eeaNonMr: Double, visa: Double, nonVisa: Double)
+    "I can train a regression model on a specific flight and get its splits back" >> {
+      import org.apache.spark.sql.SparkSession
+
+      val sparkSession: SparkSession = SparkSession
+        .builder
+        .appName("Simple Application")
+        .config("spark.master", "local")
+        .getOrCreate()
+
+      val splitsData: DataFrame = sparkSession
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        //        .csv("/tmp/all-splits-from-api.csv")
+        .csv("/home/rich/dev/all-splits-from-api.csv")
+
+      splitsData.createOrReplaceTempView("splits")
+      splitsData.printSchema()
+
+      val sqlContext = sparkSession.sqlContext
+      //      val predictor = SplitsPredictor(sparkSession, splitsData)
+      val arrival = ArrivalGenerator.apiFlight(iata = "BA0907", schDt = "2018-02-06T10:05:00Z")
+
+      val iataCode = arrival.IATA
+      val carrierEquals =s"""LIKE "$iataCode""""
+
+      val featuresWithFd = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day) FROM splits WHERE flight $carrierEquals""")
+        .rdd.map(_.getAs[String](0)).collect()
+        .foldLeft(IndexedSeq[String]()) {
+          case (fts, flightDay) => fts :+ s"fd$flightDay"
+        }
+      val featuresWithFm = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",month) FROM splits WHERE flight $carrierEquals""")
+        .rdd.map(_.getAs[String](0)).collect()
+        .foldLeft(featuresWithFd) {
+          case (fts, flightMonth) => fts :+ s"fm$flightMonth"
+        }
+      val featuresWithFy = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",year) FROM splits WHERE flight $carrierEquals""")
+        .rdd.map(_.getAs[String](0)).collect()
+        .foldLeft(featuresWithFm) {
+          case (fts, flightYear) => fts :+ s"fy$flightYear"
+        }
+      val featuresWithFo = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",origin) FROM splits WHERE flight $carrierEquals""")
+        .rdd.map(_.getAs[String](0)).collect()
+        .foldLeft(featuresWithFy) {
+          case (fts, flightOrigin) => fts :+ s"fo$flightOrigin"
+        }
+
+      val features = featuresWithFo
+
+      val labels = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational")
+
+      import sparkSession.implicits._
+
+      val stats = labels.map(label => {
+        val trainingSet = splitsData
+          .select(
+            col(label),
+            concat_ws("-", col("flight"), col("day")),
+            concat_ws("-", col("flight"), col("month")),
+            concat_ws("-", col("flight"), col("year")),
+            concat_ws("-", col("flight"), col("origin"))
+          )
+          .where(col("flight") === iataCode)
+          .map(r => {
+            val sparseFeatures = Seq(
+              (features.indexOf(s"fd${r.getAs[String](1)}"), 1.0),
+              (features.indexOf(s"fm${r.getAs[String](2)}"), 1.0),
+              (features.indexOf(s"fy${r.getAs[String](3)}"), 1.0)
+              //              (features.indexOf(s"fo${r.getAs[String](4)}"), 1.0)
+            )
+
+            LabeledPoint(
+              r.getAs[Double](0),
+              Vectors.sparse(features.length, sparseFeatures)
+            )
+          })
+
+        val lr = new LinearRegression()
+          .setMaxIter(100)
+
+        val lrModel = lr.fit(trainingSet)
+
+        val flightCode = arrival.IATA
+        val day = SDate(arrival.Scheduled).getDayOfWeek()
+        val month = SDate(arrival.Scheduled).getMonth()
+        val year = SDate(arrival.Scheduled).getFullYear()
+
+        val sparseFeatures = Seq[(Int, Double)](
+          (features.indexOf(s"fd$flightCode-$day"), 1.0),
+          (features.indexOf(s"fm$flightCode-$month"), 1.0),
+          (features.indexOf(s"fy$flightCode-$year"), 1.0)
+        )
+
+        val labelAndFeatures = Seq((0d, Vectors.sparse(features.length, sparseFeatures)))
+
+        import sparkSession.implicits._
+
+        val arrivalFeatures = labelAndFeatures.toDF("label", "features")
+        val predictedValue = lrModel
+          .transform(arrivalFeatures)
+          .select(col("prediction"))
+          .rdd
+          .map(_.getAs[Double](0))
+          .collect()
+          .head
+
+        println(s"predicted value: $predictedValue")
+
+        predictedValue
+      })
+
+      val expected = "yeah"
+
+      stats === expected
+    }
+
+    case class SplitsPredictor(sparkSession: SparkSession, splitsData: DataFrame) {
+      def sqlContext: SQLContext = sparkSession.sqlContext
+
+      def splitsFor(arrival: Arrival) = {
+
+
+      }
+    }
 
     "I can read a splits csv into spark" >> {
+      skipped("Not now")
       import org.apache.spark.sql.SparkSession
 
       val sparkSession: SparkSession = SparkSession
@@ -222,8 +351,8 @@ class SplitsExportSpec extends Specification {
         .read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv("/tmp/all-splits-from-api.csv")
-      //        .csv("/home/rich/dev/all-splits-from-api.csv")
+        //        .csv("/tmp/all-splits-from-api.csv")
+        .csv("/home/rich/dev/all-splits-from-api.csv")
 
       stuff.createOrReplaceTempView("splits")
 
@@ -284,13 +413,6 @@ class SplitsExportSpec extends Specification {
       (NonVisaNational,7.94,0.85)
       */
 
-            stuff
-              .select(col("scheduled"))
-              .where(col("scheduled") < "2018-01-05")
-              .orderBy(col("scheduled").desc)
-              .limit(5)
-              .show()
-
       val stats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
         val trainingSet = stuff
           .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
@@ -316,16 +438,7 @@ class SplitsExportSpec extends Specification {
 
         val lrModel = lr.fit(trainingSet)
 
-        // Print the coefficients and intercept for linear regression
-//        println(s"Coefficients: ${lrModel.evaluate()coefficients} Intercept: ${lrModel.intercept}")
-
-        // Summarize the model over the training set and print out some metrics
         val trainingSummary = lrModel.summary
-        println(s"numIterations: ${trainingSummary.totalIterations}")
-//        println(s"objectiveHistory: [${trainingSummary.objectiveHistory.mkString(",")}]")
-//        trainingSummary.residuals.show()
-//        println(s"RMSE: ${trainingSummary.rootMeanSquaredError}")
-//        println(s"r2: ${trainingSummary.r2}")
 
         val validationSet = stuff
           .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
@@ -347,13 +460,6 @@ class SplitsExportSpec extends Specification {
           }).cache()
 
         val summary = lrModel.evaluate(validationSet)
-//        println(s"RMSE: ${summary.rootMeanSquaredError}")
-//        println(s"r2: ${summary.r2}")
-        /*.select(col("label"), col("prediction")).rdd.map(r => {
-          Math.pow(r.getAs[Double](0) - r.getAs[Double](1), 2)
-        }).collect()*/
-//        println(s"Root mean squared: ${Math.sqrt(squaredDiff.sum / squaredDiff.length)}")
-
 
         s"$label, ${trainingSummary.rootMeanSquaredError}, ${trainingSummary.r2} Vs validation: ${summary.rootMeanSquaredError}, ${summary.r2}"
       })
@@ -362,6 +468,157 @@ class SplitsExportSpec extends Specification {
 
       1 === 1
     }
+
+    //    "I can cluster input data to better predict splits" >> {
+    //      import org.apache.spark.sql.SparkSession
+    //
+    //      val sparkSession: SparkSession = SparkSession
+    //        .builder
+    //        .appName("Simple Application")
+    //        .config("spark.master", "local")
+    //        .getOrCreate()
+    //
+    //      import sparkSession.implicits._
+    //
+    //      val stuff = sparkSession
+    //        .read
+    //        .option("header", "true")
+    //        .option("inferSchema", "true")
+    //        //        .csv("/tmp/all-splits-from-api.csv")
+    //        .csv("/home/rich/dev/all-splits-from-api.csv")
+    //
+    //      stuff.createOrReplaceTempView("splits")
+    //
+    //      stuff.printSchema()
+    //
+    //      import org.apache.spark.sql.functions._
+    //
+    //
+    //      val carrier = "FR"
+    //      val carrierLike =s"""LIKE "$carrier%""""
+    //      val portCode = "STN"
+    //      val fdDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+    //      val featuresWithFd = fdDf.rdd.map(_.getAs[String](0)).collect().foldLeft(IndexedSeq[String]()) {
+    //        case (fts, flightDay) => fts :+ s"fd$flightDay"
+    //      }
+    //      val fmDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",month) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+    //      val featuresWithFm = fmDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFd) {
+    //        case (fts, flightMonth) => fts :+ s"fm$flightMonth"
+    //      }
+    //      val fyDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",year) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+    //      val featuresWithFy = fyDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFm) {
+    //        case (fts, flightYear) => fts :+ s"fy$flightYear"
+    //      }
+    //      val foDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",origin) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
+    //      val featuresWithFo = foDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFy) {
+    //        case (fts, flightOrigin) => fts :+ s"fo$flightOrigin"
+    //      }
+    //
+    //      //      println(featuresWithDmy)
+    //
+    //      val features = featuresWithFo
+    //
+    //
+    //      val archetypeStats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
+    //        val splitsForClustering = stuff
+    //          .select(col(label), col("day"), col("month"), col("year"))
+    //          .where(col("dest") === portCode)
+    //          .where(col("scheduled") < "2018-01-05")
+    //          .map(r => {
+    //            val vector = Vectors.dense(r.getAs[Double](0), r.getAs[Int](1), r.getAs[Int](2), r.getAs[Int](3))
+    //            Row(r.getAs[Double](0), LabeledPoint(vector.hashCode(), vector))
+    //          })
+    //          .toDF(label, "cFeatures")
+    //
+    //        val kmeans = new KMeans()
+    //        val numClusters = 10
+    //        val clusterModel = kmeans
+    //          .setK(numClusters)
+    //          .setFeaturesCol("cFeatures")
+    //          .fit(splitsForClustering)
+    //
+    //        val clusteringSet = stuff
+    //          .select(
+    //            col(label),
+    //            concat_ws("-", col("flight"), col("day")),
+    //            concat_ws("-", col("flight"), col("month")),
+    //            concat_ws("-", col("flight"), col("year")),
+    //            concat_ws("-", col("flight"), col("origin")),
+    //            col("day"), col("month"), col("year")
+    //          )
+    //          .withColumn("cFeatures", array(col(label), col("day"), col("month"), col("year")))
+    //          .where(col("flight").like(s"$carrier%"))
+    //          .where(col("dest") === portCode)
+    //          .where(col("scheduled") < "2018-01-05")
+    //
+    //        val clusteredSet = clusterModel.transform(clusteringSet)
+    //
+    //        val clusteredStats = (0 until numClusters).map(cluster => {
+    //          val trainingSet = clusteredSet
+    //            .filter(col("cluster") === cluster)
+    //            .map(r => {
+    //              val sparseFeatures = Seq(
+    //                (features.indexOf(s"fd${r.getAs[String](1)}"), 1.0),
+    //                (features.indexOf(s"fm${r.getAs[String](2)}"), 1.0),
+    //                (features.indexOf(s"fy${r.getAs[String](3)}"), 1.0),
+    //                (features.indexOf(s"fo${r.getAs[String](4)}"), 1.0)
+    //              )
+    //
+    //              LabeledPoint(
+    //                r.getAs[Double](0),
+    //                Vectors.sparse(features.length, sparseFeatures)
+    //              )
+    //            }).cache()
+    //
+    //
+    //          val lr = new LinearRegression()
+    //            .setMaxIter(100)
+    //
+    //          val lrModel = lr.fit(trainingSet)
+    //
+    //          val trainingSummary = lrModel.summary
+    //          println(s"numIterations: ${trainingSummary.totalIterations}")
+    //
+    //          val validationSet = stuff
+    //            .filter(col("cluster") === cluster)
+    //            .select(
+    //              col(label),
+    //              concat_ws("-", col("flight"), col("day")),
+    //              concat_ws("-", col("flight"), col("month")),
+    //              concat_ws("-", col("flight"), col("year")),
+    //              concat_ws("-", col("flight"), col("origin"))
+    //              //            expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)")
+    //            )
+    //            .where(col("flight").like(s"$carrier%"))
+    //            .where(col("dest") === portCode)
+    //            .where(col("scheduled") >= "2018-01-05")
+    //            .map(r => {
+    //              val sparseFeatures = Seq(
+    //                (features.indexOf(s"fd${r.getAs[String](1)}"), 1.0),
+    //                (features.indexOf(s"fm${r.getAs[String](2)}"), 1.0),
+    //                (features.indexOf(s"fy${r.getAs[String](3)}"), 1.0),
+    //                (features.indexOf(s"fo${r.getAs[String](4)}"), 1.0)
+    //              )
+    //
+    //              LabeledPoint(
+    //                r.getAs[Double](0),
+    //                Vectors.sparse(features.length, sparseFeatures)
+    //              )
+    //
+    //            }).cache()
+    //
+    //          val summary = lrModel.evaluate(validationSet)
+    //
+    //          (cluster, s"$label, ${trainingSummary.rootMeanSquaredError}, ${trainingSummary.r2} Vs validation: ${summary.rootMeanSquaredError}, ${summary.r2}")
+    //        })
+    //
+    //        clusteredStats
+    //      })
+    //
+    //      archetypeStats.foreach(println)
+    //
+    //      1 === 1
+    //    }
   }
 
   def parseJsonAndWrite(archetypes: List[(String, String)], outputFile: BufferedWriter, content: String): Unit = {
