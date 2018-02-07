@@ -189,7 +189,7 @@ class SplitsExportSpec extends Specification {
     }
 
     "I can get export splits from API directly to csv" >> {
-      skipped("no need to export the csv every time")
+//      skipped("no need to export the csv every time")
       import akka.stream.scaladsl._
 
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
@@ -211,6 +211,7 @@ class SplitsExportSpec extends Specification {
     }
 
     "I can train a regression model on a specific flight and get its splits back" >> {
+      skipped("let's prove ml is better than historic averages first")
       import org.apache.spark.sql.SparkSession
 
       val sparkSession: SparkSession = SparkSession
@@ -239,22 +240,22 @@ class SplitsExportSpec extends Specification {
       val featuresWithFd = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day) FROM splits WHERE flight $carrierEquals""")
         .rdd.map(_.getAs[String](0)).collect()
         .foldLeft(IndexedSeq[String]()) {
-          case (fts, flightDay) => fts :+ s"fd$flightDay"
+          case (fts, feature) => fts :+ s"fd$feature"
         }
       val featuresWithFm = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",month) FROM splits WHERE flight $carrierEquals""")
         .rdd.map(_.getAs[String](0)).collect()
         .foldLeft(featuresWithFd) {
-          case (fts, flightMonth) => fts :+ s"fm$flightMonth"
+          case (fts, feature) => fts :+ s"fm$feature"
         }
       val featuresWithFy = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",year) FROM splits WHERE flight $carrierEquals""")
         .rdd.map(_.getAs[String](0)).collect()
         .foldLeft(featuresWithFm) {
-          case (fts, flightYear) => fts :+ s"fy$flightYear"
+          case (fts, feature) => fts :+ s"fy$feature"
         }
       val featuresWithFo = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",origin) FROM splits WHERE flight $carrierEquals""")
         .rdd.map(_.getAs[String](0)).collect()
         .foldLeft(featuresWithFy) {
-          case (fts, flightOrigin) => fts :+ s"fo$flightOrigin"
+          case (fts, feature) => fts :+ s"fo$feature"
         }
 
       val features = featuresWithFo
@@ -324,149 +325,6 @@ class SplitsExportSpec extends Specification {
       val expected = "yeah"
 
       stats === expected
-    }
-
-    case class SplitsPredictor(sparkSession: SparkSession, splitsData: DataFrame) {
-      def sqlContext: SQLContext = sparkSession.sqlContext
-
-      def splitsFor(arrival: Arrival) = {
-
-
-      }
-    }
-
-    "I can read a splits csv into spark" >> {
-      skipped("Not now")
-      import org.apache.spark.sql.SparkSession
-
-      val sparkSession: SparkSession = SparkSession
-        .builder
-        .appName("Simple Application")
-        .config("spark.master", "local")
-        .getOrCreate()
-
-      import sparkSession.implicits._
-
-      val stuff = sparkSession
-        .read
-        .option("header", "true")
-        .option("inferSchema", "true")
-        //        .csv("/tmp/all-splits-from-api.csv")
-        .csv("/home/rich/dev/all-splits-from-api.csv")
-
-      stuff.createOrReplaceTempView("splits")
-
-      stuff.printSchema()
-
-      import org.apache.spark.sql.functions._
-
-
-      val carrier = "FR"
-      val carrierLike =s"""LIKE "$carrier%""""
-      val portCode = "STN"
-      val fdmDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day,"-",month) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithFdm = fdmDf.rdd.map(_.getAs[String](0)).collect().foldLeft(IndexedSeq[String]()) {
-        case (fts, flightDayMonth) => fts :+ s"fdm$flightDayMonth"
-      }
-      val dmyDf = sparkSession.sqlContext.sql(s"""SELECT DISTINCT CONCAT(day,"-",month,"-",year) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithDmy = dmyDf.rdd.map(_.getAs[String](0)).collect().foldLeft(featuresWithFdm) {
-        case (fts, dayMonthYear) => fts :+ s"dmy$dayMonthYear"
-      }
-      val recentDf = sparkSession.sqlContext.sql(s"""SELECT IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0) FROM splits WHERE flight $carrierLike AND dest="$portCode"""")
-      val featuresWithRecent = recentDf.rdd.map(_.getAs[Int](0)).collect().foldLeft(featuresWithDmy) {
-        case (fts, recent) => fts :+ s"recent$recent"
-      }
-
-      //      println(featuresWithDmy)
-
-      val features = featuresWithRecent
-
-      /*
-      fdm
-      (EeaMachineReadable, 20.04, 0.77)
-      (EeaNonMachineReadable, 4.69, 0.67)
-      (VisaNational, 6.51, 0.87)
-      (NonVisaNational, 8.00, 0.85)
-
-      fdm & d & m
-      (EeaMachineReadable, 20.04, 0.77)
-      (EeaNonMachineReadable, 4.69, 0.67)
-      (VisaNational, 6.51, 0.87)
-      (NonVisaNational, 8.00, 0.85)
-
-      d,  m,  f
-      (EeaMachineReadable, 26.90, 0.59)
-      (EeaNonMachineReadable, 5.93, 0.47)
-      (VisaNational, 8.86, 0.77)
-      (NonVisaNational, 10.72, 0.74)
-
-      fdmo
-      (EeaMachineReadable, 20.03, 0.77)
-      (EeaNonMachineReadable, 4.69, 0.67)
-      (VisaNational, 6.51, 0.87)
-      (NonVisaNational,8.00,0.85)
-
-      fdm & dmy
-      (EeaMachineReadable,19.65,0.78)
-      (EeaNonMachineReadable,4.67,0.67)
-      (VisaNational,6.49,0.87)
-      (NonVisaNational,7.94,0.85)
-      */
-
-      val stats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
-        val trainingSet = stuff
-          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
-          .where(col("flight").like(s"$carrier%"))
-          .where(col("dest") === portCode)
-          .where(col("scheduled") < "2018-01-05")
-          .map(r => {
-            val sparseFeatures = Seq(
-              (features.indexOf(s"fdm${r.getAs[String](1)}"), 1.0),
-              (features.indexOf(s"dmy${r.getAs[String](2)}"), 1.0),
-              (features.indexOf(s"recent${r.getAs[Int](3)}"), 1.0)
-            )
-
-            LabeledPoint(
-              r.getAs[Double](0),
-              Vectors.sparse(features.length, sparseFeatures)
-            )
-          }).cache()
-
-
-        val lr = new LinearRegression()
-          .setMaxIter(100)
-
-        val lrModel = lr.fit(trainingSet)
-
-        val trainingSummary = lrModel.summary
-
-        val validationSet = stuff
-          .select(col(label), concat_ws("-", col("flight"), col("day"), col("month")), concat_ws("-", col("day"), col("month"), col("year")), expr("IF(datediff(DATE(NOW()), DATE(scheduled)) <= 37, 1, 0)"))
-          .where(col("flight").like(s"$carrier%"))
-          .where(col("dest") === portCode)
-          .where(col("scheduled") >= "2018-01-05")
-          .map(r => {
-            val sparseFeatures = Seq(
-              (features.indexOf(s"fdm${r.getAs[String](1)}"), 1.0),
-              (features.indexOf(s"dmy${r.getAs[String](2)}"), 1.0),
-              (features.indexOf(s"recent${r.getAs[Int](3)}"), 1.0)
-            )
-
-            LabeledPoint(
-              r.getAs[Double](0),
-              Vectors.sparse(features.length, sparseFeatures)
-            )
-
-          }).cache()
-
-        val summary = lrModel.evaluate(validationSet)
-
-        s"$label, ${trainingSummary.rootMeanSquaredError}, ${trainingSummary.r2} Vs validation: ${summary.rootMeanSquaredError}, ${summary.r2}"
-      })
-
-      stats.foreach(println)
-
-      1 === 1
     }
 
     //    "I can cluster input data to better predict splits" >> {
@@ -640,13 +498,15 @@ class SplitsExportSpec extends Specification {
             val dayOfWeek = SDate(scheduled).getDayOfWeek()
 
             val actuals = archetypes.map {
-              case (paxType, queueName) =>
+              case Tuple2(paxType, queueName) =>
                 splitsFromManifest.find {
                   case ApiPaxTypeAndQueueCount(pt, qn, _, _) => pt.cleanName == paxType && qn == queueName
-                }.map(_.paxCount).getOrElse(0)
+                }.map(_.paxCount).getOrElse(0d)
             }
+            val totalPax = actuals.sum
+            val percentages = actuals.map(_ / totalPax)
 
-            val row = s"${vm.flightCode},${SDate(scheduled).toISOString()},${vm.DeparturePortCode},${vm.ArrivalPortCode},$year,$month,$dayOfWeek,${actuals.mkString(",")}\n"
+            val row = s"${vm.flightCode},${SDate(scheduled).toISOString()},${vm.DeparturePortCode},${vm.ArrivalPortCode},$year,$month,$dayOfWeek,${percentages.mkString(",")}\n"
             outputFile.write(row)
         }
 
