@@ -20,6 +20,7 @@ import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
+import drt.server.feeds.lhr.forecast.LHRForecastEmail
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -203,7 +204,12 @@ trait SystemActors {
   }
 
   def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
-    val lhrForecastFeed = LHRForecastFeed(lhrForecastPath)
+    val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
+    val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
+    val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
+    val imapPassword = ConfigFactory.load().getString("lhr.forecast.imap_password")
+    val imapFromAddress = ConfigFactory.load().getString("lhr.forecast.from_address")
+    val lhrForecastFeed = LHRForecastFeed(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort)
     system.log.info(s"LHR Forecast: about to start ticking")
     Source.tick(10 seconds, 1 hour, {
       system.log.info(s"LHR Forecast: ticking")
