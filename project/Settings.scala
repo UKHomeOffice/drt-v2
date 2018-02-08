@@ -92,6 +92,10 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.mfglabs" %% "commons-aws" % awsCommons,
 
+    "javax.mail" % "mail" % "1.4.7",
+    "info.folone" %% "poi-scala" % "0.18",
+    "net.liftweb" %% "lift-json" % "3.1.0",
+
     "com.typesafe" % "config" % typesafeConfig,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
