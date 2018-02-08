@@ -96,10 +96,9 @@ object CSVPassengerSplitsProvider {
 case class CSVPassengerSplitsProvider(flightPassengerSplitLines: Seq[String]) extends PassengerSplitRatioProvider {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  log.info("Initialising CSV Splits")
   lazy val flightPaxSplits: Seq[CsvPassengerSplitsReader.FlightPaxSplit] = {
     val splitsLines = CsvPassengerSplitsReader.flightPaxSplitsFromLines(flightPassengerSplitLines)
-    log.info(s"Initialising CSV Splits will use $splitsLines")
+    log.info(s"Initialising CSV Splits will use ${splitsLines.length} csv rows")
     splitsLines
   }
 
