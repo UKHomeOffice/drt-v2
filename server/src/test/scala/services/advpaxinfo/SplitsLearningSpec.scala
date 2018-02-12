@@ -1,28 +1,33 @@
 package services.advpaxinfo
 
-import java.nio.file.Paths
 import java.sql.Timestamp
 
-import akka.stream.scaladsl.FileIO
 import com.typesafe.config.ConfigFactory
+import drt.shared.MilliDate
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{MilliDate, PaxTypes, Queues}
 import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.LinearRegression
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.functions.{col, concat_ws, expr}
+import org.apache.spark.sql.functions.col
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, Manifests}
+import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
 
 case class FeatureSpec(columns: List[String], whereClause: String, featurePrefix: String)
 
+case class SplitPrediction(flight: String, scheduled: MilliDate, archetype: String, prediction: Double)
+
+object Splits {
+  val historic = CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
+  val historicRaw = CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).getFlightSplitRatios _
+}
 
 class SplitsLearningSpec extends Specification {
   val rawZipFilesPath: String = ConfigFactory.load.getString("dq.raw_zip_files_path")
 
   "I can manipulate DataFrame / Dataset / rdd columns etc" >> {
+    skipped("until we know whether clustering will help us")
     import org.apache.spark.sql.SparkSession
 
     val sparkSession: SparkSession = SparkSession
@@ -45,7 +50,7 @@ class SplitsLearningSpec extends Specification {
     val splitsForClustering = stuff
       .select(col("EeaMachineReadable"), col("day"), col("month"))
       .where(col("dest") === "STN")
-      .where(col("scheduled") between ("2017-12-05", "2018-02-05"))
+      .where(col("scheduled") between("2017-12-05", "2018-02-05"))
       .collect.toSeq
       .map(row => {
         val vector = Vectors.dense(row.getAs[Double](0), row.getAs[Int](1), row.getAs[Int](2))
@@ -75,7 +80,7 @@ class SplitsLearningSpec extends Specification {
     val clusteringSet = stuff
       .select(col("EeaMachineReadable"), col("day"), col("month"))
       .where(col("dest") === "STN")
-      .where(col("scheduled") between ("2017-12-05", "2018-02-05"))
+      .where(col("scheduled") between("2017-12-05", "2018-02-05"))
       .collect.toSeq
       .map(row => {
         val vector = Vectors.dense(row.getAs[Double](0), row.getAs[Int](1), row.getAs[Int](2))
@@ -96,8 +101,13 @@ class SplitsLearningSpec extends Specification {
     true
   }
 
+
+  //  val historicSplits: (String, MilliDate) => Option[SplitRatios] =
+  //    CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
+
+
   "I can read a splits csv into spark" >> {
-    skipped("for now..")
+    //    skipped("for now..")
     import org.apache.spark.sql.SparkSession
 
     val sparkSession: SparkSession = SparkSession
@@ -108,12 +118,13 @@ class SplitsLearningSpec extends Specification {
 
     import sparkSession.implicits._
 
+
     val stuff = sparkSession
       .read
       .option("header", "true")
       .option("inferSchema", "true")
       //        .csv("/tmp/all-splits-from-api.csv")
-      .csv("/home/rich/dev/all-splits-from-api.csv")
+      .csv("/home/rich/dev/BA-lhr-splits-from-api.csv")
 
     stuff.createOrReplaceTempView("splits")
 
@@ -124,7 +135,7 @@ class SplitsLearningSpec extends Specification {
 
     //    val carrier = "AA"
     //    val carrierLike =s"""LIKE "$carrier%""""
-    val portCode = "BHX"
+    val portCode = "LHR"
     val whereClause = s"""dest="$portCode""""
     val featureSpecs = List(
       FeatureSpec(List("flight", "day"), whereClause, "fd"),
@@ -148,74 +159,13 @@ class SplitsLearningSpec extends Specification {
 
     val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
-    val historicSplits: (String, MilliDate) => Option[SplitRatios] =
-      CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
-
-    //    val manifests = files.sortBy(_.getName).flatMap(file => {
-    //      val byteStringSource = FileIO.fromPath(Paths.get(file.getAbsolutePath))
-    //      val flightCodesToSelect = Option(List("FR", "U2"))
-    //      Manifests
-    //        .fileNameAndContentFromZip(file.getName, byteStringSource, Option("STN"), flightCodesToSelect)
-    //        .map {
-    //          case (_, vm) => vm
-    //        }
-    //    })
-    //
-    //    val archetypes = List(
-    //      Tuple2(PaxTypes.EeaMachineReadable, Queues.EeaDesk),
-    //      Tuple2(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk),
-    //      Tuple2(PaxTypes.VisaNational, Queues.NonEeaDesk),
-    //      Tuple2(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
-    //    )
-    //    val historicSplits: List[HistoricSplitsCollection] = SplitsExport
-    //      .historicSplitsCollection(portCode, manifests)
-    //      .sortBy(h => h.scheduled.millisSinceEpoch)
-    //    val averageSplits = SplitsExport.averageFlightSplitsByMonthAndDay(historicSplits, archetypes)
-
     val stats = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational").map(label => {
       val labelAndFeatures = col(label) :: featureSpecs.map(fs => concat_ws("-", fs.columns.map(col): _*)) ++ List(col("flight"), col("scheduled"))
-      //      val labelAndFeaturesForClustering = labelAndFeatures ++ List(col("day"), col("month"), col("year"))
-      //      val offset = labelAndFeatures.length
-      //
-      //      val splitsForClustering = stuff
-      //        .select(labelAndFeaturesForClustering: _*)
-      //        .where(col("dest") === portCode)
-      //        .where(col("scheduled") < "2018-01-05")
-      //        .collect.toSeq
-      //        .map(row => {
-      //          val vector = Vectors.dense(row.getAs[Double](0), row.getAs[Int](offset+0), row.getAs[Int](offset+1), row.getAs[Int](offset+2))
-      //          (row.getAs[Double](0), vector)
-      //        })
-      //        .toDS()
-      //        .toDF(label, "cFeatures")
-      //
-      //
-      //      val kmeans = new KMeans()
-      //      val numClusters = 10
-      //      val clusterModel = kmeans
-      //        .setK(numClusters)
-      //        .setFeaturesCol("cFeatures")
-      //        .fit(splitsForClustering)
-
-      //      val clusteringSet = stuff
-      //        .select(
-      //          col(label),
-      //          concat_ws("-", col("flight"), col("day")),
-      //          concat_ws("-", col("flight"), col("month")),
-      //          concat_ws("-", col("flight"), col("year")),
-      //          concat_ws("-", col("flight"), col("origin")),
-      //          col("day"), col("month"), col("year")
-      //        )
-      //        .withColumn("cFeatures", array(col(label), col("day"), col("month"), col("year")))
-      //        .where(col("dest") === portCode)
-      //        .where(col("scheduled") < "2018-01-05")
-      //
-      //      val clusteredSet = clusterModel.transform(clusteringSet)
 
       val trainingSet = stuff
         .select(labelAndFeatures: _*)
         .where(expr(whereClause))
-        .where(col("scheduled") < "2018-01-20")
+        .where(col("scheduled") < "2018-01-01")
         //        .where(col("scheduled") between("2017-10-05", "2018-01-20"))
         .map(row => {
         val sf = featureSpecs
@@ -227,7 +177,7 @@ class SplitsLearningSpec extends Specification {
               (featureIdx, 1d)
           }
 
-        LabeledPoint(row.getAs[Double](0) * 100, Vectors.sparse(features.length, sf))
+        LabeledPoint(row.getAs[Double](0), Vectors.sparse(features.length, sf))
       }).cache()
 
 
@@ -238,7 +188,7 @@ class SplitsLearningSpec extends Specification {
       val validationSet = stuff
         .select(labelAndFeatures: _*)
         .where(expr(whereClause))
-        .where(col("scheduled") >= "2018-01-20")
+        .where(col("scheduled") >= "2018-01-01")
         .collect.toSeq
         .map(row => {
           val sf = featureSpecs
@@ -249,34 +199,73 @@ class SplitsLearningSpec extends Specification {
                 val featureIdx = features.indexOf(featureString)
                 (featureIdx, 1d)
             }
-          //          val flightCode = row.getAs[String](featureSpecs.length)
-          //          val scheduled = row.getAs[String](featureSpecs.length + 1)
 
-          (row.getAs("flight"), row.getAs("scheduled"), LabeledPoint(row.getAs[Double](0) * 100, Vectors.sparse(features.length, sf)))
+          val flightCode = row.getAs[String]("flight")
+          val scheduledTs = row.getAs[Timestamp]("scheduled")
+          val scheduled = MilliDate(scheduledTs.getTime)
+          val y = row.getAs[Double](label)
+          val sparseFeatures = Vectors.sparse(features.length, sf)
+
+          val historic: Option[Double] = Splits.historic(flightCode, scheduled).map(sr => {
+            sr.splits.filter(_.paxType.passengerType.cleanName == label).map(_.ratio).sum
+          })
+
+          (flightCode, scheduledTs, sparseFeatures, y, historic)
         })
+        .collect { case (f, s, ft, y, Some(h)) =>
+          (f, s, ft, y, h)
+        }
         .toDS()
-        .toDF("flight", "scheduled", "features")
+        .toDF("flight", "scheduled", "features", "label", "historic")
         .cache()
 
       val summary = lrModel.evaluate(validationSet)
+      val withPrediction = lrModel.transform(validationSet)
 
-      val withPrediction = lrModel
-        .transform(validationSet)
-
-      val flightAndSched = withPrediction
-        .rdd
+      val flightAndPred = withPrediction
+        .collect.toSeq
         .map(row => {
           val flightCode = row.getAs[String]("flight")
-          val scheduled = row.getAs[String]("scheduled")
-          (flightCode, scheduled)
+          val scheduled = row.getAs[Timestamp]("scheduled")
+
+          val historic = row.getAs[Double]("historic")
+
+          val y = row.getAs[Double]("label")
+          val p = row.getAs[Double]("prediction")
+
+          val winner = (Math.abs(y - p), Math.abs(y - historic)) match {
+            case (diffP, diffH) if diffP <= diffH => s"P"//: ${diffH - diffP}"
+            case (diffP, diffH) if diffP > diffH => s"H"//: ${diffP - diffH}"
+            case _ => "n/a"
+          }
+
+//          println(f"$label: $y%.2f / $p%.2f / $historic%.2f - winner: $winner")
+
+          (flightCode, scheduled, y, p, historic, winner)
         })
-        .collect
-        .take(5)
 
-      println(s"flightAndSched: $flightAndSched")
+      val numP = flightAndPred.count(_._6 == "P")
+      val numH = flightAndPred.count(_._6 == "H")
+      println(s"p/h: $numP / $numH")
 
+      val numExamples = flightAndPred.length
+      val yMean = flightAndPred.map(_._3).sum / numExamples
+      val ssTot = flightAndPred.map { case (_, _, y, _, _, _) => Math.pow(y - yMean, 2) }.sum
+      val ssRes = flightAndPred.map { case (_, _, y, _, h, _) => Math.pow(y - h, 2) }.sum
+      val histR2 = 1 - (ssRes / ssTot)
+      val histRmse = Math.sqrt(flightAndPred.map(e => Math.pow(e._5 - e._3, 2)).sum / numExamples)
 
-      s"$label, ${trainingSummary.rootMeanSquaredError}, ${trainingSummary.r2} Vs validation: ${summary.rootMeanSquaredError}, ${summary.r2}"
+      val ssResP = flightAndPred.map { case (_, _, y, p, _, _) => Math.pow(y - p, 2) }.sum
+      val histR2P = 1 - (ssResP / ssTot)
+      val histRmseP = Math.sqrt(flightAndPred.map(e => Math.pow(e._5 - e._4, 2)).sum / numExamples)
+
+      val trainRmse = trainingSummary.rootMeanSquaredError
+      val trainR2 = trainingSummary.r2
+
+      val predRmse = summary.rootMeanSquaredError
+      val predR2 = summary.r2
+
+      f"$numExamples examples, train: RMSE $trainRmse%.2f, $trainR2%.2f Vs validation: RMSE $predRmse%.2f, $predR2%.2f Vs hist: RMSE: $histRmse%.2f, r2: $histR2%.2f Vs pred: RMSE: $histRmseP%.2f, r2: $histR2P%.2f: $label"
     })
 
     stats.foreach(println)
