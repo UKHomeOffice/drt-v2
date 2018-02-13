@@ -1,15 +1,13 @@
 package services.graphstages
 
 import akka.actor.ActorRef
-import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
+import akka.stream.{ClosedShape, OverflowStrategy}
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.{ActualDeskStats, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.graphstages.RunnableArrivalsGraph.getClass
-import services.graphstages.RunnableLiveCrunchGraph.log
 
 object RunnableArrivalsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
