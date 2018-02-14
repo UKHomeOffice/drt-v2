@@ -126,7 +126,7 @@ trait SystemActors {
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
-  val useNationalityBasedProcessingTimes = config.getString("feature-flags.nationality-based-processing-times").isDefined
+  val useNationalityBasedProcessingTimes: Boolean = config.getString("feature-flags.nationality-based-processing-times").isDefined
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
@@ -150,12 +150,12 @@ trait SystemActors {
   staffMovementsActor ! AddStaffMovementsSubscribers(crunchInputs.staffMovements)
 
   liveArrivalsSource(airportConfig.portCode)
-    .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
+    .runForeach(f => crunchInputs.liveArrivals.map(_.offer(f)))(actorMaterializer)
   forecastArrivalsSource(airportConfig.portCode)
-    .runForeach(f => crunchInputs.forecastArrivals.offer(f))(actorMaterializer)
+    .runForeach(f => crunchInputs.forecastArrivals.map(_.offer(f)))(actorMaterializer)
 
   system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
-    crunchInputs.baseArrivals.offer(aclFeed.arrivals)
+    crunchInputs.baseArrivals.map(_.offer(aclFeed.arrivals))
   }
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {

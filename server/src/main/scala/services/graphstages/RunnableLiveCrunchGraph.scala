@@ -1,170 +1,144 @@
 package services.graphstages
 
 import akka.actor.ActorRef
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.{ClosedShape, OverflowStrategy}
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.{ActualDeskStats, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
-object RunnableArrivalsGraph {
+object RunnableCrunchLive {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply[SA](
-                 baseArrivalsSource: Source[Flights, SA],
-                 forecastArrivalsSource: Source[Flights, SA],
-                 liveArrivalsSource: Source[Flights, SA],
-                 arrivalsStage: ArrivalsGraphStage,
-                 arrivalsDiffQueueSubscribers: List[SourceQueueWithComplete[ArrivalsDiff]]
-               ): RunnableGraph[(SA, SA, SA)] = {
+  def apply[SA, SVM, SS, SFP, SMM, SAD](
+                                         baseArrivalsSource: Source[Flights, SA],
+                                         forecastArrivalsSource: Source[Flights, SA],
+                                         liveArrivalsSource: Source[Flights, SA],
+                                         manifestsSource: Source[VoyageManifests, SVM],
+                                         shiftsSource: Source[String, SS],
+                                         fixedPointsSource: Source[String, SFP],
+                                         staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                         actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                                         arrivalsStage: ArrivalsGraphStage,
+                                         crunchStage: CrunchGraphStage,
+                                         staffingStage: StaffingStage,
+                                         actualDesksStage: ActualDesksAndWaitTimesGraphStage,
+                                         crunchStateActor: ActorRef
+                                       ): RunnableGraph[(SA, SA, SA, SVM, SS, SFP, SMM, SAD)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
-
-    RunnableGraph.fromGraph(GraphDSL.create(baseArrivalsSource, forecastArrivalsSource, liveArrivalsSource)((_, _, _)) { implicit builder =>
-      (baseArrivals, forecastArrivals, liveArrivals) =>
-        val arrivals = builder.add(arrivalsStage)
-
-        baseArrivals ~> arrivals.in0
-        forecastArrivals ~> arrivals.in1
-        liveArrivals ~> arrivals.in2
-
-        arrivals.out ~> Sink.foreach[ArrivalsDiff](ad => arrivalsDiffQueueSubscribers.foreach(q => {
-          log.info(s"Offering ArrivalsDiff")
-          q.offer(ad)
-        }))
-
-        ClosedShape
-    })
-  }
-}
-
-object RunnableLiveCrunchGraph {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def apply[SAD, SVM](
-                       arrivalsSource: Source[ArrivalsDiff, SAD],
-                       voyageManifestsSource: Source[VoyageManifests, SVM],
-                       cruncher: CrunchGraphStage,
-                       simulationQueueSubscriber: SourceQueueWithComplete[PortState]
-                     ): RunnableGraph[(SAD, SVM)] = {
-
-    import akka.stream.scaladsl.GraphDSL.Implicits._
-
-    RunnableGraph.fromGraph(GraphDSL.create(arrivalsSource,
-      voyageManifestsSource)((_, _)) { implicit builder =>
-      (arrivals, manifests) =>
-        val crunch = builder.add(cruncher)
-
-        arrivals.out ~> crunch.in0
-        manifests ~> crunch.in1
-
-        crunch.out ~> Sink.foreach[PortState](ps => {
-          log.info(s"Offering PortState")
-          simulationQueueSubscriber.offer(ps)
-        })
-
-        ClosedShape
-    })
-  }
-}
-
-object RunnableForecastCrunchGraph {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def apply[SAD](arrivalsSource: Source[ArrivalsDiff, SAD],
-                 cruncher: CrunchGraphStage,
-                 simulationQueueSubscriber: SourceQueueWithComplete[PortState]
-                ): RunnableGraph[SAD] = {
-
-    val dummyManifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.dropHead)
-
-    import akka.stream.scaladsl.GraphDSL.Implicits._
-
-    RunnableGraph.fromGraph(GraphDSL.create(arrivalsSource) { implicit builder =>
-      arrivals =>
-        val crunch = builder.add(cruncher)
-        val dummyManifests = builder.add(dummyManifestsSource)
-
-        arrivals.out ~> crunch.in0
-        dummyManifests ~> crunch.in1
-
-        crunch.out ~> Sink.foreach[PortState](ps => {
-          log.info(s"Offering PortState")
-          simulationQueueSubscriber.offer(ps)
-        })
-
-        ClosedShape
-    })
-  }
-}
-
-object RunnableLiveSimulationGraph {
-  def apply[SC, SA, SVM, SS, SFP, SMM, SAD](crunchSource: Source[PortState, SC],
-                                            shiftsSource: Source[String, SS],
-                                            fixedPointsSource: Source[String, SFP],
-                                            staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                            actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                                            staffingStage: StaffingStage,
-                                            actualDesksStage: ActualDesksAndWaitTimesGraphStage,
-                                            crunchStateActor: ActorRef): RunnableGraph[(SC, SS, SFP, SMM, SAD)] = {
     val crunchSink = Sink.actorRef(crunchStateActor, "completed")
 
-    import akka.stream.scaladsl.GraphDSL.Implicits._
-
-    RunnableGraph.fromGraph(GraphDSL.create(
-      crunchSource,
+    val graph = GraphDSL.create(
+      baseArrivalsSource,
+      forecastArrivalsSource,
+      liveArrivalsSource,
+      manifestsSource,
       shiftsSource,
       fixedPointsSource,
       staffMovementsSource,
-      actualDesksAndWaitTimesSource)((_, _, _, _, _)) { implicit builder =>
-      (crunches, shifts, fixedPoints, movements, actuals) =>
-        val staffing = builder.add(staffingStage)
-        val addActuals = builder.add(actualDesksStage)
+      actualDesksAndWaitTimesSource
+    )((_, _, _, _, _, _, _, _)) { implicit builder =>
+      (
+        baseArrivalsSourceAsync,
+        forecastArrivalsSourceAsync,
+        liveArrivalsSourceAsync,
+        manifestsSourceAsync,
+        shiftsSourceAsync,
+        fixedPointsSourceAsync,
+        staffMovementsSourceAsync,
+        actualDesksAndWaitTimesSourceAsync
+      ) =>
+        val arrivalsStageAsync = builder.add(arrivalsStage.async)
+        val crunchStageAsync = builder.add(crunchStage.async)
+        val staffingStageAsync = builder.add(staffingStage.async)
+        val actualDesksStageAsync = builder.add(actualDesksStage.async)
+        val crunchOut = builder.add(crunchSink)
 
-        crunches ~> staffing.in0
-        shifts ~> staffing.in1
-        fixedPoints ~> staffing.in2
-        movements ~> staffing.in3
+        baseArrivalsSourceAsync ~> arrivalsStageAsync.in0
+        forecastArrivalsSourceAsync ~> arrivalsStageAsync.in1
+        liveArrivalsSourceAsync ~> arrivalsStageAsync.in2
 
-        staffing.out ~> addActuals.in0
-        actuals ~> addActuals.in1
+        arrivalsStageAsync.out ~> crunchStageAsync.in0
+        manifestsSourceAsync ~> crunchStageAsync.in1
 
-        addActuals.out ~> crunchSink
+        crunchStageAsync.out ~> staffingStageAsync.in0
+        shiftsSourceAsync.out ~> staffingStageAsync.in1
+        fixedPointsSourceAsync.out ~> staffingStageAsync.in2
+        staffMovementsSourceAsync.out ~> staffingStageAsync.in3
+
+        staffingStageAsync.out ~> actualDesksStageAsync.in0
+        actualDesksAndWaitTimesSourceAsync ~> actualDesksStageAsync.in1
+
+        actualDesksStageAsync.out ~> crunchOut
 
         ClosedShape
-    })
+    }
+
+    RunnableGraph.fromGraph(graph)
   }
 }
+object RunnableCrunchForecast {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-object RunnableForecastSimulationGraph {
-  def apply[SC, SA, SVM, SS, SFP, SMM, SAD](crunchSource: Source[PortState, SC],
-                                            shiftsSource: Source[String, SS],
-                                            fixedPointsSource: Source[String, SFP],
-                                            staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                            staffingStage: StaffingStage,
-                                            crunchStateActor: ActorRef): RunnableGraph[(SC, SS, SFP, SMM)] = {
-    val crunchSink = Sink.actorRef(crunchStateActor, "completed")
+  def apply[SA, SVM, SS, SFP, SMM, SAD](
+                                         baseArrivalsSource: Source[Flights, SA],
+                                         forecastArrivalsSource: Source[Flights, SA],
+                                         liveArrivalsSource: Source[Flights, SA],
+                                         shiftsSource: Source[String, SS],
+                                         fixedPointsSource: Source[String, SFP],
+                                         staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                         arrivalsStage: ArrivalsGraphStage,
+                                         crunchStage: CrunchGraphStage,
+                                         staffingStage: StaffingStage,
+                                         crunchStateActor: ActorRef
+                                       ): RunnableGraph[(SA, SA, SA, SS, SFP, SMM)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    RunnableGraph.fromGraph(GraphDSL.create(
-      crunchSource,
+    val dummyManifestsSource = Source.queue[VoyageManifests](0, OverflowStrategy.dropHead)
+    val crunchSink = Sink.actorRef(crunchStateActor, "completed")
+
+    val graph = GraphDSL.create(
+      baseArrivalsSource,
+      forecastArrivalsSource,
+      liveArrivalsSource,
       shiftsSource,
       fixedPointsSource,
-      staffMovementsSource)((_, _, _, _)) { implicit builder =>
-      (crunches, shifts, fixedPoints, movements) =>
-        val staffing = builder.add(staffingStage)
+      staffMovementsSource
+    )((_, _, _, _, _, _)) { implicit builder =>
+      (
+        baseArrivalsSourceAsync,
+        forecastArrivalsSourceAsync,
+        liveArrivalsSourceAsync,
+        shiftsSourceAsync,
+        fixedPointsSourceAsync,
+        staffMovementsSourceAsync
+      ) =>
+        val arrivalsStageAsync = builder.add(arrivalsStage.async)
+        val crunchStageAsync = builder.add(crunchStage.async)
+        val staffingStageAsync = builder.add(staffingStage.async)
+        val dummyManifests = builder.add(dummyManifestsSource)
+        val crunchOut = builder.add(crunchSink)
 
-        crunches ~> staffing.in0
-        shifts ~> staffing.in1
-        fixedPoints ~> staffing.in2
-        movements ~> staffing.in3
+        baseArrivalsSourceAsync ~> arrivalsStageAsync.in0
+        forecastArrivalsSourceAsync ~> arrivalsStageAsync.in1
+        liveArrivalsSourceAsync ~> arrivalsStageAsync.in2
 
-        staffing.out ~> crunchSink
+        arrivalsStageAsync.out ~> crunchStageAsync.in0
+        dummyManifests ~> crunchStageAsync.in1
+
+        crunchStageAsync.out ~> staffingStageAsync.in0
+        shiftsSourceAsync.out ~> staffingStageAsync.in1
+        fixedPointsSourceAsync.out ~> staffingStageAsync.in2
+        staffMovementsSourceAsync.out ~> staffingStageAsync.in3
+
+        staffingStageAsync.out ~> crunchOut
 
         ClosedShape
-    })
+    }
+
+    RunnableGraph.fromGraph(graph)
   }
 }
