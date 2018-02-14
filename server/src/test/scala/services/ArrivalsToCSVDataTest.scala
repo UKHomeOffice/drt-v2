@@ -9,7 +9,7 @@ class ArrivalsToCSVDataTest extends Specification {
   import CSVData._
   import controllers.ArrivalGenerator.apiFlight
 
-  "Given a list of arrivals with splits we should get back a CSV of arrival data" >> {
+  "Given a list of flights with splits we should get back a CSV of arrival data" >> {
 
     val flights = List(
       ApiFlightWithSplits(
