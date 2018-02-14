@@ -7,6 +7,7 @@ object SplitRatiosNs {
     val AdvPaxInfo = "advPaxInfo"
     val ApiSplitsWithHistoricalEGateAndFTPercentages_Old = "ApiSplitsWithHistoricalEGatePercentage"
     val ApiSplitsWithHistoricalEGateAndFTPercentages = "ApiSplitsWithHistoricalEGateAndFTPercentages"
+    val PredictedSplitsWithHistoricalEGateAndFTPercentages = "PredictedSplitsWithHistoricalEGateAndFTPercentages"
     val Historical = "Historical"
     val TerminalAverage = "TerminalAverage"
   }
