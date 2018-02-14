@@ -16,7 +16,7 @@ object Navbar {
       case p: TerminalPageTabLoc => Option(p.terminal)
       case _ => None
     }
-
+    val email = "DRTEnquiries"
     <.nav(^.className := "navbar navbar-default",
       airportConfigRCP(airportConfigPotMP => {
         <.div(^.className := "container",
@@ -24,7 +24,10 @@ object Navbar {
             <.div(^.className := "navbar-drt",
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page),
-                <.ul(^.className := "nav navbar-nav navbar-right", <.li(<.a( Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value)))
+                <.ul(^.className := "nav navbar-nav navbar-right",
+                  <.li(<.a( Icon.envelope,  "Email Us", ^.href := "mailto:" + email + "@homeoffice.gsi.gov.uk")),
+                  <.li(<.a( Icon.signOut,  "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value))
+                )
               ))
           }))
       })
