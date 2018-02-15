@@ -10,7 +10,7 @@ class CodeSharesSpec extends Specification {
   import drt.shared.CodeShares._
 
   "Given one flight " +
-    "When we ask for unique flights " +
+    "When we ask for unique arrivals " +
     "Then we should see that flight with zero code shares " >> {
     val flight: Arrival = apiFlight(flightId = 1, iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = 100)
 

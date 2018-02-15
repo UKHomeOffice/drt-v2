@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 class AclFeedSpec extends CrunchTestLike {
   "ACL feed parsing" >> {
     "Given ACL csv content containing a header line and one arrival line " +
-      "When I ask for the flights " +
+      "When I ask for the arrivals " +
       "Then I should see a list containing the appropriate Arrival" >> {
       val csvContent =
         """A/C,ACReg,Airport,ArrDep,CreDate,Date,DOOP,EditDate,Icao Aircraft Type,Icao Last/Next Station,Icao Orig/Dest Station,LastNext,LastNextCountry,Ope,OpeGroup,OpeName,OrigDest,OrigDestCountry,Res,Season,Seats,ServNo,ST,ove.ind,Term,Time,TurnOpe,TurnServNo,OpeFlightNo,LoadFactor
@@ -40,7 +40,7 @@ class AclFeedSpec extends CrunchTestLike {
     }
 
     "Given ACL csv content containing a header line and one departure line " +
-      "When I ask for the flights " +
+      "When I ask for the arrivals " +
       "Then I should see an empty list" >> {
       val csvContent =
         """A/C,ACReg,Airport,ArrDep,CreDate,Date,DOOP,EditDate,Icao Aircraft Type,Icao Last/Next Station,Icao Orig/Dest Station,LastNext,LastNextCountry,Ope,OpeGroup,OpeName,OrigDest,OrigDestCountry,Res,Season,Seats,ServNo,ST,ove.ind,Term,Time,TurnOpe,TurnServNo,OpeFlightNo,LoadFactor
@@ -54,7 +54,7 @@ class AclFeedSpec extends CrunchTestLike {
     }
 
     "Given ACL csv content containing a header line and one positioning flight " +
-      "When I ask for the flights " +
+      "When I ask for the arrivals " +
       "Then I should see an empty list" >> {
       val csvContent =
         """A/C,ACReg,Airport,ArrDep,CreDate,Date,DOOP,EditDate,Icao Aircraft Type,Icao Last/Next Station,Icao Orig/Dest Station,LastNext,LastNextCountry,Ope,OpeGroup,OpeName,OrigDest,OrigDestCountry,Res,Season,Seats,ServNo,ST,ove.ind,Term,Time,TurnOpe,TurnServNo,OpeFlightNo,LoadFactor
@@ -126,9 +126,9 @@ class AclFeedSpec extends CrunchTestLike {
       flightsResult === expected
     }
 
-    "Given some initial ACL & live flights, one ACL arrival and no live flights " +
+    "Given some initial ACL & live arrivals, one ACL arrival and no live arrivals " +
       "When I ask for a crunch " +
-      "Then I should only see the new ACL arrival with the initial live flights" >> {
+      "Then I should only see the new ACL arrival with the initial live arrivals" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
       val initialACL = Set(
@@ -160,9 +160,9 @@ class AclFeedSpec extends CrunchTestLike {
       flightsResult === expected
     }
 
-    "Given some initial flights, no ACL flights and one live arrival " +
+    "Given some initial arrivals, no ACL arrivals and one live arrival " +
       "When I ask for a crunch " +
-      "Then I should only see the initial flights updated with the live arrival" >> {
+      "Then I should only see the initial arrivals updated with the live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
       val initialAcl1 = ArrivalGenerator.apiFlight(actPax = 150, schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
@@ -192,9 +192,9 @@ class AclFeedSpec extends CrunchTestLike {
       flightsResult === expected
     }
 
-    "Given one ACL arrival followed by one live arrival and initial flights which don't match them " +
+    "Given one ACL arrival followed by one live arrival and initial arrivals which don't match them " +
       "When I ask for a crunch " +
-      "Then I should only see the new ACL & live flights plus the initial live arrival" >> {
+      "Then I should only see the new ACL & live arrivals plus the initial live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
       val initialAcl1 = ArrivalGenerator.apiFlight(actPax = 150, schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")

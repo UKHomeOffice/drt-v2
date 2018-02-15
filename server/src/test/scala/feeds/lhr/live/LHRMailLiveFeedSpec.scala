@@ -13,15 +13,16 @@ import spray.http.{HttpEntity, _}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+
 class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
 
   import drt.server.feeds.lhr.live.LHRLiveFeed._
 
   "When processing the LHR flight feed" +
-  "Given a response with 2 flights in json format then I should get back a list of 2 LHR Live Arrivals" >> {
+    "Given a response with 2 flights in json format then I should get back a list of 2 LHR Live Arrivals" >> {
     implicit val timeout = Timeout(1 second)
 
-    val consumer = new LHRLiveFeedConsumer("fake api", "fake security", system) with MockSuccessfulFlightData
+    val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
     val response = consumer.flights
 
     val result = Await.result(response, 1 second).flatten
@@ -42,7 +43,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     implicit val timeout = Timeout(1 second)
 
-    val consumer = new LHRLiveFeedConsumer("fake api", "fake security", system) with MockSuccessfulFlightData
+    val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
     val response = consumer.pax
 
     val result = Await.result(response, 1 second).flatten
@@ -59,7 +60,35 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
     result === expected
   }
 
+  "When handling date formats in the feed" >> {
+    "Given a date format with a missing T then we should handle parse it and convert it to an ISO date" >> {
+      val badDate = "2018-02-12 09:53:43"
+      val expected = "2018-02-12T09:53:43Z"
+
+      val result = LHRLiveFeed.dateStringToIsoString(badDate)
+
+      result === expected
+    }
+    "Given a date format with a T then we should handle parse it and convert it to an ISO date" >> {
+      val badDate = "2018-02-12T09:53:43"
+      val expected = "2018-02-12T09:53:43Z"
+
+      val result = LHRLiveFeed.dateStringToIsoString(badDate)
+
+      result === expected
+    }
+    "Given and empty string then we should get back an empty string" >> {
+      val badDate = ""
+      val expected = ""
+
+      val result = LHRLiveFeed.dateStringToIsoString(badDate)
+
+      result === expected
+    }
+  }
+
   "When processing the LHR Feed" >> {
+
     "Given a LHR Arrival and LHR Pax count then I should get back an Arrival with the data from both combined" >> {
       val lhrArrival = LHRLiveArrival(
         "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12T10:20:00",
@@ -70,11 +99,11 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
         "FL002", "2018-02-12T10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
       )
 
-      val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, Option(lhrPax))
+      val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, Option(lhrPax)).get
 
       val expected = Arrival(
-        "FL", "Last Bag", "2018-02-12 09:53:43", "", "2018-02-12 10:03:00", "2018-02-12 10:02:00", "", "1", 469, 414,
-        218, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00",
+        "FL", "Last Bag", "2018-02-12T09:53:43Z", "", "2018-02-12T10:03:00Z", "2018-02-12T10:02:00Z", "", "1", 469, 414,
+        218, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00Z",
         SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
       )
 
@@ -91,11 +120,11 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
         "FL002", "2018-02-12T10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
       )
 
-      val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, None)
+      val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, None).get
 
       val expected = Arrival(
-        "FL", "Last Bag", "2018-02-12 09:53:43", "", "2018-02-12 10:03:00", "2018-02-12 10:02:00", "", "1", 0, 0,
-        0, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00",
+        "FL", "Last Bag", "2018-02-12T09:53:43Z", "", "2018-02-12T10:03:00Z", "2018-02-12T10:02:00Z", "", "1", 0, 0,
+        0, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00Z",
         SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
       )
 
@@ -108,24 +137,25 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
       implicit val timeout = Timeout(1 second)
 
-      val consumer = new LHRLiveFeedConsumer("fake api", "fake security", system) with MockSuccessfulFlightData
+      val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
       val response = consumer.arrivals
 
       val result = Await.result(response, 1 second)
 
       val expected = List(
         Arrival(
-          "FL", "Last Bag", "2018-02-12 09:53:43", "", "2018-02-12 10:03:00", "2018-02-12 10:02:00", "", "1", 469,
-          414, 218, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00",
+          "FL", "Last Bag", SDate("2018-02-12T09:53:43").toISOString, "", SDate("2018-02-12T10:03:00").toISOString,
+          SDate("2018-02-12T10:02:00").toISOString, "", "1", 469, 414, 218, "", "", 0, "JNB", "T2", "FL002", "FL002",
+          "ZA", SDate("2018-02-12T10:20:00").toISOString,
           SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
         ),
         Arrival(
           "FL", "Scheduled", "", "", "", "", "", "2", 214, 163, 104, "", "", 0, "JNB", "T2", "FL001", "FL001", "ZA",
-          "2018-02-12T18:20:00", SDate("2018-02-12T18:20:00").millisSinceEpoch, 0, None
+          "2018-02-12T18:20:00Z", SDate("2018-02-12T18:20:00").millisSinceEpoch, 0, None
         )
       )
 
-      result === expected
+      result.toSet === expected.toSet
     }
 
     "Given a successful response for flights, but a rate limit exceeded response for pax numbers " +
@@ -133,24 +163,25 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
       implicit val timeout = Timeout(1 second)
 
-      val consumer = new LHRLiveFeedConsumer("fake api", "fake security", system) with MockSuccessfulFlightDataWithRateLimitedPax
+      val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightDataWithRateLimitedPax
       val response = consumer.arrivals
 
       val result = Await.result(response, 1 second)
 
       val expected = List(
         Arrival(
-          "FL", "Last Bag", "2018-02-12 09:53:43", "", "2018-02-12 10:03:00", "2018-02-12 10:02:00", "", "1", 0,
-          0, 0, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00",
+          "FL", "Last Bag", SDate("2018-02-12T09:53:43").toISOString, "", SDate("2018-02-12T10:03:00").toISOString,
+          SDate("2018-02-12T10:02:00").toISOString, "", "1", 0, 0, 0, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA",
+          SDate("2018-02-12T10:20:00").toISOString(),
           SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
         ),
         Arrival(
           "FL", "Scheduled", "", "", "", "", "", "2", 0, 0, 0, "", "", 0, "JNB", "T2", "FL001", "FL001", "ZA",
-          "2018-02-12T18:20:00", SDate("2018-02-12T18:20:00").millisSinceEpoch, 0, None
+          SDate("2018-02-12T18:20:00").toISOString, SDate("2018-02-12T18:20:00").millisSinceEpoch, 0, None
         )
       )
 
-      result === expected
+      result.toSet === expected.toSet
     }
 
     "Given a rate limit exceeded response for flights, and a rate limit exceeded response for pax numbers " +
@@ -158,7 +189,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
       implicit val timeout = Timeout(1 second)
 
-      val consumer = new LHRLiveFeedConsumer("fake api", "fake security", system) with MockRateLimitedEverything
+      val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockRateLimitedEverything
       val response = consumer.arrivals
 
       val result = Await.result(response, 1 second)
@@ -172,7 +203,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
       implicit val timeout = Timeout(1 second)
 
-      val consumer = new LHRLiveFeedConsumer("fake api", "fake security", system) with MockMalformedContentReponse
+      val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockMalformedContentReponse
       val response = consumer.arrivals
 
       val result = Await.result(response, 1 second)
@@ -226,7 +257,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
         case "/arrivaldata/api/Passenger/GetPassengerCount/0/1" =>
           Future(
             HttpResponse(StatusCodes.TooManyRequests)
-            .withEntity(HttpEntity(ContentTypes.`application/json`, rateLimitResponse))
+              .withEntity(HttpEntity(ContentTypes.`application/json`, rateLimitResponse))
           )
       }
     }
