@@ -4,7 +4,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 
-import scala.collection.immutable.Seq
+//import scala.collection.immutable.Seq
 
 
 object Queues {

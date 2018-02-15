@@ -289,6 +289,7 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String) {
 class SplitsLearningSpec extends Specification {
   val rawZipFilesPath: String = ConfigFactory.load.getString("dq.raw_zip_files_path")
   "woop" >> {
+    skipped("yeah")
     implicit val actorSystem: ActorSystem = ActorSystem("splits")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
 

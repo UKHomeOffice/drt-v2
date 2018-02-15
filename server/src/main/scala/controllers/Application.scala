@@ -145,17 +145,17 @@ trait SystemActors {
       "fixed-points" -> fixedPointsActor,
       "staff-movements" -> staffMovementsActor),
     useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes))
-  shiftsActor ! AddShiftLikeSubscribers(crunchInputs.shifts)
-  fixedPointsActor ! AddShiftLikeSubscribers(crunchInputs.fixedPoints)
-  staffMovementsActor ! AddStaffMovementsSubscribers(crunchInputs.staffMovements)
+  shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
+  fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
+  staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
 
   liveArrivalsSource(airportConfig.portCode)
-    .runForeach(f => crunchInputs.liveArrivals.map(_.offer(f)))(actorMaterializer)
+    .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
   forecastArrivalsSource(airportConfig.portCode)
-    .runForeach(f => crunchInputs.forecastArrivals.map(_.offer(f)))(actorMaterializer)
+    .runForeach(f => crunchInputs.forecastArrivals.offer(f))(actorMaterializer)
 
   system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
-    crunchInputs.baseArrivals.map(_.offer(aclFeed.arrivals))
+    crunchInputs.baseArrivals.offer(aclFeed.arrivals)
   }
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
