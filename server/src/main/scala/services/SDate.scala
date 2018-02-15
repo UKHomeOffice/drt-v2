@@ -6,6 +6,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.language.implicitConversions
+import scala.util.Try
 
 object SDate {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -77,4 +78,6 @@ object SDate {
   def now(dtz: DateTimeZone): JodaSDate = JodaSDate(new DateTime(dtz))
 
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
+
+  def tryParseString(dateTime: String) = Try(apply(dateTime))
 }
