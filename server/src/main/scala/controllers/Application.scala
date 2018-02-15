@@ -12,15 +12,12 @@ import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import buildinfo.BuildInfo
-import com.google.inject.Inject
-import com.google.inject.Singleton
+import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigFactory
-//import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lhr.forecast.LHRForecastEmail
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -29,7 +26,7 @@ import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.http.{DefaultHttpFilters, HeaderNames, HttpEntity, HttpFilters}
+import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
@@ -38,7 +35,6 @@ import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
-import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator

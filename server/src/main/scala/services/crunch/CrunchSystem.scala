@@ -12,7 +12,6 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.SplitsProvider.SplitProvider
 import services._
 import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
 import services.graphstages._
@@ -219,38 +218,6 @@ object CrunchSystem {
     validPortTerminals = airportConfig.terminalNames.toSet,
     expireAfterMillis = expireAfterMillis,
     now = now)
-
-  //  def crunchStage(name: String,
-  //                  portCode: String,
-  //                  maxDays: Int,
-  //                  manifestsUsed: Boolean = true,
-  //                  airportConfig: AirportConfig,
-  //                  historicalSplitsProvider: SplitProvider,
-  //                  expireAfterMillis: Long,
-  //                  minutesToCrunch: Int,
-  //                  warmUpMinutes: Int,
-  //                  useNationalityBasedProcessingTimes: Boolean,
-  //                  now: () => SDateLike,
-  //                  calcCrunchStart: SDateLike => SDateLike,
-  //                  calcCrunchEnd: SDateLike => SDateLike,
-  //                  affectedPcpWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)]
-  //                 ): CrunchGraphStage = new CrunchGraphStage(
-  //    name = name,
-  //    optionalInitialFlights = None,
-  //    airportConfig = airportConfig,
-  //    natProcTimes = AirportConfigs.nationalityProcessingTimes,
-  //    groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-  //    splitsCalculator = SplitsCalculator(airportConfig.portCode, historicalSplitsProvider, airportConfig.defaultPaxSplits.splits.toSet),
-  //    crunchStartFromFirstPcp = calcCrunchStart,
-  //    crunchEndFromLastPcp = calcCrunchEnd,
-  //    expireAfterMillis = expireAfterMillis,
-  //    now = now,
-  //    maxDaysToCrunch = maxDays,
-  //    earliestAndLatestAffectedPcpTime = affectedPcpWindow(maxDays),
-  //    manifestsUsed = manifestsUsed,
-  //    minutesToCrunch = minutesToCrunch,
-  //    warmUpMinutes = warmUpMinutes,
-  //    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes)
 
   def initialArrivals(arrivalsActor: AskableActorRef): Set[Arrival] = {
     val canWaitMinutes = 5
