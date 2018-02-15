@@ -173,7 +173,7 @@ object LHRLiveFeed {
         ~> unmarshal[List[List[LHRFlightPax]]]
       )
 
-    def flights: Future[List[List[LHRLiveFeed.LHRLiveArrival]]] = {
+    def flights(): Future[List[List[LHRLiveFeed.LHRLiveArrival]]] = {
       arrivalsPipeline(Get(apiUri + "/arrivaldata/api/Flights/getflightsdetails/0/1")).recoverWith {
         case t: Throwable =>
           log.warn(s"Failed to get Flight details: ${t.getMessage}")
@@ -181,7 +181,7 @@ object LHRLiveFeed {
       }
     }
 
-    def pax: Future[List[List[LHRLiveFeed.LHRFlightPax]]] = {
+    def pax(): Future[List[List[LHRLiveFeed.LHRFlightPax]]] = {
       paxPipeline(Get(apiUri + "/arrivaldata/api/Passenger/GetPassengerCount/0/1")).recoverWith {
         case t: Throwable =>
           log.warn(s"Failed to get Pax details: ${t.getMessage}")
@@ -190,8 +190,8 @@ object LHRLiveFeed {
     }
 
     def arrivals: Future[List[Arrival]] = {
-      val fs: Future[List[List[LHRLiveArrival]]] = flights
-      val ps: Future[List[List[LHRFlightPax]]] = pax
+      val fs: Future[List[List[LHRLiveArrival]]] = flights()
+      val ps: Future[List[List[LHRFlightPax]]] = pax()
 
       for {
         flightsListList: List[List[LHRLiveArrival]] <- fs
