@@ -21,6 +21,8 @@ import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lhr.forecast.LHRForecastEmail
+import drt.server.feeds.lhr.live.LHRLiveFeed
+import drt.server.feeds.lhr.live.LHRLiveFeed.LHRLiveArrival
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -173,7 +175,15 @@ trait SystemActors {
 
   def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
-      case "LHR" => LHRFlightFeed()
+      case "LHR" =>
+        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
+          val apiUri = config.getString("lhr.live.api_url").get
+          val token = config.getString("lhr.live.token").get
+          system.log.info(s"Connecting to $apiUri using $token")
+
+          LHRLiveFeed(apiUri, token, system)
+        }
+        else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }

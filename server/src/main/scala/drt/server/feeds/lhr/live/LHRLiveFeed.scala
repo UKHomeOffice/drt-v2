@@ -1,7 +1,12 @@
 package drt.server.feeds.lhr.live
 
-import akka.actor.ActorSystem
-import drt.http.WithSendAndReceive
+import akka.NotUsed
+import akka.actor.{ActorSystem, Cancellable}
+import akka.stream.scaladsl.Source
+import akka.util.Timeout
+import drt.chroma.DiffingStage
+import drt.http.{ProdSendAndReceive, WithSendAndReceive}
+import drt.server.feeds.lhr.LHRFlightFeed
 import drt.shared.Arrival
 import org.slf4j.LoggerFactory
 import services.SDate
@@ -10,7 +15,10 @@ import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.collection.immutable
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.FiniteDuration
 
 object LHRLiveFeed {
 
@@ -28,10 +36,10 @@ object LHRLiveFeed {
     Arrival(
       lhrArrival.OPERATOR,
       statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
-      lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME,
+      SDate(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME).toISOString(),
       "",
-      lhrArrival.ESTIMATEDFLIGHTCHOXTIME,
-      lhrArrival.ACTUALFLIGHTCHOXTIME,
+      SDate(lhrArrival.ESTIMATEDFLIGHTCHOXTIME).toISOString(),
+      SDate(lhrArrival.ACTUALFLIGHTCHOXTIME).toISOString(),
       "",
       lhrArrival.STAND,
       lhrPax.map(_.MAXPASSENGERCOUNT.toInt).getOrElse(0),
@@ -45,7 +53,7 @@ object LHRLiveFeed {
       lhrArrival.FLIGHTNUMBER,
       lhrArrival.FLIGHTNUMBER,
       lhrArrival.COUNTRYCODE,
-      lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME,
+      SDate(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME).toISOString(),
       SDate(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME).millisSinceEpoch,
       0,
       None
@@ -114,6 +122,8 @@ object LHRLiveFeed {
 
     import system.dispatcher
 
+    implicit val timeout = Timeout(1 minute)
+
     val logResponse: HttpResponse => HttpResponse =  resp => {
 
       if (resp.status.isFailure) {
@@ -137,7 +147,7 @@ object LHRLiveFeed {
       )
 
     def flights: Future[List[List[LHRLiveFeed.LHRLiveArrival]]] = {
-      arrivalsPipeline(Get("/arrivaldata/api/Flights/getflightsdetails/0/1")).recoverWith {
+      arrivalsPipeline(Get( apiUri + "/arrivaldata/api/Flights/getflightsdetails/0/1")).recoverWith {
         case t: Throwable =>
           log.warn(s"Failed to get Flight details: ${t.getMessage}")
           Future(List())
@@ -145,7 +155,7 @@ object LHRLiveFeed {
     }
 
     def pax: Future[List[List[LHRLiveFeed.LHRFlightPax]]] = {
-      paxPipeline(Get("/arrivaldata/api/Passenger/GetPassengerCount/0/1")).recoverWith {
+      paxPipeline(Get(apiUri + "/arrivaldata/api/Passenger/GetPassengerCount/0/1")).recoverWith {
         case t: Throwable =>
           log.warn(s"Failed to get Pax details: ${t.getMessage}")
           Future(List())
@@ -171,6 +181,26 @@ object LHRLiveFeed {
       })
 
     }
+  }
+
+  def apply(apiEndpoint: String, apiSecurityToken: String, actorSystem: ActorSystem): Source[List[Arrival], Cancellable] = {
+    log.info(s"Preparing to stream LHR Live feed")
+
+    val LHRFetcher = new LHRLiveFeedConsumer(apiEndpoint, apiSecurityToken, actorSystem) with ProdSendAndReceive
+
+    val pollFrequency = 5 minutes
+    val initialDelayImmediately: FiniteDuration = 1 milliseconds
+    val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+      .map((_) => {
+        log.info(s"About to poll for LHR live flights")
+        val flights = LHRFetcher.arrivals
+        log.info(s"Got LHR live flights")
+        Await.result(flights, 1 minute)
+      })
+
+    val diffedArrivals: Source[immutable.Seq[Arrival], Cancellable] = tickingSource.via(DiffingStage.DiffLists[Arrival]())
+
+    diffedArrivals.map(_.toList)
   }
 
 }
