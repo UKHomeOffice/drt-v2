@@ -9,6 +9,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
+import org.apache.spark.sql.SparkSession
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -95,13 +96,21 @@ object CrunchSystem {
     val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
     val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
     val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
-    val shiftsSourceLive: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
-    val fixedPointsSourceLive: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
-    val staffMovementsSourceLive: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.dropHead)
+    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
+    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
+    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.dropHead)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.dropHead)
     val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.dropHead)
 
     val maxLiveDaysToCrunch = 2
+
+    val sparkSession: SparkSession = SparkSession
+      .builder
+      .appName("Simple Application")
+      .config("spark.master", "local")
+      .getOrCreate()
+    val splitsPredictor = SplitsPredictor(sparkSession, props.airportConfig.portCode)
+    val splitsPredictorStage = new SplitsPredictorStage(splitsPredictor)
 
     val liveCrunchStage = new CrunchGraphStage(
       name = "live",
@@ -149,8 +158,10 @@ object CrunchSystem {
       now = props.now)
 
     val runnableCrunch = RunnableCrunch(
-      baseArrivals, forecastArrivals, liveArrivals, manifestsSource, shiftsSourceLive, fixedPointsSourceLive, staffMovementsSourceLive,
-      actualDesksAndQueuesSource, arrivalsStage_, actualDesksStage, liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
+      baseArrivals, forecastArrivals, liveArrivals,
+      manifestsSource, splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
+      actualDesksAndQueuesSource, arrivalsStage_, actualDesksStage,
+      liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
       forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)
 
     implicit val actorSystem: ActorSystem = props.system

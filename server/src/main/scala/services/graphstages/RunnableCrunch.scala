@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.stream.ClosedShape
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{ActualDeskStats, StaffMovement}
+import drt.shared.{ActualDeskStats, ApiSplits, Arrival, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
@@ -16,6 +16,7 @@ object RunnableCrunch {
                                          fcstArrivalsSource: Source[Flights, SA],
                                          liveArrivalsSource: Source[Flights, SA],
                                          manifestsSource: Source[VoyageManifests, SVM],
+                                         splitsPredictorStage: SplitsPredictorStage,
                                          shiftsSource: Source[String, SS],
                                          fixedPointsSource: Source[String, SFP],
                                          staffMovementsSource: Source[Seq[StaffMovement], SMM],
@@ -62,19 +63,25 @@ object RunnableCrunch {
         val fcstStaffingStageAsync = builder.add(fcstStaffingStage.async)
         val fcstCrunchOut = builder.add(fcstCrunchSink)
         val actualDesksStageAsync = builder.add(actualDesksStage.async)
+        val splitsPredictorStageAsync = builder.add(splitsPredictorStage.async)
 
-        val fanOutBase = builder.add(Broadcast[ArrivalsDiff](2).async)
+        val fanOutArrivalsDiff = builder.add(Broadcast[ArrivalsDiff](3).async)
         val fanOutShifts = builder.add(Broadcast[String](2).async)
         val fanOutFixedPoints = builder.add(Broadcast[String](2).async)
         val fanOutStaffMovements = builder.add(Broadcast[Seq[StaffMovement]](2).async)
         val fanOutManifests = builder.add(Broadcast[VoyageManifests](2).async)
+        val fanOutSplitsPredictions = builder.add(Broadcast[List[(Arrival, Option[ApiSplits])]](2).async)
 
         baseArrivalsSource ~> arrivalsStageAsync.in0
         fcstArrivalsSource ~> arrivalsStageAsync.in1
         liveArrivalsSource ~> arrivalsStageAsync.in2
 
-        arrivalsStageAsync.out ~> fanOutBase ~> liveCrunchStageAsync.in0
-                                  fanOutBase ~> fcstCrunchStageAsync.in0
+        arrivalsStageAsync.out ~> fanOutArrivalsDiff ~> liveCrunchStageAsync.in0
+                                  fanOutArrivalsDiff ~> fcstCrunchStageAsync.in0
+                                  fanOutArrivalsDiff.map(_.toUpdate.toList) ~> splitsPredictorStageAsync
+
+        splitsPredictorStageAsync.out ~> fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
+                                         fanOutSplitsPredictions ~> fcstCrunchStageAsync.in2
 
         manifestsSource ~> fanOutManifests ~> liveCrunchStageAsync.in1
                            fanOutManifests ~> fcstCrunchStageAsync.in1

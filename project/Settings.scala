@@ -117,6 +117,7 @@ object Settings {
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
+    "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.renjin" % "renjin-script-engine" % renjin,

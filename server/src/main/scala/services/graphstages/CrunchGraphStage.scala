@@ -1,7 +1,7 @@
 package services.graphstages
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
+import akka.stream._
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
@@ -35,12 +35,14 @@ class CrunchGraphStage(name: String,
                        minutesToCrunch: Int,
                        warmUpMinutes: Int,
                        useNationalityBasedProcessingTimes: Boolean)
-  extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, VoyageManifests, List[(Arrival, Option[ApiSplits])], PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("SplitsIn.in")
+  val inSplitsPredictions: Inlet[List[(Arrival, Option[ApiSplits])]] = Inlet[List[(Arrival, Option[ApiSplits])]]("SplitsPredictionsIn.in")
   val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateOut.out")
-  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outCrunch)
+
+  override val shape = new FanInShape3(inArrivalsDiff, inManifests, inSplitsPredictions, outCrunch)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
@@ -85,6 +87,7 @@ class CrunchGraphStage(name: String,
         }
         if (!hasBeenPulled(inManifests)) pull(inManifests)
         if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
+        if (!hasBeenPulled(inSplitsPredictions)) pull(inSplitsPredictions)
       }
     })
 
@@ -124,6 +127,17 @@ class CrunchGraphStage(name: String,
         } else log.info(s"No splits updates")
 
         if (!hasBeenPulled(inManifests)) pull(inManifests)
+      }
+    })
+
+    setHandler(inSplitsPredictions, new InHandler {
+      override def onPush(): Unit = {
+        log.debug(s"inSplitsPredictions onPush called")
+        val predictions = grab(inSplitsPredictions)
+
+        log.info(s"Grabbed ${predictions.length} predictions")
+
+        if (!hasBeenPulled(inSplitsPredictions)) pull(inSplitsPredictions)
       }
     })
 
