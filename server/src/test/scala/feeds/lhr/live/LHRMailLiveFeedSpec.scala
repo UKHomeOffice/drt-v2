@@ -18,9 +18,10 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
   import drt.server.feeds.lhr.live.LHRLiveFeed._
 
+  implicit val timeout = Timeout(1 second)
+
   "When processing the LHR flight feed" +
     "Given a response with 2 flights in json format then I should get back a list of 2 LHR Live Arrivals" >> {
-    implicit val timeout = Timeout(1 second)
 
     val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
     val response = consumer.flights
@@ -41,7 +42,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
   "When processing the LHR passenger feed" +
     "Given a response with pax numbers for 2 flights in json format then I should get back a list of 2 LHRFlightPax" >> {
 
-    implicit val timeout = Timeout(1 second)
 
     val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
     val response = consumer.pax
@@ -103,7 +103,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
       val expected = Arrival(
         "FL", "Last Bag", "2018-02-12T09:53:43Z", "", "2018-02-12T10:03:00Z", "2018-02-12T10:02:00Z", "", "1", 469, 414,
-        218, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00Z",
+        218, "", "", 0, "LHR", "T2", "FL002", "FL002", "JNB", "2018-02-12T10:20:00Z",
         SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
       )
 
@@ -124,7 +124,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
       val expected = Arrival(
         "FL", "Last Bag", "2018-02-12T09:53:43Z", "", "2018-02-12T10:03:00Z", "2018-02-12T10:02:00Z", "", "1", 0, 0,
-        0, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA", "2018-02-12T10:20:00Z",
+        0, "", "", 0, "LHR", "T2", "FL002", "FL002", "JNB", "2018-02-12T10:20:00Z",
         SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
       )
 
@@ -135,7 +135,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
   "When processing the LHR feed" >> {
     "Given a response with pax numbers and flights in json format then I should get back a list Arrivals with pax included" >> {
 
-      implicit val timeout = Timeout(1 second)
 
       val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
       val response = consumer.arrivals
@@ -145,12 +144,12 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       val expected = List(
         Arrival(
           "FL", "Last Bag", SDate("2018-02-12T09:53:43").toISOString, "", SDate("2018-02-12T10:03:00").toISOString,
-          SDate("2018-02-12T10:02:00").toISOString, "", "1", 469, 414, 218, "", "", 0, "JNB", "T2", "FL002", "FL002",
-          "ZA", SDate("2018-02-12T10:20:00").toISOString,
+          SDate("2018-02-12T10:02:00").toISOString, "", "1", 469, 414, 218, "", "", 0, "LHR", "T2", "FL002", "FL002",
+          "JNB", SDate("2018-02-12T10:20:00").toISOString,
           SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
         ),
         Arrival(
-          "FL", "Scheduled", "", "", "", "", "", "2", 214, 163, 104, "", "", 0, "JNB", "T2", "FL001", "FL001", "ZA",
+          "FL", "Scheduled", "", "", "", "", "", "2", 214, 163, 104, "", "", 0, "LHR", "T2", "FL001", "FL001", "JNB",
           "2018-02-12T18:20:00Z", SDate("2018-02-12T18:20:00").millisSinceEpoch, 0, None
         )
       )
@@ -161,7 +160,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
     "Given a successful response for flights, but a rate limit exceeded response for pax numbers " +
       "then I should get flights back with 0 pax numbers" >> {
 
-      implicit val timeout = Timeout(1 second)
 
       val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightDataWithRateLimitedPax
       val response = consumer.arrivals
@@ -171,12 +169,12 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       val expected = List(
         Arrival(
           "FL", "Last Bag", SDate("2018-02-12T09:53:43").toISOString, "", SDate("2018-02-12T10:03:00").toISOString,
-          SDate("2018-02-12T10:02:00").toISOString, "", "1", 0, 0, 0, "", "", 0, "JNB", "T2", "FL002", "FL002", "ZA",
+          SDate("2018-02-12T10:02:00").toISOString, "", "1", 0, 0, 0, "", "", 0, "LHR", "T2", "FL002", "FL002", "JNB",
           SDate("2018-02-12T10:20:00").toISOString(),
           SDate("2018-02-12T10:20:00").millisSinceEpoch, 0, None
         ),
         Arrival(
-          "FL", "Scheduled", "", "", "", "", "", "2", 0, 0, 0, "", "", 0, "JNB", "T2", "FL001", "FL001", "ZA",
+          "FL", "Scheduled", "", "", "", "", "", "2", 0, 0, 0, "", "", 0, "LHR", "T2", "FL001", "FL001", "JNB",
           SDate("2018-02-12T18:20:00").toISOString, SDate("2018-02-12T18:20:00").millisSinceEpoch, 0, None
         )
       )
@@ -187,7 +185,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
     "Given a rate limit exceeded response for flights, and a rate limit exceeded response for pax numbers " +
       "then I should get and empty list" >> {
 
-      implicit val timeout = Timeout(1 second)
 
       val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockRateLimitedEverything
       val response = consumer.arrivals
@@ -201,7 +198,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     "Given successful response for flights with malformed content then I should get and empty list" >> {
 
-      implicit val timeout = Timeout(1 second)
 
       val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockMalformedContentReponse
       val response = consumer.arrivals
