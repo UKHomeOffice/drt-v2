@@ -97,7 +97,7 @@ object TerminalStaffingV2 {
                     terminalPageTab: TerminalPageTabLoc,
                     router: RouterCtl[Loc]
                   ) {
-    def timeSlotMinutes = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
+    def timeSlotMinutes = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
   def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth =
