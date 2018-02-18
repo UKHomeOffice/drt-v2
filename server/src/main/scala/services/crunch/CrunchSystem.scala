@@ -9,7 +9,6 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
-import org.apache.spark.sql.SparkSession
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -52,7 +51,8 @@ object CrunchSystem {
                          crunchEndDateProvider: (SDateLike) => SDateLike = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
                          calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
                          now: () => SDateLike = () => SDate.now(),
-                         initialFlightsWithSplits: Option[FlightsWithSplits] = None
+                         initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                         splitsPredictorStage: SplitsPredictorBase
                         )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -104,14 +104,6 @@ object CrunchSystem {
 
     val maxLiveDaysToCrunch = 2
 
-    val sparkSession: SparkSession = SparkSession
-      .builder
-      .appName("Simple Application")
-      .config("spark.master", "local")
-      .getOrCreate()
-    val splitsPredictor = SplitsPredictor(sparkSession, props.airportConfig.portCode)
-    val splitsPredictorStage = new SplitsPredictorStage(splitsPredictor)
-
     val liveCrunchStage = new CrunchGraphStage(
       name = "live",
       optionalInitialFlights = props.initialFlightsWithSplits,
@@ -159,7 +151,7 @@ object CrunchSystem {
 
     val runnableCrunch = RunnableCrunch(
       baseArrivals, forecastArrivals, liveArrivals,
-      manifestsSource, splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
+      manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
       actualDesksAndQueuesSource, arrivalsStage_, actualDesksStage,
       liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
       forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)

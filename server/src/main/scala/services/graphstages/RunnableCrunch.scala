@@ -16,7 +16,7 @@ object RunnableCrunch {
                                          fcstArrivalsSource: Source[Flights, SA],
                                          liveArrivalsSource: Source[Flights, SA],
                                          manifestsSource: Source[VoyageManifests, SVM],
-                                         splitsPredictorStage: SplitsPredictorStage,
+                                         splitsPredictorStage: SplitsPredictorBase = new DummySplitsPredictor(),
                                          shiftsSource: Source[String, SS],
                                          fixedPointsSource: Source[String, SFP],
                                          staffMovementsSource: Source[Seq[StaffMovement], SMM],

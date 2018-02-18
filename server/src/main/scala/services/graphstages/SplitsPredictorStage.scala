@@ -1,54 +1,73 @@
 package services.graphstages
 
-import akka.NotUsed
 import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared._
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared._
 import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.regression.LinearRegression
-import org.apache.spark.sql.{Column, DataFrame, SparkSession}
+import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
 import org.apache.spark.sql.functions.{col, concat_ws, expr}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
-import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate, SplitsProvider}
 import services.SplitsProvider.SplitProvider
+import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate, SplitsProvider}
 
 import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
 
-case class FeatureSpec(columns: List[String], whereClause: String, featurePrefix: String)
+case class FeatureSpec(columns: List[String], featurePrefix: String)
 
 case class SplitPrediction(flight: String, scheduled: MilliDate, archetype: String, prediction: Double)
 
-object Splits {
-  def historic(portCode: String): SplitProvider = {
-    val splitsFilePath = s"file:///home/rich/dev/${portCode.toLowerCase}-passenger-splits.csv"
-    val splitsLines = CsvPassengerSplitsReader.flightPaxSplitsLinesFromPath(splitsFilePath)
-    CSVPassengerSplitsProvider(splitsLines).splitRatioProvider
-  }
+abstract class SplitsPredictorBase extends GraphStage[FlowShape[List[Arrival], List[(Arrival, Option[ApiSplits])]]]
+
+class DummySplitsPredictor() extends SplitsPredictorBase {
+  val in: Inlet[List[Arrival]] = Inlet[List[Arrival]]("SplitsPredictor.in")
+  val out: Outlet[List[(Arrival, Option[ApiSplits])]] = Outlet[List[(Arrival, Option[ApiSplits])]]("SplitsPredictor.out")
+
+  val shape: FlowShape[List[Arrival], List[(Arrival, Option[ApiSplits])]] = FlowShape.of(in, out)
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+    new GraphStageLogic(shape) {
+
+      setHandler(in, new InHandler {
+        override def onPush(): Unit = {}
+      })
+
+      setHandler(out, new OutHandler {
+        override def onPull(): Unit = {}
+      })
+    }
 }
 
-class SplitsPredictorStage(splitsPredictor: SplitsPredictor) extends GraphStage[FlowShape[List[Arrival], List[(Arrival, Option[ApiSplits])]]] {
-  val log = LoggerFactory.getLogger(getClass)
+class SplitsPredictorStage(portCode: String, sparkSession: SparkSession, rawSplitsUrl: String) extends SplitsPredictorBase {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val in = Inlet[List[Arrival]]("SplitsPredictor.in")
-  val out = Outlet[List[(Arrival, Option[ApiSplits])]]("SplitsPredictor.out")
+  val in: Inlet[List[Arrival]] = Inlet[List[Arrival]]("SplitsPredictor.in")
+  val out: Outlet[List[(Arrival, Option[ApiSplits])]] = Outlet[List[(Arrival, Option[ApiSplits])]]("SplitsPredictor.out")
 
-  val shape = FlowShape.of(in, out)
+  val shape: FlowShape[List[Arrival], List[(Arrival, Option[ApiSplits])]] = FlowShape.of(in, out)
 
-  var arrivalsWithPredictions: Option[List[(Arrival, Option[ApiSplits])]] = None
+  var modelledFlightCodes: Set[String] = Set()
+  var maybeSplitsPredictor: Option[SplitsPredictor] = None
+  var predictionsToPush: Option[List[(Arrival, Option[ApiSplits])]] = None
+
+  val splitsView: DataFrame = sparkSession
+    .read
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .csv(rawSplitsUrl)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
       def tryPushing(): Unit = {
-        arrivalsWithPredictions match {
+        predictionsToPush match {
           case None => log.info("No arrivals to push")
           case Some(toPush) if isAvailable(out) =>
             log.info(s"Pushing ${toPush.length} arrivals")
             push(out, toPush)
-            arrivalsWithPredictions = None
+            predictionsToPush = None
+
           case Some(arrivalsToPush) =>
             log.info(s"Can't push ${arrivalsToPush.length} arrivals because outlet isn't available")
         }
@@ -59,15 +78,28 @@ class SplitsPredictorStage(splitsPredictor: SplitsPredictor) extends GraphStage[
           log.info(s"onPush")
           tryPushing()
 
-          if (arrivalsWithPredictions.isEmpty) {
+          if (predictionsToPush.isEmpty) {
             val arrivals = grab(in)
+
             log.info(s"grabbed ${arrivals.length} arrivals for predictions")
-            val predictions = splitsPredictor.predictForArrivals(arrivals)
-            log.info(s"Predicted ${predictions.length} splits")
-            arrivalsWithPredictions = Option(predictions)
+
+            val flightCodesToModel = arrivals.map(_.IATA).toSet
+            val unseenFlightCodes = flightCodesToModel -- modelledFlightCodes
+
+            if (unseenFlightCodes.nonEmpty) {
+              log.info(s"${unseenFlightCodes.size} unmodelled flight codes. Re-training")
+              val updatedFlightCodesToModel = modelledFlightCodes ++ unseenFlightCodes
+              maybeSplitsPredictor = Option(SplitsPredictor(sparkSession, portCode, updatedFlightCodesToModel, splitsView))
+              modelledFlightCodes = updatedFlightCodesToModel
+            } else {
+              log.info(s"No new unmodelled flight codes so no need to re-train")
+            }
+
+            predictionsToPush = maybeSplitsPredictor.map(_.predictForArrivals(arrivals))
           } else {
             log.info(s"ignoring onPush() as we've not yet emitted our current arrivals")
           }
+
           if (!hasBeenPulled(in)) pull(in)
         }
       })
@@ -78,103 +110,53 @@ class SplitsPredictorStage(splitsPredictor: SplitsPredictor) extends GraphStage[
           tryPushing()
           if (!hasBeenPulled(in)) pull(in)
         }
-
       })
     }
 }
 
-object RunnablePredictor {
+case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightCodes: Set[String], splitsView: DataFrame) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply[X, Y](arrivalsSource: Source[List[Arrival], Y],
-                  splitsPredictor: SplitsPredictorStage,
-                  sink: Sink[List[(Arrival, Option[ApiSplits])], X]
-                 ): RunnableGraph[(Y, NotUsed, X)] = {
+  val splitTypeToQueue = Map(
+    "EeaMachineReadable" -> Queues.EeaDesk,
+    "EeaNonMachineReadable" -> Queues.EeaDesk,
+    "VisaNational" -> Queues.NonEeaDesk,
+    "NonVisaNational" -> Queues.NonEeaDesk)
 
-    import GraphDSL.Implicits._
+  val paxTypes: List[String] = splitTypeToQueue.keys.toList
 
-    RunnableGraph.fromGraph(GraphDSL.create(arrivalsSource, splitsPredictor, sink)((_, _, _)) { implicit builder =>
-      (arrivals, predictor, out) =>
-        arrivals ~> predictor ~> out
-        ClosedShape
-    })
-  }
-}
-
-case class SplitsPredictor(sparkSession: SparkSession, portCode: String) {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-  val splitsView: DataFrame = sparkSession
-    .read
-    .option("header", "true")
-    .option("inferSchema", "true")
-    //        .csv("/tmp/all-splits-from-api.csv")
-    .csv("/home/rich/dev/all-splits-from-api-from-2016-12.csv")
+  val featureSpecs = List(
+    FeatureSpec(List("flight", "day"), "fd"),
+    FeatureSpec(List("flight", "month"), "fm"),
+    //              FeatureSpec(List("flight", "year"), "fy"),
+    FeatureSpec(List("flight", "origin"), "fo"),
+    FeatureSpec(List("day"), "d"),
+    FeatureSpec(List("month"), "m"),
+    //              FeatureSpec(List("year"), "y"),
+    FeatureSpec(List("origin"), "o")
+  )
 
   splitsView.createOrReplaceTempView("splits")
-  //  splitsView.printSchema()
 
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
   val splitsCalculator = SplitsCalculator(portCode, historicalSplitsProvider, Set()) //airportConfig.defaultPaxSplits.splits.toSet),
 
-  def predictForArrivals(arrivals: List[Arrival]): List[(Arrival, Option[ApiSplits])] = {
+  lazy val flightCodesToTrain: Seq[String] = flightsHavingTrainingExamples
 
-    val flightCodesToTrain = flightsHavingTrainingExamples(arrivals)
-    log.info(s"flightCodesToTrain: $flightCodesToTrain")
+  lazy val features: IndexedSeq[String] = extractFeatures
+
+  lazy val paxTypeModels: Map[String, LinearRegressionModel] = paxTypes.map(paxType => (paxType, trainModel(paxType, features))).toMap
+
+  def predictForArrivals(arrivals: List[Arrival]): List[(Arrival, Option[ApiSplits])] = {
     val arrivalsToPredict = arrivals.filter(a => flightCodesToTrain.contains(a.IATA))
 
-    val (features, featureSpecs) = extractFeatures(arrivalsToPredict)
-    log.info(s"Using ${features.length} features")
+    val flightSplitsPredictions: List[((String, Long), String, Double)] = paxTypes.flatMap(paxType => {
+      log.info(s"Predicting $paxType values for ${arrivalsToPredict.length} arrivals")
 
-    val whereClause = s"""flight IN ("${flightCodesToTrain.mkString("\",\"")}") AND dest="$portCode" """
+      val predictionDf: DataFrame = predictionSetFromArrivals(arrivalsToPredict, features)
 
-    val splitTypeToQueue = Map(
-      "EeaMachineReadable" -> Queues.EeaDesk,
-      "EeaNonMachineReadable" -> Queues.EeaDesk,
-      "VisaNational" -> Queues.NonEeaDesk,
-      "NonVisaNational" -> Queues.NonEeaDesk)
-    val splitTypes = splitTypeToQueue.keys.toList
-
-    val flightSplitsPredictions: List[((String, Long), String, Double)] = splitTypes.flatMap(label => {
-      log.info(s"looking at $label")
-
-      val labelAndFeatures = col(label) :: featureSpecs.map(fs => concat_ws("-", fs.columns.map(col): _*)) ++ List(col("flight"), col("scheduled"))
-
-      val lrModel = trainModel(whereClause, labelAndFeatures, featureSpecs, features)
-
-      import sparkSession.implicits._
-
-      val validationSetDf = arrivalsToPredict
-        .map(arrival => {
-          val sf: Seq[(Int, Double)] = featureSpecs
-            .map { fs =>
-              val featureValue = fs.columns.map(c => arrivalFeature(c, arrival)).mkString("-")
-              val featureString = s"${fs.featurePrefix}$featureValue"
-              val featureIdx = features.indexOf(featureString)
-//              log.info(s"$featureIdx: $featureString")
-              (featureIdx, 1d)
-            }
-            .filterNot {
-              case (-1, _) =>
-                println(s"Couldn't find all features for $arrival")
-                true
-              case _ => false
-            }
-
-          val flightCode = arrivalFeature("flight", arrival)
-          val scheduledMillis = arrival.Scheduled
-          //          println(s"predicting $flightCode @ ${SDate(scheduled).toISOString()} with $sf")
-          val sparseFeatures = Vectors.sparse(features.length, sf)
-
-          (flightCode, scheduledMillis, sparseFeatures)
-        })
-        .toDS()
-        .toDF("flight", "scheduled", "features")
-        .cache()
-
-      log.info(s"${validationSetDf.count} validation rows after excluding missing historic splits")
-
-      val withPrediction = lrModel.transform(validationSetDf)
+      val withPrediction = paxTypeModels(paxType).transform(predictionDf)
 
       val predictions: Seq[((String, Long), String, Double)] = withPrediction
         .collect.toSeq
@@ -183,43 +165,79 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String) {
           val scheduled = row.getAs[Long]("scheduled")
           val prediction = row.getAs[Double]("prediction")
 
-          //          println(f"$label: $flightCode @ ${SDate(scheduled.getTime).toLocalDateTimeString()} $y%.2f / $prediction%.2f / $historic%.2f - winner: $winner")
-
-          ((flightCode, scheduled), label, prediction)
+          ((flightCode, scheduled), paxType, prediction)
         })
 
-      log.info(s"trained $label")
+      log.info(s"Predicted ${predictions.length} $paxType values")
       predictions
     })
 
-    arrivals
-      .map(a => {
-        val arrivalSplits: immutable.Seq[(String, Double)] = flightSplitsPredictions
-          .collect {
-            case ((flightCode, scheduled), splitType, prediction) if flightCode == a.IATA && scheduled == a.Scheduled => (splitType, prediction)
-          }
-        val predictedSplits = arrivalSplits match {
-          case splits if splits.isEmpty => None
-          case splits =>
-            val paxTypeAndQueueCounts = splits
-              .map {
-                case (splitType, prediction) =>
-                  ApiPaxTypeAndQueueCount(PaxType(s"""$splitType$$"""), splitTypeToQueue(splitType), prediction, None)
-              }
-              .toSet
-            val withEgatesAndFt = splitsCalculator.addEgatesAndFastTrack(a, paxTypeAndQueueCounts)
-            Option(ApiSplits(withEgatesAndFt, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, None, Percentage))
-        }
-        (a, predictedSplits)
-      })
+    log.info(s"Predicted ${flightSplitsPredictions.length} splits for ${arrivalsToPredict.length} arrivals")
+
+    arrivalsWithPredictions(arrivals, flightSplitsPredictions)
   }
 
-  private def trainModel(whereClause: String, labelAndFeatures: List[Column], featureSpecs: List[FeatureSpec], features: IndexedSeq[String]) = {
+  def arrivalsWithPredictions(arrivals: List[Arrival], flightSplitsPredictions: List[((String, Long), String, Double)]): List[(Arrival, Option[ApiSplits])] = arrivals
+    .map(a => {
+      val arrivalSplits: immutable.Seq[(String, Double)] = flightSplitsPredictions
+        .collect {
+          case ((flightCode, scheduled), splitType, prediction) if flightCode == a.IATA && scheduled == a.Scheduled => (splitType, prediction)
+        }
+      val predictedSplits = arrivalSplits match {
+        case splits if splits.isEmpty => None
+        case splits =>
+          val paxTypeAndQueueCounts = splits
+            .map {
+              case (splitType, prediction) =>
+                ApiPaxTypeAndQueueCount(PaxType(s"""$splitType$$"""), splitTypeToQueue(splitType), prediction, None)
+            }
+            .toSet
+          Option(ApiSplits(paxTypeAndQueueCounts, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, None, Percentage))
+      }
+      (a, predictedSplits)
+    })
+
+  def predictionSetFromArrivals(arrivalsToPredict: List[Arrival], features: IndexedSeq[String]): DataFrame = {
     import sparkSession.implicits._
+
+    val validationSetDf = arrivalsToPredict
+      .map(arrival => {
+        val sf: Seq[(Int, Double)] = featureSpecs
+          .map { fs =>
+            val featureValue = fs.columns.map(c => arrivalFeature(c, arrival)).mkString("-")
+            val featureString = s"${fs.featurePrefix}$featureValue"
+            val featureIdx = features.indexOf(featureString)
+            //              log.info(s"$featureIdx: $featureString")
+            (featureIdx, 1d)
+          }
+          .filterNot {
+            case (-1, _) =>
+              println(s"Couldn't find all features for $arrival")
+              true
+            case _ => false
+          }
+
+        val flightCode = arrivalFeature("flight", arrival)
+        val scheduledMillis = arrival.Scheduled
+        //          println(s"predicting $flightCode @ ${SDate(scheduled).toISOString()} with $sf")
+        val sparseFeatures = Vectors.sparse(features.length, sf)
+
+        (flightCode, scheduledMillis, sparseFeatures)
+      })
+      .toDS()
+      .toDF("flight", "scheduled", "features")
+    validationSetDf
+  }
+
+  def trainModel(labelColName: String, features: IndexedSeq[String]): LinearRegressionModel = {
+    import sparkSession.implicits._
+
+    val labelAndFeatures = col(labelColName) :: featureSpecs.map(fs => concat_ws("-", fs.columns.map(col): _*)) ++ List(col("flight"), col("scheduled"))
+    val flightsWhereClause = whereClause(flightCodesToTrain)
 
     val trainingSet = splitsView
       .select(labelAndFeatures: _*)
-      .where(expr(whereClause))
+      .where(expr(flightsWhereClause))
       .collect.toSeq
       .map(row => {
         val sf = featureSpecs
@@ -242,9 +260,10 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String) {
     lr.fit(trainingSet)
   }
 
-  def flightsHavingTrainingExamples(arrivals: List[Arrival]): Seq[String] = {
-    val flightFilterWhereClause = s"""flight IN ("${arrivals.map(_.IATA).mkString("\",\"")}") AND dest="$portCode" """
-    splitsView
+  def flightsHavingTrainingExamples: Seq[String] = {
+    val flightFilterWhereClause = whereClause(flightCodes.toSeq)
+
+    val flightsWithTrainingExamples = splitsView
       .where(expr(flightFilterWhereClause))
       .groupBy(col("flight"))
       .count
@@ -252,6 +271,10 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String) {
       .filter("numExamples >= 10")
       .collect().toSeq
       .map(_.getAs[String]("flight"))
+
+    log.info(s"${flightsWithTrainingExamples.length} out of ${flightCodes.size} flight codes have enough examples to train")
+
+    flightsWithTrainingExamples
   }
 
   def arrivalFeature(feature: String, arrival: Arrival): String = feature match {
@@ -262,27 +285,23 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String) {
     case "origin" => arrival.Origin
   }
 
-  def extractFeatures(arrivals: List[Arrival]): (IndexedSeq[String], List[FeatureSpec]) = {
-    val flightFilterWhereClause = s"""flight IN ("${arrivals.map(_.IATA).mkString("\",\"")}") AND dest="$portCode" """
-    val featureSpecs = List(
-      FeatureSpec(List("flight", "day"), flightFilterWhereClause, "fd"),
-      FeatureSpec(List("flight", "month"), flightFilterWhereClause, "fm"),
-      //              FeatureSpec(List("flight", "year"), flightFilterWhereClause, "fy"),
-      FeatureSpec(List("flight", "origin"), flightFilterWhereClause, "fo"),
-      FeatureSpec(List("day"), flightFilterWhereClause, "d"),
-      FeatureSpec(List("month"), flightFilterWhereClause, "m"),
-      //              FeatureSpec(List("year"), flightFilterWhereClause, "y"),
-      FeatureSpec(List("origin"), flightFilterWhereClause, "o")
-    )
+  def extractFeatures: IndexedSeq[String] = {
+    val flightFilterWhereClause = whereClause(flightCodesToTrain)
 
-    val features = featureSpecs.flatMap(fs => {
+    val extractedFeatures = featureSpecs.flatMap(fs => {
       splitsView
         .select(concat_ws("-", fs.columns.map(col): _*))
-        .where(expr(fs.whereClause))
+        .where(expr(flightFilterWhereClause))
         .rdd.distinct.collect
         .map(fs.featurePrefix + _.getAs[String](0))
     }).toIndexedSeq
 
-    (features, featureSpecs)
+    log.info(s"Found ${extractedFeatures.length} features from ${flightCodesToTrain.length} flight codes")
+
+    extractedFeatures
+  }
+
+  def whereClause(flightCodes: Seq[String]): String = {
+    s"""flight IN ("${flightCodes.mkString("\",\"")}") AND dest="$portCode" """
   }
 }

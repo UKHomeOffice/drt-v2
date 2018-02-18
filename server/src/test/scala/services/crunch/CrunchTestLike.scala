@@ -11,6 +11,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalNam
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import org.apache.spark.sql.SparkSession
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
@@ -18,6 +19,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
 import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
+import services.graphstages.{DummySplitsPredictor, SplitsPredictorBase, SplitsPredictorStage}
 
 
 class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
@@ -95,6 +97,8 @@ class CrunchTestLike
     timeToChoxMillis = 120000L,
     firstPaxOffMillis = 180000L
   )
+  
+  val splitsPredictorStage = new DummySplitsPredictor()
 
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
@@ -157,7 +161,8 @@ class CrunchTestLike
       crunchStartDateProvider = crunchStartDateProvider,
       crunchEndDateProvider = crunchEndDateProvider,
       calcPcpTimeWindow = (_) => calcPcpWindow,
-      initialFlightsWithSplits = initialFlightsWithSplits
+      initialFlightsWithSplits = initialFlightsWithSplits,
+      splitsPredictorStage = splitsPredictorStage
     ))
 
     crunchInputs.baseArrivals.offer(Flights(initialBaseArrivals.toList))

@@ -31,7 +31,7 @@ import scala.util.{Failure, Success, Try}
 
 
 class SplitsExportSpec extends Specification {
-  val rawZipFilesPath: String = ConfigFactory.load.getString("dq.raw_zip_files_path")
+  lazy val rawZipFilesPath: String = ConfigFactory.load.getString("dq.raw_zip_files_path")
 
   "Looking at raw API data" >> {
 
@@ -208,123 +208,6 @@ class SplitsExportSpec extends Specification {
       bw.close()
 
       1 === 1
-    }
-
-    "I can train a regression model on a specific flight and get its splits back" >> {
-      skipped("let's prove ml is better than historic averages first")
-      import org.apache.spark.sql.SparkSession
-
-      val sparkSession: SparkSession = SparkSession
-        .builder
-        .appName("Simple Application")
-        .config("spark.master", "local")
-        .getOrCreate()
-
-      val splitsData: DataFrame = sparkSession
-        .read
-        .option("header", "true")
-        .option("inferSchema", "true")
-        //        .csv("/tmp/all-splits-from-api.csv")
-        .csv("/home/rich/dev/all-splits-from-api.csv")
-
-      splitsData.createOrReplaceTempView("splits")
-      splitsData.printSchema()
-
-      val sqlContext = sparkSession.sqlContext
-      //      val predictor = SplitsPredictor(sparkSession, splitsData)
-      val arrival = ArrivalGenerator.apiFlight(iata = "BA0907", schDt = "2018-02-06T10:05:00Z")
-
-      val iataCode = arrival.IATA
-      val carrierEquals =s"""LIKE "$iataCode""""
-
-      val featuresWithFd = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",day) FROM splits WHERE flight $carrierEquals""")
-        .rdd.map(_.getAs[String](0)).collect()
-        .foldLeft(IndexedSeq[String]()) {
-          case (fts, feature) => fts :+ s"fd$feature"
-        }
-      val featuresWithFm = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",month) FROM splits WHERE flight $carrierEquals""")
-        .rdd.map(_.getAs[String](0)).collect()
-        .foldLeft(featuresWithFd) {
-          case (fts, feature) => fts :+ s"fm$feature"
-        }
-      val featuresWithFy = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",year) FROM splits WHERE flight $carrierEquals""")
-        .rdd.map(_.getAs[String](0)).collect()
-        .foldLeft(featuresWithFm) {
-          case (fts, feature) => fts :+ s"fy$feature"
-        }
-      val featuresWithFo = sqlContext.sql(s"""SELECT DISTINCT CONCAT(flight,"-",origin) FROM splits WHERE flight $carrierEquals""")
-        .rdd.map(_.getAs[String](0)).collect()
-        .foldLeft(featuresWithFy) {
-          case (fts, feature) => fts :+ s"fo$feature"
-        }
-
-      val features = featuresWithFo
-
-      val labels = List("EeaMachineReadable", "EeaNonMachineReadable", "VisaNational", "NonVisaNational")
-
-      import sparkSession.implicits._
-
-      val stats = labels.map(label => {
-        val trainingSet = splitsData
-          .select(
-            col(label),
-            concat_ws("-", col("flight"), col("day")),
-            concat_ws("-", col("flight"), col("month")),
-            concat_ws("-", col("flight"), col("year")),
-            concat_ws("-", col("flight"), col("origin"))
-          )
-          .where(col("flight") === iataCode)
-          .map(r => {
-            val sparseFeatures = Seq(
-              (features.indexOf(s"fd${r.getAs[String](1)}"), 1.0),
-              (features.indexOf(s"fm${r.getAs[String](2)}"), 1.0),
-              (features.indexOf(s"fy${r.getAs[String](3)}"), 1.0)
-              //              (features.indexOf(s"fo${r.getAs[String](4)}"), 1.0)
-            )
-
-            LabeledPoint(
-              r.getAs[Double](0),
-              Vectors.sparse(features.length, sparseFeatures)
-            )
-          })
-
-        val lr = new LinearRegression()
-          .setMaxIter(100)
-
-        val lrModel = lr.fit(trainingSet)
-
-        val flightCode = arrival.IATA
-        val day = SDate(arrival.Scheduled).getDayOfWeek()
-        val month = SDate(arrival.Scheduled).getMonth()
-        val year = SDate(arrival.Scheduled).getFullYear()
-
-        val sparseFeatures = Seq[(Int, Double)](
-          (features.indexOf(s"fd$flightCode-$day"), 1.0),
-          (features.indexOf(s"fm$flightCode-$month"), 1.0),
-          (features.indexOf(s"fy$flightCode-$year"), 1.0)
-        )
-
-        val labelAndFeatures = Seq((0d, Vectors.sparse(features.length, sparseFeatures)))
-
-        import sparkSession.implicits._
-
-        val arrivalFeatures = labelAndFeatures.toDF("label", "features")
-        val predictedValue = lrModel
-          .transform(arrivalFeatures)
-          .select(col("prediction"))
-          .rdd
-          .map(_.getAs[Double](0))
-          .collect()
-          .head
-
-        println(s"predicted value: $predictedValue")
-
-        predictedValue
-      })
-
-      val expected = "yeah"
-
-      stats === expected
     }
   }
 

@@ -2,66 +2,26 @@ package services.advpaxinfo
 
 import java.sql.Timestamp
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
-import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
-import controllers.ArrivalGenerator
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.LinearRegression
-import org.apache.spark.sql.{Column, SparkSession}
-import org.apache.spark.sql.functions.{col, concat_ws, expr}
-import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.Specification
-import passengersplits.core.SplitsCalculator
 import services.SplitsProvider.SplitProvider
 import services.graphstages._
-import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate, SplitsProvider}
+import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
 
-import scala.collection.immutable
-import scala.collection.immutable.IndexedSeq
-import scala.concurrent.duration._
+import scala.language.postfixOps
 
 
+object Splits {
+  def historic(portCode: String): SplitProvider = {
+    val splitsFilePath = s"file:///home/rich/dev/${portCode.toLowerCase}-passenger-splits.csv"
+    val splitsLines = CsvPassengerSplitsReader.flightPaxSplitsLinesFromPath(splitsFilePath)
+    CSVPassengerSplitsProvider(splitsLines).splitRatioProvider
+  }
+}
 
 class SplitsLearningSpec extends Specification {
-  val rawZipFilesPath: String = ConfigFactory.load.getString("dq.raw_zip_files_path")
-  "woop" >> {
-    skipped("yeah")
-    implicit val actorSystem: ActorSystem = ActorSystem("splits")
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-    val sparkSession: SparkSession = SparkSession
-      .builder
-      .appName("Simple Application")
-      .config("spark.master", "local")
-      .getOrCreate()
-    val splitsPredictor = SplitsPredictor(sparkSession, "LHR")
-
-    val arrivals = List(ArrivalGenerator.apiFlight(iata = "BA0565", schDt = "2018-02-13", origin = "LIN"))
-    val sourceUnderTest: Source[List[Arrival], Cancellable] = Source.tick(5 seconds, 5 minute, arrivals)
-
-    val probe = TestProbe()
-
-    val sink = Sink.actorRef(probe.ref, "completed")
-    val predictorStage = new SplitsPredictorStage(splitsPredictor)
-    val (runnable, _, _) = RunnablePredictor(sourceUnderTest, predictorStage, sink).run
-
-    probe.fishForMessage(5 minutes) {
-      case (arrival, splits) :: Nil =>
-        println(s"Got a message: $arrival, $splits")
-        true
-      case _ => false
-    }
-//    runnable.cancel()
-    true
-  }
-
   "I can read a splits csv into spark" >> {
     skipped("yeah")
     import org.apache.spark.sql.SparkSession
@@ -109,19 +69,19 @@ class SplitsLearningSpec extends Specification {
 
       val flightFilterWhereClause = s"""flight IN ("${flights.mkString("\",\"")}") AND dest="$portCode" """
       val featureSpecs = List(
-        FeatureSpec(List("flight", "day"), flightFilterWhereClause, "fd"),
-        FeatureSpec(List("flight", "month"), flightFilterWhereClause, "fm"),
-        //              FeatureSpec(List("flight", "year"), flightFilterWhereClause, "fy"),
-        FeatureSpec(List("flight", "origin"), flightFilterWhereClause, "fo"),
-        FeatureSpec(List("day"), flightFilterWhereClause, "d"),
-        FeatureSpec(List("month"), flightFilterWhereClause, "m"),
-        //              FeatureSpec(List("year"), flightFilterWhereClause, "y"),
-        FeatureSpec(List("origin"), flightFilterWhereClause, "o")
+        FeatureSpec(List("flight", "day"), "fd"),
+        FeatureSpec(List("flight", "month"), "fm"),
+        //              FeatureSpec(List("flight", "year"), "fy"),
+        FeatureSpec(List("flight", "origin"), "fo"),
+        FeatureSpec(List("day"), "d"),
+        FeatureSpec(List("month"), "m"),
+        //              FeatureSpec(List("year"), "y"),
+        FeatureSpec(List("origin"), "o")
       )
       val features = featureSpecs.flatMap(fs => {
         stuff
           .select(concat_ws("-", fs.columns.map(col): _*))
-          .where(expr(fs.whereClause))
+          .where(expr(flightFilterWhereClause))
           .rdd.distinct.collect
           .map(fs.featurePrefix + _.getAs[String](0))
       }).toIndexedSeq

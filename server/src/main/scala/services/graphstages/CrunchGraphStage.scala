@@ -136,6 +136,30 @@ class CrunchGraphStage(name: String,
         val predictions = grab(inSplitsPredictions)
 
         log.info(s"Grabbed ${predictions.length} predictions")
+        val updatedFlightsByFlightId = predictions
+          .collect {
+            case (arrival, Some(splits)) => (arrival, splits)
+          }
+          .foldLeft(flightsByFlightId) {
+            case (existingFlightsByFlightId, (arrival, splits)) =>
+              val maybeFlightWithId: Option[(Int, ApiFlightWithSplits)] = existingFlightsByFlightId.find {
+                case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival == arrival
+              }
+              maybeFlightWithId match {
+                case Some((id, flightWithSplits)) =>
+                  val splitsWithPaxNumbers = splits.copy(splits = splits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrival))), splitStyle = PaxNumbers)
+                  val fullApiSplits = splitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrival, splitsWithPaxNumbers.splits))
+                  val updatedSplitsSet = flightWithSplits.splits.filterNot {
+                    case ApiSplits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
+                    case _ => false
+                  } + fullApiSplits
+
+                  existingFlightsByFlightId.updated(id, flightWithSplits.copy(splits = updatedSplitsSet))
+
+                case None => existingFlightsByFlightId
+              }
+          }
+        flightsByFlightId = updatedFlightsByFlightId
 
         if (!hasBeenPulled(inSplitsPredictions)) pull(inSplitsPredictions)
       }
@@ -254,15 +278,14 @@ class CrunchGraphStage(name: String,
 
       log.info(s"Requesting crunch for ${scheduledFlightsInCrunchWindow.length} flights after flights update")
       val uniqueFlights = groupFlightsByCodeShares(scheduledFlightsInCrunchWindow).map(_._1)
-      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(airportConfig.defaultProcessingTimes.head._2, useNationalityBasedProcessingTimes)(uniqueFlights)
       val earliestMinute: MillisSinceEpoch = newFlightSplitMinutesByFlight.values.flatMap(_.map(identity)).toList match {
         case fsm if fsm.nonEmpty => fsm.map(_.minute).min
         case _ => 0L
       }
-      log.info(s"Earliest flight split minute: ${SDate(earliestMinute).toLocalDateTimeString()}")
+      log.debug(s"Earliest flight split minute: ${SDate(earliestMinute).toLocalDateTimeString()}")
       val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
-      log.info(s"Crunching $numberOfMinutes minutes")
+      log.debug(s"Crunching $numberOfMinutes minutes")
       val crunchMinutes = crunchFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightSplitMinutesByFlight)
 
       Option(PortState(flights = flights, crunchMinutes = crunchMinutes, staffMinutes = Map()))
@@ -341,7 +364,7 @@ class CrunchGraphStage(name: String,
           })
           crunchMinutes.map(cm => (cm.key, cm)).toMap
         case Failure(t) =>
-          log.info(s"Crunch failed: $t")
+          log.warn(s"Crunch failed: $t")
           Map[Int, CrunchMinute]()
       }
       queueCrunchMinutes
@@ -433,14 +456,20 @@ class CrunchGraphStage(name: String,
     val updated = manifests
       .mapValues(_.filterNot(expired))
       .filterNot { case (_, ms) => ms.isEmpty }
-    log.info(s"Purged ${manifests.size - updated.size} expired manifests")
+
+    val numPurged = manifests.size - updated.size
+    if (numPurged > 0) log.info(s"Purged ${numPurged} expired manifests")
+
     updated
   }
 
   def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime)
     val updated = arrivals.filterNot { case (_, a) => expired(a) }
-    log.info(s"Purged ${arrivals.size - updated.size} expired arrivals")
+
+    val numPurged = arrivals.size - updated.size
+    if (numPurged > 0) log.info(s"Purged ${numPurged} expired arrivals")
+
     updated
   }
 
