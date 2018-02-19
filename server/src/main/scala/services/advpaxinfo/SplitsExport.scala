@@ -35,8 +35,6 @@ object SplitsExport {
     val isDc = eventCode == DqEventCodes.DepartureConfirmed
     val isInterestingCarrier = carrierList.contains(carrierCode)
 
-//    println(s"$fileName - eventcode: $eventCode, carriercode: $carrierCode")
-
     isDc && isInterestingCarrier
   }
 
@@ -64,12 +62,6 @@ object SplitsExport {
 
     SplitsExport.expandToFullNationalities(relevantSummaries)
   }
-
-//  def getFlightSummaries(jsons: List[String], carriersFilter: List[String]): List[FlightSummary] = jsons
-//    .map(json => summaryFromJson(json))
-//    .collect {
-//      case Some(summary) => summary
-//    }
 
   def expandToFullNationalities(summaries: List[FlightSummary]): (List[String], List[FlightSummary]) = {
     val allCountries = summaries
@@ -217,5 +209,4 @@ object SplitsExport {
             .toList
       }
   }
-
 }

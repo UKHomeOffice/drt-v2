@@ -147,11 +147,9 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
   val featureSpecs = List(
     FeatureSpec(List("flight", "day"), "fd"),
     FeatureSpec(List("flight", "month"), "fm"),
-    //              FeatureSpec(List("flight", "year"), "fy"),
     FeatureSpec(List("flight", "origin"), "fo"),
     FeatureSpec(List("day"), "d"),
     FeatureSpec(List("month"), "m"),
-    //              FeatureSpec(List("year"), "y"),
     FeatureSpec(List("origin"), "o")
   )
 
@@ -159,7 +157,7 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
 
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
-  val splitsCalculator = SplitsCalculator(portCode, historicalSplitsProvider, Set()) //airportConfig.defaultPaxSplits.splits.toSet),
+  val splitsCalculator = SplitsCalculator(portCode, historicalSplitsProvider, Set())
 
   lazy val flightCodesToTrain: Seq[String] = flightsHavingTrainingExamples
 
@@ -226,7 +224,6 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
             val featureValue = fs.columns.map(c => arrivalFeature(c, arrival)).mkString("-")
             val featureString = s"${fs.featurePrefix}$featureValue"
             val featureIdx = features.indexOf(featureString)
-            //              log.info(s"$featureIdx: $featureString")
             (featureIdx, 1d)
           }
           .filterNot {
@@ -238,7 +235,6 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
 
         val flightCode = arrivalFeature("flight", arrival)
         val scheduledMillis = arrival.Scheduled
-        //          println(s"predicting $flightCode @ ${SDate(scheduled).toISOString()} with $sf")
         val sparseFeatures = Vectors.sparse(features.length, sf)
 
         (flightCode, scheduledMillis, sparseFeatures)
