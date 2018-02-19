@@ -7,7 +7,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.Map
 
 object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)

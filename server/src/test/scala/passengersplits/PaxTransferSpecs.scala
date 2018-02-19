@@ -49,7 +49,7 @@ class PaxTransferSpecs extends Specification with specification.dsl.GWT with Sta
     """
 
   var currentFlight: Option[VoyageManifest] = None
-  var calculatedSplits: List[ApiPaxTypeAndQueueCount] = Nil
+  var calculatedSplits: Seq[ApiPaxTypeAndQueueCount] = Nil
 
   def splitsByQueue = calculatedSplits.groupBy(_.queueType).mapValues(v => v.map(_.paxCount).sum)
 

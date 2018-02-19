@@ -248,9 +248,9 @@ case class AirportInfo(airportName: String, city: String, country: String, code:
 
 object FlightsApi {
 
-  case class Flights(flights: List[Arrival])
+  case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: List[ApiFlightWithSplits])
+  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits])
 
   type TerminalName = String
 
@@ -260,7 +260,7 @@ object FlightsApi {
 object PassengerSplits {
   type QueueType = String
 
-  type PaxTypeAndQueueCounts = List[ApiPaxTypeAndQueueCount]
+  type PaxTypeAndQueueCounts = Seq[ApiPaxTypeAndQueueCount]
 
 
   case object FlightsNotFound

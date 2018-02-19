@@ -70,7 +70,7 @@ object RunnableCrunch {
         val fanOutFixedPoints = builder.add(Broadcast[String](2).async)
         val fanOutStaffMovements = builder.add(Broadcast[Seq[StaffMovement]](2).async)
         val fanOutManifests = builder.add(Broadcast[VoyageManifests](2).async)
-        val fanOutSplitsPredictions = builder.add(Broadcast[List[(Arrival, Option[ApiSplits])]](2).async)
+        val fanOutSplitsPredictions = builder.add(Broadcast[Seq[(Arrival, Option[ApiSplits])]](2).async)
 
         baseArrivalsSource ~> arrivalsStageAsync.in0
         fcstArrivalsSource ~> arrivalsStageAsync.in1

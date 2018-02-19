@@ -175,7 +175,7 @@ object SplitsCalculator {
     case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
   }
 
-  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[ApiPaxTypeAndQueueCount] = {
+  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): Seq[ApiPaxTypeAndQueueCount] = {
     val paxTypeFn = manifest.ArrivalPortCode match {
       case "LHR" => whenTransitMatters(portCode)
       case _ => mostAirports
@@ -190,7 +190,7 @@ object SplitsCalculator {
     distributeToQueues(paxTypes)
   }
 
-  def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): List[ApiPaxTypeAndQueueCount] = {
+  def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Seq[ApiPaxTypeAndQueueCount] = {
     val paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])] = SplitsCalculator.countPassengerTypes(paxTypeAndNationalities)
     val disabledEgatePercentage = 0d
 

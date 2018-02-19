@@ -13,7 +13,7 @@ import services._
 import services.graphstages.Crunch.{log, _}
 import services.workloadcalculator.PaxLoadCalculator.Load
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.Map
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -35,11 +35,11 @@ class CrunchGraphStage(name: String,
                        minutesToCrunch: Int,
                        warmUpMinutes: Int,
                        useNationalityBasedProcessingTimes: Boolean)
-  extends GraphStage[FanInShape3[ArrivalsDiff, VoyageManifests, List[(Arrival, Option[ApiSplits])], PortState]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, VoyageManifests, Seq[(Arrival, Option[ApiSplits])], PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("SplitsIn.in")
-  val inSplitsPredictions: Inlet[List[(Arrival, Option[ApiSplits])]] = Inlet[List[(Arrival, Option[ApiSplits])]]("SplitsPredictionsIn.in")
+  val inSplitsPredictions: Inlet[Seq[(Arrival, Option[ApiSplits])]] = Inlet[Seq[(Arrival, Option[ApiSplits])]]("SplitsPredictionsIn.in")
   val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateOut.out")
 
   override val shape = new FanInShape3(inArrivalsDiff, inManifests, inSplitsPredictions, outCrunch)
@@ -85,11 +85,16 @@ class CrunchGraphStage(name: String,
           if (waitingForArrivals) log.info(s"Waiting for arrivals")
           if (waitingForManifests) log.info(s"Waiting for manifests")
         }
-        if (!hasBeenPulled(inManifests)) pull(inManifests)
-        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
-        if (!hasBeenPulled(inSplitsPredictions)) pull(inSplitsPredictions)
+        pullAll
       }
     })
+
+    def pullAll(): Unit = {
+      List(inManifests, inArrivalsDiff, inSplitsPredictions).foreach(in => if (!hasBeenPulled(in)) {
+        log.info(s"Pulling ${in.toString}")
+        pull(in)
+      })
+    }
 
     setHandler(inArrivalsDiff, new InHandler {
       override def onPush(): Unit = {
@@ -104,9 +109,9 @@ class CrunchGraphStage(name: String,
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-        } else log.info(s"No flight updates")
+        } else log.info(s"No updates due to flights")
 
-        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
+        pullAll()
       }
     })
 
@@ -124,9 +129,9 @@ class CrunchGraphStage(name: String,
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-        } else log.info(s"No splits updates")
+        } else log.info(s"No updates due to API splits")
 
-        if (!hasBeenPulled(inManifests)) pull(inManifests)
+        pullAll()
       }
     })
 
@@ -136,7 +141,7 @@ class CrunchGraphStage(name: String,
         val predictions = grab(inSplitsPredictions)
 
         log.info(s"Grabbed ${predictions.length} predictions")
-        val updatedFlightsByFlightId = predictions
+        val updatedFlights = predictions
           .collect {
             case (arrival, Some(splits)) => (arrival, splits)
           }
@@ -159,9 +164,13 @@ class CrunchGraphStage(name: String,
                 case None => existingFlightsByFlightId
               }
           }
-        flightsByFlightId = updatedFlightsByFlightId
 
-        if (!hasBeenPulled(inSplitsPredictions)) pull(inSplitsPredictions)
+        if (flightsByFlightId != updatedFlights) {
+          crunchIfAppropriate(updatedFlights, flightsByFlightId)
+          flightsByFlightId = updatedFlights
+        } else log.info(s"No updates due to splits predictions")
+
+        pullAll()
       }
     })
 

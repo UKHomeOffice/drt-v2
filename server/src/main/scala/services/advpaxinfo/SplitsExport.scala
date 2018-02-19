@@ -12,7 +12,7 @@ import services.SDate
 
 case class FlightSummary(flightCode: String, arrivalDate: String, arrivalTime: String, arrivalPort: String, isInteractive: Option[Boolean], nationalities: Map[String, Int])
 
-case class HistoricSplitsCollection(flightCode: String, originPort: String, arrivalPort: String, scheduled: MilliDate, splits: List[ApiPaxTypeAndQueueCount])
+case class HistoricSplitsCollection(flightCode: String, originPort: String, arrivalPort: String, scheduled: MilliDate, splits: Seq[ApiPaxTypeAndQueueCount])
 
 
 object SplitsExport {
