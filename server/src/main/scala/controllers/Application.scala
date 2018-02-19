@@ -25,7 +25,7 @@ import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -39,6 +39,7 @@ import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, SplitsPredictorBase, SplitsPredictorStage}
+import services.prediction.SparkSplitsPredictorFactory
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
@@ -176,7 +177,7 @@ trait SystemActors {
 
 
   def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
-    new SplitsPredictorStage(airportConfig.portCode, createSparkSession(), rawSplitsUrl)
+    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, portCode))
   else
     new DummySplitsPredictor()
 
