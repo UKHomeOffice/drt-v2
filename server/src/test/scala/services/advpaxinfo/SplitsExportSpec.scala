@@ -31,7 +31,7 @@ import scala.util.{Failure, Success, Try}
 
 
 class SplitsExportSpec extends Specification {
-  lazy val rawZipFilesPath: String = ConfigFactory.load.getString("dq.raw_zip_files_path")
+  lazy val rawZipFilesPath: String = "/tmp/dq-api-zips"
 
   "Looking at raw API data" >> {
 
