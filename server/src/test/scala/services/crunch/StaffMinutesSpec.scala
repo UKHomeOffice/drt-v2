@@ -72,7 +72,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
     val minutesInOrder = result.staffMinutes.values.toList.sortBy(_.minute)
     val staff = minutesInOrder.map(_.available)
     val staffMillis = minutesInOrder.map(_.minute)

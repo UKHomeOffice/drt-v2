@@ -5,6 +5,7 @@ import java.util.zip.ZipInputStream
 
 import com.typesafe.config.ConfigFactory
 import drt.shared.{ApiPaxTypeAndQueueCount, DqEventCodes, MilliDate, PaxType}
+import passengersplits.core.ZipUtils._
 import passengersplits.core.{SplitsCalculator, ZipUtils}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.SDate
@@ -38,26 +39,23 @@ object SplitsExport {
     isDc && isInterestingCarrier
   }
 
-  def extractFilesFromZips(files: List[File], carriers: List[String]): List[String] = {
-    val content = files.map(file => {
-      val zipStream = new ZipInputStream(new FileInputStream(file.getAbsolutePath))
-      val allUnzipped: Seq[ZipUtils.UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zipStream, fileNameFilter(carriers))
-
-      allUnzipped.map(unzippedFile => unzippedFile.content)
-    })
-    content.flatten
-  }
-
-  def extractSummariesFromZips(files: List[File], carriers: List[String]): (List[String], List[FlightSummary]) = {
-    val relevantSummaries: List[FlightSummary] = files
+  def applyToUnzippedFileContent[X](files: List[File], carriers: List[String], apply: (UnzippedFileContent) => X): List[X] = {
+    files
       .sortBy(_.getAbsolutePath)
       .flatMap(file => {
-        println(s"Processing $file")
         val zipStream = new ZipInputStream(new FileInputStream(file.getAbsolutePath))
-        val allUnzipped: Seq[ZipUtils.UnzippedFileContent] = ZipUtils.unzipAllFilesInStream(zipStream, fileNameFilter(carriers))
+        val allUnzipped: Seq[UnzippedFileContent] = unzipAllFilesInStream(zipStream, fileNameFilter(carriers))
 
-        allUnzipped.map(unzippedFile => summaryFromJson(unzippedFile.content))
+        zipStream.close()
+
+        allUnzipped.map(apply)
       })
+  }
+
+  def extractFileContentFromZips(files: List[File], carriers: List[String]): List[String] = applyToUnzippedFileContent(files, carriers, _.content)
+
+  def extractSummariesFromZips(files: List[File], carriers: List[String]): (List[String], List[FlightSummary]) = {
+    val relevantSummaries = applyToUnzippedFileContent(files, carriers, ufc => summaryFromJson(ufc.content))
       .collect { case Some(fs) => fs }
 
     SplitsExport.expandToFullNationalities(relevantSummaries)

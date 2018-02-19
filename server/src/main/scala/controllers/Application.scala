@@ -183,7 +183,7 @@ trait SystemActors {
   def createSparkSession(): SparkSession = {
     SparkSession
       .builder
-      .appName("Simple Application")
+      .appName("DRT Predictor")
       .config("spark.master", "local")
       .getOrCreate()
   }

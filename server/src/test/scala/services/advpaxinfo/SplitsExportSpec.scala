@@ -46,7 +46,7 @@ class SplitsExportSpec extends Specification {
       skipped("These were used to help write the exporting code for real API files which are not normally accessible")
       val files = SplitsExport.getListOfFiles(rawZipFilesPath)
 
-      val content: List[String] = SplitsExport.extractFilesFromZips(files.take(1), List("FR"))
+      val content: List[String] = SplitsExport.extractFileContentFromZips(files.take(1), List("FR"))
 
       content.head.length !== 0
     }
