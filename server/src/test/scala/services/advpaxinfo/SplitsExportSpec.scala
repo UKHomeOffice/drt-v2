@@ -31,25 +31,16 @@ import scala.util.{Failure, Success, Try}
 
 
 class SplitsExportSpec extends Specification {
-  lazy val rawZipFilesPath: String = "/tmp/dq-api-zips"
+  lazy val rawZipFilesPath: String = "/atmos-backup"
+
+  val archetypes = List(
+    Tuple2(PaxTypes.EeaMachineReadable.cleanName, Queues.EeaDesk),
+    Tuple2(PaxTypes.EeaNonMachineReadable.cleanName, Queues.EeaDesk),
+    Tuple2(PaxTypes.VisaNational.cleanName, Queues.NonEeaDesk),
+    Tuple2(PaxTypes.NonVisaNational.cleanName, Queues.NonEeaDesk)
+  )
 
   "Looking at raw API data" >> {
-
-    "I can list the files in the atmos-backup dir" >> {
-      skipped("These were used to help write the exporting code for real API files which are not normally accessible")
-      val files = SplitsExport.getListOfFiles(rawZipFilesPath)
-
-      files.length !== 0
-    }
-
-    "I can unzip the zips" >> {
-      skipped("These were used to help write the exporting code for real API files which are not normally accessible")
-      val files = SplitsExport.getListOfFiles(rawZipFilesPath)
-
-      val content: List[String] = SplitsExport.extractFileContentFromZips(files.take(1), List("FR"))
-
-      content.head.length !== 0
-    }
 
     "I can produce an csv export of nationalities" >> {
       skipped("These were used to help write the exporting code for real API files which are not normally accessible")
@@ -83,116 +74,19 @@ class SplitsExportSpec extends Specification {
       result === expected
     }
 
-    "I can get export splits from API to csv" >> {
-      skipped("not now..")
-      import akka.stream.scaladsl._
-
-      val files = SplitsExport.getListOfFiles(rawZipFilesPath)
-
-      val manifests = files.sortBy(_.getName).flatMap(file => {
-        val byteStringSource = FileIO.fromPath(Paths.get(file.getAbsolutePath))
-        val flightCodesToSelect = Option(List("FR", "U2"))
-        Manifests
-          .fileNameAndContentFromZip(file.getName, byteStringSource, Option("STN"), flightCodesToSelect)
-          .map {
-            case (_, vm) => vm
-          }
-      })
-
-      val archetypes = List(
-        Tuple2(PaxTypes.EeaMachineReadable, Queues.EeaDesk),
-        Tuple2(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk),
-        Tuple2(PaxTypes.VisaNational, Queues.NonEeaDesk),
-        Tuple2(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
-      )
-
-      val historicSplits: List[HistoricSplitsCollection] = SplitsExport
-        .historicSplitsCollection("STN", manifests)
-        .sortBy(h => h.scheduled.millisSinceEpoch)
-      val averageSplits = SplitsExport.averageFlightSplitsByMonthAndDay(historicSplits, archetypes)
-
-      val filePath = "/tmp/historic-splits-from-api.csv"
-      val file = new File(filePath)
-      val bw = new BufferedWriter(new FileWriter(file))
-
-      val paxTypes = archetypes.map(_._1.name.dropRight(1)).mkString(",")
-      val paxTypeAvgs = archetypes.map(a => s"${a._1.name.dropRight(1)} avg").mkString(",")
-      bw.write(s"flight,scheduled,origin,dest,year,month,day,$paxTypes,$paxTypeAvgs\n")
-
-      historicSplits
-        .foreach(s => {
-          val year = SDate(s.scheduled).getFullYear()
-          val month = SDate(s.scheduled).getMonth()
-          val dayOfWeek = SDate(s.scheduled).getDayOfWeek()
-          val key = (s.flightCode, year - 1, month, dayOfWeek)
-          val average = averageSplits.get(key) match {
-            case None => List.fill(archetypes.length)(0d)
-            case Some(avgs) =>
-              println(s"Found historic avgs for $key: $avgs")
-              avgs
-          }
-          val actuals = archetypes.map {
-            case (paxType, queueName) =>
-              s.splits.find {
-                case ApiPaxTypeAndQueueCount(pt, qn, _, _) => pt == paxType && qn == queueName
-              }.map(_.paxCount).getOrElse(0)
-          }
-          val row = s"${s.flightCode},${SDate(s.scheduled).ddMMyyString},${s.originPort},${s.arrivalPort},$year,$month,$dayOfWeek,${actuals.mkString(",")},${average.mkString(",")}\n"
-          bw.write(row)
-        })
-
-      bw.close()
-
-      //      println(averageSplits)
-
-      1 === 1
-    }
-
-    val archetypes = List(
-      Tuple2(PaxTypes.EeaMachineReadable.cleanName, Queues.EeaDesk),
-      Tuple2(PaxTypes.EeaNonMachineReadable.cleanName, Queues.EeaDesk),
-      Tuple2(PaxTypes.VisaNational.cleanName, Queues.NonEeaDesk),
-      Tuple2(PaxTypes.NonVisaNational.cleanName, Queues.NonEeaDesk)
-    )
-
-    implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-    def writeSplitsFromZip[X](zipFileName: String,
-                              zippedFileByteStream: Source[ByteString, X],
-                              outputFile: BufferedWriter): Unit = {
-
-      val inputStream: InputStream = zippedFileByteStream.runWith(
-        StreamConverters.asInputStream()
-      )
-      val zipInputStream = new ZipInputStream(inputStream)
-
-      Stream
-        .continually(zipInputStream.getNextEntry)
-        .takeWhile(_ != null)
-        .foreach { _ =>
-          val buffer = new Array[Byte](4096)
-          val stringBuffer = new ArrayBuffer[Byte]()
-          var len: Int = zipInputStream.read(buffer)
-
-          while (len > 0) {
-            stringBuffer ++= buffer.take(len)
-            len = zipInputStream.read(buffer)
-          }
-          val jsonContent: String = new String(stringBuffer.toArray, UTF_8)
-          parseJsonAndWrite(archetypes, outputFile, jsonContent)
-        }
-
-      log.info(s"Finished processing $zipFileName")
-
-      //      outputFile.flush()
-    }
-
     "I can get export splits from API directly to csv" >> {
       skipped("no need to export the csv every time")
       import akka.stream.scaladsl._
 
-      val files = SplitsExport.getListOfFiles(rawZipFilesPath)
+      val files = SplitsExport
+        .getListOfFiles(rawZipFilesPath)
+        .filterNot(f => {
+          val fileNameParts = f.getName.split("_")
+          val date = Integer.parseInt(fileNameParts(2))
+          val tooOld = date < 161201
+          if (tooOld) println(s"ignoring old zip ${f.getName} - $date < 161201")
+          tooOld
+        })
 
       val filePath = "/home/rich/dev/all-splits-from-api.csv"
       val file = new File(filePath)
@@ -209,6 +103,37 @@ class SplitsExportSpec extends Specification {
 
       1 === 1
     }
+  }
+
+  implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+
+  def writeSplitsFromZip[X](zipFileName: String,
+                            zippedFileByteStream: Source[ByteString, X],
+                            outputFile: BufferedWriter): Unit = {
+
+    val inputStream: InputStream = zippedFileByteStream.runWith(
+      StreamConverters.asInputStream()
+    )
+    val zipInputStream = new ZipInputStream(inputStream)
+
+    Stream
+      .continually(zipInputStream.getNextEntry)
+      .takeWhile(_ != null)
+      .foreach { _ =>
+        val buffer = new Array[Byte](4096)
+        val stringBuffer = new ArrayBuffer[Byte]()
+        var len: Int = zipInputStream.read(buffer)
+
+        while (len > 0) {
+          stringBuffer ++= buffer.take(len)
+          len = zipInputStream.read(buffer)
+        }
+        val jsonContent: String = new String(stringBuffer.toArray, UTF_8)
+        parseJsonAndWrite(archetypes, outputFile, jsonContent)
+      }
+
+    log.info(s"Finished processing $zipFileName")
   }
 
   def parseJsonAndWrite(archetypes: List[(String, String)], outputFile: BufferedWriter, content: String): Unit = {

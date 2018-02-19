@@ -23,7 +23,9 @@ object SplitsExport {
   def getListOfFiles(dir: String): List[File] = {
     val d = new File(dir)
     if (d.exists && d.isDirectory) {
-      d.listFiles.filter(file => file.isFile && file.getName.takeRight(4) == ".zip").toList
+      val files = d.listFiles.filter(file => file.isFile && file.getName.takeRight(4) == ".zip").toList
+      println(s"Found ${files.length} files")
+      files
     } else {
       List[File]()
     }

@@ -112,7 +112,7 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
           }
           .filterNot {
             case (-1, _) =>
-              println(s"Couldn't find all features for $arrival")
+              println(s"Couldn't find all features for ${arrival.IATA}")
               true
             case _ => false
           }
