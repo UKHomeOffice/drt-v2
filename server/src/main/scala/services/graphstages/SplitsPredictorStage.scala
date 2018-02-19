@@ -17,8 +17,6 @@ import services.{SDate, SplitsProvider}
 
 case class FeatureSpec(columns: List[String], featurePrefix: String)
 
-case class SplitPrediction(flight: String, scheduled: MilliDate, archetype: String, prediction: Double)
-
 abstract class SplitsPredictorBase extends GraphStage[FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]]]
 
 class DummySplitsPredictor() extends SplitsPredictorBase {
@@ -61,6 +59,32 @@ class SplitsPredictorStage(portCode: String, sparkSession: SparkSession, rawSpli
       var maybeSplitsPredictor: Map[TerminalName, Option[SplitsPredictor]] = Map()
       var predictionsToPush: Option[Seq[(Arrival, Option[ApiSplits])]] = None
 
+      setHandler(in, new InHandler {
+        override def onPush(): Unit = {
+          log.info(s"onPush")
+          tryPushing()
+
+          if (predictionsToPush.isEmpty) {
+            val arrivalsByTerminal = grab(in).groupBy(_.Terminal)
+            log.info(s"grabbed ${arrivalsByTerminal.values.map(_.length).sum} incomingArrivals for predictions")
+            predictionsToPush = Option(arrivalPredictions(arrivalsByTerminal))
+          } else {
+            log.info(s"ignoring onPush() as we've not yet emitted our current arrivals")
+          }
+
+          if (!hasBeenPulled(in)) pull(in)
+        }
+      })
+
+      setHandler(out, new OutHandler {
+        override def onPull(): Unit = {
+          log.info(s"onPull")
+          tryPushing()
+          
+          if (!hasBeenPulled(in)) pull(in)
+        }
+      })
+
       def tryPushing(): Unit = {
         predictionsToPush match {
           case None => log.info("No arrivals to push")
@@ -74,62 +98,32 @@ class SplitsPredictorStage(portCode: String, sparkSession: SparkSession, rawSpli
         }
       }
 
-      setHandler(in, new InHandler {
-        override def onPush(): Unit = {
-          log.info(s"onPush")
-          tryPushing()
+      def arrivalPredictions(arrivalsByTerminal: Map[String, Seq[Arrival]]): Seq[(Arrival, Option[ApiSplits])] = {
+        val predictions: Seq[(Arrival, Option[ApiSplits])] = arrivalsByTerminal
+          .toSeq
+          .flatMap {
+            case (terminalName, terminalArrivals) =>
+              val flightCodesToModel = terminalArrivals.map(_.IATA).toSet
+              val modelledTerminalFlightCodes = modelledFlightCodes.getOrElse(terminalName, Set())
+              val unseenFlightCodes = flightCodesToModel -- modelledTerminalFlightCodes
 
-          if (predictionsToPush.isEmpty) {
-            val incomingArrivals = grab(in)
-            log.info(s"grabbed ${incomingArrivals.length} incomingArrivals for predictions")
-
-            val arrivalsByTerminal = incomingArrivals.groupBy(_.Terminal)
-
-            val predictions = arrivalsByTerminal
-              .toSeq
-              .flatMap {
-                case (terminalName, terminalArrivals) =>
-
-                  val flightCodesToModel = terminalArrivals.map(_.IATA).toSet
-                  val modelledTerminalFlightCodes = modelledFlightCodes.getOrElse(terminalName, Set())
-                  val unseenFlightCodes = flightCodesToModel -- modelledTerminalFlightCodes
-
-                  if (unseenFlightCodes.nonEmpty) {
-                    log.info(s"$terminalName: ${unseenFlightCodes.size} unmodelled flight codes. Re-training")
-                    val updatedFlightCodesToModel = modelledTerminalFlightCodes ++ unseenFlightCodes
-                    maybeSplitsPredictor = maybeSplitsPredictor.updated(terminalName, Option(SplitsPredictor(sparkSession, portCode, updatedFlightCodesToModel, splitsView)))
-                    modelledFlightCodes = modelledFlightCodes.updated(terminalName, updatedFlightCodesToModel)
-                  } else {
-                    log.info(s"$terminalName: No new unmodelled flight codes so no need to re-train")
-                  }
-
-                  val x = maybeSplitsPredictor
-                    .get(terminalName)
-                    .map(_.map(_.predictForArrivals(terminalArrivals)).getOrElse(Seq()))
-                    .getOrElse(Seq())
-
-                  if (isAvailable(out)) {
-                    log.info(s"Pushing $terminalName predictions")
-                    push(out, x)
-                  }
-                  x
+              if (unseenFlightCodes.nonEmpty) {
+                log.info(s"$terminalName: ${unseenFlightCodes.size} unmodelled flight codes. Re-training")
+                val updatedFlightCodesToModel = modelledTerminalFlightCodes ++ unseenFlightCodes
+                maybeSplitsPredictor = maybeSplitsPredictor.updated(terminalName, Option(SplitsPredictor(sparkSession, portCode, updatedFlightCodesToModel, splitsView)))
+                modelledFlightCodes = modelledFlightCodes.updated(terminalName, updatedFlightCodesToModel)
+              } else {
+                log.info(s"$terminalName: No new unmodelled flight codes so no need to re-train")
               }
-            predictionsToPush = Option(predictions)
-          } else {
-            log.info(s"ignoring onPush() as we've not yet emitted our current arrivals")
+
+              maybeSplitsPredictor
+                .get(terminalName)
+                .flatten
+                .map(_.predictForArrivals(terminalArrivals))
           }
-
-          if (!hasBeenPulled(in)) pull(in)
-        }
-      })
-
-      setHandler(out, new OutHandler {
-        override def onPull(): Unit = {
-          log.info(s"onPull")
-          tryPushing()
-          if (!hasBeenPulled(in)) pull(in)
-        }
-      })
+          .flatten
+        predictions
+      }
     }
 }
 
