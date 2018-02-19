@@ -75,7 +75,7 @@ class CrunchGraphStage(name: String,
         if (!waitingForManifests && !waitingForArrivals) {
           portStateOption match {
             case Some(portState) =>
-              log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
+              log.info(s"Pushing crunched PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
               push(outCrunch, portState)
               portStateOption = None
             case None =>
@@ -85,7 +85,7 @@ class CrunchGraphStage(name: String,
           if (waitingForArrivals) log.info(s"Waiting for arrivals")
           if (waitingForManifests) log.info(s"Waiting for manifests")
         }
-        pullAll
+        pullAll()
       }
     })
 
@@ -214,7 +214,7 @@ class CrunchGraphStage(name: String,
       log.info(s"${updatedFlights.size} flights after updates. $updatesCount updates & $additionsCount additions")
 
       val minusExpired = purgeExpiredArrivals(updatedFlights)
-      log.info(s"${minusExpired.size} flights after removing expired")
+      log.debug(s"${minusExpired.size} flights after removing expired")
 
       minusExpired
     }
@@ -227,7 +227,7 @@ class CrunchGraphStage(name: String,
         case None => newFlightWithSplits
         case Some(vm) =>
           manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
-          log.info(s"Found buffered manifest to apply to new flight, and removed from buffer")
+          log.debug(s"Found buffered manifest to apply to new flight, and removed from buffer")
           removeManifestsOlderThan(twoDaysAgo)
           updateFlightWithManifests(vm, newFlightWithSplits)
       }
@@ -263,7 +263,7 @@ class CrunchGraphStage(name: String,
 
           matchingFlight match {
             case None =>
-              log.info(s"Stashing VoyageManifest in case flight is seen later")
+              log.debug(s"Stashing VoyageManifest in case flight is seen later")
               val idx = s"${newManifest.VoyageNumber}-$vmMillis"
               val existingManifests = manifestsBuffer.getOrElse(idx, Set())
               val updatedManifests = existingManifests + newManifest
@@ -467,7 +467,7 @@ class CrunchGraphStage(name: String,
       .filterNot { case (_, ms) => ms.isEmpty }
 
     val numPurged = manifests.size - updated.size
-    if (numPurged > 0) log.info(s"Purged ${numPurged} expired manifests")
+    if (numPurged > 0) log.info(s"Purged $numPurged expired manifests")
 
     updated
   }
@@ -477,7 +477,7 @@ class CrunchGraphStage(name: String,
     val updated = arrivals.filterNot { case (_, a) => expired(a) }
 
     val numPurged = arrivals.size - updated.size
-    if (numPurged > 0) log.info(s"Purged ${numPurged} expired arrivals")
+    if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals")
 
     updated
   }

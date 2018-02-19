@@ -7,7 +7,8 @@ trait SplitsPredictorFactoryLike {
   def predictor(flightCodes: Set[String]): SplitsPredictor
 }
 
-case class SparkSplitsPredictorFactory(sparkSession: SparkSession, rawSplitsPath: String, portCode: String) extends SplitsPredictorFactoryLike {
+case class SparkSplitsPredictorFactory(sparkSession: SparkSession, rawSplitsPath: String, portCode: String)
+  extends SplitsPredictorFactoryLike {
   val splitsView: DataFrame = sparkSession
     .read
     .option("header", "true")
