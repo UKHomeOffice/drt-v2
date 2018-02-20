@@ -2,18 +2,18 @@ package services
 
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{AirportConfig, Arrival}
-import org.slf4j.LoggerFactory
+import drt.shared.{AirportConfig, Arrival, MilliDate}
+import org.slf4j.{Logger, LoggerFactory}
 
 object SplitsProvider {
-  type SplitProvider = (Arrival) => Option[SplitRatios]
-  val log = LoggerFactory.getLogger(getClass)
+  type SplitProvider = (String, MilliDate) => Option[SplitRatios]
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def splitsForFlight(providers: List[SplitProvider])(apiFlight: Arrival): Option[SplitRatios] = {
     providers.foldLeft(None: Option[SplitRatios])((prev, provider) => {
       prev match {
         case Some(split) => prev
-        case None => provider(apiFlight)
+        case None => provider(apiFlight.IATA, MilliDate(apiFlight.Scheduled))
       }
     })
   }
@@ -24,12 +24,12 @@ object SplitsProvider {
     config.hasPath("passenger_splits_csv_url") && config.getString("passenger_splits_csv_url") != ""
   }
 
-  def emptyProvider: SplitProvider = _ => Option.empty[SplitRatios]
+  def emptyProvider: SplitProvider = (_, _) => Option.empty[SplitRatios]
 
   def csvProvider: SplitProvider = {
     if (shouldUseCsvSplitsProvider) {
       log.info("SplitsProvider: Using csv splits provider")
-      val provider: (Arrival) => Option[SplitRatios] = CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
+      val provider: (String, MilliDate) => Option[SplitRatios] = CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
       provider
     }
     else {
@@ -43,4 +43,3 @@ object SplitsProvider {
   }
 
 }
-

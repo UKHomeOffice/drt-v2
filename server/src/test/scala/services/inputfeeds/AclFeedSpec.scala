@@ -86,7 +86,6 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlight)
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val flightsResult = result.flights.values.map(_.apiFlight)
@@ -114,7 +113,6 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlights)
       crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       crunch.liveArrivalsInput.offer(liveFlights)
@@ -149,9 +147,10 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
 
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
@@ -181,9 +180,10 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.liveArrivalsInput.offer(Flights(newLive.toList))
 
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
@@ -215,7 +215,9 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
       crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
 

@@ -149,7 +149,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-      earliestAndLatestAffectedPcpTime = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),
+      calcPcpWindow = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),
       shifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2

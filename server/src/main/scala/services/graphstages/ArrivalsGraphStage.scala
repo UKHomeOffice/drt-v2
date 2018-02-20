@@ -97,7 +97,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
           case (_, arrival) => expired(arrival)
         }
 
-      log.info(s"Purged ${existingArrivals.size - updated.size} expired arrivals during update")
+      val numPurged = existingArrivals.size - updated.size
+      if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during update")
 
       updated
     }
@@ -108,7 +109,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
       val newMergedFiltered = newMerged.filterNot { case (_, a) => expired(a) }
 
-      log.info(s"Purged ${newMerged.size - newMergedFiltered.size} expired arrivals during merge")
+      val numPurged = newMerged.size - newMergedFiltered.size
+      if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge")
 
       toPush = arrivalsDiff(merged, newMergedFiltered)
       pushIfAvailable(toPush, outArrivalsDiff)

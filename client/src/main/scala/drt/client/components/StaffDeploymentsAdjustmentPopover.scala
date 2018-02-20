@@ -9,7 +9,6 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.Div
 
-import scala.collection.immutable.Seq
 import scala.util.{Failure, Success}
 
 object StaffDeploymentsAdjustmentPopover {

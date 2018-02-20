@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator.apiFlight
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
-import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
+import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate}
 
 class PaxSplitsFromCSVTests extends SpecificationLike {
   val CsvSplitSource = "Historical"
@@ -40,7 +40,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           "BA1234,JHB,97,0,2,1,70,30,100,0,100,0,100,0,Sunday,January,STN,T1,SA"
         ))
 
-        val result = splitsProvider.splitRatioProvider(apiFlight(flightId = 1, iata = "BA1234", schDt = "2017-01-01"))
+        val result = splitsProvider.splitRatioProvider("BA1234", MilliDate(SDate("2017-01-01").millisSinceEpoch))
 
         result === Some(SplitRatios(
           CsvSplitSource,
@@ -58,7 +58,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
           Seq()
         }
 
-        val result = splitsProvider.splitRatioProvider(apiFlight(flightId = 1, iata = "XXXX", schDt = "2017-01-01"))
+        val result = splitsProvider.splitRatioProvider("XXXX", MilliDate(SDate("2017-01-01").millisSinceEpoch))
 
         result === None
       }

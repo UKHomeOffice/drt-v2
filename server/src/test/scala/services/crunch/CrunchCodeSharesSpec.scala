@@ -66,7 +66,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 30)
 
       val expected = Map(

@@ -9,8 +9,6 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import org.scalajs.dom.raw.HTMLElement
 
-import scala.collection.immutable
-import scala.collection.immutable.Seq
 import scala.util.Try
 
 object BigSummaryBoxes {
@@ -129,7 +127,7 @@ object BigSummaryBoxes {
     "Aggregated", None, PaxNumbers
   )
 
-  def flightsAtTerminal(flightsPcp: immutable.Seq[ApiFlightWithSplits], ourTerminal: String) = {
+  def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: String) = {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 

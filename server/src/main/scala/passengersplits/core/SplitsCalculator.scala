@@ -1,6 +1,5 @@
 package passengersplits.core
 
-import controllers.SystemActors.SplitsProvider
 import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
 import drt.shared.PaxTypes._
 import drt.shared.Queues.EeaDesk
@@ -10,11 +9,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
-import services.FastTrackPercentages
+import services.{FastTrackPercentages, SplitsProvider}
 import services.workloadcalculator.PaxLoadCalculator.Load
 
 
-case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider, portDefaultSplits: Set[SplitRatio]) {
+case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.SplitProvider, portDefaultSplits: Set[SplitRatio]) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -40,7 +39,7 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider,
   }
 
   def historicalSplits(fs: Arrival): Option[Set[ApiPaxTypeAndQueueCount]] = {
-    csvSplitsProvider(fs).map(ratios => {
+    csvSplitsProvider(fs.IATA, MilliDate(fs.Scheduled)).map(ratios => {
       val splitRatios: Set[SplitRatio] = ratios.splits.toSet
       splitRatios.map {
         case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio * 100, None)
@@ -49,7 +48,7 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider,
   }
 
   def addEgatesAndFastTrack(arrival: Arrival, apiPaxTypeAndQueueCounts: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
-    val csvSplits = csvSplitsProvider(arrival)
+    val csvSplits = csvSplitsProvider(arrival.IATA, MilliDate(arrival.Scheduled))
     val egatePercentage = egatePercentageFromSplit(csvSplits, 0.6)
     val fastTrackPercentages: FastTrackPercentages = fastTrackPercentagesFromSplit(csvSplits, 0d, 0d)
     val ptqcWithCsvEgates = applyEgatesSplits(apiPaxTypeAndQueueCounts, egatePercentage)
@@ -176,7 +175,7 @@ object SplitsCalculator {
     case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
   }
 
-  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): List[ApiPaxTypeAndQueueCount] = {
+  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): Seq[ApiPaxTypeAndQueueCount] = {
     val paxTypeFn = manifest.ArrivalPortCode match {
       case "LHR" => whenTransitMatters(portCode)
       case _ => mostAirports
@@ -191,7 +190,7 @@ object SplitsCalculator {
     distributeToQueues(paxTypes)
   }
 
-  def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): List[ApiPaxTypeAndQueueCount] = {
+  def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Seq[ApiPaxTypeAndQueueCount] = {
     val paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])] = SplitsCalculator.countPassengerTypes(paxTypeAndNationalities)
     val disabledEgatePercentage = 0d
 

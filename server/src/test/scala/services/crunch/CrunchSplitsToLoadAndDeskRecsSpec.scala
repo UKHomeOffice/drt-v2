@@ -151,7 +151,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ),
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          csvSplitsProvider = _ => Option(SplitRatios(
+          csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.25)
           )))
@@ -187,7 +187,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ),
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          csvSplitsProvider = _ => Option(SplitRatios(
+          csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.5)
           ))
