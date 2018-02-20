@@ -110,6 +110,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
         """.stripMargin)
 
     crunch.liveArrivalsInput.offer(liveFlights)
+    Thread.sleep(500)
     crunch.baseArrivalsInput.offer(baseFlights)
 
     val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)

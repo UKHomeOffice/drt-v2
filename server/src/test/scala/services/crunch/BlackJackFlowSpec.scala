@@ -44,6 +44,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
+    Thread.sleep(500)
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = getLastMessageReceivedBy(crunch.liveTestProbe, 4 seconds) match {
@@ -86,6 +87,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
+    Thread.sleep(500)
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
     val crunchMinutes = getLastMessageReceivedBy(crunch.liveTestProbe, 4 seconds) match {
