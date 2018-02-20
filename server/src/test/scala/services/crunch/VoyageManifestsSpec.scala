@@ -44,10 +44,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30))
 
     crunchGraphs.manifestsInput.offer(inputManifests)
-    Thread.sleep(200L)
     crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val flights = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+    val flights = getLastMessageReceivedBy(crunchGraphs.liveTestProbe, 3 seconds) match {
       case PortState(f, _, _) => f
     }
 
@@ -98,12 +97,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )
 
     crunchGraphs.manifestsInput.offer(inputManifestsCi)
-    Thread.sleep(100L)
     crunchGraphs.manifestsInput.offer(inputManifestsDc)
-    Thread.sleep(100L)
     crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val portState = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    val portState = getLastMessageReceivedBy(crunchGraphs.liveTestProbe, 3 seconds)
 
     val expectedSplits = Set(
       ApiSplits(Set(
@@ -151,10 +148,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )
 
     crunchGraphs.manifestsInput.offer(inputManifests)
-    Thread.sleep(200L)
     crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val crunchMinutes = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+    val crunchMinutes = getLastMessageReceivedBy(crunchGraphs.liveTestProbe, 3 seconds) match {
       case PortState(_, cm, _) => cm
     }
 
@@ -200,10 +196,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )
 
     crunchGraphs.manifestsInput.offer(inputManifests)
-    Thread.sleep(200L)
     crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val crunchMinutes = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+    val crunchMinutes = getLastMessageReceivedBy(crunchGraphs.liveTestProbe, 3 seconds) match {
       case PortState(_, cm, _) => cm
     }
 
@@ -254,10 +249,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )
 
     crunchGraphs.manifestsInput.offer(inputManifests)
-    Thread.sleep(200L)
     crunchGraphs.liveArrivalsInput.offer(inputFlights)
 
-    val crunchMinutes = crunchGraphs.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+    val crunchMinutes = getLastMessageReceivedBy(crunchGraphs.liveTestProbe, 3 seconds) match {
       case PortState(_, cm, _) => cm
     }
 

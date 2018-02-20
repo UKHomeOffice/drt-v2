@@ -55,7 +55,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
       val resultSummary = deskRecsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(

@@ -44,10 +44,9 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     )
 
     crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
-
     crunch.liveArrivalsInput.offer(inputFlightsAfter)
-    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+
+    val flightsAfterUpdate = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds) match {
       case PortState(flights, _, _) => flights.values.map(_.copy(lastUpdated = None))
     }
 
@@ -82,12 +81,10 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
     )
 
     crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
-
     crunch.liveArrivalsInput.offer(inputFlightsBefore)
     crunch.liveArrivalsInput.offer(inputFlightsAfter)
 
-    val flightsAfterUpdate = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState]) match {
+    val flightsAfterUpdate = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds) match {
       case PortState(flights, _, _) => flights.values.map(_.copy(lastUpdated = None))
     }
 

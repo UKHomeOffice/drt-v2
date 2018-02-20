@@ -7,30 +7,31 @@ import akka.util.Timeout
 import drt.chroma.DiffingStage
 import drt.http.{ProdSendAndReceive, WithSendAndReceive}
 import drt.shared.Arrival
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import spray.client.pipelining.{Get, addHeader, unmarshal, _}
 import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.SprayJsonSupport
-import spray.json.DefaultJsonProtocol
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import scala.collection.immutable
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 object LHRLiveFeed {
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   trait LHRLiveFeedParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
-    implicit val lhrArrivalFormat = jsonFormat12(LHRLiveArrival)
-    implicit val lhrFlightPaxFormat = jsonFormat14(LHRFlightPax)
+    implicit val lhrArrivalFormat: RootJsonFormat[LHRLiveArrival] = jsonFormat12(LHRLiveArrival)
+    implicit val lhrFlightPaxFormat: RootJsonFormat[LHRFlightPax] = jsonFormat14(LHRFlightPax)
   }
 
   object LHRLiveFeedParserProtocol extends LHRLiveFeedParserProtocol
 
-  def flightAndPaxToArrival(lhrArrival: LHRLiveArrival, lhrPax: Option[LHRFlightPax]) = {
+  def flightAndPaxToArrival(lhrArrival: LHRLiveArrival, lhrPax: Option[LHRFlightPax]): Try[Arrival] = {
 
     val tryArrival = Try {
       Arrival(
@@ -62,25 +63,25 @@ object LHRLiveFeed {
 
     tryArrival match {
       case Failure(t: Throwable) =>
-        log.warn(s"Failed to parse LHR+Pax into Arrival ${lhrArrival} ${lhrPax}: ${t.getMessage}")
+        log.warn(s"Failed to parse LHR+Pax into Arrival $lhrArrival $lhrPax: ${t.getMessage}")
       case _ =>
     }
 
     tryArrival
   }
 
-  def dateStringToIsoString(s: String) = {
+  def dateStringToIsoString(date: String): String = {
 
     val dateRegex = "(\\d{4})-(\\d{2})-(\\d{2}).(\\d{2}).(\\d{2}).(\\d{2})".r
 
-    val fixedDate = s match {
+    val fixedDate = date match {
       case dateRegex(y, m, d, h, min, s) => s"$y-$m-${d}T$h:$min:${s}Z"
-      case _ => s
+      case _ => date
     }
 
     SDate.tryParseString(fixedDate) match {
       case Success(sd) => sd.toISOString()
-      case Failure(f: Throwable) => ""
+      case Failure(_: Throwable) => ""
     }
   }
 
@@ -147,7 +148,7 @@ object LHRLiveFeed {
 
     import system.dispatcher
 
-    implicit val timeout = Timeout(1 minute)
+    implicit val timeout: Timeout = Timeout(1 minute)
 
     val logResponse: HttpResponse => HttpResponse = resp => {
 

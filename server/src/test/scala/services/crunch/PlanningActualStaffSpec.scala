@@ -42,7 +42,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       initialBaseArrivals = forecastFlights
     )
 
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 10 seconds)
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
       forecastResult.crunchMinutes.values.toSet,

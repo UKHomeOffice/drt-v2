@@ -38,7 +38,7 @@ class PlanningPageSpec() extends CrunchTestLike {
 
     crunch.baseArrivalsInput.offer(forecastFlights)
 
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 2 seconds)
 
     val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
       forecastResult.crunchMinutes.values.toSet,

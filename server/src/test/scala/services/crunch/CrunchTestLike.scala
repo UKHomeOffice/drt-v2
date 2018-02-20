@@ -57,6 +57,8 @@ case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Flights],
                        forecastFixedPointsInput: SourceQueueWithComplete[String],
                        forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
                        actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
+                       liveCrunchActor: ActorRef,
+                       forecastCrunchActor: ActorRef,
                        liveTestProbe: TestProbe,
                        forecastTestProbe: TestProbe)
 
@@ -145,13 +147,16 @@ class CrunchTestLike
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
 
+    val liveCrunchActor = liveCrunchStateActor(liveProbe, now)
+    val forecastCrunchActor = forecastCrunchStateActor(forecastProbe, now)
+
     val crunchInputs = CrunchSystem(CrunchProps(
       system = actorSystem,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
       historicalSplitsProvider = csvSplitsProvider,
-      liveCrunchStateActor = liveCrunchStateActor(liveProbe, now),
-      forecastCrunchStateActor = forecastCrunchStateActor(forecastProbe, now),
+      liveCrunchStateActor = liveCrunchActor,
+      forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
       minutesToCrunch = minutesToCrunch,
@@ -188,6 +193,8 @@ class CrunchTestLike
       crunchInputs.fixedPoints,
       crunchInputs.staffMovements,
       crunchInputs.actualDeskStats,
+      liveCrunchActor,
+      forecastCrunchActor,
       liveProbe,
       forecastProbe
     )
