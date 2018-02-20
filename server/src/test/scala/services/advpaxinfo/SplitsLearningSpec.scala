@@ -8,6 +8,7 @@ import org.apache.spark.ml.regression.LinearRegression
 import org.specs2.mutable.Specification
 import services.SplitsProvider.SplitProvider
 import services.graphstages._
+import services.prediction.FeatureSpec
 import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
 
 import scala.language.postfixOps

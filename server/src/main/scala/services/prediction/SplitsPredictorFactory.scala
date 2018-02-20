@@ -4,7 +4,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 
 trait SplitsPredictorFactoryLike {
-  def predictor(flightCodes: Set[String]): SplitsPredictor
+  def predictor(flightCodes: Set[String]): SparkSplitsPredictor
 }
 
 case class SparkSplitsPredictorFactory(sparkSession: SparkSession, rawSplitsPath: String, portCode: String)
@@ -15,6 +15,8 @@ case class SparkSplitsPredictorFactory(sparkSession: SparkSession, rawSplitsPath
     .option("inferSchema", "true")
     .csv(rawSplitsPath)
 
-  def predictor(flightCodes: Set[String]): SplitsPredictor =
-    SplitsPredictor(sparkSession, portCode, flightCodes, splitsView)
+  splitsView.createOrReplaceTempView("splits")
+
+  def predictor(flightCodes: Set[String]): SparkSplitsPredictor =
+    SparkSplitsPredictor(sparkSession, portCode, flightCodes, splitsView)
 }

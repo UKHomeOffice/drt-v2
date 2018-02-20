@@ -64,7 +64,8 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
   def newStateFromManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): VoyageManifestState = {
     val expired: VoyageManifest => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (vm: VoyageManifest) => vm.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
     val minusExpired = existing.filterNot(expired)
-    log.info(s"Purged ${existing.size - minusExpired.size} VoyageManifests")
+    val numPurged = existing.size - minusExpired.size
+    if (numPurged > 0) log.info(s"Purged $numPurged VoyageManifests")
 
     val withUpdates = minusExpired ++ updates
     state.copy(manifests = withUpdates)

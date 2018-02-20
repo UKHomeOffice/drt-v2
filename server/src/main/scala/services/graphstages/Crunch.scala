@@ -183,7 +183,8 @@ object Crunch {
   def purgeExpiredMinutes[M <: Minute](minutes: Map[Int, M], now: () => SDateLike, expireAfterMillis: MillisSinceEpoch): Map[Int, M] = {
     val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
     val updated = minutes.filterNot { case (_, cm) => expired(cm)}
-    log.info(s"Purged ${minutes.size - updated.size} expired CrunchMinutes")
+    val numPurged = minutes.size - updated.size
+    if (numPurged > 0) log.info(s"Purged ${numPurged} expired CrunchMinutes")
     updated
   }
 }

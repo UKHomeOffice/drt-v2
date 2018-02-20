@@ -1,22 +1,21 @@
 package services.prediction
 
-import drt.shared._
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared._
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, concat_ws, expr}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.SplitsCalculator
-import services.{SDate, SplitsProvider}
-import services.SplitsProvider.SplitProvider
-import services.graphstages.FeatureSpec
+import services.SDate
+
+case class FeatureSpec(columns: List[String], featurePrefix: String)
 
 sealed trait SplitsPredictorLike {
   def predictForArrivals(arrivals: Seq[Arrival]): Seq[(Arrival, Option[ApiSplits])]
 }
 
-case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightCodes: Set[String], splitsView: DataFrame)
+case class SparkSplitsPredictor(sparkSession: SparkSession, portCode: String, flightCodes: Set[String], splitsView: DataFrame)
   extends SplitsPredictorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -37,12 +36,6 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
     FeatureSpec(List("origin"), "o")
   )
 
-  splitsView.createOrReplaceTempView("splits")
-
-  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
-
-  val splitsCalculator = SplitsCalculator(portCode, historicalSplitsProvider, Set())
-
   lazy val flightCodesToTrain: Seq[String] = flightsHavingTrainingExamples
 
   lazy val features: IndexedSeq[String] = extractFeatures
@@ -55,7 +48,7 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
     val flightSplitsPredictions: List[((String, Long), String, Double)] = paxTypes.flatMap(paxType => {
       log.info(s"Predicting $paxType values for ${arrivalsToPredict.length} arrivals")
 
-      val predictionDf: DataFrame = predictionSetFromArrivals(arrivalsToPredict, features)
+      val predictionDf: DataFrame = predictionDataFrameFromArrivals(arrivalsToPredict, features)
 
       val withPrediction = paxTypeModels(paxType).transform(predictionDf)
 
@@ -98,10 +91,10 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
       (a, predictedSplits)
     })
 
-  def predictionSetFromArrivals(arrivalsToPredict: Seq[Arrival], features: IndexedSeq[String]): DataFrame = {
+  def predictionDataFrameFromArrivals(arrivalsToPredict: Seq[Arrival], features: IndexedSeq[String]): DataFrame = {
     import sparkSession.implicits._
 
-    val validationSetDf = arrivalsToPredict
+    val arrivalsPredictionDf = arrivalsToPredict
       .map(arrival => {
         val sf: Seq[(Int, Double)] = featureSpecs
           .map { fs =>
@@ -112,7 +105,7 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
           }
           .filterNot {
             case (-1, _) =>
-              println(s"Couldn't find all features for ${arrival.IATA}")
+              log.debug(s"Couldn't find all features for ${arrival.IATA}")
               true
             case _ => false
           }
@@ -125,7 +118,7 @@ case class SplitsPredictor(sparkSession: SparkSession, portCode: String, flightC
       })
       .toDS()
       .toDF("flight", "scheduled", "features")
-    validationSetDf
+    arrivalsPredictionDf
   }
 
   def trainModel(labelColName: String, features: IndexedSeq[String]): LinearRegressionModel = {

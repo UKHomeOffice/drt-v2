@@ -5,10 +5,8 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.prediction.{SplitsPredictor, SplitsPredictorFactoryLike}
+import services.prediction.{SparkSplitsPredictor, SplitsPredictorFactoryLike}
 
-
-case class FeatureSpec(columns: List[String], featurePrefix: String)
 
 abstract class SplitsPredictorBase extends GraphStage[FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]]]
 
@@ -43,7 +41,7 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
     new GraphStageLogic(shape) {
 
       var modelledFlightCodes: Map[TerminalName, Set[String]] = Map()
-      var maybeSplitsPredictor: Map[TerminalName, Option[SplitsPredictor]] = Map()
+      var terminalMaybePredictors: Map[TerminalName, Option[SparkSplitsPredictor]] = Map()
       var predictionsToPush: Option[Seq[(Arrival, Option[ApiSplits])]] = None
 
       setHandler(in, new InHandler {
@@ -98,13 +96,13 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
                 log.info(s"$terminalName: ${unseenFlightCodes.size} unmodelled flight codes. Re-training")
                 val updatedFlightCodesToModel = modelledTerminalFlightCodes ++ unseenFlightCodes
                 val predictor = splitsPredictorFactory.predictor(updatedFlightCodesToModel)
-                maybeSplitsPredictor = maybeSplitsPredictor.updated(terminalName, Option(predictor))
+                terminalMaybePredictors = terminalMaybePredictors.updated(terminalName, Option(predictor))
                 modelledFlightCodes = modelledFlightCodes.updated(terminalName, updatedFlightCodesToModel)
               } else {
                 log.info(s"$terminalName: No new unmodelled flight codes so no need to re-train")
               }
 
-              maybeSplitsPredictor
+              terminalMaybePredictors
                 .get(terminalName)
                 .flatten
                 .map(_.predictForArrivals(terminalArrivals))
