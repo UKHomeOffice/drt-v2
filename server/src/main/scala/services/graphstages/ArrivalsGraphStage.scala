@@ -129,7 +129,7 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
 
     def grabAndSetPcp(arrivals: Inlet[Flights]): Set[Arrival] = {
       val grabbedArrivals = grab(arrivals)
-      log.info(s"Grabbed ${grabbedArrivals.flights.length} arrivals")
+      log.info(s"Grabbed ${grabbedArrivals.flights.length} ${arrivals.toString} arrivals")
       grabbedArrivals
         .flights
         .filterNot {

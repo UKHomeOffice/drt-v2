@@ -21,6 +21,10 @@ import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, SplitsPredictorBase, SplitsPredictorStage}
 
+import scala.collection.immutable
+import scala.language.postfixOps
+import scala.concurrent.duration._
+
 
 class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(1, "live-test", queues, now, expireAfterMillis, false) {
@@ -97,7 +101,7 @@ class CrunchTestLike
     timeToChoxMillis = 120000L,
     firstPaxOffMillis = 180000L
   )
-  
+
   val splitsPredictorStage = new DummySplitsPredictor()
 
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
@@ -171,7 +175,7 @@ class CrunchTestLike
     crunchInputs.manifests.offer(initialManifests)
     crunchInputs.shifts.offer(shifts)
     crunchInputs.fixedPoints.offer(fixedPoints)
-    
+
     CrunchGraph(
       crunchInputs.baseArrivals,
       crunchInputs.forecastArrivals,
@@ -287,5 +291,12 @@ class CrunchTestLike
           }
         (tn, terminalLoads)
     }
+
+  def getLastMessageReceivedBy(testProbe: TestProbe, timeDurationToWait: Duration): PortState = {
+    testProbe
+      .receiveWhile(timeDurationToWait) { case ps@PortState(_, _, _) => ps }
+      .reverse
+      .head
+  }
 }
 

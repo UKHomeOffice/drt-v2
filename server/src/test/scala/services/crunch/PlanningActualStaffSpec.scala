@@ -26,7 +26,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val weekbeginning = "2017-01-02T00:00Z"
 
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = 1, schDt = day1, iata = "BA0001", terminal = "T1", actPax = 5)
-    val forecastFlights = Flights(List(forecastArrivalDay1))
+    val forecastFlights = Set(forecastArrivalDay1)
 
     val crunch = runCrunchGraph(
       now = () => SDate(weekbeginning),
@@ -38,12 +38,11 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addDays(3),
       shifts =
         """shift a,T1,02/01/17,00:00,23:59,20
-        """.stripMargin
+        """.stripMargin,
+      initialBaseArrivals = forecastFlights
     )
 
-    crunch.baseArrivalsInput.offer(forecastFlights)
-
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 10 seconds)
 
     val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
       forecastResult.crunchMinutes.values.toSet,
