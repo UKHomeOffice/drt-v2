@@ -9,6 +9,8 @@ import services.graphstages.Crunch._
 import scala.concurrent.duration._
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
+  sequential
+  isolated
 
   val slot0To14 = 0 * 60000
   val slot15To29 = 15 * 60000

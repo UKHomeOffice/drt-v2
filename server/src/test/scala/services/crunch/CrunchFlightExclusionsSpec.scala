@@ -11,6 +11,9 @@ import services.graphstages.Crunch._
 import scala.collection.immutable.{List, Seq}
 
 class CrunchFlightExclusionsSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Given two flights, one with an invalid terminal " +
     "When I ask for a crunch " +
     "I should only see crunch results for the flight with a valid terminal" >> {

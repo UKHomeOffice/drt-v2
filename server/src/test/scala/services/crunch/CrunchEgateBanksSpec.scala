@@ -15,6 +15,9 @@ import scala.languageFeature.postfixOps
 
 
 class CrunchEgateBanksSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Egate banks handling " >> {
     "Given flights with 20 very expensive passengers and splits to eea desk & egates " +
       "When I ask for desk recs " +

@@ -13,6 +13,9 @@ import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Queue validation " >> {
     "Given a flight with transfers " +
       "When I ask for a crunch " +

@@ -9,6 +9,8 @@ import services.graphstages.Crunch._
 import scala.concurrent.duration._
 
 class PlanningPageSpec() extends CrunchTestLike {
+  sequential
+  isolated
 
   import CrunchApi._
 

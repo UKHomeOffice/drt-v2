@@ -13,6 +13,9 @@ import scala.concurrent.duration._
 
 
 class ForecastCrunchSpec() extends CrunchTestLike {
+  sequential
+  isolated
+
   "Given a live flight and a base flight arriving 3 days later " +
     "When I ask for pax loads " +
     "Then I should see pax arriving in the 1st and 2nd minute for the live flight, and the 1st & 2nd minute 3 days later for the base flight" >> {

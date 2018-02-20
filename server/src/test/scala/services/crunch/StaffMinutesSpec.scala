@@ -11,6 +11,9 @@ import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 class StaffMinutesSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Given a flight with one passenger, and a shift that covers the pcp time " +
     "When I ask for the PortState " +
     "Then I should see the staff available for the duration of the triggered crunch" >> {

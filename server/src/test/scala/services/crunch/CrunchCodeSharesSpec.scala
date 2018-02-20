@@ -13,6 +13,9 @@ import scala.concurrent.duration._
 
 
 class CrunchCodeSharesSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Code shares " >> {
     "Given 2 flights which are codeshares with each other " +
       "When I ask for a crunch " +
@@ -34,7 +37,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       val resultSummary = paxLoadsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
