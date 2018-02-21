@@ -31,7 +31,7 @@ class CrunchGraphStage(name: String,
                        expireAfterMillis: Long,
                        now: () => SDateLike,
                        maxDaysToCrunch: Int,
-                       manifestsUsed: Boolean = true,
+                       waitForManifests: Boolean = true,
                        minutesToCrunch: Int,
                        warmUpMinutes: Int,
                        useNationalityBasedProcessingTimes: Boolean)
@@ -48,7 +48,7 @@ class CrunchGraphStage(name: String,
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
     var waitingForArrivals: Boolean = true
-    var waitingForManifests: Boolean = manifestsUsed
+    var waitingForManifests: Boolean = waitForManifests
 
     var portStateOption: Option[PortState] = None
 

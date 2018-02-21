@@ -134,8 +134,8 @@ class CrunchTestLike
                      crunchEndDateProvider: (SDateLike) => SDateLike,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
-                     shifts: String = "",
-                     fixedPoints: String = ""
+                     initialShifts: String = "",
+                     initialFixedPoints: String = ""
                     ): CrunchGraph = {
 
     val maxDaysToCrunch = 100
@@ -171,15 +171,17 @@ class CrunchTestLike
       crunchEndDateProvider = crunchEndDateProvider,
       calcPcpTimeWindow = (_) => calcPcpWindow,
       initialFlightsWithSplits = initialFlightsWithSplits,
-      splitsPredictorStage = splitsPredictorStage
+      splitsPredictorStage = splitsPredictorStage,
+      waitForManifests = false
     ))
 
-    crunchInputs.baseArrivals.offer(Flights(initialBaseArrivals.toList))
-    crunchInputs.forecastArrivals.offer(Flights(initialForecastArrivals.toList))
-    crunchInputs.liveArrivals.offer(Flights(initialLiveArrivals.toList))
+    if (initialBaseArrivals.nonEmpty) crunchInputs.baseArrivals.offer(Flights(initialBaseArrivals.toList))
+    if (initialForecastArrivals.nonEmpty) crunchInputs.forecastArrivals.offer(Flights(initialForecastArrivals.toList))
+    if (initialLiveArrivals.nonEmpty) crunchInputs.liveArrivals.offer(Flights(initialLiveArrivals.toList))
+    if (initialShifts.nonEmpty) crunchInputs.shifts.offer(initialShifts)
+    if (initialFixedPoints.nonEmpty) crunchInputs.fixedPoints.offer(initialFixedPoints)
+
     crunchInputs.manifests.offer(initialManifests)
-    crunchInputs.shifts.offer(shifts)
-    crunchInputs.fixedPoints.offer(fixedPoints)
 
     CrunchGraph(
       crunchInputs.baseArrivals,

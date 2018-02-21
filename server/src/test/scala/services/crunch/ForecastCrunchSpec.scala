@@ -66,7 +66,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30),
-      shifts =
+      initialShifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
@@ -104,7 +104,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       warmUpMinutes = 120,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => SDate("2017-01-04T00:30Z"),
-      shifts =
+      initialShifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
@@ -147,7 +147,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
       calcPcpWindow = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),
-      shifts =
+      initialShifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)

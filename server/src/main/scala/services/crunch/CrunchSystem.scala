@@ -52,7 +52,8 @@ object CrunchSystem {
                          calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
                          now: () => SDateLike = () => SDate.now(),
                          initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                         splitsPredictorStage: SplitsPredictorBase
+                         splitsPredictorStage: SplitsPredictorBase,
+                         waitForManifests: Boolean = true
                         )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -117,7 +118,7 @@ object CrunchSystem {
       now = props.now,
       maxDaysToCrunch = maxLiveDaysToCrunch,
       earliestAndLatestAffectedPcpTime = props.calcPcpTimeWindow(maxLiveDaysToCrunch),
-      manifestsUsed = true,
+      waitForManifests = props.waitForManifests,
       minutesToCrunch = props.minutesToCrunch,
       warmUpMinutes = props.warmUpMinutes,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
@@ -135,7 +136,7 @@ object CrunchSystem {
       now = props.now,
       maxDaysToCrunch = props.maxDaysToCrunch,
       earliestAndLatestAffectedPcpTime = props.calcPcpTimeWindow(props.maxDaysToCrunch),
-      manifestsUsed = true,
+      waitForManifests = props.waitForManifests,
       minutesToCrunch = props.minutesToCrunch,
       warmUpMinutes = props.warmUpMinutes,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)

@@ -29,7 +29,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => crunchStart,
       crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
       crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
-      shifts =
+      initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,1
           |shift b,T1,01/01/17,00:15,00:29,2
         """.stripMargin
@@ -63,11 +63,11 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => crunchStart,
       crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
       crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
-      shifts =
+      initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,0
           |shift b,T1,01/01/17,00:15,00:29,2
         """.stripMargin,
-      fixedPoints =
+      initialFixedPoints =
         """egate monitors a,T1,01/01/17,00:00,00:14,2
           |roaming officers b,T1,01/01/17,00:15,00:29,2
         """.stripMargin
