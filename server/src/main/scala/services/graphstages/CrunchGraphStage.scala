@@ -208,6 +208,8 @@ class CrunchGraphStage(name: String,
 
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
               (updates + 1, additions, flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight)))
+            case _ =>
+              (updates, additions, flightsSoFar)
           }
       }
 
