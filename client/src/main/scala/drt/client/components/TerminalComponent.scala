@@ -2,13 +2,15 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
+
 import scala.collection.immutable
 
 object TerminalComponent {
@@ -26,11 +28,12 @@ object TerminalComponent {
                             airportInfos: Pot[AirportInfo],
                             timeRangeHours: TimeRangeHours,
                             loadingState: LoadingState,
-                            showActuals: Boolean
+                            showActuals: Boolean,
+                            userRoles: Pot[List[String]]
                           )
 
-  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.caseClass[TerminalPageTabLoc]
-  implicit val propsReuse: Reusability[Props] = Reusability.caseClass[Props]
+  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.derive[TerminalPageTabLoc]
+  implicit val propsReuse: Reusability[Props] = Reusability.derive[Props]
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
@@ -45,34 +48,106 @@ object TerminalComponent {
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.timeRangeFilter,
         model.loadingState,
-        model.showActualIfAvailable
+        model.showActualIfAvailable,
+        model.userRoles
       ))
       modelRCP(modelMP => {
         val model = modelMP()
         <.div(model.airportConfig.render(airportConfig => {
+
+          val terminalContentProps = TerminalContentComponent.Props(
+            model.crunchStatePot,
+            model.potShifts,
+            model.potFixedPoints,
+            model.potStaffMovements,
+            airportConfig,
+            props.terminalPageTab,
+            model.airportInfos,
+            model.timeRangeHours,
+            props.router,
+            model.showActuals
+          )
+
+          val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
+          val snapshotDataClass = if (props.terminalPageTab.mode == "snapshot") "active" else ""
+          val planningClass = if (props.terminalPageTab.mode == "planning") "active" else ""
+          val staffingClass = if (props.terminalPageTab.mode == "staffing") "active" else ""
+
+          val currentContentClass = if (props.terminalPageTab.mode == "current") "fade in active" else "fade out"
+          val snapshotContentClass = if (props.terminalPageTab.mode == "snapshot") "fade in active" else "fade out"
+          val planningContentClass = if (props.terminalPageTab.mode == "planning") "fade in active" else "fade out"
+          val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
+
+          val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
+
           <.div(
-            TerminalDisplayModeComponent(TerminalDisplayModeComponent.Props(
-              model.crunchStatePot,
-              model.forecastPeriodPot,
-              model.potShifts,
-              model.potMonthOfShifts,
-              model.potFixedPoints,
-              model.potStaffMovements,
-              airportConfig,
-              props.terminalPageTab,
-              model.airportInfos,
-              model.timeRangeHours,
-              props.router,
-              model.loadingState,
-              model.showActuals
+            <.ul(^.className := "nav nav-tabs",
+              <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
+                props.router.set(props.terminalPageTab.copy(mode = "current", subMode = subMode, date = None))
+              }),
+              <.li(^.className := snapshotDataClass,
+                <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
+                  props.router.set(props.terminalPageTab.copy(mode = "snapshot", subMode = subMode, date = None))
+                }
+              ),
+              <.li(^.className := planningClass,
+                <.a(VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+                  props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
+                }
+              ),
+              model.userRoles.render(
+                r => if(r.contains("staff:edit"))
+                <.li(^.className := staffingClass,
+                  <.a(VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
+                    props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
+                  }
+                ) else ""
+              )
+            ),
+            <.div(^.className := "tab-content",
+              <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
+                if (props.terminalPageTab.mode == "current") <.div(
+                  <.h2(props.terminalPageTab.date match {
+                    case Some(ds) if SDate(ds).ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                    case Some(ds) if SDate(ds).millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                    case Some(ds) if SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
+                    case _ => "Live View"
+                  }),
+                  DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState)),
+                  TerminalContentComponent(terminalContentProps)
+                ) else ""
+              }),
+              <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
+                if (props.terminalPageTab.mode == "snapshot") <.div(
+                  <.h2("Snapshot View"),
+                  SnapshotSelector(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState),
+                  TerminalContentComponent(terminalContentProps)
+                ) else ""
+              }),
+              <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
+                if (props.terminalPageTab.mode == "planning") {
+                  <.div(
+                    <.div(model.forecastPeriodPot.render(fp => {
+                      TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
+                    }))
+                  )
+                } else ""
+              }),
+              <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+                if (props.terminalPageTab.mode == "staffing") {
+                  model.potMonthOfShifts.render(ms => {
+                    TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
+                  })
+                } else ""
+              )
             )
-            ))
+          )
         }))
       })
     })
+    .componentDidMount((p) => Callback.log("TerminalComponent did mount"))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(props: Props): VdomElement = {
-    component(props)
-  }
+  def apply(props: Props): VdomElement = component(props)
 }

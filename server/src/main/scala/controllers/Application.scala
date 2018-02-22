@@ -332,23 +332,13 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   object ApiService {
-    def apply(airportConfig: AirportConfig, shiftsActor: ActorRef, fixedPointsActor: ActorRef, staffMovementsActor: ActorRef): ApiService {
-      val timeout: Timeout
-
-      def liveCrunchStateActor: AskableActorRef
-
-      def actorSystem: ActorSystem
-
-      def forecastCrunchStateActor: AskableActorRef
-
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
-
-      def askableCacheActorRef: AskableActorRef
-
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
-
-      def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
-    } = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
+    def apply(
+               airportConfig: AirportConfig,
+               shiftsActor: ActorRef,
+               fixedPointsActor: ActorRef,
+               staffMovementsActor: ActorRef,
+               headers: Headers
+             ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers) {
 
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -441,6 +431,8 @@ class Application @Inject()(implicit val config: Configuration,
             StaffTimeSlots.getShiftsForMonth(shifts, SDate(month))
         }
       }
+
+      def getUserRoles: List[String] = roles
 
       override def askableCacheActorRef: AskableActorRef = cacheActorRef
 
@@ -699,7 +691,7 @@ class Application @Inject()(implicit val config: Configuration,
       // call Autowire route
 
       implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor))
+      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, request.headers))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))

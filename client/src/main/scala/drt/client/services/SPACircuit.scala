@@ -59,20 +59,22 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
-case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
-                     latestUpdateMillis: MillisSinceEpoch = 0L,
-                     crunchStatePot: Pot[CrunchState] = Empty,
-                     forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
-                     airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                     airportConfig: Pot[AirportConfig] = Empty,
-                     shiftsRaw: Pot[String] = Empty,
-                     monthOfShifts: Pot[MonthOfRawShifts] = Empty,
-                     fixedPointsRaw: Pot[String] = Empty,
-                     staffMovements: Pot[Seq[StaffMovement]] = Empty,
-                     viewMode: ViewMode = ViewLive(),
-                     timeRangeFilter: TimeRangeHours = CurrentWindow(),
-                     loadingState: LoadingState = LoadingState(),
-                     showActualIfAvailable: Boolean = true
+case class RootModel(
+                      applicationVersion: Pot[ClientServerVersions] = Empty,
+                      latestUpdateMillis: MillisSinceEpoch = 0L,
+                      crunchStatePot: Pot[CrunchState] = Empty,
+                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
+                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
+                      airportConfig: Pot[AirportConfig] = Empty,
+                      shiftsRaw: Pot[String] = Empty,
+                      monthOfShifts: Pot[MonthOfRawShifts] = Empty,
+                      fixedPointsRaw: Pot[String] = Empty,
+                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
+                      viewMode: ViewMode = ViewLive(),
+                      timeRangeFilter: TimeRangeHours = CurrentWindow(),
+                      loadingState: LoadingState = LoadingState(),
+                      showActualIfAvailable: Boolean = true,
+                      userRoles: Pot[List[String]] = Empty
                     )
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
@@ -542,7 +544,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
       val latestUpdateMillis = if (currentViewMode != ViewLive() && newViewMode == ViewLive()) 0L else currentLatestUpdateMillis
 
-      val updateTimeFilterAction = if(newViewMode == ViewLive()) SetTimeRangeFilter(CurrentWindow()) else NoAction
+      val updateTimeFilterAction = if (newViewMode == ViewLive()) SetTimeRangeFilter(CurrentWindow()) else NoAction
 
       log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis")
       (currentViewMode, newViewMode, crunchStateMP.value) match {
@@ -609,6 +611,21 @@ class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) 
   }
 }
 
+class UserRolesHandler[M](modelRW: ModelRW[M, Pot[List[String]]]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetUserRoles =>
+      effectOnly(Effect(AjaxClient[Api].getUserRoles().call().map(SetUserRoles).recoverWith {
+        case _ =>
+          log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+          Future(RetryActionAfter(GetUserRoles, PollDelay.recoveryDelay))
+      }))
+
+    case SetUserRoles(roles) =>
+      log.info(s"Roles: $roles")
+      updated(Ready(roles))
+  }
+}
+
 class NoopHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case DoNothing() =>
@@ -648,14 +665,11 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, v) => m)),
-      new NoopHandler(zoomRW(identity)((m, v) => m))
+      new NoopHandler(zoomRW(identity)((m, v) => m)),
+      new UserRolesHandler(zoomRW(_.userRoles)((m, v) => m.copy(userRoles = v)))
     )
 
-    val loggedhandlers: HandlerFunction = (model, update) => {
-      composedhandlers(model, update)
-    }
-
-    loggedhandlers
+    composedhandlers
   }
 
   def pointInTimeMillis: MillisSinceEpoch = zoom(_.viewMode).value.millis
