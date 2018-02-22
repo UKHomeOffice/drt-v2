@@ -20,7 +20,9 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
     new GraphStageLogic(shape) {
 
       setHandler(in, new InHandler {
-        override def onPush(): Unit = {}
+        override def onPush(): Unit = {
+          grab(in)
+        }
       })
 
       setHandler(out, new OutHandler {

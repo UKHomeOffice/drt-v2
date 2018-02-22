@@ -95,6 +95,16 @@ object Crunch {
       case (id, f) if oldFlightsById.get(id).isEmpty || !f.equals(oldFlightsById(id)) => f
     }.toSet
 
+    toUpdate.map(_.apiFlight).foreach(ua => {
+      oldFlightsById.get(ua.uniqueId).map(_.apiFlight).foreach(oa => {
+        log.info(s"Actor Changes to arrival ${ua.IATA}")
+        if (ua.EstDT != oa.EstDT) log.info(s"${ua.IATA} changed estimated ${oa.EstDT} -> ${ua.EstDT}")
+        if (ua.ActDT != oa.ActDT) log.info(s"${ua.IATA} changed touchdown ${oa.ActDT} -> ${ua.ActDT}")
+        if (ua.EstChoxDT != oa.EstChoxDT) log.info(s"${ua.IATA} changed estchox   ${oa.EstChoxDT} -> ${ua.EstChoxDT}")
+        if (ua.ActChoxDT != oa.ActChoxDT) log.info(s"${ua.IATA} changed actchox   ${oa.ActChoxDT} -> ${ua.ActChoxDT}")
+      })
+    })
+
     Tuple2(toRemove, toUpdate)
   }
 
@@ -182,7 +192,7 @@ object Crunch {
 
   def purgeExpiredMinutes[M <: Minute](minutes: Map[Int, M], now: () => SDateLike, expireAfterMillis: MillisSinceEpoch): Map[Int, M] = {
     val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
-    val updated = minutes.filterNot { case (_, cm) => expired(cm)}
+    val updated = minutes.filterNot { case (_, cm) => expired(cm) }
     val numPurged = minutes.size - updated.size
     if (numPurged > 0) log.info(s"Purged ${numPurged} expired CrunchMinutes")
     updated

@@ -199,6 +199,15 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
           log.info(s"No updated arrivals")
           None
         case updatedArrivals =>
+          updatedArrivals.foreach(ua => {
+            oldMerged.get(ua.uniqueId).foreach(oa => {
+              log.info(s"Changes to arrival ${ua.IATA}")
+              if (ua.EstDT != oa.EstDT) log.info(s"${ua.IATA} changed estimated ${oa.EstDT} -> ${ua.EstDT}")
+              if (ua.ActDT != oa.ActDT) log.info(s"${ua.IATA} changed touchdown ${oa.ActDT} -> ${ua.ActDT}")
+              if (ua.EstChoxDT != oa.EstChoxDT) log.info(s"${ua.IATA} changed estchox   ${oa.EstChoxDT} -> ${ua.EstChoxDT}")
+              if (ua.ActChoxDT != oa.ActChoxDT) log.info(s"${ua.IATA} changed actchox   ${oa.ActChoxDT} -> ${ua.ActChoxDT}")
+            })
+          })
           log.info(s"${updatedArrivals.size} updated arrivals")
           Option(updatedArrivals)
       }
