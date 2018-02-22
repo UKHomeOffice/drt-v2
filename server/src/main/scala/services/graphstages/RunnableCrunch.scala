@@ -36,32 +36,32 @@ object RunnableCrunch {
     val fcstCrunchSink = Sink.actorRef(fcstCrunchStateActor, "completed")
 
     val graph = GraphDSL.create(
-      baseArrivalsSource,
-      fcstArrivalsSource,
-      liveArrivalsSource,
-      manifestsSource,
-      shiftsSource,
-      fixedPointsSource,
-      staffMovementsSource,
-      actualDesksAndWaitTimesSource
+      baseArrivalsSource.async,
+      fcstArrivalsSource.async,
+      liveArrivalsSource.async,
+      manifestsSource.async,
+      shiftsSource.async,
+      fixedPointsSource.async,
+      staffMovementsSource.async,
+      actualDesksAndWaitTimesSource.async
     )((_, _, _, _, _, _, _, _)) { implicit builder =>
       (
-        baseArrivalsSource,
-        fcstArrivalsSource,
-        liveArrivalsSource,
-        manifestsSource,
-        shiftsSource,
-        fixedPointsSource,
-        staffMovementsSource,
-        desksAndWaitTimesSource
+        baseArrivalsSourceAsync,
+        fcstArrivalsSourceAsync,
+        liveArrivalsSourceAsync,
+        manifestsSourceAsync,
+        shiftsSourceAsync,
+        fixedPointsSourceAsync,
+        staffMovementsSourceAsync,
+        desksAndWaitTimesSourceAsync
       ) =>
         val arrivalsStageAsync = builder.add(arrivalsStage.async)
         val liveCrunchStageAsync = builder.add(liveCrunchStage.async)
         val liveStaffingStageAsync = builder.add(liveStaffingStage.async)
-        val liveCrunchOut = builder.add(liveCrunchSink)
+        val liveCrunchOutAsync = builder.add(liveCrunchSink.async)
         val fcstCrunchStageAsync = builder.add(fcstCrunchStage.async)
         val fcstStaffingStageAsync = builder.add(fcstStaffingStage.async)
-        val fcstCrunchOut = builder.add(fcstCrunchSink)
+        val fcstCrunchOutAsync = builder.add(fcstCrunchSink.async)
         val actualDesksStageAsync = builder.add(actualDesksStage.async)
         val splitsPredictorStageAsync = builder.add(splitsPredictorStage.async)
 
@@ -72,9 +72,9 @@ object RunnableCrunch {
         val fanOutManifests = builder.add(Broadcast[VoyageManifests](2).async)
         val fanOutSplitsPredictions = builder.add(Broadcast[Seq[(Arrival, Option[ApiSplits])]](2).async)
 
-        baseArrivalsSource ~> arrivalsStageAsync.in0
-        fcstArrivalsSource ~> arrivalsStageAsync.in1
-        liveArrivalsSource ~> arrivalsStageAsync.in2
+        baseArrivalsSourceAsync ~> arrivalsStageAsync.in0
+        fcstArrivalsSourceAsync ~> arrivalsStageAsync.in1
+        liveArrivalsSourceAsync ~> arrivalsStageAsync.in2
 
         arrivalsStageAsync.out ~> fanOutArrivalsDiff ~> liveCrunchStageAsync.in0
                                   fanOutArrivalsDiff ~> fcstCrunchStageAsync.in0
@@ -83,27 +83,27 @@ object RunnableCrunch {
         splitsPredictorStageAsync.out ~> fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
                                          fanOutSplitsPredictions ~> fcstCrunchStageAsync.in2
 
-        manifestsSource ~> fanOutManifests ~> liveCrunchStageAsync.in1
+        manifestsSourceAsync ~> fanOutManifests ~> liveCrunchStageAsync.in1
                            fanOutManifests ~> fcstCrunchStageAsync.in1
 
-        shiftsSource.out ~> fanOutShifts ~> liveStaffingStageAsync.in1
+        shiftsSourceAsync.out ~> fanOutShifts ~> liveStaffingStageAsync.in1
                             fanOutShifts ~> fcstStaffingStageAsync.in1
 
-        fixedPointsSource.out ~> fanOutFixedPoints ~> liveStaffingStageAsync.in2
+        fixedPointsSourceAsync.out ~> fanOutFixedPoints ~> liveStaffingStageAsync.in2
                                  fanOutFixedPoints ~> fcstStaffingStageAsync.in2
 
-        staffMovementsSource.out ~> fanOutStaffMovements ~> liveStaffingStageAsync.in3
+        staffMovementsSourceAsync.out ~> fanOutStaffMovements ~> liveStaffingStageAsync.in3
                                     fanOutStaffMovements ~> fcstStaffingStageAsync.in3
 
         liveCrunchStageAsync.out ~> liveStaffingStageAsync.in0
 
-        desksAndWaitTimesSource.out ~> actualDesksStageAsync.in1
+        desksAndWaitTimesSourceAsync.out ~> actualDesksStageAsync.in1
         liveStaffingStageAsync.out ~> actualDesksStageAsync.in0
 
-        actualDesksStageAsync.out ~> liveCrunchOut
+        actualDesksStageAsync.out ~> liveCrunchOutAsync
 
         fcstCrunchStageAsync.out ~> fcstStaffingStageAsync.in0
-        fcstStaffingStageAsync.out ~> fcstCrunchOut
+        fcstStaffingStageAsync.out ~> fcstCrunchOutAsync
 
         ClosedShape
     }
