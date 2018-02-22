@@ -211,6 +211,10 @@ class CrunchStateActor(val snapshotInterval: Int,
 
     persist(diffToPersist) { (diff: CrunchDiffMessage) =>
       log.info(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
+      diff.flightsToUpdate.foreach(updatedFlight => {
+        log.info(s"updated arrival: $updatedFlight")
+      })
+      
       context.system.eventStream.publish(diff)
       if (diff.crunchMinutesToUpdate.length > 20000 || (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0)) {
         val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(updatedState)
