@@ -133,13 +133,15 @@ object TerminalComponent {
                   )
                 } else ""
               }),
+              model.userRoles.render(
+                r => if(r.contains("staff:edit"))
               <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
                 if (props.terminalPageTab.mode == "staffing") {
                   model.potMonthOfShifts.render(ms => {
                     TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
                   })
                 } else ""
-              )
+              ) else "")
             )
           )
         }))
