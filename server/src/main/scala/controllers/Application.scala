@@ -303,6 +303,10 @@ class NoCacheFilter @Inject()(
   }
 }
 
+trait AvailableUserRoles {
+  val availableRoles = List("staff:edit")
+}
+
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
@@ -311,7 +315,9 @@ class Application @Inject()(implicit val config: Configuration,
   extends Controller
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with SystemActors with ImplicitTimeoutProvider {
+    with SystemActors
+    with ImplicitTimeoutProvider
+    with AvailableUserRoles {
   ctrl =>
   val log: LoggingAdapter = system.log
 
@@ -332,23 +338,13 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   object ApiService {
-    def apply(airportConfig: AirportConfig, shiftsActor: ActorRef, fixedPointsActor: ActorRef, staffMovementsActor: ActorRef): ApiService {
-      val timeout: Timeout
-
-      def liveCrunchStateActor: AskableActorRef
-
-      def actorSystem: ActorSystem
-
-      def forecastCrunchStateActor: AskableActorRef
-
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
-
-      def askableCacheActorRef: AskableActorRef
-
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
-
-      def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
-    } = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
+    def apply(
+               airportConfig: AirportConfig,
+               shiftsActor: ActorRef,
+               fixedPointsActor: ActorRef,
+               staffMovementsActor: ActorRef,
+               headers: Headers
+             ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers) {
 
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -422,14 +418,16 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
-        log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
-        val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
-        futureShifts.map {
-          case shifts: String =>
-            val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
+        if (getUserRoles.contains("staff:edit")) {
+          log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
+          val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
+          futureShifts.map {
+            case shifts: String =>
+              val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
 
-            shiftsActor ! updatedShifts
-        }
+              shiftsActor ! updatedShifts
+          }
+        } else throw new Exception("You do not have permission to edit staffing.")
       }
 
       def getShiftsForMonth(month: MillisSinceEpoch): Future[String] = {
@@ -441,6 +439,11 @@ class Application @Inject()(implicit val config: Configuration,
             StaffTimeSlots.getShiftsForMonth(shifts, SDate(month))
         }
       }
+
+      def getUserRoles: List[String] = if (config.getString("feature-flags.super-user-mode").isDefined)
+        availableRoles
+      else
+        roles
 
       override def askableCacheActorRef: AskableActorRef = cacheActorRef
 
@@ -699,7 +702,7 @@ class Application @Inject()(implicit val config: Configuration,
       // call Autowire route
 
       implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor))
+      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, request.headers))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))

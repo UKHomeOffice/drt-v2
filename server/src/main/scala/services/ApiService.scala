@@ -8,6 +8,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.mvc.Headers
 
 import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,7 +60,9 @@ object AirportToCountry extends AirportToCountryLike {
 abstract class ApiService(val airportConfig: AirportConfig,
                           val shiftsActor: ActorRef,
                           val fixedPointsActor: ActorRef,
-                          val staffMovementsActor: ActorRef)
+                          val staffMovementsActor: ActorRef,
+                          val headers: Headers
+                         )
   extends Api
     with AirportToCountryLike
     with ShiftPersistence
@@ -69,6 +72,8 @@ abstract class ApiService(val airportConfig: AirportConfig,
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
+
+  def roles: List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
 
   def liveCrunchStateActor: AskableActorRef
   def forecastCrunchStateActor: AskableActorRef

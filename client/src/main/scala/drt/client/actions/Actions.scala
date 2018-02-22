@@ -14,6 +14,10 @@ object Actions {
 
   case object GetApplicationVersion extends Action
 
+  case object GetUserRoles extends Action
+
+  case class SetUserRoles(roles: List[String]) extends Action
+
   case class SetApplicationVersion(version: String) extends Action
 
   case class UpdateServerApplicationVersion(version: String) extends Action
