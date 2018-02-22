@@ -17,7 +17,6 @@ import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -25,8 +24,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 import scala.util.matching.Regex
+import scala.util.{Failure, Success}
 
 case class UpdateLatestZipFilename(filename: String)
 

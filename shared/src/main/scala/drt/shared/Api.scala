@@ -447,6 +447,7 @@ trait Api {
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
+  def getUserRoles(): List[String]
 }
 
 object ApiSplitsToSplitRatio {
