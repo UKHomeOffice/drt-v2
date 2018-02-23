@@ -44,12 +44,15 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         initialLiveArrivals = flights
       )
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 1).flatMap(_._2.keys)
-
       val expected = Set(Queues.EeaDesk)
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
+          resultSummary == expected
+      }
+
+      true
     }
   }
 
@@ -76,11 +79,14 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       initialLiveArrivals = flights
     )
 
-    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-    val resultSummary = paxLoadsFromPortState(result, 1, SDate(scheduled))
+    val expected = Map("T1" -> Map(Queues.EeaDesk -> List(15.0)))
 
-    val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(15.0)))
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
+        resultSummary == expected
+    }
 
-    resultSummary === expected
+    true
   }
 }

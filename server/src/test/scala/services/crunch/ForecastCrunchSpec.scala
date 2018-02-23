@@ -35,18 +35,17 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30))
 
     crunch.liveArrivalsInput.offer(liveFlights)
-    val liveResult = getLastMessageReceivedBy(crunch.liveTestProbe, 10 seconds)
-
     crunch.baseArrivalsInput.offer(baseFlights)
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 10 seconds)
 
-    val liveSummary = paxLoadsFromPortState(liveResult, 2)
-    val forecastSummary = paxLoadsFromPortState(forecastResult, 2, 3 * 1440)
-
-    val expectedLive = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
     val expectedForecast = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
 
-    (liveSummary, forecastSummary) === Tuple2(expectedLive, expectedForecast)
+    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+      case ps@PortState(_, _, _) =>
+        val forecastSummary = paxLoadsFromPortState(ps, 2, 3 * 1440)
+        forecastSummary == expectedForecast
+    }
+
+    true
   }
 
   "Given a live flight and a base flight arriving 3 days later, and shifts spanning the pcp time  " +
@@ -74,16 +73,19 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.liveArrivalsInput.offer(liveFlights)
     crunch.baseArrivalsInput.offer(baseFlights)
 
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
-
-    val deployedStaff: Seq[Option[Int]] = forecastResult
-      .crunchMinutes
-      .values.toList.sortBy(_.minute).takeRight(30)
-      .map(_.deployedDesks)
-
     val expected = List.fill(15)(Some(1)) ::: List.fill(15)(Some(2))
 
-    deployedStaff === expected
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val deployedStaff: Seq[Option[Int]] = ps
+          .crunchMinutes
+          .values.toList.sortBy(_.minute).takeRight(30)
+          .map(_.deployedDesks)
+
+        deployedStaff == expected
+    }
+
+    true
   }
 
   "Given a flight with pcp times just before midnight " +
@@ -112,19 +114,22 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.liveArrivalsInput.offer(liveFlights)
     crunch.baseArrivalsInput.offer(baseFlights)
 
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 10 seconds)
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val waitTimes: Seq[Int] = ps
+          .crunchMinutes
+          .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
+          .map(_.waitTime)
 
-    val waitTimes: Seq[Int] = forecastResult
-      .crunchMinutes
-      .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
-      .map(_.waitTime)
+        val waitTimeOneMinuteBeforeMidnight = waitTimes.head
+        val expected = waitTimeOneMinuteBeforeMidnight + 1
 
-    val waitTimeOneMinuteBeforeMidnight = waitTimes.head
-    val waitTimeOneMinuteAtMidnight = waitTimes(1)
+        val waitTimeOneMinuteAtMidnight = waitTimes(1)
 
-    val expected = waitTimeOneMinuteBeforeMidnight + 1
+        waitTimeOneMinuteAtMidnight == expected
+    }
 
-    waitTimeOneMinuteAtMidnight === expected
+    true
   }
 
   "Given a flight a live flight update after a base crunch & simulation, followed by a staffing change " +
@@ -156,16 +161,19 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.liveArrivalsInput.offer(Flights(List(liveArrival.copy(ActPax = 10))))
     crunch.forecastShiftsInput.offer("shift a,T1,03/01/17,00:00,00:29,5")
 
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
-
-    val deployedStaff: Seq[Option[Int]] = forecastResult
-      .crunchMinutes
-      .values.toList.sortBy(_.minute).takeRight(1440).take(30)
-      .map(_.deployedDesks)
-
     val expected = List.fill(30)(Some(5))
 
-    deployedStaff === expected
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val deployedStaff: Seq[Option[Int]] = ps
+          .crunchMinutes
+          .values.toList.sortBy(_.minute).takeRight(1440).take(30)
+          .map(_.deployedDesks)
+
+        deployedStaff == expected
+    }
+
+    true
   }
 
   "Given a base flight with 21 pax" +
@@ -184,13 +192,15 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     crunch.baseArrivalsInput.offer(baseFlights)
 
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
-
-    val forecastSummary = paxLoadsFromPortState(forecastResult, 2, SDate(baseScheduled))
-
     val expectedForecast = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
 
-    forecastSummary === expectedForecast
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val forecastSummary = paxLoadsFromPortState(ps, 2, SDate(baseScheduled))
+        forecastSummary == expectedForecast
+    }
+
+    true
   }
 
   "Given a forecast arrival with no matching base arrival " +
@@ -233,11 +243,15 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.forecastArrivalsInput.offer(forecastArrivals)
     crunch.baseArrivalsInput.offer(baseArrivals)
 
-    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
+        val expectedForecastArrivals = Set(baseArrival)
 
-    val expectedForecastArrivals = Set(baseArrival)
+        crunchForecastArrivals == expectedForecastArrivals
+    }
 
-    crunchForecastArrivals === expectedForecastArrivals
+    true
   }
 
   "Given a base arrival with 21 pax, and a matching forecast arrival with 50 pax, 25 trans pax and a different format flight code " +
@@ -259,11 +273,16 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     crunch.forecastArrivalsInput.offer(forecastArrivals)
     crunch.baseArrivalsInput.offer(baseArrivals)
-    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = 50, TranPax = 25))
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
+        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = 50, TranPax = 25))
 
-    crunchForecastArrivals === expectedForecastArrivals
+        crunchForecastArrivals == expectedForecastArrivals
+    }
+
+    true
   }
 
   "Given a base arrival with 21 pax, followed by a matching forecast arrival with 50 pax, and finally a live flight with zero pax " +
@@ -290,41 +309,51 @@ class ForecastCrunchSpec() extends CrunchTestLike {
     crunch.forecastArrivalsInput.offer(forecastArrivals)
     crunch.liveArrivalsInput.offer(liveArrivals)
 
-    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
+        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, EstDT = liveScheduled))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, EstDT = liveScheduled))
+        crunchForecastArrivals == expectedForecastArrivals
+    }
 
-    crunchForecastArrivals === expectedForecastArrivals
+    true
   }
 
-  "Given 2 base arrivals followed by 1 matching forecast arrival, and then the other matching forecast arrival " +
-    "When I ask for arrivals " +
-    "Then I should see the forecast pax & status details for both arrivals" >> {
+    "Given 2 base arrivals followed by 1 matching forecast arrival, and then the other matching forecast arrival " +
+      "When I ask for arrivals " +
+      "Then I should see the forecast pax & status details for both arrivals" >> {
 
-    val baseScheduled = "2017-01-01T00:00Z"
-    val forecastScheduled = baseScheduled
+      val baseScheduled = "2017-01-01T00:00Z"
+      val forecastScheduled = baseScheduled
 
-    val baseArrival1 = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "BA0001", terminal = "T1", actPax = 21, status = "ACL Forecast")
-    val baseArrival2 = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "AA1110", terminal = "T1", actPax = 22, status = "ACL Forecast")
-    val forecastArrival1 = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BAW0001", terminal = "T1", actPax = 51, status = "Port Forecast")
-    val forecastArrival2 = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "AAW1110", terminal = "T1", actPax = 52, status = "Port Forecast")
-    val baseArrivals = Flights(List(baseArrival1, baseArrival2))
-    val forecastArrivals1st = Flights(List(forecastArrival1))
-    val forecastArrivals2nd = Flights(List(forecastArrival2))
+      val baseArrival1 = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "BA0001", terminal = "T1", actPax = 21, status = "ACL Forecast")
+      val baseArrival2 = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "AA1110", terminal = "T1", actPax = 22, status = "ACL Forecast")
+      val forecastArrival1 = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BAW0001", terminal = "T1", actPax = 51, status = "Port Forecast")
+      val forecastArrival2 = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "AAW1110", terminal = "T1", actPax = 52, status = "Port Forecast")
+      val baseArrivals = Flights(List(baseArrival1, baseArrival2))
+      val forecastArrivals1st = Flights(List(forecastArrival1))
+      val forecastArrivals2nd = Flights(List(forecastArrival2))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(baseScheduled),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+      val crunch = runCrunchGraph(
+        now = () => SDate(baseScheduled),
+        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
-    crunch.baseArrivalsInput.offer(baseArrivals)
-    crunch.forecastArrivalsInput.offer(forecastArrivals1st)
-    crunch.forecastArrivalsInput.offer(forecastArrivals2nd)
+      crunch.baseArrivalsInput.offer(baseArrivals)
+      crunch.forecastArrivalsInput.offer(forecastArrivals1st)
+      crunch.forecastArrivalsInput.offer(forecastArrivals2nd)
 
-    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
+      crunch.forecastTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
+          val expectedForecastArrivals = Set(
+            baseArrival1.copy(ActPax = 51, Status = "Port Forecast"),
+            baseArrival2.copy(ActPax = 52, Status = "Port Forecast"))
 
-    val expectedForecastArrivals = Set(baseArrival1.copy(ActPax = 51, Status = "Port Forecast"), baseArrival2.copy(ActPax = 52, Status = "Port Forecast"))
+          crunchForecastArrivals == expectedForecastArrivals
+      }
 
-    crunchForecastArrivals === expectedForecastArrivals
-  }
+      true
+    }
 }

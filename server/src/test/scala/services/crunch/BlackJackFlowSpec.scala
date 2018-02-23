@@ -44,20 +44,23 @@ class BlackJackFlowSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
-    Thread.sleep(500)
     crunch.actualDesksAndQueuesInput.offer(deskStats)
-
-    val crunchMinutes = getLastMessageReceivedBy(crunch.liveTestProbe, 4 seconds) match {
-      case PortState(_, c, _) => c
-    }
-    val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
-      (cm.actDesks, cm.actWait)
-    }).take(30)
-
 
     val expected = List.fill(15)((Option(1), Option(5))) ++ List.fill(15)((Option(2), Option(10)))
 
-    actDesks === expected
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val crunchMinutes = ps match {
+          case PortState(_, c, _) => c
+        }
+        val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
+          (cm.actDesks, cm.actWait)
+        }).take(30)
+
+        actDesks == expected
+    }
+
+    true
   }
 
   "Given a CrunchGraph when the blackjack CSV is updated with some unavailable data " +
@@ -87,19 +90,23 @@ class BlackJackFlowSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
-    Thread.sleep(500)
     crunch.actualDesksAndQueuesInput.offer(deskStats)
-
-    val crunchMinutes = getLastMessageReceivedBy(crunch.liveTestProbe, 4 seconds) match {
-      case PortState(_, c, _) => c
-    }
-    val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
-      (cm.actDesks, cm.actWait)
-    }).take(30)
 
     val expected = List.fill(15)((Option(1), None)) ++ List.fill(15)((None, Option(10)))
 
-    actDesks === expected
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val crunchMinutes = ps match {
+          case PortState(_, c, _) => c
+        }
+        val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
+          (cm.actDesks, cm.actWait)
+        }).take(30)
+
+        actDesks == expected
+    }
+
+    true
   }
 
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {

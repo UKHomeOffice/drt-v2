@@ -64,9 +64,6 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         crunch.liveArrivalsInput.offer(flights)
 
-        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-        val resultSummary = deskRecsFromPortState(result, 120)
-
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -74,7 +71,13 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
         )))
 
-        resultSummary === expected
+        crunch.liveTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            val resultSummary = deskRecsFromPortState(ps, 120)
+            resultSummary == expected
+        }
+
+        true
       }
 
       "Given a list of Min or Max desks" >> {

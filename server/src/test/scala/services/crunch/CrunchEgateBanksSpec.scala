@@ -55,15 +55,18 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = deskRecsFromPortState(result, 15)
-
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7),
         Queues.EGate -> Seq(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
       ))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val resultSummary = deskRecsFromPortState(ps, 15)
+          resultSummary == expected
+      }
+
+      true
     }
   }
 

@@ -37,15 +37,19 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-    val minutesInOrder = result.staffMinutes.values.toList.sortBy(_.minute)
-    val staff = minutesInOrder.map(_.shifts)
-    val staffMillis = minutesInOrder.map(_.minute)
-
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
-    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29*Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
+    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    (staffMillis, staff) === Tuple2(expectedMillis, expectedStaff)
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
+        val staff = minutesInOrder.map(_.shifts)
+        val staffMillis = minutesInOrder.map(_.minute)
+
+        (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
+    }
+
+    true
   }
 
   "Given a flight with one passenger, zero staff from shifts and 2 fixed points " +
@@ -75,14 +79,18 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-    val minutesInOrder = result.staffMinutes.values.toList.sortBy(_.minute)
-    val staff = minutesInOrder.map(_.available)
-    val staffMillis = minutesInOrder.map(_.minute)
-
     val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    (staffMillis, staff) === Tuple2(expectedMillis, expectedStaff)
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
+        val staff = minutesInOrder.map(_.available)
+        val staffMillis = minutesInOrder.map(_.minute)
+
+        (staffMillis, staff) === Tuple2(expectedMillis, expectedStaff)
+    }
+
+    true
   }
 }

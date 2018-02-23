@@ -50,15 +50,18 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 2)
-
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
         Queues.EGate -> Seq(20 * egSplit, 1 * egSplit)
       ))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 2)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
@@ -81,12 +84,15 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 5)
-
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(10 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 5)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "Given 1 flight with 100 passengers eaa splits to desk and eGates" +
@@ -120,16 +126,18 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = workLoadsFromPortState(result, 5)
-
-
       val expected = Map("T1" -> Map(
         "eeaDesk" -> List(5.25, 5.25, 5.25, 5.25, 5.25),
         "eGate" -> List(1.5, 1.5, 1.5, 1.5, 1.5))
       )
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(10 seconds) {
+        case ps: PortState =>
+          val resultSummary = workLoadsFromPortState(ps, 5)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "CSV split ratios " >> {
@@ -158,12 +166,15 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         crunch.liveArrivalsInput.offer(flights)
 
-        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-        val resultSummary = paxLoadsFromPortState(result, 5)
-
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
-        resultSummary === expected
+        crunch.liveTestProbe.fishForMessage(10 seconds) {
+          case ps: PortState =>
+            val resultSummary = paxLoadsFromPortState(ps, 5)
+            resultSummary == expected
+        }
+
+        true
       }
     }
 
@@ -202,15 +213,18 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunch.baseArrivalsInput.offer(flights)
         crunch.manifestsInput.offer(voyageManifests)
 
-        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds)
-        val resultSummary = paxLoadsFromPortState(result, 5)
-
         val expected = Map("T1" -> Map(
           Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
           Queues.EGate -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)
         ))
 
-        resultSummary === expected
+        crunch.liveTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            val resultSummary = paxLoadsFromPortState(ps, 5)
+            resultSummary == expected
+        }
+
+        true
       }
     }
   }

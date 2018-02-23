@@ -40,15 +40,18 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-    val resultSummary = paxLoadsFromPortState(result, 30)
-
     val expected = Map(
       "T1" -> Map(Queues.EeaDesk -> Seq(
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    resultSummary === expected
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val resultSummary = paxLoadsFromPortState(ps, 30)
+        resultSummary == expected
+    }
+
+    true
   }
 
   "Given two flights, one with a cancelled " +
@@ -76,14 +79,17 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-    val resultSummary = paxLoadsFromPortState(result, 30)
-
     val expected = Map(
       "T1" -> Map(Queues.EeaDesk -> Seq(
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    resultSummary === expected
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val resultSummary = paxLoadsFromPortState(ps, 30)
+        resultSummary == expected
+    }
+
+    true
   }
 }
