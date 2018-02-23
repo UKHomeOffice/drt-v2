@@ -12,6 +12,9 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
   val inCrunch: Inlet[PortState] = Inlet[PortState]("PortStateWithoutActualDesks.in")
   val inDeskStats: Inlet[ActualDeskStats] = Inlet[ActualDeskStats]("ActualDesks.in")
   val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateWithActualDesks.out")
+
+  val allInlets = List(inCrunch, inDeskStats)
+
   override val shape = new FanInShape2(inCrunch, inDeskStats, outCrunch)
 
   var portStateOption: Option[PortState] = None
@@ -28,7 +31,8 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
       override def onPush(): Unit = {
         grabBoth()
         portStateWithActualDeskStats = addActualsIfAvailable()
-        pushAndPull()
+        pushIfAvailable()
+        pullAll()
       }
     })
 
@@ -36,17 +40,19 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
       override def onPush(): Unit = {
         grabBoth()
         portStateWithActualDeskStats = addActualsIfAvailable()
-        pushAndPull()
+        pushIfAvailable()
+        pullAll()
       }
     })
 
     setHandler(outCrunch, new OutHandler {
       override def onPull(): Unit = {
-        pushAndPull()
+        pushIfAvailable()
+        pullAll()
       }
     })
 
-    def pushAndPull() = {
+    def pushIfAvailable(): Unit = {
       if (isAvailable(outCrunch)) {
         portStateWithActualDeskStats match {
           case Some(ps) =>
@@ -57,11 +63,16 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
             log.info(s"Nothing to push")
         }
       }
-      if (!hasBeenPulled(inDeskStats)) pull(inDeskStats)
-      if (!hasBeenPulled(inCrunch)) pull(inCrunch)
     }
 
-    def grabBoth() = {
+    def pullAll(): Unit = {
+      allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) {
+        log.info(s"${inlet.toString} has not been pulled so pulling now")
+        pull(inlet)
+      })
+    }
+
+    def grabBoth(): Unit = {
       if (isAvailable(inDeskStats)) {
         log.info(s"Grabbing available inDeskStats")
         actualDesksOption = Option(grab(inDeskStats))
@@ -73,9 +84,18 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
       }
     }
 
-    def addActualsIfAvailable() = (actualDesksOption, portStateOption) match {
+    def addActualsIfAvailable(): Option[PortState] = (actualDesksOption, portStateOption) match {
+      case (None, None) =>
+        log.info(s"No actual desks or port state. Can't merge")
+        portStateOption
+      case (Some(_), None) =>
+        log.info(s"No actual port state. Can't merge")
+        portStateOption
+      case (None, Some(_)) =>
+        log.info(s"No actual desks. Can't merge")
+        portStateOption
       case (Some(ad), Some(cs)) =>
-        log.info("Got actuals, adding to PortState")
+        log.info("Adding actuals to PortState")
         Option(addActualsToCrunchMinutes(ad, cs))
       case _ =>
         portStateOption
@@ -84,7 +104,7 @@ class ActualDesksAndWaitTimesGraphStage() extends GraphStage[FanInShape2[PortSta
 }
 
 object ActualDesksAndWaitTimesGraphStage {
-  val fifteenMins = 15 * 60000
+  val fifteenMins: Int = 15 * 60000
 
   def addActualsToCrunchMinutes(act: ActualDeskStats, ps: PortState): PortState = {
     val crunchMinutesWithActuals = ps.crunchMinutes.values.map((cm: CrunchMinute) => {

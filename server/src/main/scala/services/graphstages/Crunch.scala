@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, Minute, StaffMinute}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -215,6 +215,24 @@ object Crunch {
       case (Some(diff1), Some(diff2)) =>
         log.info(s"Merging ArrivalsDiffs")
         Option(mergeArrivalsDiffs(diff1, diff2))
+    }
+  }
+
+  def mergeMapOfIndexedThings[X](things1: Map[Int, X], things2: Map[Int, X]): Map[Int, X] = things2.foldLeft(things1) {
+    case (soFar, (id, newThing)) => soFar.updated(id, newThing)
+  }
+
+  def mergeMaybePortStates(maybePortState1: Option[PortState], maybePortState2: Option[PortState]): Option[PortState] = {
+    (maybePortState1, maybePortState2) match {
+      case (None, None) => None
+      case (Some(ps), None) => Option(ps)
+      case (None, Some(ps)) => Option(ps)
+      case (Some(ps1), Some(ps2)) =>
+        val mergedFlights = mergeMapOfIndexedThings(ps1.flights, ps2.flights)
+        val mergedCrunchMinutes = mergeMapOfIndexedThings(ps1.crunchMinutes, ps2.crunchMinutes)
+        val mergedStaffMinutes = mergeMapOfIndexedThings(ps1.staffMinutes, ps2.staffMinutes)
+
+        Option(PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes))
     }
   }
 }

@@ -182,7 +182,9 @@ class CrunchGraphStage(name: String,
           val crunchStart = crunchStartFromFirstPcp(earliest)
           val crunchEnd = crunchEndFromLastPcp(latest)
           log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
-          portStateOption = crunch(updatedFlights, crunchStart, crunchEnd)
+          val lastCrunchPortState = portStateOption
+          val newCrunchPortState = crunch(updatedFlights, crunchStart, crunchEnd)
+          portStateOption = Crunch.mergeMaybePortStates(lastCrunchPortState, newCrunchPortState)
           pushStateIfReady()
       }
     }
