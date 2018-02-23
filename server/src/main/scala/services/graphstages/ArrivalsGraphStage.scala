@@ -112,7 +112,10 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       val numPurged = newMerged.size - newMergedFiltered.size
       if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge")
 
-      toPush = arrivalsDiff(merged, newMergedFiltered)
+      val maybeDiff1 = toPush
+      val maybeDiff2 = arrivalsDiff(merged, newMergedFiltered)
+      toPush = Crunch.mergeMaybeArrivalsDiffs(maybeDiff1, maybeDiff2)
+
       pushIfAvailable(toPush, outArrivalsDiff)
       merged = newMergedFiltered
     }

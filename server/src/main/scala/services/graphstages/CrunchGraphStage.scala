@@ -311,7 +311,7 @@ class CrunchGraphStage(name: String,
               log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
               push(outCrunch, portState)
               portStateOption = None
-            }
+            } else log.info(s"outCrunch not available to push")
         }
       } else {
         if (waitingForArrivals) log.info(s"Waiting for arrivals")
