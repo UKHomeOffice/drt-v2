@@ -35,10 +35,10 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30))
 
     crunch.liveArrivalsInput.offer(liveFlights)
-    val liveResult = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds)
+    val liveResult = getLastMessageReceivedBy(crunch.liveTestProbe, 10 seconds)
 
     crunch.baseArrivalsInput.offer(baseFlights)
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 10 seconds)
 
     val liveSummary = paxLoadsFromPortState(liveResult, 2)
     val forecastSummary = paxLoadsFromPortState(forecastResult, 2, 3 * 1440)
@@ -110,10 +110,9 @@ class ForecastCrunchSpec() extends CrunchTestLike {
         """.stripMargin)
 
     crunch.liveArrivalsInput.offer(liveFlights)
-    Thread.sleep(500)
     crunch.baseArrivalsInput.offer(baseFlights)
 
-    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 10 seconds)
 
     val waitTimes: Seq[Int] = forecastResult
       .crunchMinutes
