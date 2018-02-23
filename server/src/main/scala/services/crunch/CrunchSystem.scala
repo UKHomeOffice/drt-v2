@@ -141,7 +141,17 @@ object CrunchSystem {
       warmUpMinutes = props.warmUpMinutes,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
-    val arrivalsStage_ = arrivalsStage(
+    val arrivalsStageLive = arrivalsStage(
+      name = "live",
+      baseArrivalsActor = baseArrivalsActor,
+      forecastArrivalsActor = forecastArrivalsActor,
+      liveArrivalsActor = liveArrivalsActor,
+      props.pcpArrival,
+      props.airportConfig,
+      props.expireAfterMillis,
+      now = props.now)
+    val arrivalsStageForecast = arrivalsStage(
+      name = "forecast",
       baseArrivalsActor = baseArrivalsActor,
       forecastArrivalsActor = forecastArrivalsActor,
       liveArrivalsActor = liveArrivalsActor,
@@ -152,8 +162,9 @@ object CrunchSystem {
 
     val runnableCrunch = RunnableCrunch(
       baseArrivals, forecastArrivals, liveArrivals,
+      baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
       manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
-      actualDesksAndQueuesSource, arrivalsStage_, actualDesksStage,
+      actualDesksAndQueuesSource, arrivalsStageLive, arrivalsStageForecast, actualDesksStage,
       liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
       forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)
 
@@ -205,19 +216,18 @@ object CrunchSystem {
     }, 5 minutes)
   }
 
-  def arrivalsStage(baseArrivalsActor: ActorRef,
+  def arrivalsStage(name: String,
+                    baseArrivalsActor: ActorRef,
                     forecastArrivalsActor: ActorRef,
                     liveArrivalsActor: ActorRef,
                     pcpArrival: Arrival => MilliDate,
                     airportConfig: AirportConfig,
                     expireAfterMillis: Long,
                     now: () => SDateLike) = new ArrivalsGraphStage(
+    name = name,
     initialBaseArrivals = initialArrivals(baseArrivalsActor),
     initialForecastArrivals = initialArrivals(forecastArrivalsActor),
     initialLiveArrivals = initialArrivals(liveArrivalsActor),
-    baseArrivalsActor = baseArrivalsActor,
-    forecastArrivalsActor = forecastArrivalsActor,
-    liveArrivalsActor = liveArrivalsActor,
     pcpArrivalTime = pcpArrival,
     validPortTerminals = airportConfig.terminalNames.toSet,
     expireAfterMillis = expireAfterMillis,
