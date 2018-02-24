@@ -62,7 +62,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120)
         )
 
-        crunch.liveArrivalsInput.offer(flights)
+        offerAndWait(crunch.liveArrivalsInput, flights)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

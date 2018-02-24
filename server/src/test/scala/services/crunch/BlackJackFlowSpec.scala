@@ -44,7 +44,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
-    crunch.actualDesksAndQueuesInput.offer(deskStats)
+    offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
     val expected = List.fill(15)((Option(1), Option(5))) ++ List.fill(15)((Option(2), Option(10)))
 
@@ -90,7 +90,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
-    crunch.actualDesksAndQueuesInput.offer(deskStats)
+    offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
     val expected = List.fill(15)((Option(1), None)) ++ List.fill(15)((None, Option(10)))
 

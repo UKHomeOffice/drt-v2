@@ -53,7 +53,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7),

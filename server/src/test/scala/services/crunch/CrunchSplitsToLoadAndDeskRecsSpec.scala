@@ -48,7 +48,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
@@ -82,7 +82,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
 
@@ -124,7 +124,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(
         "eeaDesk" -> List(5.25, 5.25, 5.25, 5.25, 5.25),
@@ -164,7 +164,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             SplitRatio(eeaMachineReadableToDesk, 0.25)
           )))
 
-        crunch.liveArrivalsInput.offer(flights)
+        offerAndWait(crunch.liveArrivalsInput, flights)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
@@ -210,8 +210,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         ))
 
-        crunch.baseArrivalsInput.offer(flights)
-        crunch.manifestsInput.offer(voyageManifests)
+        offerAndWait(crunch.baseArrivalsInput, flights)
+        offerAndWait(crunch.manifestsInput, voyageManifests)
 
         val expected = Map("T1" -> Map(
           Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),

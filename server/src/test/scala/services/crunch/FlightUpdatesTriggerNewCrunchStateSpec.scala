@@ -13,6 +13,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -43,8 +44,8 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveArrivalsInput.offer(inputFlightsAfter)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,
@@ -82,9 +83,9 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveArrivalsInput.offer(inputFlightsAfter)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,

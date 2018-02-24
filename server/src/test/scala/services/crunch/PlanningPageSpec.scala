@@ -37,7 +37,7 @@ class PlanningPageSpec() extends CrunchTestLike {
         """.stripMargin
     )
 
-    crunch.baseArrivalsInput.offer(forecastFlights)
+    offerAndWait(crunch.baseArrivalsInput, forecastFlights)
 
     val expected = List(
       ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 1),

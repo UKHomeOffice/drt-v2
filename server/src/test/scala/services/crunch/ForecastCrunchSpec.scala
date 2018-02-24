@@ -34,8 +34,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30))
 
-    crunch.liveArrivalsInput.offer(liveFlights)
-    crunch.baseArrivalsInput.offer(baseFlights)
+    offerAndWait(crunch.liveArrivalsInput, liveFlights)
+    offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
     val expectedForecast = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
 
@@ -70,8 +70,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
 
-    crunch.liveArrivalsInput.offer(liveFlights)
-    crunch.baseArrivalsInput.offer(baseFlights)
+    offerAndWait(crunch.liveArrivalsInput, liveFlights)
+    offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
     val expected = List.fill(15)(Some(1)) ::: List.fill(15)(Some(2))
 
@@ -111,8 +111,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
 
-    crunch.liveArrivalsInput.offer(liveFlights)
-    crunch.baseArrivalsInput.offer(baseFlights)
+    offerAndWait(crunch.liveArrivalsInput, liveFlights)
+    offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
     crunch.forecastTestProbe.fishForMessage(30 seconds) {
       case ps: PortState =>
@@ -156,10 +156,10 @@ class ForecastCrunchSpec() extends CrunchTestLike {
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
 
-    crunch.liveArrivalsInput.offer(liveFlights)
-    crunch.baseArrivalsInput.offer(baseFlights)
-    crunch.liveArrivalsInput.offer(Flights(List(liveArrival.copy(ActPax = 10))))
-    crunch.forecastShiftsInput.offer("shift a,T1,03/01/17,00:00,00:29,5")
+    offerAndWait(crunch.liveArrivalsInput, liveFlights)
+    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    offerAndWait(crunch.liveArrivalsInput, Flights(List(liveArrival.copy(ActPax = 10))))
+    offerAndWait(crunch.forecastShiftsInput, "shift a,T1,03/01/17,00:00,00:29,5")
 
     val expected = List.fill(30)(Some(5))
 
@@ -190,7 +190,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
-    crunch.baseArrivalsInput.offer(baseFlights)
+    offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
     val expectedForecast = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 1)))
 
@@ -217,7 +217,7 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(forecastScheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(forecastScheduled)).addMinutes(30))
 
-    crunch.forecastArrivalsInput.offer(forecastArrivals)
+    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
     crunch.forecastTestProbe.expectNoMsg(1 seconds)
 
     true
@@ -240,8 +240,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
-    crunch.forecastArrivalsInput.offer(forecastArrivals)
-    crunch.baseArrivalsInput.offer(baseArrivals)
+    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
+    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
 
     crunch.forecastTestProbe.fishForMessage(30 seconds) {
       case ps: PortState =>
@@ -271,8 +271,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
-    crunch.forecastArrivalsInput.offer(forecastArrivals)
-    crunch.baseArrivalsInput.offer(baseArrivals)
+    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
+    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
 
     crunch.forecastTestProbe.fishForMessage(30 seconds) {
       case ps: PortState =>
@@ -305,9 +305,9 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
-    crunch.baseArrivalsInput.offer(baseArrivals)
-    crunch.forecastArrivalsInput.offer(forecastArrivals)
-    crunch.liveArrivalsInput.offer(liveArrivals)
+    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
+    offerAndWait(crunch.liveArrivalsInput, liveArrivals)
 
     crunch.forecastTestProbe.fishForMessage(30 seconds) {
       case ps: PortState =>
@@ -340,9 +340,9 @@ class ForecastCrunchSpec() extends CrunchTestLike {
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
-      crunch.baseArrivalsInput.offer(baseArrivals)
-      crunch.forecastArrivalsInput.offer(forecastArrivals1st)
-      crunch.forecastArrivalsInput.offer(forecastArrivals2nd)
+      offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+      offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)
+      offerAndWait(crunch.forecastArrivalsInput, forecastArrivals2nd)
 
       crunch.forecastTestProbe.fishForMessage(30 seconds) {
         case ps: PortState =>

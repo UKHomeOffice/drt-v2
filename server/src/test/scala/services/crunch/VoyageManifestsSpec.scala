@@ -43,8 +43,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
       crunchStartDateProvider = (_) => SDate(scheduled),
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30))
 
-    crunch.manifestsInput.offer(inputManifests)
-    crunch.liveArrivalsInput.offer(inputFlights)
+    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expectedSplits = Set(
       ApiSplits(Set(
@@ -97,9 +97,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.manifestsInput.offer(inputManifestsCi)
-    crunch.manifestsInput.offer(inputManifestsDc)
-    crunch.liveArrivalsInput.offer(inputFlights)
+    offerAndWait(crunch.manifestsInput, inputManifestsCi)
+    offerAndWait(crunch.manifestsInput, inputManifestsDc)
+    offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expectedSplits = Set(
       ApiSplits(Set(
@@ -151,8 +151,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.manifestsInput.offer(inputManifests)
-    crunch.liveArrivalsInput.offer(inputFlights)
+    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 10.0)
 
@@ -200,8 +200,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.manifestsInput.offer(inputManifests)
-    crunch.liveArrivalsInput.offer(inputFlights)
+    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
 
@@ -254,8 +254,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.manifestsInput.offer(inputManifests)
-    crunch.liveArrivalsInput.offer(inputFlights)
+    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
 

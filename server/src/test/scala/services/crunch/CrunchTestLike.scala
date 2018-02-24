@@ -3,15 +3,14 @@ package services.crunch
 import actors.{CrunchStateActor, FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import org.apache.spark.sql.SparkSession
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
@@ -19,10 +18,10 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
 import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
-import services.graphstages.{DummySplitsPredictor, SplitsPredictorBase, SplitsPredictorStage}
+import services.graphstages.DummySplitsPredictor
 
-import scala.collection.immutable
-import scala.language.postfixOps
+import scala.concurrent.Await
+//import scala.language.postfixOps
 import scala.concurrent.duration._
 
 
@@ -175,13 +174,12 @@ class CrunchTestLike
       waitForManifests = false
     ))
 
-    if (initialBaseArrivals.nonEmpty) crunchInputs.baseArrivals.offer(Flights(initialBaseArrivals.toList))
-    if (initialForecastArrivals.nonEmpty) crunchInputs.forecastArrivals.offer(Flights(initialForecastArrivals.toList))
-    if (initialLiveArrivals.nonEmpty) crunchInputs.liveArrivals.offer(Flights(initialLiveArrivals.toList))
-    if (initialShifts.nonEmpty) crunchInputs.shifts.offer(initialShifts)
-    if (initialFixedPoints.nonEmpty) crunchInputs.fixedPoints.offer(initialFixedPoints)
-
-    crunchInputs.manifests.offer(initialManifests)
+    if (initialBaseArrivals.nonEmpty) offerAndWait(crunchInputs.baseArrivals, Flights(initialBaseArrivals.toList))
+    if (initialForecastArrivals.nonEmpty) offerAndWait(crunchInputs.forecastArrivals, Flights(initialForecastArrivals.toList))
+    if (initialLiveArrivals.nonEmpty) offerAndWait(crunchInputs.liveArrivals, Flights(initialLiveArrivals.toList))
+    if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
+    if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
+    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifests, initialManifests)
 
     CrunchGraph(
       crunchInputs.baseArrivals,
@@ -306,6 +304,10 @@ class CrunchTestLike
       .receiveWhile(timeDurationToWait) { case ps@PortState(_, _, _) => ps }
       .reverse
       .head
+  }
+
+  def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
+    Await.result(sourceQueue.offer(offering), 5 seconds)
   }
 }
 

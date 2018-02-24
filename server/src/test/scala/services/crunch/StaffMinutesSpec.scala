@@ -35,7 +35,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         """.stripMargin
     )
 
-    crunch.liveArrivalsInput.offer(flights)
+    offerAndWait(crunch.liveArrivalsInput, flights)
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
@@ -77,7 +77,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         """.stripMargin
     )
 
-    crunch.liveArrivalsInput.offer(flights)
+    offerAndWait(crunch.liveArrivalsInput, flights)
 
     val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList

@@ -67,8 +67,10 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
             case VoyageManifestState(manifests, latestFilename) =>
               manifestsState = manifests
               log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
-              manifestsSource.offer(VoyageManifests(manifests))
-              fetchAndPushManifests(latestFilename)
+              manifestsSource.offer(VoyageManifests(manifests)).onComplete {
+                case Success(_) => fetchAndPushManifests(latestFilename)
+                case Failure(t) => log.warn(s"Failed to offer initial manifests to the manifests source: $t")
+              }
             case unexpected =>
               log.warn(s"Received unexpected ${unexpected.getClass}")
               fetchAndPushManifests("")
@@ -117,7 +119,9 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
       if (newManifests.nonEmpty) {
         manifestsState = manifestsState ++ newManifests
         log.info(s"${newManifests.size} manifests offered")
-        manifestsSource.offer(VoyageManifests(newManifests))
+        manifestsSource.offer(VoyageManifests(newManifests)).onFailure {
+          case t => log.warn(s"Failed to offer new manifests to the manifests source: $t")
+        }
       } else {
         log.info(s"No new manifests")
       }
