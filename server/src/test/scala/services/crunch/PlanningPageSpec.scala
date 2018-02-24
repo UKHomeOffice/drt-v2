@@ -46,7 +46,7 @@ class PlanningPageSpec() extends CrunchTestLike {
       ForecastTimeSlot(SDate("2017-01-02T00:45Z").millisSinceEpoch, 20, 0)
     )
 
-    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+    crunch.forecastTestProbe.fishForMessage(30 seconds) {
       case ps: PortState =>
         val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
           ps.crunchMinutes.values.toSet,

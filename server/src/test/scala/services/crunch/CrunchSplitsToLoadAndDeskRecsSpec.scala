@@ -55,7 +55,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         Queues.EGate -> Seq(20 * egSplit, 1 * egSplit)
       ))
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 2)
           resultSummary == expected
@@ -86,7 +86,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 5)
           resultSummary == expected
@@ -131,7 +131,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         "eGate" -> List(1.5, 1.5, 1.5, 1.5, 1.5))
       )
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
         case ps: PortState =>
           val resultSummary = workLoadsFromPortState(ps, 5)
           resultSummary == expected
@@ -168,7 +168,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
-        crunch.liveTestProbe.fishForMessage(10 seconds) {
+        crunch.liveTestProbe.fishForMessage(30 seconds) {
           case ps: PortState =>
             val resultSummary = paxLoadsFromPortState(ps, 5)
             resultSummary == expected
@@ -218,7 +218,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           Queues.EGate -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)
         ))
 
-        crunch.liveTestProbe.fishForMessage(5 seconds) {
+        crunch.liveTestProbe.fishForMessage(30 seconds) {
           case ps: PortState =>
             val resultSummary = paxLoadsFromPortState(ps, 5)
             resultSummary == expected
