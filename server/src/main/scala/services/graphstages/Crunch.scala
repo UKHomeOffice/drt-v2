@@ -97,11 +97,11 @@ object Crunch {
 
     toUpdate.map(_.apiFlight).foreach(ua => {
       oldFlightsById.get(ua.uniqueId).map(_.apiFlight).foreach(oa => {
-        log.info(s"Actor Changes to arrival ${ua.IATA}")
         if (ua.EstDT != oa.EstDT) log.info(s"${ua.IATA} changed estimated ${oa.EstDT} -> ${ua.EstDT}")
         if (ua.ActDT != oa.ActDT) log.info(s"${ua.IATA} changed touchdown ${oa.ActDT} -> ${ua.ActDT}")
         if (ua.EstChoxDT != oa.EstChoxDT) log.info(s"${ua.IATA} changed estchox   ${oa.EstChoxDT} -> ${ua.EstChoxDT}")
         if (ua.ActChoxDT != oa.ActChoxDT) log.info(s"${ua.IATA} changed actchox   ${oa.ActChoxDT} -> ${ua.ActChoxDT}")
+        if (ua.ActPax != oa.ActPax) log.info(s"${ua.IATA} changed actpax   ${oa.ActPax} -> ${ua.ActPax}")
       })
     })
 
