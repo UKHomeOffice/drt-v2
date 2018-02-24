@@ -9,6 +9,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
+import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete, StreamConverters}
 import akka.util.{ByteString, Timeout}
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
@@ -119,8 +120,11 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
       if (newManifests.nonEmpty) {
         manifestsState = manifestsState ++ newManifests
         log.info(s"${newManifests.size} manifests offered")
-        manifestsSource.offer(VoyageManifests(newManifests)).onFailure {
-          case t => log.warn(s"Failed to offer new manifests to the manifests source: $t")
+        manifestsSource.offer(VoyageManifests(newManifests)).onComplete {
+          case Success(queueOfferResult) if queueOfferResult != Enqueued =>
+            log.warn(s"Failed to offer new manifests. QueueOfferResult: ${queueOfferResult.getClass}")
+          case Failure(t) =>
+            log.warn(s"Failed to offer new manifests to the manifests source: $t")
         }
       } else {
         log.info(s"No new manifests")

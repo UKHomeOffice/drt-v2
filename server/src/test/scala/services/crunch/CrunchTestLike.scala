@@ -3,6 +3,7 @@ package services.crunch
 import actors.{CrunchStateActor, FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
+import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
@@ -307,7 +308,10 @@ class CrunchTestLike
   }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
-    Await.result(sourceQueue.offer(offering), 5 seconds)
+    Await.result(sourceQueue.offer(offering), 5 seconds) match {
+      case offerResult if offerResult != Enqueued =>
+        throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
+    }
   }
 }
 
