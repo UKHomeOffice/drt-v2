@@ -9,24 +9,13 @@ import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, pax
 import scala.collection.immutable.Map
 
 object WorkloadCalculator {
-  def flightToFlightSplitMinutes(flight: Arrival,
-                                 splits: Set[ApiSplits],
+  def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],
                                  nationalityProcessingTimes: Map[String, Double],
                                  useNationalityBasedProctimes: Boolean
                                 ): Set[FlightSplitMinute] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.CheckIn))
-    val historicalSplits = splits.find(_.source == SplitSources.Historical)
-    val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
-
-    val splitsToUseOption: Option[ApiSplits] = List(apiSplitsDc, apiSplitsCi, historicalSplits, terminalSplits).find {
-      case Some(_) => true
-      case _ => false
-    }.getOrElse {
-      log.error(s"Couldn't find terminal splits from AirportConfig to fall back on...")
-      None
-    }
+    val flight = flightWithSplits.apiFlight
+    val splitsToUseOption = flightWithSplits.bestSplits
 
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {

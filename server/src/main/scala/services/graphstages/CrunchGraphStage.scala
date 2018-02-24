@@ -429,8 +429,8 @@ class CrunchGraphStage(name: String,
 
     def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double], useNationalityBasedProcessingTimes: Boolean)(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
       flightsWithSplits.map {
-        case ApiFlightWithSplits(flight, splits, _) =>
-          (flight.uniqueId, WorkloadCalculator.flightToFlightSplitMinutes(flight, splits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes))
+        case flightWithSplits: ApiFlightWithSplits =>
+          (flightWithSplits.apiFlight.uniqueId, WorkloadCalculator.flightToFlightSplitMinutes(flightWithSplits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes))
       }.toMap
     }
 
