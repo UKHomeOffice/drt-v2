@@ -6,9 +6,8 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.Timeout
-import controllers.SystemActors.SplitsProvider
 import drt.shared.CrunchApi.PortState
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
@@ -24,26 +23,9 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
-case class LiveSimulationInputs(crunch: SourceQueueWithComplete[PortState],
-                                shifts: SourceQueueWithComplete[String],
-                                fixedPoints: SourceQueueWithComplete[String],
-                                staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                                actualDeskStats: SourceQueueWithComplete[ActualDeskStats])
-
-case class ForecastSimulationInputs(crunch: SourceQueueWithComplete[PortState],
-                                    shifts: SourceQueueWithComplete[String],
-                                    fixedPoints: SourceQueueWithComplete[String],
-                                    staffMovements: SourceQueueWithComplete[Seq[StaffMovement]])
-
-case class LiveCrunchInputs(arrivals: SourceQueueWithComplete[ArrivalsDiff], manifests: SourceQueueWithComplete[VoyageManifests])
-
-case class ForecastCrunchInputs(arrivals: SourceQueueWithComplete[ArrivalsDiff])
-
-case class ArrivalsInputs(base: SourceQueueWithComplete[Flights], forecast: SourceQueueWithComplete[Flights], live: SourceQueueWithComplete[Flights])
-
-case class CrunchSystem(shifts: List[SourceQueueWithComplete[String]],
-                        fixedPoints: List[SourceQueueWithComplete[String]],
-                        staffMovements: List[SourceQueueWithComplete[Seq[StaffMovement]]],
+case class CrunchSystem(shifts: SourceQueueWithComplete[String],
+                        fixedPoints: SourceQueueWithComplete[String],
+                        staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
                         baseArrivals: SourceQueueWithComplete[Flights],
                         forecastArrivals: SourceQueueWithComplete[Flights],
                         liveArrivals: SourceQueueWithComplete[Flights],
@@ -56,7 +38,7 @@ object CrunchSystem {
   case class CrunchProps(system: ActorSystem,
                          airportConfig: AirportConfig,
                          pcpArrival: Arrival => MilliDate,
-                         historicalSplitsProvider: SplitsProvider,
+                         historicalSplitsProvider: SplitsProvider.SplitProvider,
                          liveCrunchStateActor: ActorRef,
                          forecastCrunchStateActor: ActorRef,
                          maxDaysToCrunch: Int,
@@ -64,7 +46,14 @@ object CrunchSystem {
                          minutesToCrunch: Int,
                          warmUpMinutes: Int,
                          actors: Map[String, AskableActorRef],
-                         useNationalityBasedProcessingTimes: Boolean
+                         useNationalityBasedProcessingTimes: Boolean,
+                         crunchStartDateProvider: (SDateLike) => SDateLike = getLocalLastMidnight,
+                         crunchEndDateProvider: (SDateLike) => SDateLike = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
+                         calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
+                         now: () => SDateLike = () => SDate.now(),
+                         initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                         splitsPredictorStage: SplitsPredictorBase,
+                         waitForManifests: Boolean = true
                         )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -95,63 +84,91 @@ object CrunchSystem {
       minutesToCrunch = minutesToCrunch,
       warmUpMinutes = warmUpMinutes,
       crunchEnd = crunchEnd,
-      now = () => SDate.now(),
+      now = props.now,
       expireAfterMillis = props.expireAfterMillis,
       eGateBankSize = eGateBankSize)
 
-    val actualDesksAndQueuesStage = new ActualDesksAndWaitTimesGraphStage()
+    val actualDesksStage = new ActualDesksAndWaitTimesGraphStage()
 
-    val liveSimInputs: LiveSimulationInputs = startRunnableLiveSimulation(
-      system = props.system,
-      crunchStateActor = props.liveCrunchStateActor,
-      staffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize),
-      actualDesksStage = actualDesksAndQueuesStage)
+    val liveStaffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize)
 
-    val liveCrunchInputs: LiveCrunchInputs = startRunnableLiveCrunch(
-      system = props.system,
-      simulationSubscriber = liveSimInputs.crunch,
+    val forecastStaffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize)
+
+    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
+    val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
+    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
+    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
+    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
+    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.dropHead)
+    val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.dropHead)
+    val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.dropHead)
+
+    val maxLiveDaysToCrunch = 2
+
+    val liveCrunchStage = new CrunchGraphStage(
+      name = "live",
+      optionalInitialFlights = props.initialFlightsWithSplits,
       airportConfig = props.airportConfig,
-      historicalSplitsProvider = props.historicalSplitsProvider,
+      natProcTimes = AirportConfigs.nationalityProcessingTimes,
+      groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
+      splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet),
+      crunchStartFromFirstPcp = props.crunchStartDateProvider,
+      crunchEndFromLastPcp = props.crunchEndDateProvider,
       expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      maxDaysToCrunch = maxLiveDaysToCrunch,
+      earliestAndLatestAffectedPcpTime = props.calcPcpTimeWindow(maxLiveDaysToCrunch),
+      waitForManifests = props.waitForManifests,
       minutesToCrunch = props.minutesToCrunch,
       warmUpMinutes = props.warmUpMinutes,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
-    val forecastSimInputs: ForecastSimulationInputs = startRunnableForecastSimulation(
-      system = props.system,
-      crunchStateActor = props.forecastCrunchStateActor,
-      staffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize))
-
-    val forecastCrunchInputs: ForecastCrunchInputs = startRunnableForecastCrunch(
-      system = props.system,
-      simulationSubscriber = forecastSimInputs.crunch,
-      maxDaysToCrunch = props.maxDaysToCrunch,
+    val forecastCrunchStage = new CrunchGraphStage(
+      name = "forecast",
+      optionalInitialFlights = None,
       airportConfig = props.airportConfig,
-      historicalSplitsProvider = props.historicalSplitsProvider,
+      natProcTimes = AirportConfigs.nationalityProcessingTimes,
+      groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
+      splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet),
+      crunchStartFromFirstPcp = props.crunchStartDateProvider,
+      crunchEndFromLastPcp = props.crunchEndDateProvider,
       expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      maxDaysToCrunch = props.maxDaysToCrunch,
+      earliestAndLatestAffectedPcpTime = props.calcPcpTimeWindow(props.maxDaysToCrunch),
+      waitForManifests = props.waitForManifests,
       minutesToCrunch = props.minutesToCrunch,
-      warmUpMinutes = props.warmUpMinutes
-    )
+      warmUpMinutes = props.warmUpMinutes,
+      useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
-    val arrivalsInputs: ArrivalsInputs = startRunnableArrivals(
-      system = props.system,
-      crunchSubscribers = List(liveCrunchInputs.arrivals, forecastCrunchInputs.arrivals),
+    val arrivalsStage_ = arrivalsStage(
       baseArrivalsActor = baseArrivalsActor,
       forecastArrivalsActor = forecastArrivalsActor,
       liveArrivalsActor = liveArrivalsActor,
-      pcpArrival = props.pcpArrival,
-      airportConfig = props.airportConfig,
-      2 * Crunch.oneDayMillis)
+      props.pcpArrival,
+      props.airportConfig,
+      props.expireAfterMillis,
+      now = props.now)
+
+    val runnableCrunch = RunnableCrunch(
+      baseArrivals, forecastArrivals, liveArrivals,
+      manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
+      actualDesksAndQueuesSource, arrivalsStage_, actualDesksStage,
+      liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
+      forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)
+
+    implicit val actorSystem: ActorSystem = props.system
+    val (baseInput, forecastInput, liveInput, manifestsInput, shiftsInput, fixedPointsInput, movementsInput, actualDesksInput) = runnableCrunch.run()(ActorMaterializer())
 
     CrunchSystem(
-      shifts = List(liveSimInputs.shifts, forecastSimInputs.shifts),
-      fixedPoints = List(liveSimInputs.fixedPoints, forecastSimInputs.fixedPoints),
-      staffMovements = List(liveSimInputs.staffMovements, forecastSimInputs.staffMovements),
-      baseArrivals = arrivalsInputs.base,
-      forecastArrivals = arrivalsInputs.forecast,
-      liveArrivals = arrivalsInputs.live,
-      actualDeskStats = liveSimInputs.actualDeskStats,
-      manifests = liveCrunchInputs.manifests
+      shifts = shiftsInput,
+      fixedPoints = fixedPointsInput,
+      staffMovements = movementsInput,
+      baseArrivals = baseInput,
+      forecastArrivals = forecastInput,
+      liveArrivals = liveInput,
+      actualDeskStats = actualDesksInput,
+      manifests = manifestsInput
     )
   }
 
@@ -188,7 +205,13 @@ object CrunchSystem {
     }, 5 minutes)
   }
 
-  def arrivalsStage(baseArrivalsActor: ActorRef, forecastArrivalsActor: ActorRef, liveArrivalsActor: ActorRef, pcpArrival: Arrival => MilliDate, airportConfig: AirportConfig, expireAfterMillis: Long) = new ArrivalsGraphStage(
+  def arrivalsStage(baseArrivalsActor: ActorRef,
+                    forecastArrivalsActor: ActorRef,
+                    liveArrivalsActor: ActorRef,
+                    pcpArrival: Arrival => MilliDate,
+                    airportConfig: AirportConfig,
+                    expireAfterMillis: Long,
+                    now: () => SDateLike) = new ArrivalsGraphStage(
     initialBaseArrivals = initialArrivals(baseArrivalsActor),
     initialForecastArrivals = initialArrivals(forecastArrivalsActor),
     initialLiveArrivals = initialArrivals(liveArrivalsActor),
@@ -198,120 +221,7 @@ object CrunchSystem {
     pcpArrivalTime = pcpArrival,
     validPortTerminals = airportConfig.terminalNames.toSet,
     expireAfterMillis = expireAfterMillis,
-    now = () => SDate.now())
-
-  def crunchStage(name: String,
-                  portCode: String,
-                  maxDays: Int,
-                  manifestsUsed: Boolean = true,
-                  airportConfig: AirportConfig,
-                  historicalSplitsProvider: SplitsProvider,
-                  expireAfterMillis: Long,
-                  minutesToCrunch: Int,
-                  warmUpMinutes: Int, useNationalityBasedProcessingTimes: Boolean): CrunchGraphStage = new CrunchGraphStage(
-    name = name,
-    optionalInitialFlights = None,
-    airportConfig = airportConfig,
-    natProcTimes = AirportConfigs.nationalityProcessingTimes,
-    groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-    splitsCalculator = SplitsCalculator(airportConfig.portCode, historicalSplitsProvider, airportConfig.defaultPaxSplits.splits.toSet),
-    crunchStartFromFirstPcp = getLocalLastMidnight,
-    crunchEndFromLastPcp = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-    expireAfterMillis = expireAfterMillis,
-    now = () => SDate.now(),
-    maxDaysToCrunch = maxDays,
-    earliestAndLatestAffectedPcpTime = earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
-    manifestsUsed = manifestsUsed,
-    minutesToCrunch = minutesToCrunch,
-    warmUpMinutes = warmUpMinutes,
-    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes)
-
-  def startRunnableLiveSimulation(implicit system: ActorSystem, crunchStateActor: ActorRef, staffingStage: StaffingStage, actualDesksStage: ActualDesksAndWaitTimesGraphStage): LiveSimulationInputs = {
-    val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](10, OverflowStrategy.backpressure)
-    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
-    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
-    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
-    val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
-
-    val (crunchInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput) = RunnableLiveSimulationGraph(
-      crunchStateActor = crunchStateActor,
-      crunchSource = crunchSource,
-      shiftsSource = shiftsSource,
-      fixedPointsSource = fixedPointsSource,
-      staffMovementsSource = staffMovementsSource,
-      actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
-      staffingStage = staffingStage,
-      actualDesksStage = actualDesksStage
-    ).run()(ActorMaterializer())
-
-    LiveSimulationInputs(crunchInput, shiftsInput, fixedPointsInput, staffMovementsInput, actualDesksAndQueuesInput)
-  }
-
-  def startRunnableForecastSimulation(implicit system: ActorSystem, crunchStateActor: ActorRef, staffingStage: StaffingStage): ForecastSimulationInputs = {
-    val crunchSource: Source[PortState, SourceQueueWithComplete[PortState]] = Source.queue[PortState](10, OverflowStrategy.backpressure)
-    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
-    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.backpressure)
-    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
-
-    val (crunchInput, shiftsInput, fixedPointsInput, staffMovementsInput) = RunnableForecastSimulationGraph(
-      crunchStateActor = crunchStateActor,
-      crunchSource = crunchSource,
-      shiftsSource = shiftsSource,
-      fixedPointsSource = fixedPointsSource,
-      staffMovementsSource = staffMovementsSource,
-      staffingStage = staffingStage
-    ).run()(ActorMaterializer())
-
-    ForecastSimulationInputs(crunchInput, shiftsInput, fixedPointsInput, staffMovementsInput)
-  }
-
-  def startRunnableLiveCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
-                              airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
-                              expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int, useNationalityBasedProcessingTimes: Boolean): LiveCrunchInputs = {
-    val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.backpressure)
-    val liveArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-    val (liveArrivalsCrunchInput, manifestsInput) = RunnableLiveCrunchGraph[SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests]](
-      arrivalsSource = liveArrivalsDiffQueueSource,
-      voyageManifestsSource = manifestsSource,
-      cruncher = crunchStage(name = "live", portCode = airportConfig.portCode, maxDays = 2, airportConfig = airportConfig,
-        historicalSplitsProvider = historicalSplitsProvider, expireAfterMillis = expireAfterMillis,
-        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes, useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes),
-      simulationQueueSubscriber = simulationSubscriber
-    ).run()(ActorMaterializer())
-
-    LiveCrunchInputs(liveArrivalsCrunchInput, manifestsInput)
-  }
-
-  def startRunnableForecastCrunch(implicit system: ActorSystem, simulationSubscriber: SourceQueueWithComplete[PortState],
-                                  maxDaysToCrunch: Int, airportConfig: AirportConfig, historicalSplitsProvider: SplitsProvider,
-                                  expireAfterMillis: Long, minutesToCrunch: Int, warmUpMinutes: Int): ForecastCrunchInputs = {
-    val forecastArrivalsDiffQueueSource: Source[ArrivalsDiff, SourceQueueWithComplete[ArrivalsDiff]] = Source.queue[ArrivalsDiff](0, OverflowStrategy.backpressure)
-    val forecastArrivalsCrunchInput: SourceQueueWithComplete[ArrivalsDiff] = RunnableForecastCrunchGraph[SourceQueueWithComplete[ArrivalsDiff]](
-      arrivalsSource = forecastArrivalsDiffQueueSource,
-      cruncher = crunchStage(name = "forecast", portCode = airportConfig.portCode, maxDays = maxDaysToCrunch, manifestsUsed = false,
-        airportConfig = airportConfig, historicalSplitsProvider, expireAfterMillis = expireAfterMillis,
-        minutesToCrunch = minutesToCrunch, warmUpMinutes = warmUpMinutes, useNationalityBasedProcessingTimes = false),
-      simulationQueueSubscriber = simulationSubscriber
-    ).run()(ActorMaterializer())
-
-    ForecastCrunchInputs(forecastArrivalsCrunchInput)
-  }
-
-  def startRunnableArrivals(implicit system: ActorSystem, crunchSubscribers: List[SourceQueueWithComplete[ArrivalsDiff]], baseArrivalsActor: ActorRef, forecastArrivalsActor: ActorRef, liveArrivalsActor: ActorRef, pcpArrival: Arrival => MilliDate, airportConfig: AirportConfig, expireAfterMillis: Long): ArrivalsInputs = {
-    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
-    val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
-    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.backpressure)
-
-    val (baseArrivalsInput, forecastArrivalsInput, liveArrivalsInput) = RunnableArrivalsGraph[SourceQueueWithComplete[Flights]](
-      baseArrivals,
-      forecastArrivals,
-      liveArrivals,
-      arrivalsStage(baseArrivalsActor = baseArrivalsActor, forecastArrivalsActor = forecastArrivalsActor, liveArrivalsActor = liveArrivalsActor, pcpArrival, airportConfig, expireAfterMillis),
-      crunchSubscribers
-    ).run()(ActorMaterializer())
-
-    ArrivalsInputs(baseArrivalsInput, forecastArrivalsInput, liveArrivalsInput)
-  }
+    now = now)
 
   def initialArrivals(arrivalsActor: AskableActorRef): Set[Arrival] = {
     val canWaitMinutes = 5

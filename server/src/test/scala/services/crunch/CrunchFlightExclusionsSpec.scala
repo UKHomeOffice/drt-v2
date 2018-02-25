@@ -9,8 +9,12 @@ import services.SDate
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
+import scala.concurrent.duration._
 
 class CrunchFlightExclusionsSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Given two flights, one with an invalid terminal " +
     "When I ask for a crunch " +
     "I should only see crunch results for the flight with a valid terminal" >> {
@@ -36,7 +40,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
     val resultSummary = paxLoadsFromPortState(result, 30)
 
     val expected = Map(
@@ -72,7 +76,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
     val resultSummary = paxLoadsFromPortState(result, 30)
 
     val expected = Map(

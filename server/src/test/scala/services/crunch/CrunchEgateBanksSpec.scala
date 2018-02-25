@@ -15,6 +15,9 @@ import scala.languageFeature.postfixOps
 
 
 class CrunchEgateBanksSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Egate banks handling " >> {
     "Given flights with 20 very expensive passengers and splits to eea desk & egates " +
       "When I ask for desk recs " +
@@ -52,7 +55,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
       val resultSummary = deskRecsFromPortState(result, 15)
 
       val expected = Map("T1" -> Map(

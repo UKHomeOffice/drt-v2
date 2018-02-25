@@ -13,6 +13,9 @@ import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Queue validation " >> {
     "Given a flight with transfers " +
       "When I ask for a crunch " +
@@ -20,9 +23,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       val scheduled00 = "2017-01-01T00:00Z"
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = Flights(List(
+      val flights = Set(
         ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15)
-      ))
+      )
 
       val fiveMinutes = 600d / 60
 
@@ -37,12 +40,11 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
         ),
         crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+        initialLiveArrivals = flights
       )
 
-      crunch.liveArrivalsInput.offer(flights)
-
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
       val resultSummary = paxLoadsFromPortState(result, 1).flatMap(_._2.keys)
 
       val expected = Set(Queues.EeaDesk)
@@ -57,10 +59,10 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flights = Flights(List(
+    val flights = Set(
       ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 15),
       ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled, iata = "FR8819", terminal = "XXX", actPax = 10)
-    ))
+    )
 
     val fiveMinutes = 600d / 60
 
@@ -70,12 +72,11 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
       ),
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+      initialLiveArrivals = flights
     )
 
-    crunch.liveArrivalsInput.offer(flights)
-
-    val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
     val resultSummary = paxLoadsFromPortState(result, 1, SDate(scheduled))
 
     val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(15.0)))

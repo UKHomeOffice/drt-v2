@@ -13,6 +13,9 @@ import scala.concurrent.duration._
 
 
 class ForecastCrunchSpec() extends CrunchTestLike {
+  sequential
+  isolated
+
   "Given a live flight and a base flight arriving 3 days later " +
     "When I ask for pax loads " +
     "Then I should see pax arriving in the 1st and 2nd minute for the live flight, and the 1st & 2nd minute 3 days later for the base flight" >> {
@@ -32,11 +35,10 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30))
 
     crunch.liveArrivalsInput.offer(liveFlights)
-    val liveResult = crunch.liveTestProbe.expectMsgAnyClassOf(60 seconds, classOf[PortState])
-    crunch.forecastTestProbe.expectMsgAnyClassOf(60 seconds, classOf[PortState])
+    val liveResult = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds)
 
     crunch.baseArrivalsInput.offer(baseFlights)
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(60 seconds, classOf[PortState])
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val liveSummary = paxLoadsFromPortState(liveResult, 2)
     val forecastSummary = paxLoadsFromPortState(forecastResult, 2, 3 * 1440)
@@ -64,18 +66,15 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30),
-      shifts =
+      initialShifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
 
     crunch.liveArrivalsInput.offer(liveFlights)
-
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-    crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
     crunch.baseArrivalsInput.offer(baseFlights)
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val deployedStaff: Seq[Option[Int]] = forecastResult
       .crunchMinutes
@@ -105,18 +104,16 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       warmUpMinutes = 120,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (_) => SDate("2017-01-04T00:30Z"),
-      shifts =
+      initialShifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
 
     crunch.liveArrivalsInput.offer(liveFlights)
-
-    crunch.liveTestProbe.expectMsgAnyClassOf(60 seconds, classOf[PortState])
-    crunch.forecastTestProbe.expectMsgAnyClassOf(60 seconds, classOf[PortState])
-
+    Thread.sleep(500)
     crunch.baseArrivalsInput.offer(baseFlights)
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(60 seconds, classOf[PortState])
+
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val waitTimes: Seq[Int] = forecastResult
       .crunchMinutes
@@ -149,26 +146,18 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
       crunchEndDateProvider = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-      earliestAndLatestAffectedPcpTime = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),
-      shifts =
+      calcPcpWindow = Crunch.earliestAndLatestAffectedPcpTimeFromFlights(maxDays = 3),
+      initialShifts =
         """shift a,T1,04/01/17,00:00,00:14,1
           |shift b,T1,04/01/17,00:15,00:29,2
         """.stripMargin)
 
     crunch.liveArrivalsInput.offer(liveFlights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-    crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
     crunch.baseArrivalsInput.offer(baseFlights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-    crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
     crunch.liveArrivalsInput.offer(Flights(List(liveArrival.copy(ActPax = 10))))
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-    crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
     crunch.forecastShiftsInput.offer("shift a,T1,03/01/17,00:00,00:29,5")
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val deployedStaff: Seq[Option[Int]] = forecastResult
       .crunchMinutes
@@ -195,7 +184,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
     crunch.baseArrivalsInput.offer(baseFlights)
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val forecastSummary = paxLoadsFromPortState(forecastResult, 2, SDate(baseScheduled))
 
@@ -243,7 +233,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
 
     crunch.forecastArrivalsInput.offer(forecastArrivals)
     crunch.baseArrivalsInput.offer(baseArrivals)
-    val crunchForecastArrivals = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+
+    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
 
     val expectedForecastArrivals = Set(baseArrival)
 
@@ -268,9 +259,8 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
     crunch.forecastArrivalsInput.offer(forecastArrivals)
-    Thread.sleep(250L)
     crunch.baseArrivalsInput.offer(baseArrivals)
-    val crunchForecastArrivals = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = 50, TranPax = 25))
 
@@ -298,14 +288,10 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
     crunch.baseArrivalsInput.offer(baseArrivals)
-    Thread.sleep(250L)
     crunch.forecastArrivalsInput.offer(forecastArrivals)
-    Thread.sleep(250L)
     crunch.liveArrivalsInput.offer(liveArrivals)
 
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
-    val crunchForecastArrivals = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, EstDT = liveScheduled))
 
@@ -333,13 +319,10 @@ class ForecastCrunchSpec() extends CrunchTestLike {
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
 
     crunch.baseArrivalsInput.offer(baseArrivals)
-    crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
     crunch.forecastArrivalsInput.offer(forecastArrivals1st)
-    crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
     crunch.forecastArrivalsInput.offer(forecastArrivals2nd)
-    val crunchForecastArrivals = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState]).flights.values.map(_.apiFlight).toSet
+
+    val crunchForecastArrivals = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds).flights.values.map(_.apiFlight).toSet
 
     val expectedForecastArrivals = Set(baseArrival1.copy(ActPax = 51, Status = "Port Forecast"), baseArrival2.copy(ActPax = 52, Status = "Port Forecast"))
 

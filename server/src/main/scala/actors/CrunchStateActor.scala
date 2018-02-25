@@ -13,7 +13,6 @@ import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
 
-import scala.collection.immutable._
 import scala.language.postfixOps
 
 class CrunchStateActor(val snapshotInterval: Int,

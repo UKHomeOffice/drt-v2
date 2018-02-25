@@ -4,7 +4,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 
-import scala.collection.immutable.Seq
+//import scala.collection.immutable.Seq
 
 
 object Queues {
@@ -36,6 +36,7 @@ object Queues {
 
 sealed trait PaxType {
   def name: String = getClass.getSimpleName
+  def cleanName: String = getClass.getSimpleName.dropRight(1)
 }
 
 object PaxType {
@@ -368,7 +369,7 @@ object AirportConfigs {
       "T5" -> Map(
         "eGate" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
         "eeaDesk" -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
-        "fastTrack" -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0), List(1, 1, 1, 1, 1, 2, 4, 4, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 1)),
+        "fastTrack" -> (List(0, 0, 0, 0, 0, 2, 4, 4, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 1, 1, 0), List(0, 0, 0, 0, 0, 2, 4, 4, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 1, 1, 0)),
         "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
       )
     ),

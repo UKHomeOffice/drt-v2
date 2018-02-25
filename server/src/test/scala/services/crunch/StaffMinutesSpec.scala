@@ -11,6 +11,9 @@ import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 class StaffMinutesSpec extends CrunchTestLike {
+  sequential
+  isolated
+
   "Given a flight with one passenger, and a shift that covers the pcp time " +
     "When I ask for the PortState " +
     "Then I should see the staff available for the duration of the triggered crunch" >> {
@@ -26,7 +29,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => crunchStart,
       crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
       crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
-      shifts =
+      initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,1
           |shift b,T1,01/01/17,00:15,00:29,2
         """.stripMargin
@@ -34,7 +37,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = crunch.liveTestProbe.expectMsgAnyClassOf(10 seconds, classOf[PortState])
+    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
     val minutesInOrder = result.staffMinutes.values.toList.sortBy(_.minute)
     val staff = minutesInOrder.map(_.shifts)
     val staffMillis = minutesInOrder.map(_.minute)
@@ -60,11 +63,11 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => crunchStart,
       crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
       crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
-      shifts =
+      initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,0
           |shift b,T1,01/01/17,00:15,00:29,2
         """.stripMargin,
-      fixedPoints =
+      initialFixedPoints =
         """egate monitors a,T1,01/01/17,00:00,00:14,2
           |roaming officers b,T1,01/01/17,00:15,00:29,2
         """.stripMargin
@@ -72,7 +75,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveArrivalsInput.offer(flights)
 
-    val result = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState])
+    val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
     val minutesInOrder = result.staffMinutes.values.toList.sortBy(_.minute)
     val staff = minutesInOrder.map(_.available)
     val staffMillis = minutesInOrder.map(_.minute)

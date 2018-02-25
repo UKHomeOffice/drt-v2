@@ -1,36 +1,30 @@
 package passengersplits.core
 
-import java.io.Closeable
 import java.nio.charset.StandardCharsets._
 import java.util.zip.{ZipEntry, ZipInputStream}
-import scala.collection.JavaConversions._
+
 import scala.collection.mutable.ArrayBuffer
 
 object ZipUtils {
 
   case class UnzippedFileContent(filename: String, content: String, zipFilename: Option[String] = None)
 
-  def usingZip[R <: Closeable, T](unzippedStream: R)(f: (R) => T) = {
-    try {
-      f(unzippedStream)
-    } finally {
-      unzippedStream.close()
-    }
+  def unzipAllFilesInStream(unzippedStream: ZipInputStream, fileNameFilter: String => Boolean): Stream[UnzippedFileContent] = {
+    unzipAllFilesInStream(unzippedStream, Option(unzippedStream.getNextEntry), fileNameFilter)
   }
 
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream): Stream[UnzippedFileContent] = {
-    unzipAllFilesInStream(unzippedStream, Option(unzippedStream.getNextEntry))
-  }
-
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream, ze: Option[ZipEntry]): Stream[UnzippedFileContent] = {
+  def unzipAllFilesInStream(unzippedStream: ZipInputStream, ze: Option[ZipEntry], fileNameFilter: String => Boolean): Stream[UnzippedFileContent] = {
     ze match {
-      case None => Stream.empty
-      case Some(ze) =>
-        val name: String = ze.getName
+      case Some(zipEntry) if fileNameFilter(zipEntry.getName) =>
+        val name: String = zipEntry.getName
         val entry: String = ZipUtils.getZipEntry(unzippedStream)
         val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
         UnzippedFileContent(name, entry) #::
-          unzipAllFilesInStream(unzippedStream, maybeEntry1)
+          unzipAllFilesInStream(unzippedStream, maybeEntry1, fileNameFilter)
+      case Some(_) =>
+        val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
+        unzipAllFilesInStream(unzippedStream, maybeEntry1, fileNameFilter)
+      case _ => Stream.empty
     }
   }
 
@@ -43,7 +37,7 @@ object ZipUtils {
       stringBuffer ++= buffer.take(len)
       len = zis.read(buffer)
     }
-    val content: String = new String(stringBuffer.toArray, UTF_8)
-    (content)
+
+    new String(stringBuffer.toArray, UTF_8)
   }
 }

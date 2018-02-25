@@ -12,24 +12,23 @@ import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import buildinfo.BuildInfo
-import com.google.inject.Inject
-import com.google.inject.Singleton
+import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigFactory
-import controllers.SystemActors.SplitsProvider
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lhr.forecast.LHRForecastEmail
+import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
+import org.apache.spark.sql.SparkSession
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.http.{DefaultHttpFilters, HeaderNames, HttpEntity, HttpFilters}
+import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
@@ -38,8 +37,9 @@ import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
-import services.graphstages.Crunch
 import services.graphstages.Crunch._
+import services.graphstages.{DummySplitsPredictor, SplitsPredictorBase, SplitsPredictorStage}
+import services.prediction.SparkSplitsPredictorFactory
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
@@ -88,10 +88,6 @@ object PaxFlow {
                              (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
 }
 
-object SystemActors {
-  type SplitsProvider = (Arrival) => Option[SplitRatios]
-}
-
 trait SystemActors {
   self: AirportConfProvider =>
 
@@ -101,9 +97,9 @@ trait SystemActors {
 
   val minutesToCrunch: Int = 1440
   val warmUpMinutes: Int = 240
-  val maxDaysToCrunch: Int = ConfigFactory.load.getString("crunch.forecast.max_days").toInt
-  val aclPollMinutes: Int = ConfigFactory.load.getString("crunch.forecast.poll_minutes").toInt
-  val expireAfterMillis: Long = 2 * oneDayMillis
+  val maxDaysToCrunch: Int = config.getInt("crunch.forecast.max_days").getOrElse(360)
+  val aclPollMinutes: Int = config.getInt("crunch.forecast.poll_minutes").getOrElse(120)
+  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
   val now: () => SDateLike = () => SDate.now()
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
@@ -126,12 +122,18 @@ trait SystemActors {
   val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis), name = "voyage-manifests-actor")
   val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  val historicalSplitsProvider: SplitsProvider = SplitsProvider.csvProvider
+  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
-  val useNationalityBasedProcessingTimes = config.getString("feature-flags.nationality-based-processing-times").isDefined
+  val useNationalityBasedProcessingTimes: Boolean = config.getString("feature-flags.nationality-based-processing-times").isDefined
+  val useSplitsPrediction: Boolean = config.getString("feature-flags.use-splits-prediction").isDefined
+  val rawSplitsUrl: String = config.getString("crunch.splits.raw-data-path").getOrElse("/dev/null")
+
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
+  system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
+
+  val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
 
   val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
     system = system,
@@ -148,10 +150,12 @@ trait SystemActors {
       "shifts" -> shiftsActor,
       "fixed-points" -> fixedPointsActor,
       "staff-movements" -> staffMovementsActor),
-    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes))
-  shiftsActor ! AddShiftLikeSubscribers(crunchInputs.shifts)
-  fixedPointsActor ! AddShiftLikeSubscribers(crunchInputs.fixedPoints)
-  staffMovementsActor ! AddStaffMovementsSubscribers(crunchInputs.staffMovements)
+    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
+    splitsPredictorStage = splitsPredictorStage
+  ))
+  shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
+  fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
+  staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
 
   liveArrivalsSource(airportConfig.portCode)
     .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
@@ -171,9 +175,31 @@ trait SystemActors {
 
   VoyageManifestsProvider(bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
 
+
+  def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
+    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, portCode))
+  else
+    new DummySplitsPredictor()
+
+  def createSparkSession(): SparkSession = {
+    SparkSession
+      .builder
+      .appName("DRT Predictor")
+      .config("spark.master", "local")
+      .getOrCreate()
+  }
+
   def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
     val feed = portCode match {
-      case "LHR" => LHRFlightFeed()
+      case "LHR" =>
+        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
+          val apiUri = config.getString("lhr.live.api_url").get
+          val token = config.getString("lhr.live.token").get
+          system.log.info(s"Connecting to $apiUri using $token")
+
+          LHRLiveFeed(apiUri, token, system)
+        }
+        else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
@@ -242,14 +268,14 @@ trait AirportConfProvider extends AirportConfiguration {
 trait ProdPassengerSplitProviders {
   self: AirportConfiguration with SystemActors =>
 
-  val csvSplitsProvider: (Arrival) => Option[SplitRatios] = SplitsProvider.csvProvider
+  val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: Arrival): Double = {
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight), 0.6)
+    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0.6)
   }
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
-    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight), 0d, 0d))
+    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 
   private implicit val timeout: Timeout = Timeout(250 milliseconds)
 }
@@ -277,6 +303,10 @@ class NoCacheFilter @Inject()(
   }
 }
 
+trait AvailableUserRoles {
+  val availableRoles = List("staff:edit")
+}
+
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
@@ -285,7 +315,9 @@ class Application @Inject()(implicit val config: Configuration,
   extends Controller
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with SystemActors with ImplicitTimeoutProvider {
+    with SystemActors
+    with ImplicitTimeoutProvider
+    with AvailableUserRoles {
   ctrl =>
   val log: LoggingAdapter = system.log
 
@@ -306,23 +338,13 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   object ApiService {
-    def apply(airportConfig: AirportConfig, shiftsActor: ActorRef, fixedPointsActor: ActorRef, staffMovementsActor: ActorRef): ApiService {
-      val timeout: Timeout
-
-      def liveCrunchStateActor: AskableActorRef
-
-      def actorSystem: ActorSystem
-
-      def forecastCrunchStateActor: AskableActorRef
-
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
-
-      def askableCacheActorRef: AskableActorRef
-
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
-
-      def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
-    } = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor) {
+    def apply(
+               airportConfig: AirportConfig,
+               shiftsActor: ActorRef,
+               fixedPointsActor: ActorRef,
+               staffMovementsActor: ActorRef,
+               headers: Headers
+             ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers) {
 
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -396,14 +418,16 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
-        log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
-        val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
-        futureShifts.map {
-          case shifts: String =>
-            val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
+        if (getUserRoles.contains("staff:edit")) {
+          log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
+          val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
+          futureShifts.map {
+            case shifts: String =>
+              val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
 
-            shiftsActor ! updatedShifts
-        }
+              shiftsActor ! updatedShifts
+          }
+        } else throw new Exception("You do not have permission to edit staffing.")
       }
 
       def getShiftsForMonth(month: MillisSinceEpoch): Future[String] = {
@@ -415,6 +439,11 @@ class Application @Inject()(implicit val config: Configuration,
             StaffTimeSlots.getShiftsForMonth(shifts, SDate(month))
         }
       }
+
+      def getUserRoles: List[String] = if (config.getString("feature-flags.super-user-mode").isDefined)
+        availableRoles
+      else
+        roles
 
       override def askableCacheActorRef: AskableActorRef = cacheActorRef
 
@@ -673,7 +702,7 @@ class Application @Inject()(implicit val config: Configuration,
       // call Autowire route
 
       implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor))
+      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, request.headers))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))

@@ -1,9 +1,5 @@
 package services.inputfeeds
 
-import akka.NotUsed
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
@@ -11,7 +7,6 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import net.schmizz.sshj.sftp.SFTPClient
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -86,9 +81,8 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlight)
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
       val flightsResult = result.flights.values.map(_.apiFlight)
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"))
@@ -114,11 +108,9 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(aclFlights)
-      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
       crunch.liveArrivalsInput.offer(liveFlights)
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
       val flightsResult = result.flights.values.map(_.apiFlight)
 
       val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
@@ -149,12 +141,10 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
-      val flightsResult = result.flights.values.map(_.apiFlight).toSet
+      val lastMessage = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
+      val flightsResult = lastMessage.flights.values.map(_.apiFlight).toSet
       val expected = initialLive ++ newAcl
 
       flightsResult === expected
@@ -181,10 +171,9 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.liveArrivalsInput.offer(Flights(newLive.toList))
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newLive.map(_.copy(rawIATA = "BA0001")) + initialAcl2
@@ -215,12 +204,10 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.manifestsInput.offer(VoyageManifests(Set()))
       crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
-      crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
       crunch.liveArrivalsInput.offer(Flights(newLive.toList))
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
 
       val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newAcl ++ newLive ++ initialLive

@@ -7,7 +7,6 @@ import drt.shared.CrunchApi.CrunchState
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import japgolly.scalajs.react.test
 import utest.{TestSuite, _}
 
 

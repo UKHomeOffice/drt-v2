@@ -9,6 +9,8 @@ import services.graphstages.Crunch._
 import scala.concurrent.duration._
 
 class PlanningPageSpec() extends CrunchTestLike {
+  sequential
+  isolated
 
   import CrunchApi._
 
@@ -29,14 +31,14 @@ class PlanningPageSpec() extends CrunchTestLike {
       minutesToCrunch = 1440,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)),
       crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addDays(3),
-      shifts =
+      initialShifts =
         """shift a,T1,02/01/17,00:00,23:59,20
         """.stripMargin
     )
 
     crunch.baseArrivalsInput.offer(forecastFlights)
 
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 12 seconds)
 
     val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
       forecastResult.crunchMinutes.values.toSet,

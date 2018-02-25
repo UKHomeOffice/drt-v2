@@ -50,7 +50,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
       val resultSummary = paxLoadsFromPortState(result, 2)
 
       val expected = Map("T1" -> Map(
@@ -81,7 +81,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
       val resultSummary = paxLoadsFromPortState(result, 5)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
@@ -120,7 +120,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.offer(flights)
 
-      val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
       val resultSummary = workLoadsFromPortState(result, 5)
 
 
@@ -151,14 +151,14 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ),
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          csvSplitsProvider = _ => Option(SplitRatios(
+          csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.25)
           )))
 
         crunch.liveArrivalsInput.offer(flights)
 
-        val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
         val resultSummary = paxLoadsFromPortState(result, 5)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
@@ -187,7 +187,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ),
           crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
           crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
-          csvSplitsProvider = _ => Option(SplitRatios(
+          csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.5)
           ))
@@ -200,10 +200,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ))
 
         crunch.baseArrivalsInput.offer(flights)
-        crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
-
         crunch.manifestsInput.offer(voyageManifests)
-        val result = crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+
+        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds)
         val resultSummary = paxLoadsFromPortState(result, 5)
 
         val expected = Map("T1" -> Map(

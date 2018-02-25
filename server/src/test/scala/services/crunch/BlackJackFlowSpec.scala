@@ -23,7 +23,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
-    val flights = Flights(List(flight))
+    val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(
         EeaDesk -> Map(
@@ -40,14 +40,14 @@ class BlackJackFlowSpec extends CrunchTestLike {
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate))),
       crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
+      initialBaseArrivals = initialBaseArrivals
     )
 
-    crunch.baseArrivalsInput.offer(flights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+    Thread.sleep(500)
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
-    val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+    val crunchMinutes = getLastMessageReceivedBy(crunch.liveTestProbe, 4 seconds) match {
       case PortState(_, c, _) => c
     }
     val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {
@@ -66,7 +66,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
-    val flights = Flights(List(flight))
+    val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(
         EeaDesk -> Map(
@@ -83,14 +83,14 @@ class BlackJackFlowSpec extends CrunchTestLike {
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate))),
       crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
+      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
+      initialBaseArrivals = initialBaseArrivals
     )
 
-    crunch.baseArrivalsInput.offer(flights)
-    crunch.liveTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+    Thread.sleep(500)
     crunch.actualDesksAndQueuesInput.offer(deskStats)
 
-    val crunchMinutes = crunch.liveTestProbe.expectMsgAnyClassOf(classOf[PortState]) match {
+    val crunchMinutes = getLastMessageReceivedBy(crunch.liveTestProbe, 4 seconds) match {
       case PortState(_, c, _) => c
     }
     val actDesks = crunchMinutes.values.toList.sortBy(_.minute).map(cm => {

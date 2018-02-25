@@ -64,7 +64,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         crunch.liveArrivalsInput.offer(flights)
 
-        val result = crunch.liveTestProbe.expectMsgAnyClassOf(5 seconds, classOf[PortState])
+        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
         val resultSummary = deskRecsFromPortState(result, 120)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(

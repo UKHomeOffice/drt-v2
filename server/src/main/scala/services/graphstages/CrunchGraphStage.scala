@@ -1,23 +1,19 @@
 package services.graphstages
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import akka.stream.{Attributes, FanInShape2, Inlet, Outlet}
-import controllers.SystemActors.SplitsProvider
+import akka.stream._
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
-import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
-import drt.shared.PaxTypes.{EeaMachineReadable, NonVisaNational, VisaNational}
-import drt.shared.Queues.{EGate, EeaDesk}
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services._
 import services.graphstages.Crunch.{log, _}
-import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
+import services.workloadcalculator.PaxLoadCalculator.Load
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.Map
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -35,22 +31,24 @@ class CrunchGraphStage(name: String,
                        expireAfterMillis: Long,
                        now: () => SDateLike,
                        maxDaysToCrunch: Int,
-                       manifestsUsed: Boolean = true,
+                       waitForManifests: Boolean = true,
                        minutesToCrunch: Int,
                        warmUpMinutes: Int,
                        useNationalityBasedProcessingTimes: Boolean)
-  extends GraphStage[FanInShape2[ArrivalsDiff, VoyageManifests, PortState]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, VoyageManifests, Seq[(Arrival, Option[ApiSplits])], PortState]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("SplitsIn.in")
+  val inSplitsPredictions: Inlet[Seq[(Arrival, Option[ApiSplits])]] = Inlet[Seq[(Arrival, Option[ApiSplits])]]("SplitsPredictionsIn.in")
   val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateOut.out")
-  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outCrunch)
+
+  override val shape = new FanInShape3(inArrivalsDiff, inManifests, inSplitsPredictions, outCrunch)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
     var waitingForArrivals: Boolean = true
-    var waitingForManifests: Boolean = manifestsUsed
+    var waitingForManifests: Boolean = waitForManifests
 
     var portStateOption: Option[PortState] = None
 
@@ -77,7 +75,7 @@ class CrunchGraphStage(name: String,
         if (!waitingForManifests && !waitingForArrivals) {
           portStateOption match {
             case Some(portState) =>
-              log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
+              log.info(s"Pushing crunched PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
               push(outCrunch, portState)
               portStateOption = None
             case None =>
@@ -87,10 +85,16 @@ class CrunchGraphStage(name: String,
           if (waitingForArrivals) log.info(s"Waiting for arrivals")
           if (waitingForManifests) log.info(s"Waiting for manifests")
         }
-        if (!hasBeenPulled(inManifests)) pull(inManifests)
-        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
+        pullAll()
       }
     })
+
+    def pullAll(): Unit = {
+      List(inManifests, inArrivalsDiff, inSplitsPredictions).foreach(in => if (!hasBeenPulled(in)) {
+        log.info(s"Pulling ${in.toString}")
+        pull(in)
+      })
+    }
 
     setHandler(inArrivalsDiff, new InHandler {
       override def onPush(): Unit = {
@@ -105,9 +109,9 @@ class CrunchGraphStage(name: String,
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-        } else log.info(s"No flight updates")
+        } else log.info(s"No updates due to flights")
 
-        if (!hasBeenPulled(inArrivalsDiff)) pull(inArrivalsDiff)
+        pullAll()
       }
     })
 
@@ -125,9 +129,48 @@ class CrunchGraphStage(name: String,
         if (flightsByFlightId != updatedFlights) {
           crunchIfAppropriate(updatedFlights, flightsByFlightId)
           flightsByFlightId = updatedFlights
-        } else log.info(s"No splits updates")
+        } else log.info(s"No updates due to API splits")
 
-        if (!hasBeenPulled(inManifests)) pull(inManifests)
+        pullAll()
+      }
+    })
+
+    setHandler(inSplitsPredictions, new InHandler {
+      override def onPush(): Unit = {
+        log.debug(s"inSplitsPredictions onPush called")
+        val predictions = grab(inSplitsPredictions)
+
+        log.info(s"Grabbed ${predictions.length} predictions")
+        val updatedFlights = predictions
+          .collect {
+            case (arrival, Some(splits)) => (arrival, splits)
+          }
+          .foldLeft(flightsByFlightId) {
+            case (existingFlightsByFlightId, (arrival, splits)) =>
+              val maybeFlightWithId: Option[(Int, ApiFlightWithSplits)] = existingFlightsByFlightId.find {
+                case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival == arrival
+              }
+              maybeFlightWithId match {
+                case Some((id, flightWithSplits)) =>
+                  val splitsWithPaxNumbers = splits.copy(splits = splits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrival))), splitStyle = PaxNumbers)
+                  val fullApiSplits = splitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrival, splitsWithPaxNumbers.splits))
+                  val updatedSplitsSet = flightWithSplits.splits.filterNot {
+                    case ApiSplits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
+                    case _ => false
+                  } + fullApiSplits
+
+                  existingFlightsByFlightId.updated(id, flightWithSplits.copy(splits = updatedSplitsSet))
+
+                case None => existingFlightsByFlightId
+              }
+          }
+
+        if (flightsByFlightId != updatedFlights) {
+          crunchIfAppropriate(updatedFlights, flightsByFlightId)
+          flightsByFlightId = updatedFlights
+        } else log.info(s"No updates due to splits predictions")
+
+        pullAll()
       }
     })
 
@@ -165,13 +208,15 @@ class CrunchGraphStage(name: String,
 
             case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
               (updates + 1, additions, flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight)))
+            case _ =>
+              (updates, additions, flightsSoFar)
           }
       }
 
       log.info(s"${updatedFlights.size} flights after updates. $updatesCount updates & $additionsCount additions")
 
       val minusExpired = purgeExpiredArrivals(updatedFlights)
-      log.info(s"${minusExpired.size} flights after removing expired")
+      log.debug(s"${minusExpired.size} flights after removing expired")
 
       minusExpired
     }
@@ -184,7 +229,7 @@ class CrunchGraphStage(name: String,
         case None => newFlightWithSplits
         case Some(vm) =>
           manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
-          log.info(s"Found buffered manifest to apply to new flight, and removed from buffer")
+          log.debug(s"Found buffered manifest to apply to new flight, and removed from buffer")
           removeManifestsOlderThan(twoDaysAgo)
           updateFlightWithManifests(vm, newFlightWithSplits)
       }
@@ -220,7 +265,7 @@ class CrunchGraphStage(name: String,
 
           matchingFlight match {
             case None =>
-              log.info(s"Stashing VoyageManifest in case flight is seen later")
+              log.debug(s"Stashing VoyageManifest in case flight is seen later")
               val idx = s"${newManifest.VoyageNumber}-$vmMillis"
               val existingManifests = manifestsBuffer.getOrElse(idx, Set())
               val updatedManifests = existingManifests + newManifest
@@ -244,15 +289,14 @@ class CrunchGraphStage(name: String,
 
       log.info(s"Requesting crunch for ${scheduledFlightsInCrunchWindow.length} flights after flights update")
       val uniqueFlights = groupFlightsByCodeShares(scheduledFlightsInCrunchWindow).map(_._1)
-      log.info(s"${uniqueFlights.length} unique flights after filtering for code shares")
       val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(airportConfig.defaultProcessingTimes.head._2, useNationalityBasedProcessingTimes)(uniqueFlights)
       val earliestMinute: MillisSinceEpoch = newFlightSplitMinutesByFlight.values.flatMap(_.map(identity)).toList match {
         case fsm if fsm.nonEmpty => fsm.map(_.minute).min
         case _ => 0L
       }
-      log.info(s"Earliest flight split minute: ${SDate(earliestMinute).toLocalDateTimeString()}")
+      log.debug(s"Earliest flight split minute: ${SDate(earliestMinute).toLocalDateTimeString()}")
       val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
-      log.info(s"Crunching $numberOfMinutes minutes")
+      log.debug(s"Crunching $numberOfMinutes minutes")
       val crunchMinutes = crunchFlightSplitMinutes(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightSplitMinutesByFlight)
 
       Option(PortState(flights = flights, crunchMinutes = crunchMinutes, staffMinutes = Map()))
@@ -331,7 +375,7 @@ class CrunchGraphStage(name: String,
           })
           crunchMinutes.map(cm => (cm.key, cm)).toMap
         case Failure(t) =>
-          log.info(s"Crunch failed: $t")
+          log.warn(s"Crunch failed: $t")
           Map[Int, CrunchMinute]()
       }
       queueCrunchMinutes
@@ -423,14 +467,20 @@ class CrunchGraphStage(name: String,
     val updated = manifests
       .mapValues(_.filterNot(expired))
       .filterNot { case (_, ms) => ms.isEmpty }
-    log.info(s"Purged ${manifests.size - updated.size} expired manifests")
+
+    val numPurged = manifests.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged expired manifests")
+
     updated
   }
 
   def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime)
     val updated = arrivals.filterNot { case (_, a) => expired(a) }
-    log.info(s"Purged ${arrivals.size - updated.size} expired arrivals")
+
+    val numPurged = arrivals.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals")
+
     updated
   }
 

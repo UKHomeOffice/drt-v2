@@ -9,6 +9,8 @@ import services.graphstages.Crunch._
 import scala.concurrent.duration._
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
+  sequential
+  isolated
 
   val slot0To14 = 0 * 60000
   val slot15To29 = 15 * 60000
@@ -24,24 +26,23 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val weekbeginning = "2017-01-02T00:00Z"
 
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = 1, schDt = day1, iata = "BA0001", terminal = "T1", actPax = 5)
-    val forecastFlights = Flights(List(forecastArrivalDay1))
+    val forecastFlights = Set(forecastArrivalDay1)
 
     val crunch = runCrunchGraph(
       now = () => SDate(weekbeginning),
       airportConfig = airportConfig.copy(
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      minutesToCrunch = 1440,
+      minutesToCrunch = 60,
       crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addDays(3),
-      shifts =
+      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addMinutes(60),
+      initialShifts =
         """shift a,T1,02/01/17,00:00,23:59,20
-        """.stripMargin
+        """.stripMargin,
+      initialBaseArrivals = forecastFlights
     )
 
-    crunch.baseArrivalsInput.offer(forecastFlights)
-
-    val forecastResult = crunch.forecastTestProbe.expectMsgAnyClassOf(30 seconds, classOf[PortState])
+    val forecastResult = getLastMessageReceivedBy(crunch.forecastTestProbe, 5 seconds)
 
     val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
       forecastResult.crunchMinutes.values.toSet,
