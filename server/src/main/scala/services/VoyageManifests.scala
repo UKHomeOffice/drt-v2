@@ -125,6 +125,7 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
             log.warn(s"Failed to offer new manifests. QueueOfferResult: ${queueOfferResult.getClass}")
           case Failure(t) =>
             log.warn(s"Failed to offer new manifests to the manifests source: $t")
+          case _ =>
         }
       } else {
         log.info(s"No new manifests")
