@@ -49,7 +49,7 @@ object RunnableCrunch {
       baseArrivalsSource.async,
       fcstArrivalsSource.async,
       liveArrivalsSource.async,
-      manifestsSource.async,
+      manifestsSource,
       shiftsSource.async,
       fixedPointsSource.async,
       staffMovementsSource.async,
@@ -59,7 +59,7 @@ object RunnableCrunch {
         baseArrivalsSourceAsync,
         fcstArrivalsSourceAsync,
         liveArrivalsSourceAsync,
-        manifestsSourceAsync,
+        manifestsSource,
         shiftsSourceAsync,
         fixedPointsSourceAsync,
         staffMovementsSourceAsync,
@@ -108,7 +108,7 @@ object RunnableCrunch {
         splitsPredictorStageAsync.out ~> fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
                                          fanOutSplitsPredictions ~> fcstCrunchStageAsync.in2
 
-        manifestsSourceAsync ~> fanOutManifests ~> liveCrunchStageAsync.in1
+        manifestsSource ~> fanOutManifests ~> liveCrunchStageAsync.in1
                                 fanOutManifests ~> fcstCrunchStageAsync.in1
 
         shiftsSourceAsync.out ~> fanOutShifts ~> liveStaffingStageAsync.in1

@@ -59,27 +59,25 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
 
   def start(): Unit = {
     val askableActor: AskableActorRef = voyageManifestsActor
-    val futureVms = askableActor
-      .ask(GetState)(new Timeout(5 minutes))
-    futureVms
-      .onComplete {
-        case Success(something) =>
-          something match {
-            case VoyageManifestState(manifests, latestFilename) =>
-              manifestsState = manifests
-              log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
-              manifestsSource.offer(VoyageManifests(manifests)).onComplete {
-                case Success(_) => fetchAndPushManifests(latestFilename)
-                case Failure(t) => log.warn(s"Failed to offer initial manifests to the manifests source: $t")
-              }
-            case unexpected =>
-              log.warn(s"Received unexpected ${unexpected.getClass}")
-              fetchAndPushManifests("")
-          }
-        case Failure(t) =>
-          log.warn(s"Didn't receive voyage manifest state from actor: $t")
-          fetchAndPushManifests("")
-      }
+    val futureVms = askableActor.ask(GetState)(new Timeout(5 minutes))
+    futureVms.onComplete {
+      case Success(VoyageManifestState(manifests, latestFilename)) =>
+        manifestsState = manifests
+        log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
+        manifestsSource.offer(VoyageManifests(manifests)).onComplete {
+          case Success(Enqueued) => fetchAndPushManifests(latestFilename)
+          case Success(offerResult) =>
+            log.info(s"Failed to enqueue initial manifests offer: ${offerResult.getClass}")
+            fetchAndPushManifests(latestFilename)
+          case Failure(t) => log.warn(s"Failed to offer initial manifests to the manifests source: $t")
+        }
+      case Success(unexpected) =>
+        log.warn(s"Received unexpected ${unexpected.getClass}")
+        fetchAndPushManifests("")
+      case Failure(t) =>
+        log.warn(s"Didn't receive voyage manifest state from actor: $t")
+        fetchAndPushManifests("")
+    }
     futureVms.recover {
       case t =>
         log.warn(s"Didn't receive voyage manifest state from actor: $t")
