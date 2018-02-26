@@ -13,6 +13,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -43,18 +44,20 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveArrivalsInput.offer(inputFlightsAfter)
-
-    val flightsAfterUpdate = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds) match {
-      case PortState(flights, _, _) => flights.values.map(_.copy(lastUpdated = None))
-    }
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,
       Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
 
-    flightsAfterUpdate === expectedFlights
+    crunch.liveTestProbe.fishForMessage(30 seconds) {
+      case ps: PortState =>
+        val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
+        flightsAfterUpdate == expectedFlights
+    }
+
+    true
   }
 
   "Given a noop update to an existing flight followed by a real update " +
@@ -80,18 +83,20 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
       crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
     )
 
-    crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveArrivalsInput.offer(inputFlightsBefore)
-    crunch.liveArrivalsInput.offer(inputFlightsAfter)
-
-    val flightsAfterUpdate = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds) match {
-      case PortState(flights, _, _) => flights.values.map(_.copy(lastUpdated = None))
-    }
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
+    offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,
       Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
 
-    flightsAfterUpdate === expectedFlights
+    crunch.liveTestProbe.fishForMessage(30 seconds) {
+      case ps: PortState =>
+        val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
+        flightsAfterUpdate == expectedFlights
+    }
+
+    true
   }
 }

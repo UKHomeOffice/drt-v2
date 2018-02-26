@@ -21,7 +21,7 @@ class WorkloadSpec extends Specification {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val emptyNatProcTimes: Map[String, Double] = Map()
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, emptyNatProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, emptyNatProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -43,7 +43,7 @@ class WorkloadSpec extends Specification {
     val gbrSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -65,7 +65,7 @@ class WorkloadSpec extends Specification {
     val gbrSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -87,7 +87,7 @@ class WorkloadSpec extends Specification {
     val gbrSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -110,7 +110,7 @@ class WorkloadSpec extends Specification {
     val fraSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds, "FRA" -> fraSeconds)
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -141,7 +141,7 @@ class WorkloadSpec extends Specification {
     val zaSeconds = 100d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds, "ZAR" -> zaSeconds)
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -177,7 +177,7 @@ class WorkloadSpec extends Specification {
       "ZAR" -> zaSeconds
     )
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
 
@@ -213,7 +213,7 @@ class WorkloadSpec extends Specification {
       "ZAR" -> zaSeconds
     )
     val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(arrival, splits, procTimes, natProcTimes, true)
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .map(m => (m.paxType, m.queueName, m.workLoad))
 
     val eeaDeskWorkloadInSeconds = (gbrSeconds * 10 + fraSeconds * 2) / 60

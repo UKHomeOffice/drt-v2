@@ -18,13 +18,24 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
+      var haveGrabbed: Boolean = false
 
       setHandler(in, new InHandler {
-        override def onPush(): Unit = {}
+        override def onPush(): Unit = {
+          grab(in)
+          haveGrabbed = true
+          if (isAvailable(in)) pull(in)
+        }
       })
 
       setHandler(out, new OutHandler {
-        override def onPull(): Unit = {}
+        override def onPull(): Unit = {
+          if (haveGrabbed && isAvailable(out)) {
+            push(out, Seq())
+            haveGrabbed = false
+          }
+          if (isAvailable(in)) pull(in)
+        }
       })
     }
 }
@@ -47,7 +58,6 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
       setHandler(in, new InHandler {
         override def onPush(): Unit = {
           log.info(s"onPush")
-          tryPushing()
 
           if (predictionsToPush.isEmpty) {
             val arrivalsByTerminal = grab(in).groupBy(_.Terminal)
@@ -56,6 +66,7 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
           } else {
             log.info(s"ignoring onPush() as we've not yet emitted our current arrivals")
           }
+          tryPushing()
 
           if (!hasBeenPulled(in)) pull(in)
         }
@@ -79,7 +90,7 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
             predictionsToPush = None
 
           case Some(arrivalsToPush) =>
-            log.info(s"Can't push ${arrivalsToPush.length} arrivals because outlet isn't available")
+            log.info(s"Can't push ${arrivalsToPush.length} arrivals with prediction. outlet not available")
         }
       }
 

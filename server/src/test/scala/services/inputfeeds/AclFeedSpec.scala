@@ -81,7 +81,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(aclFlight)
+      offerAndWait(crunch.baseArrivalsInput, aclFlight)
       val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
       val flightsResult = result.flights.values.map(_.apiFlight)
 
@@ -108,8 +108,8 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(aclFlights)
-      crunch.liveArrivalsInput.offer(liveFlights)
+      offerAndWait(crunch.baseArrivalsInput, aclFlights)
+      offerAndWait(crunch.liveArrivalsInput, liveFlights)
       val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
       val flightsResult = result.flights.values.map(_.apiFlight)
 
@@ -141,7 +141,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
+      offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
 
       val lastMessage = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
       val flightsResult = lastMessage.flights.values.map(_.apiFlight).toSet
@@ -171,7 +171,7 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(Flights(newLive.toList))
+      offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
       val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
 
@@ -204,8 +204,8 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
-      crunch.liveArrivalsInput.offer(Flights(newLive.toList))
+      offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
+      offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
       val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
 

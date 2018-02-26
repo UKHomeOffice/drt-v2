@@ -81,6 +81,7 @@ class StaffingStage(name: String,
         override def onPush(): Unit = {
           grabAllAvailable()
           runSimulationAndPush(eGateBankSize)
+          pullAll()
         }
       })
 
@@ -88,6 +89,7 @@ class StaffingStage(name: String,
         override def onPush(): Unit = {
           grabAllAvailable()
           runSimulationAndPush(eGateBankSize)
+          pullAll()
         }
       })
 
@@ -95,6 +97,7 @@ class StaffingStage(name: String,
         override def onPush(): Unit = {
           grabAllAvailable()
           runSimulationAndPush(eGateBankSize)
+          pullAll()
         }
       })
 
@@ -102,11 +105,15 @@ class StaffingStage(name: String,
         override def onPush(): Unit = {
           grabAllAvailable()
           runSimulationAndPush(eGateBankSize)
+          pullAll()
         }
       })
 
       setHandler(outCrunch, new OutHandler {
-        override def onPull(): Unit = pushAndPull()
+        override def onPull(): Unit = {
+          pushIfAvailable()
+          pullAll()
+        }
       })
 
       def removeExpiredMinutes(portState: PortState): PortState = {
@@ -234,7 +241,7 @@ class StaffingStage(name: String,
         }
         stateAwaitingPush = true
 
-        pushAndPull()
+        pushIfAvailable()
       }
 
       def addSimulationNumbers(crunchMinutesWithDeployments: Map[Int, CrunchMinute], eGateBankSize: Int): Map[Int, CrunchMinute] = {
@@ -306,7 +313,7 @@ class StaffingStage(name: String,
           }
       }
 
-      def pushAndPull(): Unit = {
+      def pushIfAvailable(): Unit = {
         if (isAvailable(outCrunch))
           (portStateWithSimulation, stateAwaitingPush) match {
             case (None, _) =>
@@ -320,7 +327,13 @@ class StaffingStage(name: String,
           }
         else log.info(s"outCrunch not available to push")
 
-        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
+      }
+
+      def pullAll(): Unit = {
+        allInlets.foreach(inlet => if (!hasBeenPulled(inlet)) {
+          log.info(s"${inlet.toString} has not been pulled so pulling now")
+          pull(inlet)
+        })
       }
     }
   }

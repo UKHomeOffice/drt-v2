@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, Minute, StaffMinute}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -95,6 +95,16 @@ object Crunch {
       case (id, f) if oldFlightsById.get(id).isEmpty || !f.equals(oldFlightsById(id)) => f
     }.toSet
 
+    toUpdate.map(_.apiFlight).foreach(ua => {
+      oldFlightsById.get(ua.uniqueId).map(_.apiFlight).foreach(oa => {
+        if (ua.EstDT != oa.EstDT) log.info(s"${ua.IATA} changed estimated ${oa.EstDT} -> ${ua.EstDT}")
+        if (ua.ActDT != oa.ActDT) log.info(s"${ua.IATA} changed touchdown ${oa.ActDT} -> ${ua.ActDT}")
+        if (ua.EstChoxDT != oa.EstChoxDT) log.info(s"${ua.IATA} changed estchox   ${oa.EstChoxDT} -> ${ua.EstChoxDT}")
+        if (ua.ActChoxDT != oa.ActChoxDT) log.info(s"${ua.IATA} changed actchox   ${oa.ActChoxDT} -> ${ua.ActChoxDT}")
+        if (ua.ActPax != oa.ActPax) log.info(s"${ua.IATA} changed actpax   ${oa.ActPax} -> ${ua.ActPax}")
+      })
+    })
+
     Tuple2(toRemove, toUpdate)
   }
 
@@ -182,9 +192,47 @@ object Crunch {
 
   def purgeExpiredMinutes[M <: Minute](minutes: Map[Int, M], now: () => SDateLike, expireAfterMillis: MillisSinceEpoch): Map[Int, M] = {
     val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
-    val updated = minutes.filterNot { case (_, cm) => expired(cm)}
+    val updated = minutes.filterNot { case (_, cm) => expired(cm) }
     val numPurged = minutes.size - updated.size
     if (numPurged > 0) log.info(s"Purged ${numPurged} expired CrunchMinutes")
     updated
+  }
+
+  def mergeArrivalsDiffs(diff1: ArrivalsDiff, diff2: ArrivalsDiff): ArrivalsDiff = {
+    val mergedUpdates = diff2.toUpdate
+      .foldLeft(diff1.toUpdate) {
+        case (soFar, newArrival) => soFar.filterNot(_.uniqueId == newArrival.uniqueId) + newArrival
+      }
+    val mergedRemovals = diff2.toRemove ++ diff1.toRemove
+    ArrivalsDiff(mergedUpdates, mergedRemovals)
+  }
+
+  def mergeMaybeArrivalsDiffs(maybeDiff1: Option[ArrivalsDiff], maybeDiff2: Option[ArrivalsDiff]): Option[ArrivalsDiff] = {
+    (maybeDiff1, maybeDiff2) match {
+      case (None, None) => None
+      case (Some(diff1), None) => Option(diff1)
+      case (None, Some(diff2)) => Option(diff2)
+      case (Some(diff1), Some(diff2)) =>
+        log.info(s"Merging ArrivalsDiffs")
+        Option(mergeArrivalsDiffs(diff1, diff2))
+    }
+  }
+
+  def mergeMapOfIndexedThings[X](things1: Map[Int, X], things2: Map[Int, X]): Map[Int, X] = things2.foldLeft(things1) {
+    case (soFar, (id, newThing)) => soFar.updated(id, newThing)
+  }
+
+  def mergeMaybePortStates(maybePortState1: Option[PortState], maybePortState2: Option[PortState]): Option[PortState] = {
+    (maybePortState1, maybePortState2) match {
+      case (None, None) => None
+      case (Some(ps), None) => Option(ps)
+      case (None, Some(ps)) => Option(ps)
+      case (Some(ps1), Some(ps2)) =>
+        val mergedFlights = mergeMapOfIndexedThings(ps1.flights, ps2.flights)
+        val mergedCrunchMinutes = mergeMapOfIndexedThings(ps1.crunchMinutes, ps2.crunchMinutes)
+        val mergedStaffMinutes = mergeMapOfIndexedThings(ps1.staffMinutes, ps2.staffMinutes)
+
+        Option(PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes))
+    }
   }
 }

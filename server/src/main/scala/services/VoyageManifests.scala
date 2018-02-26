@@ -9,6 +9,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
+import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete, StreamConverters}
 import akka.util.{ByteString, Timeout}
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
@@ -58,25 +59,25 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
 
   def start(): Unit = {
     val askableActor: AskableActorRef = voyageManifestsActor
-    val futureVms = askableActor
-      .ask(GetState)(new Timeout(5 minutes))
-    futureVms
-      .onComplete {
-        case Success(something) =>
-          something match {
-            case VoyageManifestState(manifests, latestFilename) =>
-              manifestsState = manifests
-              log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
-              manifestsSource.offer(VoyageManifests(manifests))
-              fetchAndPushManifests(latestFilename)
-            case unexpected =>
-              log.warn(s"Received unexpected ${unexpected.getClass}")
-              fetchAndPushManifests("")
-          }
-        case Failure(t) =>
-          log.warn(s"Didn't receive voyage manifest state from actor: $t")
-          fetchAndPushManifests("")
-      }
+    val futureVms = askableActor.ask(GetState)(new Timeout(5 minutes))
+    futureVms.onComplete {
+      case Success(VoyageManifestState(manifests, latestFilename)) =>
+        manifestsState = manifests
+        log.info(s"Setting initial state with ${manifestsState.size} manifests, and offering to the manifests source")
+        manifestsSource.offer(VoyageManifests(manifests)).onComplete {
+          case Success(Enqueued) => fetchAndPushManifests(latestFilename)
+          case Success(offerResult) =>
+            log.info(s"Failed to enqueue initial manifests offer: ${offerResult.getClass}")
+            fetchAndPushManifests(latestFilename)
+          case Failure(t) => log.warn(s"Failed to offer initial manifests to the manifests source: $t")
+        }
+      case Success(unexpected) =>
+        log.warn(s"Received unexpected ${unexpected.getClass}")
+        fetchAndPushManifests("")
+      case Failure(t) =>
+        log.warn(s"Didn't receive voyage manifest state from actor: $t")
+        fetchAndPushManifests("")
+    }
     futureVms.recover {
       case t =>
         log.warn(s"Didn't receive voyage manifest state from actor: $t")
@@ -117,7 +118,13 @@ case class VoyageManifestsProvider(bucketName: String, portCode: String, manifes
       if (newManifests.nonEmpty) {
         manifestsState = manifestsState ++ newManifests
         log.info(s"${newManifests.size} manifests offered")
-        manifestsSource.offer(VoyageManifests(newManifests))
+        manifestsSource.offer(VoyageManifests(newManifests)).onComplete {
+          case Success(queueOfferResult) if queueOfferResult != Enqueued =>
+            log.warn(s"Failed to offer new manifests. QueueOfferResult: ${queueOfferResult.getClass}")
+          case Failure(t) =>
+            log.warn(s"Failed to offer new manifests to the manifests source: $t")
+          case _ =>
+        }
       } else {
         log.info(s"No new manifests")
       }

@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.{ActualDeskStats, ApiSplits, Arrival, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import services.ArrivalsState
 
 object RunnableCrunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -15,13 +16,17 @@ object RunnableCrunch {
                                          baseArrivalsSource: Source[Flights, SA],
                                          fcstArrivalsSource: Source[Flights, SA],
                                          liveArrivalsSource: Source[Flights, SA],
+                                         baseArrivalsActor: ActorRef,
+                                         fcstArrivalsActor: ActorRef,
+                                         liveArrivalsActor: ActorRef,
                                          manifestsSource: Source[VoyageManifests, SVM],
                                          splitsPredictorStage: SplitsPredictorBase = new DummySplitsPredictor(),
                                          shiftsSource: Source[String, SS],
                                          fixedPointsSource: Source[String, SFP],
                                          staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                          actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                                         arrivalsStage: ArrivalsGraphStage,
+                                         arrivalsStageLive: ArrivalsGraphStage,
+                                         arrivalsStageForecast: ArrivalsGraphStage,
                                          actualDesksStage: ActualDesksAndWaitTimesGraphStage,
                                          liveCrunchStage: CrunchGraphStage,
                                          liveStaffingStage: StaffingStage,
@@ -32,78 +37,98 @@ object RunnableCrunch {
                                        ): RunnableGraph[(SA, SA, SA, SVM, SS, SFP, SMM, SAD)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
+
     val liveCrunchSink = Sink.actorRef(liveCrunchStateActor, "completed")
     val fcstCrunchSink = Sink.actorRef(fcstCrunchStateActor, "completed")
 
+    val baseArrivalsSink = Sink.actorRef(baseArrivalsActor, "completed")
+    val fcstArrivalsSink = Sink.actorRef(fcstArrivalsActor, "completed")
+    val liveArrivalsSink = Sink.actorRef(liveArrivalsActor, "completed")
+
     val graph = GraphDSL.create(
-      baseArrivalsSource,
-      fcstArrivalsSource,
-      liveArrivalsSource,
+      baseArrivalsSource.async,
+      fcstArrivalsSource.async,
+      liveArrivalsSource.async,
       manifestsSource,
-      shiftsSource,
-      fixedPointsSource,
-      staffMovementsSource,
-      actualDesksAndWaitTimesSource
+      shiftsSource.async,
+      fixedPointsSource.async,
+      staffMovementsSource.async,
+      actualDesksAndWaitTimesSource.async
     )((_, _, _, _, _, _, _, _)) { implicit builder =>
       (
-        baseArrivalsSource,
-        fcstArrivalsSource,
-        liveArrivalsSource,
+        baseArrivalsSourceAsync,
+        fcstArrivalsSourceAsync,
+        liveArrivalsSourceAsync,
         manifestsSource,
-        shiftsSource,
-        fixedPointsSource,
-        staffMovementsSource,
-        desksAndWaitTimesSource
+        shiftsSourceAsync,
+        fixedPointsSourceAsync,
+        staffMovementsSourceAsync,
+        desksAndWaitTimesSourceAsync
       ) =>
-        val arrivalsStageAsync = builder.add(arrivalsStage.async)
+        val liveArrivalsStageAsync = builder.add(arrivalsStageLive.async)
+        val fcstArrivalsStageAsync = builder.add(arrivalsStageForecast.async)
         val liveCrunchStageAsync = builder.add(liveCrunchStage.async)
         val liveStaffingStageAsync = builder.add(liveStaffingStage.async)
-        val liveCrunchOut = builder.add(liveCrunchSink)
+        val liveCrunchOutAsync = builder.add(liveCrunchSink.async)
         val fcstCrunchStageAsync = builder.add(fcstCrunchStage.async)
         val fcstStaffingStageAsync = builder.add(fcstStaffingStage.async)
-        val fcstCrunchOut = builder.add(fcstCrunchSink)
+        val fcstCrunchOutAsync = builder.add(fcstCrunchSink.async)
         val actualDesksStageAsync = builder.add(actualDesksStage.async)
         val splitsPredictorStageAsync = builder.add(splitsPredictorStage.async)
 
-        val fanOutArrivalsDiff = builder.add(Broadcast[ArrivalsDiff](3).async)
+        val baseArrivalsOut = builder.add(baseArrivalsSink.async)
+        val fcstArrivalsOut = builder.add(fcstArrivalsSink.async)
+        val liveArrivalsOut = builder.add(liveArrivalsSink.async)
+
+        val fanOutLiveArrivalsDiff = builder.add(Broadcast[ArrivalsDiff](2).async)
         val fanOutShifts = builder.add(Broadcast[String](2).async)
         val fanOutFixedPoints = builder.add(Broadcast[String](2).async)
         val fanOutStaffMovements = builder.add(Broadcast[Seq[StaffMovement]](2).async)
         val fanOutManifests = builder.add(Broadcast[VoyageManifests](2).async)
         val fanOutSplitsPredictions = builder.add(Broadcast[Seq[(Arrival, Option[ApiSplits])]](2).async)
+        val fanOutBase = builder.add(Broadcast[Flights](3))
+        val fanOutFcst = builder.add(Broadcast[Flights](3))
+        val fanOutLive = builder.add(Broadcast[Flights](3))
 
-        baseArrivalsSource ~> arrivalsStageAsync.in0
-        fcstArrivalsSource ~> arrivalsStageAsync.in1
-        liveArrivalsSource ~> arrivalsStageAsync.in2
+        baseArrivalsSourceAsync ~> fanOutBase ~> liveArrivalsStageAsync.in0
+                                   fanOutBase ~> fcstArrivalsStageAsync.in0
+                                   fanOutBase.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> baseArrivalsOut
+        fcstArrivalsSourceAsync ~> fanOutFcst ~> liveArrivalsStageAsync.in1
+                                   fanOutFcst ~> fcstArrivalsStageAsync.in1
+                                   fanOutFcst.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> fcstArrivalsOut
+        liveArrivalsSourceAsync ~> fanOutLive ~> liveArrivalsStageAsync.in2
+                                   fanOutLive ~> fcstArrivalsStageAsync.in2
+                                   fanOutLive.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> liveArrivalsOut
 
-        arrivalsStageAsync.out ~> fanOutArrivalsDiff ~> liveCrunchStageAsync.in0
-                                  fanOutArrivalsDiff ~> fcstCrunchStageAsync.in0
-                                  fanOutArrivalsDiff.map(_.toUpdate.toList) ~> splitsPredictorStageAsync
+        liveArrivalsStageAsync.out ~> fanOutLiveArrivalsDiff ~> liveCrunchStageAsync.in0
+                                      fanOutLiveArrivalsDiff.map(_.toUpdate.toList) ~> splitsPredictorStageAsync
+
+        fcstArrivalsStageAsync.out ~> fcstCrunchStageAsync.in0
 
         splitsPredictorStageAsync.out ~> fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
                                          fanOutSplitsPredictions ~> fcstCrunchStageAsync.in2
 
         manifestsSource ~> fanOutManifests ~> liveCrunchStageAsync.in1
-                           fanOutManifests ~> fcstCrunchStageAsync.in1
+                                fanOutManifests ~> fcstCrunchStageAsync.in1
 
-        shiftsSource.out ~> fanOutShifts ~> liveStaffingStageAsync.in1
-                            fanOutShifts ~> fcstStaffingStageAsync.in1
+        shiftsSourceAsync.out ~> fanOutShifts ~> liveStaffingStageAsync.in1
+                                 fanOutShifts ~> fcstStaffingStageAsync.in1
 
-        fixedPointsSource.out ~> fanOutFixedPoints ~> liveStaffingStageAsync.in2
-                                 fanOutFixedPoints ~> fcstStaffingStageAsync.in2
+        fixedPointsSourceAsync.out ~> fanOutFixedPoints ~> liveStaffingStageAsync.in2
+                                      fanOutFixedPoints ~> fcstStaffingStageAsync.in2
 
-        staffMovementsSource.out ~> fanOutStaffMovements ~> liveStaffingStageAsync.in3
-                                    fanOutStaffMovements ~> fcstStaffingStageAsync.in3
+        staffMovementsSourceAsync.out ~> fanOutStaffMovements ~> liveStaffingStageAsync.in3
+                                         fanOutStaffMovements ~> fcstStaffingStageAsync.in3
 
         liveCrunchStageAsync.out ~> liveStaffingStageAsync.in0
 
-        desksAndWaitTimesSource.out ~> actualDesksStageAsync.in1
+        desksAndWaitTimesSourceAsync.out ~> actualDesksStageAsync.in1
         liveStaffingStageAsync.out ~> actualDesksStageAsync.in0
 
-        actualDesksStageAsync.out ~> liveCrunchOut
+        actualDesksStageAsync.out ~> liveCrunchOutAsync
 
         fcstCrunchStageAsync.out ~> fcstStaffingStageAsync.in0
-        fcstStaffingStageAsync.out ~> fcstCrunchOut
+        fcstStaffingStageAsync.out ~> fcstCrunchOutAsync
 
         ClosedShape
     }

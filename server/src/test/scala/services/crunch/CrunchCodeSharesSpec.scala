@@ -35,14 +35,17 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
-
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 15)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 15)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "Given flights some of which are code shares with each other " +
@@ -67,10 +70,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
-
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 30)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map(
         "T1" -> Map(Queues.EeaDesk -> Seq(
@@ -80,7 +80,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 30)
+          resultSummary == expected
+      }
+
+      true
     }
   }
 

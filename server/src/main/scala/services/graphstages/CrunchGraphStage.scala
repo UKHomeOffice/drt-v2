@@ -182,7 +182,9 @@ class CrunchGraphStage(name: String,
           val crunchStart = crunchStartFromFirstPcp(earliest)
           val crunchEnd = crunchEndFromLastPcp(latest)
           log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
-          portStateOption = crunch(updatedFlights, crunchStart, crunchEnd)
+          val lastCrunchPortState = portStateOption
+          val newCrunchPortState = crunch(updatedFlights, crunchStart, crunchEnd)
+          portStateOption = Crunch.mergeMaybePortStates(lastCrunchPortState, newCrunchPortState)
           pushStateIfReady()
       }
     }
@@ -311,7 +313,7 @@ class CrunchGraphStage(name: String,
               log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
               push(outCrunch, portState)
               portStateOption = None
-            }
+            } else log.info(s"outCrunch not available to push")
         }
       } else {
         if (waitingForArrivals) log.info(s"Waiting for arrivals")
@@ -427,8 +429,8 @@ class CrunchGraphStage(name: String,
 
     def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double], useNationalityBasedProcessingTimes: Boolean)(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
       flightsWithSplits.map {
-        case ApiFlightWithSplits(flight, splits, _) =>
-          (flight.uniqueId, WorkloadCalculator.flightToFlightSplitMinutes(flight, splits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes))
+        case flightWithSplits: ApiFlightWithSplits =>
+          (flightWithSplits.apiFlight.uniqueId, WorkloadCalculator.flightToFlightSplitMinutes(flightWithSplits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes))
       }.toMap
     }
 
