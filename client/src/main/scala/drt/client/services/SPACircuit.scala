@@ -6,12 +6,16 @@ import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
+import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
+import org.scalajs.dom
+import org.scalajs.dom.XMLHttpRequest
+import org.scalajs.dom.ext.Ajax
 
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
@@ -95,6 +99,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
 
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
+  val loginCheckDelay: FiniteDuration = 30 seconds
 }
 
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
@@ -104,12 +109,10 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
       updated(Pending(), Effect(AjaxClient[Api].airportConfiguration().call().map(UpdateAirportConfig).recoverWith {
         case _ =>
           log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(GetAirportConfigAfter(PollDelay.recoveryDelay))
+          Future(RetryActionAfter(GetAirportConfig(), PollDelay.recoveryDelay))
       }))
     case UpdateAirportConfig(configHolder) =>
       updated(Ready(configHolder))
-    case GetAirportConfigAfter(delay) =>
-      effectOnly(Effect(Future(GetAirportConfig())).after(delay))
   }
 }
 
@@ -132,12 +135,12 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
                 log.info(s"Got ${cu.flights.size} flights, ${cu.minutes.size} minutes")
                 UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
               case None =>
-                GetCrunchUpdatesAfter(crunchUpdatesRequestFrequency)
+                RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
             }
             .recoverWith {
               case f =>
-                log.error(s"Update request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-                Future(GetCrunchUpdatesAfter(PollDelay.recoveryDelay))
+                log.error(s"Update request failed. Re-requesting after ${PollDelay.recoveryDelay} (${f.getMessage})")
+                Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
             }
 
         case vm =>
@@ -160,11 +163,11 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
               UpdateCrunchStateFromCrunchState(cs)
             case None =>
               log.info(s"CrunchState not available")
-              GetCrunchStateAfter(crunchUpdatesRequestFrequency)
+              RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
           }.recoverWith {
             case f =>
               log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-              Future(GetCrunchStateAfter(PollDelay.recoveryDelay))
+              Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
           }
       }
       val crunchState = modelRW.value._1
@@ -179,11 +182,6 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
         case _ =>
           effectOnly(effects)
       }
-
-    case GetCrunchStateAfter(delay) =>
-      log.info(s"Re-requesting CrunchState for ${viewMode().time.prettyDateTime()}")
-      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
-      effectOnly(getCrunchStateAfterDelay)
 
     case UpdateCrunchStateFromCrunchState(crunchState: CrunchState) =>
       val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
@@ -215,10 +213,6 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
     case SetCrunchPending() =>
       log.info(s"Clearing out the crunch stuff")
       updated((Pending(), 0L))
-
-    case GetCrunchUpdatesAfter(delay) =>
-      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(delay)
-      effectOnly(getCrunchStateAfterDelay + Effect(Future(HideLoader())))
 
     case UpdateCrunchStateFromUpdates(crunchUpdates) =>
       log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
@@ -290,11 +284,9 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
         .recoverWith {
           case _ =>
             log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(GetAirportInfosAfter(codes, PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetAirportInfos(codes), PollDelay.recoveryDelay))
         }
       ))
-    case GetAirportInfosAfter(codes, delay) =>
-      effectOnly(Effect(Future(GetAirportInfos(codes))).after(delay))
     case UpdateAirportInfos(infos) =>
       val infosReady = infos.map(kv => (kv._1, Ready(kv._2)))
       updated(value ++ infosReady)
@@ -314,9 +306,6 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]
     case AddShift(shift) =>
       updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
 
-    case GetShiftsAfter(delay) =>
-      effectOnly(Effect(Future(GetShifts())).after(delay))
-
     case GetShifts() =>
       log.info(s"Calling getShifts")
 
@@ -325,7 +314,7 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]
         .recoverWith {
           case _ =>
             log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(GetShiftsAfter(PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetShifts(), PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
   }
@@ -427,12 +416,9 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
         .recoverWith {
           case _ =>
             log.error(s"Failed to save FixedPoints. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(SaveFixedPointsAfter(fixedPoints, terminalName, PollDelay.recoveryDelay))
+            Future(RetryActionAfter(SaveFixedPoints(fixedPoints, terminalName), PollDelay.recoveryDelay))
         }
       effectOnly(Effect(futureResponse))
-
-    case SaveFixedPointsAfter(fixedPoints, terminalName, delay) =>
-      effectOnly(Effect(Future(SaveFixedPoints(fixedPoints, terminalName))).after(delay))
 
     case AddShift(fixedPoints) =>
       updated(Ready(s"${value.getOrElse("")}\n${fixedPoints.toCsv}"))
@@ -511,16 +497,10 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
         .recoverWith {
           case _ =>
             log.error(s"Failed to get Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(GetStaffMovementsAfter(PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetStaffMovements(), PollDelay.recoveryDelay))
         }
       )
       effectOnly(apiCallEffect)
-
-    case GetStaffMovementsAfter(delay) =>
-      effectOnly(Effect(Future(GetStaffMovements())).after(delay))
-
-    case SaveStaffMovementsAfter(t, delay) =>
-      effectOnly(Effect(Future(SaveStaffMovements(t))).after(delay))
 
     case SaveStaffMovements(t) =>
       if (value.isReady) {
@@ -530,7 +510,7 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
           .recoverWith {
             case _ =>
               log.error(s"Failed to save Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
-              Future(SaveStaffMovementsAfter(t, PollDelay.recoveryDelay))
+              Future(RetryActionAfter(SaveStaffMovements(t), PollDelay.recoveryDelay))
           }
         effectOnly(Effect(responseFuture))
       } else noChange
@@ -593,13 +573,10 @@ class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) 
         .recoverWith {
           case _ =>
             log.error(s"Failed to get Forecast Period. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(GetForecastWeekAfter(startDay, terminalName, PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetForecastWeek(startDay, terminalName), PollDelay.recoveryDelay))
         })
 
       effectOnly(apiCallEffect)
-
-    case GetForecastWeekAfter(startDay, terminalName, delay) =>
-      effectOnly(Effect(Future(GetForecastWeek(startDay, terminalName))).after(delay))
 
     case SetForecastPeriod(Some(forecastPeriod)) =>
       log.info(s"Received forecast period.")
@@ -640,6 +617,42 @@ class RetryHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandl
   }
 }
 
+class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetLoggedInStatus =>
+      val eventualRequest = Ajax.get(SPAMain.pathToThisApp + "/check-status")
+      eventualRequest.onComplete {
+        case Success(req) =>
+          log.info(s"LoginStatus: Got this req back: $req")
+      }
+      eventualRequest.onFailure{
+        case dom.ext.AjaxException(req) =>
+          log.info(s"LoginStatus: Got this failure back ${req.status}")
+      }
+
+      val futureAction = eventualRequest.map {
+        case req: XMLHttpRequest if req.status == 200 =>
+          log.info(s"LoginStatus: User is still logged in.")
+          RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay)
+        case req: XMLHttpRequest if req.status == 307 =>
+          log.info(s"LoginStatus: Session has timed out, reloading page.")
+          TriggerReload
+        case other =>
+          log.info(s"LoginStatus: Error, got unexptected status code: ${other.status}")
+          RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay)
+      }
+
+      log.info(s"LoginStatus: sending effect")
+
+      effectOnly(Effect(futureAction))
+
+    case TriggerReload =>
+      log.info(s"LoginStatus: triggering reload")
+      dom.window.location.reload(true)
+      noChange
+  }
+}
+
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
@@ -665,6 +678,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, v) => m)),
+      new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),
       new NoopHandler(zoomRW(identity)((m, v) => m)),
       new UserRolesHandler(zoomRW(_.userRoles)((m, v) => m.copy(userRoles = v)))
     )

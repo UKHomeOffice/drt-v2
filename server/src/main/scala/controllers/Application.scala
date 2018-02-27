@@ -488,6 +488,12 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(views.html.index("DRT - BorderForce"))
   }
 
+  def checkStatus = Action {
+
+    TemporaryRedirect("http://google.com")
+//    Ok("ok")
+  }
+
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
     val startMillis = relativeLastMidnight
