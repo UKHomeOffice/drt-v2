@@ -19,7 +19,8 @@ object RunnableCrunch {
                                          baseArrivalsActor: ActorRef,
                                          fcstArrivalsActor: ActorRef,
                                          liveArrivalsActor: ActorRef,
-                                         manifestsSource: Source[VoyageManifests, SVM],
+                                         manifestsActor: ActorRef,
+                                         manifestsSource: Source[DqManifests, SVM],
                                          splitsPredictorStage: SplitsPredictorBase = new DummySplitsPredictor(),
                                          shiftsSource: Source[String, SS],
                                          fixedPointsSource: Source[String, SFP],
@@ -45,11 +46,13 @@ object RunnableCrunch {
     val fcstArrivalsSink = Sink.actorRef(fcstArrivalsActor, "completed")
     val liveArrivalsSink = Sink.actorRef(liveArrivalsActor, "completed")
 
+    val manifestsSink = Sink.actorRef(manifestsActor, "completed")
+
     val graph = GraphDSL.create(
       baseArrivalsSource.async,
       fcstArrivalsSource.async,
       liveArrivalsSource.async,
-      manifestsSource,
+      manifestsSource.async,
       shiftsSource.async,
       fixedPointsSource.async,
       staffMovementsSource.async,
@@ -59,7 +62,7 @@ object RunnableCrunch {
         baseArrivalsSourceAsync,
         fcstArrivalsSourceAsync,
         liveArrivalsSourceAsync,
-        manifestsSource,
+        manifestsSourceAsync,
         shiftsSourceAsync,
         fixedPointsSourceAsync,
         staffMovementsSourceAsync,
@@ -79,12 +82,13 @@ object RunnableCrunch {
         val baseArrivalsOut = builder.add(baseArrivalsSink.async)
         val fcstArrivalsOut = builder.add(fcstArrivalsSink.async)
         val liveArrivalsOut = builder.add(liveArrivalsSink.async)
+        val manifestsOut = builder.add(manifestsSink.async)
 
         val fanOutLiveArrivalsDiff = builder.add(Broadcast[ArrivalsDiff](2).async)
         val fanOutShifts = builder.add(Broadcast[String](2).async)
         val fanOutFixedPoints = builder.add(Broadcast[String](2).async)
         val fanOutStaffMovements = builder.add(Broadcast[Seq[StaffMovement]](2).async)
-        val fanOutManifests = builder.add(Broadcast[VoyageManifests](2).async)
+        val fanOutManifests = builder.add(Broadcast[DqManifests](3).async)
         val fanOutSplitsPredictions = builder.add(Broadcast[Seq[(Arrival, Option[ApiSplits])]](2).async)
         val fanOutBase = builder.add(Broadcast[Flights](3))
         val fanOutFcst = builder.add(Broadcast[Flights](3))
@@ -108,8 +112,11 @@ object RunnableCrunch {
         splitsPredictorStageAsync.out ~> fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
                                          fanOutSplitsPredictions ~> fcstCrunchStageAsync.in2
 
-        manifestsSource ~> fanOutManifests ~> liveCrunchStageAsync.in1
-                                fanOutManifests ~> fcstCrunchStageAsync.in1
+        manifestsSourceAsync.out ~> fanOutManifests
+
+        fanOutManifests.map(dqm => VoyageManifests(dqm.manifests)) ~> liveCrunchStageAsync.in1
+        fanOutManifests.map(dqm => VoyageManifests(dqm.manifests)) ~> fcstCrunchStageAsync.in1
+        fanOutManifests ~> manifestsOut
 
         shiftsSourceAsync.out ~> fanOutShifts ~> liveStaffingStageAsync.in1
                                  fanOutShifts ~> fcstStaffingStageAsync.in1

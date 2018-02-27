@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
+import akka.NotUsed
 import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
@@ -38,7 +39,7 @@ import services.SplitsProvider.SplitProvider
 import services.crunch.CrunchSystem
 import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
-import services.graphstages.{DummySplitsPredictor, SplitsPredictorBase, SplitsPredictorStage}
+import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
@@ -48,8 +49,9 @@ import services.{SDate, _}
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
@@ -129,13 +131,16 @@ trait SystemActors {
   val useNationalityBasedProcessingTimes: Boolean = config.getString("feature-flags.nationality-based-processing-times").isDefined
   val useSplitsPrediction: Boolean = config.getString("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getString("crunch.splits.raw-data-path").getOrElse("/dev/null")
+  val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
+  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(dqZipBucketName, airportConfig.portCode, getLastSeenManifestsFileName))
 
-  val crunchInputs: CrunchSystem = CrunchSystem(CrunchProps(
+  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
     system = system,
     airportConfig = airportConfig,
     pcpArrival = pcpArrivalTimeCalculator,
@@ -151,7 +156,9 @@ trait SystemActors {
       "fixed-points" -> fixedPointsActor,
       "staff-movements" -> staffMovementsActor),
     useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
-    splitsPredictorStage = splitsPredictorStage
+    splitsPredictorStage = splitsPredictorStage,
+    manifestsSource = voyageManifestsStage,
+    voyageManifestsActor = voyageManifestsActor
   ))
   shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
   fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
@@ -171,10 +178,19 @@ trait SystemActors {
     Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
   })
 
-  val bucket: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
-
-  VoyageManifestsProvider(bucket, airportConfig.portCode, crunchInputs.manifests, voyageManifestsActor).start()
-
+  def getLastSeenManifestsFileName: GateOrStand = {
+    val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
+      case VoyageManifestState(_, lastSeenFileName) => lastSeenFileName
+    }
+    Try {
+      Await.result(futureLastSeenManifestFileName, 1 minute)
+    } match {
+      case Success(lastSeen) => lastSeen
+      case Failure(t) =>
+        system.log.warning(s"Failed to get last seen file name for DQ manifests: $t")
+        ""
+    }
+  }
 
   def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
     new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, portCode))
@@ -401,7 +417,6 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def forecastWeekHeadlineFigures(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastHeadlineFigures]] = {
-
         val midnight = getLocalLastMidnight(SDate(startDay))
         val crunchStateFuture = forecastCrunchStateActor.ask(
           GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
@@ -418,7 +433,7 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
-        if (getUserRoles.contains("staff:edit")) {
+        if (getUserRoles().contains("staff:edit")) {
           log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
           val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
           futureShifts.map {
@@ -440,7 +455,7 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
-      def getUserRoles: List[String] = if (config.getString("feature-flags.super-user-mode").isDefined)
+      def getUserRoles(): List[String] = if (config.getString("feature-flags.super-user-mode").isDefined)
         availableRoles
       else
         roles
@@ -584,7 +599,7 @@ class Application @Inject()(implicit val config: Configuration,
     val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
     crunchStateFuture.map {
       case Some(PortState(_, m, s)) =>
-        log.info(s"Forecast CSV export for $terminal on ${startDay} with: crunch minutes: ${m.size} staff minutes: ${s.size}")
+        log.info(s"Forecast CSV export for $terminal on $startDay with: crunch minutes: ${m.size} staff minutes: ${s.size}")
         val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
@@ -610,7 +625,6 @@ class Application @Inject()(implicit val config: Configuration,
     val crunchStateFuture = forecastCrunchStateActor.ask(
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
-
 
 
     val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
@@ -724,7 +738,7 @@ class Application @Inject()(implicit val config: Configuration,
 }
 
 object Forecast {
-  def headLineFigures(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName) = {
+  def headLineFigures(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): ForecastHeadlineFigures = {
     val headlines = forecastMinutes
       .toList
       .filter(_.terminalName == terminalName)

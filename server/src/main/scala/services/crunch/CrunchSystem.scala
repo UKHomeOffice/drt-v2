@@ -23,19 +23,19 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
-case class CrunchSystem(shifts: SourceQueueWithComplete[String],
+case class CrunchSystem[MS](shifts: SourceQueueWithComplete[String],
                         fixedPoints: SourceQueueWithComplete[String],
                         staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
                         baseArrivals: SourceQueueWithComplete[Flights],
                         forecastArrivals: SourceQueueWithComplete[Flights],
                         liveArrivals: SourceQueueWithComplete[Flights],
-                        actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
-                        manifests: SourceQueueWithComplete[VoyageManifests]
+                        manifests: MS,
+                        actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
                        )
 
 object CrunchSystem {
 
-  case class CrunchProps(system: ActorSystem,
+  case class CrunchProps[MS](system: ActorSystem,
                          airportConfig: AirportConfig,
                          pcpArrival: Arrival => MilliDate,
                          historicalSplitsProvider: SplitsProvider.SplitProvider,
@@ -53,12 +53,14 @@ object CrunchSystem {
                          now: () => SDateLike = () => SDate.now(),
                          initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                          splitsPredictorStage: SplitsPredictorBase,
+                         manifestsSource: Source[DqManifests, MS],
+                         voyageManifestsActor: ActorRef,
                          waitForManifests: Boolean = true
                         )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(props: CrunchProps): CrunchSystem = {
+  def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
 
     val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
     val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-arrivals-actor")
@@ -101,7 +103,6 @@ object CrunchSystem {
     val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](1, OverflowStrategy.backpressure)
-    val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
 
     val maxLiveDaysToCrunch = 2
 
@@ -162,8 +163,8 @@ object CrunchSystem {
 
     val runnableCrunch = RunnableCrunch(
       baseArrivals, forecastArrivals, liveArrivals,
-      baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
-      manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
+      baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor, props.voyageManifestsActor,
+      props.manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
       actualDesksAndQueuesSource, arrivalsStageLive, arrivalsStageForecast, actualDesksStage,
       liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
       forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)
@@ -178,8 +179,8 @@ object CrunchSystem {
       baseArrivals = baseInput,
       forecastArrivals = forecastInput,
       liveArrivals = liveInput,
-      actualDeskStats = actualDesksInput,
-      manifests = manifestsInput
+      manifests = manifestsInput,
+      actualDeskStats = actualDesksInput
     )
   }
 
