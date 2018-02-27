@@ -72,19 +72,7 @@ class CrunchGraphStage(name: String,
     setHandler(outCrunch, new OutHandler {
       override def onPull(): Unit = {
         log.debug(s"crunchOut onPull called")
-        if (!waitingForManifests && !waitingForArrivals) {
-          portStateOption match {
-            case Some(portState) =>
-              log.info(s"Pushing crunched PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
-              push(outCrunch, portState)
-              portStateOption = None
-            case None =>
-              log.debug(s"No PortState to push")
-          }
-        } else {
-          if (waitingForArrivals) log.info(s"Waiting for arrivals")
-          if (waitingForManifests) log.info(s"Waiting for manifests")
-        }
+        pushStateIfReady()
         pullAll()
       }
     })
@@ -251,10 +239,7 @@ class CrunchGraphStage(name: String,
     def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
-          val vmMillis = newManifest.scheduleArrivalDateTime match {
-            case None => 0L
-            case Some(scheduled) => scheduled.millisSinceEpoch
-          }
+          val vmMillis = newManifest.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
           val matchingFlight: Option[(Int, ApiFlightWithSplits)] = flightsSoFar
             .find {
               case (_, f) =>

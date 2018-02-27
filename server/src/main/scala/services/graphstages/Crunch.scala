@@ -227,12 +227,14 @@ object Crunch {
       case (None, None) => None
       case (Some(ps), None) => Option(ps)
       case (None, Some(ps)) => Option(ps)
-      case (Some(ps1), Some(ps2)) =>
-        val mergedFlights = mergeMapOfIndexedThings(ps1.flights, ps2.flights)
-        val mergedCrunchMinutes = mergeMapOfIndexedThings(ps1.crunchMinutes, ps2.crunchMinutes)
-        val mergedStaffMinutes = mergeMapOfIndexedThings(ps1.staffMinutes, ps2.staffMinutes)
-
-        Option(PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes))
+      case (Some(ps1), Some(ps2)) => Option(mergePortState(ps1, ps2))
     }
+  }
+
+  def mergePortState(ps1: PortState, ps2: PortState): PortState = {
+    val mergedFlights = mergeMapOfIndexedThings(ps1.flights, ps2.flights)
+    val mergedCrunchMinutes = mergeMapOfIndexedThings(ps1.crunchMinutes, ps2.crunchMinutes)
+    val mergedStaffMinutes = mergeMapOfIndexedThings(ps1.staffMinutes, ps2.staffMinutes)
+    PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes)
   }
 }
