@@ -17,8 +17,7 @@ import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.Manifests.log
-import services.{Manifests, SDate}
+import services.SDate
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer

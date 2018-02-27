@@ -3,12 +3,16 @@ package actors
 import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.SDateLike
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.protobuf.messages.VoyageManifest._
+import services.SDate
 import services.graphstages.{Crunch, DqManifests}
-import services.{GetLatestZipFilename, SDate, UpdateLatestZipFilename, VoyageManifestState}
 
 import scala.collection.immutable.Seq
+
+case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename: String)
+
+case object GetLatestZipFilename
 
 class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor with ActorLogging {
   var state = VoyageManifestState(
