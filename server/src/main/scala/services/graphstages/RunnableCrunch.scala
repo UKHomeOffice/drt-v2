@@ -1,7 +1,7 @@
 package services.graphstages
 
 import akka.actor.ActorRef
-import akka.stream.ClosedShape
+import akka.stream.{Attributes, ClosedShape}
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.FlightsApi.Flights
 import drt.shared.{ActualDeskStats, ApiSplits, Arrival, StaffMovement}
@@ -47,6 +47,23 @@ object RunnableCrunch {
     val liveArrivalsSink = Sink.actorRef(liveArrivalsActor, "completed")
 
     val manifestsSink = Sink.actorRef(manifestsActor, "completed")
+
+    def combineArrivalsWithMaybeSplits(as1: Seq[(Arrival, Option[ApiSplits])], as2: Seq[(Arrival, Option[ApiSplits])]) = {
+      val arrivalsWithMaybeSplitsById = as1
+        .map {
+          case (arrival, maybeSplits) => (arrival.uniqueId, (arrival, maybeSplits))
+        }
+        .toMap
+      as2
+        .foldLeft(arrivalsWithMaybeSplitsById) {
+          case (soFar, (arrival, maybeNewSplits)) =>
+            soFar.updated(arrival.uniqueId, (arrival, maybeNewSplits))
+        }
+        .map {
+          case (_, arrivalWithMaybeSplits) => arrivalWithMaybeSplits
+        }
+        .toSeq
+    }
 
     val graph = GraphDSL.create(
       baseArrivalsSource.async,
@@ -100,6 +117,7 @@ object RunnableCrunch {
         fcstArrivalsSourceAsync ~> fanOutFcst ~> liveArrivalsStageAsync.in1
                                    fanOutFcst ~> fcstArrivalsStageAsync.in1
                                    fanOutFcst.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> fcstArrivalsOut
+
         liveArrivalsSourceAsync ~> fanOutLive ~> liveArrivalsStageAsync.in2
                                    fanOutLive ~> fcstArrivalsStageAsync.in2
                                    fanOutLive.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> liveArrivalsOut
@@ -109,23 +127,32 @@ object RunnableCrunch {
 
         fcstArrivalsStageAsync.out ~> fcstCrunchStageAsync.in0
 
-        splitsPredictorStageAsync.out ~> fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
-                                         fanOutSplitsPredictions ~> fcstCrunchStageAsync.in2
+        splitsPredictorStageAsync.out ~> fanOutSplitsPredictions
+
+        fanOutSplitsPredictions ~> liveCrunchStageAsync.in2
+        fanOutSplitsPredictions.conflate[Seq[(Arrival, Option[ApiSplits])]] {
+          case (as1, as2) => combineArrivalsWithMaybeSplits(as1, as2)
+        } ~> fcstCrunchStageAsync.in2
 
         manifestsSourceAsync.out ~> fanOutManifests
 
         fanOutManifests.map(dqm => VoyageManifests(dqm.manifests)) ~> liveCrunchStageAsync.in1
-        fanOutManifests.map(dqm => VoyageManifests(dqm.manifests)) ~> fcstCrunchStageAsync.in1
+        fanOutManifests
+          .map(dqm => VoyageManifests(dqm.manifests))
+          .conflate[VoyageManifests] {
+          case (VoyageManifests(m1), VoyageManifests(m2)) => VoyageManifests(m1 ++ m2)
+        } ~> fcstCrunchStageAsync.in1
+
         fanOutManifests ~> manifestsOut
 
         shiftsSourceAsync.out ~> fanOutShifts ~> liveStaffingStageAsync.in1
-                                 fanOutShifts ~> fcstStaffingStageAsync.in1
+        fanOutShifts ~> fcstStaffingStageAsync.in1
 
         fixedPointsSourceAsync.out ~> fanOutFixedPoints ~> liveStaffingStageAsync.in2
-                                      fanOutFixedPoints ~> fcstStaffingStageAsync.in2
+        fanOutFixedPoints ~> fcstStaffingStageAsync.in2
 
         staffMovementsSourceAsync.out ~> fanOutStaffMovements ~> liveStaffingStageAsync.in3
-                                         fanOutStaffMovements ~> fcstStaffingStageAsync.in3
+        fanOutStaffMovements ~> fcstStaffingStageAsync.in3
 
         liveCrunchStageAsync.out ~> liveStaffingStageAsync.in0
 

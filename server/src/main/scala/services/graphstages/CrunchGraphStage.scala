@@ -146,20 +146,19 @@ class CrunchGraphStage(name: String,
             case (arrival, Some(splits)) => (arrival, splits)
           }
           .foldLeft(flightsByFlightId) {
-            case (existingFlightsByFlightId, (arrival, splits)) =>
-              val maybeFlightWithId: Option[(Int, ApiFlightWithSplits)] = existingFlightsByFlightId.find {
-                case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival == arrival
-              }
-              maybeFlightWithId match {
-                case Some((id, flightWithSplits)) =>
-                  val splitsWithPaxNumbers = splits.copy(splits = splits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrival))), splitStyle = PaxNumbers)
-                  val fullApiSplits = splitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrival, splitsWithPaxNumbers.splits))
-                  val updatedSplitsSet = flightWithSplits.splits.filterNot {
+            case (existingFlightsByFlightId, (arrivalForPrediction, predictedSplits)) =>
+              existingFlightsByFlightId.find {
+                case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
+              } match {
+                case Some((id, existingFlightWithSplits)) =>
+                  val predictedSplitsWithPaxNumbers = predictedSplits.copy(splits = predictedSplits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrivalForPrediction))), splitStyle = PaxNumbers)
+                  val predictedWithEgatesAndFt = predictedSplitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrivalForPrediction, predictedSplitsWithPaxNumbers.splits))
+                  val newSplitsSet = existingFlightWithSplits.splits.filterNot {
                     case ApiSplits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
                     case _ => false
-                  } + fullApiSplits
+                  } + predictedWithEgatesAndFt
 
-                  existingFlightsByFlightId.updated(id, flightWithSplits.copy(splits = updatedSplitsSet))
+                  existingFlightsByFlightId.updated(id, existingFlightWithSplits.copy(splits = newSplitsSet))
 
                 case None => existingFlightsByFlightId
               }

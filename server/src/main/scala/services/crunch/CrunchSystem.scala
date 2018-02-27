@@ -55,7 +55,7 @@ object CrunchSystem {
                          splitsPredictorStage: SplitsPredictorBase,
                          manifestsSource: Source[DqManifests, MS],
                          voyageManifestsActor: ActorRef,
-                         waitForManifests: Boolean = true
+                         waitForManifests: Boolean = false
                         )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -106,9 +106,13 @@ object CrunchSystem {
 
     val maxLiveDaysToCrunch = 2
 
+    val liveFlightsWithSplitsFromPortState = FlightsWithSplits(initialLiveCrunchState.map(_.flights.values).getOrElse(Seq()).toSeq)
+    val initialLiveFlightsWithSplits = props.initialFlightsWithSplits.getOrElse(liveFlightsWithSplitsFromPortState)
+    val forecastFlightsWithSplitsFromPortState = FlightsWithSplits(initialForecastCrunchState.map(_.flights.values).getOrElse(Seq()).toSeq)
+    val initialForecastFlightsWithSplits = props.initialFlightsWithSplits.getOrElse(forecastFlightsWithSplitsFromPortState)
     val liveCrunchStage = new CrunchGraphStage(
       name = "live",
-      optionalInitialFlights = props.initialFlightsWithSplits,
+      optionalInitialFlights = Option(initialLiveFlightsWithSplits),
       airportConfig = props.airportConfig,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
@@ -126,7 +130,7 @@ object CrunchSystem {
 
     val forecastCrunchStage = new CrunchGraphStage(
       name = "forecast",
-      optionalInitialFlights = None,
+      optionalInitialFlights = Option(initialForecastFlightsWithSplits),
       airportConfig = props.airportConfig,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
