@@ -94,7 +94,6 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
     val eventualFileNameAndManifests = manifestsFuture(startingFilename)
       .map(fetchedFilesAndManifests => {
         val fileNames: String = fetchedFilesAndManifests.map { case (fileName, _) => fileName }.mkString(", ")
-        log.info(s"fetched manifest file names: $fileNames")
         val (lastSeenFileName, fetchedManifests) = if (fetchedFilesAndManifests.isEmpty) {
           (startingFilename, Set[VoyageManifest]())
         } else {
@@ -102,7 +101,6 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
           val manifests = fetchedFilesAndManifests.map { case (_, manifest) => manifest }.toSet
           (lastSeen, manifests)
         }
-        log.info(s"Last seen file: '$lastSeenFileName'. ${fetchedFilesAndManifests.size} manifests")
         (lastSeenFileName, fetchedManifests)
       })
 
@@ -119,10 +117,10 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
   }
 
   def manifestsFuture(latestFile: String): Future[Seq[(String, VoyageManifest)]] = {
-    log.info(s"Requesting zipFiles source for file names > ${latestFile.take(20)}")
+    log.info(s"Requesting DQ zip files > ${latestFile.take(20)}")
     zipFiles(latestFile)
       .mapAsync(64) { filename =>
-        log.info(s"Fetching $filename as stream")
+        log.info(s"Fetching $filename")
         val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
         Future(fileNameAndContentFromZip(filename, zipByteStream, Option(portCode), None))
       }
@@ -165,10 +163,8 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
       }
       .collect {
         case (zipFilename, _, Success(vm)) if maybePort.isEmpty || vm.ArrivalPortCode == maybePort.get =>
-          log.info(s"zipFilename: $zipFilename")
           (zipFilename, vm)
       }
-    log.info(s"Finished processing $zipFileName")
     vmStream.toList
   }
 
