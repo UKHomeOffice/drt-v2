@@ -5,7 +5,7 @@ import akka.persistence._
 import drt.shared.SDateLike
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import server.protobuf.messages.VoyageManifest._
-import services.graphstages.Crunch
+import services.graphstages.{Crunch, DqManifests}
 import services.{GetLatestZipFilename, SDate, UpdateLatestZipFilename, VoyageManifestState}
 
 import scala.collection.immutable.Seq
@@ -40,15 +40,15 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
         .map(voyageManifestFromMessage)
         .toSet -- state.manifests
 
-      state = newStateFromManifests(state.manifests, updatedManifests)
+      state = state.copy(manifests = newStateManifests(state.manifests, updatedManifests))
 
     case SnapshotOffer(md, ss) =>
       log.info(s"Recovery received SnapshotOffer($md)")
       ss match {
         case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
           log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
-          val updatedStateWithManifests = newStateFromManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
-          state = updatedStateWithManifests.copy(latestZipFilename = latestFilename)
+          val updatedManifests = newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
+          state = VoyageManifestState(latestZipFilename = latestFilename, manifests = updatedManifests)
 
         case lzf: String =>
           log.info(s"Updating state from latestZipFilename $lzf")
@@ -61,58 +61,31 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       log.info(s"Recovery completed")
   }
 
-  def newStateFromManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): VoyageManifestState = {
+  def newStateManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): Set[VoyageManifest] = {
     val expired: VoyageManifest => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (vm: VoyageManifest) => vm.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
     val minusExpired = existing.filterNot(expired)
     val numPurged = existing.size - minusExpired.size
     if (numPurged > 0) log.info(s"Purged $numPurged VoyageManifests")
 
     val withUpdates = minusExpired ++ updates
-    state.copy(manifests = withUpdates)
+    withUpdates
   }
 
   override def receiveCommand: Receive = {
-    case UpdateLatestZipFilename(updatedLZF) if updatedLZF != state.latestZipFilename =>
-      log.info(s"Received update - latest zip file is: $updatedLZF")
-      state = state.copy(latestZipFilename = updatedLZF)
-
-      persist(latestFilenameToMessage(state.latestZipFilename)) { lzf =>
-        log.info(s"Persisting VoyageManifests latestZipFilename ${lzf.latestFilename.getOrElse("")}")
-        context.system.eventStream.publish(lzf)
-        if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-          log.info(s"Saving VoyageManifests snapshot ${state.latestZipFilename}, ${state.manifests.size} manifests")
-          saveSnapshot(stateToMessage(state))
-        }
-      }
-
-    case UpdateLatestZipFilename(updatedLZF) if updatedLZF == state.latestZipFilename =>
-      log.info(s"Received update - latest zip file is: $updatedLZF - no change")
-
-    case VoyageManifests(newManifests) =>
-      log.info(s"Received ${newManifests.size} manifests")
+    case DqManifests(updatedLZF, newManifests) =>
+      log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF")
 
       val updates = newManifests -- state.manifests
 
-      updates match {
-        case updatedManifests if updatedManifests.nonEmpty =>
-          persist(voyageManifestsToMessage(updatedManifests)) {
-            vmm =>
-              log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
-              context.system.eventStream.publish(vmm)
-              if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-                log.info(s"Saving VoyageManifests snapshot ${
-                  state.latestZipFilename
-                }, ${
-                  state.manifests.size
-                } manifests")
-                saveSnapshot(stateToMessage(state))
-              }
-          }
-        case _ =>
-          log.info(s"No changes to persist")
-      }
+      if (updates.nonEmpty) {
+        persistManifests(updates)
+        persistLastSeenFileName(updatedLZF)
+        snapshotIfRequired(state)
+      } else log.info(s"No new manifests to persist")
 
-      state = newStateFromManifests(state.manifests, newManifests)
+      val updatedManifests = newStateManifests(state.manifests, newManifests)
+
+      state = VoyageManifestState(manifests = updatedManifests, latestZipFilename = updatedLZF)
 
     case GetState =>
       log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")
@@ -130,6 +103,28 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
 
     case other =>
       log.info(s"Received unexpected message $other")
+  }
+
+  def persistLastSeenFileName(lastSeenFileName: String): Unit = {
+    persist(latestFilenameToMessage(lastSeenFileName)) { lzf =>
+      log.info(s"Persisting VoyageManifests latestZipFilename ${lzf.latestFilename.getOrElse("")}")
+      context.system.eventStream.publish(lzf)
+    }
+  }
+
+  def snapshotIfRequired(stateToSnapshot: VoyageManifestState): Unit = {
+    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+      log.info(s"Saving VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
+      saveSnapshot(stateToMessage(stateToSnapshot))
+    }
+  }
+
+  def persistManifests(updatedManifests: Set[VoyageManifest]): Unit = {
+    persist(voyageManifestsToMessage(updatedManifests)) {
+      vmm =>
+        log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
+        context.system.eventStream.publish(vmm)
+    }
   }
 
   private def voyageManifestsToMessage(updatedManifests: Set[VoyageManifest]) = {

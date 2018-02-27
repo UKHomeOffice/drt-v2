@@ -9,6 +9,7 @@ import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import services.SDate
 import services.graphstages.Crunch.getLocalLastMidnight
+import services.graphstages.DqManifests
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
@@ -204,7 +205,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         )
 
-        val voyageManifests = VoyageManifests(Set(
+        val voyageManifests = DqManifests("", Set(
           VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
             PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
           ))
