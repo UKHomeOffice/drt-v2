@@ -1,11 +1,11 @@
 package services.crunch
 
-import actors.{CrunchStateActor, FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
-import akka.stream.scaladsl.SourceQueueWithComplete
-import akka.stream.{ActorMaterializer, QueueOfferResult}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
@@ -19,7 +19,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
 import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
-import services.graphstages.DummySplitsPredictor
+import services.graphstages.{DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
 //import scala.language.postfixOps
@@ -49,7 +49,7 @@ class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], pr
 case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Flights],
                        forecastArrivalsInput: SourceQueueWithComplete[Flights],
                        liveArrivalsInput: SourceQueueWithComplete[Flights],
-                       manifestsInput: SourceQueueWithComplete[VoyageManifests],
+                       manifestsInput: SourceQueueWithComplete[DqManifests],
                        liveShiftsInput: SourceQueueWithComplete[String],
                        liveFixedPointsInput: SourceQueueWithComplete[String],
                        liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
@@ -123,7 +123,7 @@ class CrunchTestLike
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
                      initialForecastArrivals: Set[Arrival] = Set(),
                      initialLiveArrivals: Set[Arrival] = Set(),
-                     initialManifests: VoyageManifests = VoyageManifests(Set()),
+                     initialManifests: DqManifests = DqManifests("", Set()),
                      initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
@@ -146,9 +146,12 @@ class CrunchTestLike
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis))
 
     val liveCrunchActor = liveCrunchStateActor(liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(forecastProbe, now)
+
+    val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
       system = actorSystem,
@@ -172,6 +175,8 @@ class CrunchTestLike
       calcPcpTimeWindow = (_) => calcPcpWindow,
       initialFlightsWithSplits = initialFlightsWithSplits,
       splitsPredictorStage = splitsPredictorStage,
+      manifestsSource = manifestsSource,
+      voyageManifestsActor = manifestsActor,
       waitForManifests = false
     ))
 

@@ -1,5 +1,8 @@
 package services.crunch
 
+import akka.actor.Cancellable
+import akka.stream.scaladsl.{Sink, Source}
+import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
@@ -11,8 +14,10 @@ import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
+import services.graphstages.DqManifests
 
 import scala.collection.immutable.Seq
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 
@@ -28,7 +33,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val inputFlights = Flights(List(flight))
-    val inputManifests = VoyageManifests(Set(
+    val inputManifests = DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     ))
     val crunch = runCrunchGraph(
@@ -73,12 +78,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val inputFlights = Flights(List(flight))
-    val inputManifestsCi = VoyageManifests(Set(
+    val inputManifestsCi = DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         passengerInfoJson("GBR", "P", "GBR")
       ))
     ))
-    val inputManifestsDc = VoyageManifests(Set(
+    val inputManifestsDc = DqManifests("", Set(
       VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         passengerInfoJson("USA", "P", "USA")
       ))
@@ -134,7 +139,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10)
     val inputFlights = Flights(List(flight))
-    val inputManifests = VoyageManifests(Set(
+    val inputManifests = DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     ))
     val crunch = runCrunchGraph(
@@ -179,7 +184,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10, tranPax = 5)
     val inputFlights = Flights(List(flight))
-    val inputManifests = VoyageManifests(Set(
+    val inputManifests = DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         euPassport,
         inTransitFlag,
@@ -228,7 +233,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 10, tranPax = 6)
     val inputFlights = Flights(List(flight))
-    val inputManifests = VoyageManifests(Set(
+    val inputManifests = DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         inTransitFlag,
         inTransitCountry,
