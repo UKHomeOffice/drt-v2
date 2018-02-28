@@ -68,21 +68,6 @@ object RunnableCrunch {
         .toSeq
     }
 
-    def combineArrivalsDiffs(ad1: ArrivalsDiff, ad2: ArrivalsDiff) = {
-      val updatesById = ad1.toUpdate.toSeq.map(a => (a.uniqueId, a)).toMap
-      val toUpdate = ad2
-        .toUpdate
-        .foldLeft(updatesById) {
-          case (soFar, arrival) => soFar.updated(arrival.uniqueId, arrival)
-        }
-        .map {
-          case (_, arrival) => arrival
-        }
-        .toSet
-      val removals = ad1.toRemove ++ ad2.toRemove
-      ArrivalsDiff(toRemove = removals, toUpdate = toUpdate)
-    }
-
     val graph = GraphDSL.create(
       baseArrivalsSource.async,
       fcstArrivalsSource.async,
@@ -146,10 +131,10 @@ object RunnableCrunch {
 
           fanOutArrivalsDiff.map(_.toUpdate.toList) ~> splitsPredictorStageAsync
           fanOutArrivalsDiff.conflate[ArrivalsDiff] {
-            case (ad1, ad2) => combineArrivalsDiffs(ad1, ad2)
+            case (ad1, ad2) => Crunch.mergeArrivalsDiffs(ad1, ad2)
           } ~> liveCrunchStageAsync.in0
           fanOutArrivalsDiff.conflate[ArrivalsDiff] {
-            case (ad1, ad2) => combineArrivalsDiffs(ad1, ad2)
+            case (ad1, ad2) => Crunch.mergeArrivalsDiffs(ad1, ad2)
           } ~> fcstCrunchStageAsync.in0
 
           splitsPredictorStageAsync.out ~> fanOutSplitsPredictions
