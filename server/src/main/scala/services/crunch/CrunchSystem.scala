@@ -156,13 +156,22 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
+    val arrivalsShape = ArrivalsShape(
+      baseArrivalsActor = baseArrivalsActor,
+      fcstArrivalsActor = forecastArrivalsActor,
+      liveArrivalsActor = liveArrivalsActor,
+      arrivalsStage
+    )
+
+    val liveCrunchShape = LiveCrunchShape(liveCrunchStage, liveStaffingStage, actualDesksStage)
+    val forecastCrunchShape = ForecastCrunchShape(forecastCrunchStage, forecastStaffingStage)
+
     val runnableCrunch = RunnableCrunch(
       baseArrivals, forecastArrivals, liveArrivals,
-      baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor, props.voyageManifestsActor,
-      props.manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
-      actualDesksAndQueuesSource, arrivalsStage, actualDesksStage,
-      liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
-      forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)
+      props.voyageManifestsActor, props.manifestsSource, props.splitsPredictorStage,
+      shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
+      arrivalsShape, liveCrunchShape, forecastCrunchShape,
+      props.forecastCrunchStateActor, props.liveCrunchStateActor)
 
     implicit val actorSystem: ActorSystem = props.system
     val (baseInput, forecastInput, liveInput, manifestsInput, shiftsInput, fixedPointsInput, movementsInput, actualDesksInput) = runnableCrunch.run()(ActorMaterializer())
