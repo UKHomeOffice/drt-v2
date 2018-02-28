@@ -16,25 +16,36 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
 
   val shape: FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]] = FlowShape.of(in, out)
 
+  val log = LoggerFactory.getLogger(getClass)
+
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
       var haveGrabbed: Boolean = false
 
       setHandler(in, new InHandler {
         override def onPush(): Unit = {
+          log.info(s"Dummy predictor onPush() - grabbing arrivals")
           grab(in)
           haveGrabbed = true
-          if (isAvailable(in)) pull(in)
+          if (!hasBeenPulled(in)) {
+            log.info(s"Dummy predictor pull(in)")
+            pull(in)
+          }
         }
       })
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          log.info(s"Dummy predictor onPull()")
           if (haveGrabbed && isAvailable(out)) {
-            push(out, Seq())
+            log.info(s"Dummy predictor pushing empty results")
+            push(out, Seq[(Arrival, Option[ApiSplits])]())
             haveGrabbed = false
           }
-          if (isAvailable(in)) pull(in)
+          if (!hasBeenPulled(in)) {
+            log.info(s"Dummy predictor pull(in)")
+            pull(in)
+          }
         }
       })
     }
