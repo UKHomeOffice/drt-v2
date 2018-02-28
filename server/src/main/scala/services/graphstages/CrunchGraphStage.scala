@@ -72,19 +72,7 @@ class CrunchGraphStage(name: String,
     setHandler(outCrunch, new OutHandler {
       override def onPull(): Unit = {
         log.debug(s"crunchOut onPull called")
-        if (!waitingForManifests && !waitingForArrivals) {
-          portStateOption match {
-            case Some(portState) =>
-              log.info(s"Pushing crunched PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
-              push(outCrunch, portState)
-              portStateOption = None
-            case None =>
-              log.debug(s"No PortState to push")
-          }
-        } else {
-          if (waitingForArrivals) log.info(s"Waiting for arrivals")
-          if (waitingForManifests) log.info(s"Waiting for manifests")
-        }
+        pushStateIfReady()
         pullAll()
       }
     })
@@ -146,20 +134,19 @@ class CrunchGraphStage(name: String,
             case (arrival, Some(splits)) => (arrival, splits)
           }
           .foldLeft(flightsByFlightId) {
-            case (existingFlightsByFlightId, (arrival, splits)) =>
-              val maybeFlightWithId: Option[(Int, ApiFlightWithSplits)] = existingFlightsByFlightId.find {
-                case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival == arrival
-              }
-              maybeFlightWithId match {
-                case Some((id, flightWithSplits)) =>
-                  val splitsWithPaxNumbers = splits.copy(splits = splits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrival))), splitStyle = PaxNumbers)
-                  val fullApiSplits = splitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrival, splitsWithPaxNumbers.splits))
-                  val updatedSplitsSet = flightWithSplits.splits.filterNot {
+            case (existingFlightsByFlightId, (arrivalForPrediction, predictedSplits)) =>
+              existingFlightsByFlightId.find {
+                case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
+              } match {
+                case Some((id, existingFlightWithSplits)) =>
+                  val predictedSplitsWithPaxNumbers = predictedSplits.copy(splits = predictedSplits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrivalForPrediction))), splitStyle = PaxNumbers)
+                  val predictedWithEgatesAndFt = predictedSplitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrivalForPrediction, predictedSplitsWithPaxNumbers.splits))
+                  val newSplitsSet = existingFlightWithSplits.splits.filterNot {
                     case ApiSplits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
                     case _ => false
-                  } + fullApiSplits
+                  } + predictedWithEgatesAndFt
 
-                  existingFlightsByFlightId.updated(id, flightWithSplits.copy(splits = updatedSplitsSet))
+                  existingFlightsByFlightId.updated(id, existingFlightWithSplits.copy(splits = newSplitsSet))
 
                 case None => existingFlightsByFlightId
               }
@@ -252,10 +239,7 @@ class CrunchGraphStage(name: String,
     def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
-          val vmMillis = newManifest.scheduleArrivalDateTime match {
-            case None => 0L
-            case Some(scheduled) => scheduled.millisSinceEpoch
-          }
+          val vmMillis = newManifest.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
           val matchingFlight: Option[(Int, ApiFlightWithSplits)] = flightsSoFar
             .find {
               case (_, f) =>

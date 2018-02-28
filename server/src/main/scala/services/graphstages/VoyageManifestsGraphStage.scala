@@ -105,10 +105,10 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
       })
 
     Try {
-      Await.result(eventualFileNameAndManifests, 1 minute)
+      Await.result(eventualFileNameAndManifests, 30 minute)
     } match {
       case Success((lastSeenFileName, manifests)) =>
-        log.info(s"Fetched ${manifests.size} manifests up to file ${lastSeenFileName}")
+        log.info(s"Fetched ${manifests.size} manifests up to file $lastSeenFileName")
         (lastSeenFileName, manifests)
       case Failure(t) =>
         log.warn(s"Failed to fetch new manifests: $t")
