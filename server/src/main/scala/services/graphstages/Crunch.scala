@@ -237,4 +237,21 @@ object Crunch {
     val mergedStaffMinutes = mergeMapOfIndexedThings(ps1.staffMinutes, ps2.staffMinutes)
     PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes)
   }
+
+  def combineArrivalsWithMaybeSplits(as1: Seq[(Arrival, Option[ApiSplits])], as2: Seq[(Arrival, Option[ApiSplits])]): Seq[(Arrival, Option[ApiSplits])] = {
+    val arrivalsWithMaybeSplitsById = as1
+      .map {
+        case (arrival, maybeSplits) => (arrival.uniqueId, (arrival, maybeSplits))
+      }
+      .toMap
+    as2
+      .foldLeft(arrivalsWithMaybeSplitsById) {
+        case (soFar, (arrival, maybeNewSplits)) =>
+          soFar.updated(arrival.uniqueId, (arrival, maybeNewSplits))
+      }
+      .map {
+        case (_, arrivalWithMaybeSplits) => arrivalWithMaybeSplits
+      }
+      .toSeq
+  }
 }
