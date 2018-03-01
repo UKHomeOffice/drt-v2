@@ -373,6 +373,10 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
+      def isLoggedIn(): Boolean = {
+        true
+      }
+
       def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
         val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
         val endOfForecast = startOfWeekMidnight.addDays(7).millisSinceEpoch
@@ -488,11 +492,6 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(views.html.index("DRT - BorderForce"))
   }
 
-  def checkStatus = Action {
-
-    TemporaryRedirect("http://google.com")
-//    Ok("ok")
-  }
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch

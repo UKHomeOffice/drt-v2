@@ -6,7 +6,6 @@ import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
@@ -14,8 +13,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.scalajs.dom
-import org.scalajs.dom.XMLHttpRequest
-import org.scalajs.dom.ext.Ajax
+import org.scalajs.dom.ext.AjaxException
 
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
@@ -620,31 +618,21 @@ class RetryHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandl
 class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetLoggedInStatus =>
-      val eventualRequest = Ajax.get(SPAMain.pathToThisApp + "/check-status")
-      eventualRequest.onComplete {
-        case Success(req) =>
-          log.info(s"LoginStatus: Got this req back: $req")
-      }
-      eventualRequest.onFailure{
-        case dom.ext.AjaxException(req) =>
-          log.info(s"LoginStatus: Got this failure back ${req.status}")
-      }
-
-      val futureAction = eventualRequest.map {
-        case req: XMLHttpRequest if req.status == 200 =>
-          log.info(s"LoginStatus: User is still logged in.")
-          RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay)
-        case req: XMLHttpRequest if req.status == 307 =>
-          log.info(s"LoginStatus: Session has timed out, reloading page.")
-          TriggerReload
-        case other =>
-          log.info(s"LoginStatus: Error, got unexptected status code: ${other.status}")
-          RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay)
-      }
-
-      log.info(s"LoginStatus: sending effect")
-
-      effectOnly(Effect(futureAction))
+      effectOnly(
+        Effect(
+          AjaxClient[Api]
+            .isLoggedIn()
+            .call()
+            .map(_ => RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
+            .recoverWith {
+            case f: AjaxException if f.xhr.status == 405 =>
+              log.error(s"User is logged out, triggering page reload.")
+              Future(TriggerReload)
+            case f =>
+              log.error(s"Error when checking for user login status, retrying after ${PollDelay.loginCheckDelay}")
+              Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
+            }
+        ))
 
     case TriggerReload =>
       log.info(s"LoginStatus: triggering reload")
