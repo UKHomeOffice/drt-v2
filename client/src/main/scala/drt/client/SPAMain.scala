@@ -52,6 +52,7 @@ object SPAMain extends js.JSApp {
     val initActions = Seq(
       GetApplicationVersion,
       GetUserRoles,
+      GetLoggedInStatus,
       GetAirportConfig(),
       GetShifts(),
       GetFixedPoints(),
