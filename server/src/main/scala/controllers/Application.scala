@@ -275,10 +275,14 @@ trait AirportConfProvider extends AirportConfiguration {
   def mockProd: String = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
   def useStaffingInput: Boolean = config.getString("feature-flags.use-v2-staff-input").isDefined
+  def contactEmail: Option[String] = config.getString("contact-email")
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(useStaffingInput = useStaffingInput)
+  def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(
+    useStaffingInput = useStaffingInput,
+    contactEmail = contactEmail
+  )
 }
 
 trait ProdPassengerSplitProviders {
