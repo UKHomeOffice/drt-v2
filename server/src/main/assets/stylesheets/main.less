@@ -312,9 +312,10 @@ table.headlines tr:nth-child(odd) {
 }
 
 .date-selector {
-  width: 840px;
+  width: 520px;
   padding-top: 2%;
   margin-left: 1.5%;
+  float: left;
 }
 
 .date-selector label.text {
@@ -332,6 +333,19 @@ table.headlines tr:nth-child(odd) {
 
 .date-selector .spacer {
   width: 15px;
+}
+
+.date-selector .end-spacer {
+  margin-right: 15px;
+}
+
+.date-selector .left-spacer {
+  margin-left: 15px;
+}
+
+.date-selector select {
+  display: inline;
+  width: auto;
 }
 
 .snapshot-selector {
@@ -354,6 +368,7 @@ table.headlines tr:nth-child(odd) {
 #snapshot-done {
   font-size: 24px;
   color: green;
+  display: inline;
 }
 
 .date-time-picker-container .container {
@@ -863,6 +878,101 @@ p {
 #arrivals .right {
   text-align: right;
   padding-right: 13px;
+}
+
+.pcp-pax-summary {
+    float: left;
+    width: 144px;
+    padding: 5px;
+    margin: 5px;
+}
+
+.pcp-pax-summary.last {
+    border: 0px;
+    float: none;
+    clear: left;
+}
+
+.pcp-pax-summary .total {
+    font-size: 48px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.pcp-pax-summary .queues {
+    text-align: center;
+    margin-left: 10px;
+}
+
+.pcp-pax-summary .queues .queue {
+    float: left;
+    width: 58px
+}
+
+.pcp-pax-summary .queues .queue div {
+    margin: 1px;
+    font-size: 18px;
+    background-color: #eee;
+}
+
+.pcp-pax-summary .queues .queue .queue-name div {
+    height: 56px;
+    vertical-align: middle;
+    display: table-cell;
+    width: 70px;
+}
+
+.pcp-pax-summary .queues .queue .queue-pax div {
+    height: 36px;
+    vertical-align: middle;
+    display: table-cell;
+    width: 70px;
+}
+
+.pcp-pax-summary .vertical-spacer {
+    clear: both;
+}
+.pcp-pax-summary .time-range {
+    clear: both;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.pcp-pax-summary.b0 {
+    background-color: #0B0C0C;
+    color: #fff;
+}
+
+.pcp-pax-summary.b1 {
+    background-color: #6F777B;
+    color: #fff;
+}
+
+.pcp-pax-summary.b2 {
+    background-color: #BFC1C3;
+    color: #000;
+}
+
+.pcp-pax-summary.b3 {
+    background-color: #EEEFF0;
+    color: #000;
+}
+
+.pcp-pax-summary.b0 .queues .queue div {
+    background-color: #242525;
+}
+
+.pcp-pax-summary.b1 .queues .queue div {
+    background-color: #7E8588;
+}
+
+.pcp-pax-summary.b2 .queues .queue div {
+    background-color: #CCCDCF;
+}
+
+.pcp-pax-summary.b3 .queues .queue div {
+    background-color: #FAFAFB;
 }
 
 // Usage table

@@ -1,0 +1,79 @@
+package drt.client.components
+
+import diode.data.Pot
+import drt.client.services.JSDateConversions.SDate
+import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.{Queues, SDateLike}
+import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{Callback, ScalaComponent}
+import org.scalajs.dom.html.Div
+
+case class PcpPaxSummary(startMillis: MillisSinceEpoch, durationMinutes: Long, totalPax: Double, queuesPax: Map[QueueName, Double])
+
+object PcpPaxSummary {
+  def apply(startMillis: MillisSinceEpoch, durationMillis: Long, crunchMinutes: Set[CrunchMinute], terminalName: TerminalName, queues: Set[QueueName]): PcpPaxSummary = {
+    val queueLoads: Map[QueueName, Double] = crunchMinutes
+      .filter(cm => cm.minute >= startMillis && cm.minute < startMillis + (durationMillis * 60000) && cm.terminalName == terminalName)
+      .groupBy(_.queueName)
+      .map {
+        case (qn, cms) =>
+          val sum = cms.toSeq.map(_.paxLoad).sum
+          (qn, sum)
+      }
+    val relevantQueueLoads = queueLoads.filter { case (qn, _) => queues.contains(qn) }
+    PcpPaxSummary(startMillis, durationMillis, queueLoads.values.sum, relevantQueueLoads)
+  }
+}
+
+object PcpPaxSummariesComponent {
+
+  case class Props(crunchStatePot: Pot[CrunchState])
+
+  class Backend {
+    def render(props: Props): TagOf[Div] = {
+      <.div(
+        props.crunchStatePot.render(cs => {
+          val now = SDate.now()
+          val fiveMinutes = 5
+          val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
+          <.div(^.className := "pcp-pax-summaries",
+            (0 until 4).map(box => {
+              val start = now.addMinutes(box * 5)
+              val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, "T1", queues.toSet)
+              summaryBox(box, start, queues, summary)
+            }).toTagMod,
+            <.div(^.className := "pcp-pax-summary last")
+          )
+        })
+      )
+    }
+  }
+
+  def summaryBox(boxNumber: Int, now: SDateLike, queues: Seq[QueueName], summary1: PcpPaxSummary): TagOf[Div] = {
+    <.div(^.className := s"pcp-pax-summary b$boxNumber",
+      <.div(^.className := "total", s"${summary1.totalPax.round}"),
+      <.div(^.className := "queues",
+        queues.map(qn => {
+          <.div(^.className := "queue",
+            <.div(^.className := "queue-name", <.div(Queues.queueDisplayNames(qn))),
+            <.div(^.className := "queue-pax", <.div(s"${summary1.queuesPax.getOrElse(qn, 0d).round}"))
+          )
+        }).toTagMod
+      ),
+      <.div(^.className := "vertical-spacer"),
+      <.div(^.className := "time-range", s"${now.toHoursAndMinutes()} - ${now.addMinutes(5).toHoursAndMinutes()}")
+    )
+  }
+
+  val component = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")
+    .renderBackend[PcpPaxSummariesComponent.Backend]
+    .componentDidMount((p) => {
+      Callback.log(s"PcpPaxSummaries component didMount")
+    })
+    //    .configure(Reusability.shouldComponentUpdate)
+    .build
+
+  def apply(crunchStatePot: Pot[CrunchState]): VdomElement = component(Props(crunchStatePot))
+}

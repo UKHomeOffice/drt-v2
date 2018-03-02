@@ -114,6 +114,7 @@ object TerminalComponent {
                     case _ => "Live View"
                   }),
                   DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState)),
+                  PcpPaxSummariesComponent(terminalContentProps.crunchStatePot),
                   TerminalContentComponent(terminalContentProps)
                 ) else ""
               }),
