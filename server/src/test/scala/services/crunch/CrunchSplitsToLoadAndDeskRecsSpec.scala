@@ -9,6 +9,7 @@ import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import services.SDate
 import services.graphstages.Crunch.getLocalLastMidnight
+import services.graphstages.DqManifests
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
@@ -48,17 +49,20 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
-
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 2)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
         Queues.EGate -> Seq(20 * egSplit, 1 * egSplit)
       ))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 2)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
@@ -79,14 +83,17 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
-
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = paxLoadsFromPortState(result, 5)
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 5)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "Given 1 flight with 100 passengers eaa splits to desk and eGates" +
@@ -118,18 +125,20 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(flights)
-
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-      val resultSummary = workLoadsFromPortState(result, 5)
-
+      offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(
         "eeaDesk" -> List(5.25, 5.25, 5.25, 5.25, 5.25),
         "eGate" -> List(1.5, 1.5, 1.5, 1.5, 1.5))
       )
 
-      resultSummary === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val resultSummary = workLoadsFromPortState(ps, 5)
+          resultSummary == expected
+      }
+
+      true
     }
 
     "CSV split ratios " >> {
@@ -156,14 +165,17 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             SplitRatio(eeaMachineReadableToDesk, 0.25)
           )))
 
-        crunch.liveArrivalsInput.offer(flights)
-
-        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 3 seconds)
-        val resultSummary = paxLoadsFromPortState(result, 5)
+        offerAndWait(crunch.liveArrivalsInput, flights)
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
-        resultSummary === expected
+        crunch.liveTestProbe.fishForMessage(30 seconds) {
+          case ps: PortState =>
+            val resultSummary = paxLoadsFromPortState(ps, 5)
+            resultSummary == expected
+        }
+
+        true
       }
     }
 
@@ -193,24 +205,27 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         )
 
-        val voyageManifests = VoyageManifests(Set(
+        val voyageManifests = DqManifests("", Set(
           VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
             PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
           ))
         ))
 
-        crunch.baseArrivalsInput.offer(flights)
-        crunch.manifestsInput.offer(voyageManifests)
-
-        val result = getLastMessageReceivedBy(crunch.liveTestProbe, 5 seconds)
-        val resultSummary = paxLoadsFromPortState(result, 5)
+        offerAndWait(crunch.baseArrivalsInput, flights)
+        offerAndWait(crunch.manifestsInput, voyageManifests)
 
         val expected = Map("T1" -> Map(
           Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
           Queues.EGate -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)
         ))
 
-        resultSummary === expected
+        crunch.liveTestProbe.fishForMessage(30 seconds) {
+          case ps: PortState =>
+            val resultSummary = paxLoadsFromPortState(ps, 5)
+            resultSummary == expected
+        }
+
+        true
       }
     }
   }

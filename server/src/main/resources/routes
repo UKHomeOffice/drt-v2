@@ -23,5 +23,6 @@ POST        /api/*path                                    controllers.Applicatio
 # Logging
 POST        /logging                                      controllers.Application.logging
 
+
 POST        /data/staff                                   controllers.Application.saveStaff
 

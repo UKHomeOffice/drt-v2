@@ -152,7 +152,6 @@ object LHRLiveFeed {
 
     val logResponse: HttpResponse => HttpResponse = resp => {
 
-      log.info(s"Got a response from LHR Live API: $resp")
       if (resp.status.isFailure) {
         log.warn(s"Error when reading LHR Live API ${resp.headers}, ${resp.entity.data.asString}")
       }

@@ -81,13 +81,17 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(aclFlight)
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-      val flightsResult = result.flights.values.map(_.apiFlight)
+      offerAndWait(crunch.baseArrivalsInput, aclFlight)
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"))
 
-      flightsResult === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          flightsResult == expected
+      }
+
+      true
     }
 
     "Given an ACL feed with one flight and the same flight in the live feed" +
@@ -108,14 +112,18 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(aclFlights)
-      crunch.liveArrivalsInput.offer(liveFlights)
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-      val flightsResult = result.flights.values.map(_.apiFlight)
+      offerAndWait(crunch.baseArrivalsInput, aclFlights)
+      offerAndWait(crunch.liveArrivalsInput, liveFlights)
 
       val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
 
-      flightsResult === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          flightsResult == expected
+      }
+
+      true
     }
 
     "Given some initial ACL & live arrivals, one ACL arrival and no live arrivals " +
@@ -141,13 +149,17 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
+      offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
 
-      val lastMessage = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-      val flightsResult = lastMessage.flights.values.map(_.apiFlight).toSet
       val expected = initialLive ++ newAcl
 
-      flightsResult === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          flightsResult == expected
+      }
+
+      true
     }
 
     "Given some initial arrivals, no ACL arrivals and one live arrival " +
@@ -171,14 +183,17 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.liveArrivalsInput.offer(Flights(newLive.toList))
+      offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-
-      val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newLive.map(_.copy(rawIATA = "BA0001")) + initialAcl2
 
-      flightsResult === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          flightsResult == expected
+      }
+
+      true
     }
 
     "Given one ACL arrival followed by one live arrival and initial arrivals which don't match them " +
@@ -204,15 +219,18 @@ class AclFeedSpec extends CrunchTestLike {
         crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
       )
 
-      crunch.baseArrivalsInput.offer(Flights(newAcl.toList))
-      crunch.liveArrivalsInput.offer(Flights(newLive.toList))
+      offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
+      offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
-      val result = getLastMessageReceivedBy(crunch.liveTestProbe, 2 seconds)
-
-      val flightsResult = result.flights.values.map(_.apiFlight).toSet
       val expected = newAcl ++ newLive ++ initialLive
 
-      flightsResult === expected
+      crunch.liveTestProbe.fishForMessage(30 seconds) {
+        case ps: PortState =>
+          val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          flightsResult == expected
+      }
+
+      true
     }
   }
 
@@ -232,11 +250,11 @@ class AclFeedSpec extends CrunchTestLike {
       .groupBy(_.Terminal)
 
     todayArrivals.foreach {
-      case (tn, arrivals) =>
+      case (tn, _) =>
         val tByUniqueId = todayArrivals(tn).groupBy(_.uniqueId)
         println(s"uniques for $tn: ${tByUniqueId.keys.size} flights")
-        val nonUniques = tByUniqueId.filter {
-          case (uid, a) => a.length > 1
+        tByUniqueId.filter {
+          case (_, a) => a.length > 1
         }.foreach {
           case (uid, a) => println(s"non-unique: $uid -> $a")
         }

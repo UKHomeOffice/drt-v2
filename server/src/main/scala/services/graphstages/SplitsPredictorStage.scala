@@ -16,15 +16,37 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
 
   val shape: FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]] = FlowShape.of(in, out)
 
+  val log = LoggerFactory.getLogger(getClass)
+
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
+      var haveGrabbed: Boolean = false
 
       setHandler(in, new InHandler {
-        override def onPush(): Unit = {}
+        override def onPush(): Unit = {
+          log.info(s"Dummy predictor onPush() - grabbing arrivals")
+          grab(in)
+          haveGrabbed = true
+          if (!hasBeenPulled(in)) {
+            log.info(s"Dummy predictor pull(in)")
+            pull(in)
+          }
+        }
       })
 
       setHandler(out, new OutHandler {
-        override def onPull(): Unit = {}
+        override def onPull(): Unit = {
+          log.info(s"Dummy predictor onPull()")
+          if (haveGrabbed && isAvailable(out)) {
+            log.info(s"Dummy predictor pushing empty results")
+            push(out, Seq[(Arrival, Option[ApiSplits])]())
+            haveGrabbed = false
+          }
+          if (!hasBeenPulled(in)) {
+            log.info(s"Dummy predictor pull(in)")
+            pull(in)
+          }
+        }
       })
     }
 }
@@ -47,7 +69,6 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
       setHandler(in, new InHandler {
         override def onPush(): Unit = {
           log.info(s"onPush")
-          tryPushing()
 
           if (predictionsToPush.isEmpty) {
             val arrivalsByTerminal = grab(in).groupBy(_.Terminal)
@@ -56,6 +77,7 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
           } else {
             log.info(s"ignoring onPush() as we've not yet emitted our current arrivals")
           }
+          tryPushing()
 
           if (!hasBeenPulled(in)) pull(in)
         }
@@ -79,7 +101,7 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
             predictionsToPush = None
 
           case Some(arrivalsToPush) =>
-            log.info(s"Can't push ${arrivalsToPush.length} arrivals because outlet isn't available")
+            log.info(s"Can't push ${arrivalsToPush.length} arrivals with prediction. outlet not available")
         }
       }
 

@@ -9,22 +9,12 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
-import com.typesafe.config.ConfigFactory
-import controllers.ArrivalGenerator
 import drt.shared._
-import org.apache.spark.ml.clustering.KMeans
-import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
-import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.functions.{col, concat_ws, expr}
-import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
+import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
-import services.Manifests.log
-import services.{Manifests, SDate}
+import services.SDate
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -32,6 +22,7 @@ import scala.util.{Failure, Success, Try}
 
 class SplitsExportSpec extends Specification {
   lazy val rawZipFilesPath: String = "/atmos-backup"
+  val log = LoggerFactory.getLogger(getClass)
 
   val archetypes = List(
     Tuple2(PaxTypes.EeaMachineReadable.cleanName, Queues.EeaDesk),

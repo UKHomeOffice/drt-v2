@@ -23,42 +23,44 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
-case class CrunchSystem(shifts: SourceQueueWithComplete[String],
-                        fixedPoints: SourceQueueWithComplete[String],
-                        staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                        baseArrivals: SourceQueueWithComplete[Flights],
-                        forecastArrivals: SourceQueueWithComplete[Flights],
-                        liveArrivals: SourceQueueWithComplete[Flights],
-                        actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
-                        manifests: SourceQueueWithComplete[VoyageManifests]
-                       )
+case class CrunchSystem[MS](shifts: SourceQueueWithComplete[String],
+                            fixedPoints: SourceQueueWithComplete[String],
+                            staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
+                            baseArrivals: SourceQueueWithComplete[Flights],
+                            forecastArrivals: SourceQueueWithComplete[Flights],
+                            liveArrivals: SourceQueueWithComplete[Flights],
+                            manifests: MS,
+                            actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
+                           )
 
 object CrunchSystem {
 
-  case class CrunchProps(system: ActorSystem,
-                         airportConfig: AirportConfig,
-                         pcpArrival: Arrival => MilliDate,
-                         historicalSplitsProvider: SplitsProvider.SplitProvider,
-                         liveCrunchStateActor: ActorRef,
-                         forecastCrunchStateActor: ActorRef,
-                         maxDaysToCrunch: Int,
-                         expireAfterMillis: Long,
-                         minutesToCrunch: Int,
-                         warmUpMinutes: Int,
-                         actors: Map[String, AskableActorRef],
-                         useNationalityBasedProcessingTimes: Boolean,
-                         crunchStartDateProvider: (SDateLike) => SDateLike = getLocalLastMidnight,
-                         crunchEndDateProvider: (SDateLike) => SDateLike = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-                         calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
-                         now: () => SDateLike = () => SDate.now(),
-                         initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                         splitsPredictorStage: SplitsPredictorBase,
-                         waitForManifests: Boolean = true
-                        )
+  case class CrunchProps[MS](system: ActorSystem,
+                             airportConfig: AirportConfig,
+                             pcpArrival: Arrival => MilliDate,
+                             historicalSplitsProvider: SplitsProvider.SplitProvider,
+                             liveCrunchStateActor: ActorRef,
+                             forecastCrunchStateActor: ActorRef,
+                             maxDaysToCrunch: Int,
+                             expireAfterMillis: Long,
+                             minutesToCrunch: Int,
+                             warmUpMinutes: Int,
+                             actors: Map[String, AskableActorRef],
+                             useNationalityBasedProcessingTimes: Boolean,
+                             crunchStartDateProvider: (SDateLike) => SDateLike = getLocalLastMidnight,
+                             crunchEndDateProvider: (SDateLike) => SDateLike = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
+                             calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
+                             now: () => SDateLike = () => SDate.now(),
+                             initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                             splitsPredictorStage: SplitsPredictorBase,
+                             manifestsSource: Source[DqManifests, MS],
+                             voyageManifestsActor: ActorRef,
+                             waitForManifests: Boolean = false
+                            )
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(props: CrunchProps): CrunchSystem = {
+  def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
 
     val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
     val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-arrivals-actor")
@@ -94,20 +96,23 @@ object CrunchSystem {
 
     val forecastStaffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize)
 
-    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
-    val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
-    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](10, OverflowStrategy.dropHead)
-    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
-    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](10, OverflowStrategy.dropHead)
-    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.dropHead)
-    val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.dropHead)
-    val manifestsSource: Source[VoyageManifests, SourceQueueWithComplete[VoyageManifests]] = Source.queue[VoyageManifests](100, OverflowStrategy.dropHead)
+    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
+    val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
+    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
+    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
+    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
+    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
+    val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](1, OverflowStrategy.backpressure)
 
     val maxLiveDaysToCrunch = 2
 
+    val liveFlightsWithSplitsFromPortState = FlightsWithSplits(initialLiveCrunchState.map(_.flights.values).getOrElse(Seq()).toSeq)
+    val initialLiveFlightsWithSplits = props.initialFlightsWithSplits.getOrElse(liveFlightsWithSplitsFromPortState)
+    val forecastFlightsWithSplitsFromPortState = FlightsWithSplits(initialForecastCrunchState.map(_.flights.values).getOrElse(Seq()).toSeq)
+    val initialForecastFlightsWithSplits = props.initialFlightsWithSplits.getOrElse(forecastFlightsWithSplitsFromPortState)
     val liveCrunchStage = new CrunchGraphStage(
       name = "live",
-      optionalInitialFlights = props.initialFlightsWithSplits,
+      optionalInitialFlights = Option(initialLiveFlightsWithSplits),
       airportConfig = props.airportConfig,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
@@ -125,7 +130,7 @@ object CrunchSystem {
 
     val forecastCrunchStage = new CrunchGraphStage(
       name = "forecast",
-      optionalInitialFlights = None,
+      optionalInitialFlights = Option(initialForecastFlightsWithSplits),
       airportConfig = props.airportConfig,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
       groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
@@ -141,21 +146,32 @@ object CrunchSystem {
       warmUpMinutes = props.warmUpMinutes,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
-    val arrivalsStage_ = arrivalsStage(
-      baseArrivalsActor = baseArrivalsActor,
-      forecastArrivalsActor = forecastArrivalsActor,
-      liveArrivalsActor = liveArrivalsActor,
-      props.pcpArrival,
-      props.airportConfig,
-      props.expireAfterMillis,
+    val arrivalsStage = new ArrivalsGraphStage(
+      name = "-",
+      initialBaseArrivals = initialArrivals(baseArrivalsActor),
+      initialForecastArrivals = initialArrivals(forecastArrivalsActor),
+      initialLiveArrivals = initialArrivals(liveArrivalsActor),
+      pcpArrivalTime = props.pcpArrival,
+      validPortTerminals = props.airportConfig.terminalNames.toSet,
+      expireAfterMillis = props.expireAfterMillis,
       now = props.now)
+
+    val arrivalsShape = ArrivalsShape(
+      baseArrivalsActor = baseArrivalsActor,
+      fcstArrivalsActor = forecastArrivalsActor,
+      liveArrivalsActor = liveArrivalsActor,
+      arrivalsStage
+    )
+
+    val liveCrunchShape = LiveCrunchShape(liveCrunchStage, liveStaffingStage, actualDesksStage)
+    val forecastCrunchShape = ForecastCrunchShape(forecastCrunchStage, forecastStaffingStage)
 
     val runnableCrunch = RunnableCrunch(
       baseArrivals, forecastArrivals, liveArrivals,
-      manifestsSource, props.splitsPredictorStage, shiftsSource, fixedPointsSource, staffMovementsSource,
-      actualDesksAndQueuesSource, arrivalsStage_, actualDesksStage,
-      liveCrunchStage, liveStaffingStage, props.liveCrunchStateActor,
-      forecastCrunchStage, forecastStaffingStage, props.forecastCrunchStateActor)
+      props.voyageManifestsActor, props.manifestsSource, props.splitsPredictorStage,
+      shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
+      arrivalsShape, liveCrunchShape, forecastCrunchShape,
+      props.forecastCrunchStateActor, props.liveCrunchStateActor)
 
     implicit val actorSystem: ActorSystem = props.system
     val (baseInput, forecastInput, liveInput, manifestsInput, shiftsInput, fixedPointsInput, movementsInput, actualDesksInput) = runnableCrunch.run()(ActorMaterializer())
@@ -167,8 +183,8 @@ object CrunchSystem {
       baseArrivals = baseInput,
       forecastArrivals = forecastInput,
       liveArrivals = liveInput,
-      actualDeskStats = actualDesksInput,
-      manifests = manifestsInput
+      manifests = manifestsInput,
+      actualDeskStats = actualDesksInput
     )
   }
 
@@ -204,24 +220,6 @@ object CrunchSystem {
         Seq()
     }, 5 minutes)
   }
-
-  def arrivalsStage(baseArrivalsActor: ActorRef,
-                    forecastArrivalsActor: ActorRef,
-                    liveArrivalsActor: ActorRef,
-                    pcpArrival: Arrival => MilliDate,
-                    airportConfig: AirportConfig,
-                    expireAfterMillis: Long,
-                    now: () => SDateLike) = new ArrivalsGraphStage(
-    initialBaseArrivals = initialArrivals(baseArrivalsActor),
-    initialForecastArrivals = initialArrivals(forecastArrivalsActor),
-    initialLiveArrivals = initialArrivals(liveArrivalsActor),
-    baseArrivalsActor = baseArrivalsActor,
-    forecastArrivalsActor = forecastArrivalsActor,
-    liveArrivalsActor = liveArrivalsActor,
-    pcpArrivalTime = pcpArrival,
-    validPortTerminals = airportConfig.terminalNames.toSet,
-    expireAfterMillis = expireAfterMillis,
-    now = now)
 
   def initialArrivals(arrivalsActor: AskableActorRef): Set[Arrival] = {
     val canWaitMinutes = 5

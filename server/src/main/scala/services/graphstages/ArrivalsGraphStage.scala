@@ -1,24 +1,20 @@
 package services.graphstages
 
-import akka.actor.ActorRef
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream._
+import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.{ArrivalsState, SDate}
 import services.graphstages.Crunch.midnightThisMorning
 
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.Map
 import scala.language.postfixOps
 
-class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
+class ArrivalsGraphStage(name: String,
+                         initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
-                         baseArrivalsActor: ActorRef,
-                         forecastArrivalsActor: ActorRef,
-                         liveArrivalsActor: ActorRef,
                          pcpArrivalTime: (Arrival) => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
@@ -38,23 +34,31 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     var merged: Map[Int, Arrival] = Map()
     var toPush: Option[ArrivalsDiff] = None
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       baseArrivals = initialBaseArrivals
-      forecastArrivalsById = initialForecastArrivals.map(a => (a.uniqueId-> a)).toMap
-      liveArrivals = initialLiveArrivals.map(a => (a.uniqueId, a)).toMap
+      forecastArrivalsById = prepInitialArrivals(initialForecastArrivals)
+      liveArrivals = prepInitialArrivals(initialLiveArrivals)
       super.preStart()
+    }
+
+    def prepInitialArrivals(arrivals: Set[Arrival]): Map[Int, Arrival] = {
+      val minusExpired = purgeExpired(arrivals).toSeq
+      val byId = filterAndSetPcp(minusExpired)
+        .map(a => (a.uniqueId, a))
+        .toMap
+      byId
     }
 
     setHandler(inBaseArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inBaseArrivals onPush() grabbing base flights")
-        baseArrivals = grabAndSetPcp(inBaseArrivals)
+        val grabbedArrivals = grab(inBaseArrivals)
+        log.info(s"Grabbed ${grabbedArrivals.flights.length} base arrivals")
+        baseArrivals = filterAndSetPcp(grabbedArrivals.flights)
 
-        baseArrivalsActor ! ArrivalsState(baseArrivals.map(a => (a.uniqueId, a)).toMap)
-
-        mergeAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
+        mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
       }
@@ -63,11 +67,11 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
     setHandler(inForecastArrivals, new InHandler {
       override def onPush(): Unit = {
         log.info(s"inForecastArrivals onPush() grabbing forecast flights")
-        forecastArrivalsById = updateAndPurge(grabAndSetPcp(inForecastArrivals), forecastArrivalsById)
+        val grabbedArrivals = grab(inForecastArrivals)
+        log.info(s"Grabbed ${grabbedArrivals.flights.length} forecast arrivals")
+        forecastArrivalsById = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), forecastArrivalsById)
 
-        forecastArrivalsActor ! ArrivalsState(forecastArrivalsById)
-
-        mergeAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
+        mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
       }
@@ -77,44 +81,55 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       override def onPush(): Unit = {
         log.info(s"inLiveArrivals onPush() grabbing live flights")
 
-        liveArrivals = updateAndPurge(grabAndSetPcp(inLiveArrivals), liveArrivals)
+        val grabbedArrivals = grab(inLiveArrivals)
+        log.info(s"Grabbed ${grabbedArrivals.flights.length} live arrivals")
+        liveArrivals = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), liveArrivals)
 
-        liveArrivalsActor ! ArrivalsState(liveArrivals)
-
-        mergeAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
+        mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
       }
     })
 
-    def updateAndPurge(updates: Set[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+    def mergeUpdatesAndPurge(updates: Set[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
       val updated = updates
         .foldLeft(existingArrivals) {
           case (soFar, newArrival) => soFar.updated(newArrival.uniqueId, newArrival)
         }
-        .filterNot {
-          case (_, arrival) => expired(arrival)
-        }
 
-      val numPurged = existingArrivals.size - updated.size
+      val minusExpired = purgeExpired(updated)
+
+      val numPurged = existingArrivals.size - minusExpired.size
       if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during update")
 
-      updated
+      minusExpired
     }
 
-    def mergeAndPush(baseArrivals: Set[Arrival], forecastArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
+    def purgeExpired(flightsById: Map[Int, Arrival]): Map[Int, Arrival] = {
       val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      flightsById.filterNot {
+        case (_, arrival) => expired(arrival)
+      }
+    }
 
+    def purgeExpired(flights: Set[Arrival]): Set[Arrival] = {
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      flights.filterNot(expired)
+    }
+
+    def mergeAllSourcesAndPush(baseArrivals: Set[Arrival], forecastArrivals: Set[Arrival], liveArrivals: Set[Arrival]): Unit = {
       val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
-      val newMergedFiltered = newMerged.filterNot { case (_, a) => expired(a) }
+      val minusExpired = purgeExpired(newMerged)
 
-      val numPurged = newMerged.size - newMergedFiltered.size
+      val numPurged = newMerged.size - minusExpired.size
       if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge")
 
-      toPush = arrivalsDiff(merged, newMergedFiltered)
+      val maybeDiff1 = toPush
+      val maybeDiff2 = arrivalsDiff(merged, minusExpired)
+      toPush = Crunch.mergeMaybeArrivalsDiffs(maybeDiff1, maybeDiff2)
+
       pushIfAvailable(toPush, outArrivalsDiff)
-      merged = newMergedFiltered
+      merged = minusExpired
     }
 
     setHandler(outArrivalsDiff, new OutHandler {
@@ -127,11 +142,8 @@ class ArrivalsGraphStage(initialBaseArrivals: Set[Arrival],
       }
     })
 
-    def grabAndSetPcp(arrivals: Inlet[Flights]): Set[Arrival] = {
-      val grabbedArrivals = grab(arrivals)
-      log.info(s"Grabbed ${grabbedArrivals.flights.length} ${arrivals.toString} arrivals")
-      grabbedArrivals
-        .flights
+    def filterAndSetPcp(arrivals: Seq[Arrival]): Set[Arrival] = {
+      arrivals
         .filterNot {
           case f if !isFlightRelevant(f) =>
             log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${f.SchDT}, ${f.Origin}")
