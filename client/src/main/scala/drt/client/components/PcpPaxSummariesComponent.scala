@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.{ViewLive, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{Queues, SDateLike}
@@ -29,24 +30,26 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(crunchStatePot: Pot[CrunchState])
+  case class Props(crunchStatePot: Pot[CrunchState], viewMode: ViewMode)
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
-      <.div(
-        props.crunchStatePot.render(cs => {
-          val now = SDate.now()
-          val fiveMinutes = 5
-          val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
-          <.div(^.className := "pcp-pax-summaries",
-            (0 until 4).map(box => {
-              val start = now.addMinutes(box * 5)
-              val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, "T1", queues.toSet)
-              summaryBox(box, start, queues, summary)
-            }).toTagMod,
-            <.div(^.className := "pcp-pax-summary last")
-          )
-        })
+      val now = SDate.now()
+      val fiveMinutes = 5
+      val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
+      <.div(^.className := "pcp-pax-summaries",
+        if (props.viewMode == ViewLive()) {
+          props.crunchStatePot.render(cs => {
+            <.div(
+              (0 until 4).map(box => {
+                val start = now.addMinutes(box * 5)
+                val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, "T1", queues.toSet)
+                summaryBox(box, start, queues, summary)
+              }).toTagMod,
+              <.div(^.className := "pcp-pax-summary last")
+            )
+          })
+        } else ""
       )
     }
   }
@@ -72,8 +75,7 @@ object PcpPaxSummariesComponent {
     .componentDidMount((p) => {
       Callback.log(s"PcpPaxSummaries component didMount")
     })
-    //    .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(crunchStatePot: Pot[CrunchState]): VdomElement = component(Props(crunchStatePot))
+  def apply(crunchStatePot: Pot[CrunchState], viewMode: ViewMode): VdomElement = component(Props(crunchStatePot, viewMode))
 }

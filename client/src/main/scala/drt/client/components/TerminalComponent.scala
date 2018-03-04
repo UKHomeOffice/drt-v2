@@ -29,7 +29,8 @@ object TerminalComponent {
                             timeRangeHours: TimeRangeHours,
                             loadingState: LoadingState,
                             showActuals: Boolean,
-                            userRoles: Pot[List[String]]
+                            userRoles: Pot[List[String]],
+                            viewMode: ViewMode
                           )
 
   implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.derive[TerminalPageTabLoc]
@@ -49,7 +50,8 @@ object TerminalComponent {
         model.timeRangeFilter,
         model.loadingState,
         model.showActualIfAvailable,
-        model.userRoles
+        model.userRoles,
+        model.viewMode
       ))
       modelRCP(modelMP => {
         val model = modelMP()
@@ -65,7 +67,8 @@ object TerminalComponent {
             model.airportInfos,
             model.timeRangeHours,
             props.router,
-            model.showActuals
+            model.showActuals,
+            model.viewMode
           )
 
           val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
@@ -114,7 +117,7 @@ object TerminalComponent {
                     case _ => "Live View"
                   }),
                   DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState)),
-                  PcpPaxSummariesComponent(terminalContentProps.crunchStatePot),
+                  PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode),
                   TerminalContentComponent(terminalContentProps)
                 ) else ""
               }),

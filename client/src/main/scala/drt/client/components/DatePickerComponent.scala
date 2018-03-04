@@ -86,12 +86,11 @@ object DatePickerComponent {
 
       def goButton(loading: Boolean, isCurrentSelection: Boolean): TagMod = (loading, isCurrentSelection) match {
         case (true, true) =>
-          <.div(^.id := "snapshot-done left-spacer", Icon.spinner)
+          <.div(^.id := "snapshot-done", Icon.spinner)
         case (false, true) =>
-//          <.div(^.id := "snapshot-done left-spacer", Icon.checkCircleO)
-          Icon.checkCircleO
+          <.div(^.id := "snapshot-done", Icon.checkCircleO)
         case _ =>
-          <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate)
+          <.div(^.id := "snapshot-done", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate))
       }
 
       val yesterdayActive = if (state.selectedDateTime.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
