@@ -125,7 +125,7 @@ object TerminalContentComponent {
       val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
 
-      <.div(^.className := "current-content",
+      <.div(^.className := "view-mode-content",
         <.div(^.className := "tabs-with-export",
           <.ul(^.className := "nav nav-tabs",
             <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
