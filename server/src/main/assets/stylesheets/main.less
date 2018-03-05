@@ -130,10 +130,6 @@
   position: relative;
 }
 
-.view-mode-content.viewlive, .view-mode-content.viewday {
-  top: -40px;
-}
-
 .date-view-picker-container {
   display: flex;
   padding: 10px 17px 0 0;
@@ -155,16 +151,17 @@
   display: inline-block;
 }
 
-#staffing .row {
+
+#staffing div .row {
   margin: 0px;
 }
 
-#staffing .row div {
-  margin: 15px;
+#staffing div .row div {
   float: left;
+  margin: 15px;
 }
 
-#staffing .row div label, .planning-week label {
+#staffing div .row div label, #planning div .row div label {
   margin-top: 7px;
 }
 
@@ -336,11 +333,11 @@ table.headlines tr:nth-child(odd) {
 .date-selector {
   width: 520px;
   padding-top: 2%;
-  float: left;
 }
 
 .date-selector .row {
   margin-left: 0px;
+  clear: none;
 }
 
 .date-selector label.text {
@@ -388,6 +385,11 @@ table.headlines tr:nth-child(odd) {
 
 .date-selector select.form-control, .snapshot-selector select.form-control {
   padding: 4px;
+}
+
+.content-head {
+  clear: both;
+  overflow: auto;
 }
 
 #snapshot-done {
@@ -635,10 +637,6 @@ table.user-desk-recs.cols-5 tbody td, table.user-desk-recs.cols-5 thead th {
 
 table.user-desk-recs.cols-4 tbody td, table.user-desk-recs.cols-4 thead th {
   width: 69px;
-}
-
-table.user-desk-recs.cols-3 tbody td, table.user-desk-recs.cols-3 thead th {
-  /*width: 84px;*/
 }
 
 table.user-desk-recs.cols-2 tbody td, table.user-desk-recs.cols-2 thead th {
@@ -913,9 +911,8 @@ p {
 
 .pcp-pax-summaries {
   min-height: 228px;
-  margin-left: 520px;
   position: relative;
-  top: -40px;
+  float: right;
 }
 
 .pcp-pax-summary {
@@ -1065,7 +1062,6 @@ p {
 
 .terminal-desk-recs-container {
   height: 800px;
-  /*max-width: 1224px;*/
 }
 
 table.user-desk-recs tbody tr td.table-danger {

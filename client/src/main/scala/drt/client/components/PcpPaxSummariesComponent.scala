@@ -11,7 +11,10 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html.Div
 
-case class PcpPaxSummary(startMillis: MillisSinceEpoch, durationMinutes: Long, totalPax: Double, queuesPax: Map[QueueName, Double])
+case class PcpPaxSummary(startMillis: MillisSinceEpoch,
+                         durationMinutes: Long,
+                         totalPax: Double,
+                         queuesPax: Map[QueueName, Double])
 
 object PcpPaxSummary {
   def apply(startMillis: MillisSinceEpoch, durationMillis: Long, crunchMinutes: Set[CrunchMinute], terminalName: TerminalName, queues: Set[QueueName]): PcpPaxSummary = {
@@ -30,7 +33,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(crunchStatePot: Pot[CrunchState], viewMode: ViewMode)
+  case class Props(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName)
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
@@ -45,10 +48,9 @@ object PcpPaxSummariesComponent {
               boxes.zipWithIndex.map {
                 case (label, box) =>
                   val start = now.addMinutes(box * 5)
-                  val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, "T1", queues.toSet)
+                  val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, props.terminalName, queues.toSet)
                   summaryBox(box, label, start, queues, summary)
-              }.toTagMod,
-              <.div(^.className := "pcp-pax-summary last")
+              }.toTagMod
             )
           })
         } else ""
@@ -80,5 +82,5 @@ object PcpPaxSummariesComponent {
     })
     .build
 
-  def apply(crunchStatePot: Pot[CrunchState], viewMode: ViewMode): VdomElement = component(Props(crunchStatePot, viewMode))
+  def apply(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName): VdomElement = component(Props(crunchStatePot, viewMode, terminalName))
 }
