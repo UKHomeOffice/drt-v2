@@ -40,12 +40,14 @@ object PcpPaxSummariesComponent {
       <.div(^.className := "pcp-pax-summaries",
         if (props.viewMode == ViewLive()) {
           props.crunchStatePot.render(cs => {
+            val boxes = Seq("next 5 mins", "5-10 mins", "10-15 mins")
             <.div(
-              (0 until 4).map(box => {
-                val start = now.addMinutes(box * 5)
-                val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, "T1", queues.toSet)
-                summaryBox(box, start, queues, summary)
-              }).toTagMod,
+              boxes.zipWithIndex.map {
+                case (label, box) =>
+                  val start = now.addMinutes(box * 5)
+                  val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, "T1", queues.toSet)
+                  summaryBox(box, label, start, queues, summary)
+              }.toTagMod,
               <.div(^.className := "pcp-pax-summary last")
             )
           })
@@ -54,7 +56,7 @@ object PcpPaxSummariesComponent {
     }
   }
 
-  def summaryBox(boxNumber: Int, now: SDateLike, queues: Seq[QueueName], summary1: PcpPaxSummary): TagOf[Div] = {
+  def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[QueueName], summary1: PcpPaxSummary): TagOf[Div] = {
     <.div(^.className := s"pcp-pax-summary b$boxNumber",
       <.div(^.className := "total", s"${summary1.totalPax.round}"),
       <.div(^.className := "queues",
@@ -66,6 +68,7 @@ object PcpPaxSummariesComponent {
         }).toTagMod
       ),
       <.div(^.className := "vertical-spacer"),
+      <.div(^.className := "time-range-label", label),
       <.div(^.className := "time-range", s"${now.toHoursAndMinutes()} - ${now.addMinutes(5).toHoursAndMinutes()}")
     )
   }

@@ -99,12 +99,12 @@ object TerminalComponent {
                 }
               ),
               model.userRoles.render(
-                r => if(r.contains("staff:edit"))
-                <.li(^.className := staffingClass,
-                  <.a(VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
-                    props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
-                  }
-                ) else ""
+                r => if (r.contains("staff:edit"))
+                  <.li(^.className := staffingClass,
+                    <.a(VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
+                      props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
+                    }
+                  ) else ""
               )
             ),
             <.div(^.className := "tab-content",
@@ -116,8 +116,10 @@ object TerminalComponent {
                     case Some(ds) if SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
                     case _ => "Live View"
                   }),
-                  DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState)),
-                  PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode),
+                  <.div(^.className := "content-head",
+                    DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState)),
+                    PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode)
+                  ),
                   TerminalContentComponent(terminalContentProps)
                 ) else ""
               }),
@@ -138,14 +140,14 @@ object TerminalComponent {
                 } else ""
               }),
               model.userRoles.render(
-                r => if(r.contains("staff:edit"))
-              <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
-                if (props.terminalPageTab.mode == "staffing") {
-                  model.potMonthOfShifts.render(ms => {
-                    TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
-                  })
-                } else ""
-              ) else "")
+                r => if (r.contains("staff:edit"))
+                  <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+                    if (props.terminalPageTab.mode == "staffing") {
+                      model.potMonthOfShifts.render(ms => {
+                        TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
+                      })
+                    } else ""
+                  ) else "")
             )
           )
         }))

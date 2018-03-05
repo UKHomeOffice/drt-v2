@@ -895,17 +895,19 @@ p {
 
 .pcp-pax-summaries {
   min-height: 228px;
+  margin-left: 520px;
 }
 
 .pcp-pax-summary {
   float: left;
-  width: 144px;
+  width: 32%;
   padding: 5px;
-  margin: 5px;
+  margin-right: 5px;
 }
 
 .pcp-pax-summary.last {
   border: 0px;
+  margin-right: 0px;
   float: none;
   clear: left;
 }
@@ -923,20 +925,21 @@ p {
 
 .pcp-pax-summary .queues .queue {
   float: left;
-  width: 58px
+  width: 48%;
 }
 
 .pcp-pax-summary .queues .queue div {
   margin: 1px;
   font-size: 18px;
   background-color: #eee;
+  display: table;
+  width: 94%;
 }
 
 .pcp-pax-summary .queues .queue .queue-name div {
   height: 56px;
   vertical-align: middle;
   display: table-cell;
-  width: 70px;
 }
 
 .pcp-pax-summary .queues .queue .queue-pax div {
@@ -949,11 +952,19 @@ p {
 .pcp-pax-summary .vertical-spacer {
   clear: both;
 }
+
 .pcp-pax-summary .time-range {
   clear: both;
-  margin-top: 10px;
+  margin-top: 5px;
   text-align: center;
-  font-size: 18px;
+  font-size: 15px;
+  color: #bbb;
+}
+
+.pcp-pax-summary .time-range-label {
+  text-align: center;
+  font-size: 20px;
+  margin-top: 10px;
 }
 
 .pcp-pax-summary.b0 {
@@ -974,6 +985,10 @@ p {
 .pcp-pax-summary.b3 {
   background-color: #EEEFF0;
   color: #000;
+}
+
+.pcp-pax-summary.b2 .time-range, .pcp-pax-summary.b3 .time-range {
+  color: #333;
 }
 
 .pcp-pax-summary.b0 .queues .queue div {
