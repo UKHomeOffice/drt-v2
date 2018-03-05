@@ -16,7 +16,7 @@ object Crunch {
 
   case class FlightSplitDiff(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class QueueLoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
+  case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode
@@ -169,14 +169,14 @@ object Crunch {
       .toSet
   }
 
-  def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[QueueLoadMinute]): Set[QueueLoadMinute] = {
+  def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[LoadMinute]): Set[LoadMinute] = {
     queueLoadMinutes
       .groupBy(qlm => (qlm.terminalName, qlm.queueName, qlm.minute))
       .map {
         case ((t, q, m), qlm) =>
           val summedPaxLoad = qlm.map(_.paxLoad).sum
           val summedWorkLoad = qlm.map(_.workLoad).sum
-          QueueLoadMinute(t, q, summedPaxLoad, summedWorkLoad, m)
+          LoadMinute(t, q, summedPaxLoad, summedWorkLoad, m)
       }.toSet
   }
 

@@ -2,50 +2,40 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.SplitsCalculator
 import services._
 import services.graphstages.Crunch.{log, _}
-import services.workloadcalculator.PaxLoadCalculator.Load
 
-import scala.collection.immutable
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
-case class LoadMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch, pax: Double, work: Double)
-
-class WorkloadGraphStage(name: String,
-                         optionalInitialFlights: Option[FlightsWithSplits],
+class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                          airportConfig: AirportConfig,
                          natProcTimes: Map[String, Double],
                          groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                         splitsCalculator: SplitsCalculator,
                          crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
                          crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                          earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
                          expireAfterMillis: Long,
                          now: () => SDateLike,
-                         maxDaysToCrunch: Int,
-                         waitForManifests: Boolean = true,
-                         minutesToCrunch: Int,
                          warmUpMinutes: Int,
                          useNationalityBasedProcessingTimes: Boolean)
-  extends GraphStage[FlowShape[FlightsWithSplits, PortState]] {
+  extends GraphStage[FlowShape[FlightsWithSplits, Set[LoadMinute]]] {
 
   val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("inFlightsWithSplits.in")
-  val outCrunch: Outlet[PortState] = Outlet[PortState]("PortStateOut.out")
+  val outLoads: Outlet[Set[LoadMinute]] = Outlet[Set[LoadMinute]]("PortStateOut.out")
 
-  override val shape = new FlowShape(inFlightsWithSplits, outCrunch)
+  override val shape = new FlowShape(inFlightsWithSplits, outLoads)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-    var portStateOption: Option[PortState] = None
+    var loadMinutes: Set[LoadMinute] = Set()
 
-    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+    val log: Logger = LoggerFactory.getLogger(getClass)
 
     override def preStart(): Unit = {
       optionalInitialFlights match {
@@ -62,15 +52,15 @@ class WorkloadGraphStage(name: String,
       super.preStart()
     }
 
-    setHandler(outCrunch, new OutHandler {
+    setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {
-        log.debug(s"crunchOut onPull called")
+        log.debug(s"outLoads onPull called")
         pushStateIfReady()
-        pullAll()
+        pullFlights()
       }
     })
 
-    def pullAll(): Unit = {
+    def pullFlights(): Unit = {
       if (!hasBeenPulled(inFlightsWithSplits)) {
         log.info(s"Pulling inFlightsWithSplits")
         pull(inFlightsWithSplits)
@@ -86,7 +76,7 @@ class WorkloadGraphStage(name: String,
 
         updateWorkloadsIfAppropriate(incomingFlights.flights.toSet, flightsByFlightId.values.toSet)
 
-        pullAll()
+        pullFlights()
       }
     })
 
@@ -96,15 +86,15 @@ class WorkloadGraphStage(name: String,
 
       earliestAndLatest.foreach {
         case (earliest, latest) =>
-          val crunchStart = crunchStartFromFirstPcp(earliest)
-          val crunchEnd = crunchEndFromLastPcp(latest)
-          log.info(s"Crunch period ${crunchStart.toLocalDateTimeString()} to ${crunchEnd.toLocalDateTimeString()}")
-          val loadUpdate: Set[QueueLoadMinute] = loadForUpdates(updatedFlights, crunchStart, crunchEnd)
+          val workloadStart = crunchStartFromFirstPcp(earliest)
+          val workloadEnd = crunchEndFromLastPcp(latest)
+          log.info(s"Workload period ${workloadStart.toLocalDateTimeString()} to ${workloadEnd.toLocalDateTimeString()}")
+          loadMinutes = loadForUpdates(updatedFlights, workloadStart, workloadEnd)
           pushStateIfReady()
       }
     }
 
-    def loadForUpdates(flights: Set[ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Set[QueueLoadMinute] = {
+    def loadForUpdates(flights: Set[ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Set[LoadMinute] = {
       val start = crunchStart.addMinutes(-1 * warmUpMinutes)
 
       val scheduledFlightsInCrunchWindow = flights
@@ -126,25 +116,22 @@ class WorkloadGraphStage(name: String,
     }
 
     def pushStateIfReady(): Unit = {
-      portStateOption match {
-        case None => log.info(s"We have no PortState yet. Nothing to push")
-        case Some(portState) =>
-          if (isAvailable(outCrunch)) {
-            log.info(s"Pushing PortState: ${portState.crunchMinutes.size} cms, ${portState.staffMinutes.size} sms, ${portState.flights.size} fts")
-            push(outCrunch, portState)
-            portStateOption = None
-          } else log.info(s"outCrunch not available to push")
-      }
+      if (loadMinutes.isEmpty) log.info(s"We have no PortState yet. Nothing to push")
+      else if (isAvailable(outLoads)) {
+        log.info(s"Pushing ${loadMinutes.size} LoadMinutes")
+        push(outLoads, loadMinutes)
+        loadMinutes = Set()
+      } else log.info(s"outLoads not available to push")
     }
 
-    def loadsByQueueAndTerminal(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[QueueLoadMinute] = {
-      val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
+    def loadsByQueueAndTerminal(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[LoadMinute] = {
+      val qlm: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
 
       queueMinutesForPeriod(crunchStart - warmUpMinutes * oneMinuteMillis, numberOfMinutes + warmUpMinutes)(qlm)
     }
 
     def queueMinutesForPeriod(startTime: Long, numberOfMinutes: Int)
-                             (loads: Set[QueueLoadMinute]): Set[QueueLoadMinute] = {
+                             (loads: Set[LoadMinute]): Set[LoadMinute] = {
       val endTime = startTime + numberOfMinutes * oneMinuteMillis
 
       (startTime until endTime by oneMinuteMillis).flatMap(minute => {
@@ -152,7 +139,7 @@ class WorkloadGraphStage(name: String,
           case (tn, queues) => queues.map(qn => {
             loads
               .find(m => m.minute == minute && m.terminalName == tn && m.queueName == qn)
-              .getOrElse(QueueLoadMinute(tn, qn, minute, 0, 0))
+              .getOrElse(LoadMinute(tn, qn, minute, 0, 0))
           })
         }
       }).toSet
@@ -167,7 +154,7 @@ class WorkloadGraphStage(name: String,
         .toMap
     }
 
-    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[QueueLoadMinute] = {
+    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[LoadMinute] = {
       flightToFlightSplitMinutes
         .values
         .flatten
@@ -175,7 +162,7 @@ class WorkloadGraphStage(name: String,
         case ((terminalName, queueName, minute), fsms) =>
           val paxLoad = fsms.map(_.paxLoad).sum
           val workLoad = fsms.map(_.workLoad).sum
-          QueueLoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
+          LoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
       }.toSet
     }
   }

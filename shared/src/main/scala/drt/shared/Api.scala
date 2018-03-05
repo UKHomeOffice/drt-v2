@@ -316,6 +316,8 @@ object CrunchApi {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
   }
 
+  case class LoadMinute()
+
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
                           minute: MillisSinceEpoch,
