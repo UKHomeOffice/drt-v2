@@ -106,7 +106,7 @@ object DatePickerComponent {
       else <.div()
 
       <.div(^.className := "date-selector",
-        <.div(^.className := "row",
+        <.div(^.className := "",
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
             <.div(^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
