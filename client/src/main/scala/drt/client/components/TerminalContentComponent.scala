@@ -124,8 +124,9 @@ object TerminalContentComponent {
       val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
       val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
+      val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
 
-      <.div(^.className := "view-mode-content",
+      <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
           <.ul(^.className := "nav nav-tabs",
             <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
