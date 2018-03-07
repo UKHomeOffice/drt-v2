@@ -18,6 +18,8 @@ object Crunch {
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
+  case class Loads(loadMinutes: Set[LoadMinute])
+
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode
   }

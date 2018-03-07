@@ -16,18 +16,18 @@ import scala.language.postfixOps
 class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                          airportConfig: AirportConfig,
                          natProcTimes: Map[String, Double],
-                         groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])],
-                         crunchStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
-                         crunchEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
+                         groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
+                         workloadStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
+                         workloadEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
                          earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
                          expireAfterMillis: Long,
                          now: () => SDateLike,
                          warmUpMinutes: Int,
                          useNationalityBasedProcessingTimes: Boolean)
-  extends GraphStage[FlowShape[FlightsWithSplits, Set[LoadMinute]]] {
+  extends GraphStage[FlowShape[FlightsWithSplits, Loads]] {
 
   val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("inFlightsWithSplits.in")
-  val outLoads: Outlet[Set[LoadMinute]] = Outlet[Set[LoadMinute]]("PortStateOut.out")
+  val outLoads: Outlet[Loads] = Outlet[Loads]("PortStateOut.out")
 
   override val shape = new FlowShape(inFlightsWithSplits, outLoads)
 
@@ -86,8 +86,8 @@ class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
       earliestAndLatest.foreach {
         case (earliest, latest) =>
-          val workloadStart = crunchStartFromFirstPcp(earliest)
-          val workloadEnd = crunchEndFromLastPcp(latest)
+          val workloadStart = workloadStartFromFirstPcp(earliest)
+          val workloadEnd = workloadEndFromLastPcp(latest)
           log.info(s"Workload period ${workloadStart.toLocalDateTimeString()} to ${workloadEnd.toLocalDateTimeString()}")
           loadMinutes = loadForUpdates(updatedFlights, workloadStart, workloadEnd)
           pushStateIfReady()
@@ -119,7 +119,7 @@ class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       if (loadMinutes.isEmpty) log.info(s"We have no PortState yet. Nothing to push")
       else if (isAvailable(outLoads)) {
         log.info(s"Pushing ${loadMinutes.size} LoadMinutes")
-        push(outLoads, loadMinutes)
+        push(outLoads, Loads(loadMinutes))
         loadMinutes = Set()
       } else log.info(s"outLoads not available to push")
     }
@@ -145,7 +145,7 @@ class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }).toSet
     }
 
-    def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double], useNationalityBasedProcessingTimes: Boolean)(flightsWithSplits: List[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
+    def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double], useNationalityBasedProcessingTimes: Boolean)(flightsWithSplits: Seq[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
       flightsWithSplits
         .map(flightWithSplits => {
           val flightSplitMinutes = WorkloadCalculator.flightToFlightSplitMinutes(flightWithSplits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes)

@@ -22,8 +22,6 @@ import scala.concurrent.duration._
 
 
 class VoyageManifestsSpec extends CrunchTestLike {
-  isolated
-  sequential
 
   "Given a VoyageManifest arriving before its corresponding flight " +
     "When I crunch the flight " +
@@ -80,12 +78,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val inputFlights = Flights(List(flight))
     val inputManifestsCi = DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-        passengerInfoJson("GBR", "P", "GBR")
+        PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
       ))
     ))
     val inputManifestsDc = DqManifests("", Set(
       VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-        passengerInfoJson("USA", "P", "USA")
+        PassengerInfoGenerator.passengerInfoJson("USA", "P", "USA")
       ))
     ))
     val crunch: CrunchGraph = runCrunchGraph(
@@ -277,7 +275,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     true
   }
+}
 
+object PassengerInfoGenerator {
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {
     PassengerInfoJson(Some(documentType), issuingCountry, "", Some("22"), Some("LHR"), "N", Some("GBR"), Option(nationality), None)
   }

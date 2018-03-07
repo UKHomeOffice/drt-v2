@@ -88,8 +88,14 @@ class CrunchTestLike
       SplitRatio(eeaMachineReadableToDesk, 1)
     ),
     defaultProcessingTimes = Map(
-      "T1" -> Map(eeaMachineReadableToDesk -> 25d / 60),
-      "T2" -> Map(eeaMachineReadableToDesk -> 25d / 60)
+      "T1" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 25d / 60
+      ),
+      "T2" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk-> 25d / 60
+      )
     ),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
