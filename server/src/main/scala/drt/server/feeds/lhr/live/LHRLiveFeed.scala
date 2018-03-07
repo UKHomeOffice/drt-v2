@@ -55,7 +55,7 @@ object LHRLiveFeed {
         lhrArrival.FLIGHTNUMBER,
         lhrArrival.AIRPORTCODE,
         dateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME),
-        SDate(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME).millisSinceEpoch,
+        SDate(dateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch,
         0,
         None
       )
