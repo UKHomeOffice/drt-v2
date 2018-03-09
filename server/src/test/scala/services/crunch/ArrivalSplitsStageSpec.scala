@@ -18,9 +18,10 @@ import scala.concurrent.duration._
 
 object TestableArrivalSplits {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
+  def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
   def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
-    val arrivalSplitsStage = new ArrivalSplitsGraphStage(None, splitsCalculator, oneDayMillis, now, 1)
+    val arrivalSplitsStage = new ArrivalSplitsGraphStage(None, splitsCalculator, groupByCodeShares, oneDayMillis, now, 1)
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
     val manifestsSource = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)

@@ -8,6 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services._
 
 import scala.collection.immutable.Map
+import scala.reflect.runtime.universe.{typeOf, TypeTag}
 
 object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -16,7 +17,9 @@ object Crunch {
 
   case class FlightSplitDiff(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
+  case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
+    lazy val uniqueId: Int = (terminalName, queueName, minute).hashCode
+  }
 
   case class Loads(loadMinutes: Set[LoadMinute])
 
@@ -185,6 +188,30 @@ object Crunch {
   def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
     val date = new DateTime(dateTimeMillis).withZone(europeLondonTimeZone)
     desks(date.getHourOfDay)
+  }
+
+  def purgeExpired[A: TypeTag](expireable: Map[Int, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[Int, A] = {
+    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
+    val updated = expireable.filterNot { case (_, a) => expired(a) }
+
+    val numPurged = expireable.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
+
+    updated
+  }
+
+  def purgeExpired[A: TypeTag](expireable: Set[A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Set[A] = {
+    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
+    val updated = expireable.filterNot(expired)
+
+    val numPurged = expireable.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
+
+    updated
+  }
+
+  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): A => Boolean = {
+    Crunch.hasExpired[A](now(), expireAfter, toMillis)
   }
 
   def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: (A) => MillisSinceEpoch)(toCompare: A): Boolean = {

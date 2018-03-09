@@ -19,6 +19,7 @@ case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
 class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
+                              groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike,
                               maxDaysToCrunch: Int)
@@ -177,9 +178,14 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       log.info(s"${updatedFlights.size} flights after updates. $updatesCount updates & $additionsCount additions")
 
       val minusExpired = purgeExpiredArrivals(updatedFlights)
-      log.debug(s"${minusExpired.size} flights after removing expired")
 
-      minusExpired
+      val uniqueFlights = groupFlightsByCodeShares(minusExpired.values.toSeq)
+        .map { case (fws, _) => (fws.apiFlight.uniqueId, fws) }
+        .toMap
+
+      log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
+
+      uniqueFlights
     }
 
     def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {

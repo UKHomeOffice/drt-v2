@@ -2,54 +2,120 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services._
-import services.graphstages.Crunch.{log, _}
+import services.graphstages.Crunch._
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
-class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
+class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
+                         optionalInitialFlightsWithSplits: Option[FlightsWithSplits],
                          airportConfig: AirportConfig,
                          natProcTimes: Map[String, Double],
-                         groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
-                         workloadStartFromFirstPcp: (SDateLike) => SDateLike = getLocalLastMidnight,
-                         workloadEndFromLastPcp: (SDateLike) => SDateLike = (_) => getLocalNextMidnight(SDate.now()),
-                         earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)],
                          expireAfterMillis: Long,
                          now: () => SDateLike,
-                         warmUpMinutes: Int,
                          useNationalityBasedProcessingTimes: Boolean)
   extends GraphStage[FlowShape[FlightsWithSplits, Loads]] {
 
   val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("inFlightsWithSplits.in")
   val outLoads: Outlet[Loads] = Outlet[Loads]("PortStateOut.out")
 
+  val paxDisembarkPerMinute = 20
+
   override val shape = new FlowShape(inFlightsWithSplits, outLoads)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
+    var workloadByFlightId: Map[Int, Set[FlightSplitMinute]] = Map()
     var loadMinutes: Set[LoadMinute] = Set()
+    var loadsToPush: Map[Int, LoadMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(getClass)
 
     override def preStart(): Unit = {
-      optionalInitialFlights match {
-        case Some(FlightsWithSplits(flights)) =>
-          log.info(s"Received ${flights.size} initial flight with splits")
-          flightsByFlightId = purgeExpiredArrivals(
-            flights
-              .map(f => Tuple2(f.apiFlight.uniqueId, f))
-              .toMap)
+      loadMinutes = optionalInitialLoads match {
+        case Some(Loads(lms)) =>
+          log.info(s"Received ${lms.size} initial loads")
+          Crunch.purgeExpired(lms, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
         case _ =>
-          log.warn(s"Did not receive any flights to initialise with")
+          log.warn(s"Did not receive any loads to initialise with")
+          Set()
+      }
+      workloadByFlightId = optionalInitialFlightsWithSplits match {
+        case Some(FlightsWithSplits(initialFlights)) =>
+          log.info(s"Received ${initialFlights.size} initial flights. Calculating workload.")
+          purgeExpired(flightsToWorkloadByFlightId(initialFlights), (fsms: Set[FlightSplitMinute]) => fsms.map(_.minute).min, now, expireAfterMillis)
+        case None =>
+          log.warn(s"Didn't receive any initial flights to initialise with")
+          Map()
       }
 
       super.preStart()
+    }
+
+    def flightsToWorkloadByFlightId(initialFlights: Seq[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
+      initialFlights.map(fws => {
+        val uniqueFlightId = fws.apiFlight.uniqueId
+        val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
+
+        (uniqueFlightId, flightWorkload)
+      }).toMap
+    }
+
+    setHandler(inFlightsWithSplits, new InHandler {
+      override def onPush(): Unit = {
+        val incomingFlights = grab(inFlightsWithSplits)
+        log.info(s"Received ${incomingFlights.flights.size} arrivals $incomingFlights")
+        /*
+        1) map over each incoming flights to produce new workload
+        2) update flightId -> workload map
+        3) merge all workloads to Set[LoadMinute]
+        4) calc new/old LoadMinute diff and push
+         */
+
+        val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
+        log.info(s"updatedWorkloads: $updatedWorkloads")
+        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => fsms.map(_.minute).min, now, expireAfterMillis)
+        val updatedLoads: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
+
+        val diff = loadDiff(updatedLoads, loadMinutes)
+        loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+
+        loadsToPush = purgeExpired(mergeLoadMinutes(diff, loadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        log.info(s"Now have ${loadsToPush.size} load minutes to push")
+
+        pushStateIfReady()
+
+        pullFlights()
+      }
+    })
+
+    def mergeLoadMinutes(updatedLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
+      updatedLoads.foldLeft(existingLoads) {
+        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.uniqueId, newLoadMinute)
+      }
+    }
+
+    def loadDiff(updatedLoads: Set[LoadMinute], existingLoads: Set[LoadMinute]): Set[LoadMinute] = {
+      val updates = updatedLoads -- existingLoads
+      val removeIds = (existingLoads.map(_.uniqueId) -- updatedLoads.map(_.uniqueId))
+      val removes = existingLoads.filter(l => removeIds.contains(l.uniqueId)).map(_.copy(paxLoad = 0, workLoad = 0))
+      val diff = updates ++ removes
+      log.info(s"${diff.size} updated load minutes")
+
+      diff
+    }
+
+    def mergeWorkloadByFlightId(incomingFlights: FlightsWithSplits, existingLoads: Map[Int, Set[FlightSplitMinute]]): Map[Int, Set[FlightSplitMinute]] = {
+      incomingFlights.flights.foldLeft(existingLoads) {
+        case (soFar, fws) =>
+          val uniqueFlightId = fws.apiFlight.uniqueId
+          val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
+
+          soFar.updated(uniqueFlightId, flightWorkload)
+      }
     }
 
     setHandler(outLoads, new OutHandler {
@@ -67,91 +133,13 @@ class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       }
     }
 
-    setHandler(inFlightsWithSplits, new InHandler {
-      override def onPush(): Unit = {
-        log.debug(s"inFlights onPush called")
-        val incomingFlights = grab(inFlightsWithSplits)
-
-        log.info(s"Grabbed ${incomingFlights.flights.length} flights")
-
-        updateWorkloadsIfAppropriate(incomingFlights.flights.toSet, flightsByFlightId.values.toSet)
-
-        pullFlights()
-      }
-    })
-
-    def updateWorkloadsIfAppropriate(updatedFlights: Set[ApiFlightWithSplits], existingFlights: Set[ApiFlightWithSplits]): Unit = {
-      val earliestAndLatest = earliestAndLatestAffectedPcpTime(existingFlights, updatedFlights)
-      log.info(s"Latest PCP times: $earliestAndLatest")
-
-      earliestAndLatest.foreach {
-        case (earliest, latest) =>
-          val workloadStart = workloadStartFromFirstPcp(earliest)
-          val workloadEnd = workloadEndFromLastPcp(latest)
-          log.info(s"Workload period ${workloadStart.toLocalDateTimeString()} to ${workloadEnd.toLocalDateTimeString()}")
-          loadMinutes = loadForUpdates(updatedFlights, workloadStart, workloadEnd)
-          pushStateIfReady()
-      }
-    }
-
-    def loadForUpdates(flights: Set[ApiFlightWithSplits], crunchStart: SDateLike, crunchEnd: SDateLike): Set[LoadMinute] = {
-      val start = crunchStart.addMinutes(-1 * warmUpMinutes)
-
-      val scheduledFlightsInCrunchWindow = flights
-        .toList
-        .filter(_.apiFlight.Status != "Cancelled")
-        .filter(f => isFlightInTimeWindow(f, start, crunchEnd))
-
-      log.info(s"Requesting crunch for ${scheduledFlightsInCrunchWindow.length} flights after flights update")
-      val uniqueFlights = groupFlightsByCodeShares(scheduledFlightsInCrunchWindow).map(_._1)
-      val newFlightSplitMinutesByFlight = flightsToFlightSplitMinutes(airportConfig.defaultProcessingTimes.head._2, useNationalityBasedProcessingTimes)(uniqueFlights)
-      val earliestMinute: MillisSinceEpoch = newFlightSplitMinutesByFlight.values.flatMap(_.map(identity)).toList match {
-        case fsm if fsm.nonEmpty => fsm.map(_.minute).min
-        case _ => 0L
-      }
-      log.debug(s"Earliest flight split minute: ${SDate(earliestMinute).toLocalDateTimeString()}")
-      val numberOfMinutes = ((crunchEnd.millisSinceEpoch - crunchStart.millisSinceEpoch) / 60000).toInt
-      log.debug(s"Crunching $numberOfMinutes minutes")
-      loadsByQueueAndTerminal(crunchStart.millisSinceEpoch, numberOfMinutes, newFlightSplitMinutesByFlight)
-    }
-
     def pushStateIfReady(): Unit = {
-      if (loadMinutes.isEmpty) log.info(s"We have no PortState yet. Nothing to push")
+      if (loadsToPush.isEmpty) log.info(s"We have no load minutes. Nothing to push")
       else if (isAvailable(outLoads)) {
-        log.info(s"Pushing ${loadMinutes.size} LoadMinutes")
-        push(outLoads, Loads(loadMinutes))
-        loadMinutes = Set()
+        log.info(s"Pushing ${loadsToPush.size} load minutes")
+        push(outLoads, Loads(loadsToPush.values.toSet))
+        loadsToPush = Map()
       } else log.info(s"outLoads not available to push")
-    }
-
-    def loadsByQueueAndTerminal(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Set[LoadMinute] = {
-      val qlm: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
-
-      queueMinutesForPeriod(crunchStart - warmUpMinutes * oneMinuteMillis, numberOfMinutes + warmUpMinutes)(qlm)
-    }
-
-    def queueMinutesForPeriod(startTime: Long, numberOfMinutes: Int)
-                             (loads: Set[LoadMinute]): Set[LoadMinute] = {
-      val endTime = startTime + numberOfMinutes * oneMinuteMillis
-
-      (startTime until endTime by oneMinuteMillis).flatMap(minute => {
-        airportConfig.queues.flatMap {
-          case (tn, queues) => queues.map(qn => {
-            loads
-              .find(m => m.minute == minute && m.terminalName == tn && m.queueName == qn)
-              .getOrElse(LoadMinute(tn, qn, minute, 0, 0))
-          })
-        }
-      }).toSet
-    }
-
-    def flightsToFlightSplitMinutes(portProcTimes: Map[PaxTypeAndQueue, Double], useNationalityBasedProcessingTimes: Boolean)(flightsWithSplits: Seq[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
-      flightsWithSplits
-        .map(flightWithSplits => {
-          val flightSplitMinutes = WorkloadCalculator.flightToFlightSplitMinutes(flightWithSplits, portProcTimes, natProcTimes, useNationalityBasedProcessingTimes)
-          (flightWithSplits.apiFlight.uniqueId, flightSplitMinutes)
-        })
-        .toMap
     }
 
     def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[LoadMinute] = {
@@ -165,25 +153,5 @@ class WorkloadGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           LoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
       }.toSet
     }
-  }
-
-  def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-    val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime)
-    val updated = arrivals.filterNot { case (_, a) => expired(a) }
-
-    val numPurged = arrivals.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals")
-
-    updated
-  }
-
-  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = {
-    Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
-  }
-
-  def isFlightInTimeWindow(f: ApiFlightWithSplits, crunchStart: SDateLike, crunchEnd: SDateLike): Boolean = {
-    val startPcpTime = f.apiFlight.PcpTime
-    val endPcpTime = f.apiFlight.PcpTime + (ArrivalHelper.bestPax(f.apiFlight) / 20) * oneMinuteMillis
-    crunchStart.millisSinceEpoch <= endPcpTime && startPcpTime < crunchEnd.millisSinceEpoch
   }
 }

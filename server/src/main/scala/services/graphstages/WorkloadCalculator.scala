@@ -12,7 +12,7 @@ object WorkloadCalculator {
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],
                                  nationalityProcessingTimes: Map[String, Double],
-                                 useNationalityBasedProctimes: Boolean
+                                 useNationalityBasedProcTimes: Boolean
                                 ): Set[FlightSplitMinute] = {
     val flight = flightWithSplits.apiFlight
     val splitsToUseOption = flightWithSplits.bestSplits
@@ -51,7 +51,7 @@ object WorkloadCalculator {
                   Percentage,
                   nationalityProcessingTimes,
                   totalPaxWithNationality,
-                  useNationalityBasedProctimes
+                  useNationalityBasedProcTimes
                 )
               })
         }.toSet
@@ -66,13 +66,13 @@ object WorkloadCalculator {
                         splitStyle: SplitStyle,
                         nationalityProcessingTimes: Map[String, Double],
                         totalPaxWithNationality: Double,
-                        useNationalityBasedProctimes: Boolean
+                        useNationalityBasedProcTimes: Boolean
                        ): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
-    val paxTypeQueueProcTime = procTimes(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType))
+    val paxTypeQueueProcTime = procTimes.getOrElse(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType), 0d)
     val defaultWorkload = splitPaxInMinute * paxTypeQueueProcTime
 
-    val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProctimes) match {
+    val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProcTimes) match {
       case (Some(nats), true) if nats.values.sum > 0 =>
         val bestPax = ArrivalHelper.bestPax(flight)
         val natsToPaxRatio = totalPaxWithNationality / bestPax

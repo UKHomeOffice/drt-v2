@@ -6,7 +6,7 @@ import javax.script.{ScriptEngine, ScriptEngineManager}
 import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.immutable.{IndexedSeq}
 import scala.util.Try
 
 case class OptimizerConfig(sla: Int)
