@@ -6,17 +6,19 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.{log, _}
-import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryRenjin}
+import services.graphstages.Crunch._
+import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 import scala.util.{Success, Try}
 
 
-class CrunchLoadGraphStage(airportConfig: AirportConfig,
-                           expireAfterMillis: Long,
-                           now: () => SDateLike)
+class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[Set[CrunchMinute]],
+                           airportConfig: AirportConfig,
+                           expireAfterMillis: MillisSinceEpoch,
+                           now: () => SDateLike,
+                           crunch: (Seq[Double], Seq[Int], Seq[Int], OptimizerConfig) => Try[OptimizerCrunchResult])
   extends GraphStage[FlowShape[Loads, Set[CrunchMinute]]] {
 
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
@@ -32,6 +34,7 @@ class CrunchLoadGraphStage(airportConfig: AirportConfig,
     val log: Logger = LoggerFactory.getLogger(getClass)
 
     override def preStart(): Unit = {
+
       //      loadMinutes = optionalInitialLoads match {
       //        case Some(Loads(lm)) =>
       //          log.info(s"Received ${lm.size} initial loads")
@@ -96,7 +99,7 @@ class CrunchLoadGraphStage(airportConfig: AirportConfig,
                 val minuteMillis = firstMinute until lastMinute by 60000
                 val fullWorkloadMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
                 val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-                val triedResult: Try[OptimizerCrunchResult] = TryRenjin.crunch(fullWorkloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+                val triedResult: Try[OptimizerCrunchResult] = crunch(fullWorkloadMinutes, minDesks, maxDesks, OptimizerConfig(sla))
                 triedResult match {
                   case Success(OptimizerCrunchResult(desks, waits)) =>
                     minuteMillis.zipWithIndex.map {

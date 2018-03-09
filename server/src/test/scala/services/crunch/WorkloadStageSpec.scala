@@ -48,7 +48,7 @@ object TestableWorkloadStage {
           val workload = builder.add(workloadStage.async)
           val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
 
-          flights.out ~> workload ~> sink
+          flights ~> workload ~> sink
 
           ClosedShape
     }
@@ -112,10 +112,9 @@ class WorkloadStageSpec extends CrunchTestLike {
 
     val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 25)
     val arrival2 = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = scheduled2, actPax = 25)
-    val historicSplits = ApiSplits(
-      Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
+    val historicSplits = ApiSplits(Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
+      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
     val flight = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)))
@@ -155,8 +154,7 @@ class WorkloadStageSpec extends CrunchTestLike {
 
     val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 25)
     val arrival2 = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = scheduled2, actPax = 25)
-    val historicSplits = ApiSplits(
-      Set(
+    val historicSplits = ApiSplits(Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
         ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
