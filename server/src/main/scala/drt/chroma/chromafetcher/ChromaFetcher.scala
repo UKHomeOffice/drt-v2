@@ -17,6 +17,8 @@ object ChromaFetcher {
 
   case class ChromaToken(access_token: String, token_type: String, expires_in: Int)
 
+  case class AzureToken(access_token: String, token_type: String, expires_in: String)
+
   case class ChromaLiveFlight(Operator: String,
                               Status: String,
                               EstDT: String,
