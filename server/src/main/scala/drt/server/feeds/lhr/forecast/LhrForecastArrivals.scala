@@ -1,6 +1,5 @@
 package drt.server.feeds.lhr.forecast
 
-import drt.server.feeds.lhr.forecast.LhrForecastArrivals.getClass
 import drt.shared.{Arrival, SDateLike}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
@@ -14,11 +13,11 @@ object LhrForecastArrivals {
   def apply(lines: Seq[String]): Seq[Arrival] = {
     lines
       .map(line => LhrForecastArrival(line))
-      .filterNot {
-        case Success(_) => false
+      .filter {
+        case Success(_) => true
         case Failure(t) =>
           log.info(s"couldn't parse: $t")
-          true
+          false
       }
       .collect {
         case Success(a) => a
