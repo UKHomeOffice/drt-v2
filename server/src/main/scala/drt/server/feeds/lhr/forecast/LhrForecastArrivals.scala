@@ -1,5 +1,6 @@
 package drt.server.feeds.lhr.forecast
 
+import drt.server.feeds.lhr.forecast.LhrForecastArrivals.getClass
 import drt.shared.{Arrival, SDateLike}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
@@ -26,6 +27,8 @@ object LhrForecastArrivals {
 }
 
 object LhrForecastArrival {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def terminal(fields: Seq[String]): String = s"T${fields(0)}"
 
   def isArrival(fields: Seq[String]): Boolean = fields(1) == "A"
@@ -81,6 +84,11 @@ object LhrForecastArrival {
         PcpTime = 0L,
         LastKnownPax = None
       )
+    } match {
+      case Failure(t) =>
+        log.info(s"Couldn't parse $line")
+        Failure(t)
+      case s => s
     }
   }
 }
