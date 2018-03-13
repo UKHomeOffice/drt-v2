@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
@@ -170,6 +170,45 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
         crunch.liveTestProbe.fishForMessage(30 seconds) {
+          case ps: PortState =>
+            val resultSummary = paxLoadsFromPortState(ps, 5)
+            resultSummary == expected
+        }
+
+        true
+      }
+
+      "Given an initial flight with 20 pax and an old CSV split " +
+        "When I request a crunch with new CSV splits of 25% to eea desk " +
+        "Then I should see a pax load of 5 (20 * 0.25)" >> {
+        val scheduled = "2017-01-01T00:00Z"
+
+        val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
+        val oldSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
+        val initialFlightsWithSplits = FlightsWithSplits(Seq(ApiFlightWithSplits(flight, Set(oldSplits), None)))
+
+        val crunch = runCrunchGraph(
+          now = () => SDate(scheduled),
+          airportConfig = airportConfig.copy(
+            defaultProcessingTimes = Map("T1" -> Map(
+              eeaMachineReadableToDesk -> 20d / 60,
+              eeaMachineReadableToEGate -> 35d / 60))
+          ),
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+          csvSplitsProvider = (_, _) => Option(SplitRatios(
+            SplitSources.Historical,
+            SplitRatio(eeaMachineReadableToDesk, 0.25)
+          )),
+          initialFlightsWithSplits = Option(initialFlightsWithSplits)
+        )
+
+        // Make a change to the arrival to force a crunch
+        offerAndWait(crunch.liveArrivalsInput, Flights(List(flight.copy(Status = "In the air"))))
+
+        val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
+
+        crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = paxLoadsFromPortState(ps, 5)
             resultSummary == expected
