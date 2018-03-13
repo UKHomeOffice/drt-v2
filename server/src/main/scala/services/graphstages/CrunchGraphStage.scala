@@ -60,7 +60,15 @@ class CrunchGraphStage(name: String,
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = purgeExpiredArrivals(
             flights
-              .map(f => Tuple2(f.apiFlight.uniqueId, f))
+              .map(flightWithSplits => {
+                val maybeOldSplits = flightWithSplits.splits.find(s => s.source == SplitSources.Historical)
+                val maybeNewSplits = splitsCalculator.historicalSplits(flightWithSplits.apiFlight)
+                val withUpdatedHistoricalSplits = if (maybeNewSplits.isDefined && maybeNewSplits != maybeOldSplits) {
+                  log.info(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
+                  updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)), maybeNewSplits.get)
+                } else flightWithSplits
+                Tuple2(flightWithSplits.apiFlight.uniqueId, withUpdatedHistoricalSplits)
+              })
               .toMap)
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
@@ -443,6 +451,16 @@ class CrunchGraphStage(name: String,
         case ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), _) => true
         case _ => false
       } + splitsFromManifest
+
+      flightWithSplits.copy(splits = updatedSplitsSet)
+    }
+
+    def updateFlightWithHistoricalSplits(flightWithSplits: ApiFlightWithSplits, newHistorical: Set[ApiPaxTypeAndQueueCount]): ApiFlightWithSplits = {
+      val newSplits = ApiSplits(newHistorical, SplitSources.Historical, None, Percentage)
+      val updatedSplitsSet = flightWithSplits.splits.filterNot {
+        case ApiSplits(_, SplitSources.Historical, _, _) => true
+        case _ => false
+      } + newSplits
 
       flightWithSplits.copy(splits = updatedSplitsSet)
     }
