@@ -208,7 +208,7 @@ object TerminalStaffingV2 {
               <.div(<.label("Choose Month", ^.className := "text center")),
               <.div(drawSelect(
                 values = monthOptions.map(_.toISOString),
-                names = monthOptions.map(d => f"${d.getMonth()}%02d/${d.getFullYear()}"),
+                names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
                 defaultValue = viewingDate.toISOString,
                 callback = (e: ReactEventFromInput) =>
                   props.router.set(props.terminalPageTab.copy(date = Option(SDate(e.target.value).toISODateOnly)))
