@@ -180,6 +180,10 @@ trait SDateLike {
 
   def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
 
+  val months = List(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  )
   /**
     * Days of the week 1 to 7 (Monday is 1)
     *
@@ -190,6 +194,8 @@ trait SDateLike {
   def getFullYear(): Int
 
   def getMonth(): Int
+
+  def getMonthString(): String = months(getMonth() - 1)
 
   def getDate(): Int
 
