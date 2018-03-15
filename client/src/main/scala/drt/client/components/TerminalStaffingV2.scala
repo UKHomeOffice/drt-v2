@@ -196,6 +196,26 @@ object TerminalStaffingV2 {
       stateFromProps(props)
     })
     .renderPS((scope, props, state) => {
+      def confirmAndSave(viewingDate: SDateLike) = (e: ReactEventFromInput) =>
+          Callback {
+
+            val initialTimeSlots = stateFromProps(props).timeSlots
+            val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
+
+            val updatedMonth = dateFromDateStringOption(props.terminalPageTab.date).getMonthString()
+            val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
+              .map(d => state.colHeadings(d)).toList
+
+            if (confirm(s"You have updated staff for ${dateListToString(changedDays)} ${updatedMonth} - do you want to save these changes?"))
+              SPACircuit.dispatch(
+                SaveMonthTimeSlotsToShifts(
+                  staffToStaffTimeSlotsForMonth(
+                    viewingDate,
+                    updatedTimeSlots,
+                    props.terminalPageTab.terminal,
+                    props.timeSlotMinutes
+                  )))
+          }
 
       val viewingDate = firstDayOfMonth(dateFromDateStringOption(props.terminalPageTab.date))
       <.div(
@@ -217,6 +237,11 @@ object TerminalStaffingV2 {
                 defaultValue = s"${props.timeSlotMinutes}",
                 callback = (e: ReactEventFromInput) =>
                   props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
+              )),
+              <.div(
+              <.input.button(^.value := "Save Changes",
+                ^.className := "btn btn-primary",
+                ^.onClick ==> confirmAndSave(viewingDate)
               ))
             ).toTagMod
           )
@@ -233,27 +258,7 @@ object TerminalStaffingV2 {
           <.div(^.className := "col-sm-1 no-gutters",
             <.input.button(^.value := "Save Changes",
               ^.className := "btn btn-primary",
-              ^.onClick ==> ((e: ReactEventFromInput) =>
-                Callback {
-
-                  val initialTimeSlots = stateFromProps(props).timeSlots
-                  val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
-
-                  val updatedMonth = dateFromDateStringOption(props.terminalPageTab.date).getMonthString()
-                  val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
-                    .map(d => state.colHeadings(d)).toList
-
-                  if (confirm(s"You have updated staff for ${dateListToString(changedDays)} ${updatedMonth} - do you want to save these changes?"))
-                    SPACircuit.dispatch(
-                      SaveMonthTimeSlotsToShifts(
-                        staffToStaffTimeSlotsForMonth(
-                          viewingDate,
-                          updatedTimeSlots,
-                          props.terminalPageTab.terminal,
-                          props.timeSlotMinutes
-                        )))
-                })
-
+              ^.onClick ==> confirmAndSave(viewingDate)
             )
           )
         ))
