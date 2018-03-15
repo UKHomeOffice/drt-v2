@@ -2,10 +2,7 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
-
 import utest._
-
-import scala.collection.immutable.Seq
 
 object StaffingComponentTests extends TestSuite {
 
@@ -13,115 +10,115 @@ object StaffingComponentTests extends TestSuite {
 
 
   def tests = TestSuite {
-        'StaffingService - {
-          "When asking for the end date of the month " - {
-            "Given 31-12-2017 then I should get 31-12-2017" - {
-              val today = SDate(2017, 12, 31)
+    'StaffingService - {
+      "When asking for the end date of the month " - {
+        "Given 31-12-2017 then I should get 31-12-2017" - {
+          val today = SDate(2017, 12, 31)
 
-              val result: SDateLike = lastDayOfMonth(today)
+          val result: SDateLike = lastDayOfMonth(today)
 
-              val expected = SDate(2017, 12, 31)
-              assert(result.toISOString() == expected.toISOString())
-            }
-            "Given 01-12-2017 then I should get 31-12-2017" - {
-              val today = SDate(2017, 12, 1)
-
-              val result: SDateLike = lastDayOfMonth(today)
-
-              val expected = SDate(2017, 12, 31)
-              assert(result.toISOString() == expected.toISOString())
-            }
-            "Given BST Date 01-06-2018 then I should get 30-06-2018" - {
-              val today = SDate(2018, 6, 1)
-
-              val result: SDateLike = lastDayOfMonth(today)
-
-              val expected = SDate(2018, 6, 30)
-              assert(result.toISOString() == expected.toISOString())
-            }
-            "Given BST date 30-06-2018 then I should get 30-06-2018" - {
-              val today = SDate(2018, 6, 30)
-
-              val result: SDateLike = lastDayOfMonth(today)
-
-              val expected = SDate(2018, 6, 30)
-              assert(result.toISOString() == expected.toISOString())
-            }
-          }
-          "When asking for the first date of the month " - {
-            "Given 31-12-2017 then I should get 01-12-2017" - {
-              val today = SDate(2017, 12, 31)
-
-              val result: SDateLike = firstDayOfMonth(today)
-
-              val expected = SDate(2017, 12, 1)
-              assert(result.toISOString() == expected.toISOString())
-            }
-            "Given 01-12-2017 then I should get 1-12-2017" - {
-              val today = SDate(2017, 12, 1)
-
-              val result: SDateLike = firstDayOfMonth(today)
-
-              val expected = SDate(2017, 12, 1)
-              assert(result.toISOString() == expected.toISOString())
-            }
-            "Given BST Date 01-06-2018 then I should get 01-06-2018" - {
-              val today = SDate(2018, 6, 1)
-
-              val result: SDateLike = firstDayOfMonth(today)
-
-              val expected = SDate(2018, 6, 1)
-              assert(result.toISOString() == expected.toISOString())
-            }
-            "Given BST date 30-06-2018 then I should get 01-06-2018" - {
-              val today = SDate(2018, 6, 30)
-
-              val result: SDateLike = firstDayOfMonth(today)
-
-              val expected = SDate(2018, 6, 1)
-              assert(result.toISOString() == expected.toISOString())
-            }
-          }
-          "When asking for a list of time slots" - {
-            "Given a start time of 2017-12-21T00:00 and an end time of 2017-12-21T01:00 " +
-              "Then I should get back 15 minute slots" - {
-
-              val startTime = SDate("2017-12-21T00:00")
-              val endTime = SDate("2017-12-21T01:00")
-
-              val result = toTimeSlots(startTime, endTime).map(_.millisSinceEpoch)
-
-              val expected = List(
-                SDate("2017-12-21T00:00"),
-                SDate("2017-12-21T00:15"),
-                SDate("2017-12-21T00:30"),
-                SDate("2017-12-21T00:45")
-              ).map(_.millisSinceEpoch)
-
-              assert(result == expected)
-            }
-          }
-          "When asking for a list of days" - {
-            "Given a start day of 2017-12-21 and an end day of 2017-12-25 " +
-              "Then I should get back a list of days in between" - {
-
-              val startDay = SDate("2017-12-21")
-              val endDay = SDate("2017-12-25")
-
-              val result = consecutiveDaysInMonth(startDay, endDay).map(_.millisSinceEpoch)
-
-              val expected = List(
-                SDate("2017-12-21"),
-                SDate("2017-12-22"),
-                SDate("2017-12-23"),
-                SDate("2017-12-24"),
-                SDate("2017-12-25")
-              ).map(_.millisSinceEpoch)
-
-              assert(result == expected)
-            }
-          }
+          val expected = SDate(2017, 12, 31)
+          assert(result.toISOString() == expected.toISOString())
         }
+        "Given 01-12-2017 then I should get 31-12-2017" - {
+          val today = SDate(2017, 12, 1)
+
+          val result: SDateLike = lastDayOfMonth(today)
+
+          val expected = SDate(2017, 12, 31)
+          assert(result.toISOString() == expected.toISOString())
+        }
+        "Given BST Date 01-06-2018 then I should get 30-06-2018" - {
+          val today = SDate(2018, 6, 1)
+
+          val result: SDateLike = lastDayOfMonth(today)
+
+          val expected = SDate(2018, 6, 30)
+          assert(result.toISOString() == expected.toISOString())
+        }
+        "Given BST date 30-06-2018 then I should get 30-06-2018" - {
+          val today = SDate(2018, 6, 30)
+
+          val result: SDateLike = lastDayOfMonth(today)
+
+          val expected = SDate(2018, 6, 30)
+          assert(result.toISOString() == expected.toISOString())
+        }
+      }
+      "When asking for the first date of the month " - {
+        "Given 31-12-2017 then I should get 01-12-2017" - {
+          val today = SDate(2017, 12, 31)
+
+          val result: SDateLike = firstDayOfMonth(today)
+
+          val expected = SDate(2017, 12, 1)
+          assert(result.toISOString() == expected.toISOString())
+        }
+        "Given 01-12-2017 then I should get 1-12-2017" - {
+          val today = SDate(2017, 12, 1)
+
+          val result: SDateLike = firstDayOfMonth(today)
+
+          val expected = SDate(2017, 12, 1)
+          assert(result.toISOString() == expected.toISOString())
+        }
+        "Given BST Date 01-06-2018 then I should get 01-06-2018" - {
+          val today = SDate(2018, 6, 1)
+
+          val result: SDateLike = firstDayOfMonth(today)
+
+          val expected = SDate(2018, 6, 1)
+          assert(result.toISOString() == expected.toISOString())
+        }
+        "Given BST date 30-06-2018 then I should get 01-06-2018" - {
+          val today = SDate(2018, 6, 30)
+
+          val result: SDateLike = firstDayOfMonth(today)
+
+          val expected = SDate(2018, 6, 1)
+          assert(result.toISOString() == expected.toISOString())
+        }
+      }
+      "When asking for a list of time slots" - {
+        "Given a start time of 2017-12-21T00:00 and an end time of 2017-12-21T01:00 " +
+          "Then I should get back 15 minute slots" - {
+
+          val startTime = SDate("2017-12-21T00:00")
+          val endTime = SDate("2017-12-21T01:00")
+
+          val result = toTimeSlots(startTime, endTime).map(_.millisSinceEpoch)
+
+          val expected = List(
+            SDate("2017-12-21T00:00"),
+            SDate("2017-12-21T00:15"),
+            SDate("2017-12-21T00:30"),
+            SDate("2017-12-21T00:45")
+          ).map(_.millisSinceEpoch)
+
+          assert(result == expected)
+        }
+      }
+      "When asking for a list of days" - {
+        "Given a start day of 2017-12-21 and an end day of 2017-12-25 " +
+          "Then I should get back a list of days in between" - {
+
+          val startDay = SDate("2017-12-21")
+          val endDay = SDate("2017-12-25")
+
+          val result = consecutiveDaysInMonth(startDay, endDay).map(_.millisSinceEpoch)
+
+          val expected = List(
+            SDate("2017-12-21"),
+            SDate("2017-12-22"),
+            SDate("2017-12-23"),
+            SDate("2017-12-24"),
+            SDate("2017-12-25")
+          ).map(_.millisSinceEpoch)
+
+          assert(result == expected)
+        }
+      }
+    }
     "When asking for 6 months from first day of month provided" - {
       "Given 2017-06-22 then I should get back 2017-06-01, 2017-07-01, 2017-08-01, 2017-09-01," +
         " 2017-10-01, 2017-11-01," - {
@@ -414,9 +411,16 @@ object StaffingComponentTests extends TestSuite {
       }
     }
 
-    def dateListToString(dates: List[String]) = dates.dropRight(1).mkString(", ") + " and " + dates.last
-
     "When converting a list of dates to a string" - {
+      "Given no dates, then I should get back an empty string" - {
+        val dates = List()
+
+        val expected = ""
+
+        val result = dateListToString(dates)
+
+        assert(result == expected)
+      }
       "Given one date, I should just get one date back as a string" - {
         val dates = List("1 May")
 

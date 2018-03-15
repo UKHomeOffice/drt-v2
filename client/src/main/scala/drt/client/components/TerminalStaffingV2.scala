@@ -184,7 +184,11 @@ object TerminalStaffingV2 {
       .toSet
   }
 
-  def dateListToString(dates: List[String]) = dates.dropRight(1).mkString(", ") + " and " + dates.last
+  def dateListToString(dates: List[String]) = dates match {
+    case Nil => ""
+    case head :: Nil => head
+    case _ => dates.dropRight(1).mkString(", ") + " and " + dates.last
+  }
 
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
@@ -197,25 +201,25 @@ object TerminalStaffingV2 {
     })
     .renderPS((scope, props, state) => {
       def confirmAndSave(viewingDate: SDateLike) = (e: ReactEventFromInput) =>
-          Callback {
+        Callback {
 
-            val initialTimeSlots = stateFromProps(props).timeSlots
-            val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
+          val initialTimeSlots = stateFromProps(props).timeSlots
+          val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
 
-            val updatedMonth = dateFromDateStringOption(props.terminalPageTab.date).getMonthString()
-            val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
-              .map(d => state.colHeadings(d)).toList
+          val updatedMonth = dateFromDateStringOption(props.terminalPageTab.date).getMonthString()
+          val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
+            .map(d => state.colHeadings(d)).toList
 
-            if (confirm(s"You have updated staff for ${dateListToString(changedDays)} ${updatedMonth} - do you want to save these changes?"))
-              SPACircuit.dispatch(
-                SaveMonthTimeSlotsToShifts(
-                  staffToStaffTimeSlotsForMonth(
-                    viewingDate,
-                    updatedTimeSlots,
-                    props.terminalPageTab.terminal,
-                    props.timeSlotMinutes
-                  )))
-          }
+          if (confirm(s"You have updated staff for ${dateListToString(changedDays)} ${updatedMonth} - do you want to save these changes?"))
+            SPACircuit.dispatch(
+              SaveMonthTimeSlotsToShifts(
+                staffToStaffTimeSlotsForMonth(
+                  viewingDate,
+                  updatedTimeSlots,
+                  props.terminalPageTab.terminal,
+                  props.timeSlotMinutes
+                )))
+        }
 
       val viewingDate = firstDayOfMonth(dateFromDateStringOption(props.terminalPageTab.date))
       <.div(
@@ -239,10 +243,10 @@ object TerminalStaffingV2 {
                   props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
               )),
               <.div(
-              <.input.button(^.value := "Save Changes",
-                ^.className := "btn btn-primary",
-                ^.onClick ==> confirmAndSave(viewingDate)
-              ))
+                <.input.button(^.value := "Save Changes",
+                  ^.className := "btn btn-primary",
+                  ^.onClick ==> confirmAndSave(viewingDate)
+                ))
             ).toTagMod
           )
         ),
