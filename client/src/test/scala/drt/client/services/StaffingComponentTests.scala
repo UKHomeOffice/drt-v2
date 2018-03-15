@@ -422,27 +422,27 @@ object StaffingComponentTests extends TestSuite {
         assert(result == expected)
       }
       "Given one date, I should just get one date back as a string" - {
-        val dates = List("1 May")
+        val dates = List("1")
 
-        val expected = "1 May"
+        val expected = "1"
 
         val result = dateListToString(dates)
 
         assert(result == expected)
       }
       "Given two dates, I should get back both dates separated by 'and'" - {
-        val dates = List("1 May", "2 May")
+        val dates = List("1", "2")
 
-        val expected = "1 May and 2 May"
+        val expected = "1 and 2"
 
         val result = dateListToString(dates)
 
         assert(result == expected)
       }
       "Given three dates, I should just get the first two comma separated and the last two 'and' separated" - {
-        val dates = List("1 May", "2 May", "3 May")
+        val dates = List("1", "2", "3")
 
-        val expected = "1 May, 2 May and 3 May"
+        val expected = "1, 2 and 3"
 
         val result = dateListToString(dates)
 

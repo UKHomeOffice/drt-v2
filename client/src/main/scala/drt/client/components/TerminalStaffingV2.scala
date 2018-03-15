@@ -184,9 +184,9 @@ object TerminalStaffingV2 {
       .toSet
   }
 
-  def dateListToString(dates: List[String]) = dates.map(_.toInt).sorted match {
+  def dateListToString(dates: List[String]): String = dates.map(_.toInt).sorted match {
     case Nil => ""
-    case head :: Nil => head
+    case head :: Nil => head.toString
     case dateList => dateList.dropRight(1).mkString(", ") + " and " + dates.last
   }
 
