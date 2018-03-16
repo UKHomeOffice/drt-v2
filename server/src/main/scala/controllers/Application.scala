@@ -370,7 +370,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def actorSystem: ActorSystem = system
 
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateForDayInPastOrFuture(day)
+      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = loadBestCrunchStateForPointInTime(day)
 
       def getApplicationVersion(): String = BuildInfo.version
 
@@ -477,12 +477,14 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def crunchStateForDayInPastOrFuture(day: MillisSinceEpoch): Future[Option[CrunchState]] =
+  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Option[CrunchState]] =
     if (isHistoricDate(day)) {
       crunchStateForEndOfDay(day)
     } else if (day < getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
-      log.error(s"Trying to load live CrunchState from Forecast Actor.")
-      Future(None)
+      ctrl.liveCrunchStateActor.ask(GetState).map {
+        case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
+        case _ => None
+      }
     } else {
       crunchStateForDayInForecast(day)
     }
@@ -504,7 +506,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def isHistoricDate(day: MillisSinceEpoch): Boolean = {
-    day < getLocalNextMidnight(SDate.now()).millisSinceEpoch
+    day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
   }
 
   def index = Action {
@@ -549,7 +551,9 @@ class Application @Inject()(implicit val config: Configuration,
                                             endHour: Int
                                           ): Action[AnyContent] = Action.async {
 
-    val crunchStateFuture: Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime.toLong)
+    log.info(s"Exports: For point in time ${SDate(pointInTime.toLong).toISOString()}")
+
+    val crunchStateFuture: Future[Option[CrunchState]] = loadBestCrunchStateForPointInTime(pointInTime.toLong)
 
     exportDesksToCSV(pointInTime, terminalName, crunchStateFuture, startHour, endHour)
   }
@@ -576,16 +580,19 @@ class Application @Inject()(implicit val config: Configuration,
 
     crunchStateFuture.map {
       case Some(CrunchState(_, cm, sm)) =>
+        log.debug(s"Exports: ${SDate(pointInTime.toLong).toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
         val cmForDay: Set[CrunchMinute] = cm.filter(cm => minutesOnDayWithinRange(MilliDate(cm.minute)))
         val smForDay: Set[StaffMinute] = sm.filter(sm => minutesOnDayWithinRange(MilliDate(sm.minute)))
+        log.debug(s"Exports: ${SDate(pointInTime.toLong).toISOString()} filtered to ${cmForDay.size} CMs and ${smForDay.size} SMs ")
         val csvData = CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
         )
       case unexpected =>
-        log.error(s"got the wrong thing: $unexpected")
-        NotFound("")
+        log.error(s"Exports: Got the wrong thing $unexpected for Point In time: ${SDate(pointInTime.toLong).toISOString()}")
+
+        NotFound("No data for this date")
     }
   }
 
@@ -653,10 +660,21 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String, terminalName: TerminalName, startHour: Int, endHour: Int): Action[AnyContent] = Action.async {
-    val potMilliDate = MilliDate(pointInTime.toLong)
-    val crunchStateFuture = crunchStateAtPointInTime(pointInTime.toLong)
+    val pit = MilliDate(pointInTime.toLong)
 
-    flightsCSVFromCrunchState(terminalName, potMilliDate, crunchStateFuture, startHour, endHour)
+
+    val portCode = airportConfig.portCode
+    val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
+      f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
+
+
+    flightsCSVFromCrunchState(terminalName, pit, startHour, endHour).map {
+      case Some(csvData) =>  Result(
+            ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+            HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+          )
+      case None => NotFound("No data for this date")
+    }
   }
 
   def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
@@ -675,7 +693,8 @@ class Application @Inject()(implicit val config: Configuration,
     Future(result)
   }
 
-  def flightsCSVFromCrunchState(terminalName: TerminalName, pit: MilliDate, crunchStateFuture: Future[Option[CrunchState]], startHour: Int, endHour: Int): Future[Result] = {
+  def flightsCSVFromCrunchState(terminalName: TerminalName, pit: MilliDate, startHour: Int, endHour: Int): Future[Option[String]] = {
+    val crunchStateFuture = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
     val portCode = airportConfig.portCode
     val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
       f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
@@ -691,13 +710,11 @@ class Application @Inject()(implicit val config: Configuration,
             .filter(_.apiFlight.Terminal == terminalName)
             .filter(f => minutesOnDayWithinRange(MilliDate(f.apiFlight.PcpTime)))
         )
-        Result(
-          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
-          HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-        )
+        Option(csvData)
       case unexpected =>
         log.error(s"got the wrong thing: $unexpected")
-        NotFound("")
+        None
+
     }
   }
 
