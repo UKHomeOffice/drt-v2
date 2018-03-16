@@ -92,7 +92,8 @@ case class AirportConfig(
                           eGateBankSize: Int = 5,
                           hasEstChox: Boolean = false,
                           useStaffingInput: Boolean = false,
-                          exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack
+                          exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
+                          contactEmail: Option[String] = None
                         ) extends AirportConfigLike {
 
 }

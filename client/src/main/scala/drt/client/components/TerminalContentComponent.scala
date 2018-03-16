@@ -7,7 +7,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{CurrentWindow, SPACircuit, TimeRangeHours}
+import drt.client.services.{CurrentWindow, SPACircuit, TimeRangeHours, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -33,7 +33,8 @@ object TerminalContentComponent {
                     airportInfoPot: Pot[AirportInfo],
                     timeRangeHours: TimeRangeHours,
                     router: RouterCtl[Loc],
-                    showActuals: Boolean
+                    showActuals: Boolean,
+                    viewMode: ViewMode
                   ) {
     lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]], Int, Int) = {
       val depsHash = crunchStatePot.map(
@@ -123,8 +124,9 @@ object TerminalContentComponent {
       val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
       val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
+      val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
 
-      <.div(
+      <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
           <.ul(^.className := "nav nav-tabs",
             <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {

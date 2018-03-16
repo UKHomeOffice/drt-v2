@@ -2,14 +2,12 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
-
 import utest._
-
-import scala.collection.immutable.Seq
 
 object StaffingComponentTests extends TestSuite {
 
   import drt.client.components.TerminalStaffingV2._
+
 
   def tests = TestSuite {
     'StaffingService - {
@@ -339,5 +337,118 @@ object StaffingComponentTests extends TestSuite {
         assert(result == expected)
       }
     }
+
+    "When checking which days have been updated in the monthly staffing page" - {
+      "Given 3 days with 3 time slots and time slot 2 on day 2 is updated then I should get Set(1) for changed days" - {
+        val startingSlots = List(
+          List(1, 2, 3),
+          List(1, 2, 3)
+        )
+        val updatedSlots = List(
+          List(1, 2, 3),
+          List(1, 22, 3)
+        )
+
+        val result = whatDayChanged(startingSlots, updatedSlots)
+        val expected = Set(1)
+        assert(result == expected)
+      }
+      "Given 4 days with 4 time slots and nothing changes then I should get an empty set back" - {
+        val startingSlots = List(
+          List(1, 2, 3, 4),
+          List(1, 2, 3, 4)
+        )
+        val updatedSlots = List(
+          List(1, 2, 3, 4),
+          List(1, 2, 3, 4)
+        )
+
+        val result = whatDayChanged(startingSlots, updatedSlots)
+        val expected = Set()
+        assert(result == expected)
+      }
+      "Given 4 days with 4 time slots and nothing changes then I should get an empty set back" - {
+        val startingSlots = List(
+          List(1, 2, 3, 4),
+          List(1, 2, 3, 4)
+        )
+        val updatedSlots = List(
+          List(1, 2, 3, 4),
+          List(1, 2, 3, 4)
+        )
+
+        val result = whatDayChanged(startingSlots, updatedSlots)
+        val expected = Set()
+        assert(result == expected)
+      }
+      "Given 4 days with 4 time slots and time slot 1 and 2 change on day one I should get back Set(0)" - {
+        val startingSlots = List(
+          List(1, 2, 3, 4),
+          List(1, 2, 3, 4)
+        )
+        val updatedSlots = List(
+          List(11, 2, 3, 4),
+          List(11, 2, 3, 4)
+        )
+
+        val result = whatDayChanged(startingSlots, updatedSlots)
+        val expected = Set(0)
+        assert(result == expected)
+      }
+      "Given 4 days with 4 time slots and all time slots change on day one I should get back Set(0,1,2,3)" - {
+        val startingSlots = List(
+          List(1, 2, 3, 4),
+          List(1, 2, 3, 4)
+        )
+        val updatedSlots = List(
+          List(11, 22, 33, 44),
+          List(11, 22, 33, 44)
+        )
+
+        val result = whatDayChanged(startingSlots, updatedSlots)
+        val expected = Set(0, 1, 2, 3)
+        assert(result == expected)
+      }
+    }
+
+    "When converting a list of dates to a string" - {
+      "Given no dates, then I should get back an empty string" - {
+        val dates = List()
+
+        val expected = ""
+
+        val result = dateListToString(dates)
+
+        assert(result == expected)
+      }
+      "Given one date, I should just get one date back as a string" - {
+        val dates = List("1")
+
+        val expected = "1"
+
+        val result = dateListToString(dates)
+
+        assert(result == expected)
+      }
+      "Given two dates, I should get back both dates separated by 'and'" - {
+        val dates = List("1", "2")
+
+        val expected = "1 and 2"
+
+        val result = dateListToString(dates)
+
+        assert(result == expected)
+      }
+      "Given three dates, I should just get the first two comma separated and the last two 'and' separated" - {
+        val dates = List("1", "2", "3")
+
+        val expected = "1, 2 and 3"
+
+        val result = dateListToString(dates)
+
+        assert(result == expected)
+      }
+    }
   }
+
 }

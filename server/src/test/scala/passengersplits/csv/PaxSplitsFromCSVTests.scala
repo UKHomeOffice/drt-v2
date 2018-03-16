@@ -15,8 +15,8 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
     "Given a path to the CSV file" >> {
       "Then I should be able to parse the file" >> {
         val expected = Seq(
-          FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA"),
-          FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January", "STN", "T1", "SA")
+          FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January"),
+          FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January")
         )
 
         val splitsLines = Seq(
@@ -68,7 +68,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "And the fast-track is zero " +
       "When I ask for the SplitRatios then I should get a list of each split type for a flight" >> {
         "And there will be no fast-track entry" >> {
-          val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January", "STN", "T1", "SA")
+          val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Sunday", "January")
 
           val result = splitRatioFromFlightPaxSplit(row)
 
@@ -86,7 +86,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
       "And the fast-track is zero " +
       "When I ask for the SplitRatios then I should get a list of each split type for a flight" >> {
         "And there will be no fast-track entry" >> {
-          val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 40, 60, 30, 70, 0, "Sunday", "January", "STN", "T1", "SA")
+          val row = FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 40, 60, 30, 70, 0, "Sunday", "January")
 
           val result = splitRatioFromFlightPaxSplit(row)
 
@@ -144,7 +144,7 @@ class PaxSplitsFromCSVTests extends SpecificationLike {
   "Given a dodgy peice of data in a CSV file" >> {
     "Then I should get back the splits in the correctly formatted lines anyway" >> {
       val expected = Seq(
-        FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January", "STN", "T1", "SA")
+        FlightPaxSplit("BA1234", "JHB", 97, 0, 2, 1, 70, 30, 100, 0, 100, 0, 100, 0, "Monday", "January")
       )
 
       val splitsLines = Seq(

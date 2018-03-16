@@ -30,10 +30,10 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     val expected = List(
       LHRLiveArrival(
-        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12T10:20:00",
+        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12 10:20:00",
         "2018-02-12 09:53:43", "2018-02-12 10:03:00", "2018-02-12 10:02:00"
       ),
-      LHRLiveArrival("FL001", "T2", "SH", "2", "FL", "73H", "JNB", "ZA", "2018-02-12T18:20:00", "", "", "")
+      LHRLiveArrival("FL001", "T2", "SH", "2", "FL", "73H", "JNB", "ZA", "2018-02-12 18:20:00", "", "", "")
     )
 
     result === expected
@@ -50,10 +50,10 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     val expected = List(
       LHRFlightPax(
-        "FL002", "2018-02-12T10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
+        "FL002", "2018-02-12 10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
       ),
       LHRFlightPax(
-        "FL001", "2018-02-12T18:20:00", "214", "163", "63", "104", "2", "1", "10", "0", "1", "0", "82", "6"
+        "FL001", "2018-02-12 18:20:00", "214", "163", "63", "104", "2", "1", "10", "0", "1", "0", "82", "6"
       )
     )
 
@@ -91,7 +91,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     "Given a LHR Arrival and LHR Pax count then I should get back an Arrival with the data from both combined" >> {
       val lhrArrival = LHRLiveArrival(
-        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12T10:20:00",
+        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12 10:20:00",
         "2018-02-12 09:53:43", "2018-02-12 10:03:00", "2018-02-12 10:02:00"
       )
 
@@ -112,7 +112,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     "Given two LHR Arrivals but no pax count then I should get back an Arrival with 0 pax" >> {
       val lhrArrival = LHRLiveArrival(
-        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12T10:20:00",
+        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12 10:20:00",
         "2018-02-12 09:53:43", "2018-02-12 10:03:00", "2018-02-12 10:02:00"
       )
 
@@ -279,7 +279,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       |      "AIRCRAFTTYPE": "764",
       |      "AIRPORTCODE": "JNB",
       |      "COUNTRYCODE": "ZA",
-      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12T10:20:00",
+      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12 10:20:00",
       |      "ESTIMATEDFLIGHTOPERATIONTIME": "2018-02-12 09:53:43",
       |      "ESTIMATEDFLIGHTCHOXTIME": "2018-02-12 10:03:00",
       |      "ACTUALFLIGHTCHOXTIME": "2018-02-12 10:02:00"
@@ -293,7 +293,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       |      "AIRCRAFTTYPE": "73H",
       |      "AIRPORTCODE": "JNB",
       |      "COUNTRYCODE": "ZA",
-      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12T18:20:00",
+      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12 18:20:00",
       |      "ESTIMATEDFLIGHTOPERATIONTIME": "",
       |      "ESTIMATEDFLIGHTCHOXTIME": "",
       |      "ACTUALFLIGHTCHOXTIME": ""
@@ -306,7 +306,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       |[[
       |    {
       |      "FLIGHTNUMBER": "FL002",
-      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12T10:20:00",
+      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12 10:20:00",
       |      "MAXPASSENGERCOUNT": "469",
       |      "TOTALPASSENGERCOUNT": "414",
       |      "ACTUALDIRECTPASSENGERCOUNT": "200",
@@ -322,7 +322,7 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       |    },
       |    {
       |      "FLIGHTNUMBER": "FL001",
-      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12T18:20:00",
+      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12 18:20:00",
       |      "MAXPASSENGERCOUNT": "214",
       |      "TOTALPASSENGERCOUNT": "163",
       |      "ACTUALDIRECTPASSENGERCOUNT": "63",

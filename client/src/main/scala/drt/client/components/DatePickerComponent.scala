@@ -84,13 +84,13 @@ object DatePickerComponent {
 
       def isDataAvailableForDate = SnapshotSelector.isLaterThanEarliest(state.selectedDateTime)
 
-      def goButton(loading: Boolean, isCurrentSelection: Boolean) = (loading, isCurrentSelection) match {
+      def goButton(loading: Boolean, isCurrentSelection: Boolean): TagMod = (loading, isCurrentSelection) match {
         case (true, true) =>
-          <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.spinner)
+          <.div(^.id := "snapshot-done", Icon.spinner)
         case (false, true) =>
-          <.div (^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
+          <.div(^.id := "snapshot-done", Icon.checkCircleO)
         case _ =>
-          <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate))
+          <.div(^.id := "snapshot-done", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate))
       }
 
       val yesterdayActive = if (state.selectedDateTime.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
@@ -106,21 +106,19 @@ object DatePickerComponent {
       else <.div()
 
       <.div(^.className := "date-selector",
-        <.div(^.className := "row",
-          <.div(^.className := "btn-group col-sm-4 no-gutters", VdomAttr("data-toggle") := "buttons",
+        <.div(^.className := "",
+          <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
             <.div(^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
-            <.div(^.className := s"btn btn-primary $tomorrowActive", "Tomorrow", ^.onClick ==> selectTomorrow)),
-          List(
-            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt))),
-            <.div(^.className := "col-sm-2 no-gutters narrower", drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt))),
-            <.div(^.className := "col-sm-1 no-gutters narrower", drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt))),
-            <.div(^.className := "col-sm-1 no-gutters spacer", <.label(" ", ^.className := "text center")),
+            <.div(^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)),
+            drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt)),
+            drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt)),
+            drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt)),
             goButton(props.loadingState.isLoading, isCurrentSelection),
             errorMessage
-          ).toTagMod),
-        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = isTodayActive ))
-      )
+          ),
+          TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = isTodayActive))
+        )
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
