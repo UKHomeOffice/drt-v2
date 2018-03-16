@@ -353,7 +353,7 @@ class StaffingStage(name: String,
 }
 
 object Staffing {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def staffAvailableByTerminalAndQueue(optionalShifts: Option[String], optionalFixedPoints: Option[String], optionalMovements: Option[Seq[StaffMovement]]): Option[StaffSources] = {
     val rawShiftsString = optionalShifts.getOrElse("")
@@ -576,11 +576,13 @@ trait StaffAssignmentService {
 
 case class StaffAssignmentServiceWithoutDates(assignments: Seq[StaffAssignment])
   extends StaffAssignmentService {
-  def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int = assignments.filter(assignment => {
-    assignment.terminalName == terminalName &&
-      SDate(dateMillis).toHoursAndMinutes() >= SDate(assignment.startDt).toHoursAndMinutes() &&
-      SDate(dateMillis).toHoursAndMinutes() <= SDate(assignment.endDt).toHoursAndMinutes()
-  }).map(_.numberOfStaff).sum
+  def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int = {
+    assignments.filter(assignment => {
+      assignment.terminalName == terminalName &&
+        SDate(dateMillis).toHoursAndMinutes() >= SDate(assignment.startDt).toHoursAndMinutes() &&
+        SDate(dateMillis).toHoursAndMinutes() <= SDate(assignment.endDt).toHoursAndMinutes()
+    }).map(_.numberOfStaff).sum
+  }
 }
 
 case class StaffAssignmentServiceWithDates(assignments: Seq[StaffAssignment])

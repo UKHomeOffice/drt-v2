@@ -3,13 +3,13 @@ package controllers
 import autowire.Core.Router
 import autowire.Macros.MacroHelp
 
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox
 
 object MyMacros {
 
   //this exists so that we can debug the output of autowire if we need to. there's likely a better way to inspect macro output, but this works.
   def routeMacro[Trait, PickleType]
-  (c: Context)
+  (c: whitebox.Context)
   (target: c.Expr[Trait])
   (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
   : c.Expr[Router[PickleType]] = {

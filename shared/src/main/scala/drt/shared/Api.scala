@@ -306,7 +306,7 @@ object CrunchApi {
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: Int = s"$terminalName$minute".hashCode
-    lazy val available = shifts + movements match {
+    lazy val available: Int = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
     }
@@ -314,6 +314,14 @@ object CrunchApi {
 
   object StaffMinute {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
+  }
+
+  case class StaffMinutes(minutes: Seq[StaffMinute])
+
+  object StaffMinutes {
+    def apply(minutesByKey: Map[Int, StaffMinute]): StaffMinutes = {
+      StaffMinutes(minutesByKey.values.toSeq)
+    }
   }
 
   case class CrunchMinute(terminalName: TerminalName,
