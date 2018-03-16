@@ -123,9 +123,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 1, -1, None))
 
     probe.fishForMessage(5 seconds) {
-      case StaffMinutes(minutes) =>
-        println(s"minutes: ${minutes.toSet}")
-        minutes.toSet == expected
+      case StaffMinutes(minutes) => minutes.toSet == expected
     }
 
     true
