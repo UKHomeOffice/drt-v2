@@ -28,7 +28,7 @@ class StaffGraphStage(optionalInitialShifts: Option[String],
   var staffMinutes: Map[Int, StaffMinute] = Map()
   var staffMinuteUpdates: Map[Int, StaffMinute] = Map()
 
-  def maybeSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
+  def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
 
   override def shape: FanInShape3[String, String, Seq[StaffMovement], StaffMinutes] =
     new FanInShape3(inShifts, inFixedPoints, inMovements, outStaffMinutes)
@@ -49,7 +49,7 @@ class StaffGraphStage(optionalInitialShifts: Option[String],
           log.info(s"Grabbing available inShifts")
           shiftsOption = Option(grab(inShifts))
           val minutesToUpdate = shiftsOption.map(allMinuteMillis).getOrElse(Set())
-          staffMinuteUpdates = updatesFromSources(maybeSources, minutesToUpdate)
+          staffMinuteUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
           tryPush()
           pull(inShifts)
         }
@@ -60,7 +60,7 @@ class StaffGraphStage(optionalInitialShifts: Option[String],
           log.info(s"Grabbing available inFixedPoints")
           fixedPointsOption = Option(grab(inFixedPoints))
           val minutesToUpdate = fixedPointMinutesToUpdate(fixedPointsOption)
-          staffMinuteUpdates = updatesFromSources(maybeSources, minutesToUpdate)
+          staffMinuteUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
           tryPush()
           pull(inFixedPoints)
         }
@@ -71,7 +71,7 @@ class StaffGraphStage(optionalInitialShifts: Option[String],
           log.info(s"Grabbing available inMovements")
           movementsOption = Option(grab(inMovements))
           val minutesToUpdate = movementsOption.map(allMinuteMillis).getOrElse(Set())
-          staffMinuteUpdates = updatesFromSources(maybeSources, minutesToUpdate)
+          staffMinuteUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
           tryPush()
           pull(inMovements)
         }
