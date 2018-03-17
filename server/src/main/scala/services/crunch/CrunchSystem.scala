@@ -11,7 +11,6 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
 import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
 import services.graphstages._

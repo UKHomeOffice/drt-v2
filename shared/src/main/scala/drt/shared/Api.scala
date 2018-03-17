@@ -176,6 +176,9 @@ object Arrival {
   }
 }
 
+case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
+
+
 trait SDateLike {
 
   def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
@@ -320,6 +323,14 @@ object CrunchApi {
 
   object StaffMinute {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
+  }
+
+  case class StaffMinutes(minutes: Seq[StaffMinute])
+
+  object StaffMinutes {
+    def apply(minutesByKey: Map[Int, StaffMinute]): StaffMinutes = {
+      StaffMinutes(minutesByKey.values.toSeq)
+    }
   }
 
   case class CrunchMinute(terminalName: TerminalName,
