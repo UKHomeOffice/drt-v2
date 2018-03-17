@@ -15,7 +15,6 @@ import services.graphstages.Crunch.{log, _}
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
-case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
 class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,

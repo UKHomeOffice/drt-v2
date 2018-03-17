@@ -176,6 +176,9 @@ object Arrival {
   }
 }
 
+case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
+
+
 trait SDateLike {
 
   def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"

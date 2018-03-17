@@ -17,6 +17,7 @@ import scala.collection.immutable.Map
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
+
 class CrunchGraphStage(name: String,
                        optionalInitialFlights: Option[FlightsWithSplits],
                        airportConfig: AirportConfig,

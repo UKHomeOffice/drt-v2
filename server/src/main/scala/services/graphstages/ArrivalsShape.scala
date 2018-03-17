@@ -4,6 +4,7 @@ import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.{FanInShape3, Graph}
 import akka.stream.scaladsl.{Broadcast, GraphDSL, Sink}
+import drt.shared.ArrivalsDiff
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import services.ArrivalsState

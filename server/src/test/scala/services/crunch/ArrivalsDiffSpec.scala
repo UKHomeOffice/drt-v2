@@ -1,8 +1,9 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
+import drt.shared.ArrivalsDiff
 import org.specs2.mutable.Specification
-import services.graphstages.{ArrivalsDiff, Crunch}
+import services.graphstages.Crunch
 
 class ArrivalsDiffSpec extends Specification {
   "Given two ArrivalDiffs " +

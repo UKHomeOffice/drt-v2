@@ -11,7 +11,7 @@ import drt.shared._
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.SDate
-import services.graphstages.{ArrivalSplitsGraphStage, ArrivalsDiff}
+import services.graphstages.ArrivalSplitsGraphStage
 
 import scala.concurrent.duration._
 
