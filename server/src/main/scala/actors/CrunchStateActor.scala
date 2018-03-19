@@ -60,8 +60,37 @@ class CrunchStateActor(val snapshotInterval: Int,
         s", ${s.staffMinutes.size} staff minutes ")
   }
 
-
   override def receiveCommand: Receive = {
+    case flightUpdates: FlightsWithSplits =>
+      state = state match {
+        case None => Option(newPortState(flightUpdates))
+        case Some(portState) => Option(updatePortState(flightUpdates, portState))
+      }
+
+    case drms: DeskRecMinutes =>
+      state = state match {
+        case None => Option(newPortState(drms))
+        case Some(portState) => Option(updatePortState(drms, portState))
+      }
+
+    case sims: SimulationMinutes =>
+      state = state match {
+        case None => Option(newPortState(sims))
+        case Some(portState) => Option(updatePortState(sims, portState))
+      }
+
+    case sms: StaffMinutes =>
+      state = state match {
+        case None => Option(newPortState(sms))
+        case Some(portState) => Option(updatePortState(sms, portState))
+      }
+
+//    case actDesks: ActualDeskStats =>
+//      state = state match {
+//        case None => Option(newPortState(sms))
+//        case Some(portState) => Option(updatePortState(sms, portState))
+//      }
+
     case cs: PortState =>
       log.info(s"Received PortState. storing")
       updateStateFromPortState(cs)
@@ -110,22 +139,96 @@ class CrunchStateActor(val snapshotInterval: Int,
       log.warn(s"Received unexpected message $u")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = {
-    state.map {
-      case PortState(fs, ms, ss) => PortState(
-        flights = fs.filter {
-          case (_, f) => start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
-        },
-        crunchMinutes = ms.filter {
-          case (_, m) =>
-            start <= m.minute && m.minute < end
-        },
-        staffMinutes = ss.filter {
-          case (_, m) =>
-            start <= m.minute && m.minute < end
-        }
-      )
+  def updatePortState(sms: StaffMinutes, portState: PortState): PortState = {
+    val updatedSms = sms.minutes.foldLeft(portState.staffMinutes) {
+      case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm)
     }
+    val updatedPortState = portState.copy(staffMinutes = updatedSms)
+    updatedPortState
+  }
+
+  def newPortState(sms: StaffMinutes): PortState = {
+    PortState(Map(), Map(), sms.minutes.map(cm => (cm.key, cm)).toMap)
+  }
+
+  def newPortState(flightUpdates: FlightsWithSplits): PortState = PortState(flightUpdates.flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
+
+  def newPortState(drms: DeskRecMinutes): PortState = PortState(Map(), newCrunchMinutes(drms), Map())
+
+  def newPortState(sims: SimulationMinutes): PortState = PortState(Map(), newCrunchMinutes(sims), Map())
+
+  def updatePortState(flightUpdates: FlightsWithSplits, portState: PortState): PortState = {
+    val updatedFlights = flightUpdates.flights.foldLeft(portState.flights) {
+      case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight)
+    }
+    val updatedPortState = portState.copy(flights = updatedFlights)
+    updatedPortState
+  }
+
+  def updatePortState(drms: DeskRecMinutes, portState: PortState): PortState = {
+    val updatedCms = updateCrunchMinutes(drms, portState.crunchMinutes)
+    val updatedPortState = portState.copy(crunchMinutes = updatedCms)
+    updatedPortState
+  }
+
+  def updatePortState(sims: SimulationMinutes, portState: PortState): PortState = {
+    val updatedCms = updateCrunchMinutes(sims, portState.crunchMinutes)
+    val updatedPortState = portState.copy(crunchMinutes = updatedCms)
+    updatedPortState
+  }
+
+  def newCrunchMinutes(drms: DeskRecMinutes): Map[Int, CrunchMinute] = drms
+    .minutes
+    .map(CrunchMinute(_))
+    .map(cm => (cm.key, cm))
+    .toMap
+
+  def newCrunchMinutes(sims: SimulationMinutes): Map[Int, CrunchMinute] = sims
+    .minutes
+    .map(CrunchMinute(_))
+    .map(cm => (cm.key, cm))
+    .toMap
+
+  def updateCrunchMinutes(drms: DeskRecMinutes, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = drms
+    .minutes
+    .foldLeft(crunchMinutes) {
+      case (soFar, updatedDrm) =>
+        val maybeMinute: Option[CrunchMinute] = soFar.get(updatedDrm.key)
+        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
+        soFar.updated(updatedDrm.key, mergedCm)
+    }
+
+  def updateCrunchMinutes(drms: SimulationMinutes, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = drms
+    .minutes
+    .foldLeft(crunchMinutes) {
+      case (soFar, updatedDrm) =>
+        val maybeMinute: Option[CrunchMinute] = soFar.get(updatedDrm.key)
+        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
+        soFar.updated(updatedDrm.key, mergedCm)
+    }
+
+  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
+    .map(existingCm => existingCm.copy(paxLoad = updatedDrm.paxLoad, workLoad = updatedDrm.workLoad, deskRec = updatedDrm.deskRec, waitTime = updatedDrm.waitTime))
+    .getOrElse(CrunchMinute(updatedDrm))
+
+  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: SimulationMinute): CrunchMinute = maybeMinute
+    .map(existingCm => existingCm.copy(deployedDesks = Option(updatedDrm.desks), deployedWait = Option(updatedDrm.waitTime)))
+    .getOrElse(CrunchMinute(updatedDrm))
+
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state.map {
+    case PortState(fs, ms, ss) => PortState(
+      flights = fs.filter {
+        case (_, f) => start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
+      },
+      crunchMinutes = ms.filter {
+        case (_, m) =>
+          start <= m.minute && m.minute < end
+      },
+      staffMinutes = ss.filter {
+        case (_, m) =>
+          start <= m.minute && m.minute < end
+      }
+    )
   }
 
   def setStateFromSnapshot(snapshot: Any, timeWindowEnd: Option[SDateLike] = None): Unit = {
@@ -166,14 +269,12 @@ class CrunchStateActor(val snapshotInterval: Int,
     newState
   }
 
-  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): CrunchDiff = {
-    CrunchDiff(
-      flightRemovals = diffMessage.flightIdsToRemove.map(RemoveFlight).toSet,
-      flightUpdates = diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
-      crunchMinuteUpdates = diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
-      staffMinuteUpdates = diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
-    )
-  }
+  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): CrunchDiff = CrunchDiff(
+    flightRemovals = diffMessage.flightIdsToRemove.map(RemoveFlight).toSet,
+    flightUpdates = diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
+    crunchMinuteUpdates = diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
+    staffMinuteUpdates = diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
+  )
 
   def updateStateFromPortState(newState: PortState): Unit = {
     val existingState = state match {
@@ -228,34 +329,28 @@ class CrunchStateActor(val snapshotInterval: Int,
     state = Option(updatedState)
   }
 
-  def removeCrunchMinuteToMessage(rc: RemoveCrunchMinute): RemoveCrunchMinuteMessage = {
-    RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))
-  }
+  def removeCrunchMinuteToMessage(rc: RemoveCrunchMinute): RemoveCrunchMinuteMessage = RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))
 
-  def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = {
-    CrunchMinuteMessage(
-      terminalName = Option(cm.terminalName),
-      queueName = Option(cm.queueName),
-      minute = Option(cm.minute),
-      paxLoad = Option(cm.paxLoad),
-      workLoad = Option(cm.workLoad),
-      deskRec = Option(cm.deskRec),
-      waitTime = Option(cm.waitTime),
-      simDesks = cm.deployedDesks,
-      simWait = cm.deployedWait,
-      actDesks = cm.actDesks,
-      actWait = cm.actWait
-    )
-  }
+  def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
+    terminalName = Option(cm.terminalName),
+    queueName = Option(cm.queueName),
+    minute = Option(cm.minute),
+    paxLoad = Option(cm.paxLoad),
+    workLoad = Option(cm.workLoad),
+    deskRec = Option(cm.deskRec),
+    waitTime = Option(cm.waitTime),
+    simDesks = cm.deployedDesks,
+    simWait = cm.deployedWait,
+    actDesks = cm.actDesks,
+    actWait = cm.actWait
+  )
 
-  def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = {
-    StaffMinuteMessage(
-      terminalName = Option(sm.terminalName),
-      minute = Option(sm.minute),
-      shifts = Option(sm.shifts),
-      fixedPoints = Option(sm.fixedPoints),
-      movements = Option(sm.movements))
-  }
+  def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = StaffMinuteMessage(
+    terminalName = Option(sm.terminalName),
+    minute = Option(sm.minute),
+    shifts = Option(sm.shifts),
+    fixedPoints = Option(sm.fixedPoints),
+    movements = Option(sm.movements))
 
   def portStateToSnapshotMessage(portState: PortState) = CrunchStateSnapshotMessage(
     Option(0L),
@@ -295,31 +390,27 @@ class CrunchStateActor(val snapshotInterval: Int,
     PortState(flights, crunchMinutes, staffMinutes)
   }
 
-  def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = {
-    CrunchMinute(
-      terminalName = cmm.terminalName.getOrElse(""),
-      queueName = cmm.queueName.getOrElse(""),
-      minute = cmm.minute.getOrElse(0L),
-      paxLoad = cmm.paxLoad.getOrElse(0d),
-      workLoad = cmm.workLoad.getOrElse(0d),
-      deskRec = cmm.deskRec.getOrElse(0),
-      waitTime = cmm.waitTime.getOrElse(0),
-      deployedDesks = cmm.simDesks,
-      deployedWait = cmm.simWait,
-      actDesks = cmm.actDesks,
-      actWait = cmm.actWait
-    )
-  }
+  def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = CrunchMinute(
+    terminalName = cmm.terminalName.getOrElse(""),
+    queueName = cmm.queueName.getOrElse(""),
+    minute = cmm.minute.getOrElse(0L),
+    paxLoad = cmm.paxLoad.getOrElse(0d),
+    workLoad = cmm.workLoad.getOrElse(0d),
+    deskRec = cmm.deskRec.getOrElse(0),
+    waitTime = cmm.waitTime.getOrElse(0),
+    deployedDesks = cmm.simDesks,
+    deployedWait = cmm.simWait,
+    actDesks = cmm.actDesks,
+    actWait = cmm.actWait
+  )
 
-  def staffMinuteFromMessage(smm: StaffMinuteMessage): StaffMinute = {
-    StaffMinute(
-      terminalName = smm.terminalName.getOrElse(""),
-      minute = smm.minute.getOrElse(0L),
-      shifts = smm.shifts.getOrElse(0),
-      fixedPoints = smm.fixedPoints.getOrElse(0),
-      movements = smm.movements.getOrElse(0)
-    )
-  }
+  def staffMinuteFromMessage(smm: StaffMinuteMessage): StaffMinute = StaffMinute(
+    terminalName = smm.terminalName.getOrElse(""),
+    minute = smm.minute.getOrElse(0L),
+    shifts = smm.shifts.getOrElse(0),
+    fixedPoints = smm.fixedPoints.getOrElse(0),
+    movements = smm.movements.getOrElse(0)
+  )
 
   def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = {
     ApiFlightWithSplits(

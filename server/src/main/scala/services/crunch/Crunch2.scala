@@ -3,8 +3,8 @@ package services.crunch
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
-import drt.shared.CrunchApi.{CrunchMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.Flights
+import drt.shared.CrunchApi.{CrunchMinutes, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
@@ -16,26 +16,25 @@ object Crunch2 {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[SA, SVM, SS, SFP, SMM, SAD]
-  (baseArrivalsSource: Source[Flights, SA],
-   fcstArrivalsSource: Source[Flights, SA],
-   liveArrivalsSource: Source[Flights, SA],
-   manifestsSource: Source[DqManifests, SVM],
-   shiftsSource: Source[String, SS],
-   fixedPointsSource: Source[String, SFP],
-   staffMovementsSource: Source[Seq[StaffMovement], SMM],
-   actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+  def apply[SA, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Flights, SA],
+                                        fcstArrivalsSource: Source[Flights, SA],
+                                        liveArrivalsSource: Source[Flights, SA],
+                                        manifestsSource: Source[DqManifests, SVM],
+                                        shiftsSource: Source[String, SS],
+                                        fixedPointsSource: Source[String, SFP],
+                                        staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
-   arrivalsGraphStage: ArrivalsGraphStage,
-   arrivalSplitsStage: ArrivalSplitsGraphStage,
-   splitsPredictorStage: SplitsPredictorStage,
-   workloadGraphStage: WorkloadGraphStage,
-   crunchLoadGraphStage: CrunchLoadGraphStage,
-   staffGraphStage: StaffGraphStage,
-   liveCrunchStateActor: ActorRef,
-   fcstCrunchStateActor: ActorRef,
-   now: () => SDateLike
-  ): RunnableGraph[(SA, SA, SA, SVM, SS, SFP, SMM, SAD)] = {
+                                        arrivalsGraphStage: ArrivalsGraphStage,
+                                        arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                        splitsPredictorStage: SplitsPredictorStage,
+                                        workloadGraphStage: WorkloadGraphStage,
+                                        crunchLoadGraphStage: CrunchLoadGraphStage,
+                                        staffGraphStage: StaffGraphStage,
+                                        liveCrunchStateActor: ActorRef,
+                                        fcstCrunchStateActor: ActorRef,
+                                        now: () => SDateLike
+                                       ): RunnableGraph[(SA, SA, SA, SVM, SS, SFP, SMM, SAD)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -68,9 +67,10 @@ object Crunch2 {
           val crunch = builder.add(crunchLoadGraphStage.async)
           val staff = builder.add(staffGraphStage.async)
 
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](4))
-//          val workloadFanOut = builder.add(Broadcast[Loads](2))
-          val crunchFanOut = builder.add(Broadcast[CrunchMinutes](2))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
+          //          val workloadFanOut = builder.add(Broadcast[Loads](2))
+          val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
 
           val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
@@ -90,21 +90,22 @@ object Crunch2 {
           arrivalsFanOut ~> arrivalSplits.in0
           splitsPredictor.out ~> arrivalSplits.in2
 
-          arrivalSplits.out ~> workload
+          arrivalSplits.out ~> arrivalSplitsFanOut
+          arrivalSplitsFanOut ~> workload
 
           workload.out.expand(groupLoadsByDay) ~> crunch
-//          workload ~> workloadFanOut
-//          workloadFanOut ~> crunch
-//          workloadFanOut ~>
+          //          workload ~> workloadFanOut
+          //          workloadFanOut ~> crunch
+          //          workloadFanOut ~>
 
           crunch ~> crunchFanOut
 
-          arrivalsFanOut.map(_.toUpdate.filter(_.PcpTime < tomorrowStartMillis)) ~> liveSink
-          crunchFanOut.map(_.crunchMinutes.filter(cm => cm.minute < tomorrowStartMillis)) ~> liveSink
-          actualDesksAndWaitTimes ~> liveSink
+          arrivalSplitsFanOut.map(_.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis)) ~> liveSink // FlightsWithSplits
+          crunchFanOut.map(_.minutes.filter(drm => drm.minute < tomorrowStartMillis)) ~> liveSink //DeskRecMinutes
+          actualDesksAndWaitTimes ~> liveSink // ActualDeskStats
 
-          arrivalsFanOut.map(_.toUpdate.filter(_.PcpTime >= tomorrowStartMillis)) ~> fcstSink
-          crunchFanOut.map(_.crunchMinutes.filter(cm => cm.minute >= tomorrowStartMillis)) ~> fcstSink
+          arrivalSplitsFanOut.map(_.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis)) ~> fcstSink // FlightsWithSplits
+          crunchFanOut.map(_.minutes.filter(drm => drm.minute >= tomorrowStartMillis)) ~> fcstSink
 
           staff.out ~> liveSink
 

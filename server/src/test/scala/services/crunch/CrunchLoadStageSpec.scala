@@ -3,7 +3,7 @@ package services.crunch
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes}
+import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, DeskRecMinute, DeskRecMinutes}
 import drt.shared._
 import services.graphstages.Crunch.{LoadMinute, Loads}
 import services.graphstages.CrunchLoadGraphStage
@@ -70,16 +70,16 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     loadsSource.offer(loads)
 
     val expected = Set(
-      CrunchMinute("T1", Queues.EeaDesk, 1514765100000L, 10.0, 5.0, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.EeaDesk, 1514765160000L, 2.5, 1.25, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45, None, None, None, None, None)
+      DeskRecMinute("T1", Queues.EeaDesk, 1514765100000L, 10.0, 5.0, 1, 25, None),
+      DeskRecMinute("T1", Queues.EeaDesk, 1514765160000L, 2.5, 1.25, 1, 25, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45, None)
     )
     val expectedMillis = loads.loadMinutes.map(_.minute)
     val expectedSize = 2 * 1440
 
     val result = probe.receiveOne(5 seconds) match {
-      case CrunchMinutes(cms) => cms
+      case DeskRecMinutes(drms) => drms
       case unexpected =>
         println(s"Got unexpected: $unexpected")
         Set()
@@ -111,16 +111,16 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     loadsSource.offer(loads)
 
     val expected = Set(
-      CrunchMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45, None, None, None, None, None)
+      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25, None),
+      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45, None)
     )
     val expectedMillis = loads.loadMinutes.map(_.minute)
     val expectedSize = 2 * 2 * 1440
 
     val result = probe.receiveOne(5 seconds) match {
-      case CrunchMinutes(cms) => cms
+      case DeskRecMinutes(drms) => drms
       case _ => Set()
     }
 

@@ -194,6 +194,7 @@ trait SDateLike {
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   )
+
   /**
     * Days of the week 1 to 7 (Monday is 1)
     *
@@ -340,6 +341,37 @@ object CrunchApi {
     }
   }
 
+  case class DeskRecMinute(terminalName: TerminalName,
+                           queueName: QueueName,
+                           minute: MillisSinceEpoch,
+                           paxLoad: Double,
+                           workLoad: Double,
+                           deskRec: Int,
+                           waitTime: Int,
+                           lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+    def equals(candidate: DeskRecMinute): Boolean =
+      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
+    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  }
+
+  case class DeskRecMinutes(minutes: Set[DeskRecMinute])
+
+  case class SimulationMinute(terminalName: TerminalName,
+                              queueName: QueueName,
+                              minute: MillisSinceEpoch,
+                              desks: Int,
+                              waitTime: Int,
+                              lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+    def equals(candidate: SimulationMinute): Boolean =
+      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
+    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  }
+
+
+  case class SimulationMinutes(minutes: Set[SimulationMinute])
+
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
                           minute: MillisSinceEpoch,
@@ -356,6 +388,28 @@ object CrunchApi {
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  }
+
+  object CrunchMinute {
+    def apply(drm: DeskRecMinute): CrunchMinute = CrunchMinute(
+      terminalName = drm.terminalName,
+      queueName = drm.queueName,
+      minute = drm.minute,
+      paxLoad = drm.paxLoad,
+      workLoad = drm.workLoad,
+      deskRec = drm.deskRec,
+      waitTime = drm.waitTime)
+
+    def apply(drm: SimulationMinute): CrunchMinute = CrunchMinute(
+      terminalName = drm.terminalName,
+      queueName = drm.queueName,
+      minute = drm.minute,
+      paxLoad = 0,
+      workLoad = 0,
+      deskRec = 0,
+      waitTime = 0,
+      deployedDesks = Option(drm.desks),
+      deployedWait = Option(drm.waitTime))
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
