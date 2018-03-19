@@ -120,22 +120,27 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
 
     def addPredictions(predictions: Seq[(Arrival, Option[ApiSplits])], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-      predictions
+      val arrivalsAndSplits = predictions
         .collect {
           case (arrival, Some(splits)) => (arrival, splits)
         }
-        .foldLeft(flightsById) {
-          case (existingFlightsByFlightId, (arrivalForPrediction, predictedSplits)) =>
-            existingFlightsByFlightId.find {
-              case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
-            } match {
-              case Some((id, existingFlightWithSplits)) =>
-                val newSplitsSet: Set[ApiSplits] = updateSplitsSet(arrivalForPrediction, predictedSplits, existingFlightWithSplits)
-                existingFlightsByFlightId.updated(id, existingFlightWithSplits.copy(splits = newSplitsSet))
-              case None =>
-                existingFlightsByFlightId
-            }
-        }
+
+      arrivalsAndSplits.foldLeft(flightsById) {
+        case (existingFlightsByFlightId, (arrivalForPrediction, predictedSplits)) =>
+          updatePredictionIfFlightExists(existingFlightsByFlightId, arrivalForPrediction, predictedSplits)
+      }
+    }
+
+    def updatePredictionIfFlightExists(existingFlightsByFlightId: Map[Int, ApiFlightWithSplits], arrivalForPrediction: Arrival, predictedSplits: ApiSplits): Map[Int, ApiFlightWithSplits] = {
+      existingFlightsByFlightId.find {
+        case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
+      } match {
+        case Some((id, existingFlightWithSplits)) =>
+          val newSplitsSet: Set[ApiSplits] = updateSplitsSet(arrivalForPrediction, predictedSplits, existingFlightWithSplits)
+          existingFlightsByFlightId.updated(id, existingFlightWithSplits.copy(splits = newSplitsSet))
+        case None =>
+          existingFlightsByFlightId
+      }
     }
 
     def updateSplitsSet(arrivalForPrediction: Arrival, predictedSplits: ApiSplits, existingFlightWithSplits: ApiFlightWithSplits): Set[ApiSplits] = {
@@ -153,11 +158,11 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
-      val latestCrunchMinute = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
+      val lastMinuteToCrunch = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
       val (updatesCount, additionsCount, updatedFlights) = arrivalsDiff.toUpdate.foldLeft((0, 0, afterRemovals)) {
-        case ((updates, additions, flightsSoFar), updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
+        case ((updates, additions, flightsSoFar), updatedFlight) if updatedFlight.PcpTime > lastMinuteToCrunch.millisSinceEpoch =>
           val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
-          log.debug(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
+          log.debug(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${lastMinuteToCrunch.toLocalDateTimeString()})")
           (updates, additions, flightsSoFar)
         case ((updates, additions, flightsSoFar), updatedFlight) =>
           flightsSoFar.get(updatedFlight.uniqueId) match {
