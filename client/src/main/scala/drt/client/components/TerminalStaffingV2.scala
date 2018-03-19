@@ -187,7 +187,7 @@ object TerminalStaffingV2 {
   def dateListToString(dates: List[String]): String = dates.map(_.toInt).sorted match {
     case Nil => ""
     case head :: Nil => head.toString
-    case dateList => dateList.dropRight(1).mkString(", ") + " and " + dates.last
+    case dateList => dateList.dropRight(1).mkString(", ") + " and " + dateList.last
   }
 
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())

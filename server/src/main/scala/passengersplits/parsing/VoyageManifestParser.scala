@@ -1,5 +1,6 @@
 package passengersplits.parsing
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import org.joda.time.DateTime
@@ -45,17 +46,17 @@ object VoyageManifestParser {
                             PassengerList: List[PassengerInfoJson]) {
     def flightCode: String = CarrierCode + VoyageNumber
 
-    def scheduleArrivalDateTime: Option[SDateLike] = {
-      Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
-    }
+    def scheduleArrivalDateTime: Option[SDateLike] = Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
 
     def passengerInfos: Seq[PassengerInfo] = PassengerList.map(_.toPassengerInfo)
 
-    private def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
+    def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
+
+    def millis: MillisSinceEpoch = scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
 
     def summary: String = s"$DeparturePortCode->$ArrivalPortCode/$CarrierCode$VoyageNumber@$scheduleDateTimeString"
 
-    def arrivalHash: Int = s"$VoyageNumber-${scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)}".hashCode
+    def key: Int = s"$VoyageNumber-${scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)}".hashCode
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {

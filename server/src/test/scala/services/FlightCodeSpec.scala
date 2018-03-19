@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.ArrivalHelper
 import drt.shared.FlightParsing._
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
@@ -22,13 +23,13 @@ class FlightCodeSpec extends CrunchTestLike {
 
   "Voyage Number should be padded to 4 digits" >> {
     "3 digits should pad to 4" in {
-      Crunch.padTo4Digits("123") === "0123"
+      ArrivalHelper.padTo4Digits("123") === "0123"
     }
     "4 digits should remain 4 " in {
-      Crunch.padTo4Digits("0123") === "0123"
+      ArrivalHelper.padTo4Digits("0123") === "0123"
     }
     "we think 5 is invalid, but we should return unharmed" in {
-      Crunch.padTo4Digits("45123") === "45123"
+      ArrivalHelper.padTo4Digits("45123") === "45123"
     }
   }
 }

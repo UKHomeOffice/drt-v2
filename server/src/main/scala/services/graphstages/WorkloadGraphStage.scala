@@ -68,12 +68,6 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
       override def onPush(): Unit = {
         val incomingFlights = grab(inFlightsWithSplits)
         log.info(s"Received ${incomingFlights.flights.size} arrivals $incomingFlights")
-        /*
-        1) map over each incoming flights to produce new workload
-        2) update flightId -> workload map
-        3) merge all workloads to Set[LoadMinute]
-        4) calc new/old LoadMinute diff and push
-         */
 
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
         log.info(s"updatedWorkloads: $updatedWorkloads")
@@ -92,15 +86,13 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
       }
     })
 
-    def mergeLoadMinutes(updatedLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
-      updatedLoads.foldLeft(existingLoads) {
-        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.uniqueId, newLoadMinute)
-      }
+    def mergeLoadMinutes(updatedLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
+      case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.uniqueId, newLoadMinute)
     }
 
     def loadDiff(updatedLoads: Set[LoadMinute], existingLoads: Set[LoadMinute]): Set[LoadMinute] = {
       val updates = updatedLoads -- existingLoads
-      val removeIds = (existingLoads.map(_.uniqueId) -- updatedLoads.map(_.uniqueId))
+      val removeIds = existingLoads.map(_.uniqueId) -- updatedLoads.map(_.uniqueId)
       val removes = existingLoads.filter(l => removeIds.contains(l.uniqueId)).map(_.copy(paxLoad = 0, workLoad = 0))
       val diff = updates ++ removes
       log.info(s"${diff.size} updated load minutes")
@@ -108,15 +100,20 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
       diff
     }
 
-    def mergeWorkloadByFlightId(incomingFlights: FlightsWithSplits, existingLoads: Map[Int, Set[FlightSplitMinute]]): Map[Int, Set[FlightSplitMinute]] = {
-      incomingFlights.flights.foldLeft(existingLoads) {
+    def mergeWorkloadByFlightId(incomingFlights: FlightsWithSplits, existingLoads: Map[Int, Set[FlightSplitMinute]]): Map[Int, Set[FlightSplitMinute]] = incomingFlights
+      .flights
+      .foldLeft(existingLoads) {
         case (soFar, fws) =>
           val uniqueFlightId = fws.apiFlight.uniqueId
-          val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
-
-          soFar.updated(uniqueFlightId, flightWorkload)
+          airportConfig.defaultProcessingTimes.get(fws.apiFlight.Terminal) match {
+            case None =>
+              log.warn(s"No proc times found for ${fws.apiFlight.IATA} @ ${fws.apiFlight.Terminal}. Can't calculate workload")
+              soFar
+            case Some(procTimes) =>
+              val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, procTimes, natProcTimes, useNationalityBasedProcessingTimes)
+              soFar.updated(uniqueFlightId, flightWorkload)
+          }
       }
-    }
 
     setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {

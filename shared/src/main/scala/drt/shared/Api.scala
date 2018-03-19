@@ -156,6 +156,13 @@ case class Arrival(
     }
   }
 
+  def voyageNumberPadded: String = {
+    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
+    ArrivalHelper.padTo4Digits(number.map(_._2).getOrElse("-"))
+  }
+
+  lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
+
   lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
 }
 
