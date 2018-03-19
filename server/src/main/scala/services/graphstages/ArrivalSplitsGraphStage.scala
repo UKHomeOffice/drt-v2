@@ -16,6 +16,8 @@ import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
+case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
+
 class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
@@ -158,38 +160,48 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
-      val lastMinuteToCrunch = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
-      val (updatesCount, additionsCount, updatedFlights) = arrivalsDiff.toUpdate.foldLeft((0, 0, afterRemovals)) {
-        case ((updates, additions, flightsSoFar), updatedFlight) if updatedFlight.PcpTime > lastMinuteToCrunch.millisSinceEpoch =>
-          val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
-          log.debug(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${lastMinuteToCrunch.toLocalDateTimeString()})")
-          (updates, additions, flightsSoFar)
-        case ((updates, additions, flightsSoFar), updatedFlight) =>
-          flightsSoFar.get(updatedFlight.uniqueId) match {
-            case None =>
-              val ths = splitsCalculator.terminalAndHistoricSplits(updatedFlight)
-              val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
-              val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
-              (updates, additions + 1, flightsSoFar.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits))
 
-            case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-              (updates + 1, additions, flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight)))
-            case _ =>
-              (updates, additions, flightsSoFar)
-          }
+      val lastMilliToCrunch = getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
+
+      val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights(afterRemovals, 0, 0)) {
+        case (updatesSoFar, updatedFlight) =>
+          if (updatedFlight.PcpTime <= lastMilliToCrunch) updateWithFlight(updatesSoFar, updatedFlight)
+          else updatesSoFar
       }
 
-      log.info(s"${updatedFlights.size} flights after updates. $updatesCount updates & $additionsCount additions")
+      log.info(s"${updatedFlights.flights.size} flights after updates. ${updatedFlights.updatesCount} updates & ${updatedFlights.additionsCount} additions")
 
-      val minusExpired = purgeExpiredArrivals(updatedFlights)
+      val minusExpired = purgeExpiredArrivals(updatedFlights.flights)
 
       val uniqueFlights = groupFlightsByCodeShares(minusExpired.values.toSeq)
         .map { case (fws, _) => (fws.apiFlight.uniqueId, fws) }
         .toMap
 
-      log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
+      log.info(s"${uniqueFlights.size} flights after removing expired and accounting for code shares")
 
       uniqueFlights
+    }
+
+    def updateWithFlight(updatedFlights: UpdatedFlights, updatedFlight: Arrival): UpdatedFlights = {
+      updatedFlights.flights.get(updatedFlight.uniqueId) match {
+        case None =>
+          val newFlightWithAvailableSplits: ApiFlightWithSplits = addSplitsToFlight(updatedFlight)
+          val withNewFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits)
+          updatedFlights.copy(flights = withNewFlight, additionsCount = updatedFlights.additionsCount + 1)
+
+        case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
+          val withUpdatedFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight))
+          updatedFlights.copy(flights = withUpdatedFlight, updatesCount = updatedFlights.updatesCount + 1)
+
+        case _ => updatedFlights
+      }
+    }
+
+    def addSplitsToFlight(updatedFlight: Arrival): ApiFlightWithSplits = {
+      val ths = splitsCalculator.terminalAndHistoricSplits(updatedFlight)
+      val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
+      val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
+      newFlightWithAvailableSplits
     }
 
     def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {
