@@ -304,9 +304,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     updated
   }
 
-  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = {
-    Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
-  }
+  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
 
   def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest): Boolean = {
     vm.scheduleArrivalDateTime match {
@@ -315,8 +313,6 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
   }
 
-  def twoDaysAgo: MillisSinceEpoch = {
-    SDate.now().millisSinceEpoch - (2 * oneDayMillis)
-  }
+  def twoDaysAgo: MillisSinceEpoch = SDate.now().millisSinceEpoch - (2 * oneDayMillis)
 }
 
