@@ -311,7 +311,7 @@ class CrunchGraphStage(name: String,
     }
 
     def crunchFlightSplitMinutes(crunchStart: MillisSinceEpoch, numberOfMinutes: Int, flightSplitMinutesByFlight: Map[Int, Set[FlightSplitMinute]]): Map[Int, CrunchMinute] = {
-      val qlm: Set[QueueLoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
+      val qlm: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(flightSplitMinutesByFlight)
       val wlByQueue: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Load, Load)]]] = indexQueueWorkloadsByMinute(qlm)
 
       val fullWlByTerminalAndQueue = queueMinutesForPeriod(crunchStart - warmUpMinutes * oneMinuteMillis, numberOfMinutes + warmUpMinutes)(wlByQueue)
@@ -404,7 +404,7 @@ class CrunchGraphStage(name: String,
       })
     }
 
-    def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[QueueLoadMinute]): Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = {
+    def indexQueueWorkloadsByMinute(queueWorkloadMinutes: Set[LoadMinute]): Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Double, Double)]]] = {
       val portLoads = queueWorkloadMinutes.groupBy(_.terminalName)
 
       portLoads.mapValues(terminalLoads => {
@@ -423,7 +423,7 @@ class CrunchGraphStage(name: String,
       }.toMap
     }
 
-    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[QueueLoadMinute] = {
+    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Set[LoadMinute] = {
       flightToFlightSplitMinutes
         .values
         .flatten
@@ -431,7 +431,7 @@ class CrunchGraphStage(name: String,
         case ((terminalName, queueName, minute), fsms) =>
           val paxLoad = fsms.map(_.paxLoad).sum
           val workLoad = fsms.map(_.workLoad).sum
-          QueueLoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
+          LoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
       }.toSet
     }
 

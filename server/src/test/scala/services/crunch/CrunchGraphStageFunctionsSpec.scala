@@ -127,11 +127,11 @@ class CrunchGraphStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunch
       "When I ask for them as a set " +
       "Then I should see a single QueueLoadMinute wth the loads summed up" >> {
       val qlm = List(
-        QueueLoadMinute("T1", "EeaDesk", 1.0, 1.5, 1L),
-        QueueLoadMinute("T1", "EeaDesk", 1.0, 1.5, 1L))
+        LoadMinute("T1", "EeaDesk", 1.0, 1.5, 1L),
+        LoadMinute("T1", "EeaDesk", 1.0, 1.5, 1L))
 
       val result = collapseQueueLoadMinutesToSet(qlm)
-      val expected = Set(QueueLoadMinute("T1", "EeaDesk", 2.0, 3.0, 1L))
+      val expected = Set(LoadMinute("T1", "EeaDesk", 2.0, 3.0, 1L))
 
       result === expected
     }
