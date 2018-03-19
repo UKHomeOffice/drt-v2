@@ -35,29 +35,12 @@ object Crunch {
   val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
   val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
 
-  def flightVoyageNumberPadded(arrival: Arrival): String = {
-    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(arrival.IATA)
-    val vn = padTo4Digits(number.map(_._2).getOrElse("-"))
-    vn
-  }
-
-  val europeLondonTimeZone = DateTimeZone.forID("Europe/London")
+  val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID("Europe/London")
 
   def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
     crunchStartDate
-  }
-
-  def padTo4Digits(voyageNumber: String): String = {
-    val prefix = voyageNumber.length match {
-      case 4 => ""
-      case 3 => "0"
-      case 2 => "00"
-      case 1 => "000"
-      case _ => ""
-    }
-    prefix + voyageNumber
   }
 
   def getLocalLastMidnight(now: SDateLike): SDateLike = {
