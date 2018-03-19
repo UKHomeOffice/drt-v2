@@ -35,7 +35,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-    var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
+    var manifestsBuffer: Map[Int, Set[VoyageManifest]] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
 
     val log: Logger = LoggerFactory.getLogger(getClass)
@@ -205,13 +205,12 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
 
     def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {
-      val arrival = newFlightWithSplits.apiFlight
-      val vmIdx = s"${Crunch.flightVoyageNumberPadded(arrival)}-${arrival.Scheduled}"
+      val arrivalManifestKey = newFlightWithSplits.apiFlight.manifestKey
 
-      val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
+      val newFlightWithAvailableSplits = manifestsBuffer.get(arrivalManifestKey) match {
         case None => newFlightWithSplits
         case Some(vm) =>
-          manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
+          manifestsBuffer = manifestsBuffer.filterNot { case (manifestKey, _) => manifestKey == arrivalManifestKey }
           log.debug(s"Found buffered manifest to apply to new flight, and removed from buffer")
           removeManifestsOlderThan(twoDaysAgo)
           updateFlightWithManifests(vm, newFlightWithSplits)
@@ -233,29 +232,28 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
-          val vmMillis = newManifest.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
-          val matchingFlight: Option[(Int, ApiFlightWithSplits)] = flightsSoFar
-            .find {
-              case (_, f) =>
-                val vnMatches = Crunch.flightVoyageNumberPadded(f.apiFlight) == newManifest.VoyageNumber
-                val schMatches = vmMillis == f.apiFlight.Scheduled
-                vnMatches && schMatches
-              case _ => false
+          val maybeFlightForManifest: Option[ApiFlightWithSplits] = flightsSoFar.values
+            .find { flightToCheck =>
+              val vnMatches = flightToCheck.apiFlight.voyageNumberPadded == newManifest.VoyageNumber
+              val schMatches = newManifest.millis == flightToCheck.apiFlight.Scheduled
+              vnMatches && schMatches
             }
 
-          matchingFlight match {
+          maybeFlightForManifest match {
             case None =>
-              log.debug(s"Stashing VoyageManifest in case flight is seen later")
-              val idx = s"${newManifest.VoyageNumber}-$vmMillis"
-              val existingManifests = manifestsBuffer.getOrElse(idx, Set())
-              val updatedManifests = existingManifests + newManifest
-              manifestsBuffer = manifestsBuffer.updated(idx, updatedManifests)
+              addManifestToBuffer(newManifest)
               flightsSoFar
-            case Some(Tuple2(id, f)) =>
-              val updatedFlight = updateFlightWithManifest(f, newManifest)
-              flightsSoFar.updated(id, updatedFlight)
+            case Some(flightForManifest) =>
+              val flightWithManifestSplits = updateFlightWithManifest(flightForManifest, newManifest)
+              flightsSoFar.updated(flightWithManifestSplits.apiFlight.uniqueId, flightWithManifestSplits)
           }
       }
+    }
+
+    def addManifestToBuffer(newManifest: VoyageManifest): Unit = {
+      val existingManifests = manifestsBuffer.getOrElse(newManifest.key, Set())
+      val updatedManifests = existingManifests + newManifest
+      manifestsBuffer = manifestsBuffer.updated(newManifest.key, updatedManifests)
     }
 
     def pushStateIfReady(): Unit = {
@@ -284,7 +282,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
   }
 
-  def purgeExpiredManifests(manifests: Map[String, Set[VoyageManifest]]): Map[String, Set[VoyageManifest]] = {
+  def purgeExpiredManifests(manifests: Map[Int, Set[VoyageManifest]]): Map[Int, Set[VoyageManifest]] = {
     val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
     val updated = manifests
       .mapValues(_.filterNot(expired))
