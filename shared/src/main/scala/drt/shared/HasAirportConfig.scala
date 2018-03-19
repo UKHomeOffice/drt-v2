@@ -120,6 +120,17 @@ object ArrivalHelper {
       case _ => defaultPax
     }
   }
+
+  def padTo4Digits(voyageNumber: String): String = {
+    val prefix = voyageNumber.length match {
+      case 4 => ""
+      case 3 => "0"
+      case 2 => "00"
+      case 1 => "000"
+      case _ => ""
+    }
+    prefix + voyageNumber
+  }
 }
 
 trait HasAirportConfig {

@@ -16,6 +16,8 @@ import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
+case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
+
 class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
@@ -33,7 +35,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
-    var manifestsBuffer: Map[String, Set[VoyageManifest]] = Map()
+    var manifestsBuffer: Map[Int, Set[VoyageManifest]] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
 
     val log: Logger = LoggerFactory.getLogger(getClass)
@@ -120,22 +122,27 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
 
     def addPredictions(predictions: Seq[(Arrival, Option[ApiSplits])], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-      predictions
+      val arrivalsAndSplits = predictions
         .collect {
           case (arrival, Some(splits)) => (arrival, splits)
         }
-        .foldLeft(flightsById) {
-          case (existingFlightsByFlightId, (arrivalForPrediction, predictedSplits)) =>
-            existingFlightsByFlightId.find {
-              case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
-            } match {
-              case Some((id, existingFlightWithSplits)) =>
-                val newSplitsSet: Set[ApiSplits] = updateSplitsSet(arrivalForPrediction, predictedSplits, existingFlightWithSplits)
-                existingFlightsByFlightId.updated(id, existingFlightWithSplits.copy(splits = newSplitsSet))
-              case None =>
-                existingFlightsByFlightId
-            }
-        }
+
+      arrivalsAndSplits.foldLeft(flightsById) {
+        case (existingFlightsByFlightId, (arrivalForPrediction, predictedSplits)) =>
+          updatePredictionIfFlightExists(existingFlightsByFlightId, arrivalForPrediction, predictedSplits)
+      }
+    }
+
+    def updatePredictionIfFlightExists(existingFlightsByFlightId: Map[Int, ApiFlightWithSplits], arrivalForPrediction: Arrival, predictedSplits: ApiSplits): Map[Int, ApiFlightWithSplits] = {
+      existingFlightsByFlightId.find {
+        case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
+      } match {
+        case Some((id, existingFlightWithSplits)) =>
+          val newSplitsSet: Set[ApiSplits] = updateSplitsSet(arrivalForPrediction, predictedSplits, existingFlightWithSplits)
+          existingFlightsByFlightId.updated(id, existingFlightWithSplits.copy(splits = newSplitsSet))
+        case None =>
+          existingFlightsByFlightId
+      }
     }
 
     def updateSplitsSet(arrivalForPrediction: Arrival, predictedSplits: ApiSplits, existingFlightWithSplits: ApiFlightWithSplits): Set[ApiSplits] = {
@@ -153,48 +160,57 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
-      val latestCrunchMinute = getLocalLastMidnight(now().addDays(maxDaysToCrunch))
-      val (updatesCount, additionsCount, updatedFlights) = arrivalsDiff.toUpdate.foldLeft((0, 0, afterRemovals)) {
-        case ((updates, additions, flightsSoFar), updatedFlight) if updatedFlight.PcpTime > latestCrunchMinute.millisSinceEpoch =>
-          val pcpTime = SDate(updatedFlight.PcpTime).toLocalDateTimeString()
-          log.debug(s"Ignoring arrival with PCP time ($pcpTime) beyond latest crunch minute (${latestCrunchMinute.toLocalDateTimeString()})")
-          (updates, additions, flightsSoFar)
-        case ((updates, additions, flightsSoFar), updatedFlight) =>
-          flightsSoFar.get(updatedFlight.uniqueId) match {
-            case None =>
-              val ths = splitsCalculator.terminalAndHistoricSplits(updatedFlight)
-              val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
-              val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
-              (updates, additions + 1, flightsSoFar.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits))
 
-            case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-              (updates + 1, additions, flightsSoFar.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight)))
-            case _ =>
-              (updates, additions, flightsSoFar)
-          }
+      val lastMilliToCrunch = getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
+
+      val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights(afterRemovals, 0, 0)) {
+        case (updatesSoFar, updatedFlight) =>
+          if (updatedFlight.PcpTime <= lastMilliToCrunch) updateWithFlight(updatesSoFar, updatedFlight)
+          else updatesSoFar
       }
 
-      log.info(s"${updatedFlights.size} flights after updates. $updatesCount updates & $additionsCount additions")
+      log.info(s"${updatedFlights.flights.size} flights after updates. ${updatedFlights.updatesCount} updates & ${updatedFlights.additionsCount} additions")
 
-      val minusExpired = purgeExpiredArrivals(updatedFlights)
+      val minusExpired = purgeExpiredArrivals(updatedFlights.flights)
 
       val uniqueFlights = groupFlightsByCodeShares(minusExpired.values.toSeq)
         .map { case (fws, _) => (fws.apiFlight.uniqueId, fws) }
         .toMap
 
-      log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
+log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
 
       uniqueFlights
     }
 
-    def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {
-      val arrival = newFlightWithSplits.apiFlight
-      val vmIdx = s"${Crunch.flightVoyageNumberPadded(arrival)}-${arrival.Scheduled}"
+    def updateWithFlight(updatedFlights: UpdatedFlights, updatedFlight: Arrival): UpdatedFlights = {
+      updatedFlights.flights.get(updatedFlight.uniqueId) match {
+        case None =>
+          val newFlightWithAvailableSplits: ApiFlightWithSplits = addSplitsToFlight(updatedFlight)
+          val withNewFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits)
+          updatedFlights.copy(flights = withNewFlight, additionsCount = updatedFlights.additionsCount + 1)
 
-      val newFlightWithAvailableSplits = manifestsBuffer.get(vmIdx) match {
+        case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
+          val withUpdatedFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight))
+          updatedFlights.copy(flights = withUpdatedFlight, updatesCount = updatedFlights.updatesCount + 1)
+
+        case _ => updatedFlights
+      }
+    }
+
+    def addSplitsToFlight(updatedFlight: Arrival): ApiFlightWithSplits = {
+      val ths = splitsCalculator.terminalAndHistoricSplits(updatedFlight)
+      val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
+      val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
+      newFlightWithAvailableSplits
+    }
+
+    def addApiSplitsIfAvailable(newFlightWithSplits: ApiFlightWithSplits): ApiFlightWithSplits = {
+      val arrivalManifestKey = newFlightWithSplits.apiFlight.manifestKey
+
+      val newFlightWithAvailableSplits = manifestsBuffer.get(arrivalManifestKey) match {
         case None => newFlightWithSplits
         case Some(vm) =>
-          manifestsBuffer = manifestsBuffer.filterNot { case (idx, _) => idx == vmIdx }
+          manifestsBuffer = manifestsBuffer.filterNot { case (manifestKey, _) => manifestKey == arrivalManifestKey }
           log.debug(s"Found buffered manifest to apply to new flight, and removed from buffer")
           removeManifestsOlderThan(twoDaysAgo)
           updateFlightWithManifests(vm, newFlightWithSplits)
@@ -216,29 +232,28 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
-          val vmMillis = newManifest.scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
-          val matchingFlight: Option[(Int, ApiFlightWithSplits)] = flightsSoFar
-            .find {
-              case (_, f) =>
-                val vnMatches = Crunch.flightVoyageNumberPadded(f.apiFlight) == newManifest.VoyageNumber
-                val schMatches = vmMillis == f.apiFlight.Scheduled
-                vnMatches && schMatches
-              case _ => false
+          val maybeFlightForManifest: Option[ApiFlightWithSplits] = flightsSoFar.values
+            .find { flightToCheck =>
+              val vnMatches = flightToCheck.apiFlight.voyageNumberPadded == newManifest.VoyageNumber
+              val schMatches = newManifest.millis == flightToCheck.apiFlight.Scheduled
+              vnMatches && schMatches
             }
 
-          matchingFlight match {
+          maybeFlightForManifest match {
             case None =>
-              log.debug(s"Stashing VoyageManifest in case flight is seen later")
-              val idx = s"${newManifest.VoyageNumber}-$vmMillis"
-              val existingManifests = manifestsBuffer.getOrElse(idx, Set())
-              val updatedManifests = existingManifests + newManifest
-              manifestsBuffer = manifestsBuffer.updated(idx, updatedManifests)
+              addManifestToBuffer(newManifest)
               flightsSoFar
-            case Some(Tuple2(id, f)) =>
-              val updatedFlight = updateFlightWithManifest(f, newManifest)
-              flightsSoFar.updated(id, updatedFlight)
+            case Some(flightForManifest) =>
+              val flightWithManifestSplits = updateFlightWithManifest(flightForManifest, newManifest)
+              flightsSoFar.updated(flightWithManifestSplits.apiFlight.uniqueId, flightWithManifestSplits)
           }
       }
+    }
+
+    def addManifestToBuffer(newManifest: VoyageManifest): Unit = {
+      val existingManifests = manifestsBuffer.getOrElse(newManifest.key, Set())
+      val updatedManifests = existingManifests + newManifest
+      manifestsBuffer = manifestsBuffer.updated(newManifest.key, updatedManifests)
     }
 
     def pushStateIfReady(): Unit = {
@@ -267,7 +282,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
   }
 
-  def purgeExpiredManifests(manifests: Map[String, Set[VoyageManifest]]): Map[String, Set[VoyageManifest]] = {
+  def purgeExpiredManifests(manifests: Map[Int, Set[VoyageManifest]]): Map[Int, Set[VoyageManifest]] = {
     val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
     val updated = manifests
       .mapValues(_.filterNot(expired))
@@ -289,9 +304,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     updated
   }
 
-  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = {
-    Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
-  }
+  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
 
   def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest): Boolean = {
     vm.scheduleArrivalDateTime match {
@@ -300,8 +313,6 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     }
   }
 
-  def twoDaysAgo: MillisSinceEpoch = {
-    SDate.now().millisSinceEpoch - (2 * oneDayMillis)
-  }
+  def twoDaysAgo: MillisSinceEpoch = SDate.now().millisSinceEpoch - (2 * oneDayMillis)
 }
 

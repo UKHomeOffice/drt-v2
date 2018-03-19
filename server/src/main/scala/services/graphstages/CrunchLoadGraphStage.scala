@@ -34,15 +34,13 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
     val log: Logger = LoggerFactory.getLogger(getClass)
 
     override def preStart(): Unit = {
-
-      //      loadMinutes = optionalInitialLoads match {
-      //        case Some(Loads(lm)) =>
-      //          log.info(s"Received ${lm.size} initial loads")
-      //          purgeExpiredLoads(lm)
-      //        case _ =>
-      //          log.warn(s"Did not receive any loads to initialise with")
-      //          Set()
-      //      }
+      loadMinutes = optionalInitialCrunchMinutes match {
+        case None => Map()
+        case Some(CrunchMinutes(cms)) => cms.map(cm => {
+          val lm = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
+          (lm.uniqueId, lm)
+        }).toMap
+      }
 
       super.preStart()
     }
@@ -51,13 +49,6 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
       override def onPush(): Unit = {
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
-        /*
-        1) establish crunch window - start minute & end minute from incoming set of loads
-        2) merge incoming with existing loads
-        3) crunch loads
-        4) take diff with existing crunch minutes
-        5) push diff crunch minutes
-         */
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
         val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
