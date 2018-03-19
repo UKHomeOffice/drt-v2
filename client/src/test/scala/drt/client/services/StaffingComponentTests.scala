@@ -448,6 +448,15 @@ object StaffingComponentTests extends TestSuite {
 
         assert(result == expected)
       }
+      "Given three dates, not in order, I should get an ordered response" - {
+        val dates = List("1", "3", "2")
+
+        val expected = "1, 2 and 3"
+
+        val result = dateListToString(dates)
+
+        assert(result == expected)
+      }
     }
   }
 
