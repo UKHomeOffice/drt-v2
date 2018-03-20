@@ -73,7 +73,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
         log.info(s"We now have ${updatedFlights.size} arrivals")
         arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-        log.info(s"arrivalsWithSplitsDiff: $arrivalsWithSplitsDiff")
+//        log.info(s"arrivalsWithSplitsDiff: $arrivalsWithSplitsDiff")
         flightsByFlightId = updatedFlights
 
         pushStateIfReady()
@@ -90,7 +90,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
         log.info(s"We now have ${updatedFlights.size} arrivals")
         arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-        log.info(s"arrivalsWithSplitsDiff: $arrivalsWithSplitsDiff")
+//        log.info(s"arrivalsWithSplitsDiff: $arrivalsWithSplitsDiff")
         flightsByFlightId = updatedFlights
         manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
 

@@ -27,7 +27,7 @@ object Crunch2 {
 
                                         arrivalsGraphStage: ArrivalsGraphStage,
                                         arrivalSplitsStage: ArrivalSplitsGraphStage,
-                                        splitsPredictorStage: SplitsPredictorStage,
+                                        splitsPredictorStage: SplitsPredictorBase,
                                         workloadGraphStage: WorkloadGraphStage,
                                         crunchLoadGraphStage: CrunchLoadGraphStage,
                                         staffGraphStage: StaffGraphStage,
@@ -67,13 +67,17 @@ object Crunch2 {
           val crunch = builder.add(crunchLoadGraphStage.async)
           val staff = builder.add(staffGraphStage.async)
 
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
           //          val workloadFanOut = builder.add(Broadcast[Loads](2))
           val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
 
-          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val liveSinkCrunch = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val liveSinkActDesks = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val liveSinkStaff = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val fcstSinkFlights = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val fcstSinkCrunch = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
           baseArrivals ~> arrivals.in0
@@ -100,14 +104,14 @@ object Crunch2 {
 
           crunch ~> crunchFanOut
 
-          arrivalSplitsFanOut.map(_.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis)) ~> liveSink // FlightsWithSplits
-          crunchFanOut.map(_.minutes.filter(drm => drm.minute < tomorrowStartMillis)) ~> liveSink //DeskRecMinutes
-          actualDesksAndWaitTimes ~> liveSink // ActualDeskStats
+          arrivalSplitsFanOut.map(liveFlights) ~> liveSinkFlights // FlightsWithSplits
+          crunchFanOut.map(liveDeskRecs) ~> liveSinkCrunch //DeskRecMinutes
+          actualDesksAndWaitTimes ~> liveSinkActDesks // ActualDeskStats
 
-          arrivalSplitsFanOut.map(_.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis)) ~> fcstSink // FlightsWithSplits
-          crunchFanOut.map(_.minutes.filter(drm => drm.minute >= tomorrowStartMillis)) ~> fcstSink
+          arrivalSplitsFanOut.map(forecastFlights) ~> fcstSinkFlights // FlightsWithSplits
+          crunchFanOut.map(forecastDeskRecs) ~> fcstSinkCrunch
 
-          staff.out ~> liveSink
+          staff.out ~> liveSinkStaff
 
           ClosedShape
     }
@@ -115,13 +119,26 @@ object Crunch2 {
     RunnableGraph.fromGraph(graph)
   }
 
+  def liveDeskRecs = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis))
+
+  def forecastDeskRecs = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
+
+  def liveFlights = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis))
+
+  def forecastFlights = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis))
+
   def groupLoadsByDay(loads: Loads): Iterator[Loads] = {
     loads
       .loadMinutes
       .toSeq
-      .groupBy(_.minute)
-      .values
-      .map(lbd => Loads(lbd.toSet))
+      .groupBy(l => Crunch.getLocalLastMidnight(SDate(l.minute)).millisSinceEpoch)
+      .toSeq
+      .sortBy {
+        case (millis, _) => millis
+      }
+      .map {
+        case (_, lbd) => Loads(lbd.toSet)
+      }
       .toIterator
   }
 

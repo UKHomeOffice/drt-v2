@@ -67,11 +67,10 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
     setHandler(inFlightsWithSplits, new InHandler {
       override def onPush(): Unit = {
         val incomingFlights = grab(inFlightsWithSplits)
-        log.info(s"Received ${incomingFlights.flights.size} arrivals $incomingFlights")
+        log.info(s"Received ${incomingFlights.flights.size} arrivals")
 
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
-        log.info(s"updatedWorkloads: $updatedWorkloads")
-        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => fsms.map(_.minute).min, now, expireAfterMillis)
+        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if(fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
         val updatedLoads: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
 
         val diff = loadDiff(updatedLoads, loadMinutes)

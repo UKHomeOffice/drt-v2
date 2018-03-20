@@ -36,8 +36,7 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.crunch.CrunchSystem
-import services.crunch.CrunchSystem.CrunchProps
+import services.crunch.{CrunchProps2, CrunchSystem}
 import services.graphstages.Crunch._
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
@@ -51,8 +50,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
+import scala.util.{Failure, Success, Try}
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
 
@@ -140,7 +139,27 @@ trait SystemActors {
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
   val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(dqZipBucketName, airportConfig.portCode, getLastSeenManifestsFileName))
 
-  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
+//  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
+//    system = system,
+//    airportConfig = airportConfig,
+//    pcpArrival = pcpArrivalTimeCalculator,
+//    historicalSplitsProvider = historicalSplitsProvider,
+//    liveCrunchStateActor = liveCrunchStateActor,
+//    forecastCrunchStateActor = forecastCrunchStateActor,
+//    maxDaysToCrunch = maxDaysToCrunch,
+//    expireAfterMillis = expireAfterMillis,
+//    minutesToCrunch = minutesToCrunch,
+//    warmUpMinutes = warmUpMinutes,
+//    actors = Map(
+//      "shifts" -> shiftsActor,
+//      "fixed-points" -> fixedPointsActor,
+//      "staff-movements" -> staffMovementsActor),
+//    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
+//    splitsPredictorStage = splitsPredictorStage,
+//    manifestsSource = voyageManifestsStage,
+//    voyageManifestsActor = voyageManifestsActor
+//  ))
+  val crunchInputs = CrunchSystem(CrunchProps2(
     system = system,
     airportConfig = airportConfig,
     pcpArrival = pcpArrivalTimeCalculator,
@@ -149,8 +168,6 @@ trait SystemActors {
     forecastCrunchStateActor = forecastCrunchStateActor,
     maxDaysToCrunch = maxDaysToCrunch,
     expireAfterMillis = expireAfterMillis,
-    minutesToCrunch = minutesToCrunch,
-    warmUpMinutes = warmUpMinutes,
     actors = Map(
       "shifts" -> shiftsActor,
       "fixed-points" -> fixedPointsActor,

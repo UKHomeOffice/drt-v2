@@ -15,9 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
-import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
 import services.graphstages.{DqManifests, DummySplitsPredictor}
 

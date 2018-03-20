@@ -63,19 +63,13 @@ case class CrunchProps2[MS](system: ActorSystem,
                            forecastCrunchStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Long,
-                           minutesToCrunch: Int,
-                           warmUpMinutes: Int,
                            actors: Map[String, AskableActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
-                           crunchStartDateProvider: (SDateLike) => SDateLike = getLocalLastMidnight,
-                           crunchEndDateProvider: (SDateLike) => SDateLike = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-                           calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
                            manifestsSource: Source[DqManifests, MS],
-                           voyageManifestsActor: ActorRef,
-                           waitForManifests: Boolean = false
+                           voyageManifestsActor: ActorRef
                           )
 
 object CrunchSystem {
@@ -97,9 +91,17 @@ object CrunchSystem {
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
 
-    val splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet),
-    val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
+    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
+    val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
+    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
+    val manifests = props.manifestsSource
+    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
+    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
+    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
+    val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](1, OverflowStrategy.backpressure)
 
+    val splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet)
+    val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = "-",
@@ -111,11 +113,60 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(props.initialFlightsWithSplits, splitsCalculator, groupFlightsByCodeShares, props.expireAfterMillis, props.now, props.maxDaysToCrunch)
+    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
+      props.initialFlightsWithSplits,
+      splitsCalculator,
+      groupFlightsByCodeShares,
+      props.expireAfterMillis,
+      props.now,
+      props.maxDaysToCrunch)
 
     val splitsPredictorStage = props.splitsPredictorStage
 
-    val workloadGraphStage = new WorkloadGraphStage(props.)
+    val staffGraphStage = new StaffGraphStage(
+      Option(initialShifts),
+      Option(initialFixedPoints),
+      Option(initialStaffMovements),
+      props.now,
+      props.airportConfig,
+      180)
+
+    val workloadGraphStage = new WorkloadGraphStage(
+      None,
+      props.initialFlightsWithSplits,
+      props.airportConfig,
+      AirportConfigs.nationalityProcessingTimes,
+      props.expireAfterMillis,
+      props.now,
+      props.useNationalityBasedProcessingTimes)
+
+    val crunchLoadGraphStage = new CrunchLoadGraphStage(
+      None,
+      props.airportConfig,
+      props.expireAfterMillis,
+      props.now,
+      TryRenjin.crunch)
+
+    val crunchSystem = Crunch2(
+      baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      props.now
+    )
+
+    implicit val actorSystem: ActorSystem = props.system
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn) = crunchSystem.run
+
+    CrunchSystem(
+      shifts = shiftsIn,
+      fixedPoints = fixedPointsIn,
+      staffMovements = movementsIn,
+      baseArrivals = baseIn,
+      forecastArrivals = fcstIn,
+      liveArrivals = liveIn,
+      manifests = manifestsIn,
+      actualDeskStats = actDesksIn
+    )
   }
 
   def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {

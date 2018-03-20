@@ -62,24 +62,28 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   override def receiveCommand: Receive = {
     case flightUpdates: FlightsWithSplits =>
+      log.info(s"Got ${flightUpdates.flights.size} updated flights")
       state = state match {
         case None => Option(newPortState(flightUpdates))
         case Some(portState) => Option(updatePortState(flightUpdates, portState))
       }
 
     case drms: DeskRecMinutes =>
+      log.info(s"Got ${drms.minutes.size} updated desk rec minutes")
       state = state match {
         case None => Option(newPortState(drms))
         case Some(portState) => Option(updatePortState(drms, portState))
       }
 
     case sims: SimulationMinutes =>
+      log.info(s"Got ${sims.minutes.size} updated simulation minutes")
       state = state match {
         case None => Option(newPortState(sims))
         case Some(portState) => Option(updatePortState(sims, portState))
       }
 
     case sms: StaffMinutes =>
+      log.info(s"Got ${sms.minutes.size} updated staff minutes")
       state = state match {
         case None => Option(newPortState(sms))
         case Some(portState) => Option(updatePortState(sms, portState))
