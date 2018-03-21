@@ -216,6 +216,48 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         true
       }
+
+      "Given an initial flight with 20 pax and an old CSV split " +
+        "When I request a crunch with no matching CSV splits " +
+        "Then I should see a pax load matching the terminal splits of 10 (20 * 0.5)" >> {
+        val scheduled = "2017-01-01T00:00Z"
+
+        val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
+        val terminalSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 50, None)), SplitSources.TerminalAverage, None, Percentage)
+        val oldHistoricalSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
+        val initialFlightsWithSplits = FlightsWithSplits(Seq(ApiFlightWithSplits(flight, Set(terminalSplits, oldHistoricalSplits), None)))
+
+        val crunch = runCrunchGraph(
+          now = () => SDate(scheduled),
+          airportConfig = airportConfig.copy(
+            defaultProcessingTimes = Map("T1" -> Map(
+              eeaMachineReadableToDesk -> 20d / 60,
+              eeaMachineReadableToEGate -> 35d / 60)),
+            defaultPaxSplits = SplitRatios(
+              SplitSources.TerminalAverage,
+              SplitRatio(eeaMachineReadableToDesk, 1)
+            )
+          ),
+          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
+          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
+          csvSplitsProvider = (_, _) => None,
+          initialFlightsWithSplits = Option(initialFlightsWithSplits)
+        )
+
+        // Make a change to the arrival to force a crunch
+        offerAndWait(crunch.liveArrivalsInput, Flights(List(flight.copy(Status = "In the air"))))
+
+        val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)))
+
+        crunch.liveTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            val resultSummary = paxLoadsFromPortState(ps, 5)
+            println(s"Got $resultSummary")
+            resultSummary == expected
+        }
+
+        true
+      }
     }
 
     "Split source precedence " >> {
