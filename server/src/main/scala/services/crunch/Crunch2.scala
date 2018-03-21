@@ -3,7 +3,7 @@ package services.crunch
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
-import drt.shared.CrunchApi.{CrunchMinutes, DeskRecMinutes, MillisSinceEpoch, StaffMinutes}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -74,13 +74,16 @@ object Crunch2 {
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
+          val simulationFanOut = builder.add(Broadcast[SimulationMinutes](2))
 
           val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkCrunch = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkActDesks = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkStaff = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val liveSinkSimulations = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSinkFlights = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkCrunch = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val fcstSinkSimulations = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
           baseArrivals ~> arrivals.in0
@@ -117,6 +120,10 @@ object Crunch2 {
           staffFanOut ~> simulation.in1
           staffFanOut ~> liveSinkStaff
 
+          simulation.out ~> simulationFanOut
+          simulationFanOut.map(liveSimulations) ~> liveSinkSimulations
+          simulationFanOut.map(forecastSimulations) ~> fcstSinkSimulations
+
           ClosedShape
     }
 
@@ -125,7 +132,11 @@ object Crunch2 {
 
   def liveDeskRecs: DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis))
 
+  def liveSimulations: SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute < tomorrowStartMillis))
+
   def forecastDeskRecs: DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
+
+  def forecastSimulations: SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
 
   def liveFlights: FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis))
 

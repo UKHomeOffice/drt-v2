@@ -78,8 +78,8 @@ class StaffGraphStage(optionalInitialShifts: Option[String],
       })
 
       setHandler(outStaffMinutes, new OutHandler {
-
         override def onPull(): Unit = {
+          log.info(s"outStaffMinutes onPull called")
           tryPush()
           if (!hasBeenPulled(inShifts)) pull(inShifts)
           if (!hasBeenPulled(inFixedPoints)) pull(inFixedPoints)

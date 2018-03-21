@@ -147,9 +147,17 @@ object CrunchSystem {
       props.now,
       TryRenjin.crunch)
 
+    val simulationGraphStage = new SimulationGraphStage(
+      None,
+      props.airportConfig,
+      props.expireAfterMillis,
+      props.now,
+      TryRenjin.runSimulationOfWork
+    )
+
     val crunchSystem = Crunch2(
       baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, simulationGraphStage, props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.now
     )
 

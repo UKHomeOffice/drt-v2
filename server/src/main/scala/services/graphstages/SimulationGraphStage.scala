@@ -19,7 +19,7 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
-                           crunch: (Seq[Double], Seq[Int], Seq[Int], OptimizerConfig) => Try[OptimizerCrunchResult])
+                           simulate: (Seq[Double], Seq[Int], OptimizerConfig) => Seq[Int])
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
 
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
@@ -63,7 +63,7 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
 
         pushStateIfReady()
 
-        pullLoads()
+        pullAll()
       }
     })
 
@@ -80,13 +80,17 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
           val lastMinute = firstMinute.addDays(1)
           updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
         })
+
+        pushStateIfReady()
+
+        pullAll()
       }
     })
 
     def updateSimulations(firstMinute: SDateLike, lastMinute: SDateLike, existingSimulationMinutes: Set[SimulationMinute], loads: Set[LoadMinute]): Unit = {
       log.info(s"Simulation for ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
 
-      val newSimulationMinutes: Set[SimulationMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loads)
+      val newSimulationMinutes: Set[SimulationMinute] = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loads)
       val newSimulationMinutesByKey = newSimulationMinutes.map(cm => (cm.key, cm)).toMap
 
       val diff = newSimulationMinutes -- existingSimulationMinutes
@@ -104,9 +108,10 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
       }
     }
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute]): Set[SimulationMinute] = {
+    def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute]): Set[SimulationMinute] = {
       val workload = workloadForPeriod(firstMinute, lastMinute, loads)
       val deployed = deploymentsForMillis(firstMinute, lastMinute, workload)
+//      log.info(s"deployed: $deployed")
 
       val minuteMillis = firstMinute until lastMinute by 60000
 
@@ -131,7 +136,7 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
       val waits: Seq[Int] = TryRenjin.runSimulationOfWork(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))
 
       minuteMillis.zipWithIndex.map {
-        case (minute, idx) => SimulationMinute(tn, qn, minute, 0, waits(idx))
+        case (minute, idx) => SimulationMinute(tn, qn, minute, deployedDesks(idx), waits(idx))
       }.toSet
     }
 
@@ -144,9 +149,9 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
         .flatMap(tn => {
           minuteMillis
             .flatMap(m => {
-              val queueWl: Seq[(QueueName, Double)] = workload(tn).mapValues(_.getOrElse(m, 0d)).toSeq
-              val queueMm: Map[QueueName, (Int, Int)] = minMaxDesks(tn).mapValues(_.getOrElse(m, (0, 0)))
-              val available: Int = availableStaff(tn).getOrElse(m, 0)
+              val queueWl: Seq[(QueueName, Double)] = workload.getOrElse(tn, Map()).mapValues(_.getOrElse(m, 0d)).toSeq
+              val queueMm: Map[QueueName, (Int, Int)] = minMaxDesks.getOrElse(tn, Map()).mapValues(_.getOrElse(m, (0, 0)))
+              val available: Int = availableStaff.getOrElse(tn, Map()).getOrElse(m, 0)
               deployer(queueWl, available, queueMm).map {
                 case (qn, staff) => (tn, qn, m, staff)
               }
@@ -252,23 +257,27 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
 
     setHandler(outSimulationMinutes, new OutHandler {
       override def onPull(): Unit = {
-        log.debug(s"outLoads onPull called")
+        log.debug(s"outSimulationMinutes onPull called")
         pushStateIfReady()
-        pullLoads()
+        pullAll()
       }
     })
 
-    def pullLoads(): Unit = {
+    def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {
         log.info(s"Pulling inFlightsWithSplits")
         pull(inLoads)
       }
+      if (!hasBeenPulled(inStaffMinutes)) {
+        log.info(s"Pulling inStaffMinutes")
+        pull(inStaffMinutes)
+      }
     }
 
     def pushStateIfReady(): Unit = {
-      if (simulationMinutesToPush.isEmpty) log.info(s"We have no crunch minutes. Nothing to push")
+      if (simulationMinutesToPush.isEmpty) log.info(s"We have no simulation minutes. Nothing to push")
       else if (isAvailable(outSimulationMinutes)) {
-        log.info(s"Pushing ${simulationMinutesToPush.size} crunch minutes")
+        log.info(s"Pushing ${simulationMinutesToPush.size} simulation minutes")
         push(outSimulationMinutes, SimulationMinutes(simulationMinutesToPush.values.toSet))
         simulationMinutesToPush = Map()
       } else log.info(s"outSimulationMinutes not available to push")
