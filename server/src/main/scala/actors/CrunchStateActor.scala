@@ -63,31 +63,35 @@ class CrunchStateActor(val snapshotInterval: Int,
   override def receiveCommand: Receive = {
     case flightUpdates: FlightsWithSplits =>
       log.info(s"Got ${flightUpdates.flights.size} updated flights")
-      state = state match {
-        case None => Option(newPortState(flightUpdates))
-        case Some(portState) => Option(updatePortState(flightUpdates, portState))
+      val updatedState = state match {
+        case None => newPortState(flightUpdates)
+        case Some(portState) => updatePortState(flightUpdates, portState)
       }
+      updateStateFromPortState(updatedState)
 
     case drms: DeskRecMinutes =>
       log.info(s"Got ${drms.minutes.size} updated desk rec minutes")
-      state = state match {
-        case None => Option(newPortState(drms))
-        case Some(portState) => Option(updatePortState(drms, portState))
+      val updatedState = state match {
+        case None => newPortState(drms)
+        case Some(portState) => updatePortState(drms, portState)
       }
+      updateStateFromPortState(updatedState)
 
     case sims: SimulationMinutes =>
       log.info(s"Got ${sims.minutes.size} updated simulation minutes")
-      state = state match {
-        case None => Option(newPortState(sims))
-        case Some(portState) => Option(updatePortState(sims, portState))
+      val updatedState = state match {
+        case None => newPortState(sims)
+        case Some(portState) => updatePortState(sims, portState)
       }
+      updateStateFromPortState(updatedState)
 
     case sms: StaffMinutes =>
       log.info(s"Got ${sms.minutes.size} updated staff minutes")
-      state = state match {
-        case None => Option(newPortState(sms))
-        case Some(portState) => Option(updatePortState(sms, portState))
+      val updatedState = state match {
+        case None => newPortState(sms)
+        case Some(portState) => updatePortState(sms, portState)
       }
+      updateStateFromPortState(updatedState)
 
 //    case actDesks: ActualDeskStats =>
 //      state = state match {

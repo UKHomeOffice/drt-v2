@@ -21,7 +21,15 @@ object Crunch {
     lazy val uniqueId: Int = (terminalName, queueName, minute).hashCode
   }
 
+  object LoadMinute {
+    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
+  }
+
   case class Loads(loadMinutes: Set[LoadMinute])
+
+  object Loads {
+    def apply(cms: Seq[CrunchMinute]): Loads = Loads(cms.map(LoadMinute(_)).toSet)
+  }
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode

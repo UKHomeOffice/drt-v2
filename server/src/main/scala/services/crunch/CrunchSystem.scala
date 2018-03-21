@@ -6,13 +6,13 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.Timeout
-import drt.shared.CrunchApi.PortState
+import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import services._
-import services.graphstages.Crunch.{earliestAndLatestAffectedPcpTimeFromFlights, getLocalLastMidnight, getLocalNextMidnight}
+import services.graphstages.Crunch._
 import services.graphstages._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -85,8 +85,9 @@ object CrunchSystem {
     val askableLiveCrunchStateActor: AskableActorRef = props.liveCrunchStateActor
     val askableForecastCrunchStateActor: AskableActorRef = props.forecastCrunchStateActor
 
-    val initialLiveCrunchState = initialPortState(askableLiveCrunchStateActor)
-    val initialForecastCrunchState = initialPortState(askableForecastCrunchStateActor)
+    val initialLivePortState = initialPortState(askableLiveCrunchStateActor)
+    val initialForecastPortState = initialPortState(askableForecastCrunchStateActor)
+    val initialMergedPs = mergePortStates(initialForecastPortState, initialLivePortState)
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
@@ -132,7 +133,7 @@ object CrunchSystem {
       180)
 
     val workloadGraphStage = new WorkloadGraphStage(
-      None,
+      initialMergedPs.map(ps => Loads(ps.crunchMinutes.values.toSeq)),
       props.initialFlightsWithSplits,
       props.airportConfig,
       AirportConfigs.nationalityProcessingTimes,
@@ -140,15 +141,19 @@ object CrunchSystem {
       props.now,
       props.useNationalityBasedProcessingTimes)
 
+    val maybeCrunchMinutes = initialMergedPs.map(ps => CrunchMinutes(ps.crunchMinutes.values.toSet))
     val crunchLoadGraphStage = new CrunchLoadGraphStage(
-      None,
+      maybeCrunchMinutes,
       props.airportConfig,
       props.expireAfterMillis,
       props.now,
       TryRenjin.crunch)
 
+    val maybeStaffMinutes = initialMergedPs.map(ps => StaffMinutes(ps.staffMinutes))
+
     val simulationGraphStage = new SimulationGraphStage(
-      None,
+      maybeCrunchMinutes,
+      maybeStaffMinutes,
       props.airportConfig,
       props.expireAfterMillis,
       props.now,
@@ -175,6 +180,17 @@ object CrunchSystem {
       manifests = manifestsIn,
       actualDeskStats = actDesksIn
     )
+  }
+
+  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+    case (None, None) => None
+    case (Some(fps), None) => Option(fps)
+    case (None, Some(lps)) => Option(lps)
+    case (Some(fps), Some(lps)) =>
+      Option(PortState(
+        fps.flights ++ lps.flights,
+        fps.crunchMinutes ++ lps.crunchMinutes,
+        fps.staffMinutes ++ lps.staffMinutes))
   }
 
   def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {

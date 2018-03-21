@@ -16,6 +16,7 @@ import scala.util.Try
 
 
 class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
+                           optionalInitialStaffMinutes: Option[StaffMinutes],
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
@@ -40,9 +41,17 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
       loadMinutes = optionalInitialCrunchMinutes match {
         case None => Map()
         case Some(CrunchMinutes(cms)) => cms.map(cm => {
+          log.info(s"Received ${cms.size} initial crunch minutes")
           val lm = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
           (lm.uniqueId, lm)
         }).toMap
+      }
+
+      staffMinutes = optionalInitialStaffMinutes match {
+        case None => Map()
+        case Some(StaffMinutes(sms)) =>
+          log.info(s"Received ${sms.size} initial staff minutes")
+          sms.map(sm => {(sm.key, sm)}).toMap
       }
 
       super.preStart()
@@ -111,7 +120,7 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
     def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute]): Set[SimulationMinute] = {
       val workload = workloadForPeriod(firstMinute, lastMinute, loads)
       val deployed = deploymentsForMillis(firstMinute, lastMinute, workload)
-//      log.info(s"deployed: $deployed")
+      //      log.info(s"deployed: $deployed")
 
       val minuteMillis = firstMinute until lastMinute by 60000
 
