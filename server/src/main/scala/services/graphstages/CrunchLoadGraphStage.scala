@@ -67,7 +67,7 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
 
         val mergedDeskRecMinutes = mergeDeskRecMinutes(diff, deskRecMinutesToPush)
         deskRecMinutesToPush = purgeExpired(mergedDeskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
-        log.info(s"Now have ${deskRecMinutesToPush.size} load minutes to push")
+        log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
 
         pushStateIfReady()
 

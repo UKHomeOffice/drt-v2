@@ -3,7 +3,7 @@ package services.crunch
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
-import drt.shared.CrunchApi.{CrunchMinutes, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinutes, DeskRecMinutes, MillisSinceEpoch, StaffMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -31,6 +31,7 @@ object Crunch2 {
                                         workloadGraphStage: WorkloadGraphStage,
                                         crunchLoadGraphStage: CrunchLoadGraphStage,
                                         staffGraphStage: StaffGraphStage,
+                                        simulationGraphStage: SimulationGraphStage,
                                         liveCrunchStateActor: ActorRef,
                                         fcstCrunchStateActor: ActorRef,
                                         now: () => SDateLike
@@ -66,11 +67,13 @@ object Crunch2 {
           val workload = builder.add(workloadGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
           val staff = builder.add(staffGraphStage.async)
+          val simulation = builder.add(simulationGraphStage.async)
 
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
-          //          val workloadFanOut = builder.add(Broadcast[Loads](2))
+          val workloadFanOut = builder.add(Broadcast[Loads](2))
           val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
+          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
 
           val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkCrunch = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
@@ -97,10 +100,9 @@ object Crunch2 {
           arrivalSplits.out ~> arrivalSplitsFanOut
           arrivalSplitsFanOut ~> workload
 
-          workload.out.expand(groupLoadsByDay) ~> crunch
-          //          workload ~> workloadFanOut
-          //          workloadFanOut ~> crunch
-          //          workloadFanOut ~>
+          workload.out.expand(groupLoadsByDay) ~> workloadFanOut //crunch
+          workloadFanOut ~> crunch
+          workloadFanOut ~> simulation.in0
 
           crunch ~> crunchFanOut
 
@@ -111,7 +113,9 @@ object Crunch2 {
           arrivalSplitsFanOut.map(forecastFlights) ~> fcstSinkFlights // FlightsWithSplits
           crunchFanOut.map(forecastDeskRecs) ~> fcstSinkCrunch
 
-          staff.out ~> liveSinkStaff
+          staff.out ~> staffFanOut
+          staffFanOut ~> simulation.in1
+          staffFanOut ~> liveSinkStaff
 
           ClosedShape
     }
@@ -119,13 +123,13 @@ object Crunch2 {
     RunnableGraph.fromGraph(graph)
   }
 
-  def liveDeskRecs = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis))
+  def liveDeskRecs: DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis))
 
-  def forecastDeskRecs = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
+  def forecastDeskRecs: DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
 
-  def liveFlights = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis))
+  def liveFlights: FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis))
 
-  def forecastFlights = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis))
+  def forecastFlights: FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis))
 
   def groupLoadsByDay(loads: Loads): Iterator[Loads] = {
     loads
