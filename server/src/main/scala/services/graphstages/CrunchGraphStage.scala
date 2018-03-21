@@ -63,7 +63,7 @@ class CrunchGraphStage(name: String,
                 val maybeOldSplits = flightWithSplits.splits.find(s => s.source == SplitSources.Historical)
                 val maybeNewSplits = splitsCalculator.historicalSplits(flightWithSplits.apiFlight)
                 val withUpdatedHistoricalSplits = if (maybeNewSplits != maybeOldSplits) {
-                  log.info(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
+                  log.debug(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
                   updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)), maybeNewSplits)
                 } else flightWithSplits
                 Tuple2(flightWithSplits.apiFlight.uniqueId, withUpdatedHistoricalSplits)
@@ -456,12 +456,10 @@ class CrunchGraphStage(name: String,
       val newSplits = maybeNewHistorical.map(newHistorical =>
         ApiSplits(newHistorical, SplitSources.Historical, None, Percentage)
       ).toSet
-      log.info(s"newSplits: $newSplits")
       val updatedSplitsSet = flightWithSplits.splits.filterNot {
         case ApiSplits(_, SplitSources.Historical, _, _) => true
         case _ => false
       } ++ newSplits
-      log.info(s"updatedSplitsSet: $updatedSplitsSet")
 
       flightWithSplits.copy(splits = updatedSplitsSet)
     }
