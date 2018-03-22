@@ -7,7 +7,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
-import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
+import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
@@ -18,7 +18,9 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
-                           crunch: (Seq[Double], Seq[Int], Seq[Int], OptimizerConfig) => Try[OptimizerCrunchResult])
+                           crunch: TryCrunch,
+                           crunchPeriodStartMillis: SDateLike => SDateLike,
+                           minutesToCrunch: Int)
   extends GraphStage[FlowShape[Loads, DeskRecMinutes]] {
 
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
@@ -51,8 +53,8 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
-        val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
-        val lastMinute = Crunch.getLocalNextMidnight(SDate(allMinuteMillis.max))
+        val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
+        val lastMinute = firstMinute.addMinutes(minutesToCrunch)
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)

@@ -6,13 +6,12 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services._
 import services.graphstages.Crunch._
 import services.graphstages.StaffDeploymentCalculator.deploymentWithinBounds
-import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryRenjin}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.language.postfixOps
-import scala.util.Try
 
 
 class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
@@ -20,7 +19,9 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
-                           simulate: (Seq[Double], Seq[Int], OptimizerConfig) => Seq[Int])
+                           simulate: Simulate,
+                           crunchPeriodStartMillis: SDateLike => SDateLike,
+                           minutesToCrunch: Int)
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
 
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
@@ -66,8 +67,8 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
         loadMinutes = Crunch.purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
-        val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
-        val lastMinute = Crunch.getLocalNextMidnight(SDate(allMinuteMillis.max))
+        val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
+        val lastMinute = firstMinute.addMinutes(minutesToCrunch)
         updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
 
         pushStateIfReady()

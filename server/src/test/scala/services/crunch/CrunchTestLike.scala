@@ -17,7 +17,7 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{DqManifests, DummySplitsPredictor}
+import services.graphstages.{Crunch, DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
 //import scala.language.postfixOps
@@ -77,7 +77,7 @@ class CrunchTestLike
 
   val airportConfig = AirportConfig(
     portCode = "STN",
-    queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
+    queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map(),
@@ -157,7 +157,7 @@ class CrunchTestLike
 
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
 
-    val crunchInputs = CrunchSystem(CrunchProps(
+    val crunchInputs = CrunchSystem(CrunchProps2(
       system = actorSystem,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
@@ -166,6 +166,7 @@ class CrunchTestLike
       forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
+      crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = minutesToCrunch,
       warmUpMinutes = warmUpMinutes,
       actors = Map[String, AskableActorRef](
@@ -174,14 +175,10 @@ class CrunchTestLike
         "staff-movements" -> staffMovementsActor),
       useNationalityBasedProcessingTimes = false,
       now = now,
-      crunchStartDateProvider = crunchStartDateProvider,
-      crunchEndDateProvider = crunchEndDateProvider,
-      calcPcpTimeWindow = (_) => calcPcpWindow,
       initialFlightsWithSplits = initialFlightsWithSplits,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = manifestsSource,
-      voyageManifestsActor = manifestsActor,
-      waitForManifests = false
+      voyageManifestsActor = manifestsActor
     ))
 
     if (initialBaseArrivals.nonEmpty) offerAndWait(crunchInputs.baseArrivals, Flights(initialBaseArrivals.toList))

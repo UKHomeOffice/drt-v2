@@ -139,26 +139,26 @@ trait SystemActors {
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
   val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(dqZipBucketName, airportConfig.portCode, getLastSeenManifestsFileName))
 
-//  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
-//    system = system,
-//    airportConfig = airportConfig,
-//    pcpArrival = pcpArrivalTimeCalculator,
-//    historicalSplitsProvider = historicalSplitsProvider,
-//    liveCrunchStateActor = liveCrunchStateActor,
-//    forecastCrunchStateActor = forecastCrunchStateActor,
-//    maxDaysToCrunch = maxDaysToCrunch,
-//    expireAfterMillis = expireAfterMillis,
-//    minutesToCrunch = minutesToCrunch,
-//    warmUpMinutes = warmUpMinutes,
-//    actors = Map(
-//      "shifts" -> shiftsActor,
-//      "fixed-points" -> fixedPointsActor,
-//      "staff-movements" -> staffMovementsActor),
-//    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
-//    splitsPredictorStage = splitsPredictorStage,
-//    manifestsSource = voyageManifestsStage,
-//    voyageManifestsActor = voyageManifestsActor
-//  ))
+  //  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
+  //    system = system,
+  //    airportConfig = airportConfig,
+  //    pcpArrival = pcpArrivalTimeCalculator,
+  //    historicalSplitsProvider = historicalSplitsProvider,
+  //    liveCrunchStateActor = liveCrunchStateActor,
+  //    forecastCrunchStateActor = forecastCrunchStateActor,
+  //    maxDaysToCrunch = maxDaysToCrunch,
+  //    expireAfterMillis = expireAfterMillis,
+  //    minutesToCrunch = minutesToCrunch,
+  //    warmUpMinutes = warmUpMinutes,
+  //    actors = Map(
+  //      "shifts" -> shiftsActor,
+  //      "fixed-points" -> fixedPointsActor,
+  //      "staff-movements" -> staffMovementsActor),
+  //    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
+  //    splitsPredictorStage = splitsPredictorStage,
+  //    manifestsSource = voyageManifestsStage,
+  //    voyageManifestsActor = voyageManifestsActor
+  //  ))
   val crunchInputs = CrunchSystem(CrunchProps2(
     system = system,
     airportConfig = airportConfig,
@@ -175,7 +175,8 @@ trait SystemActors {
     useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
     splitsPredictorStage = splitsPredictorStage,
     manifestsSource = voyageManifestsStage,
-    voyageManifestsActor = voyageManifestsActor
+    voyageManifestsActor = voyageManifestsActor,
+    crunchPeriodStartMillis = (s: SDateLike) => Crunch.getLocalLastMidnight(s)
   ))
   shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
   fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
@@ -292,6 +293,7 @@ trait AirportConfProvider extends AirportConfiguration {
   def mockProd: String = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
   def useStaffingInput: Boolean = config.getString("feature-flags.use-v2-staff-input").isDefined
+
   def contactEmail: Option[String] = config.getString("contact-email")
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
@@ -686,10 +688,10 @@ class Application @Inject()(implicit val config: Configuration,
 
 
     flightsCSVFromCrunchState(terminalName, pit, startHour, endHour).map {
-      case Some(csvData) =>  Result(
-            ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
-            HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-          )
+      case Some(csvData) => Result(
+        ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+        HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+      )
       case None => NotFound("No data for this date")
     }
   }

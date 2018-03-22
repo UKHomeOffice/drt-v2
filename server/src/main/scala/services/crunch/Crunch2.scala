@@ -34,6 +34,7 @@ object Crunch2 {
                                         simulationGraphStage: SimulationGraphStage,
                                         liveCrunchStateActor: ActorRef,
                                         fcstCrunchStateActor: ActorRef,
+                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                         now: () => SDateLike
                                        ): RunnableGraph[(SA, SA, SA, SVM, SS, SFP, SMM, SAD)] = {
 
@@ -103,17 +104,17 @@ object Crunch2 {
           arrivalSplits.out ~> arrivalSplitsFanOut
           arrivalSplitsFanOut ~> workload
 
-          workload.out.expand(groupLoadsByDay) ~> workloadFanOut //crunch
+          workload.out.expand(wl => groupLoadsByDay(wl, crunchPeriodStartMillis)) ~> workloadFanOut
           workloadFanOut ~> crunch
           workloadFanOut ~> simulation.in0
 
           crunch ~> crunchFanOut
 
-          arrivalSplitsFanOut.map(liveFlights) ~> liveSinkFlights // FlightsWithSplits
-          crunchFanOut.map(liveDeskRecs) ~> liveSinkCrunch //DeskRecMinutes
-          actualDesksAndWaitTimes ~> liveSinkActDesks // ActualDeskStats
+          arrivalSplitsFanOut.map(liveFlights) ~> liveSinkFlights
+          crunchFanOut.map(liveDeskRecs) ~> liveSinkCrunch
+          actualDesksAndWaitTimes ~> liveSinkActDesks
 
-          arrivalSplitsFanOut.map(forecastFlights) ~> fcstSinkFlights // FlightsWithSplits
+          arrivalSplitsFanOut.map(forecastFlights) ~> fcstSinkFlights
           crunchFanOut.map(forecastDeskRecs) ~> fcstSinkCrunch
 
           staff.out ~> staffFanOut
@@ -142,11 +143,11 @@ object Crunch2 {
 
   def forecastFlights: FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis))
 
-  def groupLoadsByDay(loads: Loads): Iterator[Loads] = {
+  def groupLoadsByDay(loads: Loads, crunchPeriodStartMillis: SDateLike => SDateLike): Iterator[Loads] = {
     loads
       .loadMinutes
       .toSeq
-      .groupBy(l => Crunch.getLocalLastMidnight(SDate(l.minute)).millisSinceEpoch)
+      .groupBy(l => crunchPeriodStartMillis(SDate(l.minute)).millisSinceEpoch)
       .toSeq
       .sortBy {
         case (millis, _) => millis

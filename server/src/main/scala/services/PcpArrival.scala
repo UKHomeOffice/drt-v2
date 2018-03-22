@@ -17,7 +17,7 @@ object PcpArrival {
     Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq) match {
       case Success(walkTimes) => walkTimes
       case f =>
-        log.warn(s"Failed to extract lines from walk times file '${walkTimesFileUrl}': $f")
+        log.warn(s"Failed to extract lines from walk times file '$walkTimesFileUrl': $f")
         Seq()
     }
   }

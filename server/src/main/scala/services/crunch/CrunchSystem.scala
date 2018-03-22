@@ -56,21 +56,24 @@ case class CrunchProps[MS](system: ActorSystem,
                           )
 
 case class CrunchProps2[MS](system: ActorSystem,
-                           airportConfig: AirportConfig,
-                           pcpArrival: Arrival => MilliDate,
-                           historicalSplitsProvider: SplitsProvider.SplitProvider,
-                           liveCrunchStateActor: ActorRef,
-                           forecastCrunchStateActor: ActorRef,
-                           maxDaysToCrunch: Int,
-                           expireAfterMillis: Long,
-                           actors: Map[String, AskableActorRef],
-                           useNationalityBasedProcessingTimes: Boolean,
-                           now: () => SDateLike = () => SDate.now(),
-                           initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                           splitsPredictorStage: SplitsPredictorBase,
-                           manifestsSource: Source[DqManifests, MS],
-                           voyageManifestsActor: ActorRef
-                          )
+                            airportConfig: AirportConfig,
+                            pcpArrival: Arrival => MilliDate,
+                            historicalSplitsProvider: SplitsProvider.SplitProvider,
+                            liveCrunchStateActor: ActorRef,
+                            forecastCrunchStateActor: ActorRef,
+                            maxDaysToCrunch: Int,
+                            expireAfterMillis: Long,
+                            crunchPeriodStartMillis: SDateLike => SDateLike,
+                            minutesToCrunch: Int = 1440,
+                            warmUpMinutes: Int = 0,
+                            actors: Map[String, AskableActorRef],
+                            useNationalityBasedProcessingTimes: Boolean,
+                            now: () => SDateLike = () => SDate.now(),
+                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                            splitsPredictorStage: SplitsPredictorBase,
+                            manifestsSource: Source[DqManifests, MS],
+                            voyageManifestsActor: ActorRef
+                           )
 
 object CrunchSystem {
 
@@ -147,7 +150,9 @@ object CrunchSystem {
       props.airportConfig,
       props.expireAfterMillis,
       props.now,
-      TryRenjin.crunch)
+      TryRenjin.crunch,
+      props.crunchPeriodStartMillis,
+      props.minutesToCrunch)
 
     val maybeStaffMinutes = initialMergedPs.map(ps => StaffMinutes(ps.staffMinutes))
 
@@ -157,13 +162,15 @@ object CrunchSystem {
       props.airportConfig,
       props.expireAfterMillis,
       props.now,
-      TryRenjin.runSimulationOfWork
+      TryRenjin.runSimulationOfWork,
+      props.crunchPeriodStartMillis,
+      props.minutesToCrunch
     )
 
     val crunchSystem = Crunch2(
       baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, simulationGraphStage, props.liveCrunchStateActor, props.forecastCrunchStateActor,
-      props.now
+      props.crunchPeriodStartMillis, props.now
     )
 
     implicit val actorSystem: ActorSystem = props.system
