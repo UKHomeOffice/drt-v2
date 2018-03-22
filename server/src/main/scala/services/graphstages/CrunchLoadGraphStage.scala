@@ -93,9 +93,10 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
                 val paxMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.paxLoad)).toMap
                 val minuteMillis = firstMinute until lastMinute by 60000
                 val fullWorkMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
+                val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
                 val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
                 val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-                val triedResult: Try[OptimizerCrunchResult] = crunch(fullWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+                val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
                 triedResult match {
                   case Success(OptimizerCrunchResult(desks, waits)) =>
                     minuteMillis.zipWithIndex.map {

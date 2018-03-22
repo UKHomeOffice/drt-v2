@@ -81,12 +81,12 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
       override def onPush(): Unit = {
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
 
-        val changedDaysMillis = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute)).millisSinceEpoch).keys
+        val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute))).keys
+        log.info(s"Days affected by incoming staff: ${changedDays.map(_.toLocalDateTimeString()).mkString("\n")}")
 
         staffMinutes = updateStaffMinutes(staffMinutes, incomingStaffMinutes)
 
-        changedDaysMillis.foreach(startMillis => {
-          val firstMinute = SDate(startMillis)
+        changedDays.foreach(firstMinute => {
           val lastMinute = firstMinute.addDays(1)
           updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
         })

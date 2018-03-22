@@ -5,7 +5,7 @@ import drt.shared._
 import services.graphstages.Crunch._
 
 
-class CrunchMinuteSpec() extends CrunchTestLike {
+class CrunchMinuteSpec extends CrunchTestLike {
 
   "Diffing " >> {
     "Given two identical sets of CrunchMinutes " +

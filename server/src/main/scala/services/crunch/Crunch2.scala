@@ -6,12 +6,15 @@ import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
+import org.slf4j.LoggerFactory
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
 object Crunch2 {
+  val log = LoggerFactory.getLogger(getClass)
+
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
@@ -74,7 +77,7 @@ object Crunch2 {
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
-          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
+          val staffFanOut = builder.add(Broadcast[StaffMinutes](3))
           val simulationFanOut = builder.add(Broadcast[SimulationMinutes](2))
 
           val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
@@ -84,6 +87,7 @@ object Crunch2 {
           val liveSinkSimulations = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSinkFlights = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkCrunch = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val fcstSinkStaff = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkSimulations = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
@@ -110,20 +114,21 @@ object Crunch2 {
 
           crunch ~> crunchFanOut
 
-          arrivalSplitsFanOut.map(liveFlights) ~> liveSinkFlights
-          crunchFanOut.map(liveDeskRecs) ~> liveSinkCrunch
+          arrivalSplitsFanOut.map(liveFlights(now)) ~> liveSinkFlights
+          crunchFanOut.map(liveDeskRecs(now)) ~> liveSinkCrunch
           actualDesksAndWaitTimes ~> liveSinkActDesks
 
-          arrivalSplitsFanOut.map(forecastFlights) ~> fcstSinkFlights
-          crunchFanOut.map(forecastDeskRecs) ~> fcstSinkCrunch
+          arrivalSplitsFanOut.map(forecastFlights(now)) ~> fcstSinkFlights
+          crunchFanOut.map(forecastDeskRecs(now)) ~> fcstSinkCrunch
 
           staff.out ~> staffFanOut
           staffFanOut ~> simulation.in1
           staffFanOut ~> liveSinkStaff
+          staffFanOut ~> fcstSinkStaff
 
           simulation.out ~> simulationFanOut
-          simulationFanOut.map(liveSimulations) ~> liveSinkSimulations
-          simulationFanOut.map(forecastSimulations) ~> fcstSinkSimulations
+          simulationFanOut.map(liveSimulations(now)) ~> liveSinkSimulations
+          simulationFanOut.map(forecastSimulations(now)) ~> fcstSinkSimulations
 
           ClosedShape
     }
@@ -131,32 +136,36 @@ object Crunch2 {
     RunnableGraph.fromGraph(graph)
   }
 
-  def liveDeskRecs: DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis))
+  def liveDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis(now)))
 
-  def liveSimulations: SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute < tomorrowStartMillis))
+  def liveSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute < tomorrowStartMillis(now)))
 
-  def forecastDeskRecs: DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
+  def forecastDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
 
-  def forecastSimulations: SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis))
+  def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
 
-  def liveFlights: FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis))
+  def liveFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis(now)))
 
-  def forecastFlights: FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis))
+  def forecastFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis(now)))
 
   def groupLoadsByDay(loads: Loads, crunchPeriodStartMillis: SDateLike => SDateLike): Iterator[Loads] = {
-    loads
+    val loadMinutesByCrunchPeriod: Seq[(MillisSinceEpoch, Set[Crunch.LoadMinute])] = loads
       .loadMinutes
+      .groupBy(load => crunchPeriodStartMillis(SDate(load.minute)).millisSinceEpoch)
       .toSeq
-      .groupBy(l => crunchPeriodStartMillis(SDate(l.minute)).millisSinceEpoch)
-      .toSeq
-      .sortBy {
-        case (millis, _) => millis
-      }
-      .map {
-        case (_, lbd) => Loads(lbd.toSet)
-      }
-      .toIterator
+      .sortBy { case (millis, _) => millis }
+
+    val dates = loadMinutesByCrunchPeriod.map {
+      case (millis, _) => SDate(millis).toLocalDateTimeString()
+    }.mkString(", ")
+
+    log.info(s"Load periods: $dates")
+
+    val loadsByCrunchPeriod = loadMinutesByCrunchPeriod
+      .map { case (_, lms) => Loads(lms) }
+
+    loadsByCrunchPeriod.toIterator
   }
 
-  def tomorrowStartMillis: MillisSinceEpoch = Crunch.getLocalNextMidnight(SDate.now()).millisSinceEpoch
+  def tomorrowStartMillis(now: () => SDateLike): MillisSinceEpoch = Crunch.getLocalNextMidnight(now()).millisSinceEpoch
 }

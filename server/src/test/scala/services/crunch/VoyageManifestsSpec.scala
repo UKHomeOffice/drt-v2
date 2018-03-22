@@ -57,7 +57,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.CheckIn), PaxNumbers)
     )
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val splitsSet = ps.flights.head match {
           case (_, ApiFlightWithSplits(_, s, _)) => s
@@ -114,7 +114,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0, Option(Map("USA" -> 1.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val splitsSet = ps.flights.head match {
           case (_, ApiFlightWithSplits(_, s, _)) => s
@@ -159,7 +159,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 10.0)
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values
@@ -208,7 +208,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values
@@ -262,7 +262,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values

@@ -40,7 +40,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.shifts)
@@ -82,7 +82,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.available)

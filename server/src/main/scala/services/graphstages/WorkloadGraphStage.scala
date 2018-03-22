@@ -56,12 +56,13 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
     }
 
     def flightsToWorkloadByFlightId(initialFlights: Seq[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
-      initialFlights.map(fws => {
-        val uniqueFlightId = fws.apiFlight.uniqueId
-        val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
+      initialFlights
+        .map(fws => {
+          val uniqueFlightId = fws.apiFlight.uniqueId
+          val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
 
-        (uniqueFlightId, flightWorkload)
-      }).toMap
+          (uniqueFlightId, flightWorkload)
+        }).toMap
     }
 
     setHandler(inFlightsWithSplits, new InHandler {
@@ -70,7 +71,7 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
         log.info(s"Received ${incomingFlights.flights.size} arrivals")
 
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
-        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if(fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
+        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
         val updatedLoads: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
 
         val diff = loadDiff(updatedLoads, loadMinutes)
@@ -101,6 +102,11 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
 
     def mergeWorkloadByFlightId(incomingFlights: FlightsWithSplits, existingLoads: Map[Int, Set[FlightSplitMinute]]): Map[Int, Set[FlightSplitMinute]] = incomingFlights
       .flights
+      .filterNot(f => {
+        val cancelled = f.apiFlight.Status == "Cancelled"
+        if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.IATA}")
+        cancelled
+      })
       .foldLeft(existingLoads) {
         case (soFar, fws) =>
           val uniqueFlightId = fws.apiFlight.uniqueId

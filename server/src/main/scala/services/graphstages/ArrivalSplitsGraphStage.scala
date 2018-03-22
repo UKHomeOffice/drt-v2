@@ -46,6 +46,15 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = purgeExpiredArrivals(
             flights
+              .map(flightWithSplits => {
+                val maybeOldSplits = flightWithSplits.splits.find(s => s.source == SplitSources.Historical)
+                val maybeNewSplits = splitsCalculator.historicalSplits(flightWithSplits.apiFlight)
+                val withUpdatedHistoricalSplits = if (maybeNewSplits.isDefined && maybeNewSplits != maybeOldSplits) {
+                  log.info(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
+                  updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)), maybeNewSplits.get)
+                } else flightWithSplits
+                withUpdatedHistoricalSplits
+              })
               .map(f => Tuple2(f.apiFlight.uniqueId, f))
               .toMap)
         case _ =>
@@ -73,7 +82,6 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
         log.info(s"We now have ${updatedFlights.size} arrivals")
         arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-//        log.info(s"arrivalsWithSplitsDiff: $arrivalsWithSplitsDiff")
         flightsByFlightId = updatedFlights
 
         pushStateIfReady()
@@ -90,7 +98,6 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
         log.info(s"We now have ${updatedFlights.size} arrivals")
         arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-//        log.info(s"arrivalsWithSplitsDiff: $arrivalsWithSplitsDiff")
         flightsByFlightId = updatedFlights
         manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
 
@@ -143,6 +150,16 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         case None =>
           existingFlightsByFlightId
       }
+    }
+
+    def updateFlightWithHistoricalSplits(flightWithSplits: ApiFlightWithSplits, newHistorical: Set[ApiPaxTypeAndQueueCount]): ApiFlightWithSplits = {
+      val newSplits = ApiSplits(newHistorical, SplitSources.Historical, None, Percentage)
+      val updatedSplitsSet = flightWithSplits.splits.filterNot {
+        case ApiSplits(_, SplitSources.Historical, _, _) => true
+        case _ => false
+      } + newSplits
+
+      flightWithSplits.copy(splits = updatedSplitsSet)
     }
 
     def updateSplitsSet(arrivalForPrediction: Arrival, predictedSplits: ApiSplits, existingFlightWithSplits: ApiFlightWithSplits): Set[ApiSplits] = {

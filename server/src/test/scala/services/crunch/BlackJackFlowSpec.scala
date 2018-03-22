@@ -48,7 +48,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val expected = List.fill(15)((Option(1), Option(5))) ++ List.fill(15)((Option(2), Option(10)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val crunchMinutes = ps match {
           case PortState(_, c, _) => c
@@ -94,7 +94,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val expected = List.fill(15)((Option(1), None)) ++ List.fill(15)((None, Option(10)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val crunchMinutes = ps match {
           case PortState(_, c, _) => c
