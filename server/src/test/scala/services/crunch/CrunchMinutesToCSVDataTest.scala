@@ -80,4 +80,23 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     result === expected
   }
+
+  "When exporting data, if headings is set to false, then we should not get headings back" >> {
+    val startDateTime = SDate("2017-11-10T00:00:00Z")
+    val cms = Set(
+      CrunchMinute("T1", Queues.EeaDesk, startDateTime.millisSinceEpoch, 1.0, 2.0, deskRec = 1, 100, Option(2), Option(100), Option(2), Option(100)),
+      CrunchMinute("T1", Queues.EGate, startDateTime.millisSinceEpoch, 1.0, 2.0, deskRec = 1, 100, Option(2), Option(100), Option(2), Option(100)),
+      CrunchMinute("T1", Queues.NonEeaDesk, startDateTime.millisSinceEpoch, 1.0, 2.0, deskRec = 1, 100, Option(2), Option(100), Option(2), Option(100))
+    )
+
+    val staffMins = Set(
+      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, 1)
+    )
+
+    val expected = """00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,4""".stripMargin
+
+    val result = CSVData.terminalCrunchMinutesToCsvData(cms, staffMins, "T1", Queues.exportQueueOrderSansFastTrack, false)
+
+    result === expected
+  }
 }

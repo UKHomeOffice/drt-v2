@@ -5,6 +5,10 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+
 object CSVData {
 
   val log = LoggerFactory.getLogger(getClass)
@@ -74,7 +78,7 @@ object CSVData {
     List(headings, data).mkString("\n")
   }
 
-  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): QueueName = {
+  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName], addHeadings: Boolean = true): QueueName = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
@@ -132,11 +136,13 @@ object CSVData {
 
           hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
       }
-    headingsLine1 + lineEnding + headingsLine2 + lineEnding +
+    if(addHeadings)
+      headingsLine1 + lineEnding + headingsLine2 + lineEnding + crunchMinutes.mkString(lineEnding)
+    else
       crunchMinutes.mkString(lineEnding)
   }
 
-  def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]): String = {
+  def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits], addHeadings: Boolean = true): String = {
     val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
@@ -167,7 +173,10 @@ object CSVData {
       flightCsvFields
     }).map(_.mkString(",")).mkString("\n")
 
-    headings + "\n" + csvData
+    if (addHeadings)
+      headings + "\n" + csvData
+    else
+      csvData
   }
 
   def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[QueueName, Int] =
@@ -184,5 +193,18 @@ object CSVData {
         s"$source $queueName"
       })
       .mkString(",")
+  }
+
+  def multiDayToSingleExport(exportDays: Seq[Future[Option[String]]]): Future[String] = {
+
+    Future.sequence(
+      exportDays.map(fd => fd.recoverWith {
+        case e =>
+          log.error(s"Failed to recover data for day ${e.getMessage}")
+          Future(None)
+      }
+      )).map(_.collect {
+      case Some(s) => s
+    }.mkString("\n"))
   }
 }
