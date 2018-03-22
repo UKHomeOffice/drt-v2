@@ -578,10 +578,6 @@ class Application @Inject()(implicit val config: Configuration,
                         endHour: Int
                       ): Future[Option[String]] = {
 
-
-    log.info(s"Start hour: $startHour End hour: $endHour")
-
-
     def minutesOnDayWithinRange(minute: SDateLike) = {
       minute.ddMMyyString == pointInTime.ddMMyyString && minute.getHours() >= startHour && minute.getHours() < endHour
     }
@@ -681,7 +677,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportFlightsWithSplitsBetweenTimeStampsTimeCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     val startPit = getLocalNextMidnight(SDate(start.toLong))
     val endPit = getLocalNextMidnight(SDate(end.toLong))
 
@@ -709,7 +705,7 @@ class Application @Inject()(implicit val config: Configuration,
     })
   }
 
-  def exportDesksAndQueuesBetweenTimeStampsTimeCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportDesksAndQueuesBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     val startPit = getLocalNextMidnight(SDate(start.toLong))
     val endPit = getLocalNextMidnight(SDate(end.toLong))
 
