@@ -60,7 +60,6 @@ class CrunchStateActor(val snapshotInterval: Int,
         s", ${s.staffMinutes.size} staff minutes ")
   }
 
-
   override def receiveCommand: Receive = {
     case cs: PortState =>
       log.info(s"Received PortState. storing")
