@@ -157,7 +157,7 @@ class CrunchTestLike
 
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
 
-    val crunchInputs = CrunchSystem(CrunchProps2(
+    val crunchInputs = CrunchSystem(CrunchProps(
       system = actorSystem,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,

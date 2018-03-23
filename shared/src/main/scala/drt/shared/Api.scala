@@ -185,7 +185,6 @@ object Arrival {
 
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
-
 trait SDateLike {
 
   def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
@@ -299,6 +298,8 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
 object CrunchApi {
   type MillisSinceEpoch = Long
 
+  case class FlightRemovals(idsToRemove: Set[Int])
+
   case class CrunchState(flights: Set[ApiFlightWithSplits],
                          crunchMinutes: Set[CrunchMinute],
                          staffMinutes: Set[StaffMinute])
@@ -368,7 +369,6 @@ object CrunchApi {
 
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode
   }
-
 
   case class SimulationMinutes(minutes: Set[SimulationMinute])
 

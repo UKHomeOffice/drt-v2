@@ -36,7 +36,7 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.crunch.{CrunchProps2, CrunchSystem}
+import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch._
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
@@ -159,7 +159,7 @@ trait SystemActors {
   //    manifestsSource = voyageManifestsStage,
   //    voyageManifestsActor = voyageManifestsActor
   //  ))
-  val crunchInputs = CrunchSystem(CrunchProps2(
+  val crunchInputs = CrunchSystem(CrunchProps(
     system = system,
     airportConfig = airportConfig,
     pcpArrival = pcpArrivalTimeCalculator,
@@ -807,9 +807,10 @@ object Forecast {
   }
 
   def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
-    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes)
-    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes)
-    groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
+    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes.filter(_.terminalName == terminalName))
+    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes.filter(_.terminalName == terminalName))
+    val minutesByMinute = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
+    groupCrunchMinutesByX(15)(minutesByMinute, terminalName, Queues.queueOrder)
       .map {
         case (startMillis, cms) =>
           val available = actualStaffByMinute.getOrElse(startMillis, 0)

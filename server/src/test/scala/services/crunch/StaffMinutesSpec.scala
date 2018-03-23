@@ -26,6 +26,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunchStart = SDate(scheduled)
 
     val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => crunchStart,
       crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
       crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
@@ -64,6 +65,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunchStart = SDate(scheduled)
 
     val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => crunchStart,
       crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
       crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
@@ -82,13 +84,13 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(5 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.available)
         val staffMillis = minutesInOrder.map(_.minute)
 
-        (staffMillis, staff) === Tuple2(expectedMillis, expectedStaff)
+        (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
     }
 
     true

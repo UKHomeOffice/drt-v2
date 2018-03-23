@@ -82,7 +82,7 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
 
         val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute))).keys
-        log.info(s"Days affected by incoming staff: ${changedDays.map(_.toLocalDateTimeString()).mkString("\n")}")
+        log.info(s"Days affected by incoming staff: ${changedDays.map(_.toLocalDateTimeString()).toSeq.sortBy(identity).mkString(", ")}")
 
         staffMinutes = updateStaffMinutes(staffMinutes, incomingStaffMinutes)
 

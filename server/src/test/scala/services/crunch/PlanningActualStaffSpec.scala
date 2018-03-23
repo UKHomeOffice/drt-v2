@@ -2,10 +2,11 @@ package services.crunch
 
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{CrunchApi, Queues}
+import drt.shared.{CrunchApi, Queues, SDateLike}
 import services.SDate
 import services.graphstages.Crunch._
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
@@ -24,24 +25,27 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     "Then I should see the actual staff numbers in the forecast" >> {
 
     val day1 = "2017-01-02T00:00Z"
-    val weekbeginning = "2017-01-02T00:00Z"
+    val weekBeginning = "2017-01-02T00:00Z"
 
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = 1, schDt = day1, iata = "BA0001", terminal = "T1", actPax = 5)
     val forecastFlights = Set(forecastArrivalDay1)
+    val shifts =
+      """shift a,T1,02/01/17,00:00,23:59,20
+      """.stripMargin
 
     val crunch = runCrunchGraph(
-      now = () => SDate(weekbeginning),
+      now = () => SDate(weekBeginning).addDays(-1),
       airportConfig = airportConfig.copy(
+        terminalNames = Seq("T1"),
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
       minutesToCrunch = 60,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addMinutes(60),
-      initialShifts =
-        """shift a,T1,02/01/17,00:00,23:59,20
-        """.stripMargin,
-      initialBaseArrivals = forecastFlights
+      crunchStartDateProvider = (s: SDateLike) => getLocalLastMidnight(s),
+      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekBeginning)).addMinutes(60)
     )
+
+    Await.ready(crunch.baseArrivalsInput.offer(Flights(forecastFlights.toSeq)), 1 second)
+    Await.ready(crunch.forecastShiftsInput.offer(shifts), 1 second)
 
     val expected = List(
       ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 1),
@@ -55,9 +59,9 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
           ps.crunchMinutes.values.toSet,
           ps.staffMinutes.values.toSet,
-          "T1"
-        )
-        val firstDayFirstHour = weekOf15MinSlots(SDate("2017-01-02T00:00Z").millisSinceEpoch).take(4)
+          "T1")
+
+        val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
 
         firstDayFirstHour == expected
     }

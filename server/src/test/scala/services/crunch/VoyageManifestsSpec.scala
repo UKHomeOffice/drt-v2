@@ -59,8 +59,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val splitsSet = ps.flights.head match {
-          case (_, ApiFlightWithSplits(_, s, _)) => s
+        val splitsSet = ps.flights.values.headOption match {
+          case Some(ApiFlightWithSplits(_, s, _)) => s
+          case None => Set()
         }
         splitsSet == expectedSplits
     }
@@ -116,8 +117,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val splitsSet = ps.flights.head match {
-          case (_, ApiFlightWithSplits(_, s, _)) => s
+        val splitsSet = ps.flights.values.headOption match {
+          case Some(ApiFlightWithSplits(_, s, _)) => s
+          case None => Set()
         }
         val queues = ps.crunchMinutes.values.groupBy(_.queueName).keys.toSet
         val expectedQueues = Set(NonEeaDesk)

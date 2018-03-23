@@ -61,6 +61,14 @@ class CrunchStateActor(val snapshotInterval: Int,
   }
 
   override def receiveCommand: Receive = {
+    case flightRemovals: FlightRemovals =>
+      log.info(s"Got ${flightRemovals.idsToRemove.size} flight removals")
+      val updatedState = state match {
+        case None => PortState(Map(), Map(), Map())
+        case Some(portState) => updatePortState(flightRemovals, portState)
+      }
+      updateStateFromPortState(updatedState)
+
     case flightUpdates: FlightsWithSplits =>
       log.info(s"Got ${flightUpdates.flights.size} updated flights")
       val updatedState = state match {
@@ -165,24 +173,26 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   def newPortState(sims: SimulationMinutes): PortState = PortState(Map(), newCrunchMinutes(sims), Map())
 
+  def updatePortState(flightRemovals: FlightRemovals, portState: PortState): PortState = {
+    val updatedFlights = portState.flights.filterKeys(id => !flightRemovals.idsToRemove.contains(id))
+    portState.copy(flights = updatedFlights)
+  }
+
   def updatePortState(flightUpdates: FlightsWithSplits, portState: PortState): PortState = {
     val updatedFlights = flightUpdates.flights.foldLeft(portState.flights) {
       case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight)
     }
-    val updatedPortState = portState.copy(flights = updatedFlights)
-    updatedPortState
+    portState.copy(flights = updatedFlights)
   }
 
   def updatePortState(drms: DeskRecMinutes, portState: PortState): PortState = {
     val updatedCms = updateCrunchMinutes(drms, portState.crunchMinutes)
-    val updatedPortState = portState.copy(crunchMinutes = updatedCms)
-    updatedPortState
+    portState.copy(crunchMinutes = updatedCms)
   }
 
   def updatePortState(sims: SimulationMinutes, portState: PortState): PortState = {
     val updatedCms = updateCrunchMinutes(sims, portState.crunchMinutes)
-    val updatedPortState = portState.copy(crunchMinutes = updatedCms)
-    updatedPortState
+    portState.copy(crunchMinutes = updatedCms)
   }
 
   def newCrunchMinutes(drms: DeskRecMinutes): Map[Int, CrunchMinute] = drms

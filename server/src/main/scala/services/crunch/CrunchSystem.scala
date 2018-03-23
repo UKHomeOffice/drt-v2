@@ -40,46 +40,23 @@ case class CrunchProps[MS](system: ActorSystem,
                            forecastCrunchStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Long,
-                           minutesToCrunch: Int,
-                           warmUpMinutes: Int,
+                           crunchPeriodStartMillis: SDateLike => SDateLike,
+                           minutesToCrunch: Int = 1440,
+                           warmUpMinutes: Int = 0,
                            actors: Map[String, AskableActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
-                           crunchStartDateProvider: (SDateLike) => SDateLike = getLocalLastMidnight,
-                           crunchEndDateProvider: (SDateLike) => SDateLike = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime),
-                           calcPcpTimeWindow: Int => (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (maxDays: Int) => earliestAndLatestAffectedPcpTimeFromFlights(maxDays = maxDays),
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
                            manifestsSource: Source[DqManifests, MS],
-                           voyageManifestsActor: ActorRef,
-                           waitForManifests: Boolean = false
-                          )
-
-case class CrunchProps2[MS](system: ActorSystem,
-                            airportConfig: AirportConfig,
-                            pcpArrival: Arrival => MilliDate,
-                            historicalSplitsProvider: SplitsProvider.SplitProvider,
-                            liveCrunchStateActor: ActorRef,
-                            forecastCrunchStateActor: ActorRef,
-                            maxDaysToCrunch: Int,
-                            expireAfterMillis: Long,
-                            crunchPeriodStartMillis: SDateLike => SDateLike,
-                            minutesToCrunch: Int = 1440,
-                            warmUpMinutes: Int = 0,
-                            actors: Map[String, AskableActorRef],
-                            useNationalityBasedProcessingTimes: Boolean,
-                            now: () => SDateLike = () => SDate.now(),
-                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                            splitsPredictorStage: SplitsPredictorBase,
-                            manifestsSource: Source[DqManifests, MS],
-                            voyageManifestsActor: ActorRef
+                           voyageManifestsActor: ActorRef
                            )
 
 object CrunchSystem {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply[MS](props: CrunchProps2[MS]): CrunchSystem[MS] = {
+  def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
 
     val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
     val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-arrivals-actor")
@@ -198,134 +175,6 @@ object CrunchSystem {
         fps.flights ++ lps.flights,
         fps.crunchMinutes ++ lps.crunchMinutes,
         fps.staffMinutes ++ lps.staffMinutes))
-  }
-
-  def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
-
-    val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
-    val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-arrivals-actor")
-    val liveArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
-
-    val askableLiveCrunchStateActor: AskableActorRef = props.liveCrunchStateActor
-    val askableForecastCrunchStateActor: AskableActorRef = props.forecastCrunchStateActor
-
-    val initialLiveCrunchState = initialPortState(askableLiveCrunchStateActor)
-    val initialForecastCrunchState = initialPortState(askableForecastCrunchStateActor)
-    val initialShifts = initialShiftsLikeState(props.actors("shifts"))
-    val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
-    val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
-
-    def staffingStage(name: String, initialPortState: Option[PortState], crunchEnd: SDateLike => SDateLike, minutesToCrunch: Int, warmUpMinutes: Int, eGateBankSize: Int) = new StaffingStage(
-      name = name,
-      initialOptionalPortState = initialPortState,
-      initialShifts = initialShifts,
-      initialFixedPoints = initialFixedPoints,
-      initialMovements = initialStaffMovements,
-      minMaxDesks = props.airportConfig.minMaxDesksByTerminalQueue,
-      slaByQueue = props.airportConfig.slaByQueue,
-      minutesToCrunch = minutesToCrunch,
-      warmUpMinutes = warmUpMinutes,
-      crunchEnd = crunchEnd,
-      now = props.now,
-      expireAfterMillis = props.expireAfterMillis,
-      eGateBankSize = eGateBankSize)
-
-    val actualDesksStage = new ActualDesksAndWaitTimesGraphStage()
-
-    val liveStaffingStage = staffingStage("live", initialLiveCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize)
-
-    val forecastStaffingStage = staffingStage("forecast", initialForecastCrunchState, (minute: SDateLike) => getLocalNextMidnight(minute), props.minutesToCrunch, props.warmUpMinutes, props.airportConfig.eGateBankSize)
-
-    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
-    val forecastArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
-    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](1, OverflowStrategy.backpressure)
-    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
-    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
-    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
-    val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](1, OverflowStrategy.backpressure)
-
-    val maxLiveDaysToCrunch = 2
-
-    val liveFlightsWithSplitsFromPortState = FlightsWithSplits(initialLiveCrunchState.map(_.flights.values).getOrElse(Seq()).toSeq)
-    val initialLiveFlightsWithSplits = props.initialFlightsWithSplits.getOrElse(liveFlightsWithSplitsFromPortState)
-    val forecastFlightsWithSplitsFromPortState = FlightsWithSplits(initialForecastCrunchState.map(_.flights.values).getOrElse(Seq()).toSeq)
-    val initialForecastFlightsWithSplits = props.initialFlightsWithSplits.getOrElse(forecastFlightsWithSplitsFromPortState)
-    val liveCrunchStage = new CrunchGraphStage(
-      name = "live",
-      optionalInitialFlights = Option(initialLiveFlightsWithSplits),
-      airportConfig = props.airportConfig,
-      natProcTimes = AirportConfigs.nationalityProcessingTimes,
-      groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-      splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet),
-      crunchStartFromFirstPcp = props.crunchStartDateProvider,
-      crunchEndFromLastPcp = props.crunchEndDateProvider,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      maxDaysToCrunch = maxLiveDaysToCrunch,
-      earliestAndLatestAffectedPcpTime = props.calcPcpTimeWindow(maxLiveDaysToCrunch),
-      waitForManifests = props.waitForManifests,
-      minutesToCrunch = props.minutesToCrunch,
-      warmUpMinutes = props.warmUpMinutes,
-      useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
-
-    val forecastCrunchStage = new CrunchGraphStage(
-      name = "forecast",
-      optionalInitialFlights = Option(initialForecastFlightsWithSplits),
-      airportConfig = props.airportConfig,
-      natProcTimes = AirportConfigs.nationalityProcessingTimes,
-      groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight),
-      splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet),
-      crunchStartFromFirstPcp = props.crunchStartDateProvider,
-      crunchEndFromLastPcp = props.crunchEndDateProvider,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      maxDaysToCrunch = props.maxDaysToCrunch,
-      earliestAndLatestAffectedPcpTime = props.calcPcpTimeWindow(props.maxDaysToCrunch),
-      waitForManifests = props.waitForManifests,
-      minutesToCrunch = props.minutesToCrunch,
-      warmUpMinutes = props.warmUpMinutes,
-      useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
-
-    val arrivalsStage = new ArrivalsGraphStage(
-      name = "-",
-      initialBaseArrivals = initialArrivals(baseArrivalsActor),
-      initialForecastArrivals = initialArrivals(forecastArrivalsActor),
-      initialLiveArrivals = initialArrivals(liveArrivalsActor),
-      pcpArrivalTime = props.pcpArrival,
-      validPortTerminals = props.airportConfig.terminalNames.toSet,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
-
-    val arrivalsShape = ArrivalsShape(
-      baseArrivalsActor = baseArrivalsActor,
-      fcstArrivalsActor = forecastArrivalsActor,
-      liveArrivalsActor = liveArrivalsActor,
-      arrivalsStage
-    )
-
-    val liveCrunchShape = LiveCrunchShape(liveCrunchStage, liveStaffingStage, actualDesksStage)
-    val forecastCrunchShape = ForecastCrunchShape(forecastCrunchStage, forecastStaffingStage)
-
-    val runnableCrunch = RunnableCrunch(
-      baseArrivals, forecastArrivals, liveArrivals,
-      props.voyageManifestsActor, props.manifestsSource, props.splitsPredictorStage,
-      shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsShape, liveCrunchShape, forecastCrunchShape,
-      props.forecastCrunchStateActor, props.liveCrunchStateActor)
-
-    implicit val actorSystem: ActorSystem = props.system
-    val (baseInput, forecastInput, liveInput, manifestsInput, shiftsInput, fixedPointsInput, movementsInput, actualDesksInput) = runnableCrunch.run()(ActorMaterializer())
-
-    CrunchSystem(
-      shifts = shiftsInput,
-      fixedPoints = fixedPointsInput,
-      staffMovements = movementsInput,
-      baseArrivals = baseInput,
-      forecastArrivals = forecastInput,
-      liveArrivals = liveInput,
-      manifests = manifestsInput,
-      actualDeskStats = actualDesksInput
-    )
   }
 
   def initialPortState(askableCrunchStateActor: AskableActorRef): Option[PortState] = {

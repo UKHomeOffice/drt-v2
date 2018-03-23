@@ -73,18 +73,20 @@ object Crunch2 {
           val staff = builder.add(staffGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
 
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](4))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](3))
           val simulationFanOut = builder.add(Broadcast[SimulationMinutes](2))
 
+          val liveSinkFlightRemovals = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkCrunch = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkActDesks = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkStaff = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkSimulations = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val fcstSinkFlightRemovals = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkFlights = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkCrunch = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkStaff = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
@@ -102,6 +104,8 @@ object Crunch2 {
           arrivals.out ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
+          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> liveSinkFlightRemovals
+          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> fcstSinkFlightRemovals
           arrivalsFanOut ~> arrivalSplits.in0
           splitsPredictor.out ~> arrivalSplits.in2
 

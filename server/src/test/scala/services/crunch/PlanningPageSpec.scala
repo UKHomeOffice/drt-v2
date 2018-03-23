@@ -19,19 +19,19 @@ class PlanningPageSpec() extends CrunchTestLike {
     "Then I should see the actual staff numbers in the forecast" >> {
 
     val day1 = "2017-01-02T00:00Z"
-    val weekbeginning = "2017-01-02T00:00Z"
+    val weekBeginning = "2017-01-02T00:00Z"
 
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = 1, schDt = day1, iata = "BA0001", terminal = "T1", actPax = 5)
     val forecastFlights = Flights(List(forecastArrivalDay1))
 
     val crunch = runCrunchGraph(
-      now = () => SDate(weekbeginning),
+      now = () => SDate(weekBeginning).addDays(-1),
       airportConfig = airportConfig.copy(
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
       minutesToCrunch = 1440,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekbeginning)).addDays(3),
+      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekBeginning)),
+      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekBeginning)).addDays(3),
       initialShifts =
         """shift a,T1,02/01/17,00:00,23:59,20
         """.stripMargin
@@ -53,8 +53,9 @@ class PlanningPageSpec() extends CrunchTestLike {
           ps.staffMinutes.values.toSet,
           "T1"
         )
-        val firstDayFirstHour = weekOf15MinSlots(SDate("2017-01-02T00:00Z").millisSinceEpoch).take(4)
-        firstDayFirstHour === expected
+        val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
+
+        firstDayFirstHour == expected
     }
 
     true
