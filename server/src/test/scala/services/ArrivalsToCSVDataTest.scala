@@ -61,7 +61,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data" >> {
 
-    val result = flightsWithSplitsToCSV(flights)
+    val result = flightsWithSplitsToCSVWithHeadings(flights)
 
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
@@ -71,9 +71,9 @@ class ArrivalsToCSVDataTest extends Specification {
 
     result === expected
   }
-  "Given a list of arrivals when addHeaders is false, we should get the list without headings" >> {
+  "Given a list of arrivals when getting csv without headings, we should get the list without headings" >> {
 
-    val result = flightsWithSplitsToCSV(flights, false)
+    val result = flightsWithSplitsToCSV(flights)
 
     val expected =
       """ |SA0324,SA0324,JHB,/,UNK,2017-01-01T20:00:00Z,2017-01-01T20:00:00Z,,,,2017-01-01T20:00:00Z,100,100,7,15,32,46,12,23,30,35,,,,
