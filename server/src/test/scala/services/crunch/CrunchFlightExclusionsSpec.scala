@@ -33,10 +33,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-      minutesToCrunch = 120,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
-    )
+      minutesToCrunch = 120)
 
     offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -72,10 +69,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-      minutesToCrunch = 120,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
-    )
+      minutesToCrunch = 120)
 
     offerAndWait(crunch.liveArrivalsInput, flights)
 

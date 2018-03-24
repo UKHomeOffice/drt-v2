@@ -3,7 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared.{CrunchApi, Queues, SDateLike}
-import services.SDate
+import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
 import scala.concurrent.Await
@@ -40,8 +40,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
       minutesToCrunch = 60,
-      crunchStartDateProvider = (s: SDateLike) => getLocalLastMidnight(s),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekBeginning)).addMinutes(60)
+      cruncher = TryRenjin.crunch
     )
 
     Await.ready(crunch.baseArrivalsInput.offer(Flights(forecastFlights.toSeq)), 1 second)

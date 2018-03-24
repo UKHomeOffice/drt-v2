@@ -39,8 +39,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           ),
           defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
         ),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
         initialLiveArrivals = flights
       )
 
@@ -74,8 +72,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       airportConfig = airportConfig.copy(
         defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
       ),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
       initialLiveArrivals = flights
     )
 

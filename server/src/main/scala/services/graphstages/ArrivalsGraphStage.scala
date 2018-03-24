@@ -11,7 +11,7 @@ import services.graphstages.Crunch.midnightThisMorning
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
-class ArrivalsGraphStage(name: String,
+class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
@@ -168,7 +168,7 @@ class ArrivalsGraphStage(name: String,
             push(outArrivalsDiff, diff)
             toPush = None
         }
-      } else log.info(s"outMerged not available to push")
+      } else log.warn(s"outMerged not available to push: $arrivalsToPush")
     }
 
     def mergeArrivals(base: Set[Arrival], forecast: Set[Arrival], live: Set[Arrival]): Map[Int, Arrival] = {

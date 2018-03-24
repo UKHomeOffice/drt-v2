@@ -32,7 +32,8 @@ case class CrunchSystem[MS](shifts: SourceQueueWithComplete[String],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
                            )
 
-case class CrunchProps[MS](system: ActorSystem,
+case class CrunchProps[MS](logLabel: String = "",
+                           system: ActorSystem,
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
                            historicalSplitsProvider: SplitsProvider.SplitProvider,
@@ -49,8 +50,10 @@ case class CrunchProps[MS](system: ActorSystem,
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
                            manifestsSource: Source[DqManifests, MS],
-                           voyageManifestsActor: ActorRef
-                           )
+                           voyageManifestsActor: ActorRef,
+                           cruncher: TryCrunch,
+                           simulator: Simulator
+                          )
 
 object CrunchSystem {
 
@@ -85,7 +88,7 @@ object CrunchSystem {
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
 
     val arrivalsStage = new ArrivalsGraphStage(
-      name = "-",
+      name = props.logLabel,
       initialBaseArrivals = initialArrivals(baseArrivalsActor),
       initialForecastArrivals = initialArrivals(forecastArrivalsActor),
       initialLiveArrivals = initialArrivals(liveArrivalsActor),
@@ -95,53 +98,58 @@ object CrunchSystem {
       now = props.now)
 
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
-      props.initialFlightsWithSplits,
-      splitsCalculator,
-      groupFlightsByCodeShares,
-      props.expireAfterMillis,
-      props.now,
-      props.maxDaysToCrunch)
+      name = props.logLabel,
+      optionalInitialFlights = props.initialFlightsWithSplits,
+      splitsCalculator = splitsCalculator,
+      groupFlightsByCodeShares = groupFlightsByCodeShares,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      maxDaysToCrunch = props.maxDaysToCrunch)
 
     val splitsPredictorStage = props.splitsPredictorStage
 
     val staffGraphStage = new StaffGraphStage(
-      Option(initialShifts),
-      Option(initialFixedPoints),
-      Option(initialStaffMovements),
-      props.now,
-      props.airportConfig,
-      180)
+      name = props.logLabel,
+      optionalInitialShifts = Option(initialShifts),
+      optionalInitialFixedPoints = Option(initialFixedPoints),
+      optionalInitialMovements = Option(initialStaffMovements),
+      now = props.now,
+      airportConfig = props.airportConfig,
+      numberOfDays = props.maxDaysToCrunch)
 
     val workloadGraphStage = new WorkloadGraphStage(
-      initialMergedPs.map(ps => Loads(ps.crunchMinutes.values.toSeq)),
-      props.initialFlightsWithSplits,
-      props.airportConfig,
-      AirportConfigs.nationalityProcessingTimes,
-      props.expireAfterMillis,
-      props.now,
-      props.useNationalityBasedProcessingTimes)
+      name = props.logLabel,
+      optionalInitialLoads = initialMergedPs.map(ps => Loads(ps.crunchMinutes.values.toSeq)),
+      optionalInitialFlightsWithSplits = props.initialFlightsWithSplits,
+      airportConfig = props.airportConfig,
+      natProcTimes = AirportConfigs.nationalityProcessingTimes,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
     val maybeCrunchMinutes = initialMergedPs.map(ps => CrunchMinutes(ps.crunchMinutes.values.toSet))
     val crunchLoadGraphStage = new CrunchLoadGraphStage(
-      maybeCrunchMinutes,
-      props.airportConfig,
-      props.expireAfterMillis,
-      props.now,
-      TryRenjin.crunch,
-      props.crunchPeriodStartMillis,
-      props.minutesToCrunch)
+      name = props.logLabel,
+      optionalInitialCrunchMinutes = maybeCrunchMinutes,
+      airportConfig = props.airportConfig,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      crunch = props.cruncher,
+      crunchPeriodStartMillis = props.crunchPeriodStartMillis,
+      minutesToCrunch = props.minutesToCrunch)
 
     val maybeStaffMinutes = initialMergedPs.map(ps => StaffMinutes(ps.staffMinutes))
 
     val simulationGraphStage = new SimulationGraphStage(
-      maybeCrunchMinutes,
-      maybeStaffMinutes,
-      props.airportConfig,
-      props.expireAfterMillis,
-      props.now,
-      TryRenjin.runSimulationOfWork,
-      props.crunchPeriodStartMillis,
-      props.minutesToCrunch
+      name = props.logLabel,
+      optionalInitialCrunchMinutes = maybeCrunchMinutes,
+      optionalInitialStaffMinutes = maybeStaffMinutes,
+      airportConfig = props.airportConfig,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      simulate = props.simulator,
+      crunchPeriodStartMillis = props.crunchPeriodStartMillis,
+      minutesToCrunch = props.minutesToCrunch
     )
 
     val crunchSystem = Crunch2(

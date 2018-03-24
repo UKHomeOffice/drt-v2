@@ -18,7 +18,8 @@ import scala.language.postfixOps
 
 case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
 
-class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
+class ArrivalSplitsGraphStage(name: String = "",
+                              optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
@@ -38,7 +39,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
     var manifestsBuffer: Map[Int, Set[VoyageManifest]] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       optionalInitialFlights match {
@@ -194,7 +195,7 @@ class ArrivalSplitsGraphStage(optionalInitialFlights: Option[FlightsWithSplits],
         .map { case (fws, _) => (fws.apiFlight.uniqueId, fws) }
         .toMap
 
-log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
+      log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
 
       uniqueFlights
     }
@@ -274,11 +275,13 @@ log.info(s"${uniqueFlights.size} flights after removing expired and accounting f
     }
 
     def pushStateIfReady(): Unit = {
-      if (isAvailable(outArrivalsWithSplits) && arrivalsWithSplitsDiff.nonEmpty) {
-        log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits")
-        push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq))
-        arrivalsWithSplitsDiff = Set()
-      } else log.info(s"No updated arrivals with splits to push")
+      if (isAvailable(outArrivalsWithSplits)) {
+        if (arrivalsWithSplitsDiff.nonEmpty) {
+          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits")
+          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq))
+          arrivalsWithSplitsDiff = Set()
+        } else log.info(s"No updated arrivals with splits to push")
+      } else log.info(s"outArrivalsWithSplits not available to push: $arrivalsWithSplitsDiff")
     }
 
     def updateFlightWithManifests(manifests: Set[VoyageManifest], f: ApiFlightWithSplits): ApiFlightWithSplits = {

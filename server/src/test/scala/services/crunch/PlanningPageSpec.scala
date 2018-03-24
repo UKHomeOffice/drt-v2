@@ -3,7 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared.{CrunchApi, Queues}
-import services.SDate
+import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
 import scala.concurrent.duration._
@@ -29,12 +29,10 @@ class PlanningPageSpec() extends CrunchTestLike {
       airportConfig = airportConfig.copy(
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      minutesToCrunch = 1440,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(weekBeginning)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(weekBeginning)).addDays(3),
       initialShifts =
         """shift a,T1,02/01/17,00:00,23:59,20
-        """.stripMargin
+        """.stripMargin,
+      cruncher = TryRenjin.crunch
     )
 
     offerAndWait(crunch.baseArrivalsInput, forecastFlights)

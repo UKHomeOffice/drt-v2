@@ -96,12 +96,21 @@ object Crunch2 {
           baseArrivals ~> arrivals.in0
           fcstArrivals ~> arrivals.in1
           liveArrivals ~> arrivals.in2
+
           manifests.out.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
           shifts ~> staff.in0
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out ~> arrivalsFanOut
+          arrivals.out.conflate[ArrivalsDiff] {
+            case (diffSoFar, diffNew) =>
+              log.warn(s"Conflating arrivals diffs\n$diffSoFar\n$diffNew")
+              val toUpdate = diffNew.toUpdate.foldLeft(diffSoFar.toUpdate.map(f => (f.uniqueId, f)).toMap) {
+                case (soFar, arrival) => soFar.updated(arrival.uniqueId, arrival)
+              }.values.toSet
+              val toRemove = diffNew.toRemove ++ diffSoFar.toRemove
+              ArrivalsDiff(toUpdate, toRemove)
+          } ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
           arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> liveSinkFlightRemovals
@@ -140,15 +149,25 @@ object Crunch2 {
     RunnableGraph.fromGraph(graph)
   }
 
+  def mergeFlightSets(flightsSoFar: Seq[Arrival], nextFlights: Seq[Arrival]): Flights = {
+    val soFarById = flightsSoFar.map(f => (f.uniqueId, f)).toMap
+    val merged = nextFlights
+      .foldLeft(soFarById) {
+        case (soFar, newFlight) => soFar.updated(newFlight.uniqueId, newFlight)
+      }
+      .values
+    Flights(merged.toSeq)
+  }
+
   def liveDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis(now)))
 
   def liveSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute < tomorrowStartMillis(now)))
 
+  def liveFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis(now)))
+
   def forecastDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
 
   def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
-
-  def liveFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime < tomorrowStartMillis(now)))
 
   def forecastFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis(now)))
 

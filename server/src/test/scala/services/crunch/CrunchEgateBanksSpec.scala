@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import services.SDate
+import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
@@ -49,8 +49,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
             Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
         ),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+        cruncher = TryRenjin.crunch
       )
 
       offerAndWait(crunch.liveArrivalsInput, flights)

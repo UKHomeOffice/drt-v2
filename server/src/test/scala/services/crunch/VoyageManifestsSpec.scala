@@ -42,9 +42,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30))
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
@@ -96,10 +94,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           nonVisaNationalToDesk -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifestsCi)
     offerAndWait(crunch.manifestsInput, inputManifestsDc)
@@ -151,10 +146,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
@@ -200,10 +192,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
@@ -254,10 +243,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           visaNationalToDesk -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)

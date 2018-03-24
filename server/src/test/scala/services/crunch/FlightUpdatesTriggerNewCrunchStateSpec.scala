@@ -39,10 +39,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
     offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
@@ -78,10 +75,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
     offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)

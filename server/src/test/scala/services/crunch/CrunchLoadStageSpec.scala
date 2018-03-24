@@ -19,14 +19,20 @@ object TestableCrunchLoadStage {
     Try(OptimizerCrunchResult(minDesks.toIndexedSeq, Seq.fill(wl.length)(config.sla)))
   }
 
+  def mockSimulator(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
+    Seq.fill(workloads.length)(config.sla)
+  }
+
   def apply(testProbe: TestProbe, now: () => SDateLike, airportConfig: AirportConfig, minutesToCrunch: Int): RunnableGraph[SourceQueueWithComplete[Loads]] = {
-    val crunchLoadStage = new CrunchLoadGraphStage(optionalInitialCrunchMinutes = None,
+    val crunchLoadStage = new CrunchLoadGraphStage(
+      name = "",
+      optionalInitialCrunchMinutes = None,
       airportConfig = airportConfig,
       expireAfterMillis = oneDayMillis,
       now = now,
-      mockCrunch,
-      Crunch.getLocalLastMidnight,
-      minutesToCrunch)
+      crunch = mockCrunch,
+      crunchPeriodStartMillis = Crunch.getLocalLastMidnight,
+      minutesToCrunch = minutesToCrunch)
 
     val loadSource = Source.queue[Loads](1, OverflowStrategy.backpressure)
 

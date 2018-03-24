@@ -14,7 +14,8 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
+class CrunchLoadGraphStage(name: String = "",
+                           optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
@@ -33,7 +34,7 @@ class CrunchLoadGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
     var existingDeskRecMinutes: Map[Int, DeskRecMinute] = Map()
     var deskRecMinutesToPush: Map[Int, DeskRecMinute] = Map()
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       loadMinutes = optionalInitialCrunchMinutes match {

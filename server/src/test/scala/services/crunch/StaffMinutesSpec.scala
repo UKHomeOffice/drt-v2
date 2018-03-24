@@ -28,8 +28,6 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => crunchStart,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
       initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,1
           |shift b,T1,01/01/17,00:15,00:29,2
@@ -67,8 +65,6 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => crunchStart,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
       initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,0
           |shift b,T1,01/01/17,00:15,00:29,2
@@ -78,6 +74,8 @@ class StaffMinutesSpec extends CrunchTestLike {
           |roaming officers b,T1,01/01/17,00:15,00:29,2
         """.stripMargin
     )
+
+    crunch.liveTestProbe.receiveOne(5 seconds)
 
     offerAndWait(crunch.liveArrivalsInput, flights)
 

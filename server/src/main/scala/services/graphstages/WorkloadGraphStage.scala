@@ -11,7 +11,8 @@ import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
-class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
+class WorkloadGraphStage(name: String = "",
+                         optionalInitialLoads: Option[Loads],
                          optionalInitialFlightsWithSplits: Option[FlightsWithSplits],
                          airportConfig: AirportConfig,
                          natProcTimes: Map[String, Double],
@@ -32,7 +33,7 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
     var loadMinutes: Set[LoadMinute] = Set()
     var loadsToPush: Map[Int, LoadMinute] = Map()
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       loadMinutes = optionalInitialLoads match {

@@ -76,10 +76,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
       offerAndWait(crunch.baseArrivalsInput, aclFlight)
 
@@ -107,10 +104,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
       offerAndWait(crunch.baseArrivalsInput, aclFlights)
       offerAndWait(crunch.liveArrivalsInput, liveFlights)
@@ -144,10 +138,7 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialBaseArrivals = initialACL,
-        initialLiveArrivals = initialLive,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-      )
+        initialLiveArrivals = initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
       offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
@@ -180,10 +171,7 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialBaseArrivals = initialAcl,
-        initialLiveArrivals = initialLive,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-      )
+        initialLiveArrivals = initialLive)
 
       offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
@@ -216,10 +204,7 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialBaseArrivals = initialAcl,
-        initialLiveArrivals = initialLive,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-      )
+        initialLiveArrivals = initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
 

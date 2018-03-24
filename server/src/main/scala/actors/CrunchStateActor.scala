@@ -24,29 +24,30 @@ class CrunchStateActor(val snapshotInterval: Int,
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
+  def logInfo(msg: String): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
 
   var state: Option[PortState] = None
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
-      log.info(s"Recovery: received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
+      logInfo(s"Recovery: received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
       setStateFromSnapshot(snapshot)
 
     case cdm: CrunchDiffMessage =>
-      log.info(s"Recovery: received CrunchDiffMessage")
+      logInfo(s"Recovery: received CrunchDiffMessage")
       val newState = stateFromDiff(cdm, state)
       logRecoveryState(newState)
       state = newState
 
     case RecoveryCompleted =>
-      log.info("Recovery: Finished restoring crunch state")
+      logInfo("Recovery: Finished restoring crunch state")
 
     case u =>
-      log.info(s"Recovery: received unexpected ${u.getClass}")
+      logInfo(s"Recovery: received unexpected ${u.getClass}")
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
-    case None => log.info(s"Recovery: state is None")
+    case None => logInfo(s"Recovery: state is None")
     case Some(s) =>
       val apiCount = s.flights.count {
         case (_, f) => f.splits.exists {
@@ -54,7 +55,7 @@ class CrunchStateActor(val snapshotInterval: Int,
           case _ => false
         }
       }
-      log.info(s"Recovery: state contains ${s.flights.size} flights " +
+      logInfo(s"Recovery: state contains ${s.flights.size} flights " +
         s"with $apiCount Api splits " +
         s", ${s.crunchMinutes.size} crunch minutes " +
         s", ${s.staffMinutes.size} staff minutes ")
@@ -62,7 +63,7 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   override def receiveCommand: Receive = {
     case flightRemovals: FlightRemovals =>
-      log.info(s"Got ${flightRemovals.idsToRemove.size} flight removals")
+      logInfo(s"Got ${flightRemovals.idsToRemove.size} flight removals")
       val updatedState = state match {
         case None => PortState(Map(), Map(), Map())
         case Some(portState) => updatePortState(flightRemovals, portState)
@@ -70,7 +71,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       updateStateFromPortState(updatedState)
 
     case flightUpdates: FlightsWithSplits =>
-      log.info(s"Got ${flightUpdates.flights.size} updated flights")
+      logInfo(s"Got ${flightUpdates.flights.size} updated flights")
       val updatedState = state match {
         case None => newPortState(flightUpdates)
         case Some(portState) => updatePortState(flightUpdates, portState)
@@ -78,7 +79,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       updateStateFromPortState(updatedState)
 
     case drms: DeskRecMinutes =>
-      log.info(s"Got ${drms.minutes.size} updated desk rec minutes")
+      logInfo(s"Got ${drms.minutes.size} updated desk rec minutes")
       val updatedState = state match {
         case None => newPortState(drms)
         case Some(portState) => updatePortState(drms, portState)
@@ -86,7 +87,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       updateStateFromPortState(updatedState)
 
     case sims: SimulationMinutes =>
-      log.info(s"Got ${sims.minutes.size} updated simulation minutes")
+      logInfo(s"Got ${sims.minutes.size} updated simulation minutes")
       val updatedState = state match {
         case None => newPortState(sims)
         case Some(portState) => updatePortState(sims, portState)
@@ -94,7 +95,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       updateStateFromPortState(updatedState)
 
     case sms: StaffMinutes =>
-      log.info(s"Got ${sms.minutes.size} updated staff minutes")
+      logInfo(s"Got ${sms.minutes.size} updated staff minutes")
       val updatedState = state match {
         case None => newPortState(sms)
         case Some(portState) => updatePortState(sms, portState)
@@ -108,11 +109,11 @@ class CrunchStateActor(val snapshotInterval: Int,
 //      }
 
     case cs: PortState =>
-      log.info(s"Received PortState. storing")
+      logInfo(s"Received PortState. storing")
       updateStateFromPortState(cs)
 
     case GetState =>
-      log.info(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
+      logInfo(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
       sender() ! state
 
     case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
@@ -135,7 +136,7 @@ class CrunchStateActor(val snapshotInterval: Int,
             val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
             val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(1L)).max else 0L
             val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
-            log.info(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
+            logInfo(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
             Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
           } else None
         case None => None
@@ -143,13 +144,13 @@ class CrunchStateActor(val snapshotInterval: Int,
       sender() ! updates
 
     case SaveSnapshotSuccess(md) =>
-      log.info(s"Snapshot success $md")
+      logInfo(s"Snapshot success $md")
 
     case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Snapshot failed $md\n$cause")
+      logInfo(s"Snapshot failed $md\n$cause")
 
     case DeleteSnapshotsSuccess(_) =>
-      log.info(s"Purged snapshots")
+      logInfo(s"Purged snapshots")
 
     case u =>
       log.warn(s"Received unexpected message $u")
@@ -252,36 +253,36 @@ class CrunchStateActor(val snapshotInterval: Int,
   def setStateFromSnapshot(snapshot: Any, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshot match {
       case sm: CrunchStateSnapshotMessage =>
-        log.info(s"Using snapshot to restore")
+        logInfo(s"Using snapshot to restore")
         state = Option(snapshotMessageToState(sm, timeWindowEnd))
       case somethingElse =>
-        log.info(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
+        logInfo(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
     }
   }
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
-    log.info(s"Unpacking CrunchDiffMessage")
+    logInfo(s"Unpacking CrunchDiffMessage")
     val diff = crunchDiffFromMessage(cdm)
-    log.info(s"Unpacked CrunchDiffMessage - " +
+    logInfo(s"Unpacked CrunchDiffMessage - " +
       s"${diff.crunchMinuteUpdates.size} crunch minute updates, " +
       s"${diff.staffMinuteUpdates.size} staff minute updates, " +
       s"${diff.flightRemovals.size} flight removals, " +
       s"${diff.flightUpdates.size} flight updates")
     val newState = existingState match {
       case None =>
-        log.info(s"Creating an empty PortState to apply CrunchDiff")
+        logInfo(s"Creating an empty PortState to apply CrunchDiff")
         Option(PortState(
           flights = applyFlightsWithSplitsDiff(diff, Map()),
           crunchMinutes = applyCrunchDiff(diff, Map()),
           staffMinutes = applyStaffDiff(diff, Map())
         ))
       case Some(ps) =>
-        log.info(s"Applying CrunchDiff to PortState")
+        logInfo(s"Applying CrunchDiff to PortState")
         val newPortState = PortState(
           flights = applyFlightsWithSplitsDiff(diff, ps.flights),
           crunchMinutes = applyCrunchDiff(diff, ps.crunchMinutes),
           staffMinutes = applyStaffDiff(diff, ps.staffMinutes))
-        log.info(s"Finished applying CrunchDiff to PortState: ${newPortState.flights.size} flights, ${newPortState.staffMinutes.size} staff minutes, ${newPortState.crunchMinutes.size} crunch minutes")
+        logInfo(s"Finished applying CrunchDiff to PortState: ${newPortState.flights.size} flights, ${newPortState.staffMinutes.size} staff minutes, ${newPortState.crunchMinutes.size} crunch minutes")
         Option(newPortState)
     }
     newState
@@ -297,7 +298,7 @@ class CrunchStateActor(val snapshotInterval: Int,
   def updateStateFromPortState(newState: PortState): Unit = {
     val existingState = state match {
       case None =>
-        log.info(s"updating from no existing state")
+        logInfo(s"updating from no existing state")
         PortState(Map(), Map(), Map())
       case Some(s) => s
     }
@@ -322,23 +323,25 @@ class CrunchStateActor(val snapshotInterval: Int,
     val filteredStaffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
     val filteredCrunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis)
 
+//    println(s"existing staffminutes: ${existingState.staffMinutes}")
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
       crunchMinutes = filteredCrunchMinutes,
       staffMinutes = filteredStaffMinutes
     )
+//    println(s"updated staffminutes: ${updatedState.staffMinutes}")
 
     persist(diffToPersist) { (diff: CrunchDiffMessage) =>
-      log.info(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
+      logInfo(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
 
       context.system.eventStream.publish(diff)
       if (diff.crunchMinutesToUpdate.length > 20000 || (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0)) {
         val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(updatedState)
-        log.info(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
+        logInfo(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
         saveSnapshot(snapshotMessage)
         if (purgePreviousSnapshots) {
           val maxSequenceNr = lastSequenceNr
-          log.info(s"Purging snapshots with sequence number < $maxSequenceNr")
+          logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
           deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
         }
       }
@@ -379,7 +382,7 @@ class CrunchStateActor(val snapshotInterval: Int,
   )
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortState = {
-    log.info(s"Unwrapping flights messages")
+    logInfo(s"Unwrapping flights messages")
     val flights = optionalTimeWindowEnd match {
       case None =>
         sm.flightWithSplits.map(fwsm => {
@@ -395,7 +398,7 @@ class CrunchStateActor(val snapshotInterval: Int,
         }.toMap
     }
 
-    log.info(s"Unwrapping minutes messages")
+    logInfo(s"Unwrapping minutes messages")
     val crunchMinutes = sm.crunchMinutes.map(cmm => {
       val cm = crunchMinuteFromMessage(cmm)
       (cm.key, cm)
@@ -404,7 +407,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       val sm = staffMinuteFromMessage(cmm)
       (sm.key, sm)
     }).toMap
-    log.info(s"Finished unwrapping messages")
+    logInfo(s"Finished unwrapping messages")
     PortState(flights, crunchMinutes, staffMinutes)
   }
 

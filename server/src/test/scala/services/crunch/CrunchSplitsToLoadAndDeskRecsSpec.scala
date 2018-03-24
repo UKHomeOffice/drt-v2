@@ -43,11 +43,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           defaultProcessingTimes = Map("T1" -> Map(
             eeaMachineReadableToDesk -> 20d / 60,
             eeaMachineReadableToEGate -> 35d / 60))
-        ),
-
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        ))
 
       offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -76,12 +72,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled2, iata = "SA123", terminal = "T1", actPax = 1)
       ))
 
-      val crunch = runCrunchGraph(
-        now = () => SDate(scheduled),
-        airportConfig = airportConfig,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+      val crunch = runCrunchGraph(now = () => SDate(scheduled))
 
       offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -121,11 +112,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               SplitRatio(eeaNonMachineReadableToDesk, 0.5)
             )
           )
-        ),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
-
+        ))
       offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(
@@ -159,8 +146,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.25)
@@ -195,8 +180,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.25)
@@ -238,8 +221,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.5)

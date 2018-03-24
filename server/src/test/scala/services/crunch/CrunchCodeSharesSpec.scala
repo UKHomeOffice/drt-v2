@@ -34,10 +34,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
 
       offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -67,10 +64,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
 
       offerAndWait(crunch.liveArrivalsInput, flights)
 

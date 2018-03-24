@@ -176,7 +176,9 @@ trait SystemActors {
     splitsPredictorStage = splitsPredictorStage,
     manifestsSource = voyageManifestsStage,
     voyageManifestsActor = voyageManifestsActor,
-    crunchPeriodStartMillis = (s: SDateLike) => Crunch.getLocalLastMidnight(s)
+    crunchPeriodStartMillis = (s: SDateLike) => Crunch.getLocalLastMidnight(s),
+    cruncher = TryRenjin.crunch,
+    simulator = TryRenjin.runSimulationOfWork
   ))
   shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
   fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))

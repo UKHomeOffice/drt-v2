@@ -14,6 +14,7 @@ import scala.concurrent.duration._
 class ForecastCrunchSpec extends CrunchTestLike {
   sequential
   isolated
+  stopOnFail
 
   "Given a live flight and a base flight arriving 3 days later " +
     "When I ask for pax loads " +
@@ -27,11 +28,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.apiFlight(schDt = base, iata = "BA0001", terminal = "T1", actPax = 21)
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(scheduled),
-      minutesToCrunch = 1440,
-      crunchStartDateProvider = (s: SDateLike) => getLocalLastMidnight(s),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(base)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(scheduled))
 
     offerAndWait(crunch.liveArrivalsInput, liveFlights)
     offerAndWait(crunch.baseArrivalsInput, baseFlights)
@@ -54,23 +51,21 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val base = "2017-01-04T00:00Z"
 
-    val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
+    val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "EZ0001", terminal = "T1", actPax = 21)
     val liveFlights = Flights(List(liveArrival))
-    val baseArrival = ArrivalGenerator.apiFlight(schDt = base, iata = "BA0001", terminal = "T1", actPax = 21)
+    val baseArrival = ArrivalGenerator.apiFlight(schDt = base, iata = "EZ0001", terminal = "T1", actPax = 21)
     val baseFlights = Flights(List(baseArrival))
 
     val firstMinute = SDate(base)
     val crunch = runCrunchGraph(
+      logLabel = "tricky",
       now = () => SDate(scheduled),
-      minutesToCrunch = 1440,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(firstMinute).addMinutes(30),
       initialShifts =
-        """shift a,T1,04/01/17,00:00,00:14,1
-          |shift b,T1,04/01/17,00:15,00:29,2
-        """.stripMargin)
+        """shift easy,T1,04/01/17,00:00,00:14,1
+          |shift difficult,T1,04/01/17,00:15,00:29,2
+        """.stripMargin
+    )
 
-    Thread.sleep(1000) // let staffing get through the system
     offerAndWait(crunch.liveArrivalsInput, liveFlights)
     offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
@@ -80,7 +75,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
+        println(s"crunch minutes at 1483488000000: ${cms.values.find(_.minute == 1483488000000L)}")
         val deployedStaff = interestingDeployments(cms)
+        println(s"deployedStaff: $deployedStaff")
         deployedStaff == expected
     }
 
@@ -101,10 +98,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 //
 //    val crunch = runCrunchGraph(
 //      now = () => SDate(scheduled),
-//      minutesToCrunch = 1440,
 //      warmUpMinutes = 120,
-//      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-//      crunchEndDateProvider = (_) => SDate("2017-01-04T00:30Z"),
 //      initialShifts =
 //        """shift a,T1,04/01/17,00:00,00:14,1
 //          |shift b,T1,04/01/17,00:15,00:29,2
@@ -141,11 +135,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.apiFlight(schDt = base, iata = "BA0001", terminal = "T1", actPax = 20)
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(scheduled),
-      minutesToCrunch = 1440,
-      crunchStartDateProvider = (s: SDateLike) => getLocalLastMidnight(s),
-      crunchEndDateProvider = (maxPcpTime: SDateLike) => getLocalNextMidnight(maxPcpTime))
+    val crunch = runCrunchGraph(now = () => SDate(scheduled))
 
     val forecastStaffNumber = 5
 
@@ -177,10 +167,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.apiFlight(schDt = baseScheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(today),
-      crunchStartDateProvider = (s: SDateLike) => getLocalLastMidnight(s),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(today))
 
     offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
@@ -204,10 +191,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrival = ArrivalGenerator.apiFlight(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val forecastArrivals = Flights(List(forecastArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(forecastScheduled),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(forecastScheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(forecastScheduled)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(forecastScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
     crunch.forecastTestProbe.expectNoMsg(1 seconds)
@@ -227,10 +211,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(baseScheduled).addDays(-1),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
     offerAndWait(crunch.baseArrivalsInput, baseArrivals)
@@ -258,10 +239,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(baseScheduled).addDays(-1),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
     offerAndWait(crunch.baseArrivalsInput, baseArrivals)
@@ -292,10 +270,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrivals = Flights(List(forecastArrival))
     val liveArrivals = Flights(List(liveArrival))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(baseScheduled).addDays(-1),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.baseArrivalsInput, baseArrivals)
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
@@ -327,13 +302,12 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrivals1st = Flights(List(forecastArrival1))
     val forecastArrivals2nd = Flights(List(forecastArrival2))
 
-    val crunch = runCrunchGraph(
-      now = () => SDate(baseScheduled).addDays(-1),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(baseScheduled)).addMinutes(30))
+    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    crunch.forecastTestProbe.receiveOne(2 seconds)
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)
+    crunch.forecastTestProbe.receiveOne(2 seconds)
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals2nd)
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {

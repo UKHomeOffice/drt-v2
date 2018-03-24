@@ -14,12 +14,13 @@ import scala.collection.immutable.{Map, NumericRange}
 import scala.language.postfixOps
 
 
-class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
+class SimulationGraphStage(name: String = "",
+                           optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            optionalInitialStaffMinutes: Option[StaffMinutes],
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
-                           simulate: Simulate,
+                           simulate: Simulator,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
                            minutesToCrunch: Int)
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
@@ -36,7 +37,7 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
     var simulationMinutes: Map[Int, SimulationMinute] = Map()
     var simulationMinutesToPush: Map[Int, SimulationMinute] = Map()
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       loadMinutes = optionalInitialCrunchMinutes match {
@@ -61,13 +62,13 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
         val incomingLoads = grab(inLoads)
-        log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
+        log.info(s"Received ${incomingLoads.loadMinutes.size} loads: $incomingLoads")
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = Crunch.purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
-        val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
+        val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
         updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
 
@@ -81,8 +82,10 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
       override def onPush(): Unit = {
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
 
+        log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
+
         val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute))).keys
-        log.info(s"Days affected by incoming staff: ${changedDays.map(_.toLocalDateTimeString()).toSeq.sortBy(identity).mkString(", ")}")
+        log.info(s"Days affected by incoming staff: ${changedDays.toSeq.sortBy(_.millisSinceEpoch).map(_.toLocalDateTimeString()).mkString(", ")}")
 
         staffMinutes = updateStaffMinutes(staffMinutes, incomingStaffMinutes)
 
@@ -93,6 +96,14 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
 
         pushStateIfReady()
 
+        pullAll()
+      }
+    })
+
+    setHandler(outSimulationMinutes, new OutHandler {
+      override def onPull(): Unit = {
+        log.debug(s"outSimulationMinutes onPull called")
+        pushStateIfReady()
         pullAll()
       }
     })
@@ -264,14 +275,6 @@ class SimulationGraphStage(optionalInitialCrunchMinutes: Option[CrunchMinutes],
           soFar.updated(load.uniqueId, load)
       }
     }
-
-    setHandler(outSimulationMinutes, new OutHandler {
-      override def onPull(): Unit = {
-        log.debug(s"outSimulationMinutes onPull called")
-        pushStateIfReady()
-        pullAll()
-      }
-    })
 
     def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {
