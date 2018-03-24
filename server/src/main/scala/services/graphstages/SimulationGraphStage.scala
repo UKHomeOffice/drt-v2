@@ -62,7 +62,7 @@ class SimulationGraphStage(name: String = "",
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
         val incomingLoads = grab(inLoads)
-        log.info(s"Received ${incomingLoads.loadMinutes.size} loads: $incomingLoads")
+        log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = Crunch.purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
