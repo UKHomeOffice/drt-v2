@@ -9,5 +9,5 @@ node -v
 echo what npm v
 npm -v
 
-export SBT_OPTS="-Xms8G -Xmx8G -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -Xss10M -Duser.timezone=UTC"
+export SBT_OPTS="-Xms8G -Xmx8G -Duser.timezone=UTC"
 sbt clean test release

@@ -134,7 +134,6 @@ class StaffGraphStage(name: String = "",
       val minutes = date.getMinutes()
       hours * 60 + minutes
     })
-    log.info(s"fpMinutesOfDayToUpdate: $fpMinutesOfDayToUpdate from\n$maybeFixedPoints")
     val firstMinute = Crunch.getLocalLastMidnight(now())
 
     val set = (0 until numberOfDays)
@@ -146,11 +145,8 @@ class StaffGraphStage(name: String = "",
             val date = firstMinute
               .addDays(d)
               .addMinutes(m)
-            log.info(s"date: $date")
-            date
-              .millisSinceEpoch
-          }
-          )
+            date.millisSinceEpoch
+          })
       ).toSet
     set
   }

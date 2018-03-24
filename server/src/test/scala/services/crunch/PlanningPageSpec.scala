@@ -14,7 +14,7 @@ class PlanningPageSpec() extends CrunchTestLike {
 
   import CrunchApi._
 
-  "Given a forecast arriving on 2017-01-02T00:00Z with 5 pax and on 2017-01-03T00:00Z with 20 staff on shift and 1 max desk" +
+  "Given a forecast arriving on 2017-01-02T00:00Z with 5 pax and on 2017-01-03T00:00Z with 20 staff on shift and 1 max desk " +
     "When I ask for 1 day of forecast on 2017-01-02T00:00Z " +
     "Then I should see the actual staff numbers in the forecast" >> {
 
@@ -29,11 +29,14 @@ class PlanningPageSpec() extends CrunchTestLike {
       airportConfig = airportConfig.copy(
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
+      minutesToCrunch = 60,
       initialShifts =
         """shift a,T1,02/01/17,00:00,23:59,20
         """.stripMargin,
       cruncher = TryRenjin.crunch
     )
+
+    crunch.forecastTestProbe.receiveOne(5 seconds)
 
     offerAndWait(crunch.baseArrivalsInput, forecastFlights)
 

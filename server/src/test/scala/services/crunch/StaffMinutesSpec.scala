@@ -61,22 +61,22 @@ class StaffMinutesSpec extends CrunchTestLike {
     ))
 
     val crunchStart = SDate(scheduled)
+    val initialShifts =
+      """shift a,T1,01/01/17,00:00,00:14,0
+        |shift b,T1,01/01/17,00:15,00:29,2
+      """.stripMargin
+    val initialFixedPoints =
+      """egate monitors a,T1,01/01/17,00:00,00:14,2
+        |roaming officers b,T1,01/01/17,00:15,00:29,2
+      """.stripMargin
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
-      now = () => crunchStart,
-      initialShifts =
-        """shift a,T1,01/01/17,00:00,00:14,0
-          |shift b,T1,01/01/17,00:15,00:29,2
-        """.stripMargin,
-      initialFixedPoints =
-        """egate monitors a,T1,01/01/17,00:00,00:14,2
-          |roaming officers b,T1,01/01/17,00:15,00:29,2
-        """.stripMargin
+      now = () => crunchStart
     )
 
-    crunch.liveTestProbe.receiveOne(5 seconds)
-
+    offerAndWait(crunch.liveShiftsInput, initialShifts)
+    offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
     offerAndWait(crunch.liveArrivalsInput, flights)
 
     val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
@@ -84,7 +84,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(30)
         val staff = minutesInOrder.map(_.available)
         val staffMillis = minutesInOrder.map(_.minute)
 

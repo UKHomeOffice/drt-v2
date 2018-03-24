@@ -324,7 +324,8 @@ class CrunchTestLike
     Await.result(sourceQueue.offer(offering), 5 seconds) match {
       case offerResult if offerResult != Enqueued =>
         throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
-      case offerResult => offerResult
+      case offerResult =>
+        offerResult
     }
   }
 }
