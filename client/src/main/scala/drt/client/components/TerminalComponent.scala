@@ -68,7 +68,8 @@ object TerminalComponent {
             model.timeRangeHours,
             props.router,
             model.showActuals,
-            model.viewMode
+            model.viewMode,
+            model.userRoles
           )
 
           val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""

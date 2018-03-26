@@ -28,7 +28,8 @@ object TerminalStaffing {
                     potShifts: Pot[String],
                     potFixedPoints: Pot[String],
                     potStaffMovements: Pot[Seq[StaffMovement]],
-                    airportConfig: AirportConfig
+                    airportConfig: AirportConfig,
+                    roles: Pot[List[String]]
                   )
 
   def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate) = {
@@ -47,7 +48,7 @@ object TerminalStaffing {
               val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
               <.div(
                 <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName))),
+                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.roles))),
                   <.div(^.className := "col-md-3", movementsEditor(todaysMovements(movements, DateRange.start, DateRange.end), props.terminalName))
                 ),
                 <.div(^.className := "container",
@@ -105,7 +106,10 @@ object TerminalStaffing {
       )
     }
 
-    case class FixedPointsProps(rawFixedPoints: String, airportConfig: AirportConfig, terminalName: TerminalName)
+    case class FixedPointsProps(rawFixedPoints: String,
+                                airportConfig: AirportConfig,
+                                terminalName: TerminalName,
+                                roles: Pot[List[String]])
 
     case class FixedPointsState(rawFixedPoints: String)
 
@@ -126,19 +130,25 @@ object TerminalStaffing {
 
           <.div(
             <.h2("Fixed Points"),
-            <.p("One entry per line with values separated by commas, e.g.:"),
-
-            <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
-            <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
-            ^.onChange ==> ((e: ReactEventFromInput) => {
-              val newRawFixedPoints = e.target.value
-              scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
-            }),
-            <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
-              val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
-              Callback(SPACircuit.dispatch(SaveFixedPoints(withTerminalName, props.terminalName)))
-            }))
-          )
+            props.roles.render(r => {
+              if (r.contains("staff:edit")) {
+                <.div(
+                  <.p("One entry per line with values separated by commas, e.g.:"),
+                  <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
+                  <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
+                  ^.onChange ==> ((e: ReactEventFromInput) => {
+                    val newRawFixedPoints = e.target.value
+                    scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
+                  }),
+                  <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
+                    val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
+                    Callback(SPACircuit.dispatch(SaveFixedPoints(withTerminalName, props.terminalName)))
+                  }))
+                )
+              } else
+                <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
+            }
+            ))
         }).build
 
       def apply(props: FixedPointsProps) = component(props)
@@ -175,7 +185,7 @@ object TerminalStaffing {
     }
   }
 
-  def   apply(props: Props): VdomElement = component(props)
+  def apply(props: Props): VdomElement = component(props)
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
@@ -196,4 +206,5 @@ object TerminalStaffing {
       f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
     }
   }
+
 }
