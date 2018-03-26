@@ -7,13 +7,13 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{CurrentWindow, SPACircuit, TimeRangeHours, ViewMode}
+import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
@@ -60,7 +60,7 @@ object TerminalContentComponent {
     }
   }
 
-  case class State(activeTab: String)
+  case class State(activeTab: String, showExportDialogue: Boolean = false)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
@@ -141,7 +141,8 @@ object TerminalContentComponent {
           ),
           <.div(^.className := "exports",
             <.a("Export Arrivals", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank"),
-            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank")
+            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank"),
+            MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
           )
         ),
         <.div(^.className := "tab-content",
@@ -179,7 +180,8 @@ object TerminalContentComponent {
               log.info(s"Rendering staffing $state")
               TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal, props.potShifts, props.potFixedPoints, props.potStaffMovements, props.airportConfig))
             } else ""
-          )))
+          ))
+      )
     }
   }
 
