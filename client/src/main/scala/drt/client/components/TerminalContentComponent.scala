@@ -34,7 +34,8 @@ object TerminalContentComponent {
                     timeRangeHours: TimeRangeHours,
                     router: RouterCtl[Loc],
                     showActuals: Boolean,
-                    viewMode: ViewMode
+                    viewMode: ViewMode,
+                    roles: Pot[List[String]]
                   ) {
     lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]], Int, Int) = {
       val depsHash = crunchStatePot.map(
@@ -177,7 +178,14 @@ object TerminalContentComponent {
           <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
             if (state.activeTab == "staffing") {
               log.info(s"Rendering staffing $state")
-              TerminalStaffing(TerminalStaffing.Props(props.terminalPageTab.terminal, props.potShifts, props.potFixedPoints, props.potStaffMovements, props.airportConfig))
+              TerminalStaffing(TerminalStaffing.Props(
+                props.terminalPageTab.terminal,
+                props.potShifts,
+                props.potFixedPoints,
+                props.potStaffMovements,
+                props.airportConfig,
+                props.roles
+              ))
             } else ""
           )))
     }
