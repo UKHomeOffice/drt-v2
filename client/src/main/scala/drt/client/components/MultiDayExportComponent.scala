@@ -67,11 +67,9 @@ object MultiDayExportComponent {
               <.div(
                 ^.className := "modal-body",
                 DateSelector("From", today, d => {
-                  log.info(s"From: Got this date from callback: $d")
                   scope.modState(_.copy(startDay = d.getDate(), startMonth = d.getMonth(), startYear = d.getFullYear()))
                 }),
                 DateSelector("To", today, d => {
-                  log.info(s"To: Got this date from callback: $d")
                   scope.modState(_.copy(endDay = d.getDate(), endMonth = d.getMonth(), endYear = d.getFullYear()))
                 }),
                 <.div(
