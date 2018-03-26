@@ -13,7 +13,9 @@ import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
 
+import scala.collection.immutable
 import scala.language.postfixOps
+import scala.util.Success
 
 class CrunchStateActor(val snapshotInterval: Int,
                        name: String,
@@ -24,6 +26,7 @@ class CrunchStateActor(val snapshotInterval: Int,
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
+
   def logInfo(msg: String): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
 
   var state: Option[PortState] = None
@@ -102,11 +105,11 @@ class CrunchStateActor(val snapshotInterval: Int,
       }
       updateStateFromPortState(updatedState)
 
-//    case actDesks: ActualDeskStats =>
-//      state = state match {
-//        case None => Option(newPortState(sms))
-//        case Some(portState) => Option(updatePortState(sms, portState))
-//      }
+    case actDesks: ActualDeskStats =>
+      state = state match {
+        case None => None
+        case Some(portState) => Option(updatePortState(actDesks, portState))
+      }
 
     case cs: PortState =>
       logInfo(s"Received PortState. storing")
@@ -156,19 +159,9 @@ class CrunchStateActor(val snapshotInterval: Int,
       log.warn(s"Received unexpected message $u")
   }
 
-  def updatePortState(sms: StaffMinutes, portState: PortState): PortState = {
-    val updatedSms = sms.minutes.foldLeft(portState.staffMinutes) {
-      case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm)
-    }
-    val updatedPortState = portState.copy(staffMinutes = updatedSms)
-    updatedPortState
-  }
-
-  def newPortState(sms: StaffMinutes): PortState = {
-    PortState(Map(), Map(), sms.minutes.map(cm => (cm.key, cm)).toMap)
-  }
-
   def newPortState(flightUpdates: FlightsWithSplits): PortState = PortState(flightUpdates.flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
+
+  def newPortState(sms: StaffMinutes): PortState = PortState(Map(), Map(), sms.minutes.map(cm => (cm.key, cm)).toMap)
 
   def newPortState(drms: DeskRecMinutes): PortState = PortState(Map(), newCrunchMinutes(drms), Map())
 
@@ -186,6 +179,14 @@ class CrunchStateActor(val snapshotInterval: Int,
     portState.copy(flights = updatedFlights)
   }
 
+  def updatePortState(sms: StaffMinutes, portState: PortState): PortState = {
+    val updatedSms = sms.minutes.foldLeft(portState.staffMinutes) {
+      case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm)
+    }
+    val updatedPortState = portState.copy(staffMinutes = updatedSms)
+    updatedPortState
+  }
+
   def updatePortState(drms: DeskRecMinutes, portState: PortState): PortState = {
     val updatedCms = updateCrunchMinutes(drms, portState.crunchMinutes)
     portState.copy(crunchMinutes = updatedCms)
@@ -193,6 +194,11 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   def updatePortState(sims: SimulationMinutes, portState: PortState): PortState = {
     val updatedCms = updateCrunchMinutes(sims, portState.crunchMinutes)
+    portState.copy(crunchMinutes = updatedCms)
+  }
+
+  def updatePortState(actDesks: ActualDeskStats, portState: PortState): PortState = {
+    val updatedCms = updateCrunchMinutes(actDesks, portState.crunchMinutes)
     portState.copy(crunchMinutes = updatedCms)
   }
 
@@ -225,6 +231,32 @@ class CrunchStateActor(val snapshotInterval: Int,
         val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
         soFar.updated(updatedDrm.key, mergedCm)
     }
+
+  def updateCrunchMinutes(actDesks: ActualDeskStats, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
+    val updatedCrunchMinutes = actDesks
+      .desks
+      .flatMap {
+        case (tn, terminalActDesks) => terminalActDesks.flatMap {
+          case (qn, queueActDesks) => crunchMinutesWithActDesks(queueActDesks, crunchMinutes, qn, tn)
+        }
+      }
+
+    updatedCrunchMinutes.foldLeft(crunchMinutes) {
+      case (soFar, updatedCm) => soFar.updated(updatedCm.key, updatedCm)
+    }
+  }
+
+  def crunchMinutesWithActDesks(queueActDesks: Map[MillisSinceEpoch, DeskStat], crunchMinutes: Map[Int, CrunchMinute], terminalName: TerminalName, queueName: QueueName): immutable.Iterable[CrunchMinute] = {
+    queueActDesks
+      .map {
+        case (millis, deskStat) =>
+          crunchMinutes.values.find(cm => cm.minute == millis && cm.queueName == queueName && cm.terminalName == terminalName).map(cm =>
+            cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime))
+      }
+      .collect {
+        case Some(cm) => cm
+      }
+  }
 
   def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
     .map(existingCm => existingCm.copy(paxLoad = updatedDrm.paxLoad, workLoad = updatedDrm.workLoad, deskRec = updatedDrm.deskRec, waitTime = updatedDrm.waitTime))
@@ -323,13 +355,13 @@ class CrunchStateActor(val snapshotInterval: Int,
     val filteredStaffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
     val filteredCrunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis)
 
-//    println(s"existing staffminutes: ${existingState.staffMinutes}")
+    //    println(s"existing staffminutes: ${existingState.staffMinutes}")
     val updatedState = existingState.copy(
       flights = flightsFromDiff,
       crunchMinutes = filteredCrunchMinutes,
       staffMinutes = filteredStaffMinutes
     )
-//    println(s"updated staffminutes: ${updatedState.staffMinutes}")
+    //    println(s"updated staffminutes: ${updatedState.staffMinutes}")
 
     persist(diffToPersist) { (diff: CrunchDiffMessage) =>
       logInfo(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")

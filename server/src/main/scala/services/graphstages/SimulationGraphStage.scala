@@ -173,7 +173,8 @@ class SimulationGraphStage(name: String = "",
           minuteMillis
             .grouped(15)
             .flatMap(slotMillis => {
-              val queueWl = airportConfig.queues(tn).map(qn => {
+              val queuesWithoutTransfer = airportConfig.queues(tn).filterNot(_ == Queues.Transfer)
+              val queueWl = queuesWithoutTransfer.map(qn => {
                 (qn, slotMillis.map(milli => workload.getOrElse(tn, Map()).getOrElse(qn, Map()).getOrElse(milli, 0d)).sum)
               })
               val queueMm: Map[QueueName, (Int, Int)] = minMaxDesks.getOrElse(tn, Map()).mapValues(_.getOrElse(slotMillis.min, (0, 0)))
