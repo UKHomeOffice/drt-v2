@@ -14,32 +14,24 @@ class StaffMinutesSpec extends CrunchTestLike {
   sequential
   isolated
 
-  "Given a flight with one passenger, and a shift that covers the pcp time " +
+  "Given two consecutive shifts " +
     "When I ask for the PortState " +
-    "Then I should see the staff available for the duration of the triggered crunch" >> {
-    val scheduled = "2017-01-01T00:00Z"
-
-    val flights = Flights(List(
-      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1)
-    ))
-
-    val crunchStart = SDate(scheduled)
+    "Then I should see the staff available for the duration of the shifts" >> {
+    val shiftStart = SDate("2017-01-01T00:00Z")
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
-      now = () => crunchStart,
+      now = () => shiftStart,
       initialShifts =
         """shift a,T1,01/01/17,00:00,00:14,1
           |shift b,T1,01/01/17,00:15,00:29,2
         """.stripMargin
     )
 
-    offerAndWait(crunch.liveArrivalsInput, flights)
-
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
-    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
+    val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(5 seconds) {
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.shifts)
@@ -54,16 +46,10 @@ class StaffMinutesSpec extends CrunchTestLike {
   "Given a flight with one passenger, zero staff from shifts and 2 fixed points " +
     "When I ask for the PortState " +
     "Then I should see zero staff available rather than a negative number" >> {
-    val scheduled = "2017-01-01T00:00Z"
-
-    val flights = Flights(List(
-      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1)
-    ))
-
-    val crunchStart = SDate(scheduled)
+    val shiftStart = SDate("2017-01-01T00:00Z")
     val initialShifts =
-      """shift a,T1,01/01/17,00:00,00:14,0
-        |shift b,T1,01/01/17,00:15,00:29,2
+      """shift a,T1,01/01/17,00:00,00:04,0
+        |shift b,T1,01/01/17,00:05,00:09,2
       """.stripMargin
     val initialFixedPoints =
       """egate monitors a,T1,01/01/17,00:00,00:14,2
@@ -72,23 +58,24 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
-      now = () => crunchStart
+      now = () => shiftStart
     )
 
     offerAndWait(crunch.liveShiftsInput, initialShifts)
     offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
-    offerAndWait(crunch.liveArrivalsInput, flights)
 
-    val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
-    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
+    val expectedAvailable = List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2)
+    val firstMilli = shiftStart.millisSinceEpoch
+    val lastMilli = shiftStart.millisSinceEpoch + 9 * Crunch.oneMinuteMillis
+    val expectedMillis = (firstMilli to lastMilli by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
-        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(30)
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
         val staff = minutesInOrder.map(_.available)
         val staffMillis = minutesInOrder.map(_.minute)
 
-        (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
+        (staffMillis, staff) == Tuple2(expectedMillis, expectedAvailable)
     }
 
     true
