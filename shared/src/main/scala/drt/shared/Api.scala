@@ -213,6 +213,8 @@ trait SDateLike {
 
   def getMinutes(): Int
 
+  def getUtcMillis(): MillisSinceEpoch
+
   def millisSinceEpoch: MillisSinceEpoch
 
   def toISOString(): String
@@ -327,6 +329,12 @@ object CrunchApi {
     lazy val available: Int = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
+    }
+    lazy val availableAtPcp: Int = {
+      shifts - fixedPoints + movements match {
+        case sa if sa >= 0 => sa
+        case _ => 0
+      }
     }
   }
 

@@ -71,6 +71,7 @@ class StaffGraphStage(name: String = "",
         movementsOption = Option(grab(inMovements))
         log.info(s"Grabbed available inMovements: $movementsOption")
         val minutesToUpdate = movementsOption.map(allMinuteMillis).getOrElse(Set())
+        log.info(s"minutesToUpdate: $minutesToUpdate")
         staffMinuteUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
         tryPush()
         pull(inMovements)
@@ -121,7 +122,7 @@ class StaffGraphStage(name: String = "",
           push(outStaffMinutes, StaffMinutes(staffMinuteUpdates))
           staffMinuteUpdates = Map()
         }
-      } else log.info(s"outStaffMinutes not available to push: $staffMinuteUpdates")
+      } else log.info(s"outStaffMinutes not available to push")
     }
 
   }

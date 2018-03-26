@@ -281,7 +281,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq))
           arrivalsWithSplitsDiff = Set()
         } else log.info(s"No updated arrivals with splits to push")
-      } else log.info(s"outArrivalsWithSplits not available to push: $arrivalsWithSplitsDiff")
+      } else log.info(s"outArrivalsWithSplits not available to push")
     }
 
     def updateFlightWithManifests(manifests: Set[VoyageManifest], f: ApiFlightWithSplits): ApiFlightWithSplits = {

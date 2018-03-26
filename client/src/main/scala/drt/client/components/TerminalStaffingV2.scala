@@ -101,17 +101,19 @@ object TerminalStaffingV2 {
     def timeSlotMinutes = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
-  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth =
-    StaffTimeSlotsForTerminalMonth(month.millisSinceEpoch, terminal, staffTimeSlotSeqToStaffTimeSlots(month, staff, terminal, slotMinutes))
+  def staffToStaffTimeSlotsForMonth(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int): StaffTimeSlotsForTerminalMonth = {
+    val timeSlots = staffTimeSlotSeqToStaffTimeSlots(month, staff, terminal, slotMinutes)
+    StaffTimeSlotsForTerminalMonth(month.millisSinceEpoch, terminal, timeSlots)
+  }
 
 
-  def staffTimeSlotSeqToStaffTimeSlots(month: SDateLike, staff: Seq[Seq[Int]], terminal: String, slotMinutes: Int) =
-    staff.zipWithIndex.flatMap {
-      case (days, timeSlotIndex) =>
-        days.zipWithIndex.collect {
+  def staffTimeSlotSeqToStaffTimeSlots(month: SDateLike, staffDays: Seq[Seq[Int]], terminal: String, slotMinutes: Int): Seq[StaffTimeSlot] =
+    staffDays.zipWithIndex.flatMap {
+      case (slotDaysStaff, timeSlotIndex) =>
+        slotDaysStaff.zipWithIndex.collect {
           case (staffInSlotForDay, dayIndex) if staffInSlotForDay != 0 =>
-            val slotStart = month.addDays(dayIndex).addMinutes(timeSlotIndex * slotMinutes)
-            StaffTimeSlot(terminal, slotStart.millisSinceEpoch, staffInSlotForDay, slotMinutes * 60000)
+            val slotStart = month.addDays(dayIndex).addMinutes(timeSlotIndex * slotMinutes).getUtcMillis()
+            StaffTimeSlot(terminal, slotStart, staffInSlotForDay, slotMinutes * 60000)
         }
 
     }.sortBy(_.start)
@@ -162,10 +164,10 @@ object TerminalStaffingV2 {
 
   def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[String, Int]): Seq[Seq[Int]] =
     staffTimeSlotDays.zipWithIndex.map {
-      case (days, timslotIndex) =>
+      case (days, timeslotIndex) =>
         days.zipWithIndex.map {
           case (staff, dayIndex) =>
-            changes.get(TimeSlotDay(timslotIndex, dayIndex).key) match {
+            changes.get(TimeSlotDay(timeslotIndex, dayIndex).key) match {
               case Some(s) => s
               case None => staff
             }
@@ -276,8 +278,9 @@ object TerminalStaffingV2 {
     import drt.client.services.JSDateConversions._
     val viewingDate = dateFromDateStringOption(props.terminalPageTab.date)
 
+    val terminalName = props.terminalPageTab.terminal
     val terminalShifts = StaffAssignmentParser(props.rawShiftString).parsedAssignments.toList.collect {
-      case Success(s) if s.terminalName == props.terminalPageTab.terminal => s
+      case Success(s) if s.terminalName == terminalName => s
     }
 
     val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(terminalShifts)
@@ -288,7 +291,10 @@ object TerminalStaffingV2 {
 
     val timeSlots = slotsInDay(viewingDate, props.timeSlotMinutes)
       .map(slot => {
-        daysInMonth.map(day => ss.terminalStaffAt(props.terminalPageTab.terminal, SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
+        daysInMonth.map(day => {
+          val slotDateTime = SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())
+          ss.terminalStaffAt(terminalName, slotDateTime)
+        })
       })
 
     State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime()), Map())

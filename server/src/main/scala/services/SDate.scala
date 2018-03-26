@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
@@ -38,6 +39,8 @@ object SDate {
     def addMillis(millisToAdd: Int): SDateLike = dateTime.plusMillis(millisToAdd)
 
     def millisSinceEpoch: Long = dateTime.getMillis
+
+    def getUtcMillis(): MillisSinceEpoch = dateTime.getMillis
 
     override def toISOString(): String = jodaSDateToIsoString(dateTime)
   }

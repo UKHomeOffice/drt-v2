@@ -168,7 +168,7 @@ class ArrivalsGraphStage(name: String = "",
             push(outArrivalsDiff, diff)
             toPush = None
         }
-      } else log.warn(s"outMerged not available to push: $arrivalsToPush")
+      } else log.info(s"outMerged not available to push")
     }
 
     def mergeArrivals(base: Set[Arrival], forecast: Set[Arrival], live: Set[Arrival]): Map[Int, Arrival] = {

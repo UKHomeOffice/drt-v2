@@ -1,10 +1,10 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate.JSSDate
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 
 import scala.language.implicitConversions
-import scala.scalajs.js
 import scala.scalajs.js.Date
 
 object JSDateConversions {
@@ -68,6 +68,8 @@ object JSDateConversions {
       override def toISOString(): String = date.toISOString()
 
       def getDayOfWeek(): Int = if (date.getDay() == 0) 7 else date.getDay()
+
+      def getUtcMillis(): MillisSinceEpoch = addMinutes(-1 * date.getTimezoneOffset()).millisSinceEpoch
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
