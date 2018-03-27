@@ -340,6 +340,20 @@ object CrunchApi {
     }
   }
 
+  case class SimulationMinute(terminalName: TerminalName,
+                              queueName: QueueName,
+                              minute: MillisSinceEpoch,
+                              desks: Int,
+                              waitTime: Int,
+                              lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+    def equals(candidate: SimulationMinute): Boolean =
+      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
+    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  }
+
+  case class SimulationMinutes(minutes: Set[SimulationMinute])
+
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
                           minute: MillisSinceEpoch,
