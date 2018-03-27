@@ -326,6 +326,12 @@ object CrunchApi {
       case sa if sa >= 0 => sa
       case _ => 0
     }
+    lazy val availableAtPcp: Int = {
+      shifts - fixedPoints + movements match {
+        case sa if sa >= 0 => sa
+        case _ => 0
+      }
+    }
   }
 
   object StaffMinute {
