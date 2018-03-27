@@ -9,10 +9,10 @@ import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.UUID
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Cancellable}
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaToken
+import drt.chroma.chromafetcher.ChromaFetcher.{AcsToken, ChromaLiveFlight}
 import drt.chroma.chromafetcher.ChromaParserProtocol
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
@@ -34,14 +34,23 @@ import spray.http.{FormData, GenericHttpCredentials}
 import spray.httpx.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
 import ChromaParserProtocol._
+import akka.NotUsed
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
+import drt.shared.Arrival
+import org.apache.http.message.BasicNameValuePair
+import spray.client.pipelining.addHeader
 
+import scala.collection.immutable.Seq
 import scala.concurrent.{Await, Future}
+import scala.util.Try
+import scala.xml.Node
 
 class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
   "PORT_CODE" -> "LGW",
   "feeds.gatwick.live.azure.name.id" -> "UKBF",
   "feeds.gatwick.live.azure.issuer" -> "UKBF",
-  "feeds.gatwick.live.azure.namespace" -> "www.gatwick.co.uk"
+  "feeds.gatwick.live.azure.namespace" -> "gatwick-data-hub-test"
 ).asJava))) with SpecificationLike {
 
   sequential
@@ -150,13 +159,12 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
     assertion
   }
 
-  val security = DefaultSecurityConfigurationBootstrap.buildDefaultConfig
+  //val security = DefaultSecurityConfigurationBootstrap.buildDefaultConfig
   def signAssertion(assertion: Assertion, privateKey: Array[Byte], certificate: Array[Byte]) {
     val signature = new SignatureBuilder().buildObject
     val signingCredential = CredentialsFactory.getSigningCredential(privateKey, certificate)
     signature.setSigningCredential(signingCredential)
-    val secConfig = security //Configuration.getGlobalSecurityConfiguration
-    println(s"secConfig $secConfig")
+    val secConfig = Configuration.getGlobalSecurityConfiguration
     SecurityHelper.prepareSignatureParams(signature, signingCredential, secConfig, null)
     assertion.setSignature(signature)
   }
@@ -166,16 +174,17 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
 
   "something" should {
     "do something" in {
-      //      DefaultBootstrap.bootstrap()
+      DefaultBootstrap.bootstrap()
 
-      val certfilpath = "idahoconnect.drt.homeoffice.gov.uk.cert"
+      val certfilpath = "/Users/ryan/Projects/DRT/idahoconnect.drt.homeoffice.gov.uk.cert"
+
       val certificateURI = FileSystems.getDefault.getPath(certfilpath)
 
       if (!certificateURI.toFile.canRead) {
         throw new Exception(s"Could not read Gatwick certificate file from $certfilpath")
       }
 
-      val privateKeyURI = FileSystems.getDefault.getPath("idahoconnect.drt.homeoffice.gov.uk.private-pkcs8.pem")
+      val privateKeyURI = FileSystems.getDefault.getPath("/Users/ryan/Projects/DRT/idahoconnect.drt.homeoffice.gov.uk.private-pkcs8.pem")
 
       if (!privateKeyURI.toFile.canRead) {
         throw new Exception(s"Could not read Gatwick private key file from /tmp/drt-lgw.pem")
@@ -210,33 +219,87 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       import spray.client.pipelining._
       import system.dispatcher
 
-      val logRequest: HttpRequest => HttpRequest = { r => println(r); r }
-      val logResponse: HttpResponse => HttpResponse = { r => println(r); r }
+      val logRequest: HttpRequest => HttpRequest = { r => println("log Request:",r); r }
+      val logResponse: HttpResponse => HttpResponse = { r => println("log Response", r.entity.data.asString); r }
 
       val tokenPostPipeline = (
         addHeader(Accept(MediaTypes.`application/json`))
-          ~> logRequest
+         // ~> logRequest
           ~> sendReceive
-        //~> unmarshal[ChromaToken]
+          //~> logResponse
+        ~> unmarshal[AcsToken]
         )
 
       val tokenPostResult = tokenPostPipeline(Post(tokenPostUri, paramsAsForm))
 
       import scala.concurrent.duration._
 
-      val tokenResult = Await.result(tokenPostResult, 10 seconds)
-      println(s"tokenResult $tokenResult")
+      val tokenResult: AcsToken = Await.result(tokenPostResult, 10 seconds)
+      println(s"tokenResult ${tokenResult.access_token}")
       val restApiTimeout = 30 //seconds
       //      val token = tokenResult.entity.data.asString
       val serviceBusUri = s"https://${azureServiceNamespace}.servicebus.windows.net/partners/${issuer}/to/messages/head?timeout=$restApiTimeout"
-      val wrapHeder = "WRAP access_token=\"" + tokenResult + "\""
+      val wrapHeder = "WRAP access_token=\"" + tokenResult.access_token + "\""
 
-      val sbResultFuture = (
-        Post(serviceBusUri)
-          ~> addHeader("Authorization", wrapHeder)
+      val toArrivals: HttpResponse  => Seq[Arrival] = { r =>
+        val is = new ByteArrayInputStream( r.entity.data.toByteArray)
+        val fromString = scala.xml.XML.load(is)
+        IOUtils.closeQuietly(is) // todo: needs to be in a Try / finally block!!
+        scala.xml.Utility.trimProper(fromString)
+        lazy val result  = fromString map nodeToArrival
+
+        def nodeToArrival = (n: Node) => new Arrival(
+          Operator = (n \ "Originator").head \ "@CompanyShortName" text,
+          Status = ((n \ "FlightLeg").head \ "LegData").head \ "OperationalStatus" text,
+          EstDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text ).equals("EST") ).map(n=>n text).getOrElse(""),
+          ActDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text ).equals("ACT") ).map(n=>n text).getOrElse(""),
+          EstChoxDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("OBN") && (n \ "@TimeType" text ).equals("EST") ).map(n=>n text).getOrElse(""),
+          ActChoxDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text ).equals("ACT") ).map(n=>n text).getOrElse(""),
+          Gate = (n \\ "PassengerGate").headOption.map(n=> n text).getOrElse(""),
+          Stand = (n \\ "ArrivalStand").headOption.map(n=> n text).getOrElse(""),
+          MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt).getOrElse(0),
+          ActPax = (n \\ "PaxCount").find(n => (n \"@Qualifier" text).equals("70A") && (n \ "@Class").isEmpty ).map(n=> (n text).toInt).getOrElse(0),
+          TranPax = (n \\ "PaxCount").find(n => (n \"@Qualifier" text).equals("TIP") && (n \ "@Class").isEmpty ).map(n=> (n text).toInt).getOrElse(0),
+          RunwayID = (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map( n => n \\ "Runway" text).getOrElse(""),
+          BaggageReclaimId = (n \\ "FIDSBagggeHallActive" text),
+          FlightID = Try(((n \\ "FlightNumber") text).toInt).getOrElse(0),
+          AirportID = (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map( n => n \\ "ArrivalAirport" text).getOrElse(""),
+          Terminal = (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map( n => n \\ "AircraftTerminal" text).getOrElse(""),
+          rawICAO  = (n \\ "AirlineICAO" text),
+          rawIATA = (n \\ "AirlineIATA" text),
+          Origin = (n \\ "DepartureAirport" text),
+          SchDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text ).equals("SCT") ).map(n=>n text).getOrElse(""),
+          Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text ).equals("SCT") ).map(n=> services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
+          PcpTime = 0,
+          LastKnownPax = None
+
         )
 
-      false
+        result
+      }
+
+      val resultPipeline = (
+         addHeader("Authorization", wrapHeder)
+          ~> sendReceive
+           //~> logResponse
+          ~> toArrivals
+      )
+
+      def sbResultFuture = resultPipeline(Post(serviceBusUri))
+
+
+      val ticker : Source[Try[Seq[Arrival]], Cancellable] = Source.tick(1 milliseconds, 10 seconds, NotUsed)
+        .map((_) => Try {
+          val result: Seq[Arrival] = Await.result(sbResultFuture, 30 seconds)
+          result
+        })
+
+      implicit val materializer = ActorMaterializer()
+      val result = Await.result(ticker.runForeach( e=> println(e.getOrElse("Failed"))), 10 minutes)
+
+      println(s"result: $result")
+
+      1 mustEqual(1)
 
     }
   }

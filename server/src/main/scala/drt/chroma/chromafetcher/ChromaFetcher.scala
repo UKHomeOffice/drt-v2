@@ -15,6 +15,8 @@ import scala.concurrent.{Await, Future}
 
 object ChromaFetcher {
 
+  case class AcsToken(token_type: String, access_token: String, expires_in: String, scope: String)
+
   case class ChromaToken(access_token: String, token_type: String, expires_in: Int)
 
   case class AzureToken(access_token: String, token_type: String, expires_in: String)
@@ -85,7 +87,7 @@ abstract case class ChromaFetcher(override val feedType: ChromaFeedType, implici
       val logRequest: HttpRequest => HttpRequest = { r => log.debug(r.toString); r }
 
       {
-        val resp = addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token))) ~>
+        val resp = addHeaders(Accept(MediaTypes.`application/xml`), Authorization(OAuth2BearerToken(token))) ~>
           logRequest ~>
           sendAndReceive ~>
           logResponse
