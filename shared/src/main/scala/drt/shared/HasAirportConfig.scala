@@ -232,6 +232,62 @@ object AirportConfigs {
       "Evening shift, A1, {date}, 17:00, 23:59, 17"
     )
   )
+  val lgw = AirportConfig(
+    portCode = "LGW",
+    queues = Map(
+      "N" -> Seq(EeaDesk, EGate, NonEeaDesk),
+      "S" -> Seq(EeaDesk, EGate, NonEeaDesk)
+    ),
+    slaByQueue = Map(
+      EeaDesk -> 25,
+      EGate -> 10,
+      NonEeaDesk -> 45
+    ),
+    terminalNames = Seq("N", "S"),
+    defaultWalkTimeMillis = Map("N" -> 180000L, "S" -> 180000L),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.85 * 0.55),
+      SplitRatio(eeaMachineReadableToEGate, 0.85 * 0.45),
+      SplitRatio(eeaNonMachineReadableToDesk, 0d),
+      SplitRatio(visaNationalToDesk, 0.06),
+      SplitRatio(nonVisaNationalToDesk, 0.09)
+    ),
+    defaultProcessingTimes = Map(
+      "N" -> Map(
+        eeaMachineReadableToDesk -> 23d / 60,
+        eeaMachineReadableToEGate -> 30d / 60,
+        eeaNonMachineReadableToDesk -> 55d / 60,
+        visaNationalToDesk -> 92d / 60,
+        nonVisaNationalToDesk -> 77d / 60
+      ),
+      "S" -> Map(
+        eeaMachineReadableToDesk -> 23d / 60,
+        eeaMachineReadableToEGate -> 30d / 60,
+        eeaNonMachineReadableToDesk -> 42d / 60,
+        visaNationalToDesk -> 99d / 60,
+        nonVisaNationalToDesk -> 81d / 60
+      )),
+    minMaxDesksByTerminalQueue = Map(
+      "N" -> Map(
+        "eGate" -> (List(0, 0, 0, 0, 0, 5, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10), List(15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
+        "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15))
+      ),
+      "S" -> Map(
+        "eGate" -> (List(0, 0, 0, 0, 0, 5, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10), List(25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(15, 15, 15, 15, 15, 15, 13, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
+        "nonEeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(10, 10, 10, 10, 10, 10, 12, 15, 15, 15, 15, 15, 15, 15, 15, 13, 13, 13, 13, 13, 13, 13, 13, 13))
+      )
+    ),
+    shiftExamples = Seq(
+      "Midnight shift, N, {date}, 00:00, 00:59, 10",
+      "Night shift, N, {date}, 01:00, 06:59, 4",
+      "Morning shift, N, {date}, 07:00, 13:59, 15",
+      "Afternoon shift, N, {date}, 14:00, 16:59, 10",
+      "Evening shift, N, {date}, 17:00, 23:59, 17"
+    )
+  )
   val stn = AirportConfig(
     portCode = "STN",
     queues = Map(
@@ -444,6 +500,6 @@ object AirportConfigs {
     "KNA" -> 83.8, "SOM" -> 90.6, "LCA" -> 89.3, "GRD" -> 105.9
   )
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lgw :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }

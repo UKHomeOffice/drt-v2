@@ -19,6 +19,7 @@ import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
+import drt.server.feeds.lgw.LGWFeed
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi._
@@ -217,6 +218,7 @@ trait SystemActors {
         }
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+      case "LGW" => LGWFeed()
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed.map(Flights)

@@ -15,7 +15,7 @@ import scala.concurrent.{Await, Future}
 
 object ChromaFetcher {
 
-  case class AcsToken(token_type: String, access_token: String, expires_in: String, scope: String)
+  case class GatwickAzureToken(token_type: String, access_token: String, expires_in: String, scope: String)
 
   case class ChromaToken(access_token: String, token_type: String, expires_in: Int)
 
