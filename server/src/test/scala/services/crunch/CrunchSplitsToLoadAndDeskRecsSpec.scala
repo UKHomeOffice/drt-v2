@@ -223,8 +223,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               SplitRatio(eeaMachineReadableToDesk, 1)
             )
           ),
-          crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-          crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
           csvSplitsProvider = (_, _) => None,
           initialFlightsWithSplits = Option(initialFlightsWithSplits)
         )

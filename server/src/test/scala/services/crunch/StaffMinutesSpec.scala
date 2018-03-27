@@ -169,12 +169,12 @@ class StaffMinutesSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         defaultPaxSplits = SplitRatios(
           SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.5),
-          SplitRatio(eeaMachineReadableToEGate, 0.5)
+          SplitRatio(eeaMachineReadableToDesk, 0.10),
+          SplitRatio(eeaMachineReadableToEGate, 0.90)
         ),
         defaultProcessingTimes = Map(
           "T1" -> Map(
-            eeaMachineReadableToDesk -> 60d / 60,
+            eeaMachineReadableToDesk -> 20d / 60,
             eeaMachineReadableToEGate -> 20d / 60
           )
         )
@@ -198,11 +198,12 @@ class StaffMinutesSpec extends CrunchTestLike {
       (Queues.EGate, shiftStart.addMinutes(3), 2),
       (Queues.EGate, shiftStart.addMinutes(4), 2))
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queueName)).take(10)
         val deployments = minutesInOrder.map(cm => (cm.queueName, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
 
+        println(s"deployments: $deployments")
         deployments == expectedCrunchDeployments
     }
 
