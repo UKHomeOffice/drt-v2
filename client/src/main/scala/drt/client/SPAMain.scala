@@ -6,6 +6,7 @@ import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalP
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
@@ -32,6 +33,10 @@ object SPAMain extends js.JSApp {
         case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(SDate(_)).getOrElse(SDate.now()))
         case _ => ViewLive()
       }
+    }
+
+    def dateFromUrlOrNow: SDateLike = {
+      date.map(s => SDate(s)).getOrElse(SDate.now())
     }
 
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)

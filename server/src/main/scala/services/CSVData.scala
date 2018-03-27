@@ -5,9 +5,15 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+
 object CSVData {
 
   val log = LoggerFactory.getLogger(getClass)
+  val lineEnding = "\n"
+
 
   def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]): String = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
@@ -24,7 +30,7 @@ object CSVData {
             ).mkString(",")
         )
       }
-    ).mkString("\n")
+    ).mkString(lineEnding)
 
     val totalPax = "Total Pax," + headlines
       .queueDayHeadlines
@@ -40,7 +46,7 @@ object CSVData {
       .map(hl => hl._2.toList.map(_.workload).sum)
       .mkString(",")
 
-    List(headings, totalPax, queues, totalWL).mkString("\n")
+    List(headings, totalPax, queues, totalWL).mkString(lineEnding)
   }
 
   def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String = {
@@ -69,26 +75,35 @@ object CSVData {
         row.map(col => {
           s"${col.available},${col.required},${col.available - col.required}"
         }).mkString(",")
-    }).mkString("\n")
+    }).mkString(lineEnding)
 
-    List(headings, data).mkString("\n")
+    List(headings, data).mkString(lineEnding)
   }
 
-  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): QueueName = {
+  def terminalCrunchMinutesToCsvDataHeadings(queues: Seq[QueueName]): String = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
       .filterNot(_ == Queues.Transfer)
     val queueHeadings = relevantQueues
       .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",")
-    val headingsLine1 = "," + queueHeadings +
+    val headingsLine1 = "Date,," + queueHeadings +
       ",Misc,PCP Staff,PCP Staff"
-    val headingsLine2 = "Start," + relevantQueues.flatMap(q => {
+    val headingsLine2 = ",Start," + relevantQueues.flatMap(q => {
       if (q == Queues.EGate) eGatesHeadings else colHeadings
     }).mkString(",") +
       ",Staff req,Avail,Req"
 
-    val lineEnding = "\n"
+
+    headingsLine1 + lineEnding + headingsLine2
+  }
+
+  def terminalCrunchMinutesToCsvDataWithHeadings(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String =
+
+    terminalCrunchMinutesToCsvDataHeadings(queues) + lineEnding + terminalCrunchMinutesToCsvData(cms, staffMinutes, terminalName, queues)
+
+
+  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String = {
 
     val crunchMilliMinutes = CrunchApi.terminalMinutesByMinute(cms, terminalName)
     val staffMilliMinutes = CrunchApi
@@ -129,19 +144,30 @@ object CSVData {
           val hoursAndMinutes = SDate(minute).toHoursAndMinutes()
           val queueFields = queueData.mkString(",")
           val pcpFields = staffData.mkString(",")
+          val dateString = SDate(minute).toISODateOnly
 
-          hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
+          dateString + "," + hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
       }
-    headingsLine1 + lineEnding + headingsLine2 + lineEnding +
-      crunchMinutes.mkString(lineEnding)
+
+    crunchMinutes.mkString(lineEnding)
   }
 
-  def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]): String = {
+  def flightsWithSplitsToCSVWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
+    flightsWithSplitsToCSVHeadings + lineEnding + flightsWithSplitsToCSV(flightsWithSplits)
+
+
+  def flightsWithSplitsToCSVHeadings: String = {
     val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
+
+    headings
+  }
+
+  def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]): String = {
+    val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
 
     val csvData = flightsWithSplits.sortBy(_.apiFlight.PcpTime).map(fws => {
 
@@ -165,9 +191,10 @@ object CSVData {
         queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
 
       flightCsvFields
-    }).map(_.mkString(",")).mkString("\n")
+    }).map(_.mkString(",")).mkString(lineEnding)
 
-    headings + "\n" + csvData
+
+    csvData
   }
 
   def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[QueueName, Int] =
@@ -184,5 +211,18 @@ object CSVData {
         s"$source $queueName"
       })
       .mkString(",")
+  }
+
+  def multiDayToSingleExport(exportDays: Seq[Future[Option[String]]]): Future[String] = {
+
+    Future.sequence(
+      exportDays.map(fd => fd.recoverWith {
+        case e =>
+          log.error(s"Failed to recover data for day ${e.getMessage}")
+          Future(None)
+      }
+      )).map(_.collect {
+      case Some(s) => s
+    }.mkString(lineEnding))
   }
 }

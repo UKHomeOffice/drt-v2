@@ -188,10 +188,7 @@ object CsvPassengerSplitsReader {
                              visaToNonEEA: Int,
                              transfers: Int,
                              dayOfWeek: String,
-                             month: String,
-                             port: String,
-                             terminal: String,
-                             originCountryCode: String
+                             month: String
                            )
 
   def flightPaxSplitsFromLines(flightPaxSplits: Seq[String]): Seq[FlightPaxSplit] = {
@@ -214,10 +211,7 @@ object CsvPassengerSplitsReader {
           splitRow(12).toInt,
           splitRow(13).toInt,
           splitRow(14),
-          splitRow(15),
-          splitRow(16),
-          splitRow(17),
-          splitRow(18)
+          splitRow(15)
         )) match {
         case Success(s) => Success(s)
         case Failure(f) =>

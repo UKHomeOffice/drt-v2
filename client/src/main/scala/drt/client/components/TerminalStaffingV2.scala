@@ -10,6 +10,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.window.confirm
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js
@@ -171,6 +172,24 @@ object TerminalStaffingV2 {
         }
     }
 
+
+  def whatDayChanged(startingSlots: Seq[Seq[Int]], updatedSlots: Seq[Seq[Int]]): Set[Int] =
+    toDaysWithIndexSet(updatedSlots)
+      .diff(toDaysWithIndexSet(startingSlots)).map { case (_, dayIndex) => dayIndex }
+
+  def toDaysWithIndexSet(updatedSlots: Seq[Seq[Int]]): Set[(Seq[Int], Int)] = {
+    updatedSlots
+      .transpose
+      .zipWithIndex
+      .toSet
+  }
+
+  def dateListToString(dates: List[String]): String = dates.map(_.toInt).sorted match {
+    case Nil => ""
+    case head :: Nil => head.toString
+    case dateList => dateList.dropRight(1).mkString(", ") + " and " + dateList.last
+  }
+
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
   implicit val propsReuse = Reusability.by((_: Props).rawShiftString.hashCode)
@@ -178,27 +197,29 @@ object TerminalStaffingV2 {
 
   val component = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(props => {
-      import drt.client.services.JSDateConversions._
-      val viewingDate = dateFromDateStringOption(props.terminalPageTab.date)
-
-      val terminalShifts = StaffAssignmentParser(props.rawShiftString).parsedAssignments.toList.collect {
-        case Success(s) if s.terminalName == props.terminalPageTab.terminal => s
-      }
-
-      val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(terminalShifts)
-
-      def firstDay = firstDayOfMonth(viewingDate)
-
-      def daysInMonth = consecutiveDaysInMonth(firstDay, lastDayOfMonth(firstDay))
-
-      val timeSlots = slotsInDay(viewingDate, props.timeSlotMinutes)
-        .map(slot => {
-          daysInMonth.map(day => ss.terminalStaffAt(props.terminalPageTab.terminal, SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
-        })
-
-      State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime()), Map())
+      stateFromProps(props)
     })
     .renderPS((scope, props, state) => {
+      def confirmAndSave(viewingDate: SDateLike) = (e: ReactEventFromInput) =>
+        Callback {
+
+          val initialTimeSlots = stateFromProps(props).timeSlots
+          val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
+
+          val updatedMonth = dateFromDateStringOption(props.terminalPageTab.date).getMonthString()
+          val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
+            .map(d => state.colHeadings(d)).toList
+
+          if (confirm(s"You have updated staff for ${dateListToString(changedDays)} ${updatedMonth} - do you want to save these changes?"))
+            SPACircuit.dispatch(
+              SaveMonthTimeSlotsToShifts(
+                staffToStaffTimeSlotsForMonth(
+                  viewingDate,
+                  updatedTimeSlots,
+                  props.terminalPageTab.terminal,
+                  props.timeSlotMinutes
+                )))
+        }
 
       val viewingDate = firstDayOfMonth(dateFromDateStringOption(props.terminalPageTab.date))
       <.div(
@@ -208,7 +229,7 @@ object TerminalStaffingV2 {
               <.div(<.label("Choose Month", ^.className := "text center")),
               <.div(drawSelect(
                 values = monthOptions.map(_.toISOString),
-                names = monthOptions.map(d => f"${d.getMonth()}%02d/${d.getFullYear()}"),
+                names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
                 defaultValue = viewingDate.toISOString,
                 callback = (e: ReactEventFromInput) =>
                   props.router.set(props.terminalPageTab.copy(date = Option(SDate(e.target.value).toISODateOnly)))
@@ -220,7 +241,12 @@ object TerminalStaffingV2 {
                 defaultValue = s"${props.timeSlotMinutes}",
                 callback = (e: ReactEventFromInput) =>
                   props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
-              ))
+              )),
+              <.div(
+                <.input.button(^.value := "Save Changes",
+                  ^.className := "btn btn-primary",
+                  ^.onClick ==> confirmAndSave(viewingDate)
+                ))
             ).toTagMod
           )
         ),
@@ -236,20 +262,7 @@ object TerminalStaffingV2 {
           <.div(^.className := "col-sm-1 no-gutters",
             <.input.button(^.value := "Save Changes",
               ^.className := "btn btn-primary",
-              ^.onClick ==> ((e: ReactEventFromInput) =>
-                Callback {
-
-                  val updatedTimeSlots = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
-
-                  SPACircuit.dispatch(
-                    SaveMonthTimeSlotsToShifts(
-                      staffToStaffTimeSlotsForMonth(
-                        viewingDate,
-                        updatedTimeSlots,
-                        props.terminalPageTab.terminal,
-                        props.timeSlotMinutes
-                      )))
-                })
+              ^.onClick ==> confirmAndSave(viewingDate)
             )
           )
         ))
@@ -258,6 +271,28 @@ object TerminalStaffingV2 {
     .componentDidUpdate(_ => Callback.log("Staff updated"))
     .componentDidMount(_ => Callback.log(s"Staff Mounted"))
     .build
+
+  def stateFromProps(props: Props) = {
+    import drt.client.services.JSDateConversions._
+    val viewingDate = dateFromDateStringOption(props.terminalPageTab.date)
+
+    val terminalShifts = StaffAssignmentParser(props.rawShiftString).parsedAssignments.toList.collect {
+      case Success(s) if s.terminalName == props.terminalPageTab.terminal => s
+    }
+
+    val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(terminalShifts)
+
+    def firstDay = firstDayOfMonth(viewingDate)
+
+    def daysInMonth = consecutiveDaysInMonth(firstDay, lastDayOfMonth(firstDay))
+
+    val timeSlots = slotsInDay(viewingDate, props.timeSlotMinutes)
+      .map(slot => {
+        daysInMonth.map(day => ss.terminalStaffAt(props.terminalPageTab.terminal, SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())))
+      })
+
+    State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime()), Map())
+  }
 
   def apply(rawShiftString: String, terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
   = component(Props(rawShiftString, terminalPageTab, router))

@@ -156,6 +156,13 @@ case class Arrival(
     }
   }
 
+  def voyageNumberPadded: String = {
+    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
+    ArrivalHelper.padTo4Digits(number.map(_._2).getOrElse("-"))
+  }
+
+  lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
+
   lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
 }
 
@@ -176,10 +183,17 @@ object Arrival {
   }
 }
 
+case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
+
+
 trait SDateLike {
 
   def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
 
+  val months = List(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  )
   /**
     * Days of the week 1 to 7 (Monday is 1)
     *
@@ -190,6 +204,8 @@ trait SDateLike {
   def getFullYear(): Int
 
   def getMonth(): Int
+
+  def getMonthString(): String = months(getMonth() - 1)
 
   def getDate(): Int
 
@@ -314,6 +330,14 @@ object CrunchApi {
 
   object StaffMinute {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
+  }
+
+  case class StaffMinutes(minutes: Seq[StaffMinute])
+
+  object StaffMinutes {
+    def apply(minutesByKey: Map[Int, StaffMinute]): StaffMinutes = {
+      StaffMinutes(minutesByKey.values.toSeq)
+    }
   }
 
   case class CrunchMinute(terminalName: TerminalName,
