@@ -6,14 +6,14 @@ import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
 object Crunch2 {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
