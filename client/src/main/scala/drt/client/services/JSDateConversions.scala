@@ -8,13 +8,13 @@ import scala.language.implicitConversions
 import scala.scalajs.js.Date
 
 object JSDateConversions {
-  implicit def jsDateToMillis(jsDate: Date): Long = jsDate.getTime().toLong
+  implicit def jsDateToMillis(jsDate: Date): MillisSinceEpoch = jsDate.getTime().toLong
 
   implicit def jsDateToMilliDate(jsDate: Date): MilliDate = MilliDate(jsDateToMillis(jsDate))
 
   implicit def jsSDateToMilliDate(jsSDate: SDateLike): MilliDate = MilliDate(jsSDate.millisSinceEpoch)
 
-  implicit def longToMilliDate(millis: Long): MilliDate = MilliDate(millis)
+  implicit def longToMilliDate(millis: MillisSinceEpoch): MilliDate = MilliDate(millis)
 
   implicit def milliDateToSDate(milliDate: MilliDate): SDateLike = SDate(milliDate)
 
@@ -63,7 +63,7 @@ object JSDateConversions {
         new Date(millisSinceEpoch + millisToAdd)
       }
 
-      def millisSinceEpoch: Long = date.getTime().toLong
+      def millisSinceEpoch: MillisSinceEpoch = date.getTime().toLong
 
       override def toISOString(): String = date.toISOString()
 
@@ -74,7 +74,7 @@ object JSDateConversions {
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
 
-    def apply(millis: Long): SDateLike = new Date(millis)
+    def apply(millis: MillisSinceEpoch): SDateLike = new Date(millis)
 
     /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component

@@ -15,7 +15,7 @@ object DeskAndPaxTypeCombinations {
   val nationalsDeskNonVisa = "Non-VISA"
 }
 
-case class MilliDate(millisSinceEpoch: Long) extends Ordered[MilliDate] {
+case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] {
   def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 }
 
@@ -137,8 +137,8 @@ case class Arrival(
                     rawIATA: String,
                     Origin: String,
                     SchDT: String,
-                    Scheduled: Long,
-                    PcpTime: Long,
+                    Scheduled: MillisSinceEpoch,
+                    PcpTime: MillisSinceEpoch,
                     LastKnownPax: Option[Int] = None) {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
@@ -257,8 +257,8 @@ object CrunchResult {
 
 
 case class CrunchResult(
-                         firstTimeMillis: Long,
-                         intervalMillis: Long,
+                         firstTimeMillis: MillisSinceEpoch,
+                         intervalMillis: MillisSinceEpoch,
                          recommendedDesks: IndexedSeq[Int],
                          waitTimes: Seq[Int])
 
@@ -295,7 +295,7 @@ object PassengerSplits {
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 
-case class ActualDeskStats(desks: Map[String, Map[String, Map[Long, DeskStat]]])
+case class ActualDeskStats(desks: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]])
 
 object CrunchApi {
   type MillisSinceEpoch = Long
