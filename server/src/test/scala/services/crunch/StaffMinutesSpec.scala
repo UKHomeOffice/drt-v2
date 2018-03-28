@@ -3,6 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
+import org.joda.time.DateTimeZone
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch.getLocalLastMidnight
@@ -40,7 +41,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.shifts)
@@ -82,13 +83,54 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
     val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.available)
         val staffMillis = minutesInOrder.map(_.minute)
 
-        (staffMillis, staff) === Tuple2(expectedMillis, expectedStaff)
+        (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
+    }
+
+    true
+  }
+
+  "Given a flight with one passenger, zero staff from shifts and 2 fixed points " +
+    "When I ask for the PortState " +
+    "Then I should see zero staff available rather than a negative number" >> {
+    skipped("Need to get this working")
+    val scheduled = "2017-07-01T00:00Z"
+
+    val flights = Flights(List(
+      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 1)
+    ))
+
+    val crunchStart = SDate(scheduled)
+
+    val crunch = runCrunchGraph(
+      now = () => crunchStart,
+      crunchStartDateProvider = (_) => getLocalLastMidnight(crunchStart),
+      crunchEndDateProvider = (_) => getLocalLastMidnight(crunchStart).addMinutes(30),
+      initialShifts =
+        """shift a,T1,01/07/17,01:00,01:14,0
+          |shift b,T1,01/07/17,01:15,01:29,2
+        """.stripMargin
+    )
+
+    offerAndWait(crunch.liveArrivalsInput, flights)
+
+    val expectedStaff = List.fill(15)(0) ++ List.fill(15)(2)
+    val expectedMillis = (crunchStart.millisSinceEpoch to (crunchStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
+
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState =>
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
+        val staff = minutesInOrder.map(_.available)
+        val staffMillis = minutesInOrder.map(_.minute)
+
+        println(s"staffMillis: $staffMillis")
+
+        (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
     }
 
     true

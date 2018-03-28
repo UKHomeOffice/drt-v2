@@ -82,5 +82,7 @@ object SDate {
 
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 
+  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int, dateTimeZone: DateTimeZone): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, dateTimeZone))
+
   def tryParseString(dateTime: String) = Try(apply(dateTime))
 }
