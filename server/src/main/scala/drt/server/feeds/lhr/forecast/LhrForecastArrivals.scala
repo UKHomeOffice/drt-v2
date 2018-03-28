@@ -39,7 +39,7 @@ object LhrForecastArrival {
   }
 
   def scheduled(fields: Seq[String]): SDateLike = {
-    SDate(scheduledStr(fields), DateTimeZone.forID("Europe/London"))
+    SDate(scheduledStr(fields))
   }
 
   def carrierCode(fields: Seq[String]): String = fields(5)
