@@ -12,6 +12,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, getLocalLastMidnight}
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
@@ -548,7 +549,7 @@ object StaffAssignment {
     Try {
       val startT = startTime.split(":").toVector
       val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
-      val startDt = SDate(y, m, d, startHour, startMinute)
+      val startDt = SDate(y = y, m = m, d = d, h = startHour, mm = startMinute, dateTimeZone = DateTimeZone.forID("Europe/London"))
       startDt
     }
   }

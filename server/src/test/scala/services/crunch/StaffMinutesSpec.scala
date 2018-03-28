@@ -167,10 +167,11 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
         terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
         defaultPaxSplits = SplitRatios(
           SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.10),
-          SplitRatio(eeaMachineReadableToEGate, 0.90)
+          SplitRatio(eeaMachineReadableToDesk, 0.25),
+          SplitRatio(eeaMachineReadableToEGate, 0.75)
         ),
         defaultProcessingTimes = Map(
           "T1" -> Map(
@@ -187,16 +188,16 @@ class StaffMinutesSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, Flights(Seq(flight)))
 
     val expectedCrunchDeployments = Set(
-      (Queues.EeaDesk, shiftStart.addMinutes(0), 6),
-      (Queues.EeaDesk, shiftStart.addMinutes(1), 6),
-      (Queues.EeaDesk, shiftStart.addMinutes(2), 6),
-      (Queues.EeaDesk, shiftStart.addMinutes(3), 6),
-      (Queues.EeaDesk, shiftStart.addMinutes(4), 6),
-      (Queues.EGate, shiftStart.addMinutes(0), 2),
-      (Queues.EGate, shiftStart.addMinutes(1), 2),
-      (Queues.EGate, shiftStart.addMinutes(2), 2),
-      (Queues.EGate, shiftStart.addMinutes(3), 2),
-      (Queues.EGate, shiftStart.addMinutes(4), 2))
+      (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
+      (Queues.EeaDesk, shiftStart.addMinutes(1), 2),
+      (Queues.EeaDesk, shiftStart.addMinutes(2), 2),
+      (Queues.EeaDesk, shiftStart.addMinutes(3), 2),
+      (Queues.EeaDesk, shiftStart.addMinutes(4), 2),
+      (Queues.EGate, shiftStart.addMinutes(0), 6),
+      (Queues.EGate, shiftStart.addMinutes(1), 6),
+      (Queues.EGate, shiftStart.addMinutes(2), 6),
+      (Queues.EGate, shiftStart.addMinutes(3), 6),
+      (Queues.EGate, shiftStart.addMinutes(4), 6))
 
     crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
