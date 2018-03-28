@@ -195,7 +195,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = paxLoadsFromPortState(ps, 5)
-            println(s"result: $resultSummary")
             resultSummary == expected
         }
 
@@ -220,7 +219,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               eeaMachineReadableToEGate -> 35d / 60)),
             defaultPaxSplits = SplitRatios(
               SplitSources.TerminalAverage,
-              SplitRatio(eeaMachineReadableToDesk, 1)
+              SplitRatio(eeaMachineReadableToDesk, 0.5),
+              SplitRatio(eeaMachineReadableToEGate, 0.5)
             )
           ),
           csvSplitsProvider = (_, _) => None,
@@ -235,7 +235,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = paxLoadsFromPortState(ps, 5)
-            println(s"Got $resultSummary")
             resultSummary == expected
         }
 

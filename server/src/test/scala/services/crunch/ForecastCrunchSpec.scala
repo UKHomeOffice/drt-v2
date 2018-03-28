@@ -5,7 +5,6 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.SDate
-import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
@@ -58,7 +57,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val firstMinute = SDate(base)
     val crunch = runCrunchGraph(
-      logLabel = "tricky",
+      airportConfig = airportConfig.copy(
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(Queues.EeaDesk))
+      ),
       now = () => SDate(scheduled),
       initialShifts =
         """shift easy,T1,04/01/17,00:00,00:14,1
@@ -75,9 +77,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
-        println(s"crunch minutes at 1483488000000: ${cms.values.find(_.minute == 1483488000000L)}")
         val deployedStaff = interestingDeployments(cms)
-        println(s"deployedStaff: $deployedStaff")
         deployedStaff == expected
     }
 
@@ -135,7 +135,13 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.apiFlight(schDt = base, iata = "BA0001", terminal = "T1", actPax = 20)
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(scheduled))
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(Queues.EeaDesk))
+      ),
+      now = () => SDate(scheduled)
+    )
 
     val forecastStaffNumber = 5
 

@@ -50,13 +50,12 @@ class ArrivalSplitsGraphStage(name: String = "",
               .map(flightWithSplits => {
                 val maybeOldSplits = flightWithSplits.splits.find(s => s.source == SplitSources.Historical)
                 val maybeNewSplits = splitsCalculator.historicalSplits(flightWithSplits.apiFlight)
-                val withUpdatedHistoricalSplits = if (maybeNewSplits.isDefined && maybeNewSplits != maybeOldSplits) {
-                  log.info(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
-                  updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)), maybeNewSplits.get)
+                val withUpdatedHistoricalSplits = if (maybeNewSplits != maybeOldSplits) {
+                  log.debug(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
+                  updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)), maybeNewSplits)
                 } else flightWithSplits
-                withUpdatedHistoricalSplits
+                Tuple2(flightWithSplits.apiFlight.uniqueId, withUpdatedHistoricalSplits)
               })
-              .map(f => Tuple2(f.apiFlight.uniqueId, f))
               .toMap)
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
@@ -153,12 +152,14 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
     }
 
-    def updateFlightWithHistoricalSplits(flightWithSplits: ApiFlightWithSplits, newHistorical: Set[ApiPaxTypeAndQueueCount]): ApiFlightWithSplits = {
-      val newSplits = ApiSplits(newHistorical, SplitSources.Historical, None, Percentage)
+    def updateFlightWithHistoricalSplits(flightWithSplits: ApiFlightWithSplits, maybeNewHistorical: Option[Set[ApiPaxTypeAndQueueCount]]): ApiFlightWithSplits = {
+      val newSplits = maybeNewHistorical.map(newHistorical =>
+        ApiSplits(newHistorical, SplitSources.Historical, None, Percentage)
+      ).toSet
       val updatedSplitsSet = flightWithSplits.splits.filterNot {
         case ApiSplits(_, SplitSources.Historical, _, _) => true
         case _ => false
-      } + newSplits
+      } ++ newSplits
 
       flightWithSplits.copy(splits = updatedSplitsSet)
     }
