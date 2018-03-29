@@ -3,10 +3,11 @@ package services
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonTimeZone
 
 class MidnightTimeZoneSpec extends Specification {
 
-  def asLocalTimeZone(localDateTimeString: String) = SDate(localDateTimeString, DateTimeZone.forID("Europe/London"))
+  def asLocalTimeZone(localDateTimeString: String) = SDate(localDateTimeString, europeLondonTimeZone)
 
   "When finding the last local midnight for UTC Date during BST" >> {
     "Given 11 AM UTC on October 23rd 2017 (During BST) we should get 2017-10-23T00:00:00+01:00 as last local midnight" >> {

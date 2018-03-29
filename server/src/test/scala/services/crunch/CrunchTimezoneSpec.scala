@@ -7,6 +7,7 @@ import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
 import services.SDate
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
@@ -18,7 +19,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
     "Given an SDateLike for a date outside BST" +
       "When I ask for a corresponding cunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
-      val now = SDate("2010-01-02T11:39", DateTimeZone.forID("Europe/London"))
+      val now = SDate("2010-01-02T11:39", europeLondonTimeZone)
 
       val result = getLocalLastMidnight(now).millisSinceEpoch
       val expected = SDate("2010-01-02T00:00").millisSinceEpoch
@@ -29,7 +30,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
     "Given an SDateLike for a date inside BST" +
       "When I ask for a corresponding cunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
-      val now = SDate("2010-07-02T11:39", DateTimeZone.forID("Europe/London"))
+      val now = SDate("2010-07-02T11:39", europeLondonTimeZone)
       val result: MillisSinceEpoch = getLocalLastMidnight(now).millisSinceEpoch
       val expected = SDate("2010-07-01T23:00").millisSinceEpoch
 

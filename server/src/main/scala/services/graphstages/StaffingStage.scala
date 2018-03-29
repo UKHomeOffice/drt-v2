@@ -14,7 +14,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, getLocalLastMidnight}
+import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone, getLocalLastMidnight}
 import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
 import services.{OptimizerConfig, SDate, TryRenjin}
 
@@ -549,7 +549,7 @@ object StaffAssignment {
     Try {
       val startT = startTime.split(":").toVector
       val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
-      val startDt = SDate(y = y, m = m, d = d, h = startHour, mm = startMinute, dateTimeZone = DateTimeZone.forID("Europe/London"))
+      val startDt = SDate(y = y, m = m, d = d, h = startHour, mm = startMinute, dateTimeZone = europeLondonTimeZone)
       startDt
     }
   }

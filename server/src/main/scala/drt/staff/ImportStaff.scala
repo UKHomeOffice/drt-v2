@@ -1,10 +1,9 @@
 package drt.staff
 
-import drt.shared.StaffTimeSlotsForTerminalMonth
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
-import services.SDate
 import services.SDate.implicits._
+import services.graphstages.Crunch.europeLondonTimeZone
 
 case class StaffShift(port_code: String, terminal: String, staff: String, shift_start: String)
 
@@ -20,7 +19,7 @@ object ImportStaff {
           case (shift, index) =>
             //The client deals in local time, and these shifts are sent to the client as strings with no timezone for now.
             //TODO: store shifts not as strings.
-            val shiftStartDate = new DateTime(shift.shift_start).withZone(DateTimeZone.forID("Europe/London"))
+            val shiftStartDate = new DateTime(shift.shift_start).withZone(europeLondonTimeZone)
             val shiftsEndDate = shiftStartDate.addMinutes(14)
 
             f"shift$index, ${shift.terminal}, ${shiftStartDate.ddMMyyString}, ${shiftStartDate.getHours()}%02d:${shiftStartDate.getMinutes()}%02d, ${shiftsEndDate.getHours()}%02d:${shiftsEndDate.getMinutes()}%02d, ${shift.staff}"

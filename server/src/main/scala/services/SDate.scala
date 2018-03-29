@@ -43,6 +43,8 @@ object SDate {
     def getUtcMillis(): MillisSinceEpoch = dateTime.getMillis
 
     override def toISOString(): String = jodaSDateToIsoString(dateTime)
+
+    def getZone(): String = dateTime.getZone.getID
   }
 
   object implicits {
@@ -73,6 +75,8 @@ object SDate {
   def apply(dateTime: SDateLike, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime.millisSinceEpoch, timeZone))
 
   def apply(millis: MillisSinceEpoch): SDateLike = JodaSDate(new DateTime(millis, DateTimeZone.UTC))
+
+  def apply(millis: MillisSinceEpoch, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(millis, timeZone))
 
   def apply(millis: MilliDate): SDateLike = JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))
 

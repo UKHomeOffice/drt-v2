@@ -4,6 +4,8 @@ import drt.shared.{Arrival, SDateLike}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.util.{Failure, Success, Try}
 
@@ -39,7 +41,7 @@ object LhrForecastArrival {
   }
 
   def scheduled(fields: Seq[String]): SDateLike = {
-    SDate(scheduledStr(fields), DateTimeZone.forID("Europe/London"))
+    SDate(scheduledStr(fields), europeLondonTimeZone)
   }
 
   def carrierCode(fields: Seq[String]): String = fields(5)
