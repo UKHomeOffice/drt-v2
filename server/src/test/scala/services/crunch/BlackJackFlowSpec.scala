@@ -38,6 +38,7 @@ skipped("")
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))),
       initialBaseArrivals = initialBaseArrivals
     )
@@ -83,6 +84,7 @@ skipped("")
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))),
       initialBaseArrivals = initialBaseArrivals
     )

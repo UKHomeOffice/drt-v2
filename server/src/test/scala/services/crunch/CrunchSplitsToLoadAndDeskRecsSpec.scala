@@ -99,6 +99,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
+          terminalNames = Seq("T1"),
           queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
           defaultProcessingTimes = Map("T1" -> Map(
             eeaMachineReadableToDesk -> 0.25,

@@ -114,6 +114,7 @@ object CrunchSystem {
       optionalInitialFixedPoints = Option(initialFixedPoints),
       optionalInitialMovements = Option(initialStaffMovements),
       now = props.now,
+      expireAfterMillis = props.expireAfterMillis,
       airportConfig = props.airportConfig,
       numberOfDays = props.maxDaysToCrunch)
 

@@ -95,7 +95,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         val vms = grab(inManifests)
 
         log.info(s"Grabbed ${vms.manifests.size} manifests")
-        val updatedFlights = updateFlightsWithManifests(vms.manifests, flightsByFlightId)
+        val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(vms.manifests, flightsByFlightId))
         log.info(s"We now have ${updatedFlights.size} arrivals")
         arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
         flightsByFlightId = updatedFlights
@@ -112,7 +112,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         val predictions = grab(inSplitsPredictions)
 
         log.info(s"Grabbed ${predictions.length} predictions")
-        val updatedFlights = addPredictions(predictions, flightsByFlightId)
+        val updatedFlights = purgeExpiredArrivals(addPredictions(predictions, flightsByFlightId))
         arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
         flightsByFlightId = updatedFlights
 

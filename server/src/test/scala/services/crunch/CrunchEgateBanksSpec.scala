@@ -35,6 +35,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
+          terminalNames = Seq("T1"),
+          queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
           defaultPaxSplits = SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),

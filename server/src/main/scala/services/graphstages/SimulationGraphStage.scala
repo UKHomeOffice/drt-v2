@@ -68,7 +68,7 @@ class SimulationGraphStage(name: String = "",
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
-        loadMinutes = Crunch.purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
         val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
@@ -90,7 +90,7 @@ class SimulationGraphStage(name: String = "",
         val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute))).keys
         log.info(s"Days affected by incoming staff: ${changedDays.toSeq.sortBy(_.millisSinceEpoch).map(_.toLocalDateTimeString()).mkString(", ")}")
 
-        staffMinutes = updateStaffMinutes(staffMinutes, incomingStaffMinutes)
+        staffMinutes = purgeExpired(updateStaffMinutes(staffMinutes, incomingStaffMinutes), (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
 
         changedDays.foreach(firstMinute => {
           val lastMinute = firstMinute.addDays(1)
@@ -119,10 +119,10 @@ class SimulationGraphStage(name: String = "",
 
       val diff = newSimulationMinutes -- existingSimulationMinutes
 
-      simulationMinutes = Crunch.purgeExpired(newSimulationMinutesByKey, (cm: SimulationMinute) => cm.minute, now, expireAfterMillis)
+      simulationMinutes = purgeExpired(newSimulationMinutesByKey, (sm: SimulationMinute) => sm.minute, now, expireAfterMillis)
 
       val mergedSimulationMinutesToPush = mergeSimulationMinutes(diff, simulationMinutesToPush)
-      simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, (cm: SimulationMinute) => cm.minute, now, expireAfterMillis)
+      simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, (sm: SimulationMinute) => sm.minute, now, expireAfterMillis)
       log.info(s"Now have ${simulationMinutesToPush.size} simulation minutes to push")
     }
 
@@ -171,11 +171,16 @@ class SimulationGraphStage(name: String = "",
       val deployments: Seq[(TerminalName, String, MillisSinceEpoch, Int)] = airportConfig.terminalNames
         .flatMap(tn => {
           minuteMillis
-            .grouped(15)
+            .sliding(15, 15)
             .flatMap(slotMillis => {
               val queuesWithoutTransfer = airportConfig.queues(tn).filterNot(_ == Queues.Transfer)
               val queueWl = queuesWithoutTransfer.map(qn => {
-                (qn, slotMillis.map(milli => workload.getOrElse(tn, Map()).getOrElse(qn, Map()).getOrElse(milli, 0d)).sum)
+                (qn, slotMillis.map(milli => {
+                  val workloadForMilli = workload.getOrElse(tn, Map()).getOrElse(qn, Map()).getOrElse(milli, 0d)
+                  val slaWeightedWorkload = workloadForMilli * (10d / Math.log(airportConfig.slaByQueue(qn)))
+                  val adjustedForEgates = if (qn == Queues.EGate) slaWeightedWorkload / airportConfig.eGateBankSize else slaWeightedWorkload
+                  adjustedForEgates
+                }).sum)
               })
               val queueMm: Map[QueueName, (Int, Int)] = minMaxDesks.getOrElse(tn, Map()).mapValues(_.getOrElse(slotMillis.min, (0, 0)))
               val available: Int = availableStaff.getOrElse(tn, Map()).getOrElse(slotMillis.min, 0)
@@ -236,12 +241,12 @@ class SimulationGraphStage(name: String = "",
         case (agg, (queue, deskRec)) if agg.length < queueRecsCorrected.length - 1 =>
           val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
           val totalRecommended = agg.map(_._2).sum
-          val dr = deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - totalRecommended)
+          val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, minMaxDesks.getOrElse(queue, (0, 10))._2, ideal, staffAvailable - totalRecommended)
           agg :+ Tuple2(queue, dr)
         case (agg, (queue, _)) =>
           val totalRecommended = agg.map(_._2).sum
           val ideal = staffAvailable - totalRecommended
-          val dr = deploymentWithinBounds(minMaxDesks(queue)._1, minMaxDesks(queue)._2, ideal, staffAvailable - totalRecommended)
+          val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, minMaxDesks.getOrElse(queue, (0, 10))._2, ideal, staffAvailable - totalRecommended)
           agg :+ Tuple2(queue, dr)
       }
     }

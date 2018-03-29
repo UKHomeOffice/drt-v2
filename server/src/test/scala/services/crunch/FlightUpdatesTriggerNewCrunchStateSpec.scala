@@ -38,6 +38,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 
@@ -74,6 +75,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 

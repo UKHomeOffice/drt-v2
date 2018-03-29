@@ -170,8 +170,8 @@ class StaffMinutesSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
         defaultPaxSplits = SplitRatios(
           SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.25),
-          SplitRatio(eeaMachineReadableToEGate, 0.75)
+          SplitRatio(eeaMachineReadableToDesk, 0.1),
+          SplitRatio(eeaMachineReadableToEGate, 0.9)
         ),
         defaultProcessingTimes = Map(
           "T1" -> Map(

@@ -39,7 +39,7 @@ class WorkloadGraphStage(name: String = "",
       loadMinutes = optionalInitialLoads match {
         case Some(Loads(lms)) =>
           log.info(s"Received ${lms.size} initial loads")
-          Crunch.purgeExpired(lms, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+          purgeExpired(lms, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
         case _ =>
           log.warn(s"Did not receive any loads to initialise with")
           Set()

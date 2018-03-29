@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
 import services.SDate
 
@@ -71,59 +71,61 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, liveFlights)
     offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
-    val expectedDeployments = List.fill(15)(Some(1)) ::: List.fill(15)(Some(2))
-    val minuteMillis = firstMinute.millisSinceEpoch to firstMinute.addMinutes(29).millisSinceEpoch by 60000
-    val expected = minuteMillis.zip(expectedDeployments).toMap
+    val shift1Millis = (firstMinute.millisSinceEpoch to firstMinute.addMinutes(14).millisSinceEpoch by 60000)
+      .map(m => (m, "T1", Queues.EeaDesk, Some(1)))
+    val shift2Millis = (firstMinute.addMinutes(15).millisSinceEpoch to firstMinute.addMinutes(29).millisSinceEpoch by 60000)
+      .map(m => (m, "T1", Queues.EeaDesk, Some(2)))
+    val expected = shift1Millis ++ shift2Millis
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
-        val deployedStaff = interestingDeployments(cms)
+        val deployedStaff = interestingDeployments(cms).take(30)
         deployedStaff == expected
     }
 
     true
   }
 
-//  "Given a flight with pcp times just before midnight " +
-//    "When I crunch  " +
-//    "Then I should see a wait time at midnight of one minute higher than the wait time at 23:59, ie the pax before midnight did not get forgotten " >> {
-//
-//    val scheduled = "2017-01-01T00:00Z"
-//    val beforeMidnight = "2017-01-03T23:55Z"
-//
-//    val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
-//    val liveFlights = Flights(List(liveArrival))
-//    val baseArrival = ArrivalGenerator.apiFlight(schDt = beforeMidnight, iata = "BA0001", terminal = "T1", actPax = 20)
-//    val baseFlights = Flights(List(baseArrival))
-//
-//    val crunch = runCrunchGraph(
-//      now = () => SDate(scheduled),
-//      warmUpMinutes = 120,
-//      initialShifts =
-//        """shift a,T1,04/01/17,00:00,00:14,1
-//          |shift b,T1,04/01/17,00:15,00:29,2
-//        """.stripMargin)
-//
-//    offerAndWait(crunch.liveArrivalsInput, liveFlights)
-//    offerAndWait(crunch.baseArrivalsInput, baseFlights)
-//
-//    crunch.forecastTestProbe.fishForMessage(10 seconds) {
-//      case ps: PortState =>
-//        val waitTimes: Seq[Int] = ps
-//          .crunchMinutes
-//          .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
-//          .map(_.waitTime)
-//
-//        val waitTimeOneMinuteBeforeMidnight = waitTimes.head
-//        val expected = waitTimeOneMinuteBeforeMidnight + 1
-//
-//        val waitTimeOneMinuteAtMidnight = waitTimes(1)
-//
-//        waitTimeOneMinuteAtMidnight == expected
-//    }
-//
-//    true
-//  }
+  //  "Given a flight with pcp times just before midnight " +
+  //    "When I crunch  " +
+  //    "Then I should see a wait time at midnight of one minute higher than the wait time at 23:59, ie the pax before midnight did not get forgotten " >> {
+  //
+  //    val scheduled = "2017-01-01T00:00Z"
+  //    val beforeMidnight = "2017-01-03T23:55Z"
+  //
+  //    val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
+  //    val liveFlights = Flights(List(liveArrival))
+  //    val baseArrival = ArrivalGenerator.apiFlight(schDt = beforeMidnight, iata = "BA0001", terminal = "T1", actPax = 20)
+  //    val baseFlights = Flights(List(baseArrival))
+  //
+  //    val crunch = runCrunchGraph(
+  //      now = () => SDate(scheduled),
+  //      warmUpMinutes = 120,
+  //      initialShifts =
+  //        """shift a,T1,04/01/17,00:00,00:14,1
+  //          |shift b,T1,04/01/17,00:15,00:29,2
+  //        """.stripMargin)
+  //
+  //    offerAndWait(crunch.liveArrivalsInput, liveFlights)
+  //    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+  //
+  //    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+  //      case ps: PortState =>
+  //        val waitTimes: Seq[Int] = ps
+  //          .crunchMinutes
+  //          .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
+  //          .map(_.waitTime)
+  //
+  //        val waitTimeOneMinuteBeforeMidnight = waitTimes.head
+  //        val expected = waitTimeOneMinuteBeforeMidnight + 1
+  //
+  //        val waitTimeOneMinuteAtMidnight = waitTimes(1)
+  //
+  //        waitTimeOneMinuteAtMidnight == expected
+  //    }
+  //
+  //    true
+  //  }
 
   "Given a live flight update after a base crunch & simulation, followed by a staffing change " +
     "When I look at the simulation numbers in the base port state for the day after the live flight update " +
@@ -333,7 +335,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
     cms.values.filter(cm => cm.paxLoad != 0).map(cm => (cm.minute, cm.paxLoad)).toMap
   }
 
-  def interestingDeployments(cms: Map[Int, CrunchApi.CrunchMinute]): Map[MillisSinceEpoch, Option[Int]] = {
-    cms.values.filter(cm => cm.deployedDesks.getOrElse(0) != 0).map(cm => (cm.minute, cm.deployedDesks)).toMap
+  def interestingDeployments(cms: Map[Int, CrunchApi.CrunchMinute]): scala.Seq[(MillisSinceEpoch, TerminalName, QueueName, Option[Int])] = {
+    cms.values
+      .filter(cm => cm.deployedDesks.getOrElse(0) != 0)
+      .toSeq
+      .sortBy(_.minute)
+      .map(cm => (cm.minute, cm.terminalName, cm.queueName, cm.deployedDesks))
   }
 }

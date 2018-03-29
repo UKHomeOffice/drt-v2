@@ -41,6 +41,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 
@@ -93,6 +94,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           nonVisaNationalToDesk -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ))
 
@@ -145,6 +147,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 
@@ -191,6 +194,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ))
 
@@ -242,6 +246,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ))
 

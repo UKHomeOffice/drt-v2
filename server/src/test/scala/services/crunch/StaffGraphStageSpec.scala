@@ -14,8 +14,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object TestableStaffGraphStage {
-  val oneDayMillis: Int = 60 * 60 * 24 * 1000
-
   def apply(testProbe: TestProbe,
             staffGraphStage: StaffGraphStage
            ): RunnableGraph[(SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]])] = {
@@ -46,12 +44,14 @@ object TestableStaffGraphStage {
 }
 
 class StaffGraphStageSpec extends CrunchTestLike {
+  val oneDayMillis: Int = 60 * 60 * 24 * 1000
+
   "Given a staff stage for 1 days " +
     "When I send some shifts " +
     "Then I should see all the minutes affected by the shifts" >> {
     val numDays = 1
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (sh, fp, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
     val movementUuid = UUID.randomUUID()
@@ -82,7 +82,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     "Then I should see all the minutes affected by the fixed points for 2 days" >> {
     val numDays = 2
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (_, fp, _) = TestableStaffGraphStage(probe, staffGraphStage).run
 
@@ -106,7 +106,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val date = "2017-01-01"
     val initialShifts = "shift a,T1,01/01/17,00:00,00:05,2"
     val initialFixedPoints = "roving officer a,T1,01/01/17,00:00,00:05,1"
-    val staffGraphStage = new StaffGraphStage("", Option(initialShifts), Option(initialFixedPoints), None, () => SDate(date), airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", Option(initialShifts), Option(initialFixedPoints), None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (_, _, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
 

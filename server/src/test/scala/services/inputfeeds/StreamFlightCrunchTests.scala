@@ -32,13 +32,13 @@ object TestCrunchConfig {
     AirportConfig(
       portCode = "EDI",
       queues = Map(
-        "A1" -> Seq("eeaDesk", "eGate", "nonEeaDesk"),
-        "A2" -> Seq("eeaDesk", "eGate", "nonEeaDesk")
+        "A1" -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk),
+        "A2" -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk)
       ),
       slaByQueue = Map(
-        "eeaDesk" -> 20,
-        "eGate" -> 25,
-        "nonEeaDesk" -> 45
+        Queues.EeaDesk -> 20,
+        Queues.EGate -> 25,
+        Queues.NonEeaDesk -> 45
       ),
       terminalNames = Seq("A1", "A2"),
       timeToChoxMillis = 0L,
@@ -69,14 +69,14 @@ object TestCrunchConfig {
         )),
       minMaxDesksByTerminalQueue = Map(
         "A1" -> Map(
-          "eeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
-          "nonEeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
-          "eGate" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
+          Queues.EeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          Queues.NonEeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          Queues.EGate -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
         ),
         "A2" -> Map(
-          "eeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
-          "nonEeaDesk" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
-          "eGate" -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
+          Queues.EeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          Queues.NonEeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
+          Queues.EGate -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
         )
       ),
       shiftExamples = Seq(

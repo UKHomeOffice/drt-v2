@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
 import drt.shared.{AirportConfig, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.graphstages.Crunch.purgeExpired
 
 import scala.util.Success
 
@@ -14,6 +15,7 @@ class StaffGraphStage(name: String = "",
                       optionalInitialFixedPoints: Option[String],
                       optionalInitialMovements: Option[Seq[StaffMovement]],
                       now: () => SDateLike,
+                      expireAfterMillis: MillisSinceEpoch,
                       airportConfig: AirportConfig,
                       numberOfDays: Int) extends GraphStage[FanInShape3[String, String, Seq[StaffMovement], StaffMinutes]] {
   val inShifts: Inlet[String] = Inlet[String]("Shifts.in")
@@ -21,20 +23,20 @@ class StaffGraphStage(name: String = "",
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
   val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
 
-  var shiftsOption: Option[String] = None
-  var fixedPointsOption: Option[String] = None
-  var movementsOption: Option[Seq[StaffMovement]] = None
-  var staffMinutes: Map[Int, StaffMinute] = Map()
-  var staffMinuteUpdates: Map[Int, StaffMinute] = Map()
-
-  def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
-
-  val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
-
   override def shape: FanInShape3[String, String, Seq[StaffMovement], StaffMinutes] =
     new FanInShape3(inShifts, inFixedPoints, inMovements, outStaffMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+
+    var shiftsOption: Option[String] = None
+    var fixedPointsOption: Option[String] = None
+    var movementsOption: Option[Seq[StaffMovement]] = None
+    var staffMinutes: Map[Int, StaffMinute] = Map()
+    var staffMinuteUpdates: Map[Int, StaffMinute] = Map()
+
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+
+    def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
 
     override def preStart(): Unit = {
       shiftsOption = optionalInitialShifts
@@ -106,9 +108,10 @@ class StaffGraphStage(name: String = "",
           })
         })
 
-      staffMinutes = updatedMinutes.foldLeft(staffMinutes) {
+      val mergedMinutes = updatedMinutes.foldLeft(staffMinutes) {
         case (soFar, updatedMinute) => soFar.updated(updatedMinute.key, updatedMinute)
       }
+      staffMinutes = purgeExpired(mergedMinutes, (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
 
       updatedMinutes.foldLeft(staffMinuteUpdates) {
         case (soFar, sm) => soFar.updated(sm.key, sm)
