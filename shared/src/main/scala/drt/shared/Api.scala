@@ -239,6 +239,8 @@ trait SDateLike {
 
   def prettyTime(): String = f"${getHours()}%02d:${getMinutes()}%02d"
 
+  def getZone(): String
+
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 
   override def equals(obj: scala.Any): Boolean = {

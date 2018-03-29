@@ -70,6 +70,8 @@ object JSDateConversions {
       def getDayOfWeek(): Int = if (date.getDay() == 0) 7 else date.getDay()
 
       def getUtcMillis(): MillisSinceEpoch = addMinutes(-1 * date.getTimezoneOffset()).millisSinceEpoch
+
+      def getZone(): String = date.getZone()
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)

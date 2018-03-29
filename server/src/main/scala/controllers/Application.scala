@@ -582,12 +582,10 @@ class Application @Inject()(implicit val config: Configuration,
     val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
     exportDesksToCSV(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
       case Some(csvData) =>
+        val columnHeadings = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
         Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
-          HttpEntity.Strict(ByteString(
-            CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName)) + CSVData.lineEnding + csvData), Option("application/csv")
-          )
-        )
+          HttpEntity.Strict(ByteString(columnHeadings + CSVData.lineEnding + csvData), Option("application/csv")))
       case None =>
         NotFound("Could not find desks and queues for this date.")
     }
@@ -601,19 +599,20 @@ class Application @Inject()(implicit val config: Configuration,
                         crunchStateFuture: Future[Option[CrunchState]]
                       ): Future[Option[String]] = {
 
-    def minutesOnDayWithinRange(minute: SDateLike) = {
+    def isInRangeOnDay(minute: SDateLike): Boolean = {
       minute.ddMMyyString == pointInTime.ddMMyyString && minute.getHours() >= startHour && minute.getHours() < endHour
     }
 
+    val localTime = SDate(pointInTime, europeLondonTimeZone)
     crunchStateFuture.map {
       case Some(CrunchState(_, cm, sm)) =>
-        log.debug(s"Exports: ${SDate(pointInTime).toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
-        val cmForDay: Set[CrunchMinute] = cm.filter(cm => minutesOnDayWithinRange(MilliDate(cm.minute)))
-        val smForDay: Set[StaffMinute] = sm.filter(sm => minutesOnDayWithinRange(MilliDate(sm.minute)))
-        log.debug(s"Exports: ${SDate(pointInTime).toISOString()} filtered to ${cmForDay.size} CMs and ${smForDay.size} SMs ")
+        log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
+        val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRangeOnDay(SDate(cm.minute, europeLondonTimeZone)))
+        val smForDay: Set[StaffMinute] = sm.filter(sm => isInRangeOnDay(SDate(sm.minute, europeLondonTimeZone)))
+        log.debug(s"Exports: ${localTime.toISOString()} filtered to ${cmForDay.size} CMs and ${smForDay.size} SMs ")
         Option(CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName)))
       case unexpected =>
-        log.error(s"Exports: Got the wrong thing $unexpected for Point In time: ${SDate(pointInTime).toISOString()}")
+        log.error(s"Exports: Got the wrong thing $unexpected for Point In time: ${localTime.toISOString()}")
 
         None
     }
@@ -714,14 +713,14 @@ class Application @Inject()(implicit val config: Configuration,
     val days: Seq[Future[Option[String]]] = dayRangeInMillis.zipWithIndex.map {
 
       case (dayMillis, index) =>
-        val csvFunc = if(index == 0) CSVData.flightsWithSplitsToCSVWithHeadings _ else CSVData.flightsWithSplitsToCSV _
+        val csvFunc = if (index == 0) CSVData.flightsWithSplitsToCSVWithHeadings _ else CSVData.flightsWithSplitsToCSV _
         flightsForCSVExportWithinRange(
           terminalName = terminalName,
           pit = MilliDate(dayMillis),
           startHour = 0,
           endHour = 24,
           crunchStateFuture = loadBestCrunchStateForPointInTime(dayMillis)
-        ).map{
+        ).map {
           case Some(fs) => Option(csvFunc(fs))
           case None => None
         }

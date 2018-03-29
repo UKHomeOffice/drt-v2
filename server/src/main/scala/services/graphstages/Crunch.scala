@@ -48,7 +48,8 @@ object Crunch {
   val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
   val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
 
-  val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID("Europe/London")
+  val europeLondonId = "Europe/London"
+  val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
   def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)

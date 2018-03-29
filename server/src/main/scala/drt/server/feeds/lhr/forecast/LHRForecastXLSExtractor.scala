@@ -9,6 +9,8 @@ import org.apache.poi.ss.usermodel.DateUtil
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import services.SDate
+import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonId
 
 
 case class LHRForecastFlightRow(
@@ -40,7 +42,7 @@ object LHRForecastXLSExtractor {
       total <- row.cells.find(cell => cell.index == 5 && cell.isInstanceOf[NumericCell]).map(c => c.asInstanceOf[NumericCell].data)
       transfer <- row.cells.find(cell => cell.index == 7 && cell.isInstanceOf[NumericCell]).map(c => c.asInstanceOf[NumericCell].data)
     } yield {
-      val scheduled = SDate(DateUtil.getJavaDate(flightDate, TimeZone.getTimeZone("Europe/London")).getTime)
+      val scheduled = SDate(DateUtil.getJavaDate(flightDate, TimeZone.getTimeZone(europeLondonId)).getTime)
       LHRForecastFlightRow(scheduledDate = scheduled, flightCode = number, origin = airport, internationalDomestic = internationalDomestic, totalPax = total.toInt, transferPax = transfer.toInt, terminal)
     }
 

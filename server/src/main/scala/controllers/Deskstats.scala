@@ -12,6 +12,8 @@ import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -86,7 +88,7 @@ object Deskstats {
   private def parseSDate(cells: Seq[String]) = {
     val (date, time) = (cells(1), cells(2).take(5))
     val Array(day, month, year) = date.split("/")
-    val statsDate = SDate(s"$year-$month-${day}T$time:00", DateTimeZone.forTimeZone(TimeZone.getTimeZone("Europe/London")))
+    val statsDate = SDate(s"$year-$month-${day}T$time:00", DateTimeZone.forTimeZone(TimeZone.getTimeZone(europeLondonId)))
     statsDate
   }
 

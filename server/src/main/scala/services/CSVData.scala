@@ -3,7 +3,10 @@ package services
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import org.joda.time.DateTimeZone
 import org.slf4j.LoggerFactory
+import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -17,7 +20,10 @@ object CSVData {
 
   def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]): String = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
-      day => f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d"
+      day => {
+        val localDate = SDate(day, europeLondonTimeZone)
+        f"${localDate.getDate()}%02d/${localDate.getMonth()}%02d"
+      }
     ).mkString(",")
     val queues: String = queueOrder.flatMap(
       q => {
@@ -54,24 +60,27 @@ object CSVData {
     log.info(s"Forecast CSV Export: Days in period: ${sortedDays.length}")
     val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.filter {
       case (millis, forecastTimeSlots) if forecastTimeSlots.length == 96 =>
-        log.info(s"Forecast CSV Export: day ${SDate(MilliDate(millis)).toLocalDateTimeString()}" +
-          s" first:${SDate(MilliDate(forecastTimeSlots.head.startMillis)).toLocalDateTimeString()}" +
-          s" last:${SDate(MilliDate(forecastTimeSlots.last.startMillis)).toLocalDateTimeString()}")
+        log.info(s"Forecast CSV Export: day ${SDate(millis, europeLondonTimeZone).toLocalDateTimeString()}" +
+          s" first:${SDate(forecastTimeSlots.head.startMillis, europeLondonTimeZone).toLocalDateTimeString()}" +
+          s" last:${SDate(forecastTimeSlots.last.startMillis, europeLondonTimeZone).toLocalDateTimeString()}")
         true
       case (millis, forecastTimeSlots) =>
-        log.error(s"Forecast CSV Export: error for ${SDate(MilliDate(millis)).toLocalDateTimeString()} got ${forecastTimeSlots.length} days")
+        log.error(s"Forecast CSV Export: error for ${SDate(millis, europeLondonTimeZone).toLocalDateTimeString()} got ${forecastTimeSlots.length} days")
         false
     }.transpose(_._2.take(96))
 
     val headings = "," + sortedDays.map {
       case (day, _) =>
-        f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - available," +
-          f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - required," +
-          f"${SDate(MilliDate(day)).getDate()}%02d/${SDate(MilliDate(day)).getMonth()}%02d - difference"
+        val localDate = SDate(day, europeLondonTimeZone)
+        val date = localDate.getDate()
+        val month = localDate.getMonth()
+        val columnPrefix = f"$date%02d/$month%02d - "
+        columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
     }.mkString(",")
 
     val data = byTimeSlot.map(row => {
-      s"${SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()}" + "," +
+      val localHoursMinutes = SDate(row.head.startMillis, europeLondonTimeZone).toHoursAndMinutes()
+      s"$localHoursMinutes" + "," +
         row.map(col => {
           s"${col.available},${col.required},${col.available - col.required}"
         }).mkString(",")
@@ -141,10 +150,10 @@ object CSVData {
             .map { case (_, queueCrunchMinutes) => DesksAndQueues.totalRequired(staffMinute, queueCrunchMinutes) }
             .getOrElse(0)
 
-          val hoursAndMinutes = SDate(minute).toHoursAndMinutes()
+          val hoursAndMinutes = SDate(minute, europeLondonTimeZone).toHoursAndMinutes()
           val queueFields = queueData.mkString(",")
           val pcpFields = staffData.mkString(",")
-          val dateString = SDate(minute).toISODateOnly
+          val dateString = SDate(minute, europeLondonTimeZone).toISODateOnly
 
           dateString + "," + hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
       }
@@ -182,7 +191,7 @@ object CSVData {
         fws.apiFlight.ActDT,
         fws.apiFlight.EstChoxDT,
         fws.apiFlight.ActChoxDT,
-        SDate(fws.apiFlight.PcpTime).toISOString(),
+        SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toISOString(),
         fws.apiFlight.ActPax,
         ArrivalHelper.bestPax(fws.apiFlight)
       ) ++
