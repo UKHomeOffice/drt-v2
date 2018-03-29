@@ -681,8 +681,8 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
-    val startPit = getLocalLastMidnight(SDate(start.toLong))
-    val endPit = getLocalNextMidnight(SDate(end.toLong))
+    val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
+    val endPit = getLocalNextMidnight(SDate(end.toLong, europeLondonTimeZone))
 
     val portCode = airportConfig.portCode
     val fileName = f"$portCode-$terminalName-arrivals-" +
@@ -765,7 +765,7 @@ class Application @Inject()(implicit val config: Configuration,
                                     ): Future[Option[List[ApiFlightWithSplits]]] = {
 
 
-    def minutesOnDayWithinRange(minute: SDateLike) = {
+    def isInRangeOnDay(minute: SDateLike): Boolean = {
       minute.ddMMyyString == pit.ddMMyyString && minute.getHours() >= startHour && minute.getHours() < endHour
     }
 
@@ -774,7 +774,7 @@ class Application @Inject()(implicit val config: Configuration,
 
         Option(fs.toList
           .filter(_.apiFlight.Terminal == terminalName)
-          .filter(f => minutesOnDayWithinRange(MilliDate(f.apiFlight.PcpTime))))
+          .filter(f => isInRangeOnDay(SDate(f.apiFlight.PcpTime, europeLondonTimeZone))))
       case unexpected =>
         log.error(s"got the wrong thing extracting flights from CrunchState (terminal: $terminalName, millis: $pit," +
           s" start hour: $startHour, endHour: $endHour): Error: $unexpected")
