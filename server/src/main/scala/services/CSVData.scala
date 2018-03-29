@@ -150,10 +150,10 @@ object CSVData {
             .map { case (_, queueCrunchMinutes) => DesksAndQueues.totalRequired(staffMinute, queueCrunchMinutes) }
             .getOrElse(0)
 
-          val hoursAndMinutes = SDate(minute).toHoursAndMinutes()
+          val hoursAndMinutes = SDate(minute, europeLondonTimeZone).toHoursAndMinutes()
           val queueFields = queueData.mkString(",")
           val pcpFields = staffData.mkString(",")
-          val dateString = SDate(minute).toISODateOnly
+          val dateString = SDate(minute, europeLondonTimeZone).toISODateOnly
 
           dateString + "," + hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
       }
@@ -191,7 +191,7 @@ object CSVData {
         fws.apiFlight.ActDT,
         fws.apiFlight.EstChoxDT,
         fws.apiFlight.ActChoxDT,
-        SDate(fws.apiFlight.PcpTime).toISOString(),
+        SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toISOString(),
         fws.apiFlight.ActPax,
         ArrivalHelper.bestPax(fws.apiFlight)
       ) ++
