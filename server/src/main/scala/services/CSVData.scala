@@ -10,6 +10,7 @@ import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.Try
 
 
 object CSVData {
@@ -186,12 +187,12 @@ object CSVData {
         fws.apiFlight.Origin,
         fws.apiFlight.Gate + "/" + fws.apiFlight.Stand,
         fws.apiFlight.Status,
-        fws.apiFlight.SchDT,
-        fws.apiFlight.EstDT,
-        fws.apiFlight.ActDT,
-        fws.apiFlight.EstChoxDT,
-        fws.apiFlight.ActChoxDT,
-        SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toISOString(),
+        Try(SDate(fws.apiFlight.SchDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
+        Try(SDate(fws.apiFlight.EstDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
+        Try(SDate(fws.apiFlight.ActDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
+        Try(SDate(fws.apiFlight.EstChoxDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
+        Try(SDate(fws.apiFlight.ActChoxDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
+        Try(SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
         fws.apiFlight.ActPax,
         ArrivalHelper.bestPax(fws.apiFlight)
       ) ++
