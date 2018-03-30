@@ -193,7 +193,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       val expected = ""
 
-      val result = getShiftsForMonth(shifts, month)
+      val result = getShiftsForMonth(shifts, month, "T1")
 
       result === expected
     }
@@ -207,10 +207,10 @@ class StaffTimeSlotsSpec extends Specification {
 
       val expected =
         """
-          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+          |0,T1,05/01/18,00:00,00:14,10
         """.stripMargin.trim
 
-      val result = getShiftsForMonth(shifts, month)
+      val result = getShiftsForMonth(shifts, month, "T1")
 
       result === expected
     }
@@ -225,10 +225,10 @@ class StaffTimeSlotsSpec extends Specification {
 
       val expected =
         """
-          |shift0120180, T1, 05/01/18, 00:00, 00:14, 10
+          |0,T1,05/01/18,00:00,00:14,10
         """.stripMargin.trim
 
-      val result = getShiftsForMonth(shifts, month)
+      val result = getShiftsForMonth(shifts, month, "T1")
 
       result === expected
     }

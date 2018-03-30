@@ -1,31 +1,24 @@
 package services.shifts
 
+import drt.shared.FlightsApi.TerminalName
 import drt.shared.{SDateLike, StaffTimeSlotsForTerminalMonth}
 import services.SDate
+import services.graphstages.Crunch
 
 import scala.util.{Success, Try}
 
 object StaffTimeSlots {
 
-  def slotsToShifts(slots: StaffTimeSlotsForTerminalMonth) = {
+  def slotsToShifts(slots: StaffTimeSlotsForTerminalMonth): String = {
     val monthSDate = SDate(slots.monthMillis)
     slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
       case (slot, index) =>
         val dateTime = SDate(slot.start)
-        f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index, ${slot.terminal}, ${dateTime.ddMMyyString}, ${dateTime.prettyTime}, ${dateTime.addMillis(slot.durationMillis - 1).prettyTime}, ${slot.staff}"
+        f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index, ${slot.terminal}, ${dateTime.ddMMyyString}, ${dateTime.prettyTime()}, ${dateTime.addMillis(slot.durationMillis - 1).prettyTime}, ${slot.staff}"
     }.mkString("\n")
   }
 
-  def removeMonthFromShifts(shifts: String, date: SDateLike) = {
-    val twoDigitYear = date.getFullYear().toString.substring(2, 4)
-    val filterDate2DigitYear = f"${date.getDate()}%02d/${date.getMonth()}%02d/$twoDigitYear"
-    val filterDate4DigitYear = f"${date.getDate()}%02d/${date.getMonth()}%02d/${date.getFullYear()}"
-    val todaysShifts = shiftsToLines(shifts).filter(l => {
-      l.contains(filterDate2DigitYear) || l.contains(filterDate4DigitYear)
-    })
-  }
-
-  def isDateInMonth(dateString: String, month: SDateLike) = {
+  def isDateInMonth(dateString: String, month: SDateLike): Boolean = {
     val ymd = dateString.split("/").toList
 
     Try((ymd(0).toInt, ymd(1).toInt, ymd(2).toInt)) match {
@@ -38,11 +31,11 @@ object StaffTimeSlots {
     }
   }
 
-  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForTerminalMonth) = {
+  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForTerminalMonth): TerminalName = {
     val shiftsExcludingNewMonth = shiftsToLines(existingShifts)
       .filter(line => {
         shiftLineToFieldList(line) match {
-          case List(_, t, d, _, _, _) if !isDateInMonth(d, SDate(slots.monthMillis)) || t != slots.terminal => true
+          case List(_, t, d, _, _, _) if !isDateInMonth(d, SDate(slots.monthMillis, Crunch.europeLondonTimeZone)) || t != slots.terminal => true
           case _ => false
         }
       })
@@ -59,13 +52,22 @@ object StaffTimeSlots {
     existingShifts.split("\n")
   }
 
-  def getShiftsForMonth(shifts: String, month: SDateLike) = {
-    shiftsToLines(shifts).filter(line => {
-      shiftLineToFieldList(line) match {
-        case List(_, _, d, _, _, _) =>
-          isDateInMonth(d, month)
-        case _ => false
+  def getShiftsForMonth(shifts: String, month: SDateLike, terminalName: TerminalName): String = {
+    shiftsToLines(shifts)
+      .filter(line => {
+        shiftLineToFieldList(line) match {
+          case List(_, tn, d, _, _, _) =>
+            tn == terminalName && isDateInMonth(d, month)
+          case _ => false
+        }
+      })
+      .zipWithIndex
+      .map {
+        case (line, idx) => {
+          val fields = shiftLineToFieldList(line).drop(1)
+          (idx.toString :: fields).mkString(",")
+        }
       }
-    }).mkString("\n")
+      .mkString("\n")
   }
 }
