@@ -454,13 +454,13 @@ class Application @Inject()(implicit val config: Configuration,
         } else throw new Exception("You do not have permission to edit staffing.")
       }
 
-      def getShiftsForMonth(month: MillisSinceEpoch): Future[String] = {
+      def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[String] = {
         val shiftsFuture = shiftsActor ? GetState
 
         shiftsFuture.collect {
           case shifts: String =>
             log.info(s"Shifts: Retrieved shifts from actor")
-            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month))
+            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month), terminalName)
         }
       }
 

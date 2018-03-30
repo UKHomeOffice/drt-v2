@@ -46,7 +46,7 @@ object SPAMain extends js.JSApp {
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(date), terminal)
       case "staffing" =>
         log.info(s"dispatching get shifts for month on staffing page")
-        GetShiftsForMonth(TerminalStaffingV2.dateFromDateStringOption(date))
+        GetShiftsForMonth(TerminalStaffingV2.dateFromDateStringOption(date), terminal)
       case _ => SetViewMode(viewMode)
     }
   }
