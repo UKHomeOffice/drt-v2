@@ -155,7 +155,10 @@ object CrunchSystem {
 
     val crunchSystem = Crunch2(
       baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, simulationGraphStage, props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, simulationGraphStage,
+      baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
+      props.voyageManifestsActor,
+      props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.crunchPeriodStartMillis, props.now
     )
 

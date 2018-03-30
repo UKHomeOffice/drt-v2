@@ -81,7 +81,8 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
         log.info(s"We now have ${updatedFlights.size} arrivals")
-        arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+        val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+        arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
         flightsByFlightId = updatedFlights
 
         pushStateIfReady()
@@ -97,7 +98,8 @@ class ArrivalSplitsGraphStage(name: String = "",
         log.info(s"Grabbed ${vms.manifests.size} manifests")
         val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(vms.manifests, flightsByFlightId))
         log.info(s"We now have ${updatedFlights.size} arrivals")
-        arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+        val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+        arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
         flightsByFlightId = updatedFlights
         manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
 
@@ -113,7 +115,8 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         log.info(s"Grabbed ${predictions.length} predictions")
         val updatedFlights = purgeExpiredArrivals(addPredictions(predictions, flightsByFlightId))
-        arrivalsWithSplitsDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+        val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+        arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
         flightsByFlightId = updatedFlights
 
         pushStateIfReady()
@@ -301,6 +304,15 @@ class ArrivalSplitsGraphStage(name: String = "",
 
       flightWithSplits.copy(splits = updatedSplitsSet)
     }
+  }
+
+  def mergeDiffSets(latestDiff: Set[ApiFlightWithSplits], existingDiff: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
+    val existingDiffById = existingDiff.map(a => (a.apiFlight.uniqueId, a)).toMap
+    latestDiff
+      .foldLeft(existingDiffById) {
+        case (soFar, updatedArrival) => soFar.updated(updatedArrival.apiFlight.uniqueId, updatedArrival)
+      }
+      .values.toSet
   }
 
   def purgeExpiredManifests(manifests: Map[Int, Set[VoyageManifest]]): Map[Int, Set[VoyageManifest]] = {

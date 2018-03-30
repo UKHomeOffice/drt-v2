@@ -74,11 +74,17 @@ class StaffGraphStage(name: String = "",
         log.info(s"Grabbed available inMovements: $movementsOption")
         val minutesToUpdate = movementsOption.map(allMinuteMillis).getOrElse(Set())
         log.info(s"minutesToUpdate: $minutesToUpdate")
-        staffMinuteUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
+        val latestUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
+        staffMinuteUpdates = mergeStaffMinuteUpdates(latestUpdates, staffMinuteUpdates)
         tryPush()
         pull(inMovements)
       }
     })
+
+    def mergeStaffMinuteUpdates(latestUpdates: Map[Int, StaffMinute], existingUpdates: Map[Int, StaffMinute]): Map[Int, StaffMinute] = latestUpdates
+      .foldLeft(existingUpdates) {
+        case (soFar, (id, updatedMinute)) => soFar.updated(id, updatedMinute)
+      }
 
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {

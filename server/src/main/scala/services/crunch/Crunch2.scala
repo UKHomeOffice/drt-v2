@@ -8,7 +8,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.SDate
+import services.{ArrivalsState, SDate}
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
@@ -35,6 +35,13 @@ object Crunch2 {
                                         crunchLoadGraphStage: CrunchLoadGraphStage,
                                         staffGraphStage: StaffGraphStage,
                                         simulationGraphStage: SimulationGraphStage,
+
+                                        baseArrivalsActor: ActorRef,
+                                        fcstArrivalsActor: ActorRef,
+                                        liveArrivalsActor: ActorRef,
+
+                                        manfestsActor: ActorRef,
+
                                         liveCrunchStateActor: ActorRef,
                                         fcstCrunchStateActor: ActorRef,
                                         crunchPeriodStartMillis: SDateLike => SDateLike,
@@ -73,12 +80,22 @@ object Crunch2 {
           val staff = builder.add(staffGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
 
+          val baseArrivalsFanOut = builder.add(Broadcast[Flights](2))
+          val fcstArrivalsFanOut = builder.add(Broadcast[Flights](2))
+          val liveArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](4))
+          val manifestsFanOut = builder.add(Broadcast[DqManifests](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](3))
           val simulationFanOut = builder.add(Broadcast[SimulationMinutes](2))
+
+          val baseArrivalsSink = builder.add(Sink.actorRef(baseArrivalsActor, "complete"))
+          val fcstArrivalsSink = builder.add(Sink.actorRef(fcstArrivalsActor, "complete"))
+          val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, "complete"))
+
+          val manifestsSink = builder.add(Sink.actorRef(manfestsActor, "complete"))
 
           val liveSinkFlightRemovals = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
@@ -86,6 +103,7 @@ object Crunch2 {
           val liveSinkActDesks = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkStaff = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkSimulations = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+
           val fcstSinkFlightRemovals = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkFlights = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val fcstSinkCrunch = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
@@ -93,11 +111,16 @@ object Crunch2 {
           val fcstSinkSimulations = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
-          baseArrivals ~> arrivals.in0
-          fcstArrivals ~> arrivals.in1
-          liveArrivals ~> arrivals.in2
+          baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
+          baseArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> baseArrivalsSink
+          fcstArrivals ~> fcstArrivalsFanOut ~> arrivals.in1
+          fcstArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> fcstArrivalsSink
+          liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2
+          liveArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> liveArrivalsSink
 
-          manifests.out.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
+          manifests ~> manifestsFanOut
+          manifestsFanOut.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
+          manifestsFanOut ~> manifestsSink
           shifts ~> staff.in0
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
