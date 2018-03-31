@@ -96,7 +96,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
 
-  def getShiftsForMonth(month: MillisSinceEpoch): Future[String]
+  def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[String]
 
   def isLoggedIn(): Boolean
 }

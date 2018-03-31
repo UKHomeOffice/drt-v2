@@ -331,15 +331,15 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfRawShifts]]) exten
         }
       effectOnly(Effect(action))
 
-    case GetShiftsForMonth(month) =>
+    case GetShiftsForMonth(month, terminalName) =>
       log.info(s"Calling getShifts for Month")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getShiftsForMonth(month.millisSinceEpoch).call()
+      val apiCallEffect = Effect(AjaxClient[Api].getShiftsForMonth(month.millisSinceEpoch, terminalName).call()
         .map(s => SetShiftsForMonth(MonthOfRawShifts(month.millisSinceEpoch, s)))
         .recoverWith {
-          case _ =>
-            log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetShiftsForMonth(month), PollDelay.recoveryDelay))
+          case t =>
+            log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}: $t")
+            Future(RetryActionAfter(GetShiftsForMonth(month, terminalName), PollDelay.recoveryDelay))
         })
       updated(Pending(), apiCallEffect)
     case SetShiftsForMonth(monthOfRawShifts) =>

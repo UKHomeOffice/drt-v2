@@ -525,7 +525,7 @@ trait Api {
 
   def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
 
-  def getShiftsForMonth(month: MillisSinceEpoch): Future[String]
+  def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[String]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 
