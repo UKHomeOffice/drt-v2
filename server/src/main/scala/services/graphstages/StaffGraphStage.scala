@@ -1,14 +1,64 @@
 package services.graphstages
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import akka.stream.{Attributes, FanInShape3, Inlet, Outlet}
+import akka.stream._
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
 import drt.shared.{AirportConfig, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.purgeExpired
+import services.graphstages.Crunch.{europeLondonTimeZone, purgeExpired}
 
 import scala.util.Success
+
+class StaffBatchUpdateGraphStage() extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
+  val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
+  val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
+
+  override def shape: FlowShape[StaffMinutes, StaffMinutes] = new FlowShape(inStaffMinutes, outStaffMinutes)
+
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+    var staffMinutesQueue: List[(MillisSinceEpoch, StaffMinutes)] = List[(MillisSinceEpoch, StaffMinutes)]()
+
+    val log: Logger = LoggerFactory.getLogger(getClass)
+
+    setHandler(inStaffMinutes, new InHandler {
+      override def onPush(): Unit = {
+        val incomingStaffMinutes = grab(inStaffMinutes)
+        val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
+
+        staffMinutesQueue = changedDays.foldLeft(staffMinutesQueue.toMap) {
+          case (soFar, (dayMillis, staffMinutes)) => soFar.updated(dayMillis, StaffMinutes(staffMinutes))
+        }.toList.sortBy(_._1)
+
+        pushIfAvailable()
+
+        pull(inStaffMinutes)
+      }
+    })
+
+    setHandler(outStaffMinutes, new OutHandler {
+      override def onPull(): Unit = {
+        log.info(s"onPull called. ${staffMinutesQueue.length} sets of minutes in the queue")
+
+        pushIfAvailable()
+
+        if (!hasBeenPulled(inStaffMinutes)) pull(inStaffMinutes)
+      }
+    })
+
+    def pushIfAvailable(): Unit = {
+      staffMinutesQueue match {
+        case Nil => log.info(s"Queue is empty. Nothing to push")
+        case (millis, staffMinutes) :: queueTail =>
+          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} staff minutes")
+          push(outStaffMinutes, staffMinutes)
+
+          staffMinutesQueue = queueTail
+          log.info(s"Queue length now ${staffMinutesQueue.length}")
+      }
+    }
+  }
+}
 
 class StaffGraphStage(name: String = "",
                       optionalInitialShifts: Option[String],

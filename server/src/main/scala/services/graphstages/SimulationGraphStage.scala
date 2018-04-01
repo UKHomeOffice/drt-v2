@@ -87,15 +87,11 @@ class SimulationGraphStage(name: String = "",
 
         log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
 
-        val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute))).keys
-        log.info(s"Days affected by incoming staff: ${changedDays.toSeq.sortBy(_.millisSinceEpoch).map(_.toLocalDateTimeString()).mkString(", ")}")
-
         staffMinutes = purgeExpired(updateStaffMinutes(staffMinutes, incomingStaffMinutes), (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
 
-        changedDays.foreach(firstMinute => {
-          val lastMinute = firstMinute.addDays(1)
-          updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
-        })
+        val firstMinute = SDate(incomingStaffMinutes.minutes.map(_.minute).min)
+        val lastMinute = firstMinute.addDays(1)
+        updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
 
         pushStateIfReady()
 

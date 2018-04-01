@@ -34,6 +34,7 @@ object Crunch2 {
                                         workloadGraphStage: WorkloadGraphStage,
                                         crunchLoadGraphStage: CrunchLoadGraphStage,
                                         staffGraphStage: StaffGraphStage,
+                                        staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
                                         simulationGraphStage: SimulationGraphStage,
 
                                         baseArrivalsActor: ActorRef,
@@ -78,6 +79,7 @@ object Crunch2 {
           val workload = builder.add(workloadGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
           val staff = builder.add(staffGraphStage.async)
+          val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
 
           val baseArrivalsFanOut = builder.add(Broadcast[Flights](2))
@@ -157,7 +159,7 @@ object Crunch2 {
           arrivalSplitsFanOut.map(forecastFlights(now)) ~> fcstSinkFlights
           crunchFanOut.map(forecastDeskRecs(now)) ~> fcstSinkCrunch
 
-          staff.out ~> staffFanOut
+          staff.out ~> batchStaff ~> staffFanOut
           staffFanOut ~> simulation.in1
           staffFanOut ~> liveSinkStaff
           staffFanOut ~> fcstSinkStaff
