@@ -330,6 +330,12 @@ object CrunchApi {
       case sa if sa >= 0 => sa
       case _ => 0
     }
+    lazy val availableAtPcp: Int = {
+      shifts - fixedPoints + movements match {
+        case sa if sa >= 0 => sa
+        case _ => 0
+      }
+    }
   }
 
   object StaffMinute {
@@ -343,6 +349,20 @@ object CrunchApi {
       StaffMinutes(minutesByKey.values.toSeq)
     }
   }
+
+  case class SimulationMinute(terminalName: TerminalName,
+                              queueName: QueueName,
+                              minute: MillisSinceEpoch,
+                              desks: Int,
+                              waitTime: Int,
+                              lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+    def equals(candidate: SimulationMinute): Boolean =
+      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+
+    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  }
+
+  case class SimulationMinutes(minutes: Set[SimulationMinute])
 
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
