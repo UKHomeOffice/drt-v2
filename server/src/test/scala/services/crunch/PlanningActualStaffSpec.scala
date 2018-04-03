@@ -74,7 +74,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       })
       :+ StaffMinute(terminalName = "T1", minute = 59 * 60000, shifts = 10, fixedPoints = 1, movements = 0, lastUpdated = None)).toSet
 
-    val staffAvailable: Map[MillisSinceEpoch, Int] = staffByTimeSlot(15)(staffMinutes)
+    val staffAvailable: Map[MillisSinceEpoch, Int] = staffByTimeSlot(15)(staffMinutes, "T1")
 
     val expected = Map(
       slot0To14 -> 20,
@@ -83,5 +83,32 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       slot45To59 -> 10)
 
     staffAvailable === expected
+  }
+
+  "Given a set of forecast minutes and staff minutes for all terminals, " +
+    "When I roll up for week per terminal " +
+    "Then I should get the lowest number in each 15 minute block relevant to the particular terminal" >> {
+
+    val staffMinutesT1: Set[StaffMinute] = (0 to 59)
+      .map(index => StaffMinute(terminalName = "T1", minute = index * 60000, shifts = 20, fixedPoints = 2, movements = 1, lastUpdated = None)).toSet
+    val staffMinutesT2 = staffMinutesT1.map(_.copy(terminalName = "T2", fixedPoints = 3))
+
+    val crunchMinutesT1: Set[CrunchMinute] = (0 to 58)
+      .map(index => CrunchMinute(terminalName = "T1", queueName = Queues.EeaDesk, minute = index * 60000,
+        lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0)).toSet
+    val crunchMinutesT2 = crunchMinutesT1.map(_.copy(terminalName = "T2", deskRec = 2))
+
+    val result = Forecast
+      .rollUpForWeek(crunchMinutesT1 ++ crunchMinutesT2, staffMinutesT1 ++ staffMinutesT2, "T1")
+      .values.head.toSet
+
+    val expected = Set(
+      ForecastTimeSlot(0, 20, 3),
+      ForecastTimeSlot(15 * 60000, 20, 3),
+      ForecastTimeSlot(30 * 60000, 20, 3),
+      ForecastTimeSlot(45 * 60000, 20, 3)
+    )
+
+    result === expected
   }
 }
