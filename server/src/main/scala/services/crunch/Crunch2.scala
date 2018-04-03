@@ -41,7 +41,7 @@ object Crunch2 {
                                         fcstArrivalsActor: ActorRef,
                                         liveArrivalsActor: ActorRef,
 
-                                        manfestsActor: ActorRef,
+                                        manifestsActor: ActorRef,
 
                                         liveCrunchStateActor: ActorRef,
                                         fcstCrunchStateActor: ActorRef,
@@ -97,7 +97,7 @@ object Crunch2 {
           val fcstArrivalsSink = builder.add(Sink.actorRef(fcstArrivalsActor, "complete"))
           val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, "complete"))
 
-          val manifestsSink = builder.add(Sink.actorRef(manfestsActor, "complete"))
+          val manifestsSink = builder.add(Sink.actorRef(manifestsActor, "complete"))
 
           val liveSinkFlightRemovals = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
