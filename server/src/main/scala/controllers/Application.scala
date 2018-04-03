@@ -21,7 +21,7 @@ import drt.http.ProdSendAndReceive
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
-import drt.shared.CrunchApi._
+import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
@@ -852,9 +852,10 @@ object Forecast {
   }
 
   def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
-    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes)
-    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes)
-    groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName), terminalName, Queues.queueOrder)
+    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes, terminalName)
+    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes, terminalName)
+    val terminalMinutes = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
+    groupCrunchMinutesByX(15)(terminalMinutes, terminalName, Queues.queueOrder)
       .map {
         case (startMillis, cms) =>
           val available = actualStaffByMinute.getOrElse(startMillis, 0)
