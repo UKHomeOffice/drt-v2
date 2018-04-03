@@ -10,7 +10,7 @@ import services.graphstages.Crunch.{europeLondonTimeZone, purgeExpired}
 
 import scala.util.Success
 
-class StaffBatchUpdateGraphStage() extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
+class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
   val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
 
@@ -26,9 +26,11 @@ class StaffBatchUpdateGraphStage() extends GraphStage[FlowShape[StaffMinutes, St
         val incomingStaffMinutes = grab(inStaffMinutes)
         val changedDays = incomingStaffMinutes.minutes.groupBy(sm => Crunch.getLocalLastMidnight(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
-        staffMinutesQueue = changedDays.foldLeft(staffMinutesQueue.toMap) {
+        val updatedMinutes = changedDays.foldLeft(staffMinutesQueue.toMap) {
           case (soFar, (dayMillis, staffMinutes)) => soFar.updated(dayMillis, StaffMinutes(staffMinutes))
         }.toList.sortBy(_._1)
+
+        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, ((millis: MillisSinceEpoch, x: StaffMinutes)) => SDate(millis), now, expireAfterMillis)
 
         pushIfAvailable()
 

@@ -1,9 +1,10 @@
 package drt.shared
 
-import drt.shared.CrunchApi._
+import drt.shared.CrunchApi.{CrunchMinute, _}
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
 
+import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
@@ -270,7 +271,18 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits])
+  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits]) extends PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState]): Option[PortState] = {
+      maybePortState match {
+        case None => Option(PortState(flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map()))
+        case Some(portState) =>
+          val updatedFlights = flights.foldLeft(portState.flights) {
+            case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight)
+          }
+          Option(portState.copy(flights = updatedFlights))
+      }
+    }
+  }
 
   type TerminalName = String
 
@@ -297,12 +309,52 @@ object PassengerSplits {
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 
-case class ActualDeskStats(desks: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]])
+case class ActualDeskStats(desks: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
+  def applyTo(maybePortState: Option[PortState]): Option[PortState] = {
+    maybePortState.map(portState => {
+        val updatedCrunchMinutes = desks
+          .flatMap {
+            case (tn, terminalActDesks) => terminalActDesks.flatMap {
+              case (qn, queueActDesks) => crunchMinutesWithActDesks(queueActDesks, portState.crunchMinutes, qn, tn)
+            }
+          }
+
+        val mergedCrunchMinutes = updatedCrunchMinutes.foldLeft(portState.crunchMinutes) {
+          case (soFar, updatedCm) => soFar.updated(updatedCm.key, updatedCm)
+        }
+
+        portState.copy(crunchMinutes = mergedCrunchMinutes)
+    })
+  }
+
+  def crunchMinutesWithActDesks(queueActDesks: Map[MillisSinceEpoch, DeskStat], crunchMinutes: Map[Int, CrunchMinute], terminalName: TerminalName, queueName: QueueName): immutable.Iterable[CrunchMinute] = {
+    queueActDesks
+      .map {
+        case (millis, deskStat) =>
+          crunchMinutes.values.find(cm => cm.minute == millis && cm.queueName == queueName && cm.terminalName == terminalName).map(cm =>
+            cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime))
+      }
+      .collect {
+        case Some(cm) => cm
+      }
+  }
+}
 
 object CrunchApi {
   type MillisSinceEpoch = Long
 
-  case class FlightRemovals(idsToRemove: Set[Int])
+  sealed trait PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState]): Option[PortState]
+  }
+
+  case class FlightRemovals(idsToRemove: Set[Int]) extends PortStateMinutes {
+    def applyTo(mayBePortState: Option[PortState]): Option[PortState] = {
+      mayBePortState.map(portState => {
+        val updatedFlights = portState.flights.filterKeys(id => !idsToRemove.contains(id))
+        portState.copy(flights = updatedFlights)
+      })
+    }
+  }
 
   case class CrunchState(flights: Set[ApiFlightWithSplits],
                          crunchMinutes: Set[CrunchMinute],
@@ -310,7 +362,8 @@ object CrunchApi {
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[Int, CrunchMinute],
-                       staffMinutes: Map[Int, StaffMinute])
+                       staffMinutes: Map[Int, StaffMinute]) {
+  }
 
   sealed trait Minute {
     val minute: MillisSinceEpoch
@@ -344,7 +397,19 @@ object CrunchApi {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
   }
 
-  case class StaffMinutes(minutes: Seq[StaffMinute])
+  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState]): Option[PortState] = {
+      maybePortState match {
+        case None => Option(PortState(Map(), Map(), minutes.map(sm => (sm.key, sm)).toMap))
+        case Some(portState) =>
+          val updatedSms = minutes.foldLeft(portState.staffMinutes) {
+            case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm)
+          }
+
+          Option(portState.copy(staffMinutes = updatedSms))
+      }
+    }
+  }
 
   object StaffMinutes {
     def apply(minutesByKey: Map[Int, StaffMinute]): StaffMinutes = {
@@ -366,7 +431,32 @@ object CrunchApi {
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode
   }
 
-  case class DeskRecMinutes(minutes: Set[DeskRecMinute])
+  case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState]): Option[PortState] = {
+      maybePortState match {
+        case None => Option(PortState(Map(), newCrunchMinutes, Map()))
+        case Some(portState) =>
+          val updatedCrunchMinutes = minutes
+            .foldLeft(portState.crunchMinutes) {
+              case (soFar, updatedDrm) =>
+                val maybeMinute: Option[CrunchMinute] = soFar.get(updatedDrm.key)
+                val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
+                soFar.updated(updatedDrm.key, mergedCm)
+            }
+          Option(portState.copy(crunchMinutes = updatedCrunchMinutes))
+      }
+    }
+
+    def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+      .map(CrunchMinute(_))
+      .map(cm => (cm.key, cm))
+      .toMap
+
+
+    def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
+      .map(existingCm => existingCm.copy(paxLoad = updatedDrm.paxLoad, workLoad = updatedDrm.workLoad, deskRec = updatedDrm.deskRec, waitTime = updatedDrm.waitTime))
+      .getOrElse(CrunchMinute(updatedDrm))
+  }
 
   case class SimulationMinute(terminalName: TerminalName,
                               queueName: QueueName,
@@ -380,7 +470,31 @@ object CrunchApi {
     lazy val key: Int = s"$terminalName$queueName$minute".hashCode
   }
 
-  case class SimulationMinutes(minutes: Set[SimulationMinute])
+  case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState]): Option[PortState] = {
+      maybePortState match {
+        case None => Option(PortState(Map(), newCrunchMinutes, Map()))
+        case Some(portState) =>
+          val updatedCrunchMinutes = minutes
+            .foldLeft(portState.crunchMinutes) {
+              case (soFar, updatedCm) =>
+                val maybeMinute: Option[CrunchMinute] = soFar.get(updatedCm.key)
+                val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm)
+                soFar.updated(updatedCm.key, mergedCm)
+            }
+          Option(portState.copy(crunchMinutes = updatedCrunchMinutes))
+      }
+    }
+
+    def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+      .map(CrunchMinute(_))
+      .map(cm => (cm.key, cm))
+      .toMap
+
+    def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: SimulationMinute): CrunchMinute = maybeMinute
+      .map(existingCm => existingCm.copy(deployedDesks = Option(updatedDrm.desks), deployedWait = Option(updatedDrm.waitTime)))
+      .getOrElse(CrunchMinute(updatedDrm))
+  }
 
   case class CrunchMinute(terminalName: TerminalName,
                           queueName: QueueName,
