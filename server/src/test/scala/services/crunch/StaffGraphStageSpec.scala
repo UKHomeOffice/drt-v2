@@ -71,7 +71,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
 
     probe.fishForMessage(10 seconds) {
-      case StaffMinutes(minutes) => minutes.toSet == expected
+      case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected
     }
 
     true
@@ -93,7 +93,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:00").addDays(1).millisSinceEpoch, 0, 1, 0, None))
 
     probe.fishForMessage(5 seconds) {
-      case StaffMinutes(minutes) => minutes.toSet == expected
+      case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected
     }
 
     true
@@ -123,7 +123,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 1, -1, None))
 
     probe.fishForMessage(5 seconds) {
-      case StaffMinutes(minutes) => minutes.toSet == expected
+      case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected
     }
 
     true

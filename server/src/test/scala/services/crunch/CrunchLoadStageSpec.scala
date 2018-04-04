@@ -83,7 +83,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val expectedSize = 2 * minutesToCrunch
 
     val result = probe.receiveOne(5 seconds) match {
-      case DeskRecMinutes(drms) => drms
+      case DeskRecMinutes(drms) => drms.map(_.copy(lastUpdated = None))
       case unexpected =>
         println(s"Got unexpected: $unexpected")
         Set()
@@ -128,7 +128,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
       case DeskRecMinutes(drms) =>
         val minutes = drms.filter(cm => {
           expectedMillis.contains(cm.minute)
-        })
+        }).map(_.copy(lastUpdated = None))
         println(s"minutes: $minutes")
         minutes == expected && drms.size == expectedSize
     }
