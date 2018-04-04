@@ -310,12 +310,13 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrivals1st = Flights(List(forecastArrival1))
     val forecastArrivals2nd = Flights(List(forecastArrival2))
 
-      val crunch = runCrunchGraph(
-        now = () => SDate(baseScheduled).addDays(-1))
+    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
-      offerAndWait(crunch.baseArrivalsInput, baseArrivals)
-      crunch.forecastTestProbe.receiveOne(2 seconds)offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)crunch.forecastTestProbe.receiveOne(2 seconds)
-      offerAndWait(crunch.forecastArrivalsInput, forecastArrivals2nd)
+    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    crunch.forecastTestProbe.receiveOne(2 seconds)
+    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)
+    crunch.forecastTestProbe.receiveOne(2 seconds)
+    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals2nd)
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>

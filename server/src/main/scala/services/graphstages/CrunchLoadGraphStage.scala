@@ -64,7 +64,7 @@ class CrunchLoadGraphStage(name: String = "",
         val deskRecMinutes: Set[DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loadMinutes.values.toSet)
         val deskRecMinutesByKey = deskRecMinutes.map(cm => (cm.key, cm)).toMap
 
-        val diff = deskRecMinutes -- existingDeskRecMinutes.values.toSet
+        val diff = deskRecMinutes.map(drm => drm.copy(lastUpdated = None)) -- existingDeskRecMinutes.values.toSet.map((drm: DeskRecMinute) => drm.copy(lastUpdated = None))
 
         existingDeskRecMinutes = purgeExpired(deskRecMinutesByKey, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
 
@@ -124,7 +124,7 @@ class CrunchLoadGraphStage(name: String = "",
 
     def mergeDeskRecMinutes(updatedCms: Set[DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
       updatedCms.foldLeft(existingCms) {
-        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
+        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)))
       }
     }
 
@@ -137,8 +137,7 @@ class CrunchLoadGraphStage(name: String = "",
 
     def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
       incomingLoads.foldLeft(existingLoads) {
-        case (soFar, load) =>
-          soFar.updated(load.uniqueId, load)
+        case (soFar, load) => soFar.updated(load.uniqueId, load)
       }
     }
 

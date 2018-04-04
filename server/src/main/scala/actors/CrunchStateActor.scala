@@ -10,12 +10,10 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.graphstages.Crunch
 import services.graphstages.Crunch._
+import services.graphstages.PortStateWithDiff
 
-import scala.collection.immutable
 import scala.language.postfixOps
-import scala.util.Success
 
 class CrunchStateActor(val snapshotInterval: Int,
                        name: String,
@@ -65,55 +63,15 @@ class CrunchStateActor(val snapshotInterval: Int,
   }
 
   override def receiveCommand: Receive = {
-    case flightRemovals: FlightRemovals =>
-      logInfo(s"Got ${flightRemovals.idsToRemove.size} flight removals")
-      val updatedState = state match {
-        case None => PortState(Map(), Map(), Map())
-        case Some(portState) => updatePortState(flightRemovals, portState)
-      }
-      updateStateFromPortState(updatedState)
+    case PortStateWithDiff(portState, diff) =>
+      logInfo(s"Received port state with diff")
+      updateStateFromPortState(portState)
 
-    case flightUpdates: FlightsWithSplits =>
-      logInfo(s"Got ${flightUpdates.flights.size} updated flights")
-      val updatedState = state match {
-        case None => newPortState(flightUpdates)
-        case Some(portState) => updatePortState(flightUpdates, portState)
-      }
-      updateStateFromPortState(updatedState)
+      persistDiff(diff)
 
-    case drms: DeskRecMinutes =>
-      logInfo(s"Got ${drms.minutes.size} updated desk rec minutes")
-      val updatedState = state match {
-        case None => newPortState(drms)
-        case Some(portState) => updatePortState(drms, portState)
+      if (diff.crunchMinutesToUpdate.length > 20000 || (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0)) {
+        persistSnapshot(portState)
       }
-      updateStateFromPortState(updatedState)
-
-    case sims: SimulationMinutes =>
-      logInfo(s"Got ${sims.minutes.size} updated simulation minutes")
-      val updatedState = state match {
-        case None => newPortState(sims)
-        case Some(portState) => updatePortState(sims, portState)
-      }
-      updateStateFromPortState(updatedState)
-
-    case sms: StaffMinutes =>
-      logInfo(s"Got ${sms.minutes.size} updated staff minutes")
-      val updatedState = state match {
-        case None => newPortState(sms)
-        case Some(portState) => updatePortState(sms, portState)
-      }
-      updateStateFromPortState(updatedState)
-
-    case actDesks: ActualDeskStats =>
-      state = state match {
-        case None => None
-        case Some(portState) => Option(updatePortState(actDesks, portState))
-      }
-
-    case cs: PortState =>
-      logInfo(s"Received PortState. storing")
-      updateStateFromPortState(cs)
 
     case GetState =>
       logInfo(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
@@ -159,112 +117,23 @@ class CrunchStateActor(val snapshotInterval: Int,
       log.warn(s"Received unexpected message $u")
   }
 
-  def newPortState(flightUpdates: FlightsWithSplits): PortState = PortState(flightUpdates.flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
-
-  def newPortState(sms: StaffMinutes): PortState = PortState(Map(), Map(), sms.minutes.map(cm => (cm.key, cm)).toMap)
-
-  def newPortState(drms: DeskRecMinutes): PortState = PortState(Map(), newCrunchMinutes(drms), Map())
-
-  def newPortState(sims: SimulationMinutes): PortState = PortState(Map(), newCrunchMinutes(sims), Map())
-
-  def updatePortState(flightRemovals: FlightRemovals, portState: PortState): PortState = {
-    val updatedFlights = portState.flights.filterKeys(id => !flightRemovals.idsToRemove.contains(id))
-    portState.copy(flights = updatedFlights)
-  }
-
-  def updatePortState(flightUpdates: FlightsWithSplits, portState: PortState): PortState = {
-    val updatedFlights = flightUpdates.flights.foldLeft(portState.flights) {
-      case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight)
-    }
-    portState.copy(flights = updatedFlights)
-  }
-
-  def updatePortState(sms: StaffMinutes, portState: PortState): PortState = {
-    val updatedSms = sms.minutes.foldLeft(portState.staffMinutes) {
-      case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm)
-    }
-    val updatedPortState = portState.copy(staffMinutes = updatedSms)
-    updatedPortState
-  }
-
-  def updatePortState(drms: DeskRecMinutes, portState: PortState): PortState = {
-    val updatedCms = updateCrunchMinutes(drms, portState.crunchMinutes)
-    portState.copy(crunchMinutes = updatedCms)
-  }
-
-  def updatePortState(sims: SimulationMinutes, portState: PortState): PortState = {
-    val updatedCms = updateCrunchMinutes(sims, portState.crunchMinutes)
-    portState.copy(crunchMinutes = updatedCms)
-  }
-
-  def updatePortState(actDesks: ActualDeskStats, portState: PortState): PortState = {
-    val updatedCms = updateCrunchMinutes(actDesks, portState.crunchMinutes)
-    portState.copy(crunchMinutes = updatedCms)
-  }
-
-  def newCrunchMinutes(drms: DeskRecMinutes): Map[Int, CrunchMinute] = drms
-    .minutes
-    .map(CrunchMinute(_))
-    .map(cm => (cm.key, cm))
-    .toMap
-
-  def newCrunchMinutes(sims: SimulationMinutes): Map[Int, CrunchMinute] = sims
-    .minutes
-    .map(CrunchMinute(_))
-    .map(cm => (cm.key, cm))
-    .toMap
-
-  def updateCrunchMinutes(drms: DeskRecMinutes, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = drms
-    .minutes
-    .foldLeft(crunchMinutes) {
-      case (soFar, updatedDrm) =>
-        val maybeMinute: Option[CrunchMinute] = soFar.get(updatedDrm.key)
-        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
-        soFar.updated(updatedDrm.key, mergedCm)
-    }
-
-  def updateCrunchMinutes(drms: SimulationMinutes, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = drms
-    .minutes
-    .foldLeft(crunchMinutes) {
-      case (soFar, updatedDrm) =>
-        val maybeMinute: Option[CrunchMinute] = soFar.get(updatedDrm.key)
-        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
-        soFar.updated(updatedDrm.key, mergedCm)
-    }
-
-  def updateCrunchMinutes(actDesks: ActualDeskStats, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
-    val updatedCrunchMinutes = actDesks
-      .desks
-      .flatMap {
-        case (tn, terminalActDesks) => terminalActDesks.flatMap {
-          case (qn, queueActDesks) => crunchMinutesWithActDesks(queueActDesks, crunchMinutes, qn, tn)
-        }
-      }
-
-    updatedCrunchMinutes.foldLeft(crunchMinutes) {
-      case (soFar, updatedCm) => soFar.updated(updatedCm.key, updatedCm)
+  def persistSnapshot(portState: PortState): Unit = {
+    val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(portState)
+    logInfo(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
+    saveSnapshot(snapshotMessage)
+    if (purgePreviousSnapshots) {
+      val maxSequenceNr = lastSequenceNr
+      logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
+      deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
     }
   }
 
-  def crunchMinutesWithActDesks(queueActDesks: Map[MillisSinceEpoch, DeskStat], crunchMinutes: Map[Int, CrunchMinute], terminalName: TerminalName, queueName: QueueName): immutable.Iterable[CrunchMinute] = {
-    queueActDesks
-      .map {
-        case (millis, deskStat) =>
-          crunchMinutes.values.find(cm => cm.minute == millis && cm.queueName == queueName && cm.terminalName == terminalName).map(cm =>
-            cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime))
-      }
-      .collect {
-        case Some(cm) => cm
-      }
+  def persistDiff(diff: CrunchDiffMessage): Unit = {
+    persist(diff) { (diff: CrunchDiffMessage) =>
+      logInfo(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
+      context.system.eventStream.publish(diff)
+    }
   }
-
-  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
-    .map(existingCm => existingCm.copy(paxLoad = updatedDrm.paxLoad, workLoad = updatedDrm.workLoad, deskRec = updatedDrm.deskRec, waitTime = updatedDrm.waitTime))
-    .getOrElse(CrunchMinute(updatedDrm))
-
-  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: SimulationMinute): CrunchMinute = maybeMinute
-    .map(existingCm => existingCm.copy(deployedDesks = Option(updatedDrm.desks), deployedWait = Option(updatedDrm.waitTime)))
-    .getOrElse(CrunchMinute(updatedDrm))
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state.map {
     case PortState(fs, ms, ss) => PortState(
@@ -328,61 +197,8 @@ class CrunchStateActor(val snapshotInterval: Int,
   )
 
   def updateStateFromPortState(newState: PortState): Unit = {
-    val existingState = state match {
-      case None =>
-        logInfo(s"updating from no existing state")
-        PortState(Map(), Map(), Map())
-      case Some(s) => s
-    }
-    val crunchesToUpdate = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
-    val staffToUpdate = staffMinutesDiff(existingState.staffMinutes, newState.staffMinutes)
-    val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
-    val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToUpdate, staffToUpdate)
-
-    val cmsFromDiff = applyCrunchDiff(diff, existingState.crunchMinutes)
-    val smsFromDiff = applyStaffDiff(diff, existingState.staffMinutes)
-    val flightsFromDiff = applyFlightsWithSplitsDiff(diff, existingState.flights)
-
-    val diffToPersist = CrunchDiffMessage(
-      createdAt = Option(SDate.now().millisSinceEpoch),
-      crunchStart = Option(0),
-      flightIdsToRemove = diff.flightRemovals.map(rf => rf.flightId).toList,
-      flightsToUpdate = diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
-      crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(crunchMinuteToMessage).toList,
-      staffMinutesToUpdate = diff.staffMinuteUpdates.map(staffMinuteToMessage).toList
-    )
-
-    val filteredStaffMinutes = Crunch.purgeExpiredMinutes(smsFromDiff, now, expireAfterMillis)
-    val filteredCrunchMinutes = Crunch.purgeExpiredMinutes(cmsFromDiff, now, expireAfterMillis)
-
-    //    println(s"existing staffminutes: ${existingState.staffMinutes}")
-    val updatedState = existingState.copy(
-      flights = flightsFromDiff,
-      crunchMinutes = filteredCrunchMinutes,
-      staffMinutes = filteredStaffMinutes
-    )
-    //    println(s"updated staffminutes: ${updatedState.staffMinutes}")
-
-    persist(diffToPersist) { (diff: CrunchDiffMessage) =>
-      logInfo(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
-
-      context.system.eventStream.publish(diff)
-      if (diff.crunchMinutesToUpdate.length > 20000 || (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0)) {
-        val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(updatedState)
-        logInfo(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
-        saveSnapshot(snapshotMessage)
-        if (purgePreviousSnapshots) {
-          val maxSequenceNr = lastSequenceNr
-          logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
-          deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
-        }
-      }
-    }
-
-    state = Option(updatedState)
+    state = Option(newState)
   }
-
-  def removeCrunchMinuteToMessage(rc: RemoveCrunchMinute): RemoveCrunchMinuteMessage = RemoveCrunchMinuteMessage(Option(rc.terminalName), Option(rc.queueName), Option(rc.minute))
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
     terminalName = Option(cm.terminalName),

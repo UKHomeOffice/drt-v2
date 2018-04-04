@@ -182,6 +182,16 @@ object Crunch {
     desks(date.getHourOfDay)
   }
 
+  def purgeExpired[A: TypeTag](expireable: List[(MillisSinceEpoch, A)], now: () => SDateLike, expireAfter: MillisSinceEpoch): List[(MillisSinceEpoch, A)] = {
+    val expired = hasExpiredForType(identity[MillisSinceEpoch], now, expireAfter)
+    val updated = expireable.filterNot { case (i, _) => expired(i) }
+
+    val numPurged = expireable.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
+
+    updated
+  }
+
   def purgeExpired[A: TypeTag](expireable: Map[Int, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[Int, A] = {
     val expired = hasExpiredForType(timeAccessor, now, expireAfter)
     val updated = expireable.filterNot { case (_, a) => expired(a) }

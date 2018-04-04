@@ -87,12 +87,11 @@ object Crunch2 {
           val baseArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val liveArrivalsFanOut = builder.add(Broadcast[Flights](2))
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](4))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
           val manifestsFanOut = builder.add(Broadcast[DqManifests](2))
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
-          val staffFanOut = builder.add(Broadcast[StaffMinutes](3))
-          val simulationFanOut = builder.add(Broadcast[SimulationMinutes](2))
+          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
           val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](2))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(baseArrivalsActor, "complete"))
@@ -149,18 +148,25 @@ object Crunch2 {
           staffFanOut ~> simulation.in1
           staffFanOut ~> portState.in4
 
-          simulation.out ~> simulationFanOut
-          simulationFanOut ~> portState.in5
+          simulation.out ~> portState.in5
 
           portState.out ~> portStateFanOut
-          portStateFanOut ~> liveSink
-          portStateFanOut ~> fcstSink
+          portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
+          portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
 
           ClosedShape
     }
 
     RunnableGraph.fromGraph(graph)
   }
+
+  def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
+
+  def liveEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(2)
+
+  def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
+
+  def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
 
   def mergeFlightSets(flightsSoFar: Seq[Arrival], nextFlights: Seq[Arrival]): Flights = {
     val soFarById = flightsSoFar.map(f => (f.uniqueId, f)).toMap

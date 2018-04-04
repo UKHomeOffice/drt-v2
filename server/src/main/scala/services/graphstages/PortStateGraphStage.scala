@@ -13,12 +13,17 @@ import services.SDate
 import services.graphstages.Crunch._
 
 case class PortStateWithDiff(portState: PortState, diff: CrunchDiffMessage) {
-  def window(start: SDateLike, end: SDateLike) = {
+  def window(start: SDateLike, end: SDateLike): PortStateWithDiff = {
     PortStateWithDiff(portState.window(start, end), crunchDiffWindow(start, end))
   }
 
-  def crunchDiffWindow(start: SDateLike, end: SDateLike) = {
+  def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
+    val flightsToRemove = diff.flightIdsToRemove.filter(id => portState.flights.get(id).exists(_.hasPcpPaxIn(start, end)))
+    val flightsToUpdate = diff.flightsToUpdate.filter(smm => smm.flight.exists(f => start.millisSinceEpoch <= f.scheduled.getOrElse(0L) && f.scheduled.getOrElse(0L) <= end.millisSinceEpoch))
+    val staffToUpdate = diff.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) <= end.millisSinceEpoch)
+    val crunchToUpdate = diff.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) <= end.millisSinceEpoch)
 
+    CrunchDiffMessage(Option(SDate.now().millisSinceEpoch), None, flightsToRemove, flightsToUpdate, crunchToUpdate, staffToUpdate)
   }
 }
 
@@ -63,8 +68,12 @@ class PortStateGraphStage(name: String = "",
       setHandler(inlet, new InHandler {
         override def onPush(): Unit = {
           mayBePortState = grab(inlet) match {
-            case incoming: PortStateMinutes => incoming.applyTo(mayBePortState)
+            case incoming: PortStateMinutes =>
+              log.info(s"Incoming ${inlet.toString}")
+              incoming.applyTo(mayBePortState)
           }
+
+          pushIfAppropriate(mayBePortState)
 
           pull(inlet)
         }
@@ -73,20 +82,28 @@ class PortStateGraphStage(name: String = "",
 
     setHandler(outPortState, new OutHandler {
       override def onPull(): Unit = {
-        mayBePortState match {
-          case None => log.info(s"No port state to push yet")
-          case Some(portState) =>
-            log.info(s"Pushing port state with diff")
-            val portStateWithDiff = PortStateWithDiff(portState, diffMessage(lastMaybePortState, portState))
-
-            push(outPortState, portStateWithDiff)
-
-            lastMaybePortState = Option(portState)
-        }
+        log.info(s"onPull() called")
+        pushIfAppropriate(mayBePortState)
 
         shape.inlets.foreach(i => if (!hasBeenPulled(i)) pull(i))
       }
     })
+
+    def pushIfAppropriate(maybeState: Option[PortState]): Unit = {
+      maybeState match {
+        case None => log.info(s"No port state to push yet")
+        case Some(portState) if lastMaybePortState.isDefined && lastMaybePortState.get == portState =>
+          log.info(s"No updates to push")
+        case Some(portState) if !isAvailable(outPortState) =>
+          log.info(s"outPortState not available for pushing")
+        case Some(portState) =>
+          log.info(s"Pushing port state with diff")
+          val portStateWithDiff = PortStateWithDiff(portState, diffMessage(lastMaybePortState, portState))
+          lastMaybePortState = Option(portState)
+
+          push(outPortState, portStateWithDiff)
+      }
+    }
   }
 
   def diffMessage(maybeExistingState: Option[PortState], newState: PortState): CrunchDiffMessage = {
@@ -130,5 +147,4 @@ class PortStateGraphStage(name: String = "",
     shifts = Option(sm.shifts),
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements))
-
 }

@@ -113,7 +113,7 @@ class SimulationGraphStage(name: String = "",
       val newSimulationMinutes: Set[SimulationMinute] = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loads)
       val newSimulationMinutesByKey = newSimulationMinutes.map(cm => (cm.key, cm)).toMap
 
-      val diff = newSimulationMinutes -- existingSimulationMinutes
+      val diff = newSimulationMinutes.map(_.copy(lastUpdated = None)) -- existingSimulationMinutes.map(_.copy(lastUpdated = None))
 
       simulationMinutes = purgeExpired(newSimulationMinutesByKey, (sm: SimulationMinute) => sm.minute, now, expireAfterMillis)
 
@@ -258,7 +258,7 @@ class SimulationGraphStage(name: String = "",
     }
 
     def mergeSimulationMinutes(updatedCms: Set[SimulationMinute], existingCms: Map[Int, SimulationMinute]): Map[Int, SimulationMinute] = updatedCms.foldLeft(existingCms) {
-      case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
+      case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)))
     }
 
     def loadDiff(updatedLoads: Set[LoadMinute], existingLoads: Set[LoadMinute]): Set[LoadMinute] = {
@@ -269,8 +269,7 @@ class SimulationGraphStage(name: String = "",
     }
 
     def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = incomingLoads.foldLeft(existingLoads) {
-      case (soFar, load) =>
-        soFar.updated(load.uniqueId, load)
+      case (soFar, load) => soFar.updated(load.uniqueId, load)
     }
 
     def pullAll(): Unit = {

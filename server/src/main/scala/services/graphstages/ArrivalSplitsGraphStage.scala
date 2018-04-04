@@ -52,7 +52,7 @@ class ArrivalSplitsGraphStage(name: String = "",
                 val maybeNewSplits = splitsCalculator.historicalSplits(flightWithSplits.apiFlight)
                 val withUpdatedHistoricalSplits = if (maybeNewSplits != maybeOldSplits) {
                   log.debug(s"Updating historical splits for ${flightWithSplits.apiFlight.IATA}")
-                  updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)), maybeNewSplits)
+                  updateFlightWithHistoricalSplits(flightWithSplits.copy(lastUpdated = nowMillis), maybeNewSplits)
                 } else flightWithSplits
                 Tuple2(flightWithSplits.apiFlight.uniqueId, withUpdatedHistoricalSplits)
               })
@@ -208,11 +208,11 @@ class ArrivalSplitsGraphStage(name: String = "",
       updatedFlights.flights.get(updatedFlight.uniqueId) match {
         case None =>
           val newFlightWithAvailableSplits: ApiFlightWithSplits = addSplitsToFlight(updatedFlight)
-          val withNewFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits)
+          val withNewFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, newFlightWithAvailableSplits.copy(lastUpdated = nowMillis))
           updatedFlights.copy(flights = withNewFlight, additionsCount = updatedFlights.additionsCount + 1)
 
         case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-          val withUpdatedFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight))
+          val withUpdatedFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
           updatedFlights.copy(flights = withUpdatedFlight, updatesCount = updatedFlights.updatesCount + 1)
 
         case _ => updatedFlights
@@ -221,7 +221,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def addSplitsToFlight(updatedFlight: Arrival): ApiFlightWithSplits = {
       val ths = splitsCalculator.terminalAndHistoricSplits(updatedFlight)
-      val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, Option(SDate.now().millisSinceEpoch))
+      val newFlightWithSplits = ApiFlightWithSplits(updatedFlight, ths, nowMillis)
       val newFlightWithAvailableSplits = addApiSplitsIfAvailable(newFlightWithSplits)
       newFlightWithAvailableSplits
     }
@@ -304,6 +304,10 @@ class ArrivalSplitsGraphStage(name: String = "",
 
       flightWithSplits.copy(splits = updatedSplitsSet)
     }
+  }
+
+  def nowMillis: Option[MillisSinceEpoch] = {
+    Option(SDate.now().millisSinceEpoch)
   }
 
   def mergeDiffSets(latestDiff: Set[ApiFlightWithSplits], existingDiff: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {

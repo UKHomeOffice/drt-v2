@@ -30,7 +30,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
           case (soFar, (dayMillis, staffMinutes)) => soFar.updated(dayMillis, StaffMinutes(staffMinutes))
         }.toList.sortBy(_._1)
 
-        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, ((millis: MillisSinceEpoch, x: StaffMinutes)) => SDate(millis), now, expireAfterMillis)
+        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis)
 
         pushIfAvailable()
 
@@ -51,6 +51,8 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
     def pushIfAvailable(): Unit = {
       staffMinutesQueue match {
         case Nil => log.info(s"Queue is empty. Nothing to push")
+        case _ if !isAvailable(outStaffMinutes) =>
+          log.info(s"outStaffMinutes not available to push")
         case (millis, staffMinutes) :: queueTail =>
           log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} staff minutes")
           push(outStaffMinutes, staffMinutes)
@@ -160,7 +162,7 @@ class StaffGraphStage(name: String = "",
                 val shifts = staffSources.shifts.terminalStaffAt(tn, m)
                 val fixedPoints = staffSources.fixedPoints.terminalStaffAt(tn, m)
                 val movements = staffSources.movements.terminalStaffAt(tn, m)
-                StaffMinute(tn, m, shifts, fixedPoints, movements)
+                StaffMinute(tn, m, shifts, fixedPoints, movements, lastUpdated = Option(SDate.now().millisSinceEpoch))
             }
             staffMinute
           })
@@ -169,6 +171,7 @@ class StaffGraphStage(name: String = "",
       val mergedMinutes = updatedMinutes.foldLeft(staffMinutes) {
         case (soFar, updatedMinute) => soFar.updated(updatedMinute.key, updatedMinute)
       }
+
       staffMinutes = purgeExpired(mergedMinutes, (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
 
       updatedMinutes.foldLeft(staffMinuteUpdates) {

@@ -114,7 +114,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     }
   }
 
-  def hasPcpPaxIn(start: SDateLike, end: SDateLike) = apiFlight.hasPcpPaxIn(start, end)
+  def hasPcpPaxIn(start: SDateLike, end: SDateLike) = apiFlight.hasPcpDuring(start, end)
 }
 
 case class FlightsNotReady()
@@ -168,10 +168,19 @@ case class Arrival(
 
   lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
 
-  def hasPcpPaxIn(start: SDateLike, end: SDateLike) = {
-    
+  def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
+    val firstPcpMilli = PcpTime
+    val lastPcpMilli = PcpTime + millisToDisembark(ActPax)
+    val firstInRange = start.millisSinceEpoch <= firstPcpMilli && firstPcpMilli <= end.millisSinceEpoch
+    val lastInRange = start.millisSinceEpoch <= lastPcpMilli && lastPcpMilli <= end.millisSinceEpoch
+    firstInRange || lastInRange
   }
 
+  def millisToDisembark(pax: Int): Long = {
+    val minutesToDisembark = (pax.toDouble / 20).ceil
+    val oneMinuteInMillis = 60 * 1000
+    (minutesToDisembark * oneMinuteInMillis).toLong
+  }
 }
 
 object Arrival {
@@ -338,8 +347,10 @@ case class ActualDeskStats(desks: Map[String, Map[String, Map[MillisSinceEpoch, 
     queueActDesks
       .map {
         case (millis, deskStat) =>
-          crunchMinutes.values.find(cm => cm.minute == millis && cm.queueName == queueName && cm.terminalName == terminalName).map(cm =>
-            cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime))
+          crunchMinutes
+            .values
+            .find(cm => cm.minute == millis && cm.queueName == queueName && cm.terminalName == terminalName)
+            .map(cm => cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime))
       }
       .collect {
         case Some(cm) => cm
@@ -370,13 +381,17 @@ object CrunchApi {
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[Int, CrunchMinute],
                        staffMinutes: Map[Int, StaffMinute]) {
-    def window(start: SDateLike, end: SDateLike) = {
+    def window(start: SDateLike, end: SDateLike): PortState = {
       val windowedFlights = flights.filter {
-        case (_, f) => f.apiFlight.
+        case (_, f) => f.apiFlight.hasPcpDuring(start, end)
       }
-      val windowedCrunchMinutes = crunchMinutes
-      val windowsStaffMinutes = staffMinutes
-      PortState(windowedFlights)
+      val windowedCrunchMinutes = crunchMinutes.filter {
+        case (_, cm) => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch
+      }
+      val windowsStaffMinutes = staffMinutes.filter {
+        case (_, sm) => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch
+      }
+      PortState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
     }
   }
 
@@ -469,7 +484,13 @@ object CrunchApi {
 
 
     def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
-      .map(existingCm => existingCm.copy(paxLoad = updatedDrm.paxLoad, workLoad = updatedDrm.workLoad, deskRec = updatedDrm.deskRec, waitTime = updatedDrm.waitTime))
+      .map(existingCm => existingCm.copy(
+        paxLoad = updatedDrm.paxLoad,
+        workLoad = updatedDrm.workLoad,
+        deskRec = updatedDrm.deskRec,
+        waitTime = updatedDrm.waitTime,
+        lastUpdated = updatedDrm.lastUpdated
+      ))
       .getOrElse(CrunchMinute(updatedDrm))
   }
 
@@ -506,9 +527,13 @@ object CrunchApi {
       .map(cm => (cm.key, cm))
       .toMap
 
-    def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: SimulationMinute): CrunchMinute = maybeMinute
-      .map(existingCm => existingCm.copy(deployedDesks = Option(updatedDrm.desks), deployedWait = Option(updatedDrm.waitTime)))
-      .getOrElse(CrunchMinute(updatedDrm))
+    def mergeMinute(maybeMinute: Option[CrunchMinute], updatedSm: SimulationMinute): CrunchMinute = maybeMinute
+      .map(existingCm => existingCm.copy(
+        deployedDesks = Option(updatedSm.desks),
+        deployedWait = Option(updatedSm.waitTime),
+        lastUpdated = updatedSm.lastUpdated
+      ))
+      .getOrElse(CrunchMinute(updatedSm))
   }
 
   case class CrunchMinute(terminalName: TerminalName,
