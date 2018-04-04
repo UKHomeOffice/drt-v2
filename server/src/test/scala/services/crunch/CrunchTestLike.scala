@@ -128,7 +128,7 @@ class CrunchTestLike
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
-                     minutesToCrunch: Int = 30,
+                     minutesToCrunch: Int = 60,
                      warmUpMinutes: Int = 0,
                      crunchStartDateProvider: (SDateLike) => SDateLike,
                      crunchEndDateProvider: (SDateLike) => SDateLike,
