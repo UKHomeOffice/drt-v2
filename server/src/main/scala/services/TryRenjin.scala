@@ -45,7 +45,7 @@ object TryRenjin {
         engine.put("weight_sla", 10)
 
         val adjustedXMax = if (workloads.length > 60) {
-          engine.eval("rollingfairxmax <- legacy.rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
+          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
           val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
           fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
         } else maxDesks
