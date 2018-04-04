@@ -76,16 +76,13 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
       offerAndWait(crunch.baseArrivalsInput, aclFlight)
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"))
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -107,17 +104,14 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
       offerAndWait(crunch.baseArrivalsInput, aclFlights)
       offerAndWait(crunch.liveArrivalsInput, liveFlights)
 
       val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -144,18 +138,17 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialBaseArrivals = initialACL,
-        initialLiveArrivals = initialLive,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-      )
+        initialLiveArrivals = initialLive)
 
+      Thread.sleep(1000) // Let the initial arrivals work their way through the system
       offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
 
       val expected = initialLive ++ newAcl
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          println(s"flights: $flightsResult")
           flightsResult == expected
       }
 
@@ -178,16 +171,13 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialBaseArrivals = initialAcl,
-        initialLiveArrivals = initialLive,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-      )
+        initialLiveArrivals = initialLive)
 
       offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
       val expected = newLive.map(_.copy(rawIATA = "BA0001")) + initialAcl2
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -214,17 +204,16 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialBaseArrivals = initialAcl,
-        initialLiveArrivals = initialLive,
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduledLive)).addMinutes(30)
-      )
+        initialLiveArrivals = initialLive)
+
+      Thread.sleep(1000) // Let the initial arrivals work their way through the system
 
       offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
       offerAndWait(crunch.liveArrivalsInput, Flights(newLive.toList))
 
       val expected = newAcl ++ newLive ++ initialLive
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected

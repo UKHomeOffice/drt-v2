@@ -99,14 +99,25 @@ case class AirportConfig(
 }
 
 object ArrivalHelper {
+  val defaultPax = 0
+
   def bestPax(flight: Arrival): Int = {
-    val DefaultPax = 0
     (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
       case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
       case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
-      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
+      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => defaultPax
       case (actPax, tranPax, _, _) => actPax - tranPax
-      case _ => DefaultPax
+      case _ => defaultPax
+    }
+  }
+
+  def bestPaxIncludingTransit(flight: Arrival): Int = {
+    (flight.ActPax, flight.LastKnownPax, flight.MaxPax) match {
+      case (actPaxIsLtE0, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (actPaxIsLt0, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
+      case (actPaxIsLt0, None, _) if actPaxIsLt0 <= 0 => defaultPax
+      case (actPax, _, _) => actPax
+      case _ => defaultPax
     }
   }
 

@@ -11,7 +11,7 @@ import services.graphstages.Crunch.midnightThisMorning
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
-class ArrivalsGraphStage(name: String,
+class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],

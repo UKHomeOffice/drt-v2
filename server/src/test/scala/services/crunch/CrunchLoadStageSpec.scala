@@ -3,11 +3,11 @@ package services.crunch
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes}
+import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes}
 import drt.shared._
 import services.graphstages.Crunch.{LoadMinute, Loads}
-import services.graphstages.CrunchLoadGraphStage
-import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryRenjin}
+import services.graphstages.{Crunch, CrunchLoadGraphStage}
+import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
 
 import scala.concurrent.duration._
 import scala.util.Try
@@ -19,17 +19,20 @@ object TestableCrunchLoadStage {
     Try(OptimizerCrunchResult(minDesks.toIndexedSeq, Seq.fill(wl.length)(config.sla)))
   }
 
-  def apply(testProbe: TestProbe,
-            now: () => SDateLike,
-            airportConfig: AirportConfig
-           ): RunnableGraph[SourceQueueWithComplete[Loads]] = {
+  def mockSimulator(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
+    Seq.fill(workloads.length)(config.sla)
+  }
+
+  def apply(testProbe: TestProbe, now: () => SDateLike, airportConfig: AirportConfig, minutesToCrunch: Int): RunnableGraph[SourceQueueWithComplete[Loads]] = {
     val crunchLoadStage = new CrunchLoadGraphStage(
+      name = "",
       optionalInitialCrunchMinutes = None,
       airportConfig = airportConfig,
       expireAfterMillis = oneDayMillis,
       now = now,
-      mockCrunch
-    )
+      crunch = mockCrunch,
+      crunchPeriodStartMillis = Crunch.getLocalLastMidnight,
+      minutesToCrunch = minutesToCrunch)
 
     val loadSource = Source.queue[Loads](1, OverflowStrategy.backpressure)
 
@@ -59,7 +62,8 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val probe = TestProbe("workload")
     val scheduled = "2018-01-01T00:05"
     val testAirportConfig = airportConfig
-    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduled), testAirportConfig).run
+    val minutesToCrunch = 1440
+    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduled), testAirportConfig, minutesToCrunch).run
 
     val loads = Loads(Set(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduled).millisSinceEpoch),
@@ -70,16 +74,16 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     loadsSource.offer(loads)
 
     val expected = Set(
-      CrunchMinute("T1", Queues.EeaDesk, 1514765100000L, 10.0, 5.0, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.EeaDesk, 1514765160000L, 2.5, 1.25, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45, None, None, None, None, None)
+      DeskRecMinute("T1", Queues.EeaDesk, 1514765100000L, 10.0, 5.0, 1, 25, None),
+      DeskRecMinute("T1", Queues.EeaDesk, 1514765160000L, 2.5, 1.25, 1, 25, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45, None)
     )
     val expectedMillis = loads.loadMinutes.map(_.minute)
-    val expectedSize = 2 * 1440
+    val expectedSize = 2 * minutesToCrunch
 
     val result = probe.receiveOne(5 seconds) match {
-      case CrunchMinutes(cms) => cms
+      case DeskRecMinutes(drms) => drms
       case unexpected =>
         println(s"Got unexpected: $unexpected")
         Set()
@@ -100,7 +104,8 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val scheduledDay1 = "2018-01-01T00:05"
     val scheduledDay2 = "2018-01-02T05:30"
     val testAirportConfig = airportConfig
-    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduledDay1), testAirportConfig).run
+    val minutesToCrunch = 2880
+    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduledDay1), testAirportConfig, minutesToCrunch).run
 
     val loads = Loads(Set(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduledDay1).millisSinceEpoch),
@@ -111,23 +116,23 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     loadsSource.offer(loads)
 
     val expected = Set(
-      CrunchMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45, None, None, None, None, None),
-      CrunchMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45, None, None, None, None, None)
+      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25, None),
+      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45, None),
+      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45, None)
     )
     val expectedMillis = loads.loadMinutes.map(_.minute)
     val expectedSize = 2 * 2 * 1440
 
-    val result = probe.receiveOne(5 seconds) match {
-      case CrunchMinutes(cms) => cms
-      case _ => Set()
+    probe.fishForMessage(5 seconds) {
+      case DeskRecMinutes(drms) =>
+        val minutes = drms.filter(cm => {
+          expectedMillis.contains(cm.minute)
+        })
+        println(s"minutes: $minutes")
+        minutes == expected && drms.size == expectedSize
     }
 
-    val interestingMinutes = result.filter(cm => {
-      expectedMillis.contains(cm.minute)
-    })
-
-    interestingMinutes === expected && result.size === expectedSize
+    true
   }
 }

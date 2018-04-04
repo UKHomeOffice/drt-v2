@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import services.SDate
+import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
@@ -35,6 +35,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
+          terminalNames = Seq("T1"),
+          queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
           defaultPaxSplits = SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),
@@ -49,8 +51,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
             Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
         ),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
+        cruncher = TryRenjin.crunch
       )
 
       offerAndWait(crunch.liveArrivalsInput, flights)
@@ -60,7 +61,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         Queues.EGate -> Seq(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
       ))
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = deskRecsFromPortState(ps, 15)
           resultSummary == expected

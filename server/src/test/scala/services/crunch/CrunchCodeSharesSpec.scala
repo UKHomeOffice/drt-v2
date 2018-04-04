@@ -16,30 +16,31 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
   sequential
   isolated
 
+  val fiveMinutes = 600d / 60
+  val procTimes = Map(
+    "T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes),
+    "T2" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+
   "Code shares " >> {
     "Given 2 flights which are codeshares with each other " +
-      "When I ask for a crunch " +
-      "Then I should see workload representing only the flight with the highest passenger numbers" >> {
+    "When I ask for a crunch " +
+    "Then I should see workload representing only the flight with the highest passenger numbers" >> {
       val scheduled = "2017-01-01T00:00Z"
+
       val flights = Flights(List(
         ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"),
         ArrivalGenerator.apiFlight(flightId = 2, actPax = 10, schDt = scheduled, iata = "FR8819")
       ))
 
-      val fiveMinutes = 600d / 60
-
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
 
       offerAndWait(crunch.liveArrivalsInput, flights)
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 15)
           resultSummary == expected
@@ -61,14 +62,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled15, iata = "EZ1010", terminal = "T2", actPax = 12)
       ))
 
-      val fiveMinutes = 600d / 60
-
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30)
-      )
+        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
 
       offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -80,9 +76,10 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 30)
+          println(s"result: $resultSummary")
           resultSummary == expected
       }
 

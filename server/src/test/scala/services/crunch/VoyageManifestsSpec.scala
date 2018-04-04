@@ -22,8 +22,6 @@ import scala.concurrent.duration._
 
 
 class VoyageManifestsSpec extends CrunchTestLike {
-  isolated
-  sequential
 
   "Given a VoyageManifest arriving before its corresponding flight " +
     "When I crunch the flight " +
@@ -43,10 +41,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30))
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
@@ -59,10 +56,11 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.CheckIn), PaxNumbers)
     )
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val splitsSet = ps.flights.head match {
-          case (_, ApiFlightWithSplits(_, s, _)) => s
+        val splitsSet = ps.flights.values.headOption match {
+          case Some(ApiFlightWithSplits(_, s, _)) => s
+          case None => Set()
         }
         splitsSet == expectedSplits
     }
@@ -96,11 +94,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           nonVisaNationalToDesk -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifestsCi)
     offerAndWait(crunch.manifestsInput, inputManifestsDc)
@@ -116,10 +112,11 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 1.0, Option(Map("USA" -> 1.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val splitsSet = ps.flights.head match {
-          case (_, ApiFlightWithSplits(_, s, _)) => s
+        val splitsSet = ps.flights.values.headOption match {
+          case Some(ApiFlightWithSplits(_, s, _)) => s
+          case None => Set()
         }
         val queues = ps.crunchMinutes.values.groupBy(_.queueName).keys.toSet
         val expectedQueues = Set(NonEeaDesk)
@@ -150,18 +147,16 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 10.0)
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values
@@ -199,18 +194,16 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values
@@ -253,18 +246,16 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
+        terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30)
-    )
+      ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, inputFlights)
 
     val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values

@@ -58,10 +58,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             minMaxDesksByTerminalQueue = minMaxDesks,
             defaultProcessingTimes = procTimes
           ),
-          minutesToCrunch = 120,
-          crunchStartDateProvider = (_) => SDate("2017-05-31T23:00Z"),
-          crunchEndDateProvider = (_) => SDate("2017-05-31T23:00Z").addMinutes(120)
-        )
+          minutesToCrunch = 120)
 
         offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -72,7 +69,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
         )))
 
-        crunch.liveTestProbe.fishForMessage(30 seconds) {
+        crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = deskRecsFromPortState(ps, 120)
             resultSummary == expected

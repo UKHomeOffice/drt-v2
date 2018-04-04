@@ -39,14 +39,12 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           ),
           defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
         ),
-        crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-        crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
         initialLiveArrivals = flights
       )
 
       val expected = Set(Queues.EeaDesk)
 
-      crunch.liveTestProbe.fishForMessage(30 seconds) {
+      crunch.liveTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
           resultSummary == expected
@@ -74,14 +72,12 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       airportConfig = airportConfig.copy(
         defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
       ),
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(30),
       initialLiveArrivals = flights
     )
 
     val expected = Map("T1" -> Map(Queues.EeaDesk -> List(15.0)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
         resultSummary == expected
