@@ -129,9 +129,11 @@ class SimulationGraphStage(name: String = "",
       }
 
     def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute]): Set[SimulationMinute] = {
+      log.info(s"calling workloadForPeriod")
       val workload = workloadForPeriod(firstMinute, lastMinute, loads)
+      log.info(s"calling deploymentsForMillis")
       val deployed = deploymentsForMillis(firstMinute, lastMinute, workload)
-
+      log.info(s"millis range")
       val minuteMillis = firstMinute until lastMinute by 60000
 
       val simulationMinutes = workload.flatMap {
@@ -166,18 +168,23 @@ class SimulationGraphStage(name: String = "",
 
       val deployments: Seq[(TerminalName, String, MillisSinceEpoch, Int)] = airportConfig.terminalNames
         .flatMap(tn => {
+          val terminalWorkloads = workload.getOrElse(tn, Map())
+
           minuteMillis
             .sliding(15, 15)
             .flatMap(slotMillis => {
               val queuesWithoutTransfer = airportConfig.queues(tn).filterNot(_ == Queues.Transfer)
               val queueWl = queuesWithoutTransfer.map(qn => {
+                val queueWorkloads = terminalWorkloads.getOrElse(qn, Map())
+                val slaWeight = Math.log(airportConfig.slaByQueue(qn))
                 (qn, slotMillis.map(milli => {
-                  val workloadForMilli = workload.getOrElse(tn, Map()).getOrElse(qn, Map()).getOrElse(milli, 0d)
-                  val slaWeightedWorkload = workloadForMilli * (10d / Math.log(airportConfig.slaByQueue(qn)))
+                  val workloadForMilli = queueWorkloads.getOrElse(milli, 0d)
+                  val slaWeightedWorkload = workloadForMilli * (10d / slaWeight)
                   val adjustedForEgates = if (qn == Queues.EGate) slaWeightedWorkload / airportConfig.eGateBankSize else slaWeightedWorkload
                   adjustedForEgates
                 }).sum)
               })
+
               val queueMm: Map[QueueName, (Int, Int)] = minMaxDesks.getOrElse(tn, Map()).mapValues(_.getOrElse(slotMillis.min, (0, 0)))
               val available: Int = availableStaff.getOrElse(tn, Map()).getOrElse(slotMillis.min, 0)
               val queuesAndDeployments = deployer(queueWl, available, queueMm)

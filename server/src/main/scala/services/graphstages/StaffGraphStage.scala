@@ -54,7 +54,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
         case _ if !isAvailable(outStaffMinutes) =>
           log.info(s"outStaffMinutes not available to push")
         case (millis, staffMinutes) :: queueTail =>
-          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} staff minutes")
+          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${staffMinutes.minutes.length} staff minutes for ${staffMinutes.minutes.groupBy(_.terminalName).keys.mkString(", ")}")
           push(outStaffMinutes, staffMinutes)
 
           staffMinutesQueue = queueTail
@@ -102,10 +102,11 @@ class StaffGraphStage(name: String = "",
 
     setHandler(inShifts, new InHandler {
       override def onPush(): Unit = {
-        shiftsOption = Option(grab(inShifts))
-        log.info(s"Grabbed available inShifts: $shiftsOption")
-        val minutesToUpdate = shiftsOption.map(allMinuteMillis).getOrElse(Set())
+        val incomingShifts = grab(inShifts)
+        log.info(s"Grabbed available inShifts")
+        val minutesToUpdate = changedMinuteMillis(shiftsOption.getOrElse(""), incomingShifts)
         staffMinuteUpdates = updatesFromSources(maybeStaffSources, minutesToUpdate)
+        shiftsOption = Option(incomingShifts)
         tryPush()
         pull(inShifts)
       }
@@ -168,14 +169,20 @@ class StaffGraphStage(name: String = "",
           })
         })
 
-      val mergedMinutes = updatedMinutes.foldLeft(staffMinutes) {
-        case (soFar, updatedMinute) => soFar.updated(updatedMinute.key, updatedMinute)
-      }
+      val mergedMinutes = mergeMinutes(updatedMinutes, staffMinutes)
 
       staffMinutes = purgeExpired(mergedMinutes, (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
 
-      updatedMinutes.foldLeft(staffMinuteUpdates) {
-        case (soFar, sm) => soFar.updated(sm.key, sm)
+      mergeMinutes(updatedMinutes, staffMinuteUpdates)
+    }
+
+    def mergeMinutes(updatedMinutes: Set[StaffMinute], existingMinutes: Map[Int, StaffMinute]): Map[Int, StaffMinute] = {
+      updatedMinutes.foldLeft(existingMinutes) {
+        case (soFar, updatedMinute) =>
+          soFar.get(updatedMinute.key) match {
+            case Some(existingMinute) if existingMinute.equals(updatedMinute) => soFar
+            case _ => soFar.updated(updatedMinute.key, updatedMinute)
+          }
       }
     }
 
@@ -216,18 +223,35 @@ class StaffGraphStage(name: String = "",
     set
   }
 
+  def changedMinuteMillis(oldShifts: String, newShifts: String) = {
+    val oldAssignments = assignmentsFromRawShifts(oldShifts)
+    val newAssignments = assignmentsFromRawShifts(newShifts)
+
+    val diff = newAssignments -- oldAssignments
+
+    diff.flatMap(a => {
+      val startMillis = a.startDt.millisSinceEpoch
+      val endMillis = a.endDt.millisSinceEpoch
+      startMillis to endMillis by 60000
+    })
+  }
+
   def allMinuteMillis(rawAssignments: String): Set[MillisSinceEpoch] = {
+    assignmentsFromRawShifts(rawAssignments)
+      .flatMap(a => {
+        val startMillis = a.startDt.millisSinceEpoch
+        val endMillis = a.endDt.millisSinceEpoch
+        startMillis to endMillis by 60000
+      })
+  }
+
+  def assignmentsFromRawShifts(rawAssignments: String): Set[StaffAssignment] = {
     StaffAssignmentParser(rawAssignments)
       .parsedAssignments
       .toList
       .collect {
         case Success(assignment) => assignment
       }
-      .flatMap(a => {
-        val startMillis = a.startDt.millisSinceEpoch
-        val endMillis = a.endDt.millisSinceEpoch
-        startMillis to endMillis by 60000
-      })
       .toSet
   }
 
