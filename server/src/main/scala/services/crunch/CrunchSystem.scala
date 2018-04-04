@@ -118,7 +118,7 @@ object CrunchSystem {
       airportConfig = props.airportConfig,
       numberOfDays = props.maxDaysToCrunch)
 
-    val staffBatcher = new StaffBatchUpdateGraphStage()
+    val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis)
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
@@ -152,12 +152,18 @@ object CrunchSystem {
       now = props.now,
       simulate = props.simulator,
       crunchPeriodStartMillis = props.crunchPeriodStartMillis,
-      minutesToCrunch = props.minutesToCrunch
-    )
+      minutesToCrunch = props.minutesToCrunch)
+
+    val portStateGraphStage = new PortStateGraphStage(
+      name = props.logLabel,
+      optionalInitialPortState = initialMergedPs,
+      airportConfig = props.airportConfig,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now)
 
     val crunchSystem = Crunch2(
       baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
       baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,

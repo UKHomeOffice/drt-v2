@@ -113,6 +113,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
       None
     }
   }
+
+  def hasPcpPaxIn(start: SDateLike, end: SDateLike) = apiFlight.hasPcpPaxIn(start, end)
 }
 
 case class FlightsNotReady()
@@ -165,6 +167,11 @@ case class Arrival(
   lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
 
   lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
+
+  def hasPcpPaxIn(start: SDateLike, end: SDateLike) = {
+    
+  }
+
 }
 
 object Arrival {
@@ -363,6 +370,14 @@ object CrunchApi {
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[Int, CrunchMinute],
                        staffMinutes: Map[Int, StaffMinute]) {
+    def window(start: SDateLike, end: SDateLike) = {
+      val windowedFlights = flights.filter {
+        case (_, f) => f.apiFlight.
+      }
+      val windowedCrunchMinutes = crunchMinutes
+      val windowsStaffMinutes = staffMinutes
+      PortState(windowedFlights)
+    }
   }
 
   sealed trait Minute {

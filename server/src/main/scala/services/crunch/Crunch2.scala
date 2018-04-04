@@ -36,6 +36,7 @@ object Crunch2 {
                                         staffGraphStage: StaffGraphStage,
                                         staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
                                         simulationGraphStage: SimulationGraphStage,
+                                        portStateGraphStage: PortStateGraphStage,
 
                                         baseArrivalsActor: ActorRef,
                                         fcstArrivalsActor: ActorRef,
@@ -81,6 +82,7 @@ object Crunch2 {
           val staff = builder.add(staffGraphStage.async)
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
+          val portState = builder.add(portStateGraphStage.async)
 
           val baseArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[Flights](2))
@@ -89,9 +91,9 @@ object Crunch2 {
           val manifestsFanOut = builder.add(Broadcast[DqManifests](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
-          val crunchFanOut = builder.add(Broadcast[DeskRecMinutes](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](3))
           val simulationFanOut = builder.add(Broadcast[SimulationMinutes](2))
+          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](2))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(baseArrivalsActor, "complete"))
           val fcstArrivalsSink = builder.add(Sink.actorRef(fcstArrivalsActor, "complete"))
@@ -99,18 +101,8 @@ object Crunch2 {
 
           val manifestsSink = builder.add(Sink.actorRef(manifestsActor, "complete"))
 
-          val liveSinkFlightRemovals = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val liveSinkFlights = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val liveSinkCrunch = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val liveSinkActDesks = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val liveSinkStaff = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val liveSinkSimulations = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-
-          val fcstSinkFlightRemovals = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
-          val fcstSinkFlights = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
-          val fcstSinkCrunch = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
-          val fcstSinkStaff = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
-          val fcstSinkSimulations = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
+          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
@@ -138,8 +130,7 @@ object Crunch2 {
           } ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> liveSinkFlightRemovals
-          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> fcstSinkFlightRemovals
+          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
           arrivalsFanOut ~> arrivalSplits.in0
           splitsPredictor.out ~> arrivalSplits.in2
 
@@ -150,23 +141,20 @@ object Crunch2 {
           workloadFanOut ~> crunch
           workloadFanOut ~> simulation.in0
 
-          crunch ~> crunchFanOut
-
-          arrivalSplitsFanOut.map(liveFlights(now)) ~> liveSinkFlights
-          crunchFanOut.map(liveDeskRecs(now)) ~> liveSinkCrunch
-          actualDesksAndWaitTimes ~> liveSinkActDesks
-
-          arrivalSplitsFanOut.map(forecastFlights(now)) ~> fcstSinkFlights
-          crunchFanOut.map(forecastDeskRecs(now)) ~> fcstSinkCrunch
+          arrivalSplitsFanOut ~> portState.in1
+          crunch ~> portState.in2
+          actualDesksAndWaitTimes ~> portState.in3
 
           staff.out ~> batchStaff ~> staffFanOut
           staffFanOut ~> simulation.in1
-          staffFanOut ~> liveSinkStaff
-          staffFanOut ~> fcstSinkStaff
+          staffFanOut ~> portState.in4
 
           simulation.out ~> simulationFanOut
-          simulationFanOut.map(liveSimulations(now)) ~> liveSinkSimulations
-          simulationFanOut.map(forecastSimulations(now)) ~> fcstSinkSimulations
+          simulationFanOut ~> portState.in5
+
+          portState.out ~> portStateFanOut
+          portStateFanOut ~> liveSink
+          portStateFanOut ~> fcstSink
 
           ClosedShape
     }
