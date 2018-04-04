@@ -134,7 +134,7 @@ class CrunchTestLike
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
-                     minutesToCrunch: Int = 30,
+                     minutesToCrunch: Int = 60,
                      warmUpMinutes: Int = 0,
                      crunchStartDateProvider: (SDateLike) => SDateLike = s => Crunch.getLocalLastMidnight(s),
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),

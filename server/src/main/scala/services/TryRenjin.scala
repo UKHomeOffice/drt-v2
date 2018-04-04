@@ -42,7 +42,17 @@ object TryRenjin {
         engine.put("weight_pax", 0.05)
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
-        engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=xmax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
+
+        val adjustedXMax = if (workloads.length > 60) {
+          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=sla, target.width=60, rolling.buffer=60)")
+          val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
+          fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+        } else maxDesks
+
+        engine.put("adjustedXMax", adjustedXMax.toArray)
+
+        engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=adjustedXMax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
+
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map deskRecs.getElementAsInt
         OptimizerCrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))

@@ -127,7 +127,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
   //    true
   //  }
 
-  "Given a live flight update after a base crunch & simulation, followed by a staffing change " +
+  "Given a flight a live flight update after a base crunch & simulation, followed by a staffing change " +
     "When I look at the simulation numbers in the base port state for the day after the live flight update " +
     "Then I should see a corresponding deployed staff number " >> {
 
@@ -310,13 +310,12 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrivals1st = Flights(List(forecastArrival1))
     val forecastArrivals2nd = Flights(List(forecastArrival2))
 
-    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
+      val crunch = runCrunchGraph(
+        now = () => SDate(baseScheduled).addDays(-1))
 
-    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
-    crunch.forecastTestProbe.receiveOne(2 seconds)
-    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)
-    crunch.forecastTestProbe.receiveOne(2 seconds)
-    offerAndWait(crunch.forecastArrivalsInput, forecastArrivals2nd)
+      offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+      crunch.forecastTestProbe.receiveOne(2 seconds)offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)crunch.forecastTestProbe.receiveOne(2 seconds)
+      offerAndWait(crunch.forecastArrivalsInput, forecastArrivals2nd)
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
