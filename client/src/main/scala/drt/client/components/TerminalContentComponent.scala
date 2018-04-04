@@ -35,9 +35,10 @@ object TerminalContentComponent {
                     router: RouterCtl[Loc],
                     showActuals: Boolean,
                     viewMode: ViewMode,
-                    roles: Pot[List[String]]
+                    roles: Pot[List[String]],
+                    minuteTicker: Int
                   ) {
-    lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, Long, Int)]], Int, Int) = {
+    lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, MillisSinceEpoch, Int)]], Int, Int, Int, Int) = {
       val depsHash = crunchStatePot.map(
         cs => cs.crunchMinutes.toSeq.map(_.hashCode())
       ).toList.mkString("|")
@@ -57,7 +58,7 @@ object TerminalContentComponent {
         )
       }))
 
-      (depsHash, flightsHash, timeRangeHours.start, timeRangeHours.end)
+      (depsHash, flightsHash, timeRangeHours.start, timeRangeHours.end, SDate.now().getHours(), minuteTicker)
     }
   }
 
@@ -65,7 +66,6 @@ object TerminalContentComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-
 
   def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]): List[ApiFlightWithSplits] = arrivals.filter(a => {
 

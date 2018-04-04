@@ -17,7 +17,12 @@ import scala.scalajs.js.Date
 object DatePickerComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState)
+  case class Props(router: RouterCtl[Loc],
+                   terminalPageTab: TerminalPageTabLoc,
+                   timeRangeHours: TimeRangeHours,
+                   loadingState: LoadingState,
+                   minuteTicker: Int
+                  )
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
@@ -32,7 +37,7 @@ object DatePickerComponent {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(
-    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end)
+    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end, p.minuteTicker)
   )
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
@@ -111,14 +116,14 @@ object DatePickerComponent {
             <.div(^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
             <.div(^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)),
-            drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt)),
-            drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt)),
-            drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt)),
-            goButton(props.loadingState.isLoading, isCurrentSelection),
-            errorMessage
-          ),
-          TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = isTodayActive))
-        )
+          drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt)),
+          drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt)),
+          drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt)),
+          goButton(props.loadingState.isLoading, isCurrentSelection),
+          errorMessage
+        ),
+        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = isTodayActive, props.minuteTicker))
+      )
     })
     .configure(Reusability.shouldComponentUpdate)
     .build

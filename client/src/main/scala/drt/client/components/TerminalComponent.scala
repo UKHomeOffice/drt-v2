@@ -2,18 +2,21 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 
 import scala.collection.immutable
 
 object TerminalComponent {
+
+  val log: Logger = LoggerFactory.getLogger("TerminalComponent")
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
 
@@ -30,11 +33,14 @@ object TerminalComponent {
                             loadingState: LoadingState,
                             showActuals: Boolean,
                             userRoles: Pot[List[String]],
-                            viewMode: ViewMode
+                            viewMode: ViewMode,
+                            minuteTicker: Int
                           )
 
   implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.derive[TerminalPageTabLoc]
-  implicit val propsReuse: Reusability[Props] = Reusability.derive[Props]
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
+    (p.terminalPageTab, p.router, SDate.now().getHours())
+  )
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
@@ -51,7 +57,8 @@ object TerminalComponent {
         model.loadingState,
         model.showActualIfAvailable,
         model.userRoles,
-        model.viewMode
+        model.viewMode,
+        model.minuteTicker
       ))
       modelRCP(modelMP => {
         val model = modelMP()
@@ -69,7 +76,8 @@ object TerminalComponent {
             props.router,
             model.showActuals,
             model.viewMode,
-            model.userRoles
+            model.userRoles,
+            model.minuteTicker
           )
 
           val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
@@ -119,7 +127,12 @@ object TerminalComponent {
                   }),
                   <.div(^.className := "content-head",
                     PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal),
-                    DatePickerComponent(DatePickerComponent.Props(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState))
+                    DatePickerComponent(DatePickerComponent.Props(props.router,
+                      props.terminalPageTab,
+                      model.timeRangeHours,
+                      model.loadingState,
+                      model.minuteTicker
+                    ))
                   ),
                   TerminalContentComponent(terminalContentProps)
                 ) else ""

@@ -94,6 +94,8 @@ object Actions {
 
   case class UpdateShowActualDesksAndQueues(state: Boolean) extends Action
 
+  case object UpdateMinuteTicker extends Action
+
   case class RetryActionAfter(action: Action, delay: FiniteDuration) extends Action
 
   case class DoNothing() extends Action

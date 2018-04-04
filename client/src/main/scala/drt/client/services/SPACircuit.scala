@@ -76,7 +76,8 @@ case class RootModel(
                       timeRangeFilter: TimeRangeHours = CurrentWindow(),
                       loadingState: LoadingState = LoadingState(),
                       showActualIfAvailable: Boolean = true,
-                      userRoles: Pot[List[String]] = Empty
+                      userRoles: Pot[List[String]] = Empty,
+                      minuteTicker: Int = 0
                     )
 
 abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends ActionHandler(modelRW) {
@@ -98,6 +99,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
   val loginCheckDelay: FiniteDuration = 30 seconds
+  val minuteUpdateDelay: FiniteDuration = 10 seconds
 }
 
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
@@ -601,6 +603,19 @@ class UserRolesHandler[M](modelRW: ModelRW[M, Pot[List[String]]]) extends Loggin
   }
 }
 
+class MinuteTickerHandler[M](modelRW: ModelRW[M, Int]) extends LoggingActionHandler(modelRW) {
+  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case UpdateMinuteTicker =>
+      val currentMinutes = SDate.now().getMinutes()
+
+      val pollEffect = Effect(Future(RetryActionAfter(UpdateMinuteTicker, PollDelay.minuteUpdateDelay)))
+      if (currentMinutes != value)
+        updated(currentMinutes, pollEffect)
+      else
+        effectOnly(pollEffect)
+  }
+}
+
 class NoopHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case DoNothing() =>
@@ -625,12 +640,12 @@ class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAc
             .call()
             .map(_ => RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
             .recoverWith {
-            case f: AjaxException if f.xhr.status == 405 =>
-              log.error(s"User is logged out, triggering page reload.")
-              Future(TriggerReload)
-            case f =>
-              log.error(s"Error when checking for user login status, retrying after ${PollDelay.loginCheckDelay}")
-              Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
+              case f: AjaxException if f.xhr.status == 405 =>
+                log.error(s"User is logged out, triggering page reload.")
+                Future(TriggerReload)
+              case f =>
+                log.error(s"Error when checking for user login status, retrying after ${PollDelay.loginCheckDelay}")
+                Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
             }
         ))
 
@@ -668,7 +683,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new RetryHandler(zoomRW(identity)((m, v) => m)),
       new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),
       new NoopHandler(zoomRW(identity)((m, v) => m)),
-      new UserRolesHandler(zoomRW(_.userRoles)((m, v) => m.copy(userRoles = v)))
+      new UserRolesHandler(zoomRW(_.userRoles)((m, v) => m.copy(userRoles = v))),
+      new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v)))
     )
 
     composedhandlers
