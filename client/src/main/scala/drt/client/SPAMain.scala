@@ -61,7 +61,8 @@ object SPAMain extends js.JSApp {
       GetAirportConfig(),
       GetShifts(),
       GetFixedPoints(),
-      GetStaffMovements()
+      GetStaffMovements(),
+      UpdateMinuteTicker
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

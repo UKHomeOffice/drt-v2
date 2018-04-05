@@ -22,7 +22,11 @@ object SnapshotSelector {
 
   val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
 
-  case class Props(router: RouterCtl[Loc], terminalPageTab: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState)
+  case class Props(router: RouterCtl[Loc],
+                   terminalPageTab: TerminalPageTabLoc,
+                   timeRangeHours: TimeRangeHours,
+                   loadingState: LoadingState
+                  )
 
   case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def snapshotDateTime = SDate(year, month, day, hours, minutes)
@@ -41,7 +45,9 @@ object SnapshotSelector {
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
+    (p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end)
+  )
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(

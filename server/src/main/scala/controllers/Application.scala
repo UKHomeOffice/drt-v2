@@ -137,7 +137,15 @@ trait SystemActors {
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
-  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(new VoyageManifestsGraphStage(dqZipBucketName, airportConfig.portCode, getLastSeenManifestsFileName))
+  val apiS3PollFequencyMillis = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
+    new VoyageManifestsGraphStage(
+      dqZipBucketName,
+      airportConfig.portCode,
+      getLastSeenManifestsFileName,
+      apiS3PollFequencyMillis
+    )
+  )
 
   //  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
   //    system = system,

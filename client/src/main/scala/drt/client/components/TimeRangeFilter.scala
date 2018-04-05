@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.actions.Actions.SetTimeRangeFilter
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
@@ -11,9 +12,9 @@ object TimeRangeFilter {
 
   val log: Logger = LoggerFactory.getLogger("TimeRangeFilter")
 
-  case class Props(window: TimeRangeHours, showNow: Boolean)
+  case class Props(window: TimeRangeHours, showNow: Boolean, minuteTicker: Int = 0)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.window.start, p.window.end))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.window.start, p.window.end, p.minuteTicker))
 
   val component = ScalaComponent.builder[Props]("TimeRangeFilter")
     .render_P((props) => {
@@ -37,8 +38,6 @@ object TimeRangeFilter {
         case WholeDayWindow() => "active"
         case _ => ""
       }
-
-      log.info(s"Rendering filter with: ${props.window}")
 
       <.div(
         <.div(^.className := "date-view-picker-container",
