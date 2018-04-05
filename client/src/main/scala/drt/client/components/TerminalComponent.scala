@@ -39,7 +39,7 @@ object TerminalComponent {
 
   implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.derive[TerminalPageTabLoc]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.terminalPageTab, p.router, SDate.now().getHours())
+    (p.terminalPageTab, p.router)
   )
 
   val component = ScalaComponent.builder[Props]("Terminal")

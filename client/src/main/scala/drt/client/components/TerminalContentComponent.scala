@@ -38,7 +38,7 @@ object TerminalContentComponent {
                     roles: Pot[List[String]],
                     minuteTicker: Int
                   ) {
-    lazy val hash: (String, Option[List[(Int, String, String, String, String, String, String, String, String, MillisSinceEpoch, Int)]], Int, Int, Int, Int) = {
+    lazy val hash = {
       val depsHash = crunchStatePot.map(
         cs => cs.crunchMinutes.toSeq.map(_.hashCode())
       ).toList.mkString("|")
@@ -58,7 +58,7 @@ object TerminalContentComponent {
         )
       }))
 
-      (depsHash, flightsHash, timeRangeHours.start, timeRangeHours.end, SDate.now().getHours(), minuteTicker)
+      (depsHash, flightsHash, timeRangeHours.start, timeRangeHours.end, minuteTicker)
     }
   }
 
