@@ -113,7 +113,7 @@ class SimulationGraphStage(name: String = "",
       val newSimulationMinutes: Set[SimulationMinute] = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loads)
       val newSimulationMinutesByKey = newSimulationMinutes.map(cm => (cm.key, cm)).toMap
 
-      val diff = newSimulationMinutes.map(_.copy(lastUpdated = None)) -- existingSimulationMinutes.map(_.copy(lastUpdated = None))
+      val diff = newSimulationMinutes -- existingSimulationMinutes
 
       simulationMinutes = purgeExpired(newSimulationMinutesByKey, (sm: SimulationMinute) => sm.minute, now, expireAfterMillis)
 
@@ -265,7 +265,7 @@ class SimulationGraphStage(name: String = "",
     }
 
     def mergeSimulationMinutes(updatedCms: Set[SimulationMinute], existingCms: Map[Int, SimulationMinute]): Map[Int, SimulationMinute] = updatedCms.foldLeft(existingCms) {
-      case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)))
+      case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
     }
 
     def loadDiff(updatedLoads: Set[LoadMinute], existingLoads: Set[LoadMinute]): Set[LoadMinute] = {
@@ -307,4 +307,43 @@ class SimulationGraphStage(name: String = "",
         sms.map(sm => (sm.minute, sm.availableAtPcp)).toMap
       }
   }
+}
+
+
+case class SimulationMinute(terminalName: TerminalName,
+                            queueName: QueueName,
+                            minute: MillisSinceEpoch,
+                            desks: Int,
+                            waitTime: Int) extends SimulationMinuteLike {
+  lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+}
+
+case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMinutes {
+  def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
+    maybePortState match {
+      case None => Option(PortState(Map(), newCrunchMinutes, Map()))
+      case Some(portState) =>
+        val updatedCrunchMinutes = minutes
+          .foldLeft(portState.crunchMinutes) {
+            case (soFar, updatedCm) =>
+              val maybeMinute: Option[CrunchMinute] = soFar.get(updatedCm.key)
+              val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm)
+              soFar.updated(updatedCm.key, mergedCm.copy(lastUpdated = Option(now.millisSinceEpoch)))
+          }
+        Option(portState.copy(crunchMinutes = updatedCrunchMinutes))
+    }
+  }
+
+  def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+    .map(CrunchMinute(_))
+    .map(cm => (cm.key, cm))
+    .toMap
+
+  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedSm: SimulationMinute): CrunchMinute = maybeMinute
+    .map(existingCm => existingCm.copy(
+      deployedDesks = Option(updatedSm.desks),
+      deployedWait = Option(updatedSm.waitTime),
+      lastUpdated = Option(SDate.now().millisSinceEpoch)
+    ))
+    .getOrElse(CrunchMinute(updatedSm))
 }

@@ -211,3 +211,12 @@ object Crunch2 {
 
   def tomorrowStartMillis(now: () => SDateLike): MillisSinceEpoch = Crunch.getLocalNextMidnight(now()).millisSinceEpoch
 }
+
+case class FlightRemovals(idsToRemove: Set[Int]) extends PortStateMinutes {
+  def applyTo(mayBePortState: Option[PortState], now: SDateLike): Option[PortState] = {
+    mayBePortState.map(portState => {
+      val updatedFlights = portState.flights.filterKeys(id => !idsToRemove.contains(id))
+      portState.copy(flights = updatedFlights)
+    })
+  }
+}

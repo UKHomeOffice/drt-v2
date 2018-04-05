@@ -64,7 +64,7 @@ class CrunchLoadGraphStage(name: String = "",
         val deskRecMinutes: Set[DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loadMinutes.values.toSet)
         val deskRecMinutesByKey = deskRecMinutes.map(cm => (cm.key, cm)).toMap
 
-        val diff = deskRecMinutes.map(drm => drm.copy(lastUpdated = None)) -- existingDeskRecMinutes.values.toSet.map((drm: DeskRecMinute) => drm.copy(lastUpdated = None))
+        val diff = deskRecMinutes -- existingDeskRecMinutes.values.toSet
 
         existingDeskRecMinutes = purgeExpired(deskRecMinutesByKey, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
 
@@ -124,7 +124,7 @@ class CrunchLoadGraphStage(name: String = "",
 
     def mergeDeskRecMinutes(updatedCms: Set[DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
       updatedCms.foldLeft(existingCms) {
-        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute.copy(lastUpdated = Option(SDate.now().millisSinceEpoch)))
+        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
       }
     }
 
@@ -165,4 +165,47 @@ class CrunchLoadGraphStage(name: String = "",
       } else log.info(s"outDeskRecMinutes not available to push")
     }
   }
+}
+
+case class DeskRecMinute(terminalName: TerminalName,
+                         queueName: QueueName,
+                         minute: MillisSinceEpoch,
+                         paxLoad: Double,
+                         workLoad: Double,
+                         deskRec: Int,
+                         waitTime: Int) extends DeskRecMinuteLike {
+  lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+}
+
+case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes {
+  def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
+    maybePortState match {
+      case None => Option(PortState(Map(), newCrunchMinutes, Map()))
+      case Some(portState) =>
+        val updatedCrunchMinutes = minutes
+          .foldLeft(portState.crunchMinutes) {
+            case (soFar, updatedDrm) =>
+              val maybeMinute: Option[CrunchMinute] = soFar.get(updatedDrm.key)
+              val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm)
+              soFar.updated(updatedDrm.key, mergedCm.copy(lastUpdated = Option(now.millisSinceEpoch)))
+          }
+        Option(portState.copy(crunchMinutes = updatedCrunchMinutes))
+    }
+  }
+
+  def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+    .map(CrunchMinute(_))
+    .map(cm => (cm.key, cm))
+    .toMap
+
+
+  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
+    .map(existingCm => existingCm.copy(
+      paxLoad = updatedDrm.paxLoad,
+      workLoad = updatedDrm.workLoad,
+      deskRec = updatedDrm.deskRec,
+      waitTime = updatedDrm.waitTime,
+      lastUpdated = Option(SDate.now().millisSinceEpoch)
+    ))
+    .getOrElse(CrunchMinute(updatedDrm))
 }

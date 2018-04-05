@@ -3,7 +3,6 @@ package services.graphstages
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.{CrunchMinute, PortState}
-import drt.shared.{ActualDeskStats, DeskStat}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.language.postfixOps

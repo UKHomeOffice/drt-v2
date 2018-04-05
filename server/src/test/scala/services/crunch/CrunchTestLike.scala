@@ -17,7 +17,7 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{Crunch, DqManifests, DummySplitsPredictor}
+import services.graphstages.{ActualDeskStats, Crunch, DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
 //import scala.language.postfixOps

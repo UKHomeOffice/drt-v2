@@ -3,10 +3,9 @@ package services.crunch
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes}
 import drt.shared._
 import services.graphstages.Crunch.{LoadMinute, Loads}
-import services.graphstages.{Crunch, CrunchLoadGraphStage}
+import services.graphstages.{Crunch, CrunchLoadGraphStage, DeskRecMinute, DeskRecMinutes}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
 
 import scala.concurrent.duration._
@@ -74,16 +73,16 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     loadsSource.offer(loads)
 
     val expected = Set(
-      DeskRecMinute("T1", Queues.EeaDesk, 1514765100000L, 10.0, 5.0, 1, 25, None),
-      DeskRecMinute("T1", Queues.EeaDesk, 1514765160000L, 2.5, 1.25, 1, 25, None),
-      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45, None),
-      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45, None)
+      DeskRecMinute("T1", Queues.EeaDesk, 1514765100000L, 10.0, 5.0, 1, 25),
+      DeskRecMinute("T1", Queues.EeaDesk, 1514765160000L, 2.5, 1.25, 1, 25),
+      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45),
+      DeskRecMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45)
     )
     val expectedMillis = loads.loadMinutes.map(_.minute)
     val expectedSize = 2 * minutesToCrunch
 
     val result = probe.receiveOne(5 seconds) match {
-      case DeskRecMinutes(drms) => drms.map(_.copy(lastUpdated = None))
+      case DeskRecMinutes(drms) => drms
       case unexpected =>
         println(s"Got unexpected: $unexpected")
         Set()
@@ -116,10 +115,10 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     loadsSource.offer(loads)
 
     val expected = Set(
-      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25, None),
-      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25, None),
-      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45, None),
-      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45, None)
+      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25),
+      DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25),
+      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45),
+      DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45)
     )
     val expectedMillis = loads.loadMinutes.map(_.minute)
     val expectedSize = 2 * 2 * 1440
@@ -128,7 +127,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
       case DeskRecMinutes(drms) =>
         val minutes = drms.filter(cm => {
           expectedMillis.contains(cm.minute)
-        }).map(_.copy(lastUpdated = None))
+        })
         println(s"minutes: $minutes")
         minutes == expected && drms.size == expectedSize
     }
