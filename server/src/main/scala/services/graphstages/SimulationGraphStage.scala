@@ -67,13 +67,15 @@ class SimulationGraphStage(name: String = "",
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
+        val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
+
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
         val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
-        updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
+        updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet, affectedTerminals)
 
         pushStateIfReady()
 
@@ -85,13 +87,15 @@ class SimulationGraphStage(name: String = "",
       override def onPush(): Unit = {
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
 
-        log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
+        val affectedTerminals = incomingStaffMinutes.minutes.map(_.terminalName).toSet
+
+        log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes for ${affectedTerminals.mkString(", ")}")
 
         staffMinutes = purgeExpired(updateStaffMinutes(staffMinutes, incomingStaffMinutes), (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
 
         val firstMinute = SDate(incomingStaffMinutes.minutes.map(_.minute).min)
         val lastMinute = firstMinute.addDays(1)
-        updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet)
+        updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet, affectedTerminals)
 
         pushStateIfReady()
 
@@ -107,10 +111,15 @@ class SimulationGraphStage(name: String = "",
       }
     })
 
-    def updateSimulations(firstMinute: SDateLike, lastMinute: SDateLike, existingSimulationMinutes: Set[SimulationMinute], loads: Set[LoadMinute]): Unit = {
-      log.info(s"Simulation for ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
+    def updateSimulations(firstMinute: SDateLike,
+                          lastMinute: SDateLike,
+                          existingSimulationMinutes: Set[SimulationMinute],
+                          loads: Set[LoadMinute],
+                          terminalNames: Set[TerminalName]
+                         ): Unit = {
+      log.info(s"Simulation for ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()} ${terminalNames.mkString(", ")}")
 
-      val newSimulationMinutes: Set[SimulationMinute] = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loads)
+      val newSimulationMinutes: Set[SimulationMinute] = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loads, terminalNames)
       val newSimulationMinutesByKey = newSimulationMinutes.map(cm => (cm.key, cm)).toMap
 
       val diff = newSimulationMinutes -- existingSimulationMinutes
@@ -128,7 +137,7 @@ class SimulationGraphStage(name: String = "",
         case (soFar, sm) => soFar.updated(sm.key, sm)
       }
 
-    def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute]): Set[SimulationMinute] = {
+    def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute], terminalNames: Set[TerminalName]): Set[SimulationMinute] = {
       log.info(s"calling workloadForPeriod")
       val workload = workloadForPeriod(firstMinute, lastMinute, loads)
       log.info(s"calling deploymentsForMillis")
@@ -136,13 +145,13 @@ class SimulationGraphStage(name: String = "",
       log.info(s"millis range")
       val minuteMillis = firstMinute until lastMinute by 60000
 
-      val simulationMinutes = workload.flatMap {
-        case (tn, terminalWorkload) => terminalWorkload.flatMap {
+      val simulationMinutes = terminalNames.flatMap(tn => {
+        workload.getOrElse(tn, Map()).flatMap {
           case (qn, queueWorkload) =>
             log.info(s"Simulating $tn $qn")
             simulationForQueue(deployed, minuteMillis, tn, qn, queueWorkload)
         }
-      }.toSet
+      })
 
       simulationMinutes
     }

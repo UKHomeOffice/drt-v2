@@ -96,7 +96,7 @@ class PortStateGraphStage(name: String = "",
         case None => log.info(s"No port state to push yet")
         case Some(portState) if lastMaybePortState.isDefined && lastMaybePortState.get == portState =>
           log.info(s"No updates to push")
-        case Some(portState) if !isAvailable(outPortState) =>
+        case Some(_) if !isAvailable(outPortState) =>
           log.info(s"outPortState not available for pushing")
         case Some(portState) =>
           log.info(s"Pushing port state with diff")
