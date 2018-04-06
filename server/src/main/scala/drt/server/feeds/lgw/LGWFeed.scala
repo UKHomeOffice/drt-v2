@@ -7,8 +7,7 @@ import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import drt.chroma.chromafetcher.ChromaFetcher.GatwickAzureToken
-import drt.chroma.chromafetcher.ChromaParserProtocol._
+import LGWParserProtocol._
 import drt.shared.Arrival
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
@@ -36,9 +35,9 @@ import scala.xml.Node
 case class LGWFeed(certPath: String, privateCertPath: String, namespace: String, issuer: String, nameId: String)(implicit actorSystem: ActorSystem) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def initialiseOpenSAML = DefaultBootstrap.bootstrap()
+  def initialiseOpenSAMLLibraryWithDefaultConfiguration(): Unit = DefaultBootstrap.bootstrap()
 
-  initialiseOpenSAML
+  initialiseOpenSAMLLibraryWithDefaultConfiguration()
 
   val privateCert: Path = FileSystems.getDefault.getPath(privateCertPath)
   val certificateURI: Path = FileSystems.getDefault.getPath(certPath)
@@ -48,7 +47,7 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
   }
 
   if (!privateCert.toFile.canRead) {
-    throw new Exception(s"Could not read Gatwick private key file from ${privateCertPath}")
+    throw new Exception(s"Could not read Gatwick private key file from $privateCertPath")
   }
 
   val pkInputStream = new FileInputStream(privateCert.toFile)
