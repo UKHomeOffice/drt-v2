@@ -57,7 +57,7 @@ object SnapshotSelector {
             val snapshotDate = SDate(dateString)
             State(showDatePicker = false, snapshotDate.getDate(), snapshotDate.getMonth(), snapshotDate.getFullYear(), snapshotDate.getHours(), snapshotDate.getMinutes())
           case None =>
-            State(showDatePicker = true, today.getDate(), today.getMonth(), today.getFullYear(), today.getHours(), today.getMinutes())
+            State(showDatePicker = true, today.getDate(), today.getMonth(), today.getFullYear(), 0, 0)
         }
     )
     .renderPS((scope, props, state) => {
