@@ -30,7 +30,8 @@ object SPAMain extends js.JSApp {
     def viewMode: ViewMode = {
       (mode, date) match {
         case ("current", Some(dateString)) => ViewDay(SDate(dateString))
-        case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(SDate(_)).getOrElse(SDate.now()))
+        case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(SDate(_))
+          .getOrElse(SDate.midnightThisMorning()))
         case _ => ViewLive()
       }
     }
