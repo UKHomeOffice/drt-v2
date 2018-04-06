@@ -3,7 +3,6 @@ package drt.server.feeds.lgw
 import java.io.{ByteArrayInputStream, FileInputStream}
 import java.nio.file.{FileSystems, Path}
 import java.util.UUID
-
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.ActorMaterializer
@@ -26,7 +25,6 @@ import spray.client.pipelining
 import spray.client.pipelining.{Post, addHeader, Delete, _}
 import spray.http.HttpHeaders.Accept
 import spray.http.{FormData, HttpRequest, HttpResponse, MediaTypes}
-
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -35,11 +33,12 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 
-
 case class LGWFeed(certPath: String, privateCertPath: String, namespace: String, issuer: String, nameId: String)(implicit actorSystem: ActorSystem) {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  DefaultBootstrap.bootstrap()
+  def initialiseOpenSAML = DefaultBootstrap.bootstrap()
+
+  initialiseOpenSAML
 
   val privateCert: Path = FileSystems.getDefault.getPath(privateCertPath)
   val certificateURI: Path = FileSystems.getDefault.getPath(certPath)
@@ -49,7 +48,7 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
   }
 
   if (!privateCert.toFile.canRead) {
-    throw new Exception(s"Could not read Gatwick private key file from /tmp/drt-lgw.pem")
+    throw new Exception(s"Could not read Gatwick private key file from ${privateCertPath}")
   }
 
   val pkInputStream = new FileInputStream(privateCert.toFile)
@@ -71,7 +70,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
       "assertion" -> assertion
     ))
 
-
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     val ourSendReceive: HttpRequest => Future[HttpResponse] = sendReceive
 
@@ -85,16 +83,18 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
   }
 
   def requestArrivals(token: GatwickAzureToken): Future[List[Arrival]] = {
-    val restApiTimeout = 30 //seconds
-    val serviceBusUri = s"https://$namespace.servicebus.windows.net/partners/$issuer/to/messages/head?timeout=$restApiTimeout"
+    val restApiTimeoutInSeconds = 30
+    val serviceBusUri = s"https://$namespace.servicebus.windows.net/partners/$issuer/to/messages/head?timeout=$restApiTimeoutInSeconds"
     val wrapHeader = "WRAP access_token=\"" + token.access_token + "\""
 
     val toArrivals: HttpResponse => List[Arrival] = { r =>
       val is = new ByteArrayInputStream(r.entity.data.toByteArray)
-      val fromString = scala.xml.XML.load(is)
-      IOUtils.closeQuietly(is) // todo: needs to be in a Try / finally block!!
-      scala.xml.Utility.trimProper(fromString)
-      lazy val result = fromString map nodeToArrival
+      val xmlTry = Try (scala.xml.XML.load(is)).recoverWith{
+        case e: Throwable => log.error("Cannot load Gatwick XML from the response", e); null
+      }
+      IOUtils.closeQuietly(is)
+      val xmlSeq = xmlTry.map(scala.xml.Utility.trimProper(_)).get
+      lazy val result = xmlSeq map nodeToArrival
 
       def nodeToArrival = (n: Node) => {
 
@@ -185,7 +185,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
     XMLHelper.nodeToString(plain)
   }
 
-
   def createAzureSamlAssertion(privateKey: Array[Byte], certificate: Array[Byte]): Assertion = {
     val builder: AssertionBuilder = new AssertionBuilder()
     val assertion = builder.buildObject()
@@ -222,7 +221,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
     assertion
   }
 
-  //val security = DefaultSecurityConfigurationBootstrap.buildDefaultConfig
   def signAssertion(assertion: Assertion, privateKey: Array[Byte], certificate: Array[Byte]) {
     val signature = new SignatureBuilder().buildObject
     val signingCredential = CredentialsFactory.getSigningCredential(privateKey, certificate)

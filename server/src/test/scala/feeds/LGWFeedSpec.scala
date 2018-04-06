@@ -1,13 +1,11 @@
 package feeds
 
-
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.Config
 import drt.server.feeds.lgw.LGWFeed
 import drt.shared.Arrival
 import org.specs2.mutable.SpecificationLike
-
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
