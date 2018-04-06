@@ -126,7 +126,7 @@ object TerminalComponent {
                     case _ => "Live View"
                   }),
                   <.div(^.className := "content-head",
-                    PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal),
+                    PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
                     DatePickerComponent(DatePickerComponent.Props(props.router,
                       props.terminalPageTab,
                       model.timeRangeHours,

@@ -33,7 +33,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName)
+  case class Props(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int)
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
@@ -82,5 +82,6 @@ object PcpPaxSummariesComponent {
     })
     .build
 
-  def apply(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName): VdomElement = component(Props(crunchStatePot, viewMode, terminalName))
+  def apply(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int): VdomElement =
+    component(Props(crunchStatePot, viewMode, terminalName, minuteTicker))
 }
