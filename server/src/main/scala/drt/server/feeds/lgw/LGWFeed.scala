@@ -173,15 +173,15 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
   def createAzureSamlAssertionAsString(privateKey: Array[Byte], certificate: Array[Byte]): String = {
     val assertion = createAzureSamlAssertion(privateKey, certificate)
 
-    // welcome to java and its horrendous mutating method magic. the following two lines
-    // do something important to the signature
-    Configuration.getMarshallerFactory.getMarshaller(assertion).marshall(assertion)
-    Signer.signObject(assertion.getSignature)
+    def marshalledAndSignedMessage = {
+      Configuration.getMarshallerFactory.getMarshaller(assertion).marshall(assertion)
+      Signer.signObject(assertion.getSignature)
 
-    val marshaller = new ResponseMarshaller
-    val plain = marshaller.marshall(assertion)
+      val marshaller = new ResponseMarshaller
+      marshaller.marshall(assertion)
+    }
 
-    XMLHelper.nodeToString(plain)
+    XMLHelper.nodeToString(marshalledAndSignedMessage)
   }
 
   def createAzureSamlAssertion(privateKey: Array[Byte], certificate: Array[Byte]): Assertion = {
