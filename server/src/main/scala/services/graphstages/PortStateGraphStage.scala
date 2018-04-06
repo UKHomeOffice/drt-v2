@@ -77,7 +77,7 @@ class PortStateGraphStage(name: String = "",
 
           pushIfAppropriate(mayBePortState)
 
-          pull(inlet)
+          pullAllInlets()
         }
       })
     })
@@ -87,9 +87,16 @@ class PortStateGraphStage(name: String = "",
         log.info(s"onPull() called")
         pushIfAppropriate(mayBePortState)
 
-        shape.inlets.foreach(i => if (!hasBeenPulled(i)) pull(i))
+        pullAllInlets()
       }
     })
+
+    def pullAllInlets(): Unit = {
+      shape.inlets.foreach(i => if (!hasBeenPulled(i)) {
+        log.info(s"Pulling $i")
+        pull(i)
+      })
+    }
 
     def pushIfAppropriate(maybeState: Option[PortState]): Unit = {
       maybeState match {
