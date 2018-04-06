@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{LoadingState, TimeRangeHours}
+import drt.client.services.{LoadingState, TimeRangeHours, WholeDayWindow}
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -24,7 +24,6 @@ object SnapshotSelector {
 
   case class Props(router: RouterCtl[Loc],
                    terminalPageTab: TerminalPageTabLoc,
-                   timeRangeHours: TimeRangeHours,
                    loadingState: LoadingState
                   )
 
@@ -46,22 +45,27 @@ object SnapshotSelector {
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
   implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end)
+    (p.loadingState.isLoading)
   )
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
       p =>
         p.terminalPageTab.date match {
-          case Some(dateString) =>
-            val snapshotDate = SDate(dateString)
-            State(showDatePicker = false, snapshotDate.getDate(), snapshotDate.getMonth(), snapshotDate.getFullYear(), snapshotDate.getHours(), snapshotDate.getMinutes())
+          case Some(_) =>
+            State(showDatePicker = false,
+              p.terminalPageTab.dateFromUrlOrNow.getDate(),
+              p.terminalPageTab.dateFromUrlOrNow.getMonth(),
+              p.terminalPageTab.dateFromUrlOrNow.getFullYear(),
+              p.terminalPageTab.dateFromUrlOrNow.getHours(),
+              p.terminalPageTab.dateFromUrlOrNow.getMinutes()
+            )
           case None =>
             State(showDatePicker = true, today.getDate(), today.getMonth(), today.getFullYear(), 0, 0)
         }
     )
     .renderPS((scope, props, state) => {
-      val selectedDate: SDateLike = props.terminalPageTab.date.map(SDate(_)).getOrElse(today)
+      val selectedDate: SDateLike = props.terminalPageTab.dateFromUrlOrNow
 
       val days = Seq.range(1, 32)
       val years = Seq.range(2017, today.getFullYear() + 1)
@@ -124,11 +128,11 @@ object SnapshotSelector {
             goButton(props.loadingState.isLoading, isCurrentSelection),
             errorMessage
           ).toTagMod),
-        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = false))
+        TimeRangeFilter(TimeRangeFilter.Props(props.router, props.terminalPageTab, WholeDayWindow(), showNow = false))
       )
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, timeRangeHours: TimeRangeHours, loadingState: LoadingState): VdomElement = component(Props(router, page, timeRangeHours, loadingState))
+  def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, loadingState: LoadingState): VdomElement = component(Props(router, page, loadingState))
 }

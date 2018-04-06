@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{LoadingState, TimeRangeHours}
+import drt.client.services.{CurrentWindow, LoadingState, TimeRangeHours}
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -19,7 +19,6 @@ object DatePickerComponent {
 
   case class Props(router: RouterCtl[Loc],
                    terminalPageTab: TerminalPageTabLoc,
-                   timeRangeHours: TimeRangeHours,
                    loadingState: LoadingState,
                    minuteTicker: Int
                   )
@@ -37,7 +36,7 @@ object DatePickerComponent {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(
-    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.timeRangeHours.start, p.timeRangeHours.end, p.minuteTicker)
+    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.minuteTicker)
   )
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
@@ -63,7 +62,7 @@ object DatePickerComponent {
           }.toTagMod)
       }
 
-      def isCurrentSelection = state.selectedDateTime.ddMMyyString == props.terminalPageTab.date.map(SDate(_)).getOrElse(SDate.now()).ddMMyyString
+      def isCurrentSelection = state.selectedDateTime.ddMMyyString == props.terminalPageTab.dateFromUrlOrNow.ddMMyyString
 
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
@@ -122,7 +121,7 @@ object DatePickerComponent {
           goButton(props.loadingState.isLoading, isCurrentSelection),
           errorMessage
         ),
-        TimeRangeFilter(TimeRangeFilter.Props(props.timeRangeHours, showNow = isTodayActive, props.minuteTicker))
+        TimeRangeFilter(TimeRangeFilter.Props(props.router, props.terminalPageTab, CurrentWindow(), isTodayActive, props.minuteTicker))
       )
     })
     .configure(Reusability.shouldComponentUpdate)

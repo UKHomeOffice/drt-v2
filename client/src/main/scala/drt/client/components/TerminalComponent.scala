@@ -29,7 +29,6 @@ object TerminalComponent {
                             potStaffMovements: Pot[immutable.Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
-                            timeRangeHours: TimeRangeHours,
                             loadingState: LoadingState,
                             showActuals: Boolean,
                             userRoles: Pot[List[String]],
@@ -53,7 +52,6 @@ object TerminalComponent {
         model.staffMovements,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
-        model.timeRangeFilter,
         model.loadingState,
         model.showActualIfAvailable,
         model.userRoles,
@@ -72,7 +70,10 @@ object TerminalComponent {
             airportConfig,
             props.terminalPageTab,
             model.airportInfos,
-            model.timeRangeHours,
+            if (model.viewMode == ViewLive())
+              CurrentWindow()
+            else
+              WholeDayWindow(),
             props.router,
             model.showActuals,
             model.viewMode,
@@ -95,11 +96,23 @@ object TerminalComponent {
           <.div(
             <.ul(^.className := "nav nav-tabs",
               <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-                props.router.set(props.terminalPageTab.copy(mode = "current", subMode = subMode, date = None))
+                props.router.set(props.terminalPageTab.copy(
+                  mode = "current",
+                  subMode = subMode,
+                  date = None,
+                  timeRangeStartString = props.terminalPageTab.timeRangeStartString,
+                  timeRangeEndString = props.terminalPageTab.timeRangeEndString
+                ))
               }),
               <.li(^.className := snapshotDataClass,
                 <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-                  props.router.set(props.terminalPageTab.copy(mode = "snapshot", subMode = subMode, date = None))
+                  props.router.set(props.terminalPageTab.copy(
+                    mode = "snapshot",
+                    subMode = subMode,
+                    date = None,
+                    timeRangeStartString = props.terminalPageTab.timeRangeStartString,
+                    timeRangeEndString = props.terminalPageTab.timeRangeEndString
+                  ))
                 }
               ),
               <.li(^.className := planningClass,
@@ -119,17 +132,16 @@ object TerminalComponent {
             <.div(^.className := "tab-content",
               <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
                 if (props.terminalPageTab.mode == "current") <.div(
-                  <.h2(props.terminalPageTab.date match {
-                    case Some(ds) if SDate(ds).ddMMyyString == SDate.now().ddMMyyString => "Live View"
-                    case Some(ds) if SDate(ds).millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
-                    case Some(ds) if SDate(ds).millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
+                  <.h2(props.terminalPageTab.dateFromUrlOrNow match {
+                    case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                    case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                    case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
                     case _ => "Live View"
                   }),
                   <.div(^.className := "content-head",
                     PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
                     DatePickerComponent(DatePickerComponent.Props(props.router,
                       props.terminalPageTab,
-                      model.timeRangeHours,
                       model.loadingState,
                       model.minuteTicker
                     ))
@@ -140,7 +152,7 @@ object TerminalComponent {
               <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
                 if (props.terminalPageTab.mode == "snapshot") <.div(
                   <.h2("Snapshot View"),
-                  SnapshotSelector(props.router, props.terminalPageTab, model.timeRangeHours, model.loadingState),
+                  SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
                   TerminalContentComponent(terminalContentProps)
                 ) else ""
               }),

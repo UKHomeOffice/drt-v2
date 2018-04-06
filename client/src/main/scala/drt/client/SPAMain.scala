@@ -25,29 +25,37 @@ object SPAMain extends js.JSApp {
                                  terminal: String,
                                  mode: String = "current",
                                  subMode: String = "desksAndQueues",
-                                 date: Option[String] = None
+                                 date: Option[String] = None,
+                                 timeRangeStartString: Option[String] = None,
+                                 timeRangeEndString: Option[String] = None
                                ) extends Loc {
     def viewMode: ViewMode = {
       (mode, date) match {
-        case ("current", Some(dateString)) => ViewDay(SDate(dateString))
-        case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(SDate(_))
+        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
+        case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(parseDateString)
           .getOrElse(SDate.midnightThisMorning()))
         case _ => ViewLive()
       }
     }
 
+    def parseDateString(s: String) = SDate(s.replace("%20", " ").split(" ").mkString("T"))
+
+    def timeRangeStart = timeRangeStartString.map(_.toInt)
+
+    def timeRangeEnd = timeRangeEndString.map(_.toInt)
+
     def dateFromUrlOrNow: SDateLike = {
-      date.map(s => SDate(s)).getOrElse(SDate.now())
+      date.map(parseDateString).getOrElse(SDate.now())
     }
 
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
     def loadAction: Action = mode match {
       case "planning" =>
-        GetForecastWeek(TerminalPlanningComponent.defaultStartDate(date), terminal)
+        GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
       case "staffing" =>
         log.info(s"dispatching get shifts for month on staffing page")
-        GetShiftsForMonth(TerminalStaffingV2.dateFromDateStringOption(date), terminal)
+        GetShiftsForMonth(dateFromUrlOrNow, terminal)
       case _ => SetViewMode(viewMode)
     }
   }
@@ -78,7 +86,9 @@ object SPAMain extends js.JSApp {
         dynRenderR((page: TerminalsDashboardLoc, router) => {
           TerminalsDashboardPage(None, router, page)
         })
-      val terminal: dsl.Rule = dynamicRouteCT(("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option).caseClass[TerminalPageTabLoc]) ~>
+      val terminal: dsl.Rule = dynamicRouteCT(
+        ("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option
+          / string("[0-9]+").option / string("[0-9]+").option).caseClass[TerminalPageTabLoc]) ~>
         dynRenderR((page: TerminalPageTabLoc, router) => {
           val props = TerminalComponent.Props(terminalPageTab = page, router)
           TerminalComponent(props)

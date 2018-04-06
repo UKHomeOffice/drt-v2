@@ -14,7 +14,6 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
-
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -41,6 +40,12 @@ case class CurrentWindow() extends TimeRangeHours {
   override def start: Int = SDate.now().getHours() - 1
 
   override def end: Int = SDate.now().getHours() + 3
+}
+
+object TimeRangeHours {
+  def apply(start: Int, end: Int) = {
+    CustomWindow(start, end)
+  }
 }
 
 sealed trait ViewMode {
