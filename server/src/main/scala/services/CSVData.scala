@@ -168,7 +168,7 @@ object CSVData {
 
   def flightsWithSplitsToCSVHeadings: String = {
     val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
-    val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
+    val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
@@ -187,12 +187,13 @@ object CSVData {
         fws.apiFlight.Origin,
         fws.apiFlight.Gate + "/" + fws.apiFlight.Stand,
         fws.apiFlight.Status,
-        Try(SDate(fws.apiFlight.SchDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
-        Try(SDate(fws.apiFlight.EstDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
-        Try(SDate(fws.apiFlight.ActDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
-        Try(SDate(fws.apiFlight.EstChoxDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
-        Try(SDate(fws.apiFlight.ActChoxDT, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
-        Try(SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toLocalDateTimeString()).getOrElse(""),
+        Try(SDate(fws.apiFlight.SchDT, europeLondonTimeZone).toISODateOnly).getOrElse(""),
+        Try(SDate(fws.apiFlight.SchDT, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+        Try(SDate(fws.apiFlight.EstDT, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+        Try(SDate(fws.apiFlight.ActDT, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+        Try(SDate(fws.apiFlight.EstChoxDT, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+        Try(SDate(fws.apiFlight.ActChoxDT, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+        Try(SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
         fws.apiFlight.ActPax,
         ArrivalHelper.bestPax(fws.apiFlight)
       ) ++
