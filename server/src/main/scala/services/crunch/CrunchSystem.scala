@@ -119,6 +119,7 @@ object CrunchSystem {
       numberOfDays = props.maxDaysToCrunch)
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis)
+    val loadBatcher = new LoadBatchUpdateGraphStage(props.now, props.expireAfterMillis)
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
@@ -163,7 +164,7 @@ object CrunchSystem {
 
     val crunchSystem = Crunch2(
       baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
       baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,

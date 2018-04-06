@@ -32,6 +32,7 @@ object Crunch2 {
                                         arrivalSplitsStage: ArrivalSplitsGraphStage,
                                         splitsPredictorStage: SplitsPredictorBase,
                                         workloadGraphStage: WorkloadGraphStage,
+                                        loadBatchUpdateGraphStage: LoadBatchUpdateGraphStage,
                                         crunchLoadGraphStage: CrunchLoadGraphStage,
                                         staffGraphStage: StaffGraphStage,
                                         staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
@@ -78,6 +79,7 @@ object Crunch2 {
           val arrivalSplits = builder.add(arrivalSplitsStage.async)
           val splitsPredictor = builder.add(splitsPredictorStage.async)
           val workload = builder.add(workloadGraphStage.async)
+          val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
           val staff = builder.add(staffGraphStage.async)
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
@@ -136,7 +138,7 @@ object Crunch2 {
           arrivalSplits.out ~> arrivalSplitsFanOut
           arrivalSplitsFanOut ~> workload
 
-          workload.out.expand(wl => groupLoadsByDay(wl, crunchPeriodStartMillis)) ~> workloadFanOut
+          workload.out ~> batchLoad ~> workloadFanOut
           workloadFanOut ~> crunch
           workloadFanOut ~> simulation.in0
 
@@ -189,26 +191,7 @@ object Crunch2 {
   def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
 
   def forecastFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis(now)))
-
-  def groupLoadsByDay(loads: Loads, crunchPeriodStartMillis: SDateLike => SDateLike): Iterator[Loads] = {
-    val loadMinutesByCrunchPeriod: Seq[(MillisSinceEpoch, Set[Crunch.LoadMinute])] = loads
-      .loadMinutes
-      .groupBy(load => crunchPeriodStartMillis(SDate(load.minute)).millisSinceEpoch)
-      .toSeq
-      .sortBy { case (millis, _) => millis }
-
-    val dates = loadMinutesByCrunchPeriod.map {
-      case (millis, _) => SDate(millis).toLocalDateTimeString()
-    }.mkString(", ")
-
-    log.info(s"Load periods: $dates")
-
-    val loadsByCrunchPeriod = loadMinutesByCrunchPeriod
-      .map { case (_, lms) => Loads(lms) }
-
-    loadsByCrunchPeriod.toIterator
-  }
-
+  
   def tomorrowStartMillis(now: () => SDateLike): MillisSinceEpoch = Crunch.getLocalNextMidnight(now()).millisSinceEpoch
 }
 
