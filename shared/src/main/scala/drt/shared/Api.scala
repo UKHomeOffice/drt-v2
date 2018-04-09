@@ -1,10 +1,9 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinute, _}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
 
-import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
@@ -114,7 +113,12 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     }
   }
 
-  def hasPcpPaxIn(start: SDateLike, end: SDateLike) = apiFlight.hasPcpDuring(start, end)
+  def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
+}
+
+object MinuteHelper {
+  def key(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch): Int = (terminalName, queueName, minute).hashCode
+  def key(terminalName: TerminalName, minute: MillisSinceEpoch): Int = (terminalName, minute).hashCode
 }
 
 case class FlightsNotReady()
@@ -365,7 +369,7 @@ object CrunchApi {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: Int = s"$terminalName$minute".hashCode
+    lazy val key: Int = MinuteHelper.key(terminalName, minute)
     lazy val available: Int = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
@@ -417,7 +421,7 @@ object CrunchApi {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+    lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   trait DeskRecMinuteLike {
@@ -631,7 +635,7 @@ object ApiSplitsToSplitRatio {
   def applyRatio(split: ApiPaxTypeAndQueueCount, totalPax: Int, splitsTotal: Double): Long =
     Math.round(totalPax * (split.paxCount / splitsTotal))
 
-  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double) =
+  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double): Set[ApiPaxTypeAndQueueCount] =
     splits
       .toList
       .sortBy(_.paxCount)

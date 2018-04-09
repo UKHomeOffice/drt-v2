@@ -5,7 +5,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
-import drt.shared.{AirportConfig, PortStateMinutes, SDateLike}
+import drt.shared.{AirportConfig, MinuteHelper, PortStateMinutes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
 import services.SDate
@@ -72,7 +72,11 @@ class PortStateGraphStage(name: String = "",
           mayBePortState = grab(inlet) match {
             case incoming: PortStateMinutes =>
               log.info(s"Incoming ${inlet.toString}")
-              incoming.applyTo(mayBePortState, SDate.now)
+              val startTime = SDate.now().millisSinceEpoch
+              val newState = incoming.applyTo(mayBePortState, SDate.now)
+              val elapsedSeconds = (SDate.now().millisSinceEpoch - startTime).toDouble / 1000
+              log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
+              newState
           }
 
           pushIfAppropriate(mayBePortState)
@@ -160,21 +164,34 @@ class PortStateGraphStage(name: String = "",
 
 case class DeskStat(desks: Option[Int], waitTime: Option[Int])
 
-case class ActualDeskStats(desks: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
+case class ActualDeskStats(portDeskSlots: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
   def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
-    maybePortState.map(portState => {
-      val updatedCrunchMinutes = desks
-        .flatMap {
-          case (tn, terminalActDesks) => terminalActDesks.flatMap {
-            case (qn, queueActDesks) => crunchMinutesWithActDesks(queueActDesks, portState.crunchMinutes, qn, tn)
+    val flattened = portDeskSlots
+      .flatMap {
+        case (tn, queueDeskSlots) =>
+          queueDeskSlots.flatMap {
+            case (qn, minuteDesks) =>
+              minuteDesks.map {
+                case (millis, deskStat) =>
+                  (tn, qn, millis, deskStat)
+              }
           }
-        }
-
-      val mergedCrunchMinutes = updatedCrunchMinutes.foldLeft(portState.crunchMinutes) {
-        case (soFar, updatedCm) => soFar.updated(updatedCm.key, updatedCm.copy(lastUpdated = Option(now.millisSinceEpoch)))
       }
+      .toSeq
 
-      portState.copy(crunchMinutes = mergedCrunchMinutes)
+    maybePortState.map(portState => {
+      flattened.foldLeft(portState) {
+        case (soFar, (tn, qn, millis, deskStat)) =>
+          val key = MinuteHelper.key(tn, qn, millis)
+          soFar.crunchMinutes.get(key) match {
+            case None => soFar
+            case Some(cm) if cm.actDesks == deskStat.desks && cm.actWait == deskStat.waitTime => soFar
+            case Some(cm) =>
+              val cmWithDeskStats = cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime)
+              val updatedCms = soFar.crunchMinutes.updated(key, cmWithDeskStats)
+              soFar.copy(crunchMinutes = updatedCms)
+          }
+      }
     })
   }
 

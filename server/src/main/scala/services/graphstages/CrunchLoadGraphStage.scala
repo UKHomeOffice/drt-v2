@@ -228,7 +228,7 @@ case class DeskRecMinute(terminalName: TerminalName,
                          workLoad: Double,
                          deskRec: Int,
                          waitTime: Int) extends DeskRecMinuteLike {
-  lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
 }
 
 case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes {

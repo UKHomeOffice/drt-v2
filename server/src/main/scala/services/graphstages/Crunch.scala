@@ -18,7 +18,7 @@ object Crunch {
   case class FlightSplitDiff(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
-    lazy val uniqueId: Int = (terminalName, queueName, minute).hashCode
+    lazy val uniqueId: Int = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   object LoadMinute {
@@ -32,7 +32,7 @@ object Crunch {
   }
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
-    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+    lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   case class RemoveFlight(flightId: Int)

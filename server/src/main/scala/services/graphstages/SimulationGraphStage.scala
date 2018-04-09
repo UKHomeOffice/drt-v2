@@ -318,13 +318,12 @@ class SimulationGraphStage(name: String = "",
   }
 }
 
-
 case class SimulationMinute(terminalName: TerminalName,
                             queueName: QueueName,
                             minute: MillisSinceEpoch,
                             desks: Int,
                             waitTime: Int) extends SimulationMinuteLike {
-  lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+  lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
 }
 
 case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMinutes {
