@@ -52,14 +52,14 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
   "Can convert an XML into an Arrival" in {
 
-    val certPath = getClass.getClassLoader.getResource("./lhr.xml").getPath
+    val certPath = getClass.getClassLoader.getResource("lgw.xml").getPath
     val privateCertPath = certPath
     val azureServiceNamespace = "Gat"
     val issuer = "issuer"
     val nameId = "nameId"
 
     val mockResponse = mock[HttpResponse]
-    val xml = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("./lhr.xml")).mkString
+    val xml = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgw.xml")).mkString
     val body = HttpEntity(MediaTypes.`application/xml`, xml.getBytes)
     mockResponse.entity returns body
 
