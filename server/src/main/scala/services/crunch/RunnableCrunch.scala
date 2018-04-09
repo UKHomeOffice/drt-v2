@@ -122,7 +122,7 @@ object RunnableCrunch {
 
           arrivals.out.conflate[ArrivalsDiff] {
             case (diffSoFar, diffNew) =>
-              log.warn(s"Conflating arrivals diffs\n$diffSoFar\n$diffNew")
+              log.warn(s"Conflating arrivals diffs")
               val toUpdate = diffNew.toUpdate.foldLeft(diffSoFar.toUpdate.map(f => (f.uniqueId, f)).toMap) {
                 case (soFar, arrival) => soFar.updated(arrival.uniqueId, arrival)
               }.values.toSet
