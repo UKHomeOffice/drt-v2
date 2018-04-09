@@ -8,7 +8,7 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
-import drt.shared._
+import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
 import services._
@@ -41,9 +41,8 @@ case class CrunchProps[MS](logLabel: String = "",
                            forecastCrunchStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Long,
-                           crunchPeriodStartMillis: SDateLike => SDateLike,
                            minutesToCrunch: Int = 1440,
-                           warmUpMinutes: Int = 0,
+                           crunchOffsetMillis: Long = 0,
                            actors: Map[String, AskableActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
                            now: () => SDateLike = () => SDate.now(),
@@ -86,6 +85,7 @@ object CrunchSystem {
 
     val splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet)
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
+    val crunchStartDateProvider: (SDateLike) => SDateLike = s => Crunch.getLocalLastMidnight(s).addMinutes(props.airportConfig.crunchOffsetMinutes)
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
@@ -119,7 +119,7 @@ object CrunchSystem {
       numberOfDays = props.maxDaysToCrunch)
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis)
-    val loadBatcher = new LoadBatchUpdateGraphStage(props.now, props.expireAfterMillis)
+    val loadBatcher = new LoadBatchUpdateGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
@@ -139,7 +139,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       crunch = props.cruncher,
-      crunchPeriodStartMillis = props.crunchPeriodStartMillis,
+      crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
 
     val maybeStaffMinutes = initialMergedPs.map(ps => StaffMinutes(ps.staffMinutes))
@@ -152,7 +152,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       simulate = props.simulator,
-      crunchPeriodStartMillis = props.crunchPeriodStartMillis,
+      crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
 
     val portStateGraphStage = new PortStateGraphStage(
@@ -168,7 +168,7 @@ object CrunchSystem {
       baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
-      props.crunchPeriodStartMillis, props.now
+      crunchStartDateProvider, props.now
     )
 
     implicit val actorSystem: ActorSystem = props.system

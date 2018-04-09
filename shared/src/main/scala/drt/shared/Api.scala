@@ -118,6 +118,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
 
 object MinuteHelper {
   def key(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch): Int = (terminalName, queueName, minute).hashCode
+
   def key(terminalName: TerminalName, minute: MillisSinceEpoch): Int = (terminalName, minute).hashCode
 }
 
@@ -282,11 +283,10 @@ object CrunchResult {
 }
 
 
-case class CrunchResult(
-                         firstTimeMillis: MillisSinceEpoch,
-                         intervalMillis: MillisSinceEpoch,
-                         recommendedDesks: IndexedSeq[Int],
-                         waitTimes: Seq[Int])
+case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
+                        intervalMillis: MillisSinceEpoch,
+                        recommendedDesks: IndexedSeq[Int],
+                        waitTimes: Seq[Int])
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 

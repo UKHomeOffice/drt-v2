@@ -97,7 +97,6 @@ trait SystemActors {
   val config: Configuration
 
   val minutesToCrunch: Int = 1440
-  val warmUpMinutes: Int = 240
   val maxDaysToCrunch: Int = config.getInt("crunch.forecast.max_days").getOrElse(360)
   val aclPollMinutes: Int = config.getInt("crunch.forecast.poll_minutes").getOrElse(120)
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
@@ -137,7 +136,7 @@ trait SystemActors {
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
-  val apiS3PollFequencyMillis = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val apiS3PollFequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
     new VoyageManifestsGraphStage(
       dqZipBucketName,
@@ -164,7 +163,6 @@ trait SystemActors {
     splitsPredictorStage = splitsPredictorStage,
     manifestsSource = voyageManifestsStage,
     voyageManifestsActor = voyageManifestsActor,
-    crunchPeriodStartMillis = (s: SDateLike) => Crunch.getLocalLastMidnight(s),
     cruncher = TryRenjin.crunch,
     simulator = TryRenjin.runSimulationOfWork
   ))

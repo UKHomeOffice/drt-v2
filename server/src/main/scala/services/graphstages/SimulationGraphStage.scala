@@ -73,8 +73,9 @@ class SimulationGraphStage(name: String = "",
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
-        val firstMinute = Crunch.getLocalLastMidnight(SDate(allMinuteMillis.min))
+        val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
+
         updateSimulations(firstMinute, lastMinute, simulationMinutes.values.toSet, loadMinutes.values.toSet, affectedTerminals)
 
         pushStateIfReady()

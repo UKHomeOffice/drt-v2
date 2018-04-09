@@ -83,7 +83,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           val testMaxDesks = List(0, 1, 2, 3, 4, 5)
           val startTimeMidnightBST = SDate("2017-06-01T00:00Z").addHours(-1).millisSinceEpoch
 
-          val oneHour = oneMinute * 60
+          val oneHour = oneMinuteMillis * 60
           val startTimes = startTimeMidnightBST to startTimeMidnightBST + (oneHour * 5) by oneHour
 
           val expected = List(0, 1, 2, 3, 4, 5)
@@ -93,7 +93,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           val testMaxDesks = List(0, 1, 2, 3, 4, 5)
           val startTimeMidnightGMT = SDate("2017-01-01T00:00Z").millisSinceEpoch
 
-          val oneHour = oneMinute * 60
+          val oneHour = oneMinuteMillis * 60
           val startTimes = startTimeMidnightGMT to startTimeMidnightGMT + (oneHour * 5) by oneHour
 
           val expected = List(0, 1, 2, 3, 4, 5)

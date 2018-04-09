@@ -40,8 +40,6 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
 
-    //    println(s"sending state staff minutes: ${state.get.staffMinutes}")
-
     probe ! state.get
   }
 }
@@ -73,7 +71,7 @@ class CrunchTestLike
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val oneMinute = 60000
+  val oneMinuteMillis = 60000
   val uniquifyArrivals: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
@@ -135,8 +133,6 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      minutesToCrunch: Int = 60,
-                     warmUpMinutes: Int = 0,
-                     crunchStartDateProvider: (SDateLike) => SDateLike = s => Crunch.getLocalLastMidnight(s),
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      initialShifts: String = "",
@@ -171,9 +167,7 @@ class CrunchTestLike
       forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
-      crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = minutesToCrunch,
-      warmUpMinutes = warmUpMinutes,
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,

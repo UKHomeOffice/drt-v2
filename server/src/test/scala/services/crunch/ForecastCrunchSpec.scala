@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
-import services.SDate
+import services.{SDate, TryRenjin}
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
@@ -86,47 +86,51 @@ class ForecastCrunchSpec extends CrunchTestLike {
     true
   }
 
-    "Given a flight with pcp times just before midnight " +
-      "When I crunch  " +
-      "Then I should see a wait time at midnight of one minute higher than the wait time at 23:59, ie the pax before midnight did not get forgotten " >> {
-      skipped("Until we've implemented warmup minutes")
+  "Given a flight with pcp times just before midnight " +
+    "When I crunch  " +
+    "Then I should see a wait time at midnight of one minute higher than the wait time at 23:59, ie the pax before midnight did not get forgotten " >> {
+    val scheduled = "2017-01-01T00:00Z"
+    val beforeMidnight = "2017-01-03T23:55Z"
+    val afterMidnight = "2017-01-04T00:15Z"
 
-      val scheduled = "2017-01-01T00:00Z"
-      val beforeMidnight = "2017-01-03T23:55Z"
+    val baseArrivals = List(
+      ArrivalGenerator.apiFlight(schDt = beforeMidnight, iata = "BA0001", terminal = "T1", actPax = 20),
+      ArrivalGenerator.apiFlight(schDt = afterMidnight, iata = "BA0002", terminal = "T1", actPax = 20)
+    )
+    val baseFlights = Flights(baseArrivals)
 
-      val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
-      val liveFlights = Flights(List(liveArrival))
-      val baseArrival = ArrivalGenerator.apiFlight(schDt = beforeMidnight, iata = "BA0001", terminal = "T1", actPax = 20)
-      val baseFlights = Flights(List(baseArrival))
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(crunchOffsetMinutes = 240),
+      now = () => SDate(scheduled),
+      minutesToCrunch = 1440,
+      initialShifts =
+        """shift a,T1,04/01/17,00:00,00:14,1
+          |shift b,T1,04/01/17,00:15,00:29,2
+        """.stripMargin,
+      cruncher = TryRenjin.crunch
+    )
 
-      val crunch = runCrunchGraph(
-        now = () => SDate(scheduled),
-        warmUpMinutes = 120,
-        initialShifts =
-          """shift a,T1,04/01/17,00:00,00:14,1
-            |shift b,T1,04/01/17,00:15,00:29,2
-          """.stripMargin)
+    offerAndWait(crunch.baseArrivalsInput, baseFlights)
 
-      offerAndWait(crunch.liveArrivalsInput, liveFlights)
-      offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState =>
+        val firstInterestingMilli = SDate("2017-01-03T23:59Z").millisSinceEpoch
+        val interestingMinuteMillis = firstInterestingMilli to firstInterestingMilli + oneMinuteMillis
+        val waitTimesBeforeAndAtMidnight = ps
+          .crunchMinutes
+          .values
+          .filter(cm => interestingMinuteMillis.contains(cm.minute))
+          .toList.sortBy(_.minute)
+          .map(_.waitTime)
 
-      crunch.forecastTestProbe.fishForMessage(10 seconds) {
-        case ps: PortState =>
-          val waitTimes: Seq[Int] = ps
-            .crunchMinutes
-            .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
-            .map(_.waitTime)
+        val waitTimeOneMinuteBeforeMidnight = waitTimesBeforeAndAtMidnight.headOption.getOrElse(0)
+        val waitTimeAtMidnight = waitTimesBeforeAndAtMidnight.drop(1).headOption.getOrElse(0)
 
-          val waitTimeOneMinuteBeforeMidnight = waitTimes.head
-          val expected = waitTimeOneMinuteBeforeMidnight + 1
-
-          val waitTimeOneMinuteAtMidnight = waitTimes(1)
-
-          waitTimeOneMinuteAtMidnight == expected
-      }
-
-      true
+        waitTimeOneMinuteBeforeMidnight < waitTimeAtMidnight
     }
+
+    true
+  }
 
   "Given a flight a live flight update after a base crunch & simulation, followed by a staffing change " +
     "When I look at the simulation numbers in the base port state for the day after the live flight update " +

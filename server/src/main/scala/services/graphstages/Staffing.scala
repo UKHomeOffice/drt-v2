@@ -49,7 +49,7 @@ object Staffing {
     }
   }
 
-  def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute], maybeSources: Option[StaffSources], warmUpMinutes: Int): Map[Int, StaffMinute] = {
+  def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute], maybeSources: Option[StaffSources]): Map[Int, StaffMinute] = {
     val staff = maybeSources
     crunchMinutes
       .values
@@ -57,7 +57,7 @@ object Staffing {
       .flatMap {
         case (tn, tcms) =>
           val minutes = tcms.map(_.minute)
-          val startMinuteMillis = minutes.min + (warmUpMinutes * Crunch.oneMinuteMillis)
+          val startMinuteMillis = minutes.min + Crunch.oneMinuteMillis
           val endMinuteMillis = minutes.max
           val minuteMillis = startMinuteMillis to endMinuteMillis by Crunch.oneMinuteMillis
           log.info(s"Getting ${minuteMillis.size} staff minutes")
@@ -102,7 +102,7 @@ object Staffing {
     staffMovementsActor ! PoisonPill
 
     val staffSources = Staffing.staffAvailableByTerminalAndQueue(Option(shifts), Option(fixedPoints), Option(movements))
-    val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources, 0)
+    val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources)
 
     PortState(fl, cm, staffMinutes)
   }

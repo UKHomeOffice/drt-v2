@@ -14,7 +14,10 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class LoadBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch) extends GraphStage[FlowShape[Loads, Loads]] {
+class LoadBatchUpdateGraphStage(now: () => SDateLike,
+                                expireAfterMillis: MillisSinceEpoch,
+                                crunchPeriodStartMillis: SDateLike => SDateLike
+                               ) extends GraphStage[FlowShape[Loads, Loads]] {
   val inLoads: Inlet[Loads] = Inlet[Loads]("Loads.in")
   val outLoads: Outlet[Loads] = Outlet[Loads]("Loads.out")
 
@@ -28,7 +31,7 @@ class LoadBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisS
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
         val incomingLoads = grab(inLoads)
-        val changedDays = incomingLoads.loadMinutes.groupBy(sm => getLocalLastMidnight(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
+        val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
         val updatedMinutes = changedDays.foldLeft(loadMinutesQueue.toMap) {
           case (soFar, (dayMillis, loadMinutes)) => soFar.updated(dayMillis, Loads(loadMinutes))
