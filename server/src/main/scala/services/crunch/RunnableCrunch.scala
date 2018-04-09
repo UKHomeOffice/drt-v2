@@ -12,7 +12,7 @@ import services.{ArrivalsState, SDate}
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
-object Crunch2 {
+object RunnableCrunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
