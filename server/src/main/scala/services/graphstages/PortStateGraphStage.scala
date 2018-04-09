@@ -181,18 +181,24 @@ case class ActualDeskStats(portDeskSlots: Map[String, Map[String, Map[MillisSinc
 
     maybePortState.map(portState => {
       flattened.foldLeft(portState) {
-        case (soFar, (tn, qn, millis, deskStat)) =>
-          val key = MinuteHelper.key(tn, qn, millis)
-          soFar.crunchMinutes.get(key) match {
-            case None => soFar
-            case Some(cm) if cm.actDesks == deskStat.desks && cm.actWait == deskStat.waitTime => soFar
-            case Some(cm) =>
-              val cmWithDeskStats = cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime)
-              val updatedCms = soFar.crunchMinutes.updated(key, cmWithDeskStats)
-              soFar.copy(crunchMinutes = updatedCms)
-          }
+        case (portStateSoFar, (tn, qn, millis, deskStat)) => expandSlotAndApply(tn, qn, portStateSoFar, millis, deskStat)
       }
     })
+  }
+
+  def expandSlotAndApply(terminalName: TerminalName, queueName: QueueName, portState: PortState, millis: MillisSinceEpoch, deskStat: DeskStat): PortState = {
+    (millis until millis + 15 * oneMinuteMillis by oneMinuteMillis).foldLeft(portState) {
+      case (portStateToUpdate, minuteMillis) =>
+        val key = MinuteHelper.key(terminalName, queueName, minuteMillis)
+        portStateToUpdate.crunchMinutes.get(key) match {
+          case None => portStateToUpdate
+          case Some(cm) if cm.actDesks == deskStat.desks && cm.actWait == deskStat.waitTime => portStateToUpdate
+          case Some(cm) =>
+            val cmWithDeskStats = cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime, lastUpdated = Option(SDate.now().millisSinceEpoch))
+            val updatedCms = portStateToUpdate.crunchMinutes.updated(key, cmWithDeskStats)
+            portStateToUpdate.copy(crunchMinutes = updatedCms)
+        }
+    }
   }
 
   def crunchMinutesWithActDesks(queueActDesks: Map[MillisSinceEpoch, DeskStat], crunchMinutes: Map[Int, CrunchMinute], terminalName: TerminalName, queueName: QueueName): immutable.Iterable[CrunchMinute] = {

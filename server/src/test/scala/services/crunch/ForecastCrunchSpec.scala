@@ -86,46 +86,47 @@ class ForecastCrunchSpec extends CrunchTestLike {
     true
   }
 
-  //  "Given a flight with pcp times just before midnight " +
-  //    "When I crunch  " +
-  //    "Then I should see a wait time at midnight of one minute higher than the wait time at 23:59, ie the pax before midnight did not get forgotten " >> {
-  //
-  //    val scheduled = "2017-01-01T00:00Z"
-  //    val beforeMidnight = "2017-01-03T23:55Z"
-  //
-  //    val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
-  //    val liveFlights = Flights(List(liveArrival))
-  //    val baseArrival = ArrivalGenerator.apiFlight(schDt = beforeMidnight, iata = "BA0001", terminal = "T1", actPax = 20)
-  //    val baseFlights = Flights(List(baseArrival))
-  //
-  //    val crunch = runCrunchGraph(
-  //      now = () => SDate(scheduled),
-  //      warmUpMinutes = 120,
-  //      initialShifts =
-  //        """shift a,T1,04/01/17,00:00,00:14,1
-  //          |shift b,T1,04/01/17,00:15,00:29,2
-  //        """.stripMargin)
-  //
-  //    offerAndWait(crunch.liveArrivalsInput, liveFlights)
-  //    offerAndWait(crunch.baseArrivalsInput, baseFlights)
-  //
-  //    crunch.forecastTestProbe.fishForMessage(10 seconds) {
-  //      case ps: PortState =>
-  //        val waitTimes: Seq[Int] = ps
-  //          .crunchMinutes
-  //          .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
-  //          .map(_.waitTime)
-  //
-  //        val waitTimeOneMinuteBeforeMidnight = waitTimes.head
-  //        val expected = waitTimeOneMinuteBeforeMidnight + 1
-  //
-  //        val waitTimeOneMinuteAtMidnight = waitTimes(1)
-  //
-  //        waitTimeOneMinuteAtMidnight == expected
-  //    }
-  //
-  //    true
-  //  }
+    "Given a flight with pcp times just before midnight " +
+      "When I crunch  " +
+      "Then I should see a wait time at midnight of one minute higher than the wait time at 23:59, ie the pax before midnight did not get forgotten " >> {
+      skipped("Until we've implemented warmup minutes")
+
+      val scheduled = "2017-01-01T00:00Z"
+      val beforeMidnight = "2017-01-03T23:55Z"
+
+      val liveArrival = ArrivalGenerator.apiFlight(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
+      val liveFlights = Flights(List(liveArrival))
+      val baseArrival = ArrivalGenerator.apiFlight(schDt = beforeMidnight, iata = "BA0001", terminal = "T1", actPax = 20)
+      val baseFlights = Flights(List(baseArrival))
+
+      val crunch = runCrunchGraph(
+        now = () => SDate(scheduled),
+        warmUpMinutes = 120,
+        initialShifts =
+          """shift a,T1,04/01/17,00:00,00:14,1
+            |shift b,T1,04/01/17,00:15,00:29,2
+          """.stripMargin)
+
+      offerAndWait(crunch.liveArrivalsInput, liveFlights)
+      offerAndWait(crunch.baseArrivalsInput, baseFlights)
+
+      crunch.forecastTestProbe.fishForMessage(10 seconds) {
+        case ps: PortState =>
+          val waitTimes: Seq[Int] = ps
+            .crunchMinutes
+            .values.toList.sortBy(_.minute).takeRight(31).dropRight(29)
+            .map(_.waitTime)
+
+          val waitTimeOneMinuteBeforeMidnight = waitTimes.head
+          val expected = waitTimeOneMinuteBeforeMidnight + 1
+
+          val waitTimeOneMinuteAtMidnight = waitTimes(1)
+
+          waitTimeOneMinuteAtMidnight == expected
+      }
+
+      true
+    }
 
   "Given a flight a live flight update after a base crunch & simulation, followed by a staffing change " +
     "When I look at the simulation numbers in the base port state for the day after the live flight update " +

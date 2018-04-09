@@ -2,6 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
+import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
@@ -18,7 +19,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
   "Given a CrunchGraph when the blackjack CSV is updated " +
     "Then the updated blackjack numbers should appear in the PortState" >> {
-skipped("")
     val scheduled = "2017-01-01T00:00Z"
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
@@ -38,10 +38,11 @@ skipped("")
           eeaMachineReadableToEGate -> 25d / 60
         )),
         terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate))),
-      initialBaseArrivals = initialBaseArrivals
+        queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
+    offerAndWait(crunch.baseArrivalsInput, Flights(initialBaseArrivals.toSeq))
+    Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
     val expected = List.fill(15)((Option(1), Option(5))) ++ List.fill(15)((Option(2), Option(10)))
@@ -63,7 +64,6 @@ skipped("")
 
   "Given a CrunchGraph when the blackjack CSV is updated with some unavailable data " +
     "Then the updated blackjack numbers should appear in the PortState" >> {
-    skipped("")
 
     val scheduled = "2017-01-01T00:00Z"
 
@@ -84,10 +84,11 @@ skipped("")
           eeaMachineReadableToEGate -> 25d / 60
         )),
         terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate))),
-      initialBaseArrivals = initialBaseArrivals
+        queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
+    offerAndWait(crunch.baseArrivalsInput, Flights(initialBaseArrivals.toSeq))
+    Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
     val expected = List.fill(15)((Option(1), None)) ++ List.fill(15)((None, Option(10)))

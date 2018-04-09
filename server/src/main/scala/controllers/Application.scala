@@ -147,26 +147,6 @@ trait SystemActors {
     )
   )
 
-  //  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
-  //    system = system,
-  //    airportConfig = airportConfig,
-  //    pcpArrival = pcpArrivalTimeCalculator,
-  //    historicalSplitsProvider = historicalSplitsProvider,
-  //    liveCrunchStateActor = liveCrunchStateActor,
-  //    forecastCrunchStateActor = forecastCrunchStateActor,
-  //    maxDaysToCrunch = maxDaysToCrunch,
-  //    expireAfterMillis = expireAfterMillis,
-  //    minutesToCrunch = minutesToCrunch,
-  //    warmUpMinutes = warmUpMinutes,
-  //    actors = Map(
-  //      "shifts" -> shiftsActor,
-  //      "fixed-points" -> fixedPointsActor,
-  //      "staff-movements" -> staffMovementsActor),
-  //    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
-  //    splitsPredictorStage = splitsPredictorStage,
-  //    manifestsSource = voyageManifestsStage,
-  //    voyageManifestsActor = voyageManifestsActor
-  //  ))
   val crunchInputs = CrunchSystem(CrunchProps(
     system = system,
     airportConfig = airportConfig,
@@ -202,8 +182,8 @@ trait SystemActors {
   }
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
-    val threeMinutesInterval = 3 * 60 * 1000
-    Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
+    val requestIntervalMillis = 5 * oneMinuteMillis
+    Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
   })
 
   def getLastSeenManifestsFileName: GateOrStand = {

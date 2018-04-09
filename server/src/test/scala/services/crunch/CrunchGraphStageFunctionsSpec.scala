@@ -18,9 +18,6 @@ class CrunchGraphStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunch
   isolated
   sequential
 
-//  implicit val actorSystem = system
-//  implicit val materializer = ActorMaterializer()
-
   "Crunch flow functions" >> {
     "Given two identical sets of FlightSplitMinutes for a flight " +
       "When I ask for the differences" +
