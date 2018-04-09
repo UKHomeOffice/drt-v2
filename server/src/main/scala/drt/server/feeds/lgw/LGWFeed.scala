@@ -62,6 +62,8 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
 
   val GRANT = "urn:oasis:names:tc:SAML:2.0:assertion"
 
+  def ourSendReceive: HttpRequest => Future[HttpResponse] = sendReceive
+
   def requestToken(): Future[GatwickAzureToken] = {
     val paramsAsForm = FormData(Map(
       "scope" -> tokenScope,
@@ -70,7 +72,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
     ))
 
     implicit val materializer: ActorMaterializer = ActorMaterializer()
-    val ourSendReceive: HttpRequest => Future[HttpResponse] = sendReceive
 
     val tokenPostPipeline = (
       addHeader(Accept(MediaTypes.`application/json`))
@@ -133,8 +134,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
 
       result.toList
     }
-
-    val ourSendReceive: HttpRequest => Future[HttpResponse] = sendReceive
 
     val resultPipeline: pipelining.WithTransformerConcatenation[HttpRequest, Future[List[Arrival]]] = (
       addHeader("Authorization", wrapHeader)
