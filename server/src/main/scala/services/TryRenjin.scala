@@ -63,6 +63,7 @@ object TryRenjin {
 
     def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
       loadOptimiserScript
+      log.info(s"Setting ${workloads.length} workloads & ${desks.length} desks")
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
       runSimulation(desks, "desks", config).toList
@@ -70,7 +71,7 @@ object TryRenjin {
 
     def runSimulation(deskRecsScala: Seq[Int], desks: String, config: OptimizerConfig): Seq[Int] = {
       engine.put("sla", config.sla)
-      engine.eval("processed <- process.work(w, " + desks + ", sla=sla, 0)")
+      engine.eval("processed <- process.work(w, " + desks + ", sla, 0)")
 
       val waitRV = engine.eval(s"processed$$wait").asInstanceOf[IntVector]
       val waitTimes: IndexedSeq[Int] = (0 until waitRV.length()) map waitRV.getElementAsInt

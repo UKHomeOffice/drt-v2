@@ -203,7 +203,7 @@ class SimulationGraphStage(name: String = "",
       val deployedDesks = minuteMillis.map(m => deployments.getOrElse((tn, qn, m), 0))
 
       log.info(s"Running $tn, $qn simulation with ${fullWorkMinutes.length} workloads & ${deployedDesks.length} desks")
-      val waits: Seq[Int] = TryRenjin.runSimulationOfWork(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))
+      val waits: Seq[Int] = simulate(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))
 
       minuteMillis.zipWithIndex.map {
         case (minute, idx) => SimulationMinute(tn, qn, minute, deployedDesks(idx), waits(idx))
