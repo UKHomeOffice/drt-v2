@@ -59,10 +59,9 @@ object CrunchSystem {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
-
-    val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "base-arrivals-actor")
-    val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-arrivals-actor")
-    val liveArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
+    val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor], props.now, props.expireAfterMillis), name = "base-arrivals-actor")
+    val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor], props.now, props.expireAfterMillis), name = "forecast-arrivals-actor")
+    val liveArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[LiveArrivalsActor], props.now, props.expireAfterMillis), name = "live-arrivals-actor")
 
     val askableLiveCrunchStateActor: AskableActorRef = props.liveCrunchStateActor
     val askableForecastCrunchStateActor: AskableActorRef = props.forecastCrunchStateActor

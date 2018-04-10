@@ -3,14 +3,16 @@ package services
 import actors.FlightMessageConversion._
 import actors.GetState
 import akka.persistence._
-import drt.shared.Arrival
+import drt.shared.{Arrival, ArrivalHelper, SDateLike}
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
+import services.graphstages.Crunch
 
 case class ArrivalsState(arrivals: Map[Int, Arrival])
 
-class ForecastBaseArrivalsActor extends ArrivalsActor {
+class ForecastBaseArrivalsActor(now: () => SDateLike,
+                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
   override val snapshotInterval = 10
@@ -24,7 +26,8 @@ class ForecastBaseArrivalsActor extends ArrivalsActor {
   }
 }
 
-class ForecastPortArrivalsActor extends ArrivalsActor {
+class ForecastPortArrivalsActor(now: () => SDateLike,
+                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
   override val snapshotInterval = 10
@@ -33,7 +36,8 @@ class ForecastPortArrivalsActor extends ArrivalsActor {
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
-class LiveArrivalsActor extends ArrivalsActor {
+class LiveArrivalsActor(now: () => SDateLike,
+                        expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
   override def persistenceId: String = s"${getClass.getName}-live"
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -41,7 +45,8 @@ class LiveArrivalsActor extends ArrivalsActor {
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
-abstract class ArrivalsActor extends PersistentActor {
+abstract class ArrivalsActor(now: () => SDateLike,
+                             expireAfterMillis: Long) extends PersistentActor {
   var arrivalsState: ArrivalsState = ArrivalsState(Map())
   val snapshotInterval = 500
   val log: Logger
@@ -73,9 +78,10 @@ abstract class ArrivalsActor extends PersistentActor {
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
+    val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime, now, expireAfterMillis)
     log.info(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
-      .foldLeft(existingState.arrivals) {
+      .foldLeft(withoutExpired) {
         case (soFar, fm) =>
           val arrival = flightMessageToApiFlight(fm)
           soFar.updated(arrival.uniqueId, arrival)

@@ -116,12 +116,6 @@ class CrunchTestLike
 
   def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-forecast-state-actor")
 
-  def baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "forecast-base-arrivals-actor")
-
-  def forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-port-arrivals-actor")
-
-  def liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
-
   def testProbe(name: String) = TestProbe(name = name)
 
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
