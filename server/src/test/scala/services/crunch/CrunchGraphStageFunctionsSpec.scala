@@ -18,23 +18,6 @@ class CrunchGraphStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunch
   isolated
   sequential
 
-  implicit val actorSystem = system
-  implicit val materializer = ActorMaterializer()
-  val oneMinute = 60000
-  val validTerminals = Set("T1", "T2")
-  val uniquifyArrivals = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
-
-  val procTimes: Map[PaxTypeAndQueue, Double] = Map(eeaMachineReadableToDesk -> 25d / 60)
-  val slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20)
-  val minMaxDesks = Map(
-    "T1" -> Map(
-      Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-      Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
-    "T2" -> Map(
-      Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-      Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))))
-  val queues: Map[TerminalName, Seq[QueueName]] = Map("T1" -> Seq(Queues.EeaDesk))
-
   "Crunch flow functions" >> {
     "Given two identical sets of FlightSplitMinutes for a flight " +
       "When I ask for the differences" +

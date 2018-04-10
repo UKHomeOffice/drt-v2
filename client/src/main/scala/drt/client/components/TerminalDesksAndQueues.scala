@@ -37,9 +37,7 @@ object TerminalDesksAndQueuesRow {
                    viewType: ViewType,
                    hasActualDeskStats: Boolean)
 
-  implicit val rowPropsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    (props.queueMinutes.hashCode, props.showActuals, props.viewType.hashCode)
-  })
+  implicit val rowPropsReuse: Reusability[Props] = Reusability.by(_.hashCode())
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P((props) => {
@@ -119,16 +117,9 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, viewType: ViewType)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    val lastUpdatedCm = props.crunchState.crunchMinutes.map(_.lastUpdated)
-    val lastUpdatedFs = props.crunchState.flights.map(_.lastUpdated)
+  implicit val propsReuse: Reusability[Props] = Reusability.by(_.hashCode())
 
-    (lastUpdatedCm, lastUpdatedFs, props.showActuals)
-  })
-
-  implicit val stateReuse: Reusability[State] = Reusability.by((state: State) => {
-    state.viewType == ViewDeps
-  })
+  implicit val stateReuse: Reusability[State] = Reusability.by(_.viewType == ViewDeps)
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {

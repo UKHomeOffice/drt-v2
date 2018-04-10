@@ -5,9 +5,9 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
-import drt.shared.{ActualDeskStats, DeskStat}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import services.SDate
+import services.graphstages.{ActualDeskStats, DeskStat}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -19,7 +19,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
   "Given a CrunchGraph when the blackjack CSV is updated " +
     "Then the updated blackjack numbers should appear in the PortState" >> {
-
     val scheduled = "2017-01-01T00:00Z"
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
@@ -38,17 +37,17 @@ class BlackJackFlowSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        queues = Map("T1" -> Seq(EeaDesk, EGate))),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
-      initialBaseArrivals = initialBaseArrivals
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
+    offerAndWait(crunch.baseArrivalsInput, Flights(initialBaseArrivals.toSeq))
+    Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
     val expected = List.fill(15)((Option(1), Option(5))) ++ List.fill(15)((Option(2), Option(10)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val crunchMinutes = ps match {
           case PortState(_, c, _) => c
@@ -84,17 +83,17 @@ class BlackJackFlowSpec extends CrunchTestLike {
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        queues = Map("T1" -> Seq(EeaDesk, EGate))),
-      crunchStartDateProvider = (_) => SDate(scheduled),
-      crunchEndDateProvider = (_) => SDate(scheduled).addMinutes(30),
-      initialBaseArrivals = initialBaseArrivals
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
+    offerAndWait(crunch.baseArrivalsInput, Flights(initialBaseArrivals.toSeq))
+    Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
     val expected = List.fill(15)((Option(1), None)) ++ List.fill(15)((None, Option(10)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val crunchMinutes = ps match {
           case PortState(_, c, _) => c

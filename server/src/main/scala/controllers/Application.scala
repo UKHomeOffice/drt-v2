@@ -36,8 +36,7 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.crunch.CrunchSystem
-import services.crunch.CrunchSystem.CrunchProps
+import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch._
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
@@ -98,7 +97,6 @@ trait SystemActors {
   val config: Configuration
 
   val minutesToCrunch: Int = 1440
-  val warmUpMinutes: Int = 240
   val maxDaysToCrunch: Int = config.getInt("crunch.forecast.max_days").getOrElse(360)
   val aclPollMinutes: Int = config.getInt("crunch.forecast.poll_minutes").getOrElse(120)
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
@@ -138,7 +136,7 @@ trait SystemActors {
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
-  val apiS3PollFequencyMillis = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val apiS3PollFequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
     new VoyageManifestsGraphStage(
       dqZipBucketName,
@@ -148,7 +146,7 @@ trait SystemActors {
     )
   )
 
-  val crunchInputs: CrunchSystem[NotUsed] = CrunchSystem(CrunchProps(
+  val crunchInputs = CrunchSystem(CrunchProps(
     system = system,
     airportConfig = airportConfig,
     pcpArrival = pcpArrivalTimeCalculator,
@@ -157,8 +155,6 @@ trait SystemActors {
     forecastCrunchStateActor = forecastCrunchStateActor,
     maxDaysToCrunch = maxDaysToCrunch,
     expireAfterMillis = expireAfterMillis,
-    minutesToCrunch = minutesToCrunch,
-    warmUpMinutes = warmUpMinutes,
     actors = Map(
       "shifts" -> shiftsActor,
       "fixed-points" -> fixedPointsActor,
@@ -166,7 +162,9 @@ trait SystemActors {
     useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
     splitsPredictorStage = splitsPredictorStage,
     manifestsSource = voyageManifestsStage,
-    voyageManifestsActor = voyageManifestsActor
+    voyageManifestsActor = voyageManifestsActor,
+    cruncher = TryRenjin.crunch,
+    simulator = TryRenjin.runSimulationOfWork
   ))
   shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
   fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
@@ -182,8 +180,8 @@ trait SystemActors {
   }
 
   if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
-    val threeMinutesInterval = 3 * 60 * 1000
-    Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, threeMinutesInterval milliseconds, SDate.now().addDays(-1))
+    val requestIntervalMillis = 5 * oneMinuteMillis
+    Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
   })
 
   def getLastSeenManifestsFileName: GateOrStand = {

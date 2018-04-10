@@ -14,8 +14,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object TestableStaffGraphStage {
-  val oneDayMillis: Int = 60 * 60 * 24 * 1000
-
   def apply(testProbe: TestProbe,
             staffGraphStage: StaffGraphStage
            ): RunnableGraph[(SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]])] = {
@@ -46,12 +44,40 @@ object TestableStaffGraphStage {
 }
 
 class StaffGraphStageSpec extends CrunchTestLike {
+  val oneDayMillis: Int = 60 * 60 * 24 * 1000
+
   "Given a staff stage for 1 days " +
-    "When I send some shifts " +
+    "When I send a shift of 3 minutes with 2 staff" +
+    "Then I should see all the 3 staff minutes with 2 staff from shifts" >> {
+    val numDays = 1
+    val date = "2017-01-01"
+    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val probe = TestProbe("staff")
+    val (sh, _, _) = TestableStaffGraphStage(probe, staffGraphStage).run
+
+    Await.ready(sh.offer("shift a,T1,01/01/17,00:00,00:02,2"), 1 second)
+
+    val expected = Set(
+      StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 2, 0, 0, None),
+      StaffMinute("T1", SDate("2017-01-01T00:01").millisSinceEpoch, 2, 0, 0, None),
+      StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
+
+    probe.fishForMessage(10 seconds) {
+      case StaffMinutes(minutes) =>
+        val interestingMinutes = minutes.map(_.copy(lastUpdated = None)).toSet
+        println(s"interestingMinute: $interestingMinutes")
+        interestingMinutes == expected
+    }
+
+    true
+  }
+
+  "Given a staff stage for 1 days " +
+    "When I send shifts with 2 staff, movements of -1 for lunch and a fixed point of 1 staff" +
     "Then I should see all the minutes affected by the shifts" >> {
     val numDays = 1
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage(None, None, None, () => SDate(date), airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (sh, fp, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
     val movementUuid = UUID.randomUUID()
@@ -71,7 +97,10 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
 
     probe.fishForMessage(10 seconds) {
-      case StaffMinutes(minutes) => minutes.toSet == expected
+      case StaffMinutes(minutes) =>
+        val interestingMinutes = minutes.map(_.copy(lastUpdated = None)).toSet
+        println(s"interestingMinute: $interestingMinutes")
+        interestingMinutes == expected
     }
 
     true
@@ -82,7 +111,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     "Then I should see all the minutes affected by the fixed points for 2 days" >> {
     val numDays = 2
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage(None, None, None, () => SDate(date), airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (_, fp, _) = TestableStaffGraphStage(probe, staffGraphStage).run
 
@@ -93,7 +122,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:00").addDays(1).millisSinceEpoch, 0, 1, 0, None))
 
     probe.fishForMessage(5 seconds) {
-      case StaffMinutes(minutes) => minutes.toSet == expected
+      case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected
     }
 
     true
@@ -106,7 +135,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val date = "2017-01-01"
     val initialShifts = "shift a,T1,01/01/17,00:00,00:05,2"
     val initialFixedPoints = "roving officer a,T1,01/01/17,00:00,00:05,1"
-    val staffGraphStage = new StaffGraphStage(Option(initialShifts), Option(initialFixedPoints), None, () => SDate(date), airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", Option(initialShifts), Option(initialFixedPoints), None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (_, _, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
 
@@ -123,7 +152,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 1, -1, None))
 
     probe.fishForMessage(5 seconds) {
-      case StaffMinutes(minutes) => minutes.toSet == expected
+      case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected
     }
 
     true

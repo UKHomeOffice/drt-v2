@@ -11,7 +11,8 @@ import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
-class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
+class WorkloadGraphStage(name: String = "",
+                         optionalInitialLoads: Option[Loads],
                          optionalInitialFlightsWithSplits: Option[FlightsWithSplits],
                          airportConfig: AirportConfig,
                          natProcTimes: Map[String, Double],
@@ -32,13 +33,13 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
     var loadMinutes: Set[LoadMinute] = Set()
     var loadsToPush: Map[Int, LoadMinute] = Map()
 
-    val log: Logger = LoggerFactory.getLogger(getClass)
+    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       loadMinutes = optionalInitialLoads match {
         case Some(Loads(lms)) =>
           log.info(s"Received ${lms.size} initial loads")
-          Crunch.purgeExpired(lms, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+          purgeExpired(lms, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
         case _ =>
           log.warn(s"Did not receive any loads to initialise with")
           Set()
@@ -56,22 +57,22 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
     }
 
     def flightsToWorkloadByFlightId(initialFlights: Seq[ApiFlightWithSplits]): Map[Int, Set[FlightSplitMinute]] = {
-      initialFlights.map(fws => {
-        val uniqueFlightId = fws.apiFlight.uniqueId
-        val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
+      initialFlights
+        .map(fws => {
+          val uniqueFlightId = fws.apiFlight.uniqueId
+          val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, airportConfig.defaultProcessingTimes.head._2, natProcTimes, useNationalityBasedProcessingTimes)
 
-        (uniqueFlightId, flightWorkload)
-      }).toMap
+          (uniqueFlightId, flightWorkload)
+        }).toMap
     }
 
     setHandler(inFlightsWithSplits, new InHandler {
       override def onPush(): Unit = {
         val incomingFlights = grab(inFlightsWithSplits)
-        log.info(s"Received ${incomingFlights.flights.size} arrivals $incomingFlights")
+        log.info(s"Received ${incomingFlights.flights.size} arrivals")
 
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
-        log.info(s"updatedWorkloads: $updatedWorkloads")
-        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => fsms.map(_.minute).min, now, expireAfterMillis)
+        workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
         val updatedLoads: Set[LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
 
         val diff = loadDiff(updatedLoads, loadMinutes)
@@ -102,6 +103,11 @@ class WorkloadGraphStage(optionalInitialLoads: Option[Loads],
 
     def mergeWorkloadByFlightId(incomingFlights: FlightsWithSplits, existingLoads: Map[Int, Set[FlightSplitMinute]]): Map[Int, Set[FlightSplitMinute]] = incomingFlights
       .flights
+      .filterNot(f => {
+        val cancelled = f.apiFlight.Status == "Cancelled"
+        if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.IATA}")
+        cancelled
+      })
       .foldLeft(existingLoads) {
         case (soFar, fws) =>
           val uniqueFlightId = fws.apiFlight.uniqueId

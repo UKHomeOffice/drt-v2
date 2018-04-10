@@ -112,6 +112,14 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
       None
     }
   }
+
+  def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
+}
+
+object MinuteHelper {
+  def key(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch): Int = (terminalName, queueName, minute).hashCode
+
+  def key(terminalName: TerminalName, minute: MillisSinceEpoch): Int = (terminalName, minute).hashCode
 }
 
 case class FlightsNotReady()
@@ -164,6 +172,20 @@ case class Arrival(
   lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
 
   lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
+
+  def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
+    val firstPcpMilli = PcpTime
+    val lastPcpMilli = PcpTime + millisToDisembark(ActPax)
+    val firstInRange = start.millisSinceEpoch <= firstPcpMilli && firstPcpMilli <= end.millisSinceEpoch
+    val lastInRange = start.millisSinceEpoch <= lastPcpMilli && lastPcpMilli <= end.millisSinceEpoch
+    firstInRange || lastInRange
+  }
+
+  def millisToDisembark(pax: Int): Long = {
+    val minutesToDisembark = (pax.toDouble / 20).ceil
+    val oneMinuteInMillis = 60 * 1000
+    (minutesToDisembark * oneMinuteInMillis).toLong
+  }
 }
 
 object Arrival {
@@ -184,7 +206,6 @@ object Arrival {
 }
 
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
-
 
 trait SDateLike {
 
@@ -253,17 +274,19 @@ trait SDateLike {
   }
 }
 
+trait PortStateMinutes {
+  def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState]
+}
 
 object CrunchResult {
   def empty = CrunchResult(0, 0, Vector[Int](), List())
 }
 
 
-case class CrunchResult(
-                         firstTimeMillis: MillisSinceEpoch,
-                         intervalMillis: MillisSinceEpoch,
-                         recommendedDesks: IndexedSeq[Int],
-                         waitTimes: Seq[Int])
+case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
+                        intervalMillis: MillisSinceEpoch,
+                        recommendedDesks: IndexedSeq[Int],
+                        waitTimes: Seq[Int])
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
@@ -271,7 +294,18 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits])
+  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits]) extends PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
+      maybePortState match {
+        case None => Option(PortState(flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map()))
+        case Some(portState) =>
+          val updatedFlights = flights.foldLeft(portState.flights) {
+            case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight.copy(lastUpdated = Option(now.millisSinceEpoch)))
+          }
+          Option(portState.copy(flights = updatedFlights))
+      }
+    }
+  }
 
   type TerminalName = String
 
@@ -296,10 +330,6 @@ object PassengerSplits {
 
 }
 
-case class DeskStat(desks: Option[Int], waitTime: Option[Int])
-
-case class ActualDeskStats(desks: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]])
-
 object CrunchApi {
   type MillisSinceEpoch = Long
 
@@ -309,7 +339,20 @@ object CrunchApi {
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[Int, CrunchMinute],
-                       staffMinutes: Map[Int, StaffMinute])
+                       staffMinutes: Map[Int, StaffMinute]) {
+    def window(start: SDateLike, end: SDateLike): PortState = {
+      val windowedFlights = flights.filter {
+        case (_, f) => f.apiFlight.hasPcpDuring(start, end)
+      }
+      val windowedCrunchMinutes = crunchMinutes.filter {
+        case (_, cm) => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch
+      }
+      val windowsStaffMinutes = staffMinutes.filter {
+        case (_, sm) => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch
+      }
+      PortState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
+    }
+  }
 
   sealed trait Minute {
     val minute: MillisSinceEpoch
@@ -326,10 +369,16 @@ object CrunchApi {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: Int = s"$terminalName$minute".hashCode
-    lazy val available = shifts + movements match {
+    lazy val key: Int = MinuteHelper.key(terminalName, minute)
+    lazy val available: Int = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
+    }
+    lazy val availableAtPcp: Int = {
+      shifts - fixedPoints + movements match {
+        case sa if sa >= 0 => sa
+        case _ => 0
+      }
     }
   }
 
@@ -337,7 +386,19 @@ object CrunchApi {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
   }
 
-  case class StaffMinutes(minutes: Seq[StaffMinute])
+  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes {
+    def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
+      maybePortState match {
+        case None => Option(PortState(Map(), Map(), minutes.map(sm => (sm.key, sm)).toMap))
+        case Some(portState) =>
+          val updatedSms = minutes.foldLeft(portState.staffMinutes) {
+            case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm.copy(lastUpdated = Option(now.millisSinceEpoch)))
+          }
+
+          Option(portState.copy(staffMinutes = updatedSms))
+      }
+    }
+  }
 
   object StaffMinutes {
     def apply(minutesByKey: Map[Int, StaffMinute]): StaffMinutes = {
@@ -360,7 +421,47 @@ object CrunchApi {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+    lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
+  }
+
+  trait DeskRecMinuteLike {
+    val terminalName: TerminalName
+    val queueName: QueueName
+    val minute: MillisSinceEpoch
+    val paxLoad: Double
+    val workLoad: Double
+    val deskRec: Int
+    val waitTime: Int
+  }
+
+  trait SimulationMinuteLike {
+    val terminalName: TerminalName
+    val queueName: QueueName
+    val minute: MillisSinceEpoch
+    val desks: Int
+    val waitTime: Int
+  }
+
+  object CrunchMinute {
+    def apply(drm: DeskRecMinuteLike): CrunchMinute = CrunchMinute(
+      terminalName = drm.terminalName,
+      queueName = drm.queueName,
+      minute = drm.minute,
+      paxLoad = drm.paxLoad,
+      workLoad = drm.workLoad,
+      deskRec = drm.deskRec,
+      waitTime = drm.waitTime)
+
+    def apply(sm: SimulationMinuteLike): CrunchMinute = CrunchMinute(
+      terminalName = sm.terminalName,
+      queueName = sm.queueName,
+      minute = sm.minute,
+      paxLoad = 0,
+      workLoad = 0,
+      deskRec = 0,
+      waitTime = 0,
+      deployedDesks = Option(sm.desks),
+      deployedWait = Option(sm.waitTime))
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
@@ -534,7 +635,7 @@ object ApiSplitsToSplitRatio {
   def applyRatio(split: ApiPaxTypeAndQueueCount, totalPax: Int, splitsTotal: Double): Long =
     Math.round(totalPax * (split.paxCount / splitsTotal))
 
-  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double) =
+  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double): Set[ApiPaxTypeAndQueueCount] =
     splits
       .toList
       .sortBy(_.paxCount)

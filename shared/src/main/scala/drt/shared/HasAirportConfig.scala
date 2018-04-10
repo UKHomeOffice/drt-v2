@@ -36,6 +36,7 @@ object Queues {
 
 sealed trait PaxType {
   def name: String = getClass.getSimpleName
+
   def cleanName: String = getClass.getSimpleName.dropRight(1)
 }
 
@@ -90,6 +91,7 @@ case class AirportConfig(
                           hasActualDeskStats: Boolean = false,
                           portStateSnapshotInterval: Int = 1000,
                           eGateBankSize: Int = 5,
+                          crunchOffsetMinutes: Int = 0,
                           hasEstChox: Boolean = false,
                           useStaffingInput: Boolean = false,
                           exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
@@ -99,14 +101,25 @@ case class AirportConfig(
 }
 
 object ArrivalHelper {
+  val defaultPax = 0
+
   def bestPax(flight: Arrival): Int = {
-    val DefaultPax = 0
     (flight.ActPax, flight.TranPax, flight.LastKnownPax, flight.MaxPax) match {
       case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
       case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
-      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => DefaultPax
+      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => defaultPax
       case (actPax, tranPax, _, _) => actPax - tranPax
-      case _ => DefaultPax
+      case _ => defaultPax
+    }
+  }
+
+  def bestPaxIncludingTransit(flight: Arrival): Int = {
+    (flight.ActPax, flight.LastKnownPax, flight.MaxPax) match {
+      case (actPaxIsLtE0, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (actPaxIsLt0, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
+      case (actPaxIsLt0, None, _) if actPaxIsLt0 <= 0 => defaultPax
+      case (actPax, _, _) => actPax
+      case _ => defaultPax
     }
   }
 
@@ -250,6 +263,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
     terminalNames = Seq("T1"),
+    crunchOffsetMinutes = 240,
     defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
@@ -341,6 +355,7 @@ object AirportConfigs {
       "T5" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer)
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
+    crunchOffsetMinutes = 120,
     terminalNames = Seq("T2", "T3", "T4", "T5"),
     defaultWalkTimeMillis = Map("T2" -> 900000L, "T3" -> 660000L, "T4" -> 900000L, "T5" -> 660000L),
     defaultPaxSplits = SplitRatios(

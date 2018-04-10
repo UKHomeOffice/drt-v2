@@ -18,13 +18,21 @@ object Crunch {
   case class FlightSplitDiff(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
-    lazy val uniqueId: Int = (terminalName, queueName, minute).hashCode
+    lazy val uniqueId: Int = MinuteHelper.key(terminalName, queueName, minute)
+  }
+
+  object LoadMinute {
+    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
   }
 
   case class Loads(loadMinutes: Set[LoadMinute])
 
+  object Loads {
+    def apply(cms: Seq[CrunchMinute]): Loads = Loads(cms.map(LoadMinute(_)).toSet)
+  }
+
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
-    lazy val key: Int = s"$terminalName$queueName$minute".hashCode
+    lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   case class RemoveFlight(flightId: Int)
@@ -172,6 +180,16 @@ object Crunch {
   def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
     val date = new DateTime(dateTimeMillis).withZone(europeLondonTimeZone)
     desks(date.getHourOfDay)
+  }
+
+  def purgeExpired[A: TypeTag](expireable: List[(MillisSinceEpoch, A)], now: () => SDateLike, expireAfter: MillisSinceEpoch): List[(MillisSinceEpoch, A)] = {
+    val expired = hasExpiredForType(identity[MillisSinceEpoch], now, expireAfter)
+    val updated = expireable.filterNot { case (i, _) => expired(i) }
+
+    val numPurged = expireable.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
+
+    updated
   }
 
   def purgeExpired[A: TypeTag](expireable: Map[Int, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[Int, A] = {

@@ -101,7 +101,7 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
             predictionsToPush = None
 
           case Some(arrivalsToPush) =>
-            log.info(s"Can't push ${arrivalsToPush.length} arrivals with prediction. outlet not available")
+            log.info(s"Can't push ${arrivalsToPush.length} arrivals with prediction. outlet not available: $arrivalsToPush")
         }
       }
 

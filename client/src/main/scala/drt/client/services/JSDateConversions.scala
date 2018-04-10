@@ -5,7 +5,6 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 
 import scala.language.implicitConversions
-import scala.scalajs.js
 import scala.scalajs.js.Date
 
 object JSDateConversions {

@@ -33,10 +33,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-      minutesToCrunch = 120,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
-    )
+      minutesToCrunch = 120)
 
     offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -45,7 +42,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
         resultSummary == expected
@@ -72,10 +69,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-      minutesToCrunch = 120,
-      crunchStartDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)),
-      crunchEndDateProvider = (_) => getLocalLastMidnight(SDate(scheduled)).addMinutes(120)
-    )
+      minutesToCrunch = 120)
 
     offerAndWait(crunch.liveArrivalsInput, flights)
 
@@ -84,9 +78,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.liveTestProbe.fishForMessage(30 seconds) {
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
+        println(s"results: $resultSummary")
         resultSummary == expected
     }
 

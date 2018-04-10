@@ -21,7 +21,14 @@ object TestableArrivalSplits {
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
   def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
-    val arrivalSplitsStage = new ArrivalSplitsGraphStage(None, splitsCalculator, groupByCodeShares, oneDayMillis, now, 1)
+    val arrivalSplitsStage = new ArrivalSplitsGraphStage(
+      name = "",
+      optionalInitialFlights = None,
+      splitsCalculator = splitsCalculator,
+      groupFlightsByCodeShares = groupByCodeShares,
+      expireAfterMillis = oneDayMillis,
+      now = now,
+      maxDaysToCrunch = 1)
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
     val manifestsSource = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)

@@ -15,19 +15,17 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services._
-import services.crunch.CrunchSystem.CrunchProps
 import services.graphstages.Crunch._
-import services.graphstages.{DqManifests, DummySplitsPredictor}
+import services.graphstages.{ActualDeskStats, Crunch, DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
 //import scala.language.postfixOps
 import scala.concurrent.duration._
 
 
-class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, "live-test", queues, now, expireAfterMillis, false) {
+class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
+  extends CrunchStateActor(1, s"live-test-$name", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -36,8 +34,8 @@ class LiveCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe:
   }
 }
 
-class ForecastCrunchStateTestActor(queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, "forecast-test", queues, now, expireAfterMillis, false) {
+class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
+  extends CrunchStateActor(1, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -73,13 +71,13 @@ class CrunchTestLike
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val oneMinute = 60000
+  val oneMinuteMillis = 60000
   val uniquifyArrivals: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
   val airportConfig = AirportConfig(
     portCode = "STN",
-    queues = Map("T1" -> Seq(Queues.EeaDesk), "T2" -> Seq(Queues.EeaDesk)),
+    queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map(),
@@ -88,8 +86,14 @@ class CrunchTestLike
       SplitRatio(eeaMachineReadableToDesk, 1)
     ),
     defaultProcessingTimes = Map(
-      "T1" -> Map(eeaMachineReadableToDesk -> 25d / 60),
-      "T2" -> Map(eeaMachineReadableToDesk -> 25d / 60)
+      "T1" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 25d / 60
+      ),
+      "T2" -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 25d / 60
+      )
     ),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
@@ -108,15 +112,9 @@ class CrunchTestLike
 
   val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.SchDT).millisSinceEpoch)
 
-  def liveCrunchStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor")
+  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor")
 
-  def forecastCrunchStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-forecast-state-actor")
-
-  def baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor]), name = "forecast-base-arrivals-actor")
-
-  def forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor]), name = "forecast-port-arrivals-actor")
-
-  def liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor]), name = "live-arrivals-actor")
+  def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-forecast-state-actor")
 
   def testProbe(name: String) = TestProbe(name = name)
 
@@ -129,16 +127,16 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
                      minutesToCrunch: Int = 60,
-                     warmUpMinutes: Int = 0,
-                     crunchStartDateProvider: (SDateLike) => SDateLike,
-                     crunchEndDateProvider: (SDateLike) => SDateLike,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      initialShifts: String = "",
-                     initialFixedPoints: String = ""
+                     initialFixedPoints: String = "",
+                     logLabel: String = "",
+                     cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
+                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator
                     ): CrunchGraph = {
 
-    val maxDaysToCrunch = 100
+    val maxDaysToCrunch = 5
     val expireAfterMillis = 2 * oneDayMillis
 
     val liveProbe = testProbe("live")
@@ -148,12 +146,13 @@ class CrunchTestLike
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis))
 
-    val liveCrunchActor = liveCrunchStateActor(liveProbe, now)
-    val forecastCrunchActor = forecastCrunchStateActor(forecastProbe, now)
+    val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
+    val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
+      logLabel = logLabel,
       system = actorSystem,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
@@ -163,21 +162,18 @@ class CrunchTestLike
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
       minutesToCrunch = minutesToCrunch,
-      warmUpMinutes = warmUpMinutes,
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,
         "staff-movements" -> staffMovementsActor),
       useNationalityBasedProcessingTimes = false,
       now = now,
-      crunchStartDateProvider = crunchStartDateProvider,
-      crunchEndDateProvider = crunchEndDateProvider,
-      calcPcpTimeWindow = (_) => calcPcpWindow,
       initialFlightsWithSplits = initialFlightsWithSplits,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
-      waitForManifests = false
+      cruncher = cruncher,
+      simulator = simulator
     ))
 
     if (initialBaseArrivals.nonEmpty) offerAndWait(crunchInputs.baseArrivals, Flights(initialBaseArrivals.toList))
@@ -316,7 +312,8 @@ class CrunchTestLike
     Await.result(sourceQueue.offer(offering), 5 seconds) match {
       case offerResult if offerResult != Enqueued =>
         throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
-      case offerResult => offerResult
+      case offerResult =>
+        offerResult
     }
   }
 }

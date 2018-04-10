@@ -12,7 +12,7 @@ import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch
+import services.graphstages.{ActualDeskStats, Crunch, DeskStat}
 import services.graphstages.Crunch.europeLondonId
 
 import scala.concurrent.ExecutionContext.Implicits.global
