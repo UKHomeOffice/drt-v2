@@ -109,9 +109,9 @@ object RunnableCrunch {
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
           baseArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> baseArrivalsSink
           fcstArrivals ~> fcstArrivalsFanOut ~> arrivals.in1
-          fcstArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> fcstArrivalsSink
+          fcstArrivalsFanOut ~> fcstArrivalsSink
           liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2
-          liveArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> liveArrivalsSink
+          liveArrivalsFanOut ~> liveArrivalsSink
 
           manifests ~> manifestsFanOut
           manifestsFanOut.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1

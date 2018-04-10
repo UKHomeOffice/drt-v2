@@ -5,6 +5,7 @@ import actors.GetState
 import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 
@@ -59,6 +60,23 @@ abstract class ArrivalsActor extends PersistentActor {
   }
 
   override def receiveCommand: Receive = {
+    case Flights(incomingArrivals) =>
+      log.info(s"Received flights")
+
+      val newStateArrivals = incomingArrivals.foldLeft(arrivalsState.arrivals) {
+        case (soFar, updatedArrival) => soFar.updated(updatedArrival.uniqueId, updatedArrival)
+      }
+
+      val updatedArrivals = newStateArrivals.values.toSet -- arrivalsState.arrivals.values.toSet
+
+      arrivalsState = ArrivalsState(newStateArrivals)
+
+      if (updatedArrivals.isEmpty) {
+        log.info(s"No updates to persist")
+      } else {
+        persistOrSnapshot(Set(), updatedArrivals)
+      }
+
     case ArrivalsState(incomingArrivals) if incomingArrivals != arrivalsState.arrivals =>
       log.info(s"Received updated ArrivalsState")
       val currentKeys = arrivalsState.arrivals.keys.toSet
