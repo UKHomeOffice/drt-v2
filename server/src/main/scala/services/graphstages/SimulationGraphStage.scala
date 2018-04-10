@@ -13,6 +13,7 @@ import services.{SDate, _}
 import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 
 class SimulationGraphStage(name: String = "",
@@ -96,6 +97,8 @@ class SimulationGraphStage(name: String = "",
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
+
+        deployments = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
 
         updateSimulations(firstMinute, lastMinute, affectedTerminals)
 
@@ -203,11 +206,19 @@ class SimulationGraphStage(name: String = "",
       val deployedDesks = minuteMillis.map(m => deployments.getOrElse((tn, qn, m), 0))
 
       log.info(s"Running $tn, $qn simulation with ${fullWorkMinutes.length} workloads & ${deployedDesks.length} desks")
-      val waits: Seq[Int] = simulate(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))
-
-      minuteMillis.zipWithIndex.map {
-        case (minute, idx) => SimulationMinute(tn, qn, minute, deployedDesks(idx), waits(idx))
-      }.toSet
+      Try(simulate(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))) match {
+        case Success(waits) =>
+          minuteMillis.zipWithIndex.map {
+            case (minute, idx) => SimulationMinute(tn, qn, minute, deployedDesks(idx), waits(idx))
+          }.toSet
+        case Failure(t) =>
+          val start = SDate(minuteMillis.min).toLocalDateTimeString()
+          val end = SDate(minuteMillis.max).toLocalDateTimeString()
+          log.error(s"Failed to run simulations for $tn / $qn - $start -> $end: $t")
+          log.error(s"${deployedDesks.length} desks: $deployedDesks")
+          log.error(s"${fullWorkMinutes.length} works minutes: $fullWorkMinutes")
+          Set()
+      }
     }
 
     def deploymentsForMillis(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, workload: PortLoad, terminalsToUpdate: Set[TerminalName]): Map[(TerminalName, String, MillisSinceEpoch), Int] = {
@@ -270,13 +281,13 @@ class SimulationGraphStage(name: String = "",
       })
 
     def workloadForPeriod(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute], terminalsToUpdate: Set[TerminalName]): PortLoad = {
-      val loadsForPeriod = loads
-        .filter(lm => firstMinute <= lm.minute && lm.minute < lastMinute)
+      val loadsByTerminal = loads
+        .filter(lm => firstMinute <= lm.minute && lm.minute < lastMinute && terminalsToUpdate.contains(lm.terminalName))
         .groupBy(_.terminalName)
 
       terminalsToUpdate
         .map(tn => {
-          val terminalLoads = loadsForPeriod
+          val terminalLoads = loadsByTerminal
             .getOrElse(tn, Set())
             .groupBy(_.queueName)
             .mapValues(qlms => qlms.toSeq.map(lm => (lm.minute, lm.workLoad)).toMap)
