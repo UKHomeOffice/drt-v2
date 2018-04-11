@@ -2,6 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -47,7 +48,8 @@ class WorkloadGraphStage(name: String = "",
       workloadByFlightId = optionalInitialFlightsWithSplits match {
         case Some(FlightsWithSplits(initialFlights)) =>
           log.info(s"Received ${initialFlights.size} initial flights. Calculating workload.")
-          purgeExpired(flightsToWorkloadByFlightId(initialFlights), (fsms: Set[FlightSplitMinute]) => fsms.map(_.minute).min, now, expireAfterMillis)
+          val timeAccessor = (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0L
+          purgeExpired(flightsToWorkloadByFlightId(initialFlights), timeAccessor, now, expireAfterMillis)
         case None =>
           log.warn(s"Didn't receive any initial flights to initialise with")
           Map()

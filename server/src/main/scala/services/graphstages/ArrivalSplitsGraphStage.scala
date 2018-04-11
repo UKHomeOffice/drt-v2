@@ -57,6 +57,8 @@ class ArrivalSplitsGraphStage(name: String = "",
                 Tuple2(flightWithSplits.apiFlight.uniqueId, withUpdatedHistoricalSplits)
               })
               .toMap)
+          val withApi = flightsByFlightId.values.count(fws => fws.splits.exists(s => s.source == SplitSources.AdvPaxInfo))
+          log.info(s"initial flights with api splits: $withApi")
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
