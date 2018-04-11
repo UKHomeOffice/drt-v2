@@ -36,7 +36,6 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.crunch.CrunchSystem.mergePortStates
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch._
 import services.graphstages._
@@ -197,6 +196,17 @@ trait SystemActors {
         system.log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
         None
     }, 5 minutes)
+  }
+
+  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+    case (None, None) => None
+    case (Some(fps), None) => Option(fps)
+    case (None, Some(lps)) => Option(lps)
+    case (Some(fps), Some(lps)) =>
+      Option(PortState(
+        fps.flights ++ lps.flights,
+        fps.crunchMinutes ++ lps.crunchMinutes,
+        fps.staffMinutes ++ lps.staffMinutes))
   }
 
   def getLastSeenManifestsFileName: GateOrStand = {

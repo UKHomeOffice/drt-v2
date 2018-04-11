@@ -189,17 +189,6 @@ object CrunchSystem {
 
   def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map(ps => FlightsWithSplits(ps.flights.values.toSeq))
 
-  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
-    case (None, None) => None
-    case (Some(fps), None) => Option(fps)
-    case (None, Some(lps)) => Option(lps)
-    case (Some(fps), Some(lps)) =>
-      Option(PortState(
-        fps.flights ++ lps.flights,
-        fps.crunchMinutes ++ lps.crunchMinutes,
-        fps.staffMinutes ++ lps.staffMinutes))
-  }
-
   def initialShiftsLikeState(askableShiftsLikeActor: AskableActorRef): String = {
     Await.result(askableShiftsLikeActor.ask(GetState)(new Timeout(5 minutes)).map {
       case shifts: String if shifts.nonEmpty =>
