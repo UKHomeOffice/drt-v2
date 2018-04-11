@@ -115,10 +115,12 @@ class CrunchLoadGraphStage(name: String = "",
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
 
+        val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
+
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        val deskRecMinutes: Set[DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, loadMinutes.values.toSet)
+        val deskRecMinutes: Set[DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
         val deskRecMinutesByKey = deskRecMinutes.map(cm => (cm.key, cm)).toMap
 
         val diff = deskRecMinutes -- existingDeskRecMinutes.values.toSet
@@ -135,9 +137,10 @@ class CrunchLoadGraphStage(name: String = "",
       }
     })
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, loads: Set[LoadMinute]): Set[DeskRecMinute] = {
-      loads
-        .filter(lm => firstMinute <= lm.minute && lm.minute < lastMinute)
+    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Set[DeskRecMinute] = {
+      val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
+
+      filteredLoads
         .groupBy(_.terminalName)
         .flatMap {
           case (tn, tLms) => tLms
@@ -169,6 +172,19 @@ class CrunchLoadGraphStage(name: String = "",
                 }
             }
         }.toSet
+    }
+
+    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
+      val maybeThings = for {
+        terminalName <- terminalsToUpdate
+        queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
+        minute <- firstMinute until lastMinute by oneMinuteMillis
+      } yield {
+        toFilter
+          .get(MinuteHelper.key(terminalName, queueName, minute))
+      }
+
+      maybeThings.collect { case Some(thing) => thing }
     }
 
     def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName): (Seq[Int], Seq[Int]) = {

@@ -567,6 +567,7 @@ object CrunchApi {
     .groupBy(_.minute)
     .toList
     .sortBy(_._1)
+
 }
 
 trait Api {
