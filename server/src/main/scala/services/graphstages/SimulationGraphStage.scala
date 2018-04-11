@@ -98,7 +98,9 @@ class SimulationGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
 
-        deployments = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
+        val accessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
+        val updatedDeployments: Map[(TerminalName, QueueName, MillisSinceEpoch), Int] = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
+        deployments = Crunch.purgeExpiredTuple(updatedDeployments, accessor, now, expireAfterMillis)
 
         updateSimulations(firstMinute, lastMinute, affectedTerminals)
 
