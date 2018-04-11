@@ -354,10 +354,21 @@ object CrunchApi {
     }
   }
 
-  sealed trait Minute {
+  trait Minute {
     val minute: MillisSinceEpoch
     val lastUpdated: Option[MillisSinceEpoch]
     val terminalName: TerminalName
+  }
+
+  trait TerminalQueueMinute {
+    val terminalName: TerminalName
+    val queueName: QueueName
+    val minute: MillisSinceEpoch
+  }
+
+  trait TerminalMinute {
+    val terminalName: TerminalName
+    val minute: MillisSinceEpoch
   }
 
   case class StaffMinute(terminalName: TerminalName,
@@ -365,7 +376,7 @@ object CrunchApi {
                          shifts: Int,
                          fixedPoints: Int,
                          movements: Int,
-                         lastUpdated: Option[MillisSinceEpoch] = None) extends Minute {
+                         lastUpdated: Option[MillisSinceEpoch] = None) extends Minute with TerminalMinute {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
