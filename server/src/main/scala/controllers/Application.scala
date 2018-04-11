@@ -132,6 +132,8 @@ trait SystemActors {
   val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
 
+  val initialPortState: Option[PortState] = mergePortStates(initialPortState(forecastCrunchStateActor), initialPortState(liveCrunchStateActor))
+
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
@@ -164,7 +166,8 @@ trait SystemActors {
     manifestsSource = voyageManifestsStage,
     voyageManifestsActor = voyageManifestsActor,
     cruncher = TryRenjin.crunch,
-    simulator = TryRenjin.runSimulationOfWork
+    simulator = TryRenjin.runSimulationOfWork,
+    initialPortState = initialPortState
   ))
   shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
   fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
@@ -183,6 +186,28 @@ trait SystemActors {
     val requestIntervalMillis = 5 * oneMinuteMillis
     Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
   })
+
+  def initialPortState(askableCrunchStateActor: AskableActorRef): Option[PortState] = {
+    Await.result(askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case Some(ps: PortState) =>
+        system.log.info(s"Got an initial port state from ${askableCrunchStateActor.toString} with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
+        Option(ps)
+      case _ =>
+        system.log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
+        None
+    }, 5 minutes)
+  }
+
+  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+    case (None, None) => None
+    case (Some(fps), None) => Option(fps)
+    case (None, Some(lps)) => Option(lps)
+    case (Some(fps), Some(lps)) =>
+      Option(PortState(
+        fps.flights ++ lps.flights,
+        fps.crunchMinutes ++ lps.crunchMinutes,
+        fps.staffMinutes ++ lps.staffMinutes))
+  }
 
   def getLastSeenManifestsFileName: GateOrStand = {
     val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
