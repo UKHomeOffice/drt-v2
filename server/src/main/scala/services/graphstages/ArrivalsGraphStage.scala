@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.graphstages.Crunch.midnightThisMorning
 
 import scala.collection.immutable.Map
@@ -55,6 +56,7 @@ class ArrivalsGraphStage(name: String = "",
 
     setHandler(inBaseArrivals, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         log.info(s"inBaseArrivals onPush() grabbing base flights")
         val grabbedArrivals = grab(inBaseArrivals)
         log.info(s"Grabbed ${grabbedArrivals.flights.length} base arrivals")
@@ -63,11 +65,13 @@ class ArrivalsGraphStage(name: String = "",
         mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
+        log.info(s"inBaseArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inForecastArrivals, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         log.info(s"inForecastArrivals onPush() grabbing forecast flights")
         val grabbedArrivals = grab(inForecastArrivals)
         log.info(s"Grabbed ${grabbedArrivals.flights.length} forecast arrivals")
@@ -76,11 +80,13 @@ class ArrivalsGraphStage(name: String = "",
         mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
+        log.info(s"inForecastArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inLiveArrivals, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         log.info(s"inLiveArrivals onPush() grabbing live flights")
 
         val grabbedArrivals = grab(inLiveArrivals)
@@ -90,6 +96,7 @@ class ArrivalsGraphStage(name: String = "",
         mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
+        log.info(s"inLiveArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
@@ -136,11 +143,13 @@ class ArrivalsGraphStage(name: String = "",
 
     setHandler(outArrivalsDiff, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         pushIfAvailable(toPush, outArrivalsDiff)
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
         if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
         if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
+        log.info(s"outArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 

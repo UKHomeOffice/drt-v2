@@ -86,6 +86,7 @@ class SimulationGraphStage(name: String = "",
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
@@ -107,11 +108,13 @@ class SimulationGraphStage(name: String = "",
         pushStateIfReady()
 
         pullAll()
+        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inStaffMinutes, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
         log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
 
@@ -136,6 +139,7 @@ class SimulationGraphStage(name: String = "",
         pushStateIfReady()
 
         pullAll()
+        log.info(s"inStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
@@ -147,8 +151,7 @@ class SimulationGraphStage(name: String = "",
       val firstMillis = firstMinute.millisSinceEpoch
       val lastMillis = lastMinute.millisSinceEpoch
 
-      val workload = workloadForPeriod(firstMillis, lastMillis, affectedTerminals)
-      val deploymentUpdates = deploymentsForMillis(firstMillis, lastMillis, workload, affectedTerminals)
+      val deploymentUpdates = deploymentsForMillis(firstMillis, lastMillis, affectedTerminals)
 
       log.info(s"Merging updated deployments into existing")
       val updatedDeployments = deploymentUpdates.foldLeft(existingDeployments) {
@@ -160,9 +163,11 @@ class SimulationGraphStage(name: String = "",
 
     setHandler(outSimulationMinutes, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         log.debug(s"outSimulationMinutes onPull called")
         pushStateIfReady()
         pullAll()
+        log.info(s"outSimulationMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
@@ -228,7 +233,9 @@ class SimulationGraphStage(name: String = "",
       }
     }
 
-    def deploymentsForMillis(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, workload: PortLoad, terminalsToUpdate: Set[TerminalName]): Map[(TerminalName, String, MillisSinceEpoch), Int] = {
+    def deploymentsForMillis(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName]): Map[(TerminalName, String, MillisSinceEpoch), Int] = {
+      val workload = workloadForPeriod(firstMinute, lastMinute, terminalsToUpdate)
+
       val minuteMillis = firstMinute until lastMinute by 60000
       log.info(s"Getting available staff")
       val availableStaff: Map[TerminalName, Map[MillisSinceEpoch, Int]] = availableStaffForPeriod(firstMinute, lastMinute, terminalsToUpdate)
@@ -236,7 +243,7 @@ class SimulationGraphStage(name: String = "",
       val minMaxDesks: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Int, Int)]]] = minMaxDesksForMillis(minuteMillis)
 
       log.info(s"Getting queue deployments")
-      terminalsToUpdate.toSeq
+      terminalsToUpdate
         .flatMap(tn => {
           val terminalWorkloads: Map[QueueName, Map[MillisSinceEpoch, Double]] = workload.getOrElse(tn, Map())
 
@@ -291,12 +298,8 @@ class SimulationGraphStage(name: String = "",
       })
 
     def workloadForPeriod(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName]): PortLoad = {
-      log.info(s"About to filter Set of  ${loadMinutes.size} LoadMinutes")
-
       val loadsByTerminal = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToUpdate, loadMinutes)
         .groupBy(_.terminalName)
-
-      log.info(s"Done filtering. Going to group by t & q")
 
       terminalsToUpdate
         .map(tn => {
@@ -336,23 +339,35 @@ class SimulationGraphStage(name: String = "",
 
     def adjustEgateWorkload(eGateBankSize: Int, wl: Double): Double = wl / eGateBankSize
 
+    var deploymentCache: Map[Int, Seq[(String, Int)]] = Map()
+
     def queueRecsToDeployments(round: Double => Int)
                               (queueRecs: Seq[(String, Double)], staffAvailable: Int, minMaxDesks: Map[String, (Int, Int)]): Seq[(String, Int)] = {
-      val queueRecsCorrected = if (queueRecs.map(_._2).sum == 0) queueRecs.map(qr => (qr._1, 1d)) else queueRecs
+      val key = (queueRecs, staffAvailable, minMaxDesks).hashCode()
 
-      val totalStaffRec = queueRecsCorrected.map(_._2).sum
+      deploymentCache.get(key) match {
+        case Some(deps) => deps
+        case None =>
+          val queueRecsCorrected = if (queueRecs.map(_._2).sum == 0) queueRecs.map(qr => (qr._1, 1d)) else queueRecs
 
-      queueRecsCorrected.foldLeft(List[(String, Int)]()) {
-        case (agg, (queue, deskRec)) if agg.length < queueRecsCorrected.length - 1 =>
-          val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
-          val totalRecommended = agg.map(_._2).sum
-          val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, minMaxDesks.getOrElse(queue, (0, 10))._2, ideal, staffAvailable - totalRecommended)
-          agg :+ Tuple2(queue, dr)
-        case (agg, (queue, _)) =>
-          val totalRecommended = agg.map(_._2).sum
-          val ideal = staffAvailable - totalRecommended
-          val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, minMaxDesks.getOrElse(queue, (0, 10))._2, ideal, staffAvailable - totalRecommended)
-          agg :+ Tuple2(queue, dr)
+          val totalStaffRec = queueRecsCorrected.map(_._2).sum
+
+          val deployments = queueRecsCorrected.foldLeft(List[(String, Int)]()) {
+            case (agg, (queue, deskRec)) if agg.length < queueRecsCorrected.length - 1 =>
+              val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
+              val totalRecommended = agg.map(_._2).sum
+              val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, minMaxDesks.getOrElse(queue, (0, 10))._2, ideal, staffAvailable - totalRecommended)
+              agg :+ Tuple2(queue, dr)
+            case (agg, (queue, _)) =>
+              val totalRecommended = agg.map(_._2).sum
+              val ideal = staffAvailable - totalRecommended
+              val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, minMaxDesks.getOrElse(queue, (0, 10))._2, ideal, staffAvailable - totalRecommended)
+              agg :+ Tuple2(queue, dr)
+          }
+
+          deploymentCache = deploymentCache.updated(key, deployments)
+
+          deployments
       }
     }
 

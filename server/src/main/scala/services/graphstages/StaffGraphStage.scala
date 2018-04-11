@@ -24,6 +24,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
 
     setHandler(inStaffMinutes, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingStaffMinutes = grab(inStaffMinutes)
         val changedDays = incomingStaffMinutes.minutes.groupBy(sm => getLocalLastMidnight(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
@@ -36,16 +37,19 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
         pushIfAvailable()
 
         pull(inStaffMinutes)
+        log.info(s"inStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         log.info(s"onPull called. ${staffMinutesQueue.length} sets of minutes in the queue")
 
         pushIfAvailable()
 
         if (!hasBeenPulled(inStaffMinutes)) pull(inStaffMinutes)
+        log.info(s"outStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
@@ -105,6 +109,7 @@ class StaffGraphStage(name: String = "",
 
     setHandler(inShifts, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingShifts = grab(inShifts)
         log.info(s"Grabbed available inShifts")
         val updateCriteria = changedMinuteMillis(shiftsOption.getOrElse(""), incomingShifts)
@@ -112,11 +117,13 @@ class StaffGraphStage(name: String = "",
         staffMinuteUpdates = updatesFromSources(maybeStaffSources, updateCriteria)
         tryPush()
         pull(inShifts)
+        log.info(s"inShifts Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inFixedPoints, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingFixedPoints = grab(inFixedPoints)
         log.info(s"Grabbed available inFixedPoints")
         val updateCriteria = fixedPointMinutesToUpdate(fixedPointsOption.getOrElse(""), incomingFixedPoints)
@@ -124,11 +131,13 @@ class StaffGraphStage(name: String = "",
         staffMinuteUpdates = updatesFromSources(maybeStaffSources, updateCriteria)
         tryPush()
         pull(inFixedPoints)
+        log.info(s"inFixedPoints Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inMovements, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingMovements = grab(inMovements)
         log.info(s"Grabbed available inMovements")
         val maybeMovements = movementsOption.map(_.toSet).getOrElse(Set())
@@ -140,6 +149,7 @@ class StaffGraphStage(name: String = "",
         staffMinuteUpdates = mergeStaffMinuteUpdates(latestUpdates, staffMinuteUpdates)
         tryPush()
         pull(inMovements)
+        log.info(s"inMovements Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
@@ -150,11 +160,13 @@ class StaffGraphStage(name: String = "",
 
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         log.info(s"outStaffMinutes onPull called")
         tryPush()
         if (!hasBeenPulled(inShifts)) pull(inShifts)
         if (!hasBeenPulled(inFixedPoints)) pull(inFixedPoints)
         if (!hasBeenPulled(inMovements)) pull(inMovements)
+        log.info(s"outStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 

@@ -30,6 +30,7 @@ class LoadBatchUpdateGraphStage(now: () => SDateLike,
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingLoads = grab(inLoads)
         val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
@@ -42,16 +43,19 @@ class LoadBatchUpdateGraphStage(now: () => SDateLike,
         pushIfAvailable()
 
         pull(inLoads)
+        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         log.info(s"onPull called. ${loadMinutesQueue.length} sets of minutes in the queue")
 
         pushIfAvailable()
 
         if (!hasBeenPulled(inLoads)) pull(inLoads)
+        log.info(s"outLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
