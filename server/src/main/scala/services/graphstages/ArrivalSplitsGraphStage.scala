@@ -66,14 +66,17 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     setHandler(outArrivalsWithSplits, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         log.debug(s"arrivalsWithSplitsOut onPull called")
         pushStateIfReady()
         pullAll()
+        log.info(s"outArrivalsWithSplits Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inArrivalsDiff, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         log.debug(s"inFlights onPush called")
         val arrivalsDiff = grab(inArrivalsDiff)
 
@@ -87,11 +90,13 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         pushStateIfReady()
         pullAll()
+        log.info(s"inArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inManifests, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         log.debug(s"inSplits onPush called")
         val vms = grab(inManifests)
 
@@ -105,11 +110,13 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         pushStateIfReady()
         pullAll()
+        log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
     setHandler(inSplitsPredictions, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         log.debug(s"inSplitsPredictions onPush called")
         val predictions = grab(inSplitsPredictions)
 
@@ -121,6 +128,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         pushStateIfReady()
         pullAll()
+        log.info(s"inSplitsPredictions Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
