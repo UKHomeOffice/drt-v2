@@ -51,7 +51,8 @@ case class CrunchProps[MS](logLabel: String = "",
                            manifestsSource: Source[DqManifests, MS],
                            voyageManifestsActor: ActorRef,
                            cruncher: TryCrunch,
-                           simulator: Simulator
+                           simulator: Simulator,
+                           initialPortState: Option[PortState] = None
                           )
 
 object CrunchSystem {
@@ -63,12 +64,6 @@ object CrunchSystem {
     val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor], props.now, props.expireAfterMillis), name = "forecast-arrivals-actor")
     val liveArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[LiveArrivalsActor], props.now, props.expireAfterMillis), name = "live-arrivals-actor")
 
-    val askableLiveCrunchStateActor: AskableActorRef = props.liveCrunchStateActor
-    val askableForecastCrunchStateActor: AskableActorRef = props.forecastCrunchStateActor
-
-    val initialLivePortState = initialPortState(askableLiveCrunchStateActor)
-    val initialForecastPortState = initialPortState(askableForecastCrunchStateActor)
-    val initialMergedPs = mergePortStates(initialForecastPortState, initialLivePortState)
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
@@ -86,6 +81,9 @@ object CrunchSystem {
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
     val crunchStartDateProvider: (SDateLike) => SDateLike = s => Crunch.getLocalLastMidnight(s).addMinutes(props.airportConfig.crunchOffsetMinutes)
 
+    val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
+    val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
+
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
       initialBaseArrivals = initialArrivals(baseArrivalsActor),
@@ -98,7 +96,7 @@ object CrunchSystem {
 
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
-      optionalInitialFlights = props.initialFlightsWithSplits,
+      optionalInitialFlights = initialFlightsFromPortState(props.initialPortState),
       splitsCalculator = splitsCalculator,
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
@@ -122,15 +120,14 @@ object CrunchSystem {
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
-      optionalInitialLoads = initialMergedPs.map(ps => Loads(ps.crunchMinutes.values.toSeq)),
-      optionalInitialFlightsWithSplits = props.initialFlightsWithSplits,
+      optionalInitialLoads = initialLoadsFromPortState(props.initialPortState),
+      optionalInitialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState),
       airportConfig = props.airportConfig,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
 
-    val maybeCrunchMinutes = initialMergedPs.map(ps => CrunchMinutes(ps.crunchMinutes.values.toSet))
     val crunchLoadGraphStage = new CrunchLoadGraphStage(
       name = props.logLabel,
       optionalInitialCrunchMinutes = maybeCrunchMinutes,
@@ -140,8 +137,6 @@ object CrunchSystem {
       crunch = props.cruncher,
       crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
-
-    val maybeStaffMinutes = initialMergedPs.map(ps => StaffMinutes(ps.staffMinutes))
 
     val simulationGraphStage = new SimulationGraphStage(
       name = props.logLabel,
@@ -156,7 +151,7 @@ object CrunchSystem {
 
     val portStateGraphStage = new PortStateGraphStage(
       name = props.logLabel,
-      optionalInitialPortState = initialMergedPs,
+      optionalInitialPortState = props.initialPortState,
       airportConfig = props.airportConfig,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
@@ -186,27 +181,13 @@ object CrunchSystem {
     )
   }
 
-  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
-    case (None, None) => None
-    case (Some(fps), None) => Option(fps)
-    case (None, Some(lps)) => Option(lps)
-    case (Some(fps), Some(lps)) =>
-      Option(PortState(
-        fps.flights ++ lps.flights,
-        fps.crunchMinutes ++ lps.crunchMinutes,
-        fps.staffMinutes ++ lps.staffMinutes))
-  }
+  def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(ps => StaffMinutes(ps.staffMinutes))
 
-  def initialPortState(askableCrunchStateActor: AskableActorRef): Option[PortState] = {
-    Await.result(askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case Some(ps: PortState) =>
-        log.info(s"Got an initial port state from ${askableCrunchStateActor.toString} with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
-        Option(ps)
-      case _ =>
-        log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
-        None
-    }, 5 minutes)
-  }
+  def initialCrunchMinutesFromPortState(initialPortState: Option[PortState]): Option[CrunchMinutes] = initialPortState.map(ps => CrunchMinutes(ps.crunchMinutes.values.toSet))
+
+  def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads(ps.crunchMinutes.values.toSeq))
+
+  def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map(ps => FlightsWithSplits(ps.flights.values.toSeq))
 
   def initialShiftsLikeState(askableShiftsLikeActor: AskableActorRef): String = {
     Await.result(askableShiftsLikeActor.ask(GetState)(new Timeout(5 minutes)).map {

@@ -172,7 +172,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
         val oldSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
-        val initialFlightsWithSplits = FlightsWithSplits(Seq(ApiFlightWithSplits(flight, Set(oldSplits), None)))
+        val initialFlightsWithSplits = Seq(ApiFlightWithSplits(flight, Set(oldSplits), None))
+        val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
@@ -185,7 +186,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             SplitSources.Historical,
             SplitRatio(eeaMachineReadableToDesk, 0.25)
           )),
-          initialFlightsWithSplits = Option(initialFlightsWithSplits)
+          initialPortState = Option(initialPortState)
         )
 
         // Make a change to the arrival to force a crunch
@@ -210,7 +211,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 20)
         val terminalSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 50, None)), SplitSources.TerminalAverage, None, Percentage)
         val oldHistoricalSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
-        val initialFlightsWithSplits = FlightsWithSplits(Seq(ApiFlightWithSplits(flight, Set(terminalSplits, oldHistoricalSplits), None)))
+        val initialFlightsWithSplits = Seq(ApiFlightWithSplits(flight, Set(terminalSplits, oldHistoricalSplits), None))
+        val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
@@ -225,7 +227,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             )
           ),
           csvSplitsProvider = (_, _) => None,
-          initialFlightsWithSplits = Option(initialFlightsWithSplits)
+          initialPortState = Option(initialPortState)
         )
 
         // Make a change to the arrival to force a crunch

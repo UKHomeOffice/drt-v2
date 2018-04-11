@@ -122,7 +122,7 @@ class CrunchTestLike
                      initialForecastArrivals: Set[Arrival] = Set(),
                      initialLiveArrivals: Set[Arrival] = Set(),
                      initialManifests: DqManifests = DqManifests("", Set()),
-                     initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                     initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
@@ -168,12 +168,12 @@ class CrunchTestLike
         "staff-movements" -> staffMovementsActor),
       useNationalityBasedProcessingTimes = false,
       now = now,
-      initialFlightsWithSplits = initialFlightsWithSplits,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
       cruncher = cruncher,
-      simulator = simulator
+      simulator = simulator,
+      initialPortState = initialPortState
     ))
 
     if (initialBaseArrivals.nonEmpty) offerAndWait(crunchInputs.baseArrivals, Flights(initialBaseArrivals.toList))
