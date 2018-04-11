@@ -37,18 +37,20 @@ class ArrivalsGraphStage(name: String = "",
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
-      baseArrivals = initialBaseArrivals
+      log.info(s"Received ${initialBaseArrivals.size} base arrivals")
+      baseArrivals = filterAndSetPcp(initialBaseArrivals.toSeq)
+      log.info(s"Received ${initialForecastArrivals.size} forecast arrivals")
       forecastArrivalsById = prepInitialArrivals(initialForecastArrivals)
+      log.info(s"Received ${initialLiveArrivals.size} live arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
       super.preStart()
     }
 
     def prepInitialArrivals(arrivals: Set[Arrival]): Map[Int, Arrival] = {
-      val minusExpired = purgeExpired(arrivals).toSeq
-      val byId = filterAndSetPcp(minusExpired)
+      val arrivalsWithPcp = filterAndSetPcp(arrivals.toSeq)
+      purgeExpired(arrivalsWithPcp)
         .map(a => (a.uniqueId, a))
         .toMap
-      byId
     }
 
     setHandler(inBaseArrivals, new InHandler {
@@ -122,7 +124,7 @@ class ArrivalsGraphStage(name: String = "",
       val minusExpired = purgeExpired(newMerged)
 
       val numPurged = newMerged.size - minusExpired.size
-      if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge")
+      if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge: ${newMerged.size} -> ${minusExpired.size}")
 
       val maybeDiff1 = toPush
       val maybeDiff2 = arrivalsDiff(merged, minusExpired)

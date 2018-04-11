@@ -57,7 +57,7 @@ object TestableWorkloadStage {
   }
 }
 
-class WorkloadStageSpec extends CrunchTestLike {
+class WorkloadGraphStageSpec extends CrunchTestLike {
   "Given a flight with splits " +
     "When I ask for the workload " +
     "Then I should see the workload associated with the best splits for that flight" >> {
@@ -72,6 +72,47 @@ class WorkloadStageSpec extends CrunchTestLike {
     val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
     val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 25)
+    val historicSplits = ApiSplits(
+      Set(
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
+        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
+      SplitSources.Historical, None, Percentage)
+
+    val flight = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)))
+
+    flightsWithSplits.offer(flight)
+
+    val expectedLoads = Set(
+      LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduled).millisSinceEpoch),
+      LoadMinute("T1", Queues.EeaDesk, 2.5, 1.25, SDate(scheduled).addMinutes(1).millisSinceEpoch),
+      LoadMinute("T1", Queues.NonEeaDesk, 10, 10, SDate(scheduled).millisSinceEpoch),
+      LoadMinute("T1", Queues.NonEeaDesk, 2.5, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
+    )
+
+    val result = probe.receiveOne(2 seconds) match {
+      case Loads(loadMinutes) => loadMinutes
+    }
+
+    result === expectedLoads
+  }
+
+  "Given a flight with splits and some transit pax " +
+    "When I ask for the workload " +
+    "Then I should see the workload associated with the best splits for that flight" >> {
+
+    val probe = TestProbe("workload")
+    val scheduled = "2018-01-01T00:05"
+    val workloadStart = (_: SDateLike) => SDate(scheduled)
+    val workloadEnd = (_: SDateLike) => SDate(scheduled).addMinutes(30)
+    val workloadWindow = (_: Set[ApiFlightWithSplits], _: Set[ApiFlightWithSplits]) => Option((workloadStart(SDate(scheduled)), workloadEnd(SDate(scheduled))))
+    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
+    val testAirportConfig = airportConfig.copy(
+      queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.Transfer)),
+      defaultProcessingTimes = procTimes
+    )
+    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
+
+    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 75, tranPax = 50)
     val historicSplits = ApiSplits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
@@ -143,7 +184,6 @@ class WorkloadStageSpec extends CrunchTestLike {
 
     val probe = TestProbe("workload")
     val scheduled = "2018-01-01T00:05"
-    val estimated = "2018-01-01T00:06"
     val scheduled2 = "2018-01-01T00:06"
     val workloadStart = (t: SDateLike) => Crunch.getLocalLastMidnight(t)
     val workloadEnd = (t: SDateLike) => Crunch.getLocalNextMidnight(t)

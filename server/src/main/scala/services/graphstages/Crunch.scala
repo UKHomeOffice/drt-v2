@@ -202,6 +202,16 @@ object Crunch {
     updated
   }
 
+  def purgeExpiredTuple[A: TypeTag](expireable: Map[A, Int], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[A, Int] = {
+    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
+    val updated = expireable.filterNot { case (a, _) => expired(a) }
+
+    val numPurged = expireable.size - updated.size
+    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
+
+    updated
+  }
+
   def purgeExpired[A: TypeTag](expireable: Set[A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Set[A] = {
     val expired = hasExpiredForType(timeAccessor, now, expireAfter)
     val updated = expireable.filterNot(expired)
