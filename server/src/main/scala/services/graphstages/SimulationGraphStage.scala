@@ -293,13 +293,12 @@ class SimulationGraphStage(name: String = "",
     def workloadForPeriod(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName]): PortLoad = {
       log.info(s"About to filter Set of  ${loadMinutes.size} LoadMinutes")
 
-      val filtered = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToUpdate, loadMinutes)
-
-      val loadsByTerminal = filtered.groupBy(_.terminalName)
+      val loadsByTerminal = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToUpdate, loadMinutes)
+        .groupBy(_.terminalName)
 
       log.info(s"Done filtering. Going to group by t & q")
 
-      val map = terminalsToUpdate
+      terminalsToUpdate
         .map(tn => {
           val terminalLoads = loadsByTerminal
             .getOrElse(tn, Set())
@@ -308,10 +307,6 @@ class SimulationGraphStage(name: String = "",
           (tn, terminalLoads)
         })
         .toMap
-
-      log.info(s"Done grouping by")
-
-      map
     }
 
     def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
