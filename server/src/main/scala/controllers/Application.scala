@@ -132,60 +132,76 @@ trait SystemActors {
   val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
 
-  val initialPortState: Option[PortState] = mergePortStates(initialPortState(forecastCrunchStateActor), initialPortState(liveCrunchStateActor))
-
-  system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
-  system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
-
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
-  val apiS3PollFequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
     new VoyageManifestsGraphStage(
       dqZipBucketName,
       airportConfig.portCode,
       getLastSeenManifestsFileName,
-      apiS3PollFequencyMillis
+      apiS3PollFrequencyMillis
     )
   )
 
-  val crunchInputs = CrunchSystem(CrunchProps(
-    system = system,
-    airportConfig = airportConfig,
-    pcpArrival = pcpArrivalTimeCalculator,
-    historicalSplitsProvider = historicalSplitsProvider,
-    liveCrunchStateActor = liveCrunchStateActor,
-    forecastCrunchStateActor = forecastCrunchStateActor,
-    maxDaysToCrunch = maxDaysToCrunch,
-    expireAfterMillis = expireAfterMillis,
-    actors = Map(
-      "shifts" -> shiftsActor,
-      "fixed-points" -> fixedPointsActor,
-      "staff-movements" -> staffMovementsActor),
-    useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
-    splitsPredictorStage = splitsPredictorStage,
-    manifestsSource = voyageManifestsStage,
-    voyageManifestsActor = voyageManifestsActor,
-    cruncher = TryRenjin.crunch,
-    simulator = TryRenjin.runSimulationOfWork,
-    initialPortState = initialPortState
-  ))
-  shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
-  fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
-  staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
+  system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
+  system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
-  liveArrivalsSource(airportConfig.portCode)
-    .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
-  forecastArrivalsSource(airportConfig.portCode)
-    .runForeach(f => crunchInputs.forecastArrivals.offer(f))(actorMaterializer)
-
-  system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
-    crunchInputs.baseArrivals.offer(aclFeed.arrivals)
+  val futureLivePortState = liveCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
+    case ps: PortState => Option(ps)
+    case _ => None
+  }
+  val futureForecastPortState = forecastCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).collect {
+    case ps: PortState => Option(ps)
+    case _ => None
   }
 
-  if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
-    val requestIntervalMillis = 5 * oneMinuteMillis
-    Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
-  })
+  val futurePortStates: Future[Seq[Option[PortState]]] = Future.sequence(Seq(futureLivePortState, futureForecastPortState))
+
+  futurePortStates.onComplete {
+    case Success(maybeLiveState :: maybeForecastState :: Nil) =>
+      system.log.info(s"Live and forecast port states received")
+
+      val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
+
+      val crunchInputs = CrunchSystem(CrunchProps(
+        system = system,
+        airportConfig = airportConfig,
+        pcpArrival = pcpArrivalTimeCalculator,
+        historicalSplitsProvider = historicalSplitsProvider,
+        liveCrunchStateActor = liveCrunchStateActor,
+        forecastCrunchStateActor = forecastCrunchStateActor,
+        maxDaysToCrunch = maxDaysToCrunch,
+        expireAfterMillis = expireAfterMillis,
+        actors = Map(
+          "shifts" -> shiftsActor,
+          "fixed-points" -> fixedPointsActor,
+          "staff-movements" -> staffMovementsActor),
+        useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
+        splitsPredictorStage = splitsPredictorStage,
+        manifestsSource = voyageManifestsStage,
+        voyageManifestsActor = voyageManifestsActor,
+        cruncher = TryRenjin.crunch,
+        simulator = TryRenjin.runSimulationOfWork,
+        initialPortState = initialPortState
+      ))
+      shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
+      fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
+      staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
+
+      liveArrivalsSource(airportConfig.portCode)
+        .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
+      forecastArrivalsSource(airportConfig.portCode)
+        .runForeach(f => crunchInputs.forecastArrivals.offer(f))(actorMaterializer)
+
+      system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
+        crunchInputs.baseArrivals.offer(aclFeed.arrivals)
+      }
+
+      if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
+        val requestIntervalMillis = 5 * oneMinuteMillis
+        Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
+      })
+  }
 
   def initialPortState(askableCrunchStateActor: AskableActorRef): Option[PortState] = {
     Await.result(askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
