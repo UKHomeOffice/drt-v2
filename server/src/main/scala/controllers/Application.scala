@@ -146,21 +146,12 @@ trait SystemActors {
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
-  val futureLivePortState = liveCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
-    case ps: PortState => Option(ps)
-    case _ => None
-  }
-  val futureForecastPortState = forecastCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).collect {
-    case ps: PortState => Option(ps)
-    case _ => None
-  }
-
-  val futurePortStates: Future[Seq[Option[PortState]]] = Future.sequence(Seq(futureLivePortState, futureForecastPortState))
+  val futurePortStates: Future[Seq[Option[PortState]]] = Future.sequence(Seq(
+    initialPortState(liveCrunchStateActor),
+    initialPortState(forecastCrunchStateActor)))
 
   futurePortStates.onComplete {
     case Success(maybeLiveState :: maybeForecastState :: Nil) =>
-      system.log.info(s"Live and forecast port states received")
-
       val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
 
       val crunchInputs = CrunchSystem(CrunchProps(
@@ -184,6 +175,7 @@ trait SystemActors {
         simulator = TryRenjin.runSimulationOfWork,
         initialPortState = initialPortState
       ))
+
       shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
       fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
       staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -203,15 +195,15 @@ trait SystemActors {
       })
   }
 
-  def initialPortState(askableCrunchStateActor: AskableActorRef): Option[PortState] = {
-    Await.result(askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
+  def initialPortState(askableCrunchStateActor: AskableActorRef): Future[Option[PortState]] = {
+    askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
       case Some(ps: PortState) =>
         system.log.info(s"Got an initial port state from ${askableCrunchStateActor.toString} with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
         Option(ps)
       case _ =>
         system.log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
         None
-    }, 5 minutes)
+    }
   }
 
   def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
