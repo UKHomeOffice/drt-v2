@@ -173,7 +173,11 @@ object TerminalContentComponent {
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
-                val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, props.defaultTimeRangeHours, terminalFlights.toList)
+                val timeRangeHours = TimeRangeHours(
+                  props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
+                  props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
+                )
+                val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, timeRangeHours, terminalFlights.toList)
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder, props.airportConfig.hasEstChox))
               }))

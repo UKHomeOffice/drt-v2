@@ -67,7 +67,13 @@ object DatePickerComponent {
       def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
 
       def updateUrlWithDateCallback(date: Option[SDateLike]): Callback = {
-        props.router.set(props.terminalPageTab.copy(date = date.map(_.toLocalDateTimeString())))
+        props.router.set(
+          props.terminalPageTab.copy(
+            date = date.map(_.toLocalDateTimeString()),
+            timeRangeStartString = None,
+            timeRangeEndString = None
+          )
+        )
       }
 
       def selectPointInTime = (_: ReactEventFromInput) => {
