@@ -68,10 +68,12 @@ object TerminalContentComponent {
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
   def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]): List[ApiFlightWithSplits] = arrivals.filter(a => {
-
     def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
       case s: SDateLike if s.ddMMyyString == date.ddMMyyString =>
-        s.getHours >= range.start && s.getHours < range.end
+        if (range.end < 24)
+          s.getHours >= range.start && s.getHours < range.end
+        else
+          s.getHours >= range.start
       case _ => false
     } else false
 
@@ -79,16 +81,28 @@ object TerminalContentComponent {
   })
 
   def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState): CrunchState = {
+    val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
+    val startOfView = startOfDay.addHours(range.start)
+    val endOfView = startOfDay.addHours(range.end)
+    log.info(s"range: ${startOfView.toLocalDateTimeString()} - ${endOfView.toLocalDateTimeString()}")
     CrunchState(
-      filterFlightsByRange(day, range, state.flights.toList).toSet,
-      state.crunchMinutes.filter(cm => timeFallsBetweenHours(range, cm.minute)),
-      state.staffMinutes.filter(sm => timeFallsBetweenHours(range, sm.minute))
+      state.flights.filter(f => timeFallsBetween(f.apiFlight.PcpTime, startOfView, endOfView)),
+      state.crunchMinutes.filter(cm => timeFallsBetween(cm.minute, startOfView, endOfView)),
+      state.staffMinutes.filter(sm => timeFallsBetween(sm.minute, startOfView, endOfView))
     )
   }
 
-  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch): Boolean = {
-    SDate(MilliDate(minute)).getHours() >= range.start && SDate(MilliDate(minute)).getHours() < range.end
+  def timeFallsBetween(minute: MillisSinceEpoch, start: SDateLike, end: SDateLike): Boolean = {
+//    log.info(s"${start.toLocalDateTimeString()} <= ${SDate(minute).toLocalDateTimeString()} < ${end.toLocalDateTimeString()}")
+    start.millisSinceEpoch <= minute && minute < end.millisSinceEpoch
   }
+
+//  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch): Boolean = {
+//    if (range.end < 24)
+//      SDate(MilliDate(minute)).getHours() >= range.start && SDate(MilliDate(minute)).getHours() < range.end
+//    else
+//      SDate(MilliDate(minute)).getHours() >= range.start
+//  }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
@@ -152,9 +166,10 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
+                val filteredPortState = filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
-                    filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState),
+                    filteredPortState,
                     props.airportConfig,
                     props.terminalPageTab.terminal,
                     props.showActuals
@@ -168,11 +183,10 @@ object TerminalContentComponent {
               log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
+                val filteredPortState = filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState)
                 val flightsWithSplits = crunchState.flights
-                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
-                val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, props.timeRangeHours, terminalFlights.toList)
 
-                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder, props.airportConfig.hasEstChox))
+                arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
               }))
             } else ""
           }),

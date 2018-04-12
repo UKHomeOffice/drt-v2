@@ -95,7 +95,8 @@ case class AirportConfig(
                           hasEstChox: Boolean = false,
                           useStaffingInput: Boolean = false,
                           exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
-                          contactEmail: Option[String] = None
+                          contactEmail: Option[String] = None,
+                          dayLengthHours: Int = 36
                         ) extends AirportConfigLike {
 
 }
@@ -264,6 +265,7 @@ object AirportConfigs {
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
     terminalNames = Seq("T1"),
     crunchOffsetMinutes = 240,
+    dayLengthHours = 36,
     defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
@@ -356,6 +358,7 @@ object AirportConfigs {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     crunchOffsetMinutes = 120,
+    dayLengthHours = 36,
     terminalNames = Seq("T2", "T3", "T4", "T5"),
     defaultWalkTimeMillis = Map("T2" -> 900000L, "T3" -> 660000L, "T4" -> 900000L, "T5" -> 660000L),
     defaultPaxSplits = SplitRatios(
