@@ -7,7 +7,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
+import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability

@@ -2,11 +2,37 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services._
+import drt.client.services.JSDateConversions.SDate
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+
+sealed trait TimeRangeHours {
+  def start: Int
+
+  def end: Int
+}
+
+case class CustomWindow(start: Int, end: Int) extends TimeRangeHours
+
+case class WholeDayWindow() extends TimeRangeHours {
+  override def start: Int = 0
+
+  override def end: Int = 24
+}
+
+case class CurrentWindow() extends TimeRangeHours {
+  override def start: Int = SDate.now().getHours() - 1
+
+  override def end: Int = SDate.now().getHours() + 3
+}
+
+object TimeRangeHours {
+  def apply(start: Int, end: Int) = {
+    CustomWindow(start, end)
+  }
+}
 
 object TimeRangeFilter {
 
@@ -41,17 +67,13 @@ object TimeRangeFilter {
         .set(props.terminalPageTab.copy(timeRangeEndString = Option(v)))
 
       def nowActive =
-        if (props.terminalPageTab.timeRangeStart.getOrElse(currentWindow.start) == currentWindow.start &&
-          props.terminalPageTab.timeRangeEnd.getOrElse(currentWindow.end) == currentWindow.end)
+        if (selectedWindow.start == currentWindow.start && selectedWindow.end == currentWindow.end)
         "active"
       else ""
 
-      def dayActive = {
-        (props.terminalPageTab.timeRangeStart, props.terminalPageTab.timeRangeEnd) match {
-          case (Some(start), Some(end)) if start == wholeDayWindow.start && end == wholeDayWindow.end => "active"
-          case _ => ""
-        }
-      }
+      def dayActive = if (selectedWindow.start == wholeDayWindow.start && selectedWindow.end == wholeDayWindow.end)
+        "active"
+      else ""
 
       <.div(
         <.div(^.className := "date-view-picker-container",

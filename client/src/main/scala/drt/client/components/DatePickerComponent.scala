@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{CurrentWindow, LoadingState, TimeRangeHours}
+import drt.client.services.LoadingState
 import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -115,6 +115,12 @@ object DatePickerComponent {
         <.div(^.className := "error-message", s"Earliest available is ${SnapshotSelector.earliestAvailable.ddMMyyString}")
       else <.div()
 
+      def defaultTimeRangeWindow = if (isTodayActive)
+        CurrentWindow()
+      else
+        WholeDayWindow()
+
+
       <.div(^.className := "date-selector",
         <.div(^.className := "",
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
@@ -127,7 +133,7 @@ object DatePickerComponent {
           goButton(props.loadingState.isLoading, isCurrentSelection),
           errorMessage
         ),
-        TimeRangeFilter(TimeRangeFilter.Props(props.router, props.terminalPageTab, CurrentWindow(), isTodayActive, props.minuteTicker))
+        TimeRangeFilter(TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker))
       )
     })
     .configure(Reusability.shouldComponentUpdate)
