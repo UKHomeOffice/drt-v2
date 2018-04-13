@@ -99,9 +99,7 @@ object TerminalComponent {
                 props.router.set(props.terminalPageTab.copy(
                   mode = "current",
                   subMode = subMode,
-                  date = None,
-                  timeRangeStartString = props.terminalPageTab.timeRangeStartString,
-                  timeRangeEndString = props.terminalPageTab.timeRangeEndString
+                  date = None
                 ))
               }),
               <.li(^.className := snapshotDataClass,
@@ -109,9 +107,7 @@ object TerminalComponent {
                   props.router.set(props.terminalPageTab.copy(
                     mode = "snapshot",
                     subMode = subMode,
-                    date = None,
-                    timeRangeStartString = props.terminalPageTab.timeRangeStartString,
-                    timeRangeEndString = props.terminalPageTab.timeRangeEndString
+                    date = None
                   ))
                 }
               ),

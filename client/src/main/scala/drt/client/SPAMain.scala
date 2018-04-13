@@ -86,9 +86,15 @@ object SPAMain extends js.JSApp {
         dynRenderR((page: TerminalsDashboardLoc, router) => {
           TerminalsDashboardPage(None, router, page)
         })
+      val requiredTerminalName = string("[a-zA-Z0-9]+")
+      val requiredTopLevelTab = string("[a-zA-Z0-9]+")
+      val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
+      val optionalDate = string(".+").option
+      val optionalTimeRangeStartHour = string("[0-9]+").option
+      val optionalTimeRangeEndHour = string("[0-9]+").option
       val terminal: dsl.Rule = dynamicRouteCT(
-        ("#terminal" / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string("[a-zA-Z0-9]+") / string(".+").option
-          / string("[0-9]+").option / string("[0-9]+").option).caseClass[TerminalPageTabLoc]) ~>
+        ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / optionalDate
+          / optionalTimeRangeStartHour / optionalTimeRangeEndHour).caseClass[TerminalPageTabLoc]) ~>
         dynRenderR((page: TerminalPageTabLoc, router) => {
           val props = TerminalComponent.Props(terminalPageTab = page, router)
           TerminalComponent(props)
