@@ -162,9 +162,6 @@ object TerminalStaffingV2 {
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5).map(i => firstDayOfMonth(date).addMonths(i))
 
-  def dateFromDateStringOption(dateStringOption: Option[String]): SDateLike =
-    dateStringOption.map(d => SDate(d)).getOrElse(SDate.now())
-
   def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[String, Int]): Seq[Seq[Int]] =
     staffTimeSlotDays.zipWithIndex.map {
       case (days, timeslotIndex) =>
@@ -211,7 +208,7 @@ object TerminalStaffingV2 {
           val initialTimeSlots = stateFromProps(props).timeSlots
           val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
 
-          val updatedMonth = dateFromDateStringOption(props.terminalPageTab.date).getMonthString()
+          val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
             .map(d => state.colHeadings(d)).toList
 
@@ -226,7 +223,7 @@ object TerminalStaffingV2 {
                 )))
         }
 
-      val viewingDate = firstDayOfMonth(dateFromDateStringOption(props.terminalPageTab.date))
+      val viewingDate = firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
       <.div(
         <.div(^.className := "date-picker",
           <.div(^.className := "row",
@@ -279,7 +276,7 @@ object TerminalStaffingV2 {
 
   def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
-    val viewingDate = dateFromDateStringOption(props.terminalPageTab.date)
+    val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
     val terminalName = props.terminalPageTab.terminal
     val terminalShifts = StaffAssignmentParser(props.rawShiftString).parsedAssignments.toList.collect {

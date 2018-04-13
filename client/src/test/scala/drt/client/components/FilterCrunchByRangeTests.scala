@@ -1,7 +1,6 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{CustomWindow, TimeRangeHours}
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, StaffMinute}
 import drt.shared.{ApiFlightWithSplits, Queues}
 import utest.{TestSuite, _}

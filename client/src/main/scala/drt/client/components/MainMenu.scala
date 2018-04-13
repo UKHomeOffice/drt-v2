@@ -31,7 +31,7 @@ object MainMenu {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
-            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date)
+            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date, tptl.timeRangeStartString, tptl.timeRangeEndString)
           case _ => TerminalPageTabLoc(tn)
         }
         MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, targetLoc)
@@ -50,7 +50,7 @@ object MainMenu {
 
             val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig, props.currentLoc)) yield {
               val active = (props.currentLoc, item.location) match {
-                case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
+                case (TerminalPageTabLoc(tn, _, _, _, _, _), TerminalPageTabLoc(tni, _, _, _, _, _)) => tn == tni
                 case (current, itemLoc) => current == itemLoc
               }
               val classes = Seq(("active", active))

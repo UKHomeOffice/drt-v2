@@ -2,9 +2,7 @@ package drt.client.components
 
 import drt.client.components.TerminalContentComponent.filterFlightsByRange
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{CustomWindow, TimeRangeHours}
 import drt.shared.ApiFlightWithSplits
-import japgolly.scalajs.react.test
 import utest.{TestSuite, _}
 
 

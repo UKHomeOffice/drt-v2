@@ -3,7 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
-import drt.client.services.{StaffAssignment, TimeRangeHours, ViewMode}
+import drt.client.services.{StaffAssignment, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines}
 import drt.shared.FlightsApi._
 import drt.shared._
@@ -79,8 +79,6 @@ object Actions {
   case class GetStaffMovements() extends Action
 
   case class SetViewMode(mode: ViewMode) extends Action
-
-  case class SetTimeRangeFilter(timeRangeHours: TimeRangeHours) extends Action
 
   case class ShowLoader() extends Action
 

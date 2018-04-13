@@ -14,7 +14,6 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
-
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -22,26 +21,6 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
-
-sealed trait TimeRangeHours {
-  def start: Int
-
-  def end: Int
-}
-
-case class CustomWindow(start: Int, end: Int) extends TimeRangeHours
-
-case class WholeDayWindow() extends TimeRangeHours {
-  override def start: Int = 0
-
-  override def end: Int = 24
-}
-
-case class CurrentWindow() extends TimeRangeHours {
-  override def start: Int = SDate.now().getHours() - 1
-
-  override def end: Int = SDate.now().getHours() + 3
-}
 
 sealed trait ViewMode {
   def millis: MillisSinceEpoch = time.millisSinceEpoch
@@ -73,7 +52,6 @@ case class RootModel(
                       fixedPointsRaw: Pot[String] = Empty,
                       staffMovements: Pot[Seq[StaffMovement]] = Empty,
                       viewMode: ViewMode = ViewLive(),
-                      timeRangeFilter: TimeRangeHours = CurrentWindow(),
                       loadingState: LoadingState = LoadingState(),
                       showActualIfAvailable: Boolean = true,
                       userRoles: Pot[List[String]] = Empty,
@@ -531,27 +509,17 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
       val latestUpdateMillis = if (currentViewMode != ViewLive() && newViewMode == ViewLive()) 0L else currentLatestUpdateMillis
 
-      val updateTimeFilterAction = if (newViewMode == ViewLive()) SetTimeRangeFilter(CurrentWindow()) else NoAction
-
       log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis")
       (currentViewMode, newViewMode, crunchStateMP.value) match {
         case (_, _, cs@Pending(_)) =>
-          updated((newViewMode, cs, latestUpdateMillis), Effect(Future(updateTimeFilterAction)))
+          updated((newViewMode, cs, latestUpdateMillis))
         case (ViewLive(), nvm, PendingStale(_, _)) if nvm != ViewLive() =>
-          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(SetTimeRangeFilter(WholeDayWindow()))))
+          updated((newViewMode, Pending(), latestUpdateMillis))
         case (_, _, cs@PendingStale(_, _)) =>
-          updated((newViewMode, cs, latestUpdateMillis), Effect(Future(updateTimeFilterAction)))
+          updated((newViewMode, cs, latestUpdateMillis))
         case _ =>
-          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())) + Effect(Future(updateTimeFilterAction)))
+          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())))
       }
-  }
-}
-
-class TimeRangeFilterHandler[M](modelRW: ModelRW[M, TimeRangeHours]) extends LoggingActionHandler(modelRW) {
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetTimeRangeFilter(r) =>
-      log.info(s"Setting time range to $r")
-      updated(r)
   }
 }
 
@@ -684,7 +652,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
-      new TimeRangeFilterHandler(zoomRW(_.timeRangeFilter)((m, v) => m.copy(timeRangeFilter = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, v) => m)),
