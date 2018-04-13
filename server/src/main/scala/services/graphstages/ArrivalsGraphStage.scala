@@ -90,7 +90,7 @@ class ArrivalsGraphStage(name: String = "",
         log.info(s"inLiveArrivals onPush() grabbing live flights")
 
         val grabbedArrivals = grab(inLiveArrivals)
-        log.info(s"Grabbed ${grabbedArrivals.flights.length} live arrivals")
+        log.info(s"Grabbed ${grabbedArrivals.flights.length} live arrivals: $grabbedArrivals")
         liveArrivals = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), liveArrivals)
 
         mergeAllSourcesAndPush(baseArrivals, forecastArrivalsById.values.toSet, liveArrivals.values.toSet)

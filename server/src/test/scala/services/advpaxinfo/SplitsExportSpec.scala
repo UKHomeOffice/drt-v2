@@ -9,6 +9,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
+import com.typesafe.config.ConfigFactory
 import drt.shared._
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.Specification
@@ -96,7 +97,7 @@ class SplitsExportSpec extends Specification {
     }
   }
 
-  implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo")
+  implicit val actorSystem: ActorSystem = ActorSystem("AdvPaxInfo", ConfigFactory.empty())
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   def writeSplitsFromZip[X](zipFileName: String,

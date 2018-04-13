@@ -60,6 +60,8 @@ object Settings {
     val typesafeConfig = "1.3.0"
     val reactHandsontable = "0.3.1"
     val sparkMlLib = "2.2.1"
+    val pac4jSaml = "2.0.0-RC1"
+    val openSaml = "2.6.1"
   }
 
   import versions._
@@ -113,7 +115,8 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-
+    "org.opensaml" % "opensaml" % openSaml,
+    "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
