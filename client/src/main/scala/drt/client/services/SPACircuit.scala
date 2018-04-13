@@ -439,17 +439,24 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
 
       val nextCallEffect = Effect(Future(GetApplicationVersion)).after(PollDelay.recoveryDelay)
 
-      val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersion => {
-        value match {
-          case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion =>
-            UpdateServerApplicationVersion(serverVersion)
-          case Ready(_) =>
-            log.info(s"server application version unchanged ($serverVersion)")
-            NoAction
-          case Empty =>
-            SetApplicationVersion(serverVersion)
-          case u =>
-            log.info(s"Got a $u")
+      val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersionContent => {
+        Try(Integer.parseInt(serverVersionContent)) match {
+          case Success(serverVersionInt) =>
+            val serverVersion = serverVersionInt.toString
+            value match {
+              case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion =>
+                UpdateServerApplicationVersion(serverVersion)
+              case Ready(_) =>
+                log.info(s"server application version unchanged ($serverVersionInt)")
+                NoAction
+              case Empty =>
+                SetApplicationVersion(serverVersion)
+              case u =>
+                log.info(s"Got a $u")
+                NoAction
+            }
+          case Failure(t) =>
+            log.info(s"Failed to parse application version number from response: $t")
             NoAction
         }
       }))
