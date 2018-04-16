@@ -38,16 +38,16 @@ object PcpPaxSummariesComponent {
   class Backend {
     def render(props: Props): TagOf[Div] = {
       val now = SDate.now()
-      val fiveMinutes = 15
+      val fiveMinutes = 5
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
       <.div(^.className := "pcp-pax-summaries",
         if (props.viewMode == ViewLive()) {
           props.crunchStatePot.render(cs => {
-            val boxes = Seq("next 15 mins", "15-30 mins", "30-45 mins")
+            val boxes = Seq("next 5 mins", "5-10 mins", "10-15 mins")
             <.div(
               boxes.zipWithIndex.map {
                 case (label, box) =>
-                  val start = now.addMinutes(box * 15)
+                  val start = now.addMinutes(box * 5)
                   val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, props.terminalName, queues.toSet)
                   summaryBox(box, label, start, queues, summary)
               }.toTagMod
@@ -71,7 +71,7 @@ object PcpPaxSummariesComponent {
       ),
       <.div(^.className := "vertical-spacer"),
       <.div(^.className := "time-range-label", label),
-      <.div(^.className := "time-range", s"${now.toHoursAndMinutes()} - ${now.addMinutes(15).toHoursAndMinutes()}")
+      <.div(^.className := "time-range", s"${now.toHoursAndMinutes()} - ${now.addMinutes(5).toHoursAndMinutes()}")
     )
   }
 
