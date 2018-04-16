@@ -9,6 +9,7 @@ import drt.http.{ProdSendAndReceive, WithSendAndReceive}
 import drt.shared.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.graphstages.Crunch
 import spray.client.pipelining.{Get, addHeader, unmarshal, _}
 import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.SprayJsonSupport
@@ -37,10 +38,10 @@ object LHRLiveFeed {
       Arrival(
         lhrArrival.OPERATOR,
         statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
-        dateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME),
+        localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME),
         "",
-        dateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME),
-        dateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME),
+        localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME),
+        localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME),
         "",
         lhrArrival.STAND,
         lhrPax.map(_.MAXPASSENGERCOUNT.toInt).getOrElse(0),
@@ -54,8 +55,8 @@ object LHRLiveFeed {
         lhrArrival.FLIGHTNUMBER,
         lhrArrival.FLIGHTNUMBER,
         lhrArrival.AIRPORTCODE,
-        dateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME),
-        SDate(dateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch,
+        localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME),
+        SDate(localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch,
         0,
         None
       )
@@ -70,7 +71,7 @@ object LHRLiveFeed {
     tryArrival
   }
 
-  def dateStringToIsoString(date: String): String = {
+  def dateStringToIsoStringOption(date: String): Option[String] = {
 
     val dateRegex = "(\\d{4})-(\\d{2})-(\\d{2}).(\\d{2}).(\\d{2}).(\\d{2})".r
 
@@ -79,12 +80,13 @@ object LHRLiveFeed {
       case _ => date
     }
 
-    SDate.tryParseString(fixedDate) match {
-      case Success(sd) => sd.toISOString()
-      case Failure(_: Throwable) => ""
-    }
+    SDate.tryParseString(fixedDate).toOption.map(sd => sd.toISOString())
   }
 
+  def localTimeDateStringToIsoString(date: String): String =
+    dateStringToIsoStringOption(date).map(
+      s => SDate(SDate(s.dropRight(1), Crunch.europeLondonTimeZone).millisSinceEpoch).toISOString()
+    ).getOrElse("")
 
   case class LHRLiveArrival(
                              FLIGHTNUMBER: String,

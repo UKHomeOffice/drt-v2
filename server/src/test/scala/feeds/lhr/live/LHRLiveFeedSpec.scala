@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
 
   import drt.server.feeds.lhr.live.LHRLiveFeed._
 
@@ -42,7 +42,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
   "When processing the LHR passenger feed" +
     "Given a response with pax numbers for 2 flights in json format then I should get back a list of 2 LHRFlightPax" >> {
 
-
     val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
     val response = consumer.pax
 
@@ -63,25 +62,25 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
   "When handling date formats in the feed" >> {
     "Given a date format with a missing T then we should handle parse it and convert it to an ISO date" >> {
       val badDate = "2018-02-12 09:53:43"
-      val expected = "2018-02-12T09:53:43Z"
+      val expected = Option("2018-02-12T09:53:43Z")
 
-      val result = LHRLiveFeed.dateStringToIsoString(badDate)
+      val result = LHRLiveFeed.dateStringToIsoStringOption(badDate)
 
       result === expected
     }
     "Given a date format with a T then we should handle parse it and convert it to an ISO date" >> {
       val badDate = "2018-02-12T09:53:43"
-      val expected = "2018-02-12T09:53:43Z"
+      val expected = Option("2018-02-12T09:53:43Z")
 
-      val result = LHRLiveFeed.dateStringToIsoString(badDate)
+      val result = LHRLiveFeed.dateStringToIsoStringOption(badDate)
 
       result === expected
     }
     "Given and empty string then we should get back an empty string" >> {
       val badDate = ""
-      val expected = ""
+      val expected = None
 
-      val result = LHRLiveFeed.dateStringToIsoString(badDate)
+      val result = LHRLiveFeed.dateStringToIsoStringOption(badDate)
 
       result === expected
     }
@@ -110,14 +109,27 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       result === expected
     }
 
+    "Given a LHR Arrival with flights in BST I should get an LHRLiveArrival with UTC times" >> {
+      val lhrArrival = LHRLiveArrival(
+        "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-04-12 10:20:00",
+        "2018-04-12 09:53:43", "2018-04-12 10:03:00", "2018-04-12 10:02:00"
+      )
+
+      val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, None).get
+
+      val expected = Arrival(
+        "FL", "Last Bag", "2018-04-12T08:53:43Z", "", "2018-04-12T09:03:00Z", "2018-04-12T09:02:00Z", "", "1", 0, 0,
+        0, "", "", 0, "LHR", "T2", "FL002", "FL002", "JNB", "2018-04-12T09:20:00Z",
+        SDate("2018-04-12T09:20:00Z").millisSinceEpoch, 0, None
+      )
+
+      result === expected
+    }
+
     "Given two LHR Arrivals but no pax count then I should get back an Arrival with 0 pax" >> {
       val lhrArrival = LHRLiveArrival(
         "FL002", "T2", "LB", "1", "FL", "764", "JNB", "ZA", "2018-02-12 10:20:00",
         "2018-02-12 09:53:43", "2018-02-12 10:03:00", "2018-02-12 10:02:00"
-      )
-
-      val lhrPax = LHRFlightPax(
-        "FL002", "2018-02-12T10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
       )
 
       val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, None).get
@@ -134,7 +146,6 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
   "When processing the LHR feed" >> {
     "Given a response with pax numbers and flights in json format then I should get back a list Arrivals with pax included" >> {
-
 
       val consumer = new LHRLiveFeedConsumer("", "fake security", system) with MockSuccessfulFlightData
       val response = consumer.arrivals
@@ -297,6 +308,26 @@ class LHRMailLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       |      "ESTIMATEDFLIGHTOPERATIONTIME": "",
       |      "ESTIMATEDFLIGHTCHOXTIME": "",
       |      "ACTUALFLIGHTCHOXTIME": ""
+      |  }
+      |]]
+    """.stripMargin
+
+val successFullBSTFlightsResponse =
+    """
+      |[[
+      |  {
+      |      "FLIGHTNUMBER": "FL002",
+      |      "TERMINAL": "T2",
+      |      "FLIGHTSTATUS": "LB",
+      |      "STAND": "1",
+      |      "OPERATOR": "FL",
+      |      "AIRCRAFTTYPE": "764",
+      |      "AIRPORTCODE": "JNB",
+      |      "COUNTRYCODE": "ZA",
+      |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-04-12 10:20:00",
+      |      "ESTIMATEDFLIGHTOPERATIONTIME": "2018-04-12 09:53:43",
+      |      "ESTIMATEDFLIGHTCHOXTIME": "2018-04-12 10:03:00",
+      |      "ACTUALFLIGHTCHOXTIME": "2018-04-12 10:02:00"
       |  }
       |]]
     """.stripMargin
