@@ -22,7 +22,7 @@ object Navbar {
         <.div(^.className := "container",
           airportConfigPotMP().render(airportConfig => {
             val contactLink = airportConfig.contactEmail.map(contactEmail => {
-              <.li(<.a(Icon.envelope, "Email Us", ^.href := "mailto:" + contactEmail))
+              <.li(<.a(Icon.envelope, "Email Us", ^.href := "mailto:" + contactEmail + "?subject=Email from DRT v2 Page&body=Please give as much detail as possible about your enquiry here"))
             }).getOrElse(TagMod(""))
 
             <.div(^.className := "navbar-drt",
