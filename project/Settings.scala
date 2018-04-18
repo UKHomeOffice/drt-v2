@@ -53,7 +53,7 @@ object Settings {
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
-    val sshJ = "0.19.1"
+    val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"

@@ -127,6 +127,11 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
 
+      val timeRangeHours = TimeRangeHours(
+        props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
+        props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
+      )
+
       <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
           <.ul(^.className := "nav nav-tabs",
@@ -141,8 +146,17 @@ object TerminalContentComponent {
             })
           ),
           <.div(^.className := "exports",
-            <.a("Export Arrivals", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.terminalPageTab.timeRangeStart}&endHour=${props.terminalPageTab.timeRangeEnd}", ^.target := "_blank"),
-            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.terminalPageTab.timeRangeStart}&endHour=${props.terminalPageTab.timeRangeEnd}", ^.target := "_blank"),
+            <.a("Export Arrivals",
+              ^.className := "btn btn-default",
+              ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+              ^.target := "_blank"
+            ),
+            <.a(
+              "Export Desks",
+              ^.className := "btn btn-default",
+              ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+              ^.target := "_blank"
+            ),
             MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
           )
         ),
@@ -173,10 +187,6 @@ object TerminalContentComponent {
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
                 val flightsWithSplits = crunchState.flights
                 val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
-                val timeRangeHours = TimeRangeHours(
-                  props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
-                  props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
-                )
                 val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, timeRangeHours, terminalFlights.toList)
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder, props.airportConfig.hasEstChox))

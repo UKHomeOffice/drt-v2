@@ -543,7 +543,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
-    val lastMinute = getLocalNextMidnight(SDate(day)).millisSinceEpoch
+    val lastMinute = SDate(firstMinute).addDays(1).millisSinceEpoch
 
     val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
@@ -630,16 +630,16 @@ class Application @Inject()(implicit val config: Configuration,
                         crunchStateFuture: Future[Option[CrunchState]]
                       ): Future[Option[String]] = {
 
-    def isInRangeOnDay(minute: SDateLike): Boolean = {
-      minute.ddMMyyString == pointInTime.ddMMyyString && minute.getHours() >= startHour && minute.getHours() < endHour
-    }
+    val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
+    val endDateTime = getLocalLastMidnight(pointInTime).addHours(endHour)
+    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
 
     val localTime = SDate(pointInTime, europeLondonTimeZone)
     crunchStateFuture.map {
       case Some(CrunchState(_, cm, sm)) =>
         log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
-        val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRangeOnDay(SDate(cm.minute, europeLondonTimeZone)))
-        val smForDay: Set[StaffMinute] = sm.filter(sm => isInRangeOnDay(SDate(sm.minute, europeLondonTimeZone)))
+        val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRange(SDate(cm.minute, europeLondonTimeZone)))
+        val smForDay: Set[StaffMinute] = sm.filter(sm => isInRange(SDate(sm.minute, europeLondonTimeZone)))
         log.debug(s"Exports: ${localTime.toISOString()} filtered to ${cmForDay.size} CMs and ${smForDay.size} SMs ")
         Option(CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName)))
       case unexpected =>
@@ -733,12 +733,10 @@ class Application @Inject()(implicit val config: Configuration,
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
-    val endPit = getLocalNextMidnight(SDate(end.toLong, europeLondonTimeZone))
+    val endPit = SDate(end.toLong, europeLondonTimeZone)
 
     val portCode = airportConfig.portCode
-    val fileName = f"$portCode-$terminalName-arrivals-" +
-      f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
-      f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
+    val fileName = makeFileName("arrivals", terminalName, startPit, endPit, portCode)
 
     val dayRangeInMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
     val days: Seq[Future[Option[String]]] = dayRangeInMillis.zipWithIndex.map {
@@ -753,7 +751,9 @@ class Application @Inject()(implicit val config: Configuration,
           crunchStateFuture = loadBestCrunchStateForPointInTime(dayMillis)
         ).map {
           case Some(fs) => Option(csvFunc(fs))
-          case None => None
+          case None =>
+            log.error(s"Missing a day of flights")
+            None
         }
     }
 
@@ -764,13 +764,11 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def exportDesksAndQueuesBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
-    val startPit = getLocalLastMidnight(SDate(start.toLong))
-    val endPit = getLocalNextMidnight(SDate(end.toLong))
+    val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
+    val endPit = SDate(end.toLong, europeLondonTimeZone)
 
     val portCode = airportConfig.portCode
-    val fileName = f"$portCode-$terminalName-desks-and-queues-" +
-      f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
-      f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
+    val fileName = makeFileName("desks-and-queues", terminalName, startPit, endPit, portCode)
 
     val dayRangeMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
     val days: Seq[Future[Option[String]]] = dayRangeMillis.map(
@@ -791,6 +789,12 @@ class Application @Inject()(implicit val config: Configuration,
     })
   }
 
+  def makeFileName(subject: String, terminalName: TerminalName, startPit: SDateLike, endPit: SDateLike, portCode: String): String = {
+    f"$portCode-$terminalName-$subject-" +
+      f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
+      f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
+  }
+
   def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
     val fileName = AclFeed.latestFileForPort(aclFeed.sftp, portCode.toUpperCase)
 
@@ -807,6 +811,10 @@ class Application @Inject()(implicit val config: Configuration,
     Future(result)
   }
 
+  def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
+    startDateTime.millisSinceEpoch < minute.millisSinceEpoch && minute.millisSinceEpoch < endDateTime.millisSinceEpoch
+
+
   def flightsForCSVExportWithinRange(
                                       terminalName: TerminalName,
                                       pit: MilliDate,
@@ -815,17 +823,18 @@ class Application @Inject()(implicit val config: Configuration,
                                       crunchStateFuture: Future[Option[CrunchState]]
                                     ): Future[Option[List[ApiFlightWithSplits]]] = {
 
-
-    def isInRangeOnDay(minute: SDateLike): Boolean = {
-      minute.ddMMyyString == pit.ddMMyyString && minute.getHours() >= startHour && minute.getHours() < endHour
-    }
+    val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
+    val endDateTime = getLocalLastMidnight(pit).addHours(endHour)
+    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
 
     crunchStateFuture.map {
       case Some(CrunchState(fs, _, _)) =>
 
-        Option(fs.toList
+        val flightsForTerminalInRange = fs.toList
           .filter(_.apiFlight.Terminal == terminalName)
-          .filter(f => isInRangeOnDay(SDate(f.apiFlight.PcpTime, europeLondonTimeZone))))
+          .filter(f => isInRange(SDate(f.apiFlight.PcpTime, europeLondonTimeZone)))
+
+        Option(flightsForTerminalInRange)
       case unexpected =>
         log.error(s"got the wrong thing extracting flights from CrunchState (terminal: $terminalName, millis: $pit," +
           s" start hour: $startHour, endHour: $endHour): Error: $unexpected")
