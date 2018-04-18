@@ -26,3 +26,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.0")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
+
+resolvers += "Sonatype Repository" at "https://oss.sonatype.org/content/groups/public"
+
+addSbtPlugin("com.ebiznext.sbt.plugins" % "sbt-cxf-wsdl2java" % "0.1.4")

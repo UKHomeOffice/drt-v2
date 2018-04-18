@@ -108,7 +108,14 @@ lazy val server = (project in file("server"))
   PB.targets in Compile := Seq(
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   ),
-  TwirlKeys.templateImports += "buildinfo._"
+  TwirlKeys.templateImports += "buildinfo._",
+  // CXF wsdl2java configuration
+  Seq(cxf.settings: _*),
+  cxf.cxfVersion := Settings.versions.cxfVersion,
+  cxf.wsdls := Seq(
+    cxf.Wsdl((resourceDirectory in Compile).value / "FlightInformation.wsdl",
+      Seq("-mark-generated"), "FlightInformation")
+  )
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)

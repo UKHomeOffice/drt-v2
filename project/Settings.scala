@@ -62,6 +62,7 @@ object Settings {
     val sparkMlLib = "2.2.1"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
+    val cxfVersion: String = "3.2.4"
   }
 
   import versions._
@@ -120,6 +121,8 @@ object Settings {
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
+    "org.apache.cxf" % "cxf-rt-frontend-jaxws" % cxfVersion,
+    "org.apache.cxf" % "cxf-rt-transports-http" % cxfVersion,
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
