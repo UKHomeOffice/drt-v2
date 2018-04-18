@@ -5,13 +5,9 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import drt.server.feeds.lgw.GatwickAzureToken
 import drt.shared.Arrival
-import javax.xml.datatype.XMLGregorianCalendar
 import javax.xml.ws.BindingProvider
-import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
-import uk.co.bhx.online.flightinformation.{FlightInformation, FlightInformationSoap, FlightRecord, ScheduledFlightRecord}
-
+import uk.co.bhx.online.flightinformation.{FlightInformation, FlightInformationSoap}
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -25,8 +21,6 @@ case class BHXFeed(serviceSoap: FlightInformationSoap) extends BHXLiveArrivals w
     val flightRecords = serviceSoap.bfGetFlights.getFlightRecord.toList
     flightRecords.map(toLiveArrival)
   }
-
-
 
   def getForecastArrivals: List[Arrival] = {
     val flights = serviceSoap.bfGetScheduledFlights().getScheduledFlightRecord.toList
@@ -61,7 +55,6 @@ object BHXFeed {
       }.recoverWith { case t => log.error(s"Failure starting Birmingham feed: ${t.getMessage}", t); null }.get
 
     val feed = BHXFeed(serviceSoap)
-
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => {

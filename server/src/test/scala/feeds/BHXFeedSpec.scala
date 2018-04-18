@@ -9,7 +9,6 @@ import drt.server.feeds.bhx.BHXFeed
 import drt.shared.Arrival
 import javax.xml.datatype.DatatypeFactory
 import org.mockito.Mockito.verify
-import org.mockito.internal.util.reflection.Whitebox
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
@@ -153,12 +152,12 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
     }
 
     "an exploratory test" in {
-      skipped("exploratory test for the BHX live feed")
+      //skipped("exploratory test for the BHX live feed")
       val feed = BHXFeed(new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl")).getFlightInformationSoap)
       val arrivals: List[Arrival] = feed.getArrivals
       arrivals.foreach(println)
       ok
-    }.pendingUntilFixed("used to test if the Birmingham feed is working locally given you can ssh into a whitelisted IP address")
+    }//.pendingUntilFixed("used to test if the Birmingham feed is working locally given you can ssh into a whitelisted IP address")
   }
 
 }
