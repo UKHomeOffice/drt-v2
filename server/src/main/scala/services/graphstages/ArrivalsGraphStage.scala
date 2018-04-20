@@ -214,8 +214,6 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def arrivalsDiff(oldMerged: Map[Int, Arrival], newMerged: Map[Int, Arrival]): Option[ArrivalsDiff] = {
-      log.info(s"oldMerged: $oldMerged")
-      log.info(s"newMerged: $newMerged")
       val updates: Option[Set[Arrival]] = newMerged.values.toSet -- oldMerged.values.toSet match {
         case updatedArrivals if updatedArrivals.isEmpty =>
           log.info(s"No updated arrivals")

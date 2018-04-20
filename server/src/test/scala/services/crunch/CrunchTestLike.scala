@@ -185,7 +185,7 @@ class CrunchTestLike
       initialFcstArrivals = initialForecastArrivals,
       initialLiveArrivals = initialLiveArrivals
     ))
-    
+
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
     if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifests, initialManifests)
