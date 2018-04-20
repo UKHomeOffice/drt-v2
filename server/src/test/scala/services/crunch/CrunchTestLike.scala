@@ -141,6 +141,9 @@ class CrunchTestLike
 
     val liveProbe = testProbe("live")
     val forecastProbe = testProbe("forecast")
+    val baseArrivalsProbe = testProbe("base-arrivals")
+    val forecastArrivalsProbe = testProbe("forecast-arrivals")
+    val liveArrivalsProbe = testProbe("live-arrivals")
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
@@ -165,7 +168,11 @@ class CrunchTestLike
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,
-        "staff-movements" -> staffMovementsActor),
+        "staff-movements" -> staffMovementsActor,
+        "base-arrivals" -> baseArrivalsProbe.ref,
+        "forecast-arrivals" -> forecastArrivalsProbe.ref,
+        "live-arrivals" -> liveArrivalsProbe.ref
+      ),
       useNationalityBasedProcessingTimes = false,
       now = now,
       splitsPredictorStage = splitsPredictorStage,
@@ -173,12 +180,12 @@ class CrunchTestLike
       voyageManifestsActor = manifestsActor,
       cruncher = cruncher,
       simulator = simulator,
-      initialPortState = initialPortState
+      initialPortState = initialPortState,
+      initialBaseArrivals = initialBaseArrivals,
+      initialFcstArrivals = initialForecastArrivals,
+      initialLiveArrivals = initialLiveArrivals
     ))
-
-    if (initialBaseArrivals.nonEmpty) offerAndWait(crunchInputs.baseArrivals, Flights(initialBaseArrivals.toList))
-    if (initialForecastArrivals.nonEmpty) offerAndWait(crunchInputs.forecastArrivals, Flights(initialForecastArrivals.toList))
-    if (initialLiveArrivals.nonEmpty) offerAndWait(crunchInputs.liveArrivals, Flights(initialLiveArrivals.toList))
+    
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
     if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifests, initialManifests)

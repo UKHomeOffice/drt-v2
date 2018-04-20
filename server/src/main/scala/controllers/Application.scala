@@ -117,6 +117,11 @@ trait SystemActors {
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
+
+  val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
+  val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
+  val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
+
   val liveCrunchStateProps = Props(classOf[CrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
   val forecastCrunchStateProps = Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
 
@@ -147,16 +152,23 @@ trait SystemActors {
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
-  val futurePortStates: Future[Seq[Option[PortState]]] = Future.sequence(Seq(
+  val futurePortStates: Future[Seq[Option[Any]]] = Future.sequence(Seq(
     initialPortState(liveCrunchStateActor),
-    initialPortState(forecastCrunchStateActor)))
+    initialPortState(forecastCrunchStateActor),
+    initialArrivals(baseArrivalsActor),
+    initialArrivals(forecastArrivalsActor),
+    initialArrivals(liveArrivalsActor)))
+
 
   futurePortStates.onComplete {
-    case Success(maybeLiveState :: maybeForecastState :: Nil) =>
-      val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
-      val crunchInputs: CrunchSystem[NotUsed] = startCrunchSystem(initialPortState)
-      subscribeStaffingActors(crunchInputs)
-      startScheduledFeedImports(crunchInputs)
+    case Success(maybeLiveState :: maybeForecastState :: maybeBaseArrivals :: maybeForecastArrivals :: maybeLiveArrivals :: Nil) =>
+      (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
+        case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
+          val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
+          val crunchInputs: CrunchSystem[NotUsed] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals)
+          subscribeStaffingActors(crunchInputs)
+          startScheduledFeedImports(crunchInputs)
+      }
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed]): Unit = {
@@ -181,7 +193,7 @@ trait SystemActors {
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 
-  def startCrunchSystem(initialPortState: Option[PortState]): CrunchSystem[NotUsed] = {
+  def startCrunchSystem(initialPortState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]): CrunchSystem[NotUsed] = {
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
       airportConfig = airportConfig,
@@ -194,14 +206,21 @@ trait SystemActors {
       actors = Map(
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,
-        "staff-movements" -> staffMovementsActor),
+        "staff-movements" -> staffMovementsActor,
+        "base-arrivals" -> baseArrivalsActor,
+        "forecast-arrivals" -> forecastArrivalsActor,
+        "live-arrivals" -> liveArrivalsActor
+      ),
       useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = voyageManifestsStage,
       voyageManifestsActor = voyageManifestsActor,
       cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
-      initialPortState = initialPortState
+      initialPortState = initialPortState,
+      initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
+      initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
+      initialLiveArrivals = initialLiveArrivals.getOrElse(Set())
     ))
     crunchInputs
   }
@@ -215,6 +234,23 @@ trait SystemActors {
         system.log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
         None
     }
+  }
+
+  def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
+    val canWaitMinutes = 5
+    val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
+      case ArrivalsState(arrivals) => Option(arrivals.values.toSet)
+      case _ => None
+    }
+
+    arrivalsFuture.onComplete {
+      case Success(arrivals) => arrivals
+      case Failure(t) =>
+        system.log.warning(s"Failed to get an initial ArrivalsState: $t")
+        None
+    }
+
+    arrivalsFuture
   }
 
   def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
