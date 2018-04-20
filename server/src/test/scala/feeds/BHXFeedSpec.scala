@@ -1,13 +1,13 @@
 package feeds
 
 import java.util.{Calendar, GregorianCalendar, TimeZone}
-
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.bhx.BHXFeed
 import drt.shared.Arrival
 import javax.xml.datatype.DatatypeFactory
+import javax.xml.ws.BindingProvider
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
@@ -20,7 +20,8 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
   Map("feeds.birmingham.soap.connection_timeout" -> 10,
     "feeds.birmingham.soap.receive_timeout" -> 30,
     "feeds.birmingham.soap.poll_frequency_in_minutes" -> 1,
-    "feeds.birmingham.soap.initial_delay_in_milliseconds" -> 1
+    "feeds.birmingham.soap.initial_delay_in_milliseconds" -> 1,
+    "feeds.birmingham.soap.endPointUrl" -> ""
   )))) with SpecificationLike with Mockito {
   sequential
   isolated
@@ -152,12 +153,24 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
     }
 
     "an exploratory test" in {
-      //skipped("exploratory test for the BHX live feed")
-      val feed = BHXFeed(new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl")).getFlightInformationSoap)
+      skipped("exploratory test for the BHX live feed")
+      val f = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
+      val soapService =
+      f.getFlightInformationSoap match {
+        case binder: BindingProvider =>
+          val endpointURL = "https://online.example.co.uk:4443/flightinformationservice/FlightInformation.asmx"
+          binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", "300000")
+          binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", "300000")
+          binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointURL)
+          binder
+        case flightInformationSoap => flightInformationSoap
+      }
+      val feed = BHXFeed(soapService)
       val arrivals: List[Arrival] = feed.getArrivals
+      println(s"We got ${arrivals.size} Arrivals.")
       arrivals.foreach(println)
       ok
-    }//.pendingUntilFixed("used to test if the Birmingham feed is working locally given you can ssh into a whitelisted IP address")
+    }.pendingUntilFixed("used to test if the Birmingham feed is working locally given you can ssh into a whitelisted IP address")
   }
 
 }

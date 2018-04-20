@@ -40,6 +40,7 @@ object BHXFeed {
     val receiveTimeout = config.getInt("feeds.birmingham.soap.receive_timeout")
     val pollFrequency = config.getInt("feeds.birmingham.soap.poll_frequency_in_minutes") minutes
     val initialDelayImmediately: FiniteDuration = config.getInt("feeds.birmingham.soap.initial_delay_in_milliseconds") milliseconds
+    val endPointUrl = config.getString("feeds.birmingham.soap.endPointUrl")
 
     val serviceSoap: FlightInformationSoap =
       Try {
@@ -49,6 +50,8 @@ object BHXFeed {
           case binder: BindingProvider =>
             binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", connectionTimeout.toString)
             binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", receiveTimeout.toString)
+            if (!endPointUrl.isEmpty)
+              binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endPointUrl)
             binder
           case flightInformationSoap => flightInformationSoap
         }

@@ -63,6 +63,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
     val cxfVersion: String = "3.2.4"
+    val drtBirminghamSchema = "1.0.0"
   }
 
   import versions._
@@ -123,6 +124,7 @@ object Settings {
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
     "org.apache.cxf" % "cxf-rt-frontend-jaxws" % cxfVersion,
     "org.apache.cxf" % "cxf-rt-transports-http" % cxfVersion,
+    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
