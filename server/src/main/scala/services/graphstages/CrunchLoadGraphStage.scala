@@ -124,12 +124,18 @@ class CrunchLoadGraphStage(name: String = "",
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        val deskRecMinutes: Set[DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
-        val deskRecMinutesByKey = deskRecMinutes.map(cm => (cm.key, cm)).toMap
+        val deskRecMinutes: Map[Int, DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
-        val diff = deskRecMinutes -- existingDeskRecMinutes.values.toSet
+        val diff = deskRecMinutes.foldLeft(Map[Int, DeskRecMinute]()) {
+          case (soFar, (key, drm)) =>
+            existingDeskRecMinutes.get(key) match {
+              case None => soFar.updated(key, drm)
+              case Some(existingDrm) if existingDrm != drm => soFar.updated(key, drm)
+              case Some(_) => soFar
+            }
+        }
 
-        existingDeskRecMinutes = purgeExpired(deskRecMinutesByKey, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
+        existingDeskRecMinutes = purgeExpired(deskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
 
         val mergedDeskRecMinutes = mergeDeskRecMinutes(diff, deskRecMinutesToPush)
         deskRecMinutesToPush = purgeExpired(mergedDeskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
@@ -141,7 +147,7 @@ class CrunchLoadGraphStage(name: String = "",
       }
     })
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Set[DeskRecMinute] = {
+    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[Int, DeskRecMinute] = {
       val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
 
       filteredLoads
@@ -168,14 +174,15 @@ class CrunchLoadGraphStage(name: String = "",
                       case (minute, idx) =>
                         val wl = fullWorkMinutes(idx)
                         val pl = fullPaxMinutes(idx)
-                        DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+                        val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+                        (drm.key, drm)
                     }
                   case Failure(t) =>
                     log.warn(s"failed to crunch: $t")
-                    Set()
+                    Map()
                 }
             }
-        }.toSet
+        }
     }
 
     def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
@@ -199,9 +206,9 @@ class CrunchLoadGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeDeskRecMinutes(updatedCms: Set[DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
+    def mergeDeskRecMinutes(updatedCms: Map[Int, DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
       updatedCms.foldLeft(existingCms) {
-        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
+        case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
       }
     }
 

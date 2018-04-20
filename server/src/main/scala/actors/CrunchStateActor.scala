@@ -63,6 +63,9 @@ class CrunchStateActor(val snapshotInterval: Int,
   }
 
   override def receiveCommand: Receive = {
+    case PortStateWithDiff(_, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
+      log.info(s"Received port state with empty diff")
+
     case PortStateWithDiff(portState, diff) =>
       logInfo(s"Received port state with diff")
       updateStateFromPortState(portState)
