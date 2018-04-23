@@ -62,9 +62,12 @@ object BHXFeed {
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => {
         Try {
+          log.info("About to get arrivals for Birmingham.")
           feed.getArrivals
         } match {
-          case Success(arrivals) => arrivals
+          case Success(arrivals) =>
+            log.info(s"Got ${arrivals.size} Birmingham arrivals.")
+            arrivals
           case Failure(t) =>
             log.info(s"Failed to fetch BHX arrivals.", t)
             List.empty[Arrival]

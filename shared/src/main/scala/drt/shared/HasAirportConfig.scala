@@ -505,7 +505,53 @@ object AirportConfigs {
       )
     )
   )
-
+  val bhx = AirportConfig(
+    portCode = "BHX",
+    queues = Map(
+      "T1" -> Seq(EeaDesk, EGate, NonEeaDesk),
+      "T2" -> Seq(EeaDesk, NonEeaDesk)
+    ),
+    slaByQueue = defaultSlas,
+    terminalNames = Seq("T1", "T2"),
+    defaultWalkTimeMillis = Map("T1" -> 230000L, "T2" -> 65000L),
+    defaultPaxSplits =  SplitRatios(
+    SplitSources.TerminalAverage,
+    SplitRatio(eeaMachineReadableToDesk, 0.92*0.7),
+    SplitRatio(eeaMachineReadableToEGate, 0.92*0.3),
+    SplitRatio(eeaNonMachineReadableToDesk, 0),
+    SplitRatio(visaNationalToDesk, 0.04),
+    SplitRatio(nonVisaNationalToDesk, 0.04)
+  ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 16d / 60,
+      eeaMachineReadableToEGate -> 20d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 93d / 60,
+      nonVisaNationalToDesk -> 83d / 60
+    ), "T2" -> Map(
+      eeaMachineReadableToDesk -> 16d / 60,
+      //eeaMachineReadableToEGate -> 30d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 93d / 60,
+      nonVisaNationalToDesk -> 83d / 60
+    )),
+    minMaxDesksByTerminalQueue = Map(
+      "T1" -> Map(
+        "eGate" -> (List(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10),
+          List(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)),
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+          List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+          List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+      ),
+      "T2" -> Map(
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+          List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)),
+        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+          List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
+      )
+    )
+  )
   val nationalityProcessingTimes = Map(
     "AUT" -> 22.7, "BEL" -> 22.7, "BGR" -> 22.7, "HRV" -> 22.7, "CYP" -> 22.7, "CZE" -> 22.7, "DNK" -> 22.7,
     "EST" -> 22.7, "FIN" -> 22.7, "FRA" -> 22.7, "DEU" -> 22.7, "HUN" -> 22.7, "IRL" -> 22.7, "LVA" -> 22.7,
@@ -526,6 +572,6 @@ object AirportConfigs {
     "KNA" -> 83.8, "SOM" -> 90.6, "LCA" -> 89.3, "GRD" -> 105.9
   )
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lgw :: lgw.copy(portCode = "BHX"):: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lgw :: bhx:: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
