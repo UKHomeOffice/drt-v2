@@ -17,10 +17,7 @@ import uk.co.bhx.online.flightinformation._
 import scala.collection.JavaConversions._
 
 class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(
-  Map("feeds.birmingham.soap.connection_timeout" -> 10,
-    "feeds.birmingham.soap.receive_timeout" -> 30,
-    "feeds.birmingham.soap.poll_frequency_in_minutes" -> 1,
-    "feeds.birmingham.soap.initial_delay_in_milliseconds" -> 1,
+  Map(
     "feeds.birmingham.soap.endPointUrl" -> ""
   )))) with SpecificationLike with Mockito {
   sequential

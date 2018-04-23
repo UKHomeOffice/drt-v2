@@ -36,10 +36,10 @@ object BHXFeed {
   def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
     val config = actorSystem.settings.config
 
-    val connectionTimeout = config.getInt("feeds.birmingham.soap.connection_timeout")
-    val receiveTimeout = config.getInt("feeds.birmingham.soap.receive_timeout")
-    val pollFrequency = config.getInt("feeds.birmingham.soap.poll_frequency_in_minutes") minutes
-    val initialDelayImmediately: FiniteDuration = config.getInt("feeds.birmingham.soap.initial_delay_in_milliseconds") milliseconds
+    val connectionTimeout = 25000
+    val receiveTimeout = 30000
+    val pollFrequency = 4 minutes
+    val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val endPointUrl = config.getString("feeds.birmingham.soap.endPointUrl")
 
     val serviceSoap: FlightInformationSoap =
