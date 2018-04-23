@@ -812,7 +812,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
-    startDateTime.millisSinceEpoch < minute.millisSinceEpoch && minute.millisSinceEpoch < endDateTime.millisSinceEpoch
+    startDateTime.millisSinceEpoch <= minute.millisSinceEpoch && minute.millisSinceEpoch < endDateTime.millisSinceEpoch
 
 
   def flightsForCSVExportWithinRange(

@@ -17,7 +17,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
     )
 
     val staffMins = Set(
-      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, 1)
+      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
     val result = CSVData.terminalCrunchMinutesToCsvDataWithHeadings(cms, staffMins, "T1", List("Q1", "Q2", "Q3"))
@@ -46,7 +46,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
     })
 
     val staffMins = (0 until 16).toSet.map((min: Int) => {
-      StaffMinute("T1", startDateTime.addMinutes(min).millisSinceEpoch, 5, fixedPoints = 1, 1)
+      StaffMinute("T1", startDateTime.addMinutes(min).millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     })
 
     val result = CSVData.terminalCrunchMinutesToCsvDataWithHeadings(cms, staffMins, "T1", List("Q1", "Q2", "Q3"))
@@ -69,7 +69,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
     )
 
     val staffMins = Set(
-      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, 1)
+      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
     val expected = """|Date,,EEA,EEA,EEA,EEA,EEA,NON-EEA,NON-EEA,NON-EEA,NON-EEA,NON-EEA,E-GATES,E-GATES,E-GATES,E-GATES,E-GATES,Misc,PCP Staff,PCP Staff
@@ -90,7 +90,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
     )
 
     val staffMins = Set(
-      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, 1)
+      StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
     val expected = """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,4""".stripMargin
