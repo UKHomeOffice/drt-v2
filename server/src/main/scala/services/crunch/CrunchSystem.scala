@@ -62,6 +62,11 @@ object CrunchSystem {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
+    val adjustedMinute = minuteInQuestion.addMinutes(-offsetMinutes)
+    Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
+  }
+
   def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
@@ -79,7 +84,7 @@ object CrunchSystem {
 
     val splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet)
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
-    val crunchStartDateProvider: (SDateLike) => SDateLike = s => Crunch.getLocalLastMidnight(s).addMinutes(props.airportConfig.crunchOffsetMinutes)
+    val crunchStartDateProvider: (SDateLike) => SDateLike = crunchStartWithOffset(props.airportConfig.crunchOffsetMinutes)
 
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
     val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
