@@ -317,7 +317,6 @@ object PassengerSplits {
 
   type PaxTypeAndQueueCounts = Seq[ApiPaxTypeAndQueueCount]
 
-
   case object FlightsNotFound
 
   case class FlightNotFound(carrierCode: String, flightCode: String, scheduledArrivalDateTime: MilliDate)
@@ -544,6 +543,7 @@ object CrunchApi {
 
   def groupStaffMinutesByX(groupSize: Int)(staffMinutes: Seq[(MillisSinceEpoch, StaffMinute)], terminalName: TerminalName): Seq[(MillisSinceEpoch, StaffMinute)] = {
     staffMinutes
+      .filter(_._2.terminalName == terminalName)
       .grouped(groupSize)
       .toList
       .map((milliStaffMinutes: Seq[(MillisSinceEpoch, StaffMinute)]) => {
