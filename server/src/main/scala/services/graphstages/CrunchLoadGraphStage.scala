@@ -117,8 +117,7 @@ class CrunchLoadGraphStage(name: String = "",
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
-        log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
-
+        log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()} - (first load ${SDate(allMinuteMillis.min).toLocalDateTimeString()})")
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
@@ -129,9 +128,8 @@ class CrunchLoadGraphStage(name: String = "",
         val diff = deskRecMinutes.foldLeft(Map[Int, DeskRecMinute]()) {
           case (soFar, (key, drm)) =>
             existingDeskRecMinutes.get(key) match {
-              case None => soFar.updated(key, drm)
-              case Some(existingDrm) if existingDrm != drm => soFar.updated(key, drm)
-              case Some(_) => soFar
+              case Some(existingDrm) if existingDrm == drm => soFar
+              case _ => soFar.updated(key, drm)
             }
         }
 
