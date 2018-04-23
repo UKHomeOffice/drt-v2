@@ -37,16 +37,10 @@ class WorkloadGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
-    private val minuteInQuestion1: MillisSinceEpoch = SDate("2018-04-24T20:00").millisSinceEpoch
-    private val minuteInQuestion2: MillisSinceEpoch = SDate("2018-04-24T22:00").millisSinceEpoch
-
     override def preStart(): Unit = {
       loadMinutes = optionalInitialLoads match {
         case Some(Loads(lms)) =>
           log.info(s"Received ${lms.size} initial loads")
-          lms.foreach(lm => {
-            if (minuteInQuestion1 <= lm.minute && lm.minute < minuteInQuestion2) println(s"xxxinitial $lm (${SDate(lm.minute).toLocalDateTimeString()})")
-          })
           val byId = lms
             .map(lm => (lm.uniqueId, lm))
             .toMap
@@ -122,7 +116,7 @@ class WorkloadGraphStage(name: String = "",
         .collect { case Some(lm) if lm.workLoad != 0 => (lm.uniqueId, lm.copy(paxLoad = 0, workLoad = 0)) }
 
       val diff = updates ++ removes
-      log.info(s"${diff.size} updated load minutes (${updates.size} updates + ${removes.size} removes")
+      log.info(s"${diff.size} updated load minutes (${updates.size} updates + ${removes.size} removes)")
 
       diff
     }

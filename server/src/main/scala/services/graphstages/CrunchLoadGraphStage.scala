@@ -117,7 +117,7 @@ class CrunchLoadGraphStage(name: String = "",
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
-        log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()} - (first load ${SDate(allMinuteMillis.min).toLocalDateTimeString()})")
+        log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
