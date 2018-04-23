@@ -48,7 +48,7 @@ class WorkloadGraphStage(name: String = "",
             if (minuteInQuestion1 <= lm.minute && lm.minute < minuteInQuestion2) println(s"xxxinitial $lm (${SDate(lm.minute).toLocalDateTimeString()})")
           })
           val byId = lms
-            .collect { case lm if lm.workLoad != 0 => (lm.uniqueId, lm) }
+            .map(lm => (lm.uniqueId, lm))
             .toMap
           val afterPurged = purgeExpired(byId, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
           log.info(s"Storing ${afterPurged.size} initial loads")
@@ -91,23 +91,7 @@ class WorkloadGraphStage(name: String = "",
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
         workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
         val updatedLoads: Map[Int, LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
-        println(s"xxxExisting:")
-        loadMinutes.values.foreach(lm => {
-          if (minuteInQuestion1 <= lm.minute && lm.minute < minuteInQuestion2)
-            println(s"xxxexisting $lm (${SDate(lm.minute).toLocalDateTimeString()})")
-        })
-        println(s"xxxUpdated:")
-        updatedLoads.values.foreach(lm => {
-          if (minuteInQuestion1 <= lm.minute && lm.minute < minuteInQuestion2)
-            println(s"xxxupdated $lm (${SDate(lm.minute).toLocalDateTimeString()})")
-        })
         val diff = loadDiff(updatedLoads, loadMinutes)
-        println(s"xxxDiff:")
-        diff.foreach(lm => {
-          val minute = lm._2.minute
-          if (minuteInQuestion1 <= minute && minute < minuteInQuestion2)
-            println(s"xxxnew ${lm._2} (${SDate(minute).toLocalDateTimeString()})\nxxxold ${loadMinutes.getOrElse(lm._1, "--")}")
-        })
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         loadsToPush = purgeExpired(mergeLoadMinutes(diff, loadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
@@ -204,3 +188,4 @@ class WorkloadGraphStage(name: String = "",
     }
   }
 }
+
