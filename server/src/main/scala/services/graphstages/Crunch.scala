@@ -295,4 +295,35 @@ object Crunch {
       }
       .toSeq
   }
+
+  def mergeLoadsIntoQueue(incomingLoads: Loads, loadMinutesQueue: List[(MillisSinceEpoch, Loads)], crunchPeriodStartMillis: SDateLike => SDateLike): List[(MillisSinceEpoch, Loads)] = {
+    val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
+
+    changedDays
+      .foldLeft(loadMinutesQueue.toMap) {
+        case (soFar, (dayStartMillis, dayLoadMinutes)) =>
+          val mergedDayMinutes = mergeUpdatedLoads(soFar.get(dayStartMillis), dayStartMillis, dayLoadMinutes)
+          soFar.updated(dayStartMillis, Loads(mergedDayMinutes))
+      }
+      .toList
+      .sortBy { case (dayStartMillis, _) => dayStartMillis }
+  }
+
+  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: Set[LoadMinute]): Set[LoadMinute] = {
+    maybeExistingDayLoads match {
+      case None => dayLoadMinutes
+      case Some(existingDayLoads) =>
+        val existingByKey = existingDayLoads
+          .loadMinutes
+          .toSeq
+          .map(lm => (lm.uniqueId, lm))
+          .toMap
+        dayLoadMinutes
+          .foldLeft(existingByKey) {
+            case (daySoFar, loadMinute) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
+          }
+          .values
+          .toSet
+    }
+  }
 }
