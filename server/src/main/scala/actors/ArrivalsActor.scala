@@ -15,7 +15,7 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
-  override val snapshotInterval = 10
+  override val snapshotInterval = 100
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
@@ -30,7 +30,7 @@ class ForecastPortArrivalsActor(now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
-  override val snapshotInterval = 10
+  override val snapshotInterval = 100
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
