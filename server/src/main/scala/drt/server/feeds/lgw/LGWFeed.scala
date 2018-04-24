@@ -5,9 +5,10 @@ import java.nio.file.{FileSystems, Path}
 import java.util.UUID
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import LGWParserProtocol._
+import akka.stream.{ActorAttributes, ActorMaterializer, Supervision, ThrottleMode}
+import drt.http.ProdSendAndReceive
+import drt.server.feeds.lgw.LGWParserProtocol._
 import drt.shared.Arrival
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
@@ -21,18 +22,17 @@ import org.opensaml.xml.signature.impl.SignatureBuilder
 import org.opensaml.xml.util.XMLHelper
 import org.slf4j.{Logger, LoggerFactory}
 import spray.client.pipelining
-import spray.client.pipelining.{Post, addHeader, Delete, _}
+import spray.client.pipelining.{Delete, Post, addHeader, _}
 import spray.http.HttpHeaders.Accept
 import spray.http.{FormData, HttpRequest, HttpResponse, MediaTypes}
 import scala.collection.immutable.Seq
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 
-case class LGWFeed(certPath: String, privateCertPath: String, namespace: String, issuer: String, nameId: String)(implicit actorSystem: ActorSystem) {
+case class LGWFeed(certPath: String, privateCertPath: String, namespace: String, issuer: String, nameId: String, implicit val system: ActorSystem) extends ProdSendAndReceive {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def initialiseOpenSAMLLibraryWithDefaultConfiguration(): Unit = DefaultBootstrap.bootstrap()
@@ -62,7 +62,7 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
 
   val GRANT = "urn:oasis:names:tc:SAML:2.0:assertion"
 
-  def ourSendReceive: HttpRequest => Future[HttpResponse] = sendReceive
+  implicit val executionContext =  system.dispatcher
 
   def requestToken(): Future[GatwickAzureToken] = {
     val paramsAsForm = FormData(Map(
@@ -75,11 +75,15 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
 
     val tokenPostPipeline = (
       addHeader(Accept(MediaTypes.`application/json`))
-        ~> ourSendReceive
+        ~> sendAndReceive
         ~> unmarshal[GatwickAzureToken]
       )
 
-    tokenPostPipeline(Post(tokenPostUri, paramsAsForm))
+    tokenPostPipeline(Post(tokenPostUri, paramsAsForm)).recoverWith {
+      case t: Throwable =>
+        log.warn(s"Failed to get GatwickAzureToken: ${t.getMessage}")
+        Future(GatwickAzureToken("unknown", "unknown", "0", "unknown"))
+    }
   }
 
   def requestArrivals(token: GatwickAzureToken): Future[List[Arrival]] = {
@@ -88,9 +92,10 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
     val wrapHeader = "WRAP access_token=\"" + token.access_token + "\""
 
     val toArrivals: HttpResponse => List[Arrival] = { r =>
+      log.debug(s"LGW response status code is ${r.status.intValue}")
       val is = new ByteArrayInputStream(r.entity.data.toByteArray)
       val xmlTry = Try (scala.xml.XML.load(is)).recoverWith{
-        case e: Throwable => log.error("Cannot load Gatwick XML from the response", e); null
+        case e: Throwable => log.error(s"Cannot load Gatwick XML from the response ${r.status}", e); null
       }
       IOUtils.closeQuietly(is)
       val xmlSeq = xmlTry.map(scala.xml.Utility.trimProper(_)).get
@@ -137,11 +142,16 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
 
     val resultPipeline: pipelining.WithTransformerConcatenation[HttpRequest, Future[List[Arrival]]] = (
       addHeader("Authorization", wrapHeader)
-        ~> ourSendReceive
+        ~> sendAndReceive
         ~> toArrivals
       )
 
     resultPipeline(Delete(serviceBusUri))
+    .recoverWith {
+      case t: Throwable =>
+        log.warn(s"Failed to get Flight details: ${t.getMessage}", t)
+        Future(List.empty)
+    }
   }
 
   private def parseFlightNumber(n: Node) = {
@@ -236,13 +246,15 @@ object LGWFeed {
   def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
     val config = actorSystem.settings.config
 
+    implicit val dispatcher: ExecutionContextExecutor =  actorSystem.dispatcher
+
     val certPath = config.getString("feeds.gatwick.live.azure.cert")
     val privateCertPath = config.getString("feeds.gatwick.live.azure.private_cert")
     val azureServiceNamespace = config.getString("feeds.gatwick.live.azure.namespace")
     val issuer = config.getString("feeds.gatwick.live.azure.issuer")
     val nameId = config.getString("feeds.gatwick.live.azure.name.id")
 
-    val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId)
+    val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, actorSystem)
 
     val pollFrequency = 3 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
@@ -250,22 +262,28 @@ object LGWFeed {
     tokenFuture = feed.requestToken()
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+      .throttle(elements = 1, per = 30 seconds, maximumBurst = 1, ThrottleMode.shaping)
+      .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map((_) => {
-        val arrivalsFuture = Try {
-          for {
+        Try {
+          val arrivalsFuture = for {
             token <- tokenFuture
             arrivals <- feed.requestArrivals(token)
-
           } yield arrivals
+          Await.result(arrivalsFuture, 30 seconds)
         } match {
           case Success(arrivals) =>
+            log.info(s"Got Some Arrivals $arrivals")
+            if (arrivals.isEmpty) {
+              log.info(s"Empty LGW arrivals. Re-requesting token.")
+              tokenFuture = feed.requestToken()
+            }
             arrivals
           case Failure(t) =>
             log.info(s"Failed to fetch LGW arrivals. Re-requesting token. $t")
             tokenFuture = feed.requestToken()
-            Future(List[Arrival]())
+            List.empty[Arrival]
         }
-        Await.result(arrivalsFuture, 30 seconds)
       })
 
     tickingSource

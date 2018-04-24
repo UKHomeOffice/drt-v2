@@ -1,8 +1,6 @@
 package feeds
 
-import java.nio.file.FileSystems
 import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
@@ -11,12 +9,12 @@ import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import spray.http._
-
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
   sequential
@@ -30,28 +28,34 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
     skipped("exploratory test for the LGW live feed")
 
-    val certPath = config.getString("feeds.gatwick.live.azure.cert")
-    val privateCertPath = config.getString("feeds.gatwick.live.azure.private_cert")
-    val azureServiceNamespace = config.getString("feeds.gatwick.live.azure.namespace")
-    val issuer = config.getString("feeds.gatwick.live.azure.issuer")
-    val nameId = config.getString("feeds.gatwick.live.azure.name.id")
+    val certPath = ""
+    val privateCertPath = ""
+    val azureServiceNamespace = ""
+    val issuer = ""
+    val nameId = ""
 
-    val lgwFeed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId)
+    val lgwFeed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system)
 
-    val tokenFuture = lgwFeed.requestToken()
+    var tokenFuture = lgwFeed.requestToken()
+    val arrivalsFuture = Try {
+      for {
+        token <- tokenFuture
+        arrivals <- lgwFeed.requestArrivals(token)
 
-    val futureArrivals: Future[Seq[Arrival]] = for {
-      token <- tokenFuture
-      arrivals <- lgwFeed.requestArrivals(token)
-    } yield arrivals
+      } yield arrivals
+    } match {
+      case Success(theArrivals) =>
+        theArrivals
+      case Failure(t) =>
+        tokenFuture = lgwFeed.requestToken()
+        Future(List[Arrival]())
+    }
+    val arrivals = Await.result(arrivalsFuture, 30.seconds)
 
-    val arrivals = Await.result(futureArrivals, 10 seconds)
-
-    arrivals === Seq()
+    arrivals mustNotEqual Seq()
   }.pendingUntilFixed("This is not a test")
 
   "Can convert an XML into an Arrival" in {
-
     val certPath = getClass.getClassLoader.getResource("lgw.xml").getPath
     val privateCertPath = certPath
     val azureServiceNamespace = "Gat"
@@ -62,9 +66,10 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val xml = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgw.xml")).mkString
     val body = HttpEntity(MediaTypes.`application/xml`, xml.getBytes)
     mockResponse.entity returns body
+    mockResponse.status returns StatusCode.int2StatusCode(200)
 
-    val feed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId) {
-      override def ourSendReceive = (req: HttpRequest) => Promise.successful(mockResponse).future
+    val feed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+      override def sendAndReceive = (req: HttpRequest) => Promise.successful(mockResponse).future
 
       override def createAzureSamlAssertionAsString(privateKey: Array[Byte], certificate: Array[Byte]) = "assertion"
     }
