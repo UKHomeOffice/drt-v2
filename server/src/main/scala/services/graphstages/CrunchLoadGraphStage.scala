@@ -35,7 +35,9 @@ class LoadBatchUpdateGraphStage(now: () => SDateLike,
         val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
         val updatedMinutes = changedDays.foldLeft(loadMinutesQueue.toMap) {
-          case (soFar, (dayMillis, loadMinutes)) => soFar.updated(dayMillis, Loads(loadMinutes))
+          case (soFar, (dayMillis, dayLoadMinutes)) =>
+            val mergedDayMinutes = mergeUpdatedLoads(soFar.get(dayMillis), dayMillis, dayLoadMinutes)
+            soFar.updated(dayMillis, Loads(mergedDayMinutes))
         }.toList.sortBy(_._1)
 
         loadMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis)
@@ -71,6 +73,24 @@ class LoadBatchUpdateGraphStage(now: () => SDateLike,
           loadMinutesQueue = queueTail
           log.info(s"Queue length now ${loadMinutesQueue.length}")
       }
+    }
+  }
+
+  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: Set[LoadMinute]): Set[LoadMinute] = {
+    maybeExistingDayLoads match {
+      case None => dayLoadMinutes
+      case Some(existingDayLoads) =>
+        val existingByKey = existingDayLoads
+          .loadMinutes
+          .toSeq
+          .map(lm => (lm.uniqueId, lm))
+          .toMap
+        dayLoadMinutes
+          .foldLeft(existingByKey) {
+            case (daySoFar, loadMinute) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
+          }
+          .values
+          .toSet
     }
   }
 }
