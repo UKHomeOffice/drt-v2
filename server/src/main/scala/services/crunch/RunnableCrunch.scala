@@ -32,7 +32,7 @@ object RunnableCrunch {
                                         arrivalSplitsStage: ArrivalSplitsGraphStage,
                                         splitsPredictorStage: SplitsPredictorBase,
                                         workloadGraphStage: WorkloadGraphStage,
-                                        loadBatchUpdateGraphStage: LoadBatchUpdateGraphStage,
+                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
                                         crunchLoadGraphStage: CrunchLoadGraphStage,
                                         staffGraphStage: StaffGraphStage,
                                         staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,

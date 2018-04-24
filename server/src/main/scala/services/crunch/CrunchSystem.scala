@@ -121,7 +121,7 @@ object CrunchSystem {
       numberOfDays = props.maxDaysToCrunch)
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis)
-    val loadBatcher = new LoadBatchUpdateGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
+    val loadBatcher = new BatchLoadsByCrunchPeriodGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
