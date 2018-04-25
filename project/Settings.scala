@@ -115,7 +115,7 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-    "org.opensaml" % "opensaml" % openSaml,
+    "org.opensaml" % "opensaml" % openSaml excludeAll ExclusionRule("org.bouncycastle"),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
