@@ -93,6 +93,11 @@ object JSDateConversions {
 
     def parse(dateString: String): SDateLike = new Date(dateString)
 
+    def parseAsLocalDateTime(localDateString: String): SDateLike = {
+      val d = new Date(localDateString)
+      new Date(d.getTime() + d.getTimezoneOffset() * 60000)
+    }
+
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
       val jsDate = Date.parse(dateString)
       if (!jsDate.isNaN) Option(SDate(MilliDate(jsDate.toLong))) else

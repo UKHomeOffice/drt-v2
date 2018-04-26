@@ -38,7 +38,7 @@ object SPAMain extends js.JSApp {
       }
     }
 
-    def parseDateString(s: String) = SDate(s.replace("%20", " ").split(" ").mkString("T"))
+    def parseDateString(s: String) = SDate.parseAsLocalDateTime(s.replace("%20", " ").split(" ").mkString("T"))
 
     def timeRangeStart = timeRangeStartString.map(_.toInt)
 
