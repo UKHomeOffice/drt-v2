@@ -73,11 +73,7 @@ object TerminalContentComponent {
     val endOfView = startOfDay.addHours(range.end)
     state.window(startOfView, endOfView)
   }
-
-  def timeFallsBetween(minute: MillisSinceEpoch, start: SDateLike, end: SDateLike): Boolean = {
-    start.millisSinceEpoch <= minute && minute < end.millisSinceEpoch
-  }
-
+  
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
