@@ -67,6 +67,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val body = HttpEntity(MediaTypes.`application/xml`, xml.getBytes)
     mockResponse.entity returns body
     mockResponse.status returns StatusCode.int2StatusCode(200)
+    mockResponse.headers returns List.empty[HttpHeader]
 
     val feed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
       override def sendAndReceive = (req: HttpRequest) => Promise.successful(mockResponse).future

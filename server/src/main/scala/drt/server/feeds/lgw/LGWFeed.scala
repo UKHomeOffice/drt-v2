@@ -23,8 +23,8 @@ import org.opensaml.xml.util.XMLHelper
 import org.slf4j.{Logger, LoggerFactory}
 import spray.client.pipelining
 import spray.client.pipelining.{Delete, Post, addHeader, _}
-import spray.http.HttpHeaders.Accept
 import spray.http.{FormData, HttpRequest, HttpResponse, MediaTypes}
+import spray.http.HttpHeaders.{Accept, RawHeader}
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -62,7 +62,7 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
 
   val GRANT = "urn:oasis:names:tc:SAML:2.0:assertion"
 
-  implicit val executionContext =  system.dispatcher
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   def requestToken(): Future[GatwickAzureToken] = {
     val paramsAsForm = FormData(Map(
@@ -91,10 +91,11 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
     val serviceBusUri = s"https://$namespace.servicebus.windows.net/partners/$issuer/to/messages/head?timeout=$restApiTimeoutInSeconds"
     val wrapHeader = "WRAP access_token=\"" + token.access_token + "\""
 
-    val toArrivals: HttpResponse => List[Arrival] = { r =>
+    val toArrivals: HttpResponse => List[(Arrival, Option[String])] = { r =>
+      val locationOption: Option[String] = r.headers.find(h => h.name == "Location").map(_.value)
       log.debug(s"LGW response status code is ${r.status.intValue}")
       val is = new ByteArrayInputStream(r.entity.data.toByteArray)
-      val xmlTry = Try (scala.xml.XML.load(is)).recoverWith{
+      val xmlTry = Try(scala.xml.XML.load(is)).recoverWith {
         case e: Throwable => log.error(s"Cannot load Gatwick XML from the response ${r.status}", e); null
       }
       IOUtils.closeQuietly(is)
@@ -129,29 +130,46 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
           rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),
           rawIATA = (n \\ "AirlineIATA" text) + parseFlightNumber(n),
           Origin = parseOrigin(n),
-          SchDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text ).equals("SCT") ).map(n=>n text).getOrElse(""),
-          Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text ).equals("SCT") ).map(n=> services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
+          SchDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => n text).getOrElse(""),
+          Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
           PcpTime = 0,
           LastKnownPax = None)
         log.info(s"parsed arrival: $arrival")
-        arrival
+        (arrival, locationOption)
       }
 
       result.toList
     }
 
+    val processDeleteIfApplicable: List[(Arrival, Option[String])] => List[Arrival] = { arrivalsAndLocationList =>
+      val deletePipeline = (
+        addHeader("Authorization", wrapHeader)
+          ~> sendAndReceive
+        )
+      arrivalsAndLocationList.flatMap(_._2).foreach { location =>
+        deletePipeline(Delete(location)).recoverWith {
+          case t: Throwable =>
+            log.warn(s"Failed to send a Delete request to url $location", t)
+            Future(location)
+        }
+      }
+
+      arrivalsAndLocationList.map(_._1)
+    }
+
     val resultPipeline: pipelining.WithTransformerConcatenation[HttpRequest, Future[List[Arrival]]] = (
-      addHeader("Authorization", wrapHeader)
+      addHeaders(List(RawHeader("Authorization", wrapHeader), RawHeader("MessageId", UUID.randomUUID().toString)))
         ~> sendAndReceive
         ~> toArrivals
+        ~> processDeleteIfApplicable
       )
 
-    resultPipeline(Delete(serviceBusUri))
-    .recoverWith {
-      case t: Throwable =>
-        log.warn(s"Failed to get Flight details: ${t.getMessage}", t)
-        Future(List.empty)
-    }
+    resultPipeline(Post(serviceBusUri))
+      .recoverWith {
+        case t: Throwable =>
+          log.warn(s"Failed to get Flight details: ${t.getMessage}", t)
+          Future(List.empty)
+      }
   }
 
   private def parseFlightNumber(n: Node) = {
@@ -175,7 +193,7 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
   }
 
   def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[String] = {
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text ).equals("SCT") ).map(n=>n text)
+    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => n text)
     (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => n text)
   }
 
@@ -246,7 +264,7 @@ object LGWFeed {
   def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
     val config = actorSystem.settings.config
 
-    implicit val dispatcher: ExecutionContextExecutor =  actorSystem.dispatcher
+    implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
 
     val certPath = config.getString("feeds.gatwick.live.azure.cert")
     val privateCertPath = config.getString("feeds.gatwick.live.azure.private_cert")
@@ -264,7 +282,7 @@ object LGWFeed {
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .throttle(elements = 1, per = 30 seconds, maximumBurst = 1, ThrottleMode.shaping)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
-      .map((_) => {
+      .map(_ => {
         Try {
           val arrivalsFuture = for {
             token <- tokenFuture
