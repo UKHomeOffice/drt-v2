@@ -67,29 +67,11 @@ object TerminalContentComponent {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
-  def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]): List[ApiFlightWithSplits] = arrivals.filter(a => {
-    def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
-      case s: SDateLike if s.ddMMyyString == date.ddMMyyString =>
-        if (range.end < 24)
-          s.getHours >= range.start && s.getHours < range.end
-        else
-          s.getHours >= range.start
-      case _ => false
-    } else false
-
-    withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString())
-  })
-
   def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState): CrunchState = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
     val startOfView = startOfDay.addHours(range.start)
     val endOfView = startOfDay.addHours(range.end)
-    log.info(s"range: ${startOfView.toLocalDateTimeString()} - ${endOfView.toLocalDateTimeString()}")
-    CrunchState(
-      state.flights.filter(f => timeFallsBetween(f.apiFlight.PcpTime, startOfView, endOfView)),
-      state.crunchMinutes.filter(cm => timeFallsBetween(cm.minute, startOfView, endOfView)),
-      state.staffMinutes.filter(sm => timeFallsBetween(sm.minute, startOfView, endOfView))
-    )
+    state.window(startOfView, endOfView)
   }
 
   def timeFallsBetween(minute: MillisSinceEpoch, start: SDateLike, end: SDateLike): Boolean = {
@@ -133,10 +115,7 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
 
-      val timeRangeHours = TimeRangeHours(
-        props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
-        props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
-      )
+      val timeRangeHours: CustomWindow = timeRange(props)
 
       <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
@@ -172,11 +151,7 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
-                val range = TimeRangeHours(
-                  props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
-                  props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
-                )
-                val filteredPortState = filterCrunchStateByRange(SDate.now(), range, crunchState)
+                val filteredPortState = filterCrunchStateByRange(SDate.now(), timeRangeHours, crunchState)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
                     filteredPortState,
@@ -193,9 +168,7 @@ object TerminalContentComponent {
               log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                val filteredPortState = filterCrunchStateByRange(SDate.now(), props.defaultTimeRangeHours, crunchState)
-                val flightsWithSplits = crunchState.flights
-
+                val filteredPortState = filterCrunchStateByRange(SDate.now(), timeRangeHours, crunchState)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
               }))
             } else ""
@@ -215,6 +188,13 @@ object TerminalContentComponent {
           ))
       )
     }
+  }
+
+  def timeRange(props: Props): CustomWindow = {
+    TimeRangeHours(
+      props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
+      props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
+    )
   }
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
