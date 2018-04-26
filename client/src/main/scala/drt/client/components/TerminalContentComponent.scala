@@ -67,27 +67,11 @@ object TerminalContentComponent {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
-  def filterFlightsByRange(date: SDateLike, range: TimeRangeHours, arrivals: List[ApiFlightWithSplits]): List[ApiFlightWithSplits] = arrivals.filter(a => {
-
-    def withinRange(ds: String) = if (ds.length > 0) SDate.parse(ds) match {
-      case s: SDateLike if s.ddMMyyString == date.ddMMyyString =>
-        s.getHours >= range.start && s.getHours < range.end
-      case _ => false
-    } else false
-
-    withinRange(SDate(MilliDate(a.apiFlight.PcpTime)).toISOString())
-  })
-
   def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState): CrunchState = {
-    CrunchState(
-      filterFlightsByRange(day, range, state.flights.toList).toSet,
-      state.crunchMinutes.filter(cm => timeFallsBetweenHours(range, cm.minute)),
-      state.staffMinutes.filter(sm => timeFallsBetweenHours(range, sm.minute))
-    )
-  }
-
-  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch): Boolean = {
-    SDate(MilliDate(minute)).getHours() >= range.start && SDate(MilliDate(minute)).getHours() < range.end
+    val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
+    val startOfView = startOfDay.addHours(range.start)
+    val endOfView = startOfDay.addHours(range.end)
+    state.window(startOfView, endOfView)
   }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
@@ -127,10 +111,7 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
 
-      val timeRangeHours = TimeRangeHours(
-        props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
-        props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
-      )
+      val timeRangeHours: CustomWindow = timeRange(props)
 
       <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
@@ -166,12 +147,10 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
+                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
-                    filterCrunchStateByRange(SDate.now(), TimeRangeHours(
-                      props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
-                      props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
-                    ), crunchState),
+                    filteredPortState,
                     props.airportConfig,
                     props.terminalPageTab.terminal,
                     props.showActuals
@@ -185,11 +164,8 @@ object TerminalContentComponent {
               log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                val flightsWithSplits = crunchState.flights
-                val terminalFlights = flightsWithSplits.filter(f => f.apiFlight.Terminal == props.terminalPageTab.terminal)
-                val flightsInRange = filterFlightsByRange(props.terminalPageTab.viewMode.time, timeRangeHours, terminalFlights.toList)
-
-                arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsInRange, queueOrder, props.airportConfig.hasEstChox))
+                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState)
+                arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
               }))
             } else ""
           }),
@@ -208,6 +184,13 @@ object TerminalContentComponent {
           ))
       )
     }
+  }
+
+  def timeRange(props: Props): CustomWindow = {
+    TimeRangeHours(
+      props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
+      props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
+    )
   }
 
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")

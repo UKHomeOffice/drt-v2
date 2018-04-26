@@ -469,7 +469,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
         val startMillis = midnightThisMorning
-        val endMillis = midnightThisMorning + oneHourMillis * 24
+        val endMillis = midnightThisMorning + oneHourMillis * airportConfig.dayLengthHours
         val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(30 seconds))
 
         crunchStateFuture.map {
@@ -580,7 +580,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
-    val lastMinute = SDate(firstMinute).addDays(1).millisSinceEpoch
+    val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
     val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
@@ -606,7 +606,7 @@ class Application @Inject()(implicit val config: Configuration,
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
     val startMillis = relativeLastMidnight
-    val endMillis = relativeLastMidnight + oneHourMillis * 24
+    val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
 
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
@@ -614,8 +614,8 @@ class Application @Inject()(implicit val config: Configuration,
   def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val startMillis = relativeLastMidnight
-    val endMillis = relativeLastMidnight + oneHourMillis * 24
-    val pointInTime = endMillis + oneHourMillis * 3
+    val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
+    val pointInTime = startMillis + oneDayMillis + oneHourMillis * 3
 
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }

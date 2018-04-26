@@ -101,8 +101,9 @@ object TimeRangeFilter {
             <.select(^.className := "form-control",
               ^.value := s"${selectedWindow.end}",
               ^.onChange ==> ((e: ReactEventFromInput) => setEnd(e.target.value)),
-              (0 to 24).map(h => {
-                <.option(^.value := s"$h", f"$h%02d")
+              (0 to 36).map(h => {
+                val display = if (h < 24) f"$h%02d" else f"${h - 24}%02d +1"
+                <.option(^.value := s"$h", display)
               }
               ).toTagMod)
           )
