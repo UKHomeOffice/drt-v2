@@ -14,18 +14,17 @@ case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extends PersistentActor with ActorLogging {
+class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends PersistentActor with ActorLogging {
   var state = VoyageManifestState(
     manifests = Set(),
     latestZipFilename = defaultLatestZipFilename)
+  var persistCounter = 0
 
   def defaultLatestZipFilename: String = {
     val yesterday = SDate.now().addDays(-1)
     val yymmddYesterday = f"${yesterday.getFullYear() - 2000}%02d${yesterday.getMonth()}%02d${yesterday.getDate()}%02d"
     s"drt_dq_$yymmddYesterday"
   }
-
-  val snapshotInterval = 50
 
   override def persistenceId: String = "arrival-manifests"
 
@@ -45,6 +44,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
         .toSet -- state.manifests
 
       state = state.copy(manifests = newStateManifests(state.manifests, updatedManifests))
+      persistCounter += 1
 
     case SnapshotOffer(md, ss) =>
       log.info(s"Recovery received SnapshotOffer($md)")
@@ -117,9 +117,10 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
   }
 
   def snapshotIfRequired(stateToSnapshot: VoyageManifestState): Unit = {
-    if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
+    if (persistCounter >= snapshotInterval) {
       log.info(s"Saving VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
       saveSnapshot(stateToMessage(stateToSnapshot))
+      persistCounter = 0
     }
   }
 
@@ -128,6 +129,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long) extend
       vmm =>
         log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
         context.system.eventStream.publish(vmm)
+        persistCounter += 1
     }
   }
 

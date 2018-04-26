@@ -100,6 +100,7 @@ trait SystemActors {
   val minutesToCrunch: Int = 1440
   val maxDaysToCrunch: Int = config.getInt("crunch.forecast.max_days").getOrElse(360)
   val aclPollMinutes: Int = config.getInt("crunch.forecast.poll_minutes").getOrElse(120)
+  val snapshotIntervalVm: Int = config.getInt("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
   val now: () => SDateLike = () => SDate.now()
 
@@ -126,7 +127,7 @@ trait SystemActors {
   val forecastCrunchStateProps = Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
 
   val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis), name = "voyage-manifests-actor")
+  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
   val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
   val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))

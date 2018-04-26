@@ -147,7 +147,8 @@ class CrunchTestLike
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
-    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis))
+    val snapshotInterval = 1
+    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotInterval))
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
